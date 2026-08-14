@@ -1,0 +1,13 @@
+#!/bin/sh
+# Eval gate: no commit may regress the fast suite below the recorded baseline.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+python3 -m evals.run --suite fast --baseline .eval-baseline.json --no-report
+status=$?
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "COMMIT BLOCKED by the eval gate."
+  echo "Fix the regression, or if the baseline move is deliberate:"
+  echo "  python3 -m evals.run --suite fast --update-baseline   # + record why in an ADR"
+  exit 1
+fi
+exit 0
