@@ -5,9 +5,10 @@ Date: 2026-08-15 · Status: accepted
 ## Context
 
 Standard SDD (OpenSpec / Spec Kit style) assumes requirements are ambiguous and
-implementation is clear. This assignment inverts that: requirements are explicit
-(e.g. split a 10-K into Items 1–16), but correctness has no public ground truth.
-A prose spec like "Item 1A must be extracted correctly" is unfalsifiable.
+implementation is clear. The problems this template targets invert that:
+requirements are explicit (e.g. split a 10-K into Items 1–16), but correctness
+has no public ground truth. A prose spec like "Item 1A must be extracted
+correctly" is unfalsifiable.
 
 ## Decision
 
@@ -17,8 +18,8 @@ Enforcement lives in hooks (PostToolUse invariant suite, pre-commit eval gate)
 because hooks are the only layer that can actually block an agent — CLAUDE.md
 is advice, hooks are law. Discipline mechanisms are hand-built on native Claude
 Code primitives (skills/agents/hooks) rather than adopting OpenSpec/Superpowers/
-BMAD/GSD: two-week single-person scope, and each mechanism must be explainable
-line-by-line in the interview.
+BMAD/GSD: single-person short-cycle scope, and each mechanism must be
+explainable line-by-line.
 
 ## Consequences
 

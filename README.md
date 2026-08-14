@@ -1,27 +1,29 @@
-# AI Coding Test
+# project-template
 
-Eval-first workspace for the AI coding test (Task 2: SEC 10-K item-level
-extraction; scaffold is task-agnostic and extends to Task 1).
+Eval-first project template for problems where requirements are clear but
+correctness is hard to define (extraction, agents, anything without public
+ground truth). Built on native Claude Code primitives — no SDD framework.
 
-## Status
-
-Scaffold only — no task implementation yet. See `CLAUDE.md` for working rules.
-
-## Setup
+## Using this template
 
 ```bash
+git clone <this-repo> my-project && cd my-project
 git config core.hooksPath .githooks   # enable the pre-commit eval gate
 python3 -m evals.run --suite fast     # sanity: runner works (no cases yet)
 ```
 
-No dependencies — the harness is stdlib-only. Task implementations declare
-their own deps under `src/<task>/`.
+Opening the repo in Claude Code auto-prompts to install the **ponytail**
+plugin (`.claude/settings.json` → `extraKnownMarketplaces` + `enabledPlugins`);
+**graphify** is vendored as a project skill, no install needed.
 
-## How this repo is built (methodology)
+The harness is stdlib-only. Task implementations declare their own deps under
+`src/<task>/`. To add a task, follow "Adding a task" in `CLAUDE.md`.
 
-The eval set is the spec: correctness here has no public ground truth, so it
-is encoded as executable invariants + golden/adversarial cases instead of
-prose requirements (ADR-000). Four layers, no overlap:
+## Methodology
+
+The eval set is the spec: correctness is encoded as executable invariants +
+golden/adversarial cases instead of prose requirements (ADR-000). Four layers,
+no overlap:
 
 | Layer | Mechanism | Role |
 |---|---|---|
@@ -34,6 +36,3 @@ Loop per feature: failing eval case → implement under the invariant hook →
 cold review → findings become adversarial cases → gate green → commit.
 `prompts/` holds the AI-collaboration record, including where evals
 contradicted assumptions.
-
-(Sections to be filled as tasks land: how to run each task, frontend URL,
-what works / what fails honestly, performance & cost analysis.)

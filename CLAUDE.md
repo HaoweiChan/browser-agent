@@ -1,8 +1,17 @@
-# AI Coding Test — working rules
+# Project working rules
 
-Eval-first repo for the Whaleforce AI coding test. Tasks live under `src/<task>/`.
-**The eval set IS the spec.** Requirements here are clear; correctness is not
-definable up front — so we encode it as executable invariants and metrics, not prose.
+Eval-first repo (built from `project-template`). Tasks live under `src/<task>/`.
+**The eval set IS the spec.** This template targets problems where requirements
+are clear but correctness is hard to define up front — so correctness is encoded
+as executable invariants and metrics, not prose.
+
+## Toolchain
+
+- **ponytail** plugin is enabled repo-wide via `.claude/settings.json` — laziest
+  working solution, stdlib first, shortest diff. Applies to all code here.
+- **graphify** is vendored as a project skill — use `/graphify` for architecture
+  and file-relationship questions; once `graphify-out/` exists, treat such
+  questions as graphify queries first.
 
 ## Layout
 
