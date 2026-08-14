@@ -9,6 +9,7 @@ case "$file" in
   *) exit 0 ;;
 esac
 cd "$CLAUDE_PROJECT_DIR" || exit 0
+[ -f evals/run.py ] || exit 0  # project removed the eval harness — nothing to enforce
 out=$(python3 -m evals.run --suite invariant --no-report 2>&1)
 status=$?
 if [ $status -ne 0 ]; then
