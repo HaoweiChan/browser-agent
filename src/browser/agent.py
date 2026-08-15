@@ -12,9 +12,11 @@ import time
 from pathlib import Path
 
 from .resolver import ResolveError, resolve
+from .verifier import verify
 
 MAX_ACTIONS = 30
 SETTLE_TRIES, SETTLE_MS = 10, 200
+PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, bounded
 
 # ponytail: keyword screen — LLM-based scope screening only if evals demand it (M3).
 # Latin terms need \b (case screening-word-boundary: 'signing' contains 'signin');
@@ -32,29 +34,59 @@ def screen(task: str) -> str | None:
     return f"out of scope (matched '{m.group(0)}'): auth/CAPTCHA/payment/destructive/download tasks are unsupported" if m else None
 
 
-async def check_state(page, expected: dict | None) -> bool:
+async def check_state(page, expected: dict | None) -> bool | None:
+    """True / False / None, where None means "nothing was asserted".
+
+    None is not True. Collapsing them recorded unverified steps as verified and
+    made the module docstring's claim false (case postcondition-unverified-click).
+    Every key present must hold: an if/elif chain silently graded a compound
+    expectation on its first key alone (case postcondition-compound-keys).
+    """
     if not expected:
-        return True
+        return None
+
+    async def holds(key, want) -> bool:
+        if key == "url_contains":
+            return want in page.url
+        if key == "text_visible":
+            return want in (await page.inner_text("body"))
+        if key == "role_visible":
+            loc = (page.get_by_role(want["role"], name=want["name"])
+                   if want.get("name") else page.get_by_role(want["role"]))
+            return await loc.count() >= 1 and await loc.first.is_visible()
+        raise ValueError(f"unknown expected_state key {key!r}")
+
     for _ in range(SETTLE_TRIES):
         try:
-            if "url_contains" in expected:
-                if expected["url_contains"] in page.url:
-                    return True
-            elif "text_visible" in expected:
-                if expected["text_visible"] in (await page.inner_text("body")):
-                    return True
-            elif "role_visible" in expected:
-                rv = expected["role_visible"]
-                loc = page.get_by_role(rv["role"], name=rv.get("name")) if rv.get("name") else page.get_by_role(rv["role"])
-                if await loc.count() >= 1 and await loc.first.is_visible():
-                    return True
+            if all([await holds(k, v) for k, v in expected.items()]):
+                return True
+        except ValueError:
+            raise
         except Exception:
             pass
         await page.wait_for_timeout(SETTLE_MS)
     return False
 
 
-def assemble_result(task, trace, answer, budgets, failure=None, reason=None, final_url=None, page_digest=None):
+def evidence_window(body: str, value: str, keep: int = PAGE_TEXT_KEEP) -> str:
+    """Bounded page-text evidence that still contains the extracted value.
+
+    A flat head-truncation would fail the verifier's grounding check on any
+    page longer than `keep` — a false `failure:semantic` on a correct run.
+    Selecting the window is evidence handling, not grading: if the value is
+    absent the head is stored and grounding fails, which is the true verdict.
+    """
+    if len(body) <= keep:
+        return body
+    i = body.find(value)
+    if i < 0:
+        return body[:keep]
+    lo = max(0, i - keep // 2)
+    return body[lo:lo + keep]
+
+
+def assemble_result(task, trace, answer, budgets, failure=None, reason=None, final_url=None,
+                    page_digest=None, extractions=None, verdict=None):
     if failure:
         status = "unsupported" if failure == "unsupported" else f"failure:{failure}"
     else:
@@ -62,13 +94,19 @@ def assemble_result(task, trace, answer, budgets, failure=None, reason=None, fin
     # INV-0: never success with empty output (specs/000, specs/001).
     if status == "success" and (not answer or not trace):
         status, reason = "failure:extract", reason or "empty answer or empty trace"
+    # INV-2: the executor's claim never outranks the verifier (specs/000).
+    if status == "success" and verdict and verdict.get("verdict") != "PASS":
+        status = "failure:semantic"
+        reason = reason or f"verifier {verdict['verdict']}: {verdict.get('reason')}"
     return {
         "status": status,
         "answer": answer if answer else None,
         "reason": reason,
+        "verdict": verdict,
         "evidence": {
             "trace": trace,
             "screenshots": [s["screenshot"] for s in trace if s.get("screenshot")],
+            "extractions": extractions or [],
             "final_url": final_url,
             "final_page_digest": page_digest,
         },
@@ -82,10 +120,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     run_dir.mkdir(parents=True, exist_ok=True)
     budgets = {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "ms": 0}
     trace: list[dict] = []
+    # Raw evidence for the OutcomeVerifier: what was read, and what the page
+    # said at the moment it was read. The verifier never sees our conclusion.
+    extractions: list[dict] = []
 
-    def done(answer=None, failure=None, reason=None, final_url=None, digest=None):
+    def done(answer=None, failure=None, reason=None, final_url=None, digest=None, verdict=None):
         budgets["ms"] = int((time.monotonic() - t0) * 1000)
-        result = assemble_result(task, trace, answer, budgets, failure, reason, final_url, digest)
+        result = assemble_result(task, trace, answer, budgets, failure, reason, final_url,
+                                 digest, extractions, verdict)
         (run_dir / "trace.jsonl").write_text("\n".join(json.dumps(s) for s in trace) + "\n")
         (run_dir / "result.json").write_text(json.dumps(result, indent=2))
         return result
@@ -167,11 +209,24 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                             await loc.click(timeout=10_000)
                         elif step["action"] == "fill":
                             await loc.fill(step.get("value") or "", timeout=10_000)
+                            # A fill verifies itself by readback, so it needs no
+                            # authored postcondition to count as checked.
+                            back = await loc.input_value()
+                            if back != (step.get("value") or ""):
+                                return fail("act", f"field readback {back!r} != filled value")
+                            rec["postcondition_ok"] = True
                         elif step["action"] == "extract":
                             val = (await loc.inner_text()).strip()
                             if not val:
                                 return fail("extract", "extraction returned empty text")
+                            body = await page.inner_text("body")
+                            extractions.append({"value": val, "page_text": evidence_window(body, val)})
                             answers.append(val)
+                            # Identity anchor (verifier L1): the entity the task
+                            # names must be present where the answer was read.
+                            anchor = step.get("anchor")
+                            if anchor and anchor not in body:
+                                return fail("semantic", f"identity anchor {anchor!r} absent from the page the answer was read from")
                         else:
                             return fail("task", f"unknown action {step['action']!r}")
                 except ResolveError as e:
@@ -180,7 +235,12 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     cls = "nav" if step["action"] == "navigate" else "act"
                     return fail(cls, f"{type(e).__name__}: {e}")
 
-                rec["postcondition_ok"] = await check_state(page, step.get("expected_state"))
+                try:
+                    checked = await check_state(page, step.get("expected_state"))
+                except ValueError as e:
+                    return fail("task", f"malformed expected_state: {e}")
+                if checked is not None or rec["postcondition_ok"] is None:
+                    rec["postcondition_ok"] = checked
                 shot = f"step_{i}.png"
                 try:
                     await page.screenshot(path=str(run_dir / shot))
@@ -198,4 +258,6 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
 
     # One extract -> scalar answer; several -> list (contract: answer string|list).
     answer = answers[0] if len(answers) == 1 else (answers or None)
-    return done(answer=answer, final_url=final_url, digest=digest)
+    # The run is graded by the verifier, not by having reached this line.
+    verdict = verify(trace=trace, extractions=extractions, answer=answer)
+    return done(answer=answer, final_url=final_url, digest=digest, verdict=verdict)

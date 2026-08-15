@@ -1,0 +1,22 @@
+{
+  "id": "tc2-shop-search-zh",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC2",
+  "input": {
+    "task": "在商品目錄搜尋 'Cobalt'，並回報找到的商品價格。",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "searchbox", "name": "Search products" }, "value": "Cobalt",
+        "expected_state": null },
+      { "action": "click", "target": { "role": "button", "name": "Search" },
+        "expected_state": { "text_visible": "1 result(s) for \"cobalt\"" } },
+      { "action": "click", "target": { "role": "link", "index": 0 },
+        "expected_state": { "url_contains": "shop-rug" } },
+      { "action": "extract", "target": { "role": "group", "name": "Price" }, "anchor": "RUG-COB" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "$18.00", "anchors": ["RUG-COB", "Cobalt Floor Rug"] },
+  "provenance": "authored fixtures shop.html + shop-rug.html. ZH sample for TC2; search-then-navigate-then-extract, so the URL postcondition proves the right result was opened."
+}

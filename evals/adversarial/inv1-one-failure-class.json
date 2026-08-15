@@ -1,0 +1,8 @@
+{
+  "id": "inv1-one-failure-class",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "input": { "kind": "invariant", "check": "inv1" },
+  "expect": { "note": "every non-success status carries exactly one of the 7 top-level classes, or is the bare literal 'unsupported'" },
+  "provenance": "pure-code property check backing INV-1 (specs/000). Watched red by making assemble_result emit 'failure:locate,act' for a multi-class failure before the case was trusted green; no browser, no LLM, no network."
+}

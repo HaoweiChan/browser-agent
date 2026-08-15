@@ -1,14 +1,27 @@
 {
   "id": "tc1-hello-heading",
   "task": "browser",
-  "suites": ["fast"],
+  "suites": [
+    "fast"
+  ],
+  "tc": "TC1",
+  "level": "L1",
   "input": {
     "task": "What does the main heading on the page say?",
     "fixture": "hello.html",
     "stub_plan": [
-      { "action": "extract", "target": { "role": "heading", "name": "Hello Fixture" } }
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello Fixture"
+        }
+      }
     ]
   },
-  "expect": { "status": "success", "answer": "Hello Fixture" },
+  "expect": {
+    "status": "success",
+    "answer": "Hello Fixture"
+  },
   "provenance": "authored fixture; heading text is literal in src/browser/fixtures/hello.html. Stubbed plan (fast suite tests resolver/executor/verifier, not planning)."
 }

@@ -1,0 +1,35 @@
+{
+  "id": "mutation-catalog-integrity",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {
+    "kind": "mutation",
+    "fixture": "shop.html",
+    "checks": {
+      "ids-renamed": {
+        "id=\"catalogue\"": false,
+        "id=\"catalogue-x7\"": true,
+        "for=\"q-x7\"": true,
+        ">Sort by price (low to high)<": true,
+        "<div class=\"w-a\">": false,
+        "getElementById": false
+      },
+      "button-text-renamed": {
+        ">Search<": false,
+        ">Find<": true,
+        "aria-label=\"Search\"": true,
+        "aria-label=\"Sort by price (low to high)\"": true,
+        "id=\"catalogue\"": true
+      },
+      "wrapper-nesting": {
+        "<div class=\"w-a\">": true,
+        "<div class=\"w-outer\">": true,
+        "id=\"catalogue\"": true,
+        ">Search<": true
+      }
+    }
+  },
+  "expect": { "note": "each mutation breaks its own tier and leaves the other two alone" },
+  "provenance": "ground-truth integrity for the whole L4 story. If a mutation silently stopped mutating — a renamed fixture element, a regex that no longer matches — every mutation case would pass for the wrong reason and the self-maintenance evidence would be worthless. Checks are literal substrings of src/browser/fixtures/shop.html. The 'getElementById: false' check was added after l4-shop-ids-renamed went red on first run (2026-08-16): the mutation was renaming ids the fixture's own script depended on, so it broke the page rather than the agent's stable-attr dependency. A fault injector that damages the fixture measures nothing.",
+  "triage": { "class": "eval-integrity", "note": "guards the fault injector, not the product" }
+}

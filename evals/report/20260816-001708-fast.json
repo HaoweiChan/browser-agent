@@ -1,0 +1,1020 @@
+{
+  "suite": "fast",
+  "score": 1.0,
+  "totals": {
+    "actions": 71,
+    "llm_tokens": 0,
+    "llm_usd": 0.0,
+    "ms": 8835,
+    "wall_seconds": 9.95,
+    "latency_p50": 0.32,
+    "latency_p95": 0.6,
+    "cases_with_budgets": 27
+  },
+  "results": [
+    {
+      "passed": true,
+      "missing": [],
+      "advertised_unresolvable": [],
+      "n_elements": 5,
+      "seconds": 0.71,
+      "id": "observe-hello-elements",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "Hello Fixture",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 310
+      },
+      "seconds": 0.31,
+      "id": "tc1-hello-heading",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "secret-42",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 411
+      },
+      "seconds": 0.41,
+      "id": "tc1-hello-reveal",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "$24.50",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 315
+      },
+      "seconds": 0.32,
+      "id": "tc1-shop-price-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "$39.00",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 318
+      },
+      "seconds": 0.32,
+      "id": "tc1-shop-price",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "$18.00",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 5,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 577
+      },
+      "seconds": 0.58,
+      "id": "tc2-shop-search-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "Meridian Wall Clock",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 501
+      },
+      "seconds": 0.5,
+      "id": "tc2-shop-search",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "CLOCK-MER",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 397
+      },
+      "seconds": 0.4,
+      "id": "tc3-shop-detail-nav-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "Anodised aluminium",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 416
+      },
+      "seconds": 0.42,
+      "id": "tc3-shop-detail-nav",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "Cobalt Floor Rug",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 400
+      },
+      "seconds": 0.4,
+      "id": "tc4-shop-sort-cheapest",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "Cobalt Floor Rug $18.00",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 416
+      },
+      "seconds": 0.42,
+      "id": "tc4-shop-sort-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true,
+          "ground_truth_state": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "REF-CFEDF0",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 6,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 595
+      },
+      "seconds": 0.6,
+      "id": "tc5-forms-submit-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true,
+          "ground_truth_state": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "REF-6B5159",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 6,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 562
+      },
+      "seconds": 0.57,
+      "id": "tc5-forms-submit",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "answer is empty"
+      },
+      "got": {
+        "status": "failure:locate",
+        "answer": null,
+        "reason": "step 2 (click): element-not-found: no tier resolved {'text': 'Sort by price (low to high)'}"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 246
+      },
+      "seconds": 0.27,
+      "id": "l4-shop-button-text-renamed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "Cobalt Floor Rug",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 397
+      },
+      "seconds": 0.4,
+      "id": "l4-shop-ids-renamed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": "Meridian Wall Clock",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 495
+      },
+      "seconds": 0.5,
+      "id": "l4-shop-wrapper-nesting",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": false,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "no trace: nothing was attempted; answer is empty"
+      },
+      "got": {
+        "status": "unsupported",
+        "answer": null,
+        "reason": "out of scope (matched 'captcha'): auth/CAPTCHA/payment/destructive/download tasks are unsupported"
+      },
+      "budgets": {
+        "actions": 0,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 0
+      },
+      "seconds": 0.0,
+      "id": "l5-refuse-captcha",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": false,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "no trace: nothing was attempted; answer is empty"
+      },
+      "got": {
+        "status": "unsupported",
+        "answer": null,
+        "reason": "out of scope (matched '\u522a\u9664'): auth/CAPTCHA/payment/destructive/download tasks are unsupported"
+      },
+      "budgets": {
+        "actions": 0,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 0
+      },
+      "seconds": 0.0,
+      "id": "l5-refuse-destructive-zh",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": false,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "no trace: nothing was attempted; answer is empty"
+      },
+      "got": {
+        "status": "unsupported",
+        "answer": null,
+        "reason": "out of scope (matched 'Download'): auth/CAPTCHA/payment/destructive/download tasks are unsupported"
+      },
+      "budgets": {
+        "actions": 0,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 0
+      },
+      "seconds": 0.0,
+      "id": "l5-refuse-download",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": false,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "no trace: nothing was attempted; answer is empty"
+      },
+      "got": {
+        "status": "unsupported",
+        "answer": null,
+        "reason": "out of scope (matched 'Log in'): auth/CAPTCHA/payment/destructive/download tasks are unsupported"
+      },
+      "budgets": {
+        "actions": 0,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 0
+      },
+      "seconds": 0.0,
+      "id": "l5-refuse-login",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": false,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "no trace: nothing was attempted; answer is empty"
+      },
+      "got": {
+        "status": "unsupported",
+        "answer": null,
+        "reason": "out of scope (matched 'Buy'): auth/CAPTCHA/payment/destructive/download tasks are unsupported"
+      },
+      "budgets": {
+        "actions": 0,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 0
+      },
+      "seconds": 0.0,
+      "id": "l5-refuse-payment",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "got": {
+        "status": "success",
+        "answer": [
+          "Hello Fixture",
+          "secret-42"
+        ],
+        "reason": null
+      },
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 464
+      },
+      "seconds": 0.47,
+      "id": "multi-extract-list",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "mutation-catalog-integrity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "missing": [],
+      "advertised_unresolvable": [],
+      "n_elements": 9,
+      "seconds": 0.27,
+      "id": "observe-name-prohibited-roles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "got": {
+        "steps": 1,
+        "first_action": "navigate"
+      },
+      "seconds": 0.0,
+      "id": "planner-fenced-json",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "answer is empty"
+      },
+      "got": {
+        "status": "failure:locate",
+        "answer": null,
+        "reason": "step 2 (extract): element-not-found: no tier resolved {'role': 'heading', 'name': 'History'}"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 246
+      },
+      "seconds": 0.27,
+      "id": "resolver-substring-name",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "screening-word-boundary",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "answer is empty"
+      },
+      "got": {
+        "status": "failure:extract",
+        "answer": null,
+        "reason": "step 2 (extract): extraction returned empty text"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 253
+      },
+      "seconds": 0.28,
+      "id": "trap-empty-extraction",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "ground_truth_state": false
+        },
+        "reason": "ground-truth state {'name': None, 'email': None} != expected {'name': 'Grace Hopper', 'email': 'grace@example.com'}"
+      },
+      "got": {
+        "status": "success",
+        "answer": "Contact Nimbus Shop",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 5,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 490
+      },
+      "seconds": 0.49,
+      "id": "trap-form-not-submitted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": false,
+          "answer_matches": false
+        },
+        "reason": "identity anchor(s) absent from evidence: ['LAMP-STD']; answer '$59.00' != expected '$39.00'"
+      },
+      "got": {
+        "status": "success",
+        "answer": "$59.00",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 395
+      },
+      "seconds": 0.4,
+      "id": "trap-near-miss-entity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": false
+        },
+        "reason": "answer 'Aurora Desk Lamp' != expected 'Cobalt Floor Rug'"
+      },
+      "got": {
+        "status": "success",
+        "answer": "Aurora Desk Lamp",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 316
+      },
+      "seconds": 0.32,
+      "id": "trap-unsorted-cheapest",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": false
+        },
+        "reason": "answer 'Anodised aluminium' != expected 'LAMP-STD'"
+      },
+      "got": {
+        "status": "success",
+        "answer": "Anodised aluminium",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "ms": 315
+      },
+      "seconds": 0.32,
+      "id": "trap-wrong-field",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "trap-empty-extraction",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC4",
+  "trap": "absent answer",
+  "input": {
+    "task": "What does the result summary say?",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "status", "name": "Result summary" } }
+    ]
+  },
+  "expect": { "status": "failure:extract" },
+  "provenance": "the result summary is empty until a search or sort runs, so the extraction returns ''. The honest outcome is a loud failure:extract, never a success with a blank answer — the INV-0 family observed through the executor rather than through assemble_result directly.",
+  "triage": { "class": "silent-semantic", "note": "executor-side catch: empty extraction is a classified failure before the verifier is reached" }
+}

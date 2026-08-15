@@ -1,0 +1,23 @@
+{
+  "id": "verifier-numeric-precision",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "verifier",
+    "compare": [
+      ["$12,345.67", "$12,345.74", false],
+      ["¥1,234,570", "¥1,234,567", false],
+      ["#1234567", "#1234570", false],
+      ["$39.00", "39", true],
+      ["$39.00", "$39.00", true],
+      ["1,234,567.89", "1234567.89", true],
+      ["0.000123", "0.000124", false],
+      ["REF-6B5159", "REF-6B5159", true],
+      ["REF-6B5159", "REF-6B5160", false],
+      ["Cobalt Floor Rug", "cobalt floor rug", true]
+    ]
+  },
+  "expect": { "note": "triples are (got, want, should_match)" },
+  "provenance": "cold-reviewer finding 1 (M2 close-out): normalize() formatted numbers with '%g', which is 6 significant digits, so the grader declared $12,345.67 and $12,345.74 equal — and every price above ~$9,999 lost its cents at the one layer whose entire job is deciding whether an answer is right. No golden case had an answer longer than 4 significant digits, so the numeric branch was only ever exercised where it happened to be exact. Tagged invariant: a grader that cannot tell two numbers apart invalidates every other measurement in the repo.",
+  "triage": { "class": "invariant-gap", "note": "silent wrong PASS at layer 2; fix = exact decimal comparison, never float formatting" }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "tc3-shop-detail-nav-zh",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC3",
+  "input": {
+    "task": "從商品目錄開啟 Meridian Wall Clock 的頁面，回報它的商品編號。",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "link", "name": "Meridian Wall Clock" },
+        "expected_state": { "url_contains": "shop-clock" } },
+      { "action": "extract", "target": { "role": "group", "name": "SKU" }, "anchor": "Meridian Wall Clock" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "CLOCK-MER", "anchors": ["CLOCK-MER"] },
+  "provenance": "authored fixtures. ZH sample for TC3."
+}

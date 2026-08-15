@@ -1,0 +1,16 @@
+{
+  "id": "tc1-shop-price-zh",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "這個頁面上的 Meridian 掛鐘要多少錢？",
+    "fixture": "shop-clock.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "group", "name": "Price" }, "anchor": "CLOCK-MER" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "$24.50", "anchors": ["CLOCK-MER"] },
+  "provenance": "authored fixture shop-clock.html. ZH sample for TC1. Limitation: the fast suite stubs the planner, so this exercises non-ASCII task text end-to-end through screening, trace and result serialization — not ZH planning quality, which only the full suite can measure."
+}

@@ -1,0 +1,18 @@
+{
+  "id": "tc4-shop-sort-cheapest",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+        "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+      { "action": "extract", "target": { "role": "link", "index": 0 } }
+    ]
+  },
+  "expect": { "status": "success", "answer": "Cobalt Floor Rug", "anchors": ["Cobalt Floor Rug"] },
+  "provenance": "authored fixture shop.html: catalogue order in the file is lamp/pro/clock/rug, so position 1 only becomes the $18.00 rug if the sort control actually ran. trap-unsorted-cheapest is the same extraction without the click and must be caught."
+}

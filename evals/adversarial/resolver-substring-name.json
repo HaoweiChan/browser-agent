@@ -1,15 +1,30 @@
 {
   "id": "resolver-substring-name",
   "task": "browser",
-  "suites": ["fast"],
+  "suites": [
+    "fast"
+  ],
+  "tc": "TC1",
+  "level": "L1",
   "input": {
     "task": "What does the 'History' heading say?",
     "fixture": "hello.html",
     "stub_plan": [
-      { "action": "extract", "target": { "role": "heading", "name": "History" } }
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "History"
+        }
+      }
     ]
   },
-  "expect": { "status": "failure:locate" },
+  "expect": {
+    "status": "failure:locate"
+  },
   "provenance": "cold-reviewer finding 3 (M1 close-out): get_by_role's default substring matching let a request for an absent 'History' heading uniquely resolve to 'Hello Fixture History' and extract the wrong element's text as a success. The correct behavior when the asked-for element is absent is a loud failure:locate.",
-  "triage": { "class": "invariant-gap", "note": "wrong-element resolution reported as tier-1 win; fix = exact accessible-name matching (planner names come from the observation, so exact is available)" }
+  "triage": {
+    "class": "invariant-gap",
+    "note": "wrong-element resolution reported as tier-1 win; fix = exact accessible-name matching (planner names come from the observation, so exact is available)"
+  }
 }

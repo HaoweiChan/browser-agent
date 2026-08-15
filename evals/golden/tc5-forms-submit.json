@@ -1,0 +1,26 @@
+{
+  "id": "tc5-forms-submit",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC5",
+  "input": {
+    "task": "Send an enquiry from Ada Lovelace (ada@example.com) asking whether the Aurora lamp is dimmable, and report the reference number.",
+    "fixture": "forms.html",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "textbox", "name": "Full name" }, "value": "Ada Lovelace" },
+      { "action": "fill", "target": { "role": "textbox", "name": "Email" }, "value": "ada@example.com" },
+      { "action": "fill", "target": { "role": "textbox", "name": "Message" }, "value": "Is the Aurora lamp dimmable?" },
+      { "action": "click", "target": { "role": "button", "name": "Submit enquiry" },
+        "expected_state": { "text_visible": "Enquiry received" } },
+      { "action": "extract", "target": { "role": "group", "name": "Reference" }, "anchor": "Ada Lovelace" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "REF-6B5159",
+    "anchors": ["Ada Lovelace"],
+    "state": { "name": "Ada Lovelace", "email": "ada@example.com", "message": "Is the Aurora lamp dimmable?" }
+  },
+  "provenance": "authored fixture forms.html. Ground truth is external to the browser path: the server's own record at /fixtures/forms/state, fetched by the eval adapter after the run and compared by the OutcomeVerifier (layer 2). The reference is sha1(name|email)[:6] so it is reproducible: REF-6B5159."
+}

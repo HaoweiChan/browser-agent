@@ -1,0 +1,31 @@
+{
+  "id": "verifier-anchor-not-self-satisfied",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {
+    "kind": "verifier",
+    "anchors": [
+      {
+        "answer": "Aurora Desk Lamp",
+        "page_texts": ["Nimbus Shop Aurora Desk Lamp $39.00 Cobalt Floor Rug $18.00"],
+        "anchors": ["Meridian Wall Clock"],
+        "pass": false
+      },
+      {
+        "answer": "Meridian Wall Clock",
+        "page_texts": ["Nimbus Shop Aurora Desk Lamp $39.00 Cobalt Floor Rug $18.00"],
+        "anchors": ["Meridian Wall Clock"],
+        "pass": false
+      },
+      {
+        "answer": "$39.00",
+        "page_texts": ["Aurora Desk Lamp LAMP-STD $39.00 Anodised aluminium"],
+        "anchors": ["LAMP-STD"],
+        "pass": true
+      }
+    ]
+  },
+  "expect": { "note": "an identity anchor must be satisfied by page evidence, never by the answer it is meant to corroborate" },
+  "provenance": "cold-reviewer finding 3 (M2 close-out): the eval-side anchor corpus was [answer] + page texts, so an anchor equal to the expected answer certified itself. That made identity_anchors unfalsifiable in four shipped cases (tc2-shop-search, tc4-shop-sort-cheapest, l4-shop-ids-renamed, l4-shop-wrapper-nesting) — a green check that could not go red. Scenario 2 is the exact shape: the answer contains the anchor, the page does not.",
+  "triage": { "class": "invariant-gap", "note": "tautological check; fix = anchors are checked against page evidence only" }
+}

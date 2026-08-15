@@ -5,23 +5,25 @@ the inline smoke page is replaced by the real frontend at M4.
 """
 
 import asyncio
+import hashlib
+import html
 import ipaddress
 import json
 import re
 import uuid
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .agent import run_task
+from .mutate import apply_mutation
 from .planner import live_planner
 
 app = FastAPI(title="browser-agent")
-app.mount("/fixtures", StaticFiles(directory=Path(__file__).parent / "fixtures"), name="fixtures")
+FIXTURE_DIR = (Path(__file__).parent / "fixtures").resolve()
 
 # ponytail: in-memory run store + semaphore(1) — persisted records and higher
 # concurrency when the M4 UI lands; per-IP rate limiting stays BACKLOG.
@@ -146,6 +148,58 @@ async def index():
 @app.get("/healthz")
 async def healthz():
     return {"ok": True}
+
+
+# --- Fixture sites ---------------------------------------------------------
+# Served through the mutation layer rather than StaticFiles: `?mut=` is the
+# self-maintenance ground truth, so it has to sit on the only serving path.
+# The forms fixture's last submission is the eval's external ground truth.
+
+FORM_STATE: dict = {}
+
+CONFIRM = """<!doctype html>
+<meta charset="utf-8">
+<title>Enquiry received — Nimbus Shop</title>
+<h1>Enquiry received</h1>
+<p>Thank you, {name}.</p>
+<div role="group" aria-label="Reference"><span>{ref}</span></div>
+<p><a href="/fixtures/forms.html">Send another</a></p>
+"""
+
+
+@app.post("/fixtures/forms/submit", response_class=HTMLResponse)
+async def forms_submit(request: Request):
+    body = (await request.body()).decode()
+    data = {k: v[0] for k, v in parse_qs(body).items()}
+    ref = "REF-" + hashlib.sha1(
+        f"{data.get('name', '')}|{data.get('email', '')}".encode()
+    ).hexdigest()[:6].upper()
+    FORM_STATE.clear()
+    FORM_STATE.update({**data, "ref": ref})
+    return CONFIRM.format(name=html.escape(data.get("name", "")), ref=ref)
+
+
+@app.get("/fixtures/forms/state")
+async def forms_state():
+    """Ground truth for TC5 — what the server actually received."""
+    return FORM_STATE
+
+
+@app.post("/fixtures/forms/reset")
+async def forms_reset():
+    FORM_STATE.clear()
+    return {"ok": True}
+
+
+@app.get("/fixtures/{name}", response_class=HTMLResponse)
+async def fixture(name: str, mut: str | None = None):
+    path = (FIXTURE_DIR / name).resolve()
+    if path.parent != FIXTURE_DIR or not path.is_file():
+        raise HTTPException(404, "no such fixture")
+    try:
+        return apply_mutation(path.read_text(), mut)
+    except KeyError as e:
+        raise HTTPException(422, str(e)) from e
 
 
 async def smoke_events():

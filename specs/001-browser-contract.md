@@ -11,9 +11,12 @@ contract-drift (spec-drift audits field-by-field).
   "status": "success | partial | failure:<class> | unsupported",
   "answer": "string | list | null",
   "reason": "string | null",
+  "verdict": { "verdict": "PASS | FAIL | INCONCLUSIVE", "layer": 1,
+               "ground_truth": false, "checks": {}, "reason": null },
   "evidence": {
     "trace": [ TraceStep, ... ],
     "screenshots": ["step_1.png", ...],
+    "extractions": [ {"value": "...", "page_text": "≤2000 chars around the value"} ],
     "final_url": "string | null",
     "final_page_digest": "first ~500 chars of page text | null"
   },
@@ -33,10 +36,22 @@ contract-drift (spec-drift audits field-by-field).
   non-empty `answer` AND a non-empty `evidence.trace`.** An empty extraction is
   `failure:extract`, never a quiet success.
 - `reason` — human-readable cause for non-success statuses; null on success.
+- `verdict` — the OutcomeVerifier's finding (`src/browser/verifier.py`), null
+  when the run stopped before anything could be verified (screened out,
+  navigation failure). **INV-2: a non-PASS verdict can never be `success`.**
+  `ground_truth` is false for a runtime verdict (layer 1 predicates only) and
+  true when the caller supplied external ground truth — the eval adapter does,
+  a live run cannot. `layer` names the deepest layer that ran.
+- `evidence.extractions` — what was read and what the page said where it was
+  read, captured at extraction time. This is the verifier's input; it exists so
+  verification consumes raw evidence rather than the executor's conclusion.
 - `partial` — only for enumerable multi-item tasks: `answer` holds the correct
   subset, `reason` states what is missing. Honesty note: no code path produces
-  `partial` yet — it lands with OutcomeVerifier L2 (M2); until then incomplete
-  enumerations surface as failures, never as quiet successes.
+  `partial` yet. It was scheduled for M2 with OutcomeVerifier L2 and did not
+  land: L2 compares a whole answer against ground truth, and nothing in the
+  B-floor task set enumerates a set whose *subset* is meaningfully correct.
+  Until a case demands it, incomplete enumerations surface as failures, never
+  as quiet successes.
 
 ## TraceStep
 
@@ -47,8 +62,9 @@ appears, in order — no post-hoc reconstruction).
 {
   "i": 1,
   "action": "navigate | click | fill | extract",
-  "target": {"role": "...", "name": "...", "text": "...", "near": "..."} ,
+  "target": {"role": "...", "name": "...", "text": "...", "near": "...", "index": 0} ,
   "value": "string | null",
+  "anchor": "string | null",
   "resolved": {"tier": "role|text|attrs|structural", "description": "..."} ,
   "expected_state": {"url_contains": "..."} ,
   "postcondition_ok": true,
@@ -60,8 +76,24 @@ appears, in order — no post-hoc reconstruction).
 }
 ```
 
+- `postcondition_ok` is **true / false / null**, and null is not true: it means
+  nothing was asserted about this step. Every key in `expected_state` must
+  hold. A `click` with a null postcondition is unverifiable and the run is
+  `failure:semantic`; a `fill` verifies itself by field readback and needs no
+  authored postcondition.
 - `resolved.tier` is the locator tier that won — the self-maintenance metric
   reads this field.
+- `target.index` (0-based) selects the k-th match instead of requiring
+  uniqueness — "the first search result" is a browsing primitive, not site
+  knowledge. Without it, several matches remain a loud `locate` failure.
+- `anchor` (extract steps) is the identity anchor: the distinguishing string of
+  the entity the task names. If it is absent from the page the answer was read
+  from, the run is `failure:semantic`. Two known limits, both with cases: it is
+  a substring test, so a near-miss entity whose name contains the target's name
+  passes (`trap-near-miss-entity`); and on an aggregate page — a listing, a
+  search-results page — every candidate entity is in the page text, so the
+  anchor is satisfied by the wrong answer too (`trap-search-not-executed`).
+  Only ground-truth verification catches either, and a live run has none.
 - `retry_or_recovery` — null for first attempts; `"retry"` for same-strategy
   re-attempts; `"recovery"` only when a classified failure led to a different
   strategy (M3). The recovery metric counts only `"recovery"` steps by
@@ -73,5 +105,9 @@ appears, in order — no post-hoc reconstruction).
 
 - INV-0 (specs/000): never `success` with empty output — enforced at
   `assemble_result`, backed by `evals/adversarial/inv0-no-empty-success.json`.
-- Future invariants (budgets-enforced, trace-complete, one-class-per-failure)
-  enter specs/000 with their backing cases as the features land (M2–M3).
+- INV-1: exactly one failure class per non-success status —
+  `evals/adversarial/inv1-one-failure-class.json`.
+- INV-2: the verifier outranks the executor —
+  `evals/adversarial/inv2-verifier-outranks-executor.json`.
+- Remaining planned invariant (budgets-enforced) enters specs/000 with its
+  backing case when the M3 budget enforcement lands.

@@ -1,0 +1,23 @@
+{
+  "id": "trap-wrong-field",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC1",
+  "trap": "wrong field, right page",
+  "input": {
+    "task": "What is the SKU of the Aurora Desk Lamp?",
+    "fixture": "shop-lamp-std.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "group", "name": "Material" }, "anchor": "LAMP-STD" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "verdict": "FAIL",
+    "answer": "LAMP-STD",
+    "anchors": ["LAMP-STD"]
+  },
+  "provenance": "right page, right entity, wrong field: every identity anchor passes (the SKU really is on this page) and the extraction is grounded. Nothing but the hand-labeled expected answer can catch it — the case that shows identity anchors are necessary and not sufficient.",
+  "triage": { "class": "silent-semantic", "note": "anchor-passing wrong answer; layer 2 only" }
+}

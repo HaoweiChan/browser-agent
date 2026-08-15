@@ -1,0 +1,23 @@
+{
+  "id": "trap-unsorted-cheapest",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC4",
+  "trap": "planted wrong outcome",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "index": 0 } }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "verdict": "FAIL",
+    "answer": "Cobalt Floor Rug",
+    "anchors": ["Cobalt Floor Rug"]
+  },
+  "provenance": "tc4-shop-sort-cheapest with the sort click removed: the agent reads position 1 of an unsorted list and answers 'Aurora Desk Lamp'. This case is what proves tc4-shop-sort-cheapest can go red — without it, that golden case could be passing on list order rather than on the control it claims to operate.",
+  "triage": { "class": "silent-semantic", "note": "skipped stateful action, plausible answer; caught by hand-labeled ground truth" }
+}

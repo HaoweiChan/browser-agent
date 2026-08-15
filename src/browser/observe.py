@@ -5,9 +5,18 @@ in this observation. Kept compact — raw DOM dumps blow token budgets
 (browser-domain skill).
 """
 
-SKIP_ROLES = {"generic", "none", "InlineTextBox", "LineBreak", "StaticText", "text", "paragraph"}
+SKIP_ROLES = {"generic", "none", "InlineTextBox", "LineBreak", "StaticText", "text",
+              "paragraph", "LabelText", "ListMarker"}
 MAX_ELEMS = 60
 TEXT_HEAD = 300
+
+# ARIA forbids an author-supplied accessible name on these roles, so Playwright
+# computes "" for them however loudly the DOM shouts aria-label. Chromium's
+# snapshot is more permissive and reports a name anyway — advertising it would
+# hand the planner a target the resolver can never match (case
+# observe-name-prohibited-roles). Show the element, hide the unusable name.
+NAME_PROHIBITED = {"definition", "term", "code", "emphasis", "strong", "caption",
+                   "deletion", "insertion", "mark", "subscript", "superscript", "time"}
 
 
 async def observe(page) -> dict:
@@ -23,7 +32,7 @@ async def observe(page) -> dict:
         role = node.get("role", "")
         name = (node.get("name") or "").strip()
         if role and role not in SKIP_ROLES:
-            elems.append({"role": role, "name": name})
+            elems.append({"role": role, "name": "" if role in NAME_PROHIBITED else name})
         for child in node.get("children") or []:
             walk(child)
 

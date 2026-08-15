@@ -1,0 +1,8 @@
+{
+  "id": "inv2-verifier-outranks-executor",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "input": { "kind": "invariant", "check": "inv2" },
+  "expect": { "note": "a FAIL or INCONCLUSIVE verdict can never be reported as success, whatever the executor thinks" },
+  "provenance": "pure-code property check backing INV-2 (specs/000). This is the structural half of silent-failure prevention: the executor reaching its last step is not what makes a run successful, the verifier is. Watched red by removing the verdict branch in assemble_result."
+}

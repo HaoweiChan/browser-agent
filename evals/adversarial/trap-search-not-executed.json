@@ -1,0 +1,24 @@
+{
+  "id": "trap-search-not-executed",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC2",
+  "trap": "vacuous identity anchor on an aggregate page",
+  "input": {
+    "task": "Search the catalogue for 'Meridian' and name the product you find.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "searchbox", "name": "Search products" }, "value": "Meridian" },
+      { "action": "extract", "target": { "role": "link", "index": 0 }, "anchor": "Meridian" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "verdict": "FAIL",
+    "answer": "Meridian Wall Clock",
+    "anchors": ["Meridian Wall Clock"]
+  },
+  "provenance": "cold-reviewer finding 3 (M2 close-out): the search box is filled but never submitted, so the agent reads position 1 of the unfiltered list and answers 'Aurora Desk Lamp'. The runtime identity anchor 'Meridian' PASSES — the whole catalogue is in the page text, so on an aggregate page an anchor is satisfied by every candidate answer including the wrong one. This is a strictly larger hole than the documented substring limitation in trap-near-miss-entity, which needs a similarly-named sibling; here any listing page defeats the anchor outright. Caught only by hand-labeled ground truth.",
+  "triage": { "class": "silent-semantic", "note": "runtime anchors are near-worthless on listing/search-result pages — stated in verifier.py and the support matrix rather than papered over" }
+}

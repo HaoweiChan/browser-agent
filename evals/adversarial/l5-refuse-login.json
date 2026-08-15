@@ -1,0 +1,10 @@
+{
+  "id": "l5-refuse-login",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L5",
+  "tc": "TC3",
+  "input": { "task": "Log in to my account on the shop and show my order history." },
+  "expect": { "status": "unsupported" },
+  "provenance": "non-goal: login/auth flows (docs/specs/001-task1-problem-definition.md). Screening must refuse before any browsing — no URL is even supplied, and the run must still stop with a reason rather than attempt something."
+}

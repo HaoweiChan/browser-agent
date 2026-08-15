@@ -58,6 +58,30 @@ def run_case(case):
     return result
 
 
+def pctl(values, p):
+    """Nearest-rank percentile — no numpy for a list of a few dozen floats."""
+    if not values:
+        return 0.0
+    s = sorted(values)
+    return s[min(len(s) - 1, int(round(p / 100 * len(s) + 0.5)) - 1)]
+
+
+def aggregate(results):
+    """Cost and latency roll-up. Adapters report spend under `budgets`; the
+    runner stays task-agnostic by summing whatever numeric keys it finds."""
+    totals: dict[str, float] = {}
+    for r in results:
+        for k, v in (r.get("budgets") or {}).items():
+            if isinstance(v, (int, float)):
+                totals[k] = round(totals.get(k, 0) + v, 6)
+    secs = [r["seconds"] for r in results]
+    totals["wall_seconds"] = round(sum(secs), 2)
+    totals["latency_p50"] = pctl(secs, 50)
+    totals["latency_p95"] = pctl(secs, 95)
+    totals["cases_with_budgets"] = sum(1 for r in results if r.get("budgets"))
+    return totals
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--suite", default="fast")
@@ -76,18 +100,22 @@ def main():
     results = [run_case(c) for c in cases]
     passed = sum(r["passed"] for r in results)
     score = passed / len(results)
+    totals = aggregate(results)
     for r in results:
         mark = "PASS" if r["passed"] else "FAIL"
         print(f"[{mark}] {r['id']} ({r['kind']}, {r['seconds']}s)")
         if not r["passed"] and "error" in r:
             print(f"       {r['error'].strip().splitlines()[-1]}")
     print(f"[eval] suite '{args.suite}': {passed}/{len(results)} = {score:.3f}")
+    print(f"[eval] cost ${totals.get('llm_usd', 0):.4f} · {int(totals.get('llm_tokens', 0))} tok · "
+          f"{int(totals.get('actions', 0))} actions · wall {totals['wall_seconds']}s · "
+          f"p50 {totals['latency_p50']}s p95 {totals['latency_p95']}s")
 
     if not args.no_report:
         REPORT_DIR.mkdir(parents=True, exist_ok=True)
         stamp = time.strftime("%Y%m%d-%H%M%S")
         (REPORT_DIR / f"{stamp}-{args.suite}.json").write_text(json.dumps(
-            {"suite": args.suite, "score": score, "results": results}, indent=2))
+            {"suite": args.suite, "score": score, "totals": totals, "results": results}, indent=2))
 
     baseline_path = Path(args.baseline)
     baseline = json.loads(baseline_path.read_text()) if baseline_path.exists() else {}

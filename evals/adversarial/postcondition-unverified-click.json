@@ -1,0 +1,19 @@
+{
+  "id": "postcondition-unverified-click",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+        "expected_state": null },
+      { "action": "extract", "target": { "role": "link", "index": 0 } }
+    ]
+  },
+  "expect": { "status": "failure:semantic" },
+  "provenance": "cold-reviewer finding 2 (M2 close-out): check_state() returned True when there was nothing to check, so a step nobody verified was recorded as postcondition_ok: true — and src/browser/agent.py's own docstring claims every step is postcondition-verified. The planner prompt actively encouraged this by telling the model to emit expected_state: null whenever the resulting state could not be known, which on real sites is the common case. Note this plan produces the RIGHT answer: the sort really does run. It is failed anyway, because an unverified state change is not a verified one — the methodology's INCONCLUSIVE-is-not-PASS stance applied to a step.",
+  "triage": { "class": "invariant-gap", "note": "unverified recorded as verified; fix = postcondition_ok null for 'not checked' + the verifier requires every click to be verified. The planner prompt now requires a postcondition on click." }
+}

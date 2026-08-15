@@ -1,0 +1,19 @@
+{
+  "id": "observe-name-prohibited-roles",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": { "kind": "observe", "fixture": "shop-lamp-std.html" },
+  "expect": {
+    "contains": [
+      { "role": "heading", "name": "Aurora Desk Lamp" },
+      { "role": "group", "name": "Price" },
+      { "role": "group", "name": "SKU" }
+    ],
+    "unnameable_roles": ["definition", "term", "code", "emphasis", "strong",
+                         "caption", "deletion", "insertion", "mark",
+                         "subscript", "superscript", "time"],
+    "note": "the observation may not advertise a name the resolver can never match"
+  },
+  "provenance": "found while designing the M2 shop fixture (2026-08-16). Chromium's accessibility snapshot reports <dd aria-label=\"Warranty\"> as role 'definition' with name 'Warranty', but ARIA marks term/definition as name-prohibited, so Playwright's accessible-name computation yields '' and get_by_role('definition', name='Warranty') matches 0 elements — verified directly against Playwright 1.49. The planner is told to target only what the observation shows, so it will confidently emit an unresolvable target and the run dies as failure:locate on an element that is right there on the page.",
+  "triage": { "class": "invariant-gap", "note": "observation/resolver capability mismatch — observe() advertises addressability it does not have. Fix = blank the name on name-prohibited roles so the planner cannot target them by name; the residual gap (such values are unaddressable) goes to the support matrix as a stated limitation, not a silent failure." }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "trap-form-not-submitted",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC5",
+  "trap": "absent outcome",
+  "input": {
+    "task": "Send an enquiry from Grace Hopper (grace@example.com) about bulk orders and confirm it was sent.",
+    "fixture": "forms.html",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "textbox", "name": "Full name" }, "value": "Grace Hopper" },
+      { "action": "fill", "target": { "role": "textbox", "name": "Email" }, "value": "grace@example.com" },
+      { "action": "fill", "target": { "role": "textbox", "name": "Message" }, "value": "Do you take bulk orders?" },
+      { "action": "extract", "target": { "role": "heading", "name": "Contact Nimbus Shop" } }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "verdict": "FAIL",
+    "state": { "name": "Grace Hopper", "email": "grace@example.com" }
+  },
+  "provenance": "the form is filled but never submitted, and the agent reports the page heading as if it were a confirmation. The browser-side evidence is entirely consistent; only the server's own record at /fixtures/forms/state disagrees, which is why TC5 ground truth is an endpoint rather than a page assertion. Also proves tc5-forms-submit can go red.",
+  "triage": { "class": "silent-semantic", "note": "the action that mattered never happened; caught by external state, layer 2" }
+}

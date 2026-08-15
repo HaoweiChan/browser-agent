@@ -1,0 +1,18 @@
+{
+  "id": "tc3-shop-detail-nav",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC3",
+  "input": {
+    "task": "From the catalogue, open the Aurora Desk Lamp and report its material.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "link", "name": "Aurora Desk Lamp" },
+        "expected_state": { "url_contains": "shop-lamp-std" } },
+      { "action": "extract", "target": { "role": "group", "name": "Material" }, "anchor": "LAMP-STD" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "Anodised aluminium", "anchors": ["LAMP-STD"] },
+  "provenance": "authored fixtures. Two page states (listing -> detail). The link name is exact, which is what keeps it off the 'Aurora Desk Lamp Pro' sibling — the resolver-substring-name guard in action on a realistic pair."
+}

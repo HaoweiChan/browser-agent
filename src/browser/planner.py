@@ -17,17 +17,28 @@ DEFAULT_MODEL = "anthropic/claude-sonnet-4.5"
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
 Each step: {"action": "navigate|click|fill|extract",
- "target": {"role": str|null, "name": str|null, "text": str|null} | null,
+ "target": {"role": str|null, "name": str|null, "text": str|null, "index": int|null} | null,
  "value": str|null,
+ "anchor": str|null,
  "expected_state": {"url_contains": str} | {"text_visible": str} | {"role_visible": {"role": str, "name": str|null}} | null}
 Rules: `navigate` puts the URL in `value`. `extract` reads the target element's
 text as the answer. Targets are semantic (ARIA role + accessible name) — never
-CSS selectors. Prefer few steps.
+CSS selectors. `index` (0-based) picks the k-th match when several elements
+share a role, e.g. the first search result. On an `extract` step, `anchor` is
+the distinguishing name of the entity the task is about; the run fails if that
+string is absent from the page the answer was read from — use it whenever the
+task names a specific entity. Prefer few steps.
+Every `click` MUST carry an expected_state — a click that changes nothing you
+can check is a click nobody can verify, and the run will be failed for it.
+Pick the cheapest checkable consequence: a URL fragment, or a role+name that
+becomes visible. All keys you give must hold, so assert one thing you are sure
+of rather than two you are hoping for. `fill` verifies itself by readback and
+needs no expected_state. If a click's consequence genuinely cannot be known
+from the observation, prefer a different plan over a guess — never invent
+expected text.
 When a page observation is provided: the browser is ALREADY on that page — do
 not re-navigate unless the task needs a different page, and target ONLY roles/
-names present in the observation. If an action's resulting state cannot be
-known from the observation or the task, use expected_state: null — never invent
-expected text. Output the raw JSON array only — no markdown fences, no commentary."""
+names present in the observation. Output the raw JSON array only — no markdown fences, no commentary."""
 
 
 class PlanError(Exception):

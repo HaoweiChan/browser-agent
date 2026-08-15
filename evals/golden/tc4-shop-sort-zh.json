@@ -1,0 +1,18 @@
+{
+  "id": "tc4-shop-sort-zh",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "把商品依價格由低到高排序，然後回報排序後第一項的名稱與價格。",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+        "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+      { "action": "extract", "target": { "role": "listitem", "index": 0 } }
+    ]
+  },
+  "expect": { "status": "success", "answer": "Cobalt Floor Rug $18.00", "anchors": ["Cobalt Floor Rug"] },
+  "provenance": "authored fixture shop.html. ZH sample for TC4; extracts the whole row so both name and price are verified against the authored ground truth."
+}

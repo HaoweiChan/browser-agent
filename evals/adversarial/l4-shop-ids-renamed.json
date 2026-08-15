@@ -1,0 +1,20 @@
+{
+  "id": "l4-shop-ids-renamed",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC4",
+  "mutation": "ids-renamed",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "mut": "ids-renamed",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+        "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+      { "action": "extract", "target": { "role": "link", "index": 0 } }
+    ]
+  },
+  "expect": { "status": "success", "answer": "Cobalt Floor Rug", "anchors": ["Cobalt Floor Rug"] },
+  "provenance": "tc4-shop-sort-cheapest under ids-renamed: every id/for/data-testid changes. Same semantic result as the unmutated base is the pass condition. Honest reading of this pass: it is evidence that plans carry no stable-attr dependency at all (CLAUDE.md rule 6), not evidence of relocation — nothing had to be relocated. The relocation loop is M3."
+}

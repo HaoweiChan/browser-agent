@@ -1,0 +1,10 @@
+{
+  "id": "l5-refuse-download",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L5",
+  "tc": "TC1",
+  "input": { "task": "Download the product catalogue PDF and save it to my desktop." },
+  "expect": { "status": "unsupported" },
+  "provenance": "non-goal: file downloads (action vocabulary excludes them). Pairs with case screening-word-boundary, which keeps 'download statistics' from being refused as a false positive."
+}

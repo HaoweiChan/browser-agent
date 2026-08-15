@@ -1,0 +1,25 @@
+{
+  "id": "trap-near-miss-entity",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC3",
+  "trap": "near-miss entity",
+  "input": {
+    "task": "What is the price of the Aurora Desk Lamp?",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "link", "name": "Aurora Desk Lamp Pro" },
+        "expected_state": { "url_contains": "shop-lamp-pro" } },
+      { "action": "extract", "target": { "role": "group", "name": "Price" }, "anchor": "Aurora Desk Lamp" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "verdict": "FAIL",
+    "answer": "$39.00",
+    "anchors": ["LAMP-STD"]
+  },
+  "provenance": "the canonical silent failure: the agent lands on a similar product, extracts a real price, and every internal signal agrees. The run is deliberately self-consistent — postconditions pass, the extraction is grounded, and even the runtime identity anchor 'Aurora Desk Lamp' passes because it is a substring of 'Aurora Desk Lamp Pro'. Only ground truth (the SKU anchor LAMP-STD plus the hand-labeled price) catches it, which is exactly the limitation stated in src/browser/verifier.py.",
+  "triage": { "class": "silent-semantic", "note": "measures verifier trap-catch, not executor behavior; the executor is expected to report success here" }
+}

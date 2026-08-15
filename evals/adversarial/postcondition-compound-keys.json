@@ -1,0 +1,19 @@
+{
+  "id": "postcondition-compound-keys",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC3",
+  "input": {
+    "task": "Open the Aurora Desk Lamp page and report its material.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "link", "name": "Aurora Desk Lamp" },
+        "expected_state": { "url_contains": "shop-lamp-std", "text_visible": "Out of stock" } },
+      { "action": "extract", "target": { "role": "group", "name": "Material" } }
+    ]
+  },
+  "expect": { "status": "failure:act" },
+  "provenance": "cold-reviewer finding 2b (M2 close-out): check_state was an if/elif chain, so a compound expected_state had only its FIRST key evaluated and the rest silently dropped. Here the URL condition holds and 'Out of stock' is nowhere on the page — the step must fail. A planner that hedges by asserting two things and gets graded on one is being told its weakest claim is its strongest.",
+  "triage": { "class": "invariant-gap", "note": "silently dropped assertions; fix = every provided key must hold" }
+}

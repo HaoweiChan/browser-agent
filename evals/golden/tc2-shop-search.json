@@ -1,0 +1,20 @@
+{
+  "id": "tc2-shop-search",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC2",
+  "input": {
+    "task": "Search the catalogue for 'Meridian' and name the product you find.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "searchbox", "name": "Search products" }, "value": "Meridian",
+        "expected_state": null },
+      { "action": "click", "target": { "role": "button", "name": "Search" },
+        "expected_state": { "text_visible": "1 result(s) for \"meridian\"" } },
+      { "action": "extract", "target": { "role": "link", "index": 0 }, "anchor": "Meridian" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "Meridian Wall Clock", "anchors": ["Meridian Wall Clock"] },
+  "provenance": "authored fixture shop.html; the search filter sets display:none on non-matching rows, which removes them from the accessibility tree, so link index 0 is the only surviving result. Postcondition asserts the result count the fixture reports."
+}

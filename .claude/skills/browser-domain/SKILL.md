@@ -18,20 +18,43 @@ uniqueness × visibility × tier prior × cached history.
 
 ## Fixture map
 
-Served by the same FastAPI app; evals hit them via loopback.
+Served by the same FastAPI app (`GET /fixtures/{name}`); the eval adapter
+starts that app on a loopback port, so eval and production share one serving
+path. `src/browser/mutate.py` is the transform layer.
 
-- `/fixtures/shop` — catalogue: listing, detail pages, filter/sort controls.
-  Ground truth: authored content, deterministic.
-- `/fixtures/forms` — multi-field form + confirmation. Ground truth:
-  `/fixtures/forms/state` endpoint returns the last submission.
-- `?mut=<name>` middleware applies deterministic HTML transforms:
+- `/fixtures/shop.html` — catalogue: search box, sort control, 4 products,
+  detail pages (`shop-lamp-std|lamp-pro|clock|rug.html`). Ground truth:
+  authored content. `Aurora Desk Lamp` / `Aurora Desk Lamp Pro` are a
+  deliberate near-miss pair; SKUs (`LAMP-STD`, `LAMP-PRO`, …) are the
+  distinguishing identity anchors.
+- `/fixtures/forms.html` — multi-field form + server-rendered confirmation.
+  Ground truth: `GET /fixtures/forms/state` returns the last submission;
+  `POST /fixtures/forms/reset` clears it before a case.
+- `/fixtures/hello.html` — M1 walking-skeleton page, still the cheapest case.
+- `?mut=<name>` applies deterministic HTML transforms:
   B-floor: `ids-renamed`, `button-text-renamed`, `wrapper-nesting`
   (each breaks exactly one locator tier — that's the point).
   B-strong: `classes-scrambled`, `element-reordered`, `duplicate-labels`,
   `render-delayed`, `overlay-modal`, `a11y-stripped`.
 
+**A fixture must survive its own mutations.** `ids-renamed` renames every
+`id`/`for`/`data-testid`, so fixture scripts resolve their own elements by
+tag/aria-label, never by id — otherwise the mutation breaks the page instead
+of the agent's stable-attr dependency, and the L4 case measures nothing
+(learned the hard way: `l4-shop-ids-renamed`, guarded by
+`mutation-catalog-integrity`).
+
 Fixture code may know its own DOM; it must never leak selectors to the
 executor (rule 6 boundary — cold-reviewer checks this).
+
+## Roles that are addressable (verified against Playwright 1.49)
+
+Nameable and resolvable: `heading`, `link`, `button`, `searchbox`, `textbox`,
+`list`, `listitem` (unnamed, use `index`), `group`, `status`, `cell`,
+`rowheader`. **Not** nameable: `definition`, `term`, `code`, `emphasis`,
+`strong`, `caption`, `time` — ARIA prohibits an author name on these, so
+Chromium's snapshot shows a name that `get_by_role(..., name=)` will never
+match. `observe()` blanks those names for exactly that reason.
 
 ## Postcondition patterns (expected_state)
 

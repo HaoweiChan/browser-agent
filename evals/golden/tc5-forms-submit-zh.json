@@ -1,0 +1,26 @@
+{
+  "id": "tc5-forms-submit-zh",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC5",
+  "input": {
+    "task": "以林小美 (mei@example.com) 的名義送出詢問單，詢問地毯是否有其他顏色，並回報參考編號。",
+    "fixture": "forms.html",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "textbox", "name": "Full name" }, "value": "林小美" },
+      { "action": "fill", "target": { "role": "textbox", "name": "Email" }, "value": "mei@example.com" },
+      { "action": "fill", "target": { "role": "textbox", "name": "Message" }, "value": "地毯還有其他顏色嗎？" },
+      { "action": "click", "target": { "role": "button", "name": "Submit enquiry" },
+        "expected_state": { "text_visible": "Enquiry received" } },
+      { "action": "extract", "target": { "role": "group", "name": "Reference" }, "anchor": "林小美" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "REF-CFEDF0",
+    "anchors": ["林小美"],
+    "state": { "name": "林小美", "email": "mei@example.com", "message": "地毯還有其他顏色嗎？" }
+  },
+  "provenance": "authored fixture forms.html. ZH sample for TC5; also the only case that pushes non-ASCII through a form POST, the server's state record and back out as an identity anchor."
+}

@@ -1,0 +1,12 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nimbus Shop — Contact</title>
+<h1>Contact Nimbus Shop</h1>
+<p>Non-destructive enquiry form. The server records the last submission at
+<code>/fixtures/forms/state</code> — that endpoint is the eval ground truth.</p>
+<form id="enquiry" method="post" action="/fixtures/forms/submit">
+  <p><label for="name">Full name</label> <input id="name" name="name" type="text"></p>
+  <p><label for="email">Email</label> <input id="email" name="email" type="email"></p>
+  <p><label for="message">Message</label> <textarea id="message" name="message"></textarea></p>
+  <button id="submit-btn" type="submit">Submit enquiry</button>
+</form>

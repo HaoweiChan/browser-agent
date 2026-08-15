@@ -1,0 +1,16 @@
+{
+  "id": "tc1-shop-price",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the price of the Aurora Desk Lamp on this page?",
+    "fixture": "shop-lamp-std.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "group", "name": "Price" }, "anchor": "LAMP-STD" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "$39.00", "anchors": ["LAMP-STD", "Aurora Desk Lamp"] },
+  "provenance": "authored fixture src/browser/fixtures/shop-lamp-std.html; price and SKU are literal in the file. Identity anchor is the SKU, which is unique to this product (the Pro variant carries LAMP-PRO) — the distinguishing string the near-miss trap violates."
+}

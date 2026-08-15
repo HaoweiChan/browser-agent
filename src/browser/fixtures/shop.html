@@ -1,0 +1,55 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nimbus Shop — Catalogue</title>
+<h1>Nimbus Shop</h1>
+
+<form id="search-form" onsubmit="return doSearch(event)">
+  <label for="q">Search products</label>
+  <input id="q" type="search">
+  <button id="search-btn" type="submit">Search</button>
+</form>
+
+<button id="sort-btn" onclick="sortByPrice()">Sort by price (low to high)</button>
+
+<output id="summary" aria-label="Result summary" aria-live="polite"></output>
+
+<!-- Deliberately NOT in price order: sorting has to actually happen for the
+     cheapest item to reach position 1 (trap-unsorted-cheapest depends on it). -->
+<ul id="catalogue" aria-label="Catalogue">
+  <li id="row-lamp-std" data-price="39.00"><a href="shop-lamp-std.html">Aurora Desk Lamp</a> <span class="price">$39.00</span></li>
+  <li id="row-lamp-pro" data-price="59.00"><a href="shop-lamp-pro.html">Aurora Desk Lamp Pro</a> <span class="price">$59.00</span></li>
+  <li id="row-clock" data-price="24.50"><a href="shop-clock.html">Meridian Wall Clock</a> <span class="price">$24.50</span></li>
+  <li id="row-rug" data-price="18.00"><a href="shop-rug.html">Cobalt Floor Rug</a> <span class="price">$18.00</span></li>
+</ul>
+
+<script>
+// Deliberately id-free: the ids-renamed mutation rewrites every id on the page,
+// and a site that renames its own ids updates its own scripts too. Wiring this
+// page through id lookups would make that mutation break the fixture
+// instead of the agent's stable-attr dependency — which is what it did, until
+// case l4-shop-ids-renamed went red and said so.
+const list = () => document.querySelector('ul[aria-label="Catalogue"]');
+const summary = () => document.querySelector('[aria-label="Result summary"]');
+const rows = () => [...list().querySelectorAll('li')];
+
+function sortByPrice() {
+  const ul = list();
+  rows().sort((a, b) => a.dataset.price - b.dataset.price).forEach(li => ul.appendChild(li));
+  summary().textContent = 'Sorted by price (low to high)';
+}
+
+function doSearch(ev) {
+  ev.preventDefault();
+  const q = document.querySelector('input[type="search"]').value.trim().toLowerCase();
+  let hits = 0;
+  for (const li of rows()) {
+    const match = !q || li.textContent.toLowerCase().includes(q);
+    // display:none removes the row from the accessibility tree, so a filtered
+    // list really is invisible to the agent — not merely visually hidden.
+    li.style.display = match ? '' : 'none';
+    if (match) hits++;
+  }
+  summary().textContent = `${hits} result(s) for "${q}"`;
+  return false;
+}
+</script>

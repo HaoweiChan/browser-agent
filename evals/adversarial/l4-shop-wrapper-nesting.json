@@ -1,0 +1,21 @@
+{
+  "id": "l4-shop-wrapper-nesting",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC2",
+  "mutation": "wrapper-nesting",
+  "input": {
+    "task": "Search the catalogue for 'Meridian' and name the product you find.",
+    "fixture": "shop.html",
+    "mut": "wrapper-nesting",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "searchbox", "name": "Search products" }, "value": "Meridian" },
+      { "action": "click", "target": { "role": "button", "name": "Search" },
+        "expected_state": { "text_visible": "1 result(s) for \"meridian\"" } },
+      { "action": "extract", "target": { "role": "link", "index": 0 }, "anchor": "Meridian" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "Meridian Wall Clock", "anchors": ["Meridian Wall Clock"] },
+  "provenance": "tc2-shop-search under wrapper-nesting: every list row and the search form gain two extra div layers, so any structural/nth-child path is broken while roles and names are untouched. Same honest reading as l4-shop-ids-renamed — this proves tier independence, not relocation."
+}

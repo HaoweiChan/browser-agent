@@ -13,9 +13,15 @@ class ResolveError(Exception):
 
 
 async def resolve(page, target: dict):
-    """Return (locator, tier). Raises ResolveError with a locate subclass."""
+    """Return (locator, tier). Raises ResolveError with a locate subclass.
+
+    `index` (0-based) picks the k-th match instead of demanding uniqueness —
+    "the first result" is a real browsing primitive (TC2/TC4), not site
+    knowledge. Without it, ambiguity stays a loud locate failure.
+    """
     tiers = []
     role, name, text = target.get("role"), target.get("name"), target.get("text")
+    index = target.get("index")
     # exact=True: planner names come from the observation verbatim; substring
     # matching resolved absent targets to superstring siblings and extracted
     # the wrong element as a success (case resolver-substring-name).
@@ -28,6 +34,10 @@ async def resolve(page, target: dict):
     ambiguous = None
     for tier, loc in tiers:
         n = await loc.count()
+        if index is not None:
+            if n > index:
+                return loc.nth(index), tier
+            continue
         if n == 1:
             return loc, tier
         if n > 1 and ambiguous is None:
