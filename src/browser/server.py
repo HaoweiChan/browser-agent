@@ -5,11 +5,14 @@ the inline smoke page is replaced by the real frontend at M4.
 """
 
 import json
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="browser-agent")
+app.mount("/fixtures", StaticFiles(directory=Path(__file__).parent / "fixtures"), name="fixtures")
 
 SMOKE_URL = "https://example.com"
 

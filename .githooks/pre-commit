@@ -10,7 +10,8 @@ if git diff --cached | grep -qE 'sk-or-v1-[A-Za-z0-9]{8,}'; then
   exit 1
 fi
 [ -f evals/run.py ] || exit 0  # project removed the eval harness — no gate
-python3 -m evals.run --suite fast --baseline .eval-baseline.json --no-report
+PY=python3; [ -x .venv/bin/python ] && PY=.venv/bin/python  # task deps live in .venv
+"$PY" -m evals.run --suite fast --baseline .eval-baseline.json --no-report
 status=$?
 if [ $status -ne 0 ]; then
   echo ""

@@ -16,7 +16,9 @@ Format per invariant:
 ## INV-0: The pipeline never reports success with empty output
 - Rationale: silent failure is the #1 graded failure mode; an empty result
   must surface as an explicit failure/low-confidence signal, never a green run.
-- Enforced by: (pending — first task-specific case must cover this)
+- Enforced by: evals/adversarial/inv0-no-empty-success.json (inv0-no-empty-success)
+  — guard lives in `src/browser/agent.py::assemble_result`; the case was proven
+  red by disabling the guard before it was trusted green.
 
 ---
 

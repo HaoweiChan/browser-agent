@@ -1,0 +1,8 @@
+{
+  "id": "inv0-no-empty-success",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "input": { "kind": "invariant", "check": "inv0" },
+  "expect": { "note": "assemble_result with a completed trace but empty answer must NOT yield status=success" },
+  "provenance": "pure-code property check backing INV-0 (specs/000); no browser, no LLM, no network"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "tc1-hello-reveal",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {
+    "task": "Click the Reveal button and report the secret code that appears.",
+    "fixture": "hello.html",
+    "stub_plan": [
+      { "action": "navigate", "value": "$FIXTURE_URL" },
+      {
+        "action": "click",
+        "target": { "role": "button", "name": "Reveal" },
+        "expected_state": { "text_visible": "secret-42" }
+      },
+      { "action": "extract", "target": { "role": "status" } }
+    ]
+  },
+  "expect": { "status": "success", "answer": "secret-42" },
+  "provenance": "authored fixture; the <output> (ARIA role=status) is empty until the button's onclick fills it — the case fails if the click doesn't actually happen."
+}
