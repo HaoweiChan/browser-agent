@@ -61,8 +61,21 @@ def _run_fixture_case(case: dict) -> dict:
 
 
 def run_case(case: dict) -> dict:
-    if case["input"].get("kind") == "invariant":
+    kind = case["input"].get("kind")
+    if kind == "invariant":
         if case["input"]["check"] == "inv0":
             return _check_inv0()
         return {"passed": False, "error": f"unknown invariant check {case['input']['check']}"}
+    if kind == "parse-plan":
+        from .planner import PlanError, parse_plan
+
+        exp = case["expect"]
+        try:
+            steps = parse_plan(case["input"]["content"])
+        except PlanError as e:
+            return {"passed": False, "error": str(e)[:200]}
+        return {
+            "passed": len(steps) == exp["steps"] and steps[0]["action"] == exp["first_action"],
+            "got": {"steps": len(steps), "first_action": steps[0].get("action")},
+        }
     return _run_fixture_case(case)

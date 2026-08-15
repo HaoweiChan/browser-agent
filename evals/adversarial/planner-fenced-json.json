@@ -1,0 +1,12 @@
+{
+  "id": "planner-fenced-json",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {
+    "kind": "parse-plan",
+    "content": "```json\n[\n  {\n    \"action\": \"navigate\",\n    \"target\": null,\n    \"value\": \"https://whaleforce-browser-agent.zeabur.app/fixtures/hello.html\",\n    \"expected_state\": null\n  }\n]\n```"
+  },
+  "expect": { "steps": 1, "first_action": "navigate" },
+  "provenance": "real production failure, run 5a52f0aa on the deployed instance (2026-08-15): claude-sonnet-4.5 via OpenRouter wrapped the plan in a markdown fence; json.loads failed -> failure:env. Content here is the actual payload, trimmed.",
+  "triage": { "class": "input-variant", "note": "LLM output format variance at the planner boundary; fix = fence-tolerant parse_plan, not a retry" }
+}

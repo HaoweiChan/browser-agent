@@ -22,11 +22,29 @@ Each step: {"action": "navigate|click|fill|extract",
  "expected_state": {"url_contains": str} | {"text_visible": str} | {"role_visible": {"role": str, "name": str|null}} | null}
 Rules: `navigate` puts the URL in `value`. `extract` reads the target element's
 text as the answer. Targets are semantic (ARIA role + accessible name) — never
-CSS selectors. Prefer few steps. Every click/fill carries an expected_state."""
+CSS selectors. Prefer few steps. Every click/fill carries an expected_state.
+Output the raw JSON array only — no markdown fences, no commentary."""
 
 
 class PlanError(Exception):
     pass
+
+
+def parse_plan(content: str) -> list:
+    """Model output -> list of steps. Raises PlanError on non-plan output.
+
+    Tolerates markdown code fences (real production variance: adversarial case
+    planner-fenced-json, run 5a52f0aa)."""
+    text = content.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else ""
+        text = text.rsplit("```", 1)[0]
+    try:
+        steps = json.loads(text)
+        assert isinstance(steps, list)
+        return steps
+    except Exception as e:
+        raise PlanError(f"planner returned non-plan output: {e}: {content[:200]}")
 
 
 def stub_planner(steps: list):
@@ -64,11 +82,7 @@ def live_planner(model: str = DEFAULT_MODEL):
         }
         data = await asyncio.to_thread(_call, payload)
         content = data["choices"][0]["message"]["content"]
-        try:
-            steps = json.loads(content)
-            assert isinstance(steps, list)
-        except Exception as e:
-            raise PlanError(f"planner returned non-plan output: {e}: {content[:200]}")
+        steps = parse_plan(content)
         u = data.get("usage", {})
         usage = {
             "llm_tokens": u.get("total_tokens", 0),
