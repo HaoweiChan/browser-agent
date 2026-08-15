@@ -7,12 +7,16 @@ description: How to run, read, and extend the eval harness. Use whenever adding 
 
 ## Suites
 
-- `invariant` — properties that must ALWAYS hold. Run automatically by the
-  PostToolUse hook after every src/ edit. Must stay fast (< ~10s total).
-- `fast` — the pre-commit gate suite. Golden + adversarial cases cheap enough
-  to run on every commit (< ~60s total). No paid API calls here.
-- `full` — everything, including slow/expensive cases. Run before a milestone,
-  not on every commit.
+- `invariant` — properties that must ALWAYS hold; pure code, no LLM/network.
+  Run automatically by the PostToolUse hook after every src/ edit. Must stay
+  fast (< ~10s total). Gated at 100% regardless of baseline.
+- `fast` — the pre-commit gate suite. Fixtures + LLM stubbed at the module
+  boundary; zero paid calls, fully offline (< ~60s total).
+- `full` — live sites + real LLM calls. Run manually or scheduled (before a
+  milestone, for the analysis report, for the support matrix) — never in CI,
+  never on commit.
+- `all` — CLI-only catch-all (`--suite all`): matches every case regardless of
+  tags. Not a tag; don't put it in a case's `suites`.
 
 Tag cases via `"suites": [...]` in the case JSON; default is `["fast"]`.
 

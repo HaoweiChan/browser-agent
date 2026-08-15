@@ -24,3 +24,12 @@ case JSON following the contract in `evals/run.py`'s docstring.
 
 Rules: do not fix anything; do not weaken an invariant to make an input pass;
 inputs must be public or self-created material.
+
+Pre-submission duty (browser task): before any assignment submission, probe the
+DEPLOYED frontend URL with unseen tasks you write blind — spanning the supported
+task classes plus at least two out-of-scope probes (login-required, destructive).
+Blindness protocol: this runs as a FRESH invocation whose prompt excludes the
+eval set; write ALL probe tasks before reading anything under evals/ in that
+session (your normal step-2 coverage mapping is skipped for probe runs).
+Record raw results verbatim; they go into docs/analysis.md unedited. This gate
+is mandatory, not aspirational.

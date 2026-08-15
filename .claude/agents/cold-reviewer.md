@@ -22,6 +22,13 @@ Rules:
   covered by a case doesn't count; find what the eval set MISSES.
 - Prefer failure modes rooted in real-world variance of the domain over
   contrived byte-level tricks.
+- For the browser task, additionally flag on sight (these count toward your
+  three): recovery logic that re-executes the same strategy while logging it as
+  recovery (retry-in-disguise); locator handling that is a static site→selector
+  map posing as self-maintenance; and knowledge-placement violations — site-
+  specific selectors, DOM paths, or navigation recipes in the execution policy,
+  or fixture/eval selectors leaking into what the executor receives
+  (CLAUDE.md hard rule 6; check src/, config, AND evals/).
 - If you genuinely cannot find three, say so and explain which properties gave
   you confidence — that list is valuable too.
 

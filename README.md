@@ -12,7 +12,7 @@ invariants and golden/adversarial cases instead of prose specs.
 ## Status
 
 Repo scaffolded from the template — no implementation yet. Next steps per the
-groundwork loop: `specs/001-browser-agent-contract.md`, task invariants in
+groundwork loop: `specs/001-browser-contract.md`, task invariants in
 `specs/000`, a domain skill, and the first red eval cases before any code.
 
 ---

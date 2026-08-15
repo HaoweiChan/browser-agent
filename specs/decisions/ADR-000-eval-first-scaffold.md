@@ -1,6 +1,7 @@
 # ADR-000: Eval-first scaffold instead of spec-driven development
 
-Date: 2026-08-15 · Status: accepted
+Date: 2026-08-15 · Status: accepted — the "no tasks.md / plan files" consequence
+is amended by ADR-001 (bounded docs/ layer + milestone-level TODO)
 
 ## Context
 

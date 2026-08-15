@@ -22,21 +22,27 @@ README.md; this file is the working contract.
 .claude/hooks/     enforcement — the only layer that can actually block
 .githooks/         pre-commit eval gate (installed via core.hooksPath)
 specs/             ONLY: 000-invariants.md, per-task contracts, decisions/ADR-*.md
+docs/              planning package: product/ specs/ architecture/ evals/ plans/ + support-matrix.md, analysis.md (ADR-001)
+tasks/TODO.md      milestone-level tracker only — micro-tasks stay in-session (ADR-001)
 evals/golden/      hand-labeled cases (JSON, one per case)
 evals/adversarial/ cases known or designed to break the pipeline
 evals/report/      every run's output, committed to git
-prompts/           AI-collaboration record (auto-dumped raw/ + curated files)
+prompts/           AI-collaboration record (auto-dumped raw/ + curated 00N-*.md)
 src/<task>/        implementation + eval_adapter.py per task
 ```
 
 ## Commands
 
 ```bash
-python3 -m evals.run --suite fast              # quick gate suite
-python3 -m evals.run --suite invariant         # must-always-hold assertions
-python3 -m evals.run --suite all               # everything, writes report
+python3 -m evals.run --suite invariant         # must-always-hold, pure code, no LLM/network
+python3 -m evals.run --suite fast              # offline gate: fixtures + LLM stubs, zero paid calls
+python3 -m evals.run --suite full              # live sites + real LLM — manual/scheduled only
+python3 -m evals.run --suite all               # every case regardless of tags
 python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
 ```
+
+Suite names are case tags (`"suites": [...]`); `all` is the only selection-special
+CLI value, and `invariant` additionally gates at 100% regardless of baseline.
 
 ## Hard rules
 
@@ -45,11 +51,24 @@ python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
 2. **Every new failure becomes a case** in `evals/adversarial/` before it is fixed.
    Watch the new case fail first; an eval you've never seen red proves nothing.
 3. **specs/ holds only three kinds of files**: invariants, output contracts, ADRs.
-   No tasks.md, no plans — task lists live in the session, not in files.
+   Prose planning lives in `docs/`; the only task file is milestone-level
+   `tasks/TODO.md` (ADR-001). Micro-task lists stay in the session.
 4. **No mocked results.** If a live dependency is unreachable, fail loudly; never
    fabricate output to make a run look green.
 5. Commits go through the pre-commit eval gate. `--no-verify` is for emergencies
    and must be explained in the commit message.
+6. **No site-specific knowledge in the execution policy.** Production agent code
+   contains no site-specific selectors, DOM paths, or navigation recipes.
+   Eval/fixture code may use them strictly for ground-truth verification and
+   fault injection, and must never feed them to the executor. Allowed per-site
+   data anywhere: start URL, rate limit, ground-truth API endpoint.
+7. **Commits are consolidated milestones, not save-points.** Reviewers read the
+   history. Batch related work, verify it (suites + a self-review pass), THEN
+   commit once. No rapid fixup chains — a "fix X" commit minutes after X is a
+   review failure, not progress.
+8. **Secrets are environment variables only** — Zeabur service settings in prod,
+   shell env locally. No .env files, no secrets in code or history (pre-commit
+   guard enforces the OpenRouter pattern).
 
 ## Per-feature loop
 
