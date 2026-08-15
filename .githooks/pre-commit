@@ -1,6 +1,14 @@
 #!/bin/sh
 # Eval gate: no commit may regress the fast suite below the recorded baseline.
 cd "$(git rev-parse --show-toplevel)" || exit 1
+
+# Secret guard: no API key material ever enters history (repo goes public at submission).
+# ponytail: one pattern per provider we actually use; extend when a new provider is added.
+if git diff --cached | grep -qE 'sk-or-v1-[A-Za-z0-9]{8,}'; then
+  echo "COMMIT BLOCKED: staged content matches an OpenRouter API key (sk-or-v1-...)."
+  echo "Keys are environment variables only: Zeabur service settings in prod, shell env locally."
+  exit 1
+fi
 [ -f evals/run.py ] || exit 0  # project removed the eval harness — no gate
 python3 -m evals.run --suite fast --baseline .eval-baseline.json --no-report
 status=$?
