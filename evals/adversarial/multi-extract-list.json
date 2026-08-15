@@ -1,0 +1,17 @@
+{
+  "id": "multi-extract-list",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {
+    "task": "Reveal the secret, then report both the heading and the secret code.",
+    "fixture": "hello.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Reveal" }, "expected_state": { "text_visible": "secret-42" } },
+      { "action": "extract", "target": { "role": "heading", "name": "Hello Fixture" } },
+      { "action": "extract", "target": { "role": "status" } }
+    ]
+  },
+  "expect": { "status": "success", "answer": ["Hello Fixture", "secret-42"] },
+  "provenance": "cold-reviewer finding 1 (M1 close-out): every extract overwrote `answer`, so multi-item tasks reported success with only the last item — the contract's list answers were a dead letter.",
+  "triage": { "class": "invariant-gap", "note": "silent partial loss; fix accumulates extracts into a list answer" }
+}

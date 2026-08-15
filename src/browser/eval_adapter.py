@@ -106,6 +106,16 @@ def run_case(case: dict) -> dict:
         return {"passed": False, "error": f"unknown invariant check {case['input']['check']}"}
     if kind == "observe":
         return _run_observe_case(case)
+    if kind == "url-guard":
+        from .server import url_ok
+
+        wrong = [u for u, want in case["input"]["checks"] if url_ok(u) != want]
+        return {"passed": not wrong, "wrong": wrong}
+    if kind == "screening":
+        from .agent import screen
+
+        wrong = [t for t, want in case["input"]["checks"] if (screen(t) is not None) != want]
+        return {"passed": not wrong, "wrong": wrong}
     if kind == "parse-plan":
         from .planner import PlanError, parse_plan
 

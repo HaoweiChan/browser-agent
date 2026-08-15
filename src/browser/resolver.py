@@ -16,11 +16,14 @@ async def resolve(page, target: dict):
     """Return (locator, tier). Raises ResolveError with a locate subclass."""
     tiers = []
     role, name, text = target.get("role"), target.get("name"), target.get("text")
+    # exact=True: planner names come from the observation verbatim; substring
+    # matching resolved absent targets to superstring siblings and extracted
+    # the wrong element as a success (case resolver-substring-name).
     if role:
-        loc = page.get_by_role(role, name=name) if name else page.get_by_role(role)
+        loc = page.get_by_role(role, name=name, exact=True) if name else page.get_by_role(role)
         tiers.append(("role", loc))
     if text:
-        tiers.append(("text", page.get_by_text(text)))
+        tiers.append(("text", page.get_by_text(text, exact=True)))
 
     ambiguous = None
     for tier, loc in tiers:

@@ -17,9 +17,11 @@ MAX_ACTIONS = 30
 SETTLE_TRIES, SETTLE_MS = 10, 200
 
 # ponytail: keyword screen — LLM-based scope screening only if evals demand it (M3).
+# Latin terms need \b (case screening-word-boundary: 'signing' contains 'signin');
+# CJK terms must stay boundary-free — \b never matches inside a CJK run.
 SCOPE_BLOCK = re.compile(
-    r"log ?in|sign ?in|password|captcha|checkout|payment|purchase|\bbuy\b|\bpay\b"
-    r"|delete my|download"
+    r"\b(?:log ?in|sign ?in|password|captcha|checkout|payment|purchase|buy|pay|download)\b"
+    r"|\bdelete (?:my|the|this)\b"
     r"|登入|登录|密碼|密码|驗證碼|验证码|付款|購買|购买|刪除|删除|下載|下载",
     re.IGNORECASE,
 )
@@ -95,7 +97,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
 
     from .observe import observe
 
-    answer = None
+    answers: list = []
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=headless, args=["--no-sandbox"])
         page = await browser.new_page()
@@ -166,7 +168,10 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         elif step["action"] == "fill":
                             await loc.fill(step.get("value") or "", timeout=10_000)
                         elif step["action"] == "extract":
-                            answer = (await loc.inner_text()).strip()
+                            val = (await loc.inner_text()).strip()
+                            if not val:
+                                return fail("extract", "extraction returned empty text")
+                            answers.append(val)
                         else:
                             return fail("task", f"unknown action {step['action']!r}")
                 except ResolveError as e:
@@ -176,8 +181,6 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     return fail(cls, f"{type(e).__name__}: {e}")
 
                 rec["postcondition_ok"] = await check_state(page, step.get("expected_state"))
-                if step["action"] == "extract" and not answer:
-                    return fail("extract", "extraction returned empty text")
                 shot = f"step_{i}.png"
                 try:
                     await page.screenshot(path=str(run_dir / shot))
@@ -193,4 +196,6 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
         finally:
             await browser.close()
 
+    # One extract -> scalar answer; several -> list (contract: answer string|list).
+    answer = answers[0] if len(answers) == 1 else (answers or None)
     return done(answer=answer, final_url=final_url, digest=digest)

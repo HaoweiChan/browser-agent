@@ -7,6 +7,7 @@ the inline smoke page is replaced by the real frontend at M4.
 import asyncio
 import ipaddress
 import json
+import re
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
@@ -28,20 +29,29 @@ RUNS: dict[str, dict] = {}
 SEM = asyncio.Semaphore(1)
 
 
+# Decimal/octal/hex/dotted-short IP literals ("2130706433", "127.1",
+# "0x7f000001", "0x7f.0.0.1") raise ValueError in ipaddress but Chromium still
+# normalizes them to real IPs (case url-guard-literal-ips).
+IP_LITERAL = re.compile(r"(?:0x[0-9a-f]+|\d+)(?:\.(?:0x[0-9a-f]+|\d+))*$")
+
+
 def url_ok(u: str) -> bool:
-    """http/https only, no loopback/private/link-local literals.
+    """http/https only, no loopback/private/link-local hosts in any spelling.
     ponytail: hostname DNS-rebinding defense is BACKLOG (docs/plans)."""
     p = urlparse(u)
     if p.scheme not in ("http", "https"):
         return False
-    host = p.hostname or ""
-    if host.lower() == "localhost":
+    host = (p.hostname or "").lower().rstrip(".")
+    if not host or host == "localhost":
         return False
     try:
         ip = ipaddress.ip_address(host)
-        return not (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved)
     except ValueError:
-        return True  # named host
+        return not IP_LITERAL.match(host)  # named host unless an IP in disguise
+    if ip.version == 6 and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    return not (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified)
 
 
 class TaskIn(BaseModel):

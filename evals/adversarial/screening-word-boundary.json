@@ -1,0 +1,18 @@
+{
+  "id": "screening-word-boundary",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {
+    "kind": "screening",
+    "checks": [
+      ["I am signing the guestbook on this page", false],
+      ["Find articles about the painter Loginov", false],
+      ["What are the download statistics shown on the page?", true],
+      ["log in to my account and check messages", true],
+      ["幫我登入然後看訊息", true]
+    ]
+  },
+  "expect": { "note": "check pairs are (task, should_be_blocked)" },
+  "provenance": "cold-reviewer honorable mention (M1 close-out): no word boundaries — 'signing' contains 'signin', 'Loginov' contains 'login', so benign tasks were refused as out-of-scope. Wrong output is `unsupported`, not `success`, but a false refusal on a reviewer's task costs honesty points.",
+  "triage": { "class": "input-variant", "note": "regex boundary fix; download stays blocked as a word" }
+}

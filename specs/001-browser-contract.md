@@ -34,7 +34,9 @@ contract-drift (spec-drift audits field-by-field).
   `failure:extract`, never a quiet success.
 - `reason` — human-readable cause for non-success statuses; null on success.
 - `partial` — only for enumerable multi-item tasks: `answer` holds the correct
-  subset, `reason` states what is missing.
+  subset, `reason` states what is missing. Honesty note: no code path produces
+  `partial` yet — it lands with OutcomeVerifier L2 (M2); until then incomplete
+  enumerations surface as failures, never as quiet successes.
 
 ## TraceStep
 
