@@ -1,9 +1,10 @@
 # Project working rules
 
-Eval-first repo (built from `project-template`). Tasks live under `src/<task>/`.
-**The eval set IS the spec.** This template targets problems where requirements
+Eval-first repo, built on **groundwork**. Tasks live under `src/<task>/`.
+**The eval set IS the spec.** groundwork targets problems where requirements
 are clear but correctness is hard to define up front — so correctness is encoded
-as executable invariants and metrics, not prose.
+as executable invariants and metrics, not prose. Architecture rationale lives in
+README.md; this file is the working contract.
 
 ## Toolchain
 
