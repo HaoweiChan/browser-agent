@@ -1,4 +1,23 @@
-# groundwork
+# browser-agent
+
+Generalized browser automation agent — accepts natural-language task
+descriptions and executes them reliably across sites, with self-correction
+(diagnose failures, switch strategies) and self-maintenance (detect UI /
+selector drift and adapt locators).
+
+Built on [groundwork](https://github.com/HaoweiChan/groundwork), an eval-first
+scaffold: reliability here has no ground truth, so it is encoded as executable
+invariants and golden/adversarial cases instead of prose specs.
+
+## Status
+
+Repo scaffolded from the template — no implementation yet. Next steps per the
+groundwork loop: `specs/001-browser-agent-contract.md`, task invariants in
+`specs/000`, a domain skill, and the first red eval cases before any code.
+
+---
+
+## The template underneath
 
 **An eval-first project scaffold for the agent era.**
 
