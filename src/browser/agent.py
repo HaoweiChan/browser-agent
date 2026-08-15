@@ -74,7 +74,7 @@ def assemble_result(task, trace, answer, budgets, failure=None, reason=None, fin
     }
 
 
-async def run_task(task: str, url: str | None, planner, run_dir: str | Path, headless: bool = True):
+async def run_task(task: str, url: str | None, planner, run_dir: str | Path, headless: bool = True, url_guard=None):
     t0 = time.monotonic()
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -126,6 +126,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
 
                 try:
                     if step["action"] == "navigate":
+                        if url_guard and not url_guard(step.get("value") or ""):
+                            return fail("task", f"blocked URL: {step.get('value')!r}")
                         await page.goto(step["value"], timeout=20_000)
                     else:
                         loc, tier = await resolve(page, step.get("target") or {})
