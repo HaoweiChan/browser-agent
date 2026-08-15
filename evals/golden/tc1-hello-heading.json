@@ -6,7 +6,6 @@
     "task": "What does the main heading on the page say?",
     "fixture": "hello.html",
     "stub_plan": [
-      { "action": "navigate", "value": "$FIXTURE_URL" },
       { "action": "extract", "target": { "role": "heading" } }
     ]
   },

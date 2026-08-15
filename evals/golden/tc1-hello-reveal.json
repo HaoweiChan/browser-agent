@@ -6,7 +6,6 @@
     "task": "Click the Reveal button and report the secret code that appears.",
     "fixture": "hello.html",
     "stub_plan": [
-      { "action": "navigate", "value": "$FIXTURE_URL" },
       {
         "action": "click",
         "target": { "role": "button", "name": "Reveal" },

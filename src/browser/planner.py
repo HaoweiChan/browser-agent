@@ -22,8 +22,12 @@ Each step: {"action": "navigate|click|fill|extract",
  "expected_state": {"url_contains": str} | {"text_visible": str} | {"role_visible": {"role": str, "name": str|null}} | null}
 Rules: `navigate` puts the URL in `value`. `extract` reads the target element's
 text as the answer. Targets are semantic (ARIA role + accessible name) — never
-CSS selectors. Prefer few steps. Every click/fill carries an expected_state.
-Output the raw JSON array only — no markdown fences, no commentary."""
+CSS selectors. Prefer few steps.
+When a page observation is provided: the browser is ALREADY on that page — do
+not re-navigate unless the task needs a different page, and target ONLY roles/
+names present in the observation. If an action's resulting state cannot be
+known from the observation or the task, use expected_state: null — never invent
+expected text. Output the raw JSON array only — no markdown fences, no commentary."""
 
 
 class PlanError(Exception):
@@ -50,7 +54,7 @@ def parse_plan(content: str) -> list:
 def stub_planner(steps: list):
     """Deterministic planner for the fast suite: returns the given steps."""
 
-    async def plan(task: str, url: str | None):
+    async def plan(task: str, url: str | None, observation: dict | None = None):
         return steps, {"llm_tokens": 0, "llm_usd": 0.0}
 
     return plan
@@ -70,8 +74,12 @@ def live_planner(model: str = DEFAULT_MODEL):
         with urllib.request.urlopen(req, timeout=60) as resp:
             return json.load(resp)
 
-    async def plan(task: str, url: str | None):
+    async def plan(task: str, url: str | None, observation: dict | None = None):
         user = f"Task: {task}\nStart URL: {url or 'none — choose one via navigate'}"
+        if observation:
+            from .observe import render
+
+            user += "\n\nCurrent page observation:\n" + render(observation)
         payload = {
             "model": model,
             "messages": [

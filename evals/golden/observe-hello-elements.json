@@ -1,0 +1,15 @@
+{
+  "id": "observe-hello-elements",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": { "kind": "observe", "fixture": "hello.html" },
+  "expect": {
+    "contains": [
+      { "role": "heading", "name": "Hello Fixture" },
+      { "role": "button", "name": "Reveal" },
+      { "role": "status" }
+    ]
+  },
+  "provenance": "authored fixture. Guards the observe() condensation that fixes blind planning — live runs dee8ad5d (planner guessed role 'region' for the status element) and 2e70785a (planner invented postcondition text it could not know), 2026-08-15.",
+  "triage": { "class": "invariant-gap", "note": "planner planned without an observation; architecture MUST (planner receives condensed a11y observation) was unimplemented" }
+}

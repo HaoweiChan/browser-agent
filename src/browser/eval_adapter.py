@@ -32,6 +32,44 @@ def _check_inv0() -> dict:
     return {"passed": r["status"] != "success", "status": r["status"]}
 
 
+def _serve_fixtures():
+    handler = partial(http.server.SimpleHTTPRequestHandler, directory=str(FIXTURES))
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, f"http://127.0.0.1:{server.server_address[1]}"
+
+
+def _run_observe_case(case: dict) -> dict:
+    from playwright.async_api import async_playwright
+
+    from .observe import observe
+
+    server, base = _serve_fixtures()
+    try:
+        async def go():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(args=["--no-sandbox"])
+                page = await browser.new_page()
+                await page.goto(f"{base}/{case['input']['fixture']}")
+                obs = await observe(page)
+                await browser.close()
+                return obs
+
+        obs = asyncio.run(go())
+    finally:
+        server.shutdown()
+
+    missing = []
+    for want in case["expect"]["contains"]:
+        hit = any(
+            e["role"] == want["role"] and ("name" not in want or e["name"] == want["name"])
+            for e in obs["elements"]
+        )
+        if not hit:
+            missing.append(want)
+    return {"passed": not missing, "missing": missing, "n_elements": len(obs["elements"])}
+
+
 def _run_fixture_case(case: dict) -> dict:
     inp = case["input"]
     handler = partial(http.server.SimpleHTTPRequestHandler, directory=str(FIXTURES))
@@ -66,6 +104,8 @@ def run_case(case: dict) -> dict:
         if case["input"]["check"] == "inv0":
             return _check_inv0()
         return {"passed": False, "error": f"unknown invariant check {case['input']['check']}"}
+    if kind == "observe":
+        return _run_observe_case(case)
     if kind == "parse-plan":
         from .planner import PlanError, parse_plan
 

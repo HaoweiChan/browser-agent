@@ -91,21 +91,50 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     if reason := screen(task):
         return done(failure="unsupported", reason=reason)
 
-    try:
-        steps, usage = await planner(task, url)
-        budgets["llm_tokens"] += usage["llm_tokens"]
-        budgets["llm_usd"] += usage["llm_usd"]
-    except Exception as e:
-        return done(failure="env", reason=f"planner failed: {e}")
-
     from playwright.async_api import async_playwright
+
+    from .observe import observe
 
     answer = None
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=headless, args=["--no-sandbox"])
         page = await browser.new_page()
         try:
-            for i, step in enumerate(steps, 1):
+            # Pre-plan navigation + observation: the planner never plans blind
+            # (live failures dee8ad5d / 2e70785a — guessed roles, invented
+            # postconditions). Evolving-prefix replan on invalidation lands at M3.
+            obs = None
+            if url:
+                if url_guard and not url_guard(url):
+                    return done(failure="task", reason=f"blocked URL: {url!r}")
+                s0 = time.monotonic()
+                rec = {
+                    "i": 1, "action": "navigate", "target": None, "value": url,
+                    "resolved": None, "expected_state": None, "postcondition_ok": None,
+                    "failure_class": None, "note": "pre-plan observation",
+                    "retry_or_recovery": None, "screenshot": None, "ms": 0,
+                }
+                trace.append(rec)
+                budgets["actions"] += 1
+                try:
+                    await page.goto(url, timeout=20_000)
+                    obs = await observe(page)
+                    (run_dir / "observation.json").write_text(json.dumps(obs, indent=2))
+                    rec["postcondition_ok"] = True
+                except Exception as e:
+                    rec["failure_class"] = "nav"
+                    rec["note"] = f"{type(e).__name__}: {e}"
+                    return done(failure="nav", reason=f"pre-plan navigation failed: {e}")
+                rec["ms"] = int((time.monotonic() - s0) * 1000)
+
+            try:
+                steps, usage = await planner(task, url, obs)
+                budgets["llm_tokens"] += usage["llm_tokens"]
+                budgets["llm_usd"] += usage["llm_usd"]
+            except Exception as e:
+                return done(failure="env", reason=f"planner failed: {e}")
+
+            for i, step in enumerate(steps, len(trace) + 1):
                 if budgets["actions"] >= MAX_ACTIONS:
                     return done(failure="env", reason=f"action budget ({MAX_ACTIONS}) exhausted")
                 budgets["actions"] += 1
