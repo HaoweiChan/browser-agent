@@ -1,0 +1,55 @@
+# E2E against the DEPLOYED instance — the layer eval-gate cannot see.
+# Every check is free by construction: the guard rejects before a browser
+# opens, and /smoke/stream drives a real Chromium with no LLM call. The M5
+# incident this exists for: the URL served the M1 build for four milestones
+# while every suite stayed green.
+#
+# Known ceiling (stated, not hidden): on push events this cannot prove it is
+# testing the NEW build — Zeabur keeps serving the old one until the deploy
+# flips, and the app exposes no /version. The fixed wait is a heuristic; a
+# /version endpoint compared against GITHUB_SHA is the honest fix and goes
+# through the eval loop as its own change.
+name: deploy-smoke
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * *"
+  push:
+    branches: [main]
+
+env:
+  BASE: https://whaleforce-browser-agent.zeabur.app
+
+jobs:
+  deploy-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: give Zeabur time to flip the deployment (push only)
+        if: github.event_name == 'push'
+        run: sleep 240
+      - name: deployment answers
+        run: |
+          for i in $(seq 1 15); do
+            curl -fsS -m 10 "$BASE/" >/dev/null && exit 0
+            sleep 20
+          done
+          echo "deployment never answered"; exit 1
+      - name: frontend serves the app shell
+        run: curl -fsS -m 15 "$BASE/" | grep -q "browser-agent"
+      - name: support matrix serves, with limitations declared
+        run: |
+          curl -fsS -m 15 "$BASE/support-matrix" \
+            | jq -e '(.rows | length > 0) and (.limitations | length > 0)'
+      - name: URL guard refuses loopback before a browser opens
+        run: |
+          code=$(curl -s -o guard.json -w '%{http_code}' -m 15 -X POST "$BASE/tasks" \
+            -H 'content-type: application/json' \
+            -d '{"task":"read the admin page","url":"http://127.1/admin"}')
+          cat guard.json; echo
+          test "$code" = "422" && grep -q "url blocked" guard.json
+      - name: real Chromium launches and navigates on the deployment
+        run: |
+          curl -fsS -N -m 90 "$BASE/smoke/stream" > smoke.log || true
+          cat smoke.log
+          grep -q '"event": "done"' smoke.log
