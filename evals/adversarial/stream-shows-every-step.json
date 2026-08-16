@@ -1,0 +1,29 @@
+{
+  "id": "stream-shows-every-step",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC4",
+  "mutation": "button-text-renamed",
+  "input": {
+    "kind": "stream",
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "mut": "button-text-renamed",
+    "stub_plan": [
+      { "action": "click", "target": { "text": "Sort by price (low to high)" },
+        "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+      { "action": "extract", "target": { "role": "link", "index": 0 } }
+    ]
+  },
+  "expect": {
+    "live_matches_final": true,
+    "emits_failed_attempt": true,
+    "terminal_status": "success"
+  },
+  "provenance": "written before the M4 progress stream existed. Watched red twice: on the missing on_step hook (TypeError, the pre-M4 state), and on the honesty mutation that matters — emitting only steps whose execution raised nothing. Under that mutation the run still returns success, the terminal status still matches, and the emitted ids are still in order (1,3,4); only emits_failed_attempt goes red, on the superseded text-tier click at #2. The M4 claim under test is 'a stranger can watch the run and inspect a failure' — a stream that quietly drops the attempts a ladder superseded would let a reviewer watch this exact run, see two tidy steps, and never learn that the text tier died and the agent relocated. The scenario is deliberately the recovery case (button-text-renamed), because it is the only fixture run whose trace contains an attempt that FAILED and was superseded — a stream tested on a clean run cannot fail this way.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "the failure mode is presentational, not executional: the run is correct either way, so nothing else in the suite goes red if the viewer lies by omission. That is exactly why it needs its own case — the trace is the deliverable evidence, and a viewer that shows a prettier run than the one that happened is honesty debt, not a UI bug."
+  }
+}

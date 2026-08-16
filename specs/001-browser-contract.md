@@ -118,6 +118,43 @@ appears, in order — no post-hoc reconstruction).
 - Screenshots are written per step into the run directory alongside
   `trace.jsonl` and `result.json`.
 
+## Progress stream (gateway)
+
+`GET /tasks/{run_id}/stream` is Server-Sent Events. Each `data:` line is one
+JSON object, and there are exactly two kinds:
+
+```json
+{"event": "step", "step": TraceStep}
+{"event": "done", "result": RunResult}
+```
+
+- **Every attempted step is emitted, in order, exactly once** — including the
+  ones a recovery ladder later supersedes. The stream is the trace, not a
+  highlight reel: a viewer that showed only the steps that worked would render
+  a tidier run than the one that happened, and nothing else in the suite would
+  go red for it (`evals/adversarial/stream-shows-every-step.json`).
+- A `step` event is a snapshot at emission time, so it is *provisional* in one
+  field: `superseded_by` is written when the replacement attempt is created,
+  which is after the failed attempt was already sent. The `done` event carries
+  the authoritative trace and the frontend re-renders from it.
+- `done` is terminal and always arrives — including when the run never started
+  (see below). A run that ends without one is a hung stream, not a quiet
+  success.
+- The stream is single-consumer: the queue is drained, so a second viewer or a
+  reconnect sees only what is left plus `done`. `GET /tasks/{run_id}` remains
+  the complete-result path.
+
+**Every gateway result is a RunResult**, including the catch-all for a run that
+raised before `run_task` was entered — the missing-API-key path builds one
+through the same `assemble_result` a real run uses. It has an empty trace, which
+is correct (the key is validated before a browser is launched, so nothing was
+attempted) and is not the same thing as a missing `evidence` object
+(`evals/adversarial/gateway-error-contract-shape.json`).
+
+Per-step screenshots are served from `GET /runs/{run_id}/{step_N.png}`; both
+path components are pattern-matched, so nothing else in a run directory —
+`result.json`, `trace.jsonl`, `observation.json` — is reachable over HTTP.
+
 ## Invariants bound to this contract
 
 - INV-0 (specs/000): never `success` with empty output — enforced at

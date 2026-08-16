@@ -11,9 +11,39 @@ invariants and golden/adversarial cases instead of prose specs.
 
 ## Status
 
-Repo scaffolded from the template — no implementation yet. Next steps per the
-groundwork loop: `specs/001-browser-contract.md`, task invariants in
-`specs/000`, a domain skill, and the first red eval cases before any code.
+M0–M4 done; M5 (freeze: analysis, README rewrite, held-out probe) is next.
+Milestones and their evidence: `tasks/TODO.md`.
+
+Latest offline baseline — `evals/report/20260816-192727-fast.json`:
+
+```
+fast       52/52   invariant 12/12   $0.0000   24.3s
+recovery 3/3 verified (6 rungs tried) · mutation 4/4 passed, 2 by relocating
+diagnosis 5/5 · 3 replans
+```
+
+Read those numbers with their denominators. They are measured on **offline
+fixtures with the planner stubbed**, so they grade the resolver / executor /
+verifier path and say nothing about planning quality or any live site. Recovery
+is a floor on three injected cases, not a rate. "4/4 mutations passed, 2 by
+relocating" is the honest split: two of the three mutation types break a tier no
+plan was standing on, so they pass without recovering anything. What is not yet
+measured at all is listed in `docs/support-matrix.md`, which the frontend
+renders from the same file — including the largest open cell, no live domain.
+
+```bash
+python3 -m evals.run --suite fast        # offline gate, zero paid calls
+python3 -m evals.run --suite invariant   # must-always-hold, no LLM/network
+```
+
+Run the reviewer UI locally (submit a task, watch the trace stream, inspect a
+failed attempt and its screenshot). The task-submit path needs
+`OPENROUTER_API_KEY`; everything else — guards, matrix, smoke test — works
+without one:
+
+```bash
+python3 -m uvicorn src.browser.server:app --port 8099
+```
 
 ---
 

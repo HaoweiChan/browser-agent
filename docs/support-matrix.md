@@ -20,7 +20,7 @@ Entry shape (also served as JSON to the frontend):
 
 ## Current matrix
 
-Declared from the M2 baseline (`evals/report/20260816-002725-fast.json`, 41/41).
+Declared from the M4 baseline (`evals/report/20260816-192727-fast.json`, 52/52).
 Every status below rests on **offline fixtures with the planner stubbed** —
 this table measures the resolver/executor/verifier path, not planning quality
 and not any live site. Empty cells are shown, not hidden.
@@ -35,14 +35,15 @@ and not any live site. Empty cells are shown, not hidden.
 Statuses: `supported` / `unreliable` / `unsupported` / `—` (not yet evaluated).
 Unsupported and unreliable rows must cite a concrete failing case id.
 
-## Declared limitations (M2)
+## Declared limitations (M3)
 
 | Limitation | Evidence | Status |
 |---|---|---|
 | No live domain evaluated at all | no `full`-suite case exists yet | blocks the B-floor "≥1 live domain" criterion; scheduled for M5 |
 | Planning quality unmeasured | every `fast` case stubs the planner at the module boundary | by design (cost-discipline); the `full` suite is the only measurement |
 | Values in ARIA name-prohibited elements (`<dd>`, `<dt>`, `code`, `time`…) cannot be targeted | `observe-name-prohibited-roles` | `unsupported` — the observation no longer advertises them, so the agent fails loudly instead of planning an unresolvable target |
-| A locator broken at the tier the plan is standing on is not recovered | `l4-shop-button-text-renamed` (expects `failure:locate`) | `unsupported` until the M3 relocation loop |
+| A locator broken at **both** reachable tiers is not recovered | `l4-shop-button-text-renamed` recovers text → role+name, `l4-recover-name-to-text` the reverse | `unreliable` — relocation has exactly two rungs to climb between, because `role` and `text` are the only tiers any run has ever emitted. The `attrs` and `structural` tiers exist in the taxonomy and in no code path, so a mutation that kills both reachable tiers has nowhere to go |
+| Recovery is reported as a floor, not a rate | 3 injected cases assert recovery; 6 rungs were tried to produce them | by design (ADR-003) — three cases is not a population. It stays `x/y` with the denominator printed until a live suite gives it one |
 | Near-miss entity whose name contains the target's name | `trap-near-miss-entity` | caught only with external ground truth; a live run's runtime anchor passes it |
 | Identity anchors on aggregate pages (listings, search results) | `trap-search-not-executed` | `unreliable` — every candidate entity is in the page text, so the anchor certifies the wrong answer too. The larger of the two anchor holes, and it sits exactly where TC2/TC4 live. |
 | The `fast` suite never runs observe → plan → resolve | all fixture cases inject a stub plan at the planner boundary | by design (cost-discipline), but it means the L4 self-maintenance passes are measured on plans hand-authored against the mutated DOM. Only the `full` suite closes this. |

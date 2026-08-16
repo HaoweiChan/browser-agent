@@ -5,6 +5,7 @@ __pycache__
 .claude
 .githooks
 docs
+!docs/support-matrix.md
 prompts
 specs
 tasks

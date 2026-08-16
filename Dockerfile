@@ -7,6 +7,10 @@ COPY src/browser/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY src/ /app/src/
+# The frontend parses this at request time — docs/support-matrix.md is the one
+# source the README and the UI both render, so the image ships the file rather
+# than a second copy of the table baked into code.
+COPY docs/support-matrix.md /app/docs/support-matrix.md
 
 USER pwuser
 EXPOSE 8080

@@ -165,7 +165,8 @@ def assemble_result(task, trace, answer, budgets, failure=None, reason=None, fin
     }
 
 
-async def run_task(task: str, url: str | None, planner, run_dir: str | Path, headless: bool = True, url_guard=None):
+async def run_task(task: str, url: str | None, planner, run_dir: str | Path, headless: bool = True,
+                   url_guard=None, on_step=None):
     t0 = time.monotonic()
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -174,6 +175,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     # Raw evidence for the OutcomeVerifier: what was read, and what the page
     # said at the moment it was read. The verifier never sees our conclusion.
     extractions: list[dict] = []
+
+    def emit(rec):
+        """Hand a finished step to a live watcher (the gateway's SSE endpoint).
+        Every attempt is emitted, including the ones a ladder supersedes: the
+        stream is the trace, not a highlight reel (stream-shows-every-step)."""
+        if on_step:
+            on_step(rec)
 
     def done(answer=None, failure=None, reason=None, final_url=None, digest=None, verdict=None):
         budgets["ms"] = int((time.monotonic() - t0) * 1000)
@@ -221,8 +229,11 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 except Exception as e:
                     rec["failure_class"] = "nav"
                     rec["note"] = f"{type(e).__name__}: {e}"
+                    rec["ms"] = int((time.monotonic() - s0) * 1000)
+                    emit(rec)
                     return done(failure="nav", reason=f"pre-plan navigation failed: {e}")
                 rec["ms"] = int((time.monotonic() - s0) * 1000)
+                emit(rec)
 
             try:
                 steps, usage = await planner(task, url, obs)
@@ -300,6 +311,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 except Exception:
                     pass  # evidence best-effort; the postcondition is the gate
                 rec["ms"] = int((time.monotonic() - s0) * 1000)
+                emit(rec)
                 return rec, cls
 
             async def look():

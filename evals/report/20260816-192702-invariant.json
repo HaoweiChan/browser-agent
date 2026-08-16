@@ -1,0 +1,160 @@
+{
+  "suite": "invariant",
+  "score": 1.0,
+  "totals": {
+    "wall_seconds": 0.49,
+    "latency_p50": 0.0,
+    "latency_p95": 0.49,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "result": [
+          "status",
+          "answer",
+          "reason",
+          "verdict",
+          "evidence",
+          "budgets_spent"
+        ],
+        "evidence": [
+          "trace",
+          "screenshots",
+          "extractions",
+          "final_url",
+          "final_page_digest"
+        ],
+        "verdict": [
+          "verdict",
+          "layer",
+          "ground_truth",
+          "checks",
+          "reason"
+        ],
+        "budgets_spent": [
+          "actions",
+          "llm_tokens",
+          "llm_usd",
+          "replans",
+          "ms"
+        ],
+        "trace_step": [
+          "action",
+          "anchor",
+          "expected_state",
+          "failure_class",
+          "i",
+          "ms",
+          "note",
+          "postcondition_ok",
+          "resolved",
+          "retry_or_recovery",
+          "screenshot",
+          "superseded_by",
+          "target",
+          "value"
+        ]
+      },
+      "seconds": 0.49,
+      "id": "contract-trace-schema",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "shape": true,
+        "classified": true
+      },
+      "wrong": {},
+      "got": {
+        "status": "failure:env",
+        "reason": "PlanError: OPENROUTER_API_KEY is not set"
+      },
+      "seconds": 0.0,
+      "id": "gateway-error-contract-shape",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv3-budget-exhaustion-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "illegal_status": [],
+        "dangling_citations": []
+      },
+      "got": {
+        "rows": 4,
+        "limitations": 10,
+        "citations": 6
+      },
+      "seconds": 0.0,
+      "id": "support-matrix-cites-real-cases",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-numeric-precision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-superseded-not-a-loophole",
+      "kind": "adversarial"
+    }
+  ]
+}

@@ -407,8 +407,127 @@ def _run_fixture_case(case: dict) -> dict:
     }
 
 
+def _run_stream_case(case: dict) -> dict:
+    """The progress stream must show the run that happened, not a tidier one.
+
+    Grades the `on_step` hook the gateway's SSE endpoint is built on, not the
+    HTTP framing — POST /tasks plans with the live model, and the fast suite
+    spends $0.00. Adding a stub backdoor to a public endpoint to test it here
+    would be a worse trade than testing one layer down."""
+    inp, exp = case["input"], case["expect"]
+    fixture_url = f"{_base_url()}/fixtures/{inp['fixture']}"
+    if inp.get("mut"):
+        fixture_url += f"?mut={inp['mut']}"
+    steps = json.loads(json.dumps(inp["stub_plan"]).replace("$FIXTURE_URL", fixture_url))
+
+    live: list[dict] = []
+    with tempfile.TemporaryDirectory() as run_dir:
+        result = asyncio.run(run_task(
+            inp["task"], fixture_url, stub_planner([steps]), run_dir,
+            # Copy on arrival: the executor mutates its record after emitting
+            # (screenshot, ms, superseded_by). Holding the live reference would
+            # compare the final trace against itself and pass unconditionally.
+            on_step=lambda rec: live.append(json.loads(json.dumps(rec))),
+        ))
+    final = result["evidence"]["trace"]
+
+    checks = {}
+    # Same steps, same order, exactly once each: nothing dropped, nothing invented.
+    checks["live_matches_final"] = (
+        [s["i"] for s in live] == [s["i"] for s in final]) == exp["live_matches_final"]
+    # The honesty half. This run's text-tier click fails and is superseded by a
+    # relocated attempt; a stream that emits only what worked would still satisfy
+    # the ordering check above, because the surviving steps are in order.
+    failed_final = [s["i"] for s in final if s.get("failure_class")]
+    checks["emits_failed_attempt"] = (
+        bool(failed_final) and set(failed_final) <= {s["i"] for s in live}
+    ) == exp["emits_failed_attempt"]
+    checks["terminal_status"] = result["status"] == exp["terminal_status"]
+    return {
+        "passed": all(checks.values()),
+        "checks": checks,
+        "got": {"live_i": [s["i"] for s in live], "final_i": [s["i"] for s in final],
+                "failed_i": failed_final, "status": result["status"]},
+        "budgets": result["budgets_spent"],
+    }
+
+
+def _run_matrix_case(case: dict) -> dict:
+    """Every citation in the honesty table must resolve to a real case.
+
+    Checks that the evidence EXISTS, never that a declared status is right:
+    declaring is a human judgment act, and a pass rate that thresholds itself
+    into "supported" is the thing the methodology doc forbids."""
+    from .server import CASE_CITATION, parse_matrix
+
+    doc = parse_matrix()
+    known = {p.stem for p in (Path(__file__).parents[2] / "evals").glob("*/*.json")}
+    legal = set(case["expect"]["statuses"])
+
+    bad_status = [
+        {"domain": r["domain"], "tc": tc, "status": v}
+        for r in doc["rows"] for tc, v in r["cells"].items() if v not in legal
+    ]
+    dangling = sorted(set(CASE_CITATION.findall(doc["citation_text"])) - known)
+    return {
+        "passed": not bad_status and not dangling,
+        "wrong": {"illegal_status": bad_status, "dangling_citations": dangling},
+        "got": {"rows": len(doc["rows"]), "limitations": len(doc["limitations"]),
+                "citations": len(set(CASE_CITATION.findall(doc["citation_text"])))},
+    }
+
+
+def _run_gateway_error_case(case: dict) -> dict:
+    """The gateway's catch-all must return the contract shape, not a stub dict.
+
+    Forces the no-key path by blanking OPENROUTER_API_KEY for the duration: the
+    app runs in a thread in this process, so the run fails before any HTTP call
+    to OpenRouter and the case costs $0.00 on a developer machine that has a key
+    (cost-discipline rule 4) instead of quietly making a live request."""
+    import os
+
+    inp, exp = case["input"], case["expect"]
+    base = _base_url()
+    prev = os.environ.get("OPENROUTER_API_KEY")
+    os.environ["OPENROUTER_API_KEY"] = ""
+    try:
+        req = urllib.request.Request(
+            f"{base}/tasks", data=json.dumps({"task": inp["task"]}).encode(),
+            headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=10) as r:
+            run_id = json.load(r)["run_id"]
+        for _ in range(200):
+            rec = _get_json(f"/tasks/{run_id}")
+            if rec.get("status") != "running":
+                break
+            time.sleep(0.05)
+        else:
+            return {"passed": False, "error": "gateway run never left 'running'"}
+    finally:
+        if prev is None:
+            os.environ.pop("OPENROUTER_API_KEY", None)
+        else:
+            os.environ["OPENROUTER_API_KEY"] = prev
+
+    got = {"result": sorted(rec)}
+    for section in ("evidence", "budgets_spent"):
+        # `or {}` would launder exactly the null this case exists to catch.
+        got[section] = sorted(rec[section]) if isinstance(rec[section], dict) else None
+    wrong = {k: got[k] for k, want in exp["keys"].items() if got[k] != sorted(want)}
+    checks = {"shape": not wrong,
+              "classified": str(rec.get("status", "")).startswith(exp["status_prefix"])}
+    return {"passed": all(checks.values()), "checks": checks, "wrong": wrong,
+            "got": {"status": rec.get("status"), "reason": rec.get("reason")}}
+
+
 def run_case(case: dict) -> dict:
     kind = case["input"].get("kind")
+    if kind == "gateway-error":
+        return _run_gateway_error_case(case)
+    if kind == "stream":
+        return _run_stream_case(case)
+    if kind == "matrix":
+        return _run_matrix_case(case)
     if kind == "invariant":
         check = case["input"]["check"]
         if check not in INVARIANTS:
