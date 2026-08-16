@@ -4,7 +4,8 @@ Milestone-level only (ADR-001) — micro-tasks live in the session. Every row
 names the reviewer evidence it buys (rubric cells:
 `docs/product/assignment-requirements.md` §E1–E5). Hour guard: at **20–24
 cumulative engineering hours on Task 1, freeze and start Task 2** regardless of
-backlog appeal.
+backlog appeal. *(B-freeze executed at M5; guard superseded 2026-08-17 by the
+owner's reopen decision — see the Reopen note below. A-phase guard: +12h.)*
 
 | # | Milestone | Contents | Reviewer evidence | Validation | Status |
 |---|-----------|----------|-------------------|------------|--------|
@@ -16,7 +17,12 @@ backlog appeal.
 | M4 | Reviewer UI (~day 2–3) | Full frontend on the live deployment · trace viewer · support matrix live · spend/URL guards verified | deliverable, honesty | a stranger can submit a task, watch it, inspect a failure | **done** — 52/52 fast, 12/12 invariant, $0.00, 24.3s; SSE trace stream (every attempt, incl. superseded), per-step screenshots, matrix served from `docs/support-matrix.md` itself; guard refused `http://127.1/admin` in-browser before a browser opened; ADR-004 records what the UI is not allowed to hide. **Live-planner submit path is unverified on the deployment** — needs the key, folded into M5's held-out probe |
 | — | **Cold review** (M3 + M4, before the M5 freeze — the first two milestones committed without one) | Two scopes: reliability core, gateway/UI · findings → cases → fixes · unfixed findings declared | eval-depth, honesty | every new case watched red against its own fix | **done** — 6 defects in code already green on 52 cases, 3 of them wrong-or-unverified-answer-scores-PASS: grader equated `-39`/`39` and `€18`/`$18`; a replan laundered an action that never landed (success + wrong answer); a retry wore recovery's badge; the URL guard was an input filter only (and **no eval ever passed it into `run_task`**); the support matrix could parse quietly to zero limitations; a supersede dangled on the failure path. 58/58 fast, 16/16 invariant, $0.00, 31.9s. ADR-005 records all six and the 7 findings deliberately **not** fixed |
 | M5 | B-Freeze (~day 3) | Coverage cells verified · cost/latency numbers · `docs/analysis.md` from report data · README rewrite · prompts curated · **eval-adversary held-out probe vs deployed URL (mandatory gate, raw results in analysis)** | analysis, collab, all | B-floor exit criteria in `docs/plans/completed/task1-b-level-plan.md` all green → **STOP, start Task 2** | **done** — 60/60 fast, 18/18 invariant, 1/1 live. First live domain (books.toscrape.com) + the observation-budget bug it found; M2–M4 **deployed at last** (the URL had served the M1 build for four milestones) and guards re-verified live; `docs/analysis.md`, README rewrite, prompts 004–007. Held-out probe run: **2/8 correct answers, 1/2 refusals, $0.0681, no wrong answer ever reported as success** — it found the `log into` scope bypass that let the agent touch a real credential field (fixed). B-floor: **5 of 6 criteria met**, criterion 2 (coverage) short on live breadth — see below |
-| M6 | Optional hardening (post-freeze A-backlog, ranked reviewer-value ÷ effort) | hand-labeled verifier sample → precision/recall · hostile live domain · full mutation catalog · verifier-accuracy dashboard · cost/model ablation via OpenRouter · live-drift snapshot replay · adaptive locator learning · parallel eval runner · visual fallback (last) | E5 markers | each item lands with its own eval evidence | backlog |
+| M6 | Live breadth & depth (A-phase, top-ranked — closes the one partial B-floor criterion) | ≥2 new live domains (candidates: Hacker News, Open Library) · ≥3 task classes exercised live · L3-difficulty cases · support-matrix rows per new domain | eval-depth (E2), T2 | criterion 2 fully met; every new case watched red first; live cases tagged `full` only | **next** |
+| M7 | Verifier accuracy | ~20–30 hand-labeled runs → precision/recall in `docs/analysis.md` · answer-responsiveness check (probe #5: a page dump was rejected only on a whitespace technicality) · new trap cases | silent-failure (E3), analysis (E4), E5 | precision/recall from committed labels; responsiveness trap case red before the fix | planned |
+| M8 | Mutation & hostility hardening | full mutation catalog · hostile live domain · live-drift snapshot replay (SHOULD) | mechanism-substance (E1), eval-depth (E2) | each new mutation red without relocation, green with; hostile results published raw | planned |
+| M9 | Cost/model ablation | ≥2-model OpenRouter ablation · cost/latency tradeoff table · ADR for the default-model choice | analysis (E4), E5 tradeoffs | table from committed report runs, not estimates | planned |
+| M10 | A-Freeze | analysis/README/support-matrix refresh · prompts curated · **second held-out probe vs deployed URL (mandatory gate, raw results committed)** | all, esp. E5 | A-exit criteria in `docs/plans/active/task1-a-level-plan.md` all green → owner decides submission/public | gate |
+| — | Still backlog (not promoted) | adaptive locator learning · parallel eval runner · verifier-accuracy dashboard UI · visual fallback · per-IP rate limiting | — | each would need its own eval evidence | backlog |
 
 ## B-floor exit criteria — status at freeze
 
@@ -32,6 +38,19 @@ backlog appeal.
 **5 of 6 met; criterion 2 partial.** Per the freeze rule, Task 1 stops here and
 Task 2 starts. Live breadth is the top item if Task 1 is ever reopened.
 
-Plan: `docs/plans/completed/task1-b-level-plan.md` ·
+## Reopen — A-phase (2026-08-17)
+
+Owner decision, recorded in `prompts/008-a-level-reopen.md`: **B-baseline is
+accepted; the repo does not go public yet; Task 1 reopens for A-level before
+submission.** This supersedes the freeze rule above by explicit instruction —
+Task 2 start is deferred by the same decision, and the A-phase carries its own
+hour guard (+12h default) so the reopen stays bounded. Milestones M6–M10 above
+are the A-phase roadmap, ranked by reviewer-value ÷ effort against the two gaps
+the freeze measured (live breadth, verifier accuracy). Per-feature loop is
+unchanged: eval cases first, watch them red, then implement — **no
+implementation has started under this reopen; planning docs only.**
+
+A-plan: `docs/plans/active/task1-a-level-plan.md` ·
+B-plan: `docs/plans/completed/task1-b-level-plan.md` ·
 Methodology: `docs/evals/evaluation-methodology.md` ·
 Architecture: `docs/architecture/task1-overview.md`
