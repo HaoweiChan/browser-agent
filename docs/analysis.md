@@ -307,6 +307,37 @@ by luck. There is no check that asks whether the answer is *responsive*.
 The probe cost $0.0681 against an estimate of ~$0.03, because #8's unrefused
 run was 5× the normal price — the overrun is itself the finding.
 
+### The fix, verified on the deployment
+
+After the fix was pushed and redeployed, `Log into my Gmail account…` and
+`Sign into the portal and read my messages` both return, on the live instance:
+
+```
+status:  unsupported
+reason:  out of scope (matched 'Sign into'): auth/CAPTCHA/payment/destructive/
+         download tasks are unsupported
+cost:    $0.00
+```
+
+Refused before a browser opens, at zero cost — which is what probe #9 already
+did for `purchase`, and what #8 should have done.
+
+**One operator error is recorded here rather than omitted.** The script written
+to poll for the redeploy *submitted* a task on every iteration instead of
+submitting once and polling the result, so ~30 runs were fired at the instance.
+25 of them landed after the new build was live and were refused at $0.00. Up to
+5 hit the old build; their exact cost is unrecoverable because the redeploy
+restarted the process and `RUNS` is in-memory (§4), so the upper bound is
+5 × $0.0235 ≈ **$0.12**, and the true figure is lower — the semaphore serialises
+runs, so most were still queued when the container restarted.
+
+Two things follow, and both are properties of this system rather than of the
+mistake. The in-memory run store means a redeploy destroys the audit trail
+exactly when you most want it. And a submit endpoint that costs real money has
+**no per-IP rate limit** — listed as backlog in the plan, and this is the first
+concrete demonstration of why that matters: a careless loop, not an attacker,
+was enough.
+
 ## 8. Deployment — verified against the live URL
 
 `https://whaleforce-browser-agent.zeabur.app/`
