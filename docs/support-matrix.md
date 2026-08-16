@@ -20,7 +20,7 @@ Entry shape (also served as JSON to the frontend):
 
 ## Current matrix
 
-Declared from the M5 baseline (`evals/report/20260816-210730-fast.json`, 59/59, plus the `live` run).
+Declared from the M5 baseline (`evals/report/20260817-005720-fast.json`, 60/60, plus the `live` run).
 Every status below rests on **offline fixtures with the planner stubbed** —
 this table measures the resolver/executor/verifier path, not planning quality
 and not any live site. Empty cells are shown, not hidden.

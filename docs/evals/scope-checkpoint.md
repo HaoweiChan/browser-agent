@@ -2,7 +2,7 @@
 
 Committed before any M3 code. Purpose: make the M3 mechanism choice follow the
 *observed* failure distribution instead of the interesting-sounding one. The
-plan (`docs/plans/active/task1-b-level-plan.md`) names skipping this note under
+plan (`docs/plans/completed/task1-b-level-plan.md`) names skipping this note under
 time pressure as its own risk — it is the evidence that investment followed
 measurement.
 

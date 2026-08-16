@@ -5,20 +5,21 @@ verification. Every number below is read out of a committed report in
 `evals/report/`, not estimated. Where a number does not exist, this document
 says so rather than supplying a plausible one.
 
-Baseline: `evals/report/20260816-210730-fast.json` plus the `live` and
+Baseline: `evals/report/20260817-005720-fast.json` plus the `live` and
 `invariant` runs of the same working tree.
 
 ## 1. What was measured, and on what
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 59 | 59/59 | 31.98s | 0.34s | 2.52s | $0.0000 |
-| `invariant` (must-always-hold) | 17 | 17/17 | 3.5s | 0.00s | 2.47s | $0.0000 |
-| `live` (books.toscrape.com) | 1 | 1/1 | 2.14s | 2.14s | 2.14s | $0.0000 |
+| `fast` (offline gate) | 60 | 60/60 | 32.74s | 0.34s | 2.51s | $0.0000 |
+| `invariant` (must-always-hold) | 18 | 18/18 | 3.95s | 0.00s | 2.45s | $0.0000 |
+| `live` (books.toscrape.com) | 1 | 1/1 | 2.41s | 2.41s | 2.41s | $0.0000 |
 
-60 distinct cases. 103 browser actions in a `fast` run; 37 of the 59 cases drive
-a real Chromium end to end, the remaining 22 are pure-code probes of a single
-component (the grader, the classifier, the URL guard, the matrix parser).
+61 distinct cases. 103 browser actions in a `fast` run; 37 of the 60 cases drive
+a real Chromium end to end, the remaining 23 are pure-code probes of a single
+component (the grader, the classifier, the URL guard, the scope screen, the
+matrix parser).
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -73,7 +74,7 @@ been reached rather than a limit that has been exercised.
 
 ## 3. Runtime performance
 
-p50 0.34s, p95 2.52s per `fast` case. The distribution is bimodal and the shape
+p50 0.34s, p95 2.51s per `fast` case. The distribution is bimodal and the shape
 is more informative than the percentiles:
 
 | Case | s | Why |
@@ -89,7 +90,7 @@ the postcondition settle loop, paid on exactly the cases whose subject is a
 postcondition that fails. That is the mechanism under test, so it is paid rather
 than mocked. A successful step never waits it out.
 
-The live case runs in 2.14s for 3 actions against a real site over the public
+The live case runs in 2.41s for 3 actions against a real site over the public
 internet — the only latency figure here that includes real network.
 
 **Not measured:** end-to-end latency of a real task, which is dominated by the
@@ -118,7 +119,7 @@ Stated plainly, because this is a reviewer-facing demo and not a service:
 - **Screenshots are written to the container filesystem** under `/tmp/runs/`,
   which is ephemeral.
 - **Rate limiting is per-process, not per-IP.** Per-IP limiting is explicitly
-  backlog (`docs/plans/active/task1-b-level-plan.md`).
+  backlog (`docs/plans/completed/task1-b-level-plan.md`).
 
 The honest scaling statement: this design serves one reviewer at a time
 correctly, and would need a job queue, shared run storage and per-IP limits
@@ -195,15 +196,15 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-60 cases. Empty cells are shown, not hidden.
+61 cases. Empty cells are shown, not hidden.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
 | TC1 extract-on-page | 9 | | L1 | 16 |
 | TC2 search-then-extract | 4 | | L2 | 11 |
-| TC3 navigate-then-extract | 6 | | **L3** | **0 — deferred to B-strong** |
+| TC3 navigate-then-extract | 7 | | **L3** | **0 — deferred to B-strong** |
 | TC4 interact-then-extract | 13 | | L4 (mutation/recovery) | 8 |
-| TC5 form submission | 5 | | L5 (refusal) | 6 |
+| TC5 form submission | 5 | | L5 (refusal) | 7 |
 | mechanism/unit probes | 23 | | untagged (unit probes) | 19 |
 
 | Domain | Kind | Cases |
