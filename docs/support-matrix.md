@@ -20,7 +20,7 @@ Entry shape (also served as JSON to the frontend):
 
 ## Current matrix
 
-Declared from the M4 baseline (`evals/report/20260816-192727-fast.json`, 52/52).
+Declared from the M4 baseline (`evals/report/20260816-210730-fast.json`, 58/58).
 Every status below rests on **offline fixtures with the planner stubbed** —
 this table measures the resolver/executor/verifier path, not planning quality
 and not any live site. Empty cells are shown, not hidden.
@@ -43,6 +43,10 @@ Unsupported and unreliable rows must cite a concrete failing case id.
 | Planning quality unmeasured | every `fast` case stubs the planner at the module boundary | by design (cost-discipline); the `full` suite is the only measurement |
 | Values in ARIA name-prohibited elements (`<dd>`, `<dt>`, `code`, `time`…) cannot be targeted | `observe-name-prohibited-roles` | `unsupported` — the observation no longer advertises them, so the agent fails loudly instead of planning an unresolvable target |
 | A locator broken at **both** reachable tiers is not recovered | `l4-shop-button-text-renamed` recovers text → role+name, `l4-recover-name-to-text` the reverse | `unreliable` — relocation has exactly two rungs to climb between, because `role` and `text` are the only tiers any run has ever emitted. The `attrs` and `structural` tiers exist in the taxonomy and in no code path, so a mutation that kills both reachable tiers has nowhere to go |
+| An identity anchor can be satisfied by evidence from a discarded attempt | `verifier-superseded-not-a-loophole` pins the trace half only | `unreliable` — supersede hides a failed attempt from trace grading, but `evidence_text` is still built from every extraction, including the superseded one (ADR-005) |
+| A replan is refused when the failed action changed nothing on the page | `replan-cannot-launder-noop-action` vs its benign twin `recovery-replan-postcondition` | `supported`, with a ceiling: the test is whole-body text equality, so an action whose only effect is visual or off-page reads as no change and its recovery is refused — loud, and in the safe direction |
+| Relocation rung 1 ignores the target's role | no case yet; found by cold review (ADR-005) | `unreliable` — a target `{role: link, text: X}` can relocate onto a same-named heading, which is a common listing-page shape |
+| The progress stream is graded on the executor's hook, not on the SSE endpoint | `stream-shows-every-step` installs its own `on_step` and compares step ids only | `unreliable` — the gateway's own emitter and its copy semantics are untested, and a stream that stripped step *contents* would still pass (ADR-005) |
 | Recovery is reported as a floor, not a rate | 3 injected cases assert recovery; 6 rungs were tried to produce them | by design (ADR-003) — three cases is not a population. It stays `x/y` with the denominator printed until a live suite gives it one |
 | Near-miss entity whose name contains the target's name | `trap-near-miss-entity` | caught only with external ground truth; a live run's runtime anchor passes it |
 | Identity anchors on aggregate pages (listings, search results) | `trap-search-not-executed` | `unreliable` — every candidate entity is in the page text, so the anchor certifies the wrong answer too. The larger of the two anchor holes, and it sits exactly where TC2/TC4 live. |

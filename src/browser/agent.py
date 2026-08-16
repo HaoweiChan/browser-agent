@@ -172,6 +172,10 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     run_dir.mkdir(parents=True, exist_ok=True)
     budgets = {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0}
     trace: list[dict] = []
+    # Holds at most one record awaiting the index of the attempt that replaces
+    # it; resolved when that attempt is created, so a run that dies before it
+    # never ships a supersede pointing into nothing.
+    pending_supersede: list[dict] = []
     # Raw evidence for the OutcomeVerifier: what was read, and what the page
     # said at the moment it was read. The verifier never sees our conclusion.
     extractions: list[dict] = []
@@ -216,7 +220,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     "i": 1, "action": "navigate", "target": None, "value": url, "anchor": None,
                     "resolved": None, "expected_state": None, "postcondition_ok": None,
                     "failure_class": None, "note": "pre-plan observation",
-                    "retry_or_recovery": None, "superseded_by": None,
+                    "retry_or_recovery": None, "superseded_by": None, "page_changed": None,
                     "screenshot": None, "ms": 0,
                 }
                 trace.append(rec)
@@ -287,14 +291,31 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     "value": step.get("value"), "anchor": step.get("anchor"), "resolved": None,
                     "expected_state": step.get("expected_state"), "postcondition_ok": None,
                     "failure_class": None, "note": note, "retry_or_recovery": recovery,
-                    "superseded_by": None, "screenshot": None, "ms": 0,
+                    "superseded_by": None, "page_changed": None, "screenshot": None, "ms": 0,
                 }
                 trace.append(rec)
+                # A replan is only allowed to skip the step it replaces once the
+                # replacement attempt actually exists. Writing the pointer early
+                # shipped traces whose run-killing step claimed to be superseded
+                # by an index that was never created (case supersede-never-dangles).
+                if pending_supersede:
+                    pending_supersede.pop()["superseded_by"] = rec["i"]
                 budgets["actions"] += 1
                 s0 = time.monotonic()
                 cls = None
+                # Did this action change anything at all? The only evidence that
+                # separates a replan legitimately skipping work already done from
+                # one laundering an action that did nothing (replan-cannot-launder-noop-action).
+                before = await page.inner_text("body") if step["action"] != "extract" else None
                 try:
                     await execute(step, rec)
+                    if url_guard and not url_guard(page.url):
+                        # The guard is not just an input filter: a click, a 302 or
+                        # a meta-refresh can walk the browser off the allowed host
+                        # after the submitted URL passed (url-guard-holds-after-navigation).
+                        raise StepError("task", f"navigated to blocked URL: {page.url!r}")
+                    if before is not None:
+                        rec["page_changed"] = (await page.inner_text("body")) != before
                     checked = await check_state(page, step.get("expected_state"))
                     if checked is not None or rec["postcondition_ok"] is None:
                         rec["postcondition_ok"] = checked
@@ -366,9 +387,28 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                             return done(failure="env", reason=f"replanner failed: {e}")
                         budgets["llm_tokens"] += usage["llm_tokens"]
                         budgets["llm_usd"] += usage["llm_usd"]
-                        if new_steps and new_steps != steps[si:]:
+                        # Three ways a replan is not progress. The first two are
+                        # no-ops; the third is the dangerous one — a plan that
+                        # drops the failed action and reads the page as if it had
+                        # worked, when nothing on the page moved. The benign twin
+                        # (recovery-replan-postcondition) clicks a control that
+                        # really did re-sort the list, so page_changed tells them
+                        # apart where nothing about the PLAN can.
+                        drops_action = new_steps and new_steps[0].get("action") == "extract"
+                        if not new_steps or new_steps == steps[si:]:
+                            rec["note"] += "; replan made no progress (identical or empty plan)"
+                        elif new_steps[0] == steps[si]:
+                            # Family 1 enforces "a rung must be a different tier";
+                            # this is family 2's equivalent. Re-issuing the step
+                            # that just failed is a retry, and specs/001 keeps
+                            # retries out of the recovery metric by construction.
+                            rec["note"] += "; replan re-issued the step that just failed"
+                        elif drops_action and not rec.get("page_changed"):
+                            rec["note"] += ("; replan would skip a failed action that changed "
+                                            "nothing on the page")
+                        else:
                             budgets["replans"] += 1
-                            rec["superseded_by"] = len(trace) + 1
+                            pending_supersede.append(rec)
                             pending = (f"replan #{budgets['replans']} after act failure at step "
                                        f"{rec['i']}: {len(new_steps)} step(s) planned from the "
                                        "page as it actually is")
@@ -382,7 +422,6 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                             # (value, step intent) if one ever does.
                             steps = steps[:si] + new_steps
                             continue
-                        rec["note"] += "; replan made no progress (identical or empty plan)"
 
                 if cls:
                     return done(failure=cls,

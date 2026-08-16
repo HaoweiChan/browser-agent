@@ -1,0 +1,28 @@
+{
+  "id": "verifier-sign-currency-percent",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "verifier",
+    "compare": [
+      ["-39.00", "39.00", false],
+      ["39.00", "-39.00", false],
+      ["+2.5", "-2.5", false],
+      ["(39.00)", "39.00", false],
+      ["€18.00", "$18.00", false],
+      ["£18.00", "$18.00", false],
+      ["2.5%", "$2.50", false],
+      ["2.5%", "2.5", false],
+      ["$39.00", "39", true],
+      ["$39.00", "$39.00", true],
+      ["-39.00", "-39", true],
+      ["1,234.50", "$1234.5", true]
+    ]
+  },
+  "expect": { "note": "every row is (got, want, should_match)" },
+  "provenance": "cold review of M3, finding 1. `_NUM`'s leading `[^\\w]*` is greedy and Unicode-aware, so it eats the sign before the group's own `[-+]?` can take it, and it strips every currency symbol to nothing: normalize('-39.00'), normalize('€18.00') and normalize('2.5%') return '39', '18' and '2.5' — identical to normalize('39.00'), normalize('$18.00') and normalize('$2.50'). answers_match returns True for all of them. verifier-numeric-precision has ten rows and varies magnitude and precision only; its row ['$39.00', '39', true] establishes that stripping a currency symbol is deliberate, and nothing anywhere asserted that two DIFFERENT symbols, or a sign, must not be stripped. Watched red on the first eight rows before the fix; the last four pin the behavior that was deliberate and must survive it.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "layer 2 is the only layer that decides correctness against ground truth, so this is a wrong answer scoring PASS at the point every other metric in the repo is downstream of. Tagged invariant. Same normalize() also matches relocation rungs (resolver.py), where it let a target named '-39' relocate onto an element named '39'."
+  }
+}

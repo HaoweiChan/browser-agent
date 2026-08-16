@@ -14,12 +14,12 @@ invariants and golden/adversarial cases instead of prose specs.
 M0–M4 done; M5 (freeze: analysis, README rewrite, held-out probe) is next.
 Milestones and their evidence: `tasks/TODO.md`.
 
-Latest offline baseline — `evals/report/20260816-192727-fast.json`:
+Latest offline baseline — `evals/report/20260816-210730-fast.json`:
 
 ```
-fast       52/52   invariant 12/12   $0.0000   24.3s
+fast       58/58   invariant 16/16   $0.0000   32.0s
 recovery 3/3 verified (6 rungs tried) · mutation 4/4 passed, 2 by relocating
-diagnosis 5/5 · 3 replans
+diagnosis 8/8 · 3 replans
 ```
 
 Read those numbers with their denominators. They are measured on **offline

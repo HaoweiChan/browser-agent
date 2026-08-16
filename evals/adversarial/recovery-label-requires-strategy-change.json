@@ -1,0 +1,31 @@
+{
+  "id": "recovery-label-requires-strategy-change",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+          "expected_state": { "text_visible": "Sorted cheapest first" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ],
+      [
+        { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+          "expected_state": { "text_visible": "Sorted cheapest first" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } },
+        { "action": "extract", "target": { "role": "link", "index": 1 } }
+      ]
+    ]
+  },
+  "expect": { "status": "failure:act", "recovery": false, "replans": 0,
+              "no_recovery_label_on_identical_step": true },
+  "provenance": "cold review of M3, finding 3. The no-progress guard compared the WHOLE replacement list against the whole remaining tail (`new_steps != steps[si:]`), so a replan whose first step is byte-identical to the step that just failed counted as progress if anything later differed — here, one extra trailing extract. The re-issued click was then labelled retry_or_recovery:'recovery' unconditionally, with no comparison against the step it superseded. specs/001 reserves that label for a DIFFERENT strategy and states the recovery metric counts only 'recovery' steps by construction. Watched red with step #3 carrying rec=recovery while its action, target and expected_state were identical to superseded step #2.",
+  "triage": {
+    "class": "metric-integrity",
+    "note": "the run's status is not the issue — it fails act either way here. What is wrong is the label, and therefore the headline `recovery n/n verified (k rungs tried)` number: had the underlying failure been transient (the common real cause of a missed postcondition), the identical second attempt would succeed and the run would report success with recovery:true while nothing switched strategy. The contract already names 'retry' for exactly this and says it stays out of the metric by construction, not by intention."
+  }
+}

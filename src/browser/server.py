@@ -72,11 +72,30 @@ def parse_matrix(text: str | None = None) -> dict:
         cells = [c.strip() for c in line.strip("|").split("|")]
         if set("".join(cells)) <= set("-: "):
             continue  # header underline
-        if section.startswith("current matrix") and len(cells) == 6 and cells[0] != "Domain":
+        # Strict on width, not tolerant: a row that does not fit the shape used
+        # to be skipped, so a single malformed row disappeared from the rendered
+        # matrix while everything around it still parsed.
+        if section.startswith("current matrix") and cells[0] != "Domain":
+            if len(cells) != len(TCS) + 1:
+                raise ValueError(f"support matrix: row {cells[0]!r} has {len(cells)} cells, "
+                                 f"expected {len(TCS) + 1}")
             rows.append({"domain": cells[0], "cells": dict(zip(TCS, cells[1:]))})
-        elif section.startswith("declared limitations") and len(cells) == 3 \
-                and cells[0] != "Limitation":
+        elif section.startswith("declared limitations") and cells[0] != "Limitation":
+            if len(cells) != 3:
+                raise ValueError(f"support matrix: limitation {cells[0][:40]!r} has "
+                                 f"{len(cells)} cells, expected 3")
             limitations.append(dict(zip(("limitation", "evidence", "status"), cells)))
+    # Loud, never quietly empty. Both sections are keyed on a heading prefix and
+    # an exact cell count, so a renamed heading, an added column or one
+    # unbalanced fence used to yield zero entries — and the frontend rendered a
+    # clean header-only table, i.e. an agent declaring no limitations at all.
+    # That is the honesty artifact failing in the flattering direction
+    # (case matrix-parse-fails-loudly).
+    for name, found in (("current matrix", rows), ("declared limitations", limitations)):
+        if not found:
+            raise ValueError(
+                f"support matrix: '{name}' section parsed to zero entries — the heading, the "
+                "column count or a code fence in docs/support-matrix.md changed")
     return {"rows": rows, "limitations": limitations, "citation_text": "\n".join(body)}
 
 

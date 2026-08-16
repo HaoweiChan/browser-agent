@@ -1,0 +1,22 @@
+{
+  "id": "matrix-parse-fails-loudly",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "matrix-drift",
+    "variants": [
+      { "note": "section heading renamed at a later milestone",
+        "replace": ["## Declared limitations (M3)", "## Known limitations"] },
+      { "note": "a column added to the matrix grid",
+        "replace": ["| shop fixture | supported |", "| shop fixture | supported | supported |"] },
+      { "note": "unbalanced code fence swallows the rest of the document",
+        "replace": ["## Current matrix", "```\n\n## Current matrix"] }
+    ]
+  },
+  "expect": { "raises": true },
+  "provenance": "cold review of M4, finding 2. parse_matrix keyed rows on `section.startswith(...)` plus an exact cell count, and asserted nothing about having found anything. Renaming a heading, adding a TC6 or an Owner column, or leaving one unbalanced fence made a section silently parse to zero entries — and support-matrix-cites-real-cases stayed GREEN on it, because bad_status iterates the rows it did not find and every surviving citation still resolves. The frontend then rendered a clean, authoritative, header-only table: an agent declaring no limitations at all. Watched red as three variants that parsed quietly instead of raising.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "this is the honesty artifact failing in the flattering direction, which is the one direction that must never be quiet (CLAUDE.md rule 4). The fix is loudness, not tolerance: an empty section raises, so the /support-matrix endpoint 500s and the page shows an error rather than an empty promise. Also fixed alongside: the citation checker built its set of known case ids from evals/*/*.json, which included evals/report/*.json, so a report filename like `20260816-192727-fast` was accepted as a valid case citation."
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "supersede-never-dangles",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "invariant",
+    "check": "supersede-dangling"
+  },
+  "expect": { "note": "no trace step may point superseded_by at an index the trace does not contain" },
+  "provenance": "cold review of M4, finding 3. The replan branch wrote `rec['superseded_by'] = len(trace) + 1` BEFORE the replacement attempt existed, then continued the loop. If a run-level budget tripped on the next iteration, the replacement was never created, the run returned failure:env, and the trace shipped with its last, run-killing step pointing at a step number that does not exist. verify() is only called on the success path, so supersedes_resolve — the check specs/001 says makes the supersede exemption safe — was bypassed on precisely the path that produced the dangling pointer. The frontend then dimmed that fatal step to 62% opacity and labelled it 'superseded by #31', the exact vocabulary it reserves for 'a ladder replaced this, look at the next attempt' — with no next attempt to look at. Watched red on a run driven into the action budget one step after a replan.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "verifier-superseded-not-a-loophole pins the dangling pointer in the VERIFIER, on a hand-built trace; it never runs the path where verify is not called. This case checks the executor's own emitted traces instead, so the guarantee holds on failure paths too — the ones a reviewer inspecting a broken run is most likely to be reading."
+  }
+}

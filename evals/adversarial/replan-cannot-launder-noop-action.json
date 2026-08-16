@@ -1,0 +1,27 @@
+{
+  "id": "replan-cannot-launder-noop-action",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        { "action": "click", "target": { "role": "heading", "name": "Nimbus Shop" },
+          "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ],
+      [
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ]
+    ]
+  },
+  "expect": { "status": "failure:act", "recovery": false },
+  "provenance": "cold review of M3, finding 2 — the evil twin of recovery-replan-postcondition, and the reason that case alone was not coverage. Both plans click something, both postconditions fail, and both replans drop the failed step and extract instead. In the benign case the click really did sort the list; here it clicks a heading, which does nothing at all. The agent saw the two as identical, so it produced status:success, answer:'Aurora Desk Lamp', verdict PASS, replans 1 — a wrong answer (the true cheapest is Cobalt Floor Rug, $18.00) laundered through the M3 recovery machinery, because supersede exempts the failed step from no_failed_postcondition and actions_verified. Watched red exactly there: success with the pre-action answer.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "no rule over the PLAN can separate this from the benign case — the difference is only in the world. The discriminating evidence is whether the action changed the page at all: the legitimate replan follows a click that visibly re-ordered the list, this one follows a click that changed nothing. Family 2 previously had only its happy path pinned, while family 1's equivalent rule (a rung must be a different tier) was enforced in code and pinned by relocation-distinct-tier."
+  }
+}

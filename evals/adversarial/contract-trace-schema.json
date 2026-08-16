@@ -64,6 +64,7 @@
         "note",
         "retry_or_recovery",
         "superseded_by",
+        "page_changed",
         "screenshot",
         "ms"
       ]

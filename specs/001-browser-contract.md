@@ -73,6 +73,7 @@ appears, in order — no post-hoc reconstruction).
   "note": null,
   "retry_or_recovery": null,
   "superseded_by": null,
+  "page_changed": null,
   "screenshot": "step_1.png",
   "ms": 0
 }
@@ -108,6 +109,19 @@ appears, in order — no post-hoc reconstruction).
   the one that differs from what failed. No `"retry"` rung exists yet; when a
   re-observe or wait rung is added it logs as `retry` and stays out of the
   recovery metric by construction, not by intention.
+- `page_changed` — did this action change the page's text at all? `null` on
+  `extract` (which changes nothing by definition) and on the pre-plan navigate.
+  It exists for one decision: a replan may drop the step it replaces only when
+  that step actually moved the page. Two runs can be identical in plan, trace
+  and failure — a click that lands, a postcondition that never arrives, a
+  replan that skips straight to extraction — and differ only in whether the
+  click did anything. In one the replanner is correctly reading an
+  already-sorted page; in the other it reports the pre-action answer as the
+  result. Nothing about the plan separates them, so the page does
+  (`evals/adversarial/replan-cannot-launder-noop-action.json` against its
+  benign twin `recovery-replan-postcondition`). Known ceiling: whole-body text
+  equality, so an action whose only effect is off-page or purely visual reads
+  as no change and its replan is refused — loudly, in the safe direction.
 - `superseded_by` — null, or the `i` of the attempt that replaced this one. A
   failed attempt stays in the trace forever; this field is what stops it from
   also failing the *run*, so that a recovered run can be graded PASS. The

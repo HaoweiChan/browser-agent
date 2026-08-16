@@ -34,35 +34,87 @@ trap cases in evals/adversarial/ hold both shapes open on purpose.
 import re
 from decimal import Decimal, InvalidOperation
 
-_NUM = re.compile(r"^[^\w]*([-+]?\d[\d,]*\.?\d*)\s*[^\w]*$")
+                        # sign        digits           trailing unit (%, etc.)
+_NUM = re.compile(r"^(?P<lead>\D*?)(?P<sign>[-+]?)(?P<num>\d[\d,]*\.?\d*)(?P<unit>\D*)$")
+# Symbols that mean "this is money" and carry no value of their own, so "$39.00"
+# and "39" are the same answer. `%` is NOT here: it is a unit, and 2.5% is not
+# 2.50. Two DIFFERENT symbols are never interchangeable either (€18 != $18).
+_CURRENCY = "$€£¥₩₹"
+
+
+def _clean(value) -> str:
+    return re.sub(r"\s+", " ", str(value)).strip().casefold().strip(".,;:!")
+
+
+def _num_parts(s: str):
+    """`(Decimal, currency|None, unit|None)`, or None when s is not a number.
+
+    Sign and unit survive here. The previous pattern opened with a greedy
+    Unicode `[^\\w]*`, which swallowed the sign before the group's own `[-+]?`
+    could take it and erased every currency symbol to nothing — so -39 == 39,
+    €18 == $18 and 2.5% == $2.50 all compared equal, at the only layer that
+    decides correctness (case verifier-sign-currency-percent).
+    """
+    m = _NUM.match(s)
+    if not m:
+        return None
+    lead, unit = m["lead"].strip(), m["unit"].strip()
+    # Accounting negative: (39.00) is -39.00, not 39.00.
+    paren = lead.endswith("(") and unit.startswith(")")
+    lead, unit = lead.rstrip("("), unit.lstrip(")")
+    sign = "-" if (m["sign"] == "-") ^ paren else ""
+    try:
+        val = Decimal(sign + m["num"].replace(",", "")).normalize()
+    except InvalidOperation:
+        return None
+    # `t and` is load-bearing: "" is a substring of every string, so without it
+    # an absent symbol reads as a currency and "$39.00" stops equalling "39".
+    cur = next((t for t in (lead, unit) if t and t in _CURRENCY), None)
+    # Anything left that is not a bare currency symbol is a real unit.
+    other = [t for t in (lead, unit) if t and t not in _CURRENCY]
+    if len(other) > 1:
+        return None  # decorated on both sides and not money — compare as text
+    return val, cur, (other[0] if other else None)
 
 
 def normalize(value) -> str:
-    """Casefold + collapse whitespace; pure numeric/currency values compare
-    numerically so "$39.00" and "39" are the same answer.
+    """Casefold + collapse whitespace, with numbers canonicalized.
 
     Decimal, never float formatting: `%g` rounds to 6 significant digits, which
     made the grader call $12,345.67 and $12,345.74 the same number — a wrong
     answer scored PASS at the only layer that decides correctness (case
     verifier-numeric-precision).
+
+    This is a string key, so it is the right tool for name/text matching (the
+    resolver's relocation rungs use it) and the wrong one for comparing two
+    answers — see answers_match.
     """
-    s = re.sub(r"\s+", " ", str(value)).strip().casefold().strip(".,;:!")
-    m = _NUM.match(s)
-    if m:
-        try:
-            return format(Decimal(m.group(1).replace(",", "")).normalize(), "f")
-        except InvalidOperation:
-            pass
-    return s
+    s = _clean(value)
+    parts = _num_parts(s)
+    if not parts:
+        return s
+    val, cur, unit = parts
+    return " ".join(filter(None, [format(val, "f"), unit, cur]))
 
 
 def answers_match(got, want) -> bool:
+    """Numbers compare structurally, not as normalized strings.
+
+    A single canonical string cannot express what is actually true here,
+    because the relation is not transitive: "$39.00" and "39" are the same
+    answer, "€18.00" and "18" are the same answer, and yet "€18.00" and
+    "$18.00" are NOT. So value, unit and currency are compared as three
+    separate facts — a currency symbol may be absent on one side, but two
+    different symbols never match, and a unit like % must match exactly.
+    """
     if isinstance(want, list) != isinstance(got, list):
         return False
     if isinstance(want, list):
-        return len(got) == len(want) and all(
-            normalize(g) == normalize(w) for g, w in zip(got, want)
-        )
+        return len(got) == len(want) and all(answers_match(g, w) for g, w in zip(got, want))
+    g, w = _num_parts(_clean(got)), _num_parts(_clean(want))
+    if g and w:
+        return (g[0] == w[0] and g[2] == w[2]
+                and (g[1] is None or w[1] is None or g[1] == w[1]))
     return normalize(got) == normalize(want)
 
 

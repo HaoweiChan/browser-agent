@@ -155,7 +155,7 @@ def _check_inv3() -> dict:
 
 
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
-              "inv3": _check_inv3}
+              "inv3": _check_inv3, "supersede-dangling": lambda: _check_supersede_dangling()}
 
 
 def _run_classify_case(case: dict) -> dict:
@@ -334,9 +334,16 @@ def _run_fixture_case(case: dict) -> dict:
     # replanner comes back with; `stub_plan` is the single-plan shorthand.
     plans = inp.get("stub_plans") or [inp.get("stub_plan", [])]
     plans = json.loads(json.dumps(plans).replace("$FIXTURE_URL", fixture_url or ""))
+    # An injected marker predicate, not the production url_ok: fixtures are
+    # served on loopback and the real guard blocks loopback, so passing url_ok
+    # here would fail every fixture case for the wrong reason. This grades that
+    # the guard is CONSULTED as the browser moves; url-guard-literal-ips grades
+    # what it decides.
+    guard = (lambda u: inp["block_host"] not in u) if inp.get("block_host") else None
     with tempfile.TemporaryDirectory() as run_dir:
         result = asyncio.run(
-            run_task(inp["task"], inp.get("url", fixture_url), stub_planner(plans), run_dir)
+            run_task(inp["task"], inp.get("url", fixture_url), stub_planner(plans), run_dir,
+                     url_guard=guard)
         )
 
     # Re-verify with ground truth the runtime cannot have: hand labels, identity
@@ -369,6 +376,17 @@ def _run_fixture_case(case: dict) -> dict:
         checks["recovery"] = bool(recovered) == exp["recovery"]
     if "replans" in exp:
         checks["replans"] = result["budgets_spent"]["replans"] == exp["replans"]
+    # A "recovery" label claims a strategy CHANGED. An attempt identical to the
+    # one it replaced is a retry, and specs/001 keeps retries out of the
+    # recovery metric by construction, not by intention.
+    if exp.get("no_recovery_label_on_identical_step"):
+        intent = lambda s: (s.get("action"), json.dumps(s.get("target"), sort_keys=True),
+                            s.get("value"), json.dumps(s.get("expected_state"), sort_keys=True))
+        by_i = {s["i"]: s for s in trace}
+        relabelled = [s["i"] for s in trace if s.get("retry_or_recovery") == "recovery"
+                      for o in trace if o.get("superseded_by") == s["i"]
+                      and intent(o) == intent(by_i[s["i"]])]
+        checks["no_recovery_label_on_identical_step"] = not relabelled
 
     # Metrics the runner rolls up (docs/evals/evaluation-methodology.md). Counted
     # from the trace and the injected ground truth, never from a claim.
@@ -388,7 +406,12 @@ def _run_fixture_case(case: dict) -> dict:
         metrics["recovery_rungs"] = len(recovered)
     if exp.get("recovery"):
         metrics["recovery_expected"] = 1
-        metrics["recovery_verified"] = int(bool(recovered) and result["status"] == "success")
+        # Graded on the AUDIT, not on the runtime's own claim. Keyed off
+        # result["status"] == "success", a run that "recovered" into a wrong
+        # answer counted toward the headline recovery number even when
+        # ground truth said FAIL — the metric flattering itself with the
+        # mechanism it is supposed to be measuring (cold review, M3).
+        metrics["recovery_verified"] = int(bool(recovered) and all(checks.values()))
     if str(exp.get("status", "")).startswith("failure:"):
         metrics["diagnosis_cases"] = 1
         metrics["diagnosis_correct"] = int(result["status"] == exp["status"])
@@ -461,7 +484,10 @@ def _run_matrix_case(case: dict) -> dict:
     from .server import CASE_CITATION, parse_matrix
 
     doc = parse_matrix()
-    known = {p.stem for p in (Path(__file__).parents[2] / "evals").glob("*/*.json")}
+    # Case dirs only. Globbing evals/*/*.json swept in evals/report/*.json, so a
+    # report filename like `20260816-192727-fast` counted as a valid case id.
+    evals_dir = Path(__file__).parents[2] / "evals"
+    known = {p.stem for d in ("golden", "adversarial") for p in (evals_dir / d).glob("*.json")}
     legal = set(case["expect"]["statuses"])
 
     bad_status = [
@@ -520,8 +546,65 @@ def _run_gateway_error_case(case: dict) -> dict:
             "got": {"status": rec.get("status"), "reason": rec.get("reason")}}
 
 
+def _run_matrix_drift_case(case: dict) -> dict:
+    """Ordinary maintenance of the matrix doc must break loudly, not quietly.
+
+    Each variant is an edit a future milestone would plausibly make. A variant
+    that parses without raising is a document that silently declared nothing."""
+    from .server import MATRIX_DOC, parse_matrix
+
+    src = MATRIX_DOC.read_text(encoding="utf-8")
+    quiet = []
+    for v in case["input"]["variants"]:
+        old, new = v["replace"]
+        if old not in src:
+            return {"passed": False, "error": f"variant anchor not in the doc: {old!r}"}
+        try:
+            got = parse_matrix(src.replace(old, new))
+        except ValueError:
+            continue  # loud — what we want
+        quiet.append({"note": v["note"], "rows": len(got["rows"]),
+                      "limitations": len(got["limitations"])})
+    return {"passed": not quiet, "wrong": {"parsed_quietly": quiet}}
+
+
+def _check_supersede_dangling() -> dict:
+    """No emitted trace may point superseded_by at a step that does not exist.
+
+    Drives a real run into the action budget one step after a replan — the path
+    that produced the dangling pointer, and the one where verify() is never
+    called, so the verifier's own supersedes_resolve gate cannot catch it."""
+    from . import agent as A
+
+    base, orig = _base_url(), dict(A.RUN_BUDGETS)
+    A.RUN_BUDGETS["actions"] = 2  # pre-plan navigate + the failing click
+    plans = [
+        [{"action": "click", "target": {"role": "button", "name": "Sort by price (low to high)"},
+          "expected_state": {"text_visible": "never rendered"}},
+         {"action": "extract", "target": {"role": "link", "index": 0}}],
+        [{"action": "extract", "target": {"role": "link", "index": 0}}],
+    ]
+    try:
+        with tempfile.TemporaryDirectory() as run_dir:
+            result = asyncio.run(run_task(
+                "Sort by price and name the cheapest.", f"{base}/fixtures/shop.html",
+                stub_planner(plans), run_dir))
+    finally:
+        A.RUN_BUDGETS.clear()
+        A.RUN_BUDGETS.update(orig)
+
+    trace = result["evidence"]["trace"]
+    present = {s["i"] for s in trace}
+    dangling = [{"i": s["i"], "superseded_by": s["superseded_by"]} for s in trace
+                if s.get("superseded_by") and s["superseded_by"] not in present]
+    return {"passed": not dangling, "wrong": {"dangling": dangling},
+            "got": {"status": result["status"], "steps": len(trace)}}
+
+
 def run_case(case: dict) -> dict:
     kind = case["input"].get("kind")
+    if kind == "matrix-drift":
+        return _run_matrix_drift_case(case)
     if kind == "gateway-error":
         return _run_gateway_error_case(case)
     if kind == "stream":

@@ -1,0 +1,21 @@
+{
+  "id": "url-guard-holds-after-navigation",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "task": "Open the partner site and read its heading.",
+    "fixture": "offsite.html",
+    "block_host": "hello.html",
+    "stub_plan": [
+      { "action": "click", "target": { "text": "Stay on this site" },
+        "expected_state": { "url_contains": "hello.html" } },
+      { "action": "extract", "target": { "role": "heading" } }
+    ]
+  },
+  "expect": { "status": "failure:task", "recovery": false },
+  "provenance": "cold review of M4, finding 1. The guard was consulted in exactly two places — the submitted URL string at the gateway, and the `navigate` branch of execute() — so a CLICK that leaves the allowed host was never checked, nor was a 302 or meta-refresh, nor the final_url the run reports. The frontend told reviewers verbatim that a blocked URL is refused before a browser opens, which was true only of the string. Worse, no eval ever passed url_guard into run_task at all: both in-agent guard checks could be deleted and every suite stayed green. Watched red by deleting the post-action guard check: the click then navigated onto the blocked URL unchallenged and the run carried on there, ending failure:locate on an ambiguous heading several steps later. Worth stating precisely — the observable damage is not a wrong answer, it is that the browser was somewhere the guard exists to forbid and nothing noticed; what it did next was incidental.",
+  "triage": {
+    "class": "invariant-gap",
+    "note": "uses an injected marker predicate (`block_host`) rather than the production url_ok, because the fixtures are served on loopback and the real guard blocks loopback — passing url_ok into a fixture case would fail every case for the wrong reason. So this grades the ENFORCEMENT (the guard is consulted whenever the browser changes host), while url-guard-literal-ips grades the PREDICATE. Neither is coverage without the other."
+  }
+}
