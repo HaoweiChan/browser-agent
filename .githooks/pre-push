@@ -1,0 +1,17 @@
+#!/bin/sh
+# PR-only main (owner directive, 2026-08-17): direct pushes to main are refused.
+# Merges happen on GitHub through a PR with the eval-gate check green.
+# GitHub-side enforcement (branch protection / rulesets) needs Pro on a private
+# repo, so this hook is the enforcement we can version until submission makes
+# the repo public. --no-verify skips it, like every hook: an emergency door,
+# and using it without an explanation in the commit is a review failure
+# (CLAUDE.md hard rule 5).
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "PUSH BLOCKED: main is PR-only."
+    echo "Push a branch and open a PR; merge when eval-gate is green:"
+    echo "  git push -u origin <branch> && gh pr create"
+    exit 1
+  fi
+done
+exit 0
