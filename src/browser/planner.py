@@ -62,10 +62,20 @@ def parse_plan(content: str) -> list:
         raise PlanError(f"planner returned non-plan output: {e}: {content[:200]}")
 
 
-def stub_planner(steps: list):
-    """Deterministic planner for the fast suite: returns the given steps."""
+def stub_planner(plans: list):
+    """Deterministic planner for the fast suite: one plan per call, in order.
 
-    async def plan(task: str, url: str | None, observation: dict | None = None):
+    A sequence rather than a single plan because M3 replans: a case that injects
+    a bad first plan has to be able to say what the replanner comes back with.
+    The last plan repeats, so a case that never replans still just gets its one
+    plan — and a replan that returns the same steps is caught by the agent's
+    no-progress guard rather than looping.
+    """
+    calls = [0]
+
+    async def plan(task: str, url: str | None, observation: dict | None = None, note: str | None = None):
+        steps = plans[min(calls[0], len(plans) - 1)]
+        calls[0] += 1
         return steps, {"llm_tokens": 0, "llm_usd": 0.0}
 
     return plan
@@ -85,12 +95,18 @@ def live_planner(model: str = DEFAULT_MODEL):
         with urllib.request.urlopen(req, timeout=60) as resp:
             return json.load(resp)
 
-    async def plan(task: str, url: str | None, observation: dict | None = None):
+    async def plan(task: str, url: str | None, observation: dict | None = None, note: str | None = None):
         user = f"Task: {task}\nStart URL: {url or 'none — choose one via navigate'}"
         if observation:
             from .observe import render
 
             user += "\n\nCurrent page observation:\n" + render(observation)
+        if note:
+            # Replan: the previous attempt and why it failed, plus the page as
+            # it actually is now. Plan the REMAINING work from here — the steps
+            # already executed are not re-issued.
+            user += (f"\n\nA previous attempt failed: {note}\n"
+                     "Plan only the steps still needed from the page above.")
         payload = {
             "model": model,
             "messages": [

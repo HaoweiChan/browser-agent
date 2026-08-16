@@ -124,7 +124,80 @@ def _check_inv2() -> dict:
     return {"passed": not bad and ok["status"] == "success", "leaked": bad}
 
 
-INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2}
+def _check_inv3() -> dict:
+    """INV-3: budget exhaustion is a loud classified failure, never a quiet stop.
+
+    Pure code — the budgets are counters and `budget_stop` is the predicate over
+    them, so the property is checkable without a browser. The end-to-end half
+    (a run that really exhausts its replans) is budget-replans-exhausted."""
+    from .agent import RUN_BUDGETS, budget_stop
+
+    wrong = []
+    if budget_stop({k: 0 for k in RUN_BUDGETS}) is not None:
+        wrong.append("stopped a run that had spent nothing")
+    for k, cap in RUN_BUDGETS.items():
+        if budget_stop({k: cap - 1}) is not None:
+            wrong.append(f"{k} stopped below its cap")
+        if budget_stop({k: cap}) is None:
+            wrong.append(f"{k} did not stop AT its cap")
+        if budget_stop({k: cap * 2}) is None:
+            wrong.append(f"{k} did not stop past its cap")
+    # ...and the stop must arrive as a classified failure carrying its trace,
+    # which is the half that makes it loud rather than merely correct.
+    trace = [{"i": 1, "action": "click", "postcondition_ok": True, "screenshot": None}]
+    r = assemble_result(task="x", trace=trace, answer="a",
+                        budgets={"actions": 30, "llm_tokens": 0, "llm_usd": 0.0,
+                                 "replans": 0, "ms": 1},
+                        failure="env", reason=budget_stop({"actions": 30}))
+    if r["status"] != "failure:env" or not r["reason"] or not r["evidence"]["trace"]:
+        wrong.append(f"exhaustion was not a loud classified failure: {r['status']}")
+    return {"passed": not wrong, "wrong": wrong}
+
+
+INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
+              "inv3": _check_inv3}
+
+
+def _run_classify_case(case: dict) -> dict:
+    """Diagnosis ground truth: (action, error) -> exactly one taxonomy class.
+
+    The classifier is the only component that decides which recovery ladder
+    fires, so it gets a truth table rather than an assertion in prose."""
+    from .agent import StepError, classify
+    from .resolver import ResolveError
+
+    def make(spec: str) -> Exception:
+        if spec.startswith("StepError:"):
+            return StepError(spec.split(":", 1)[1], "planted")
+        if spec == "ResolveError":
+            return ResolveError("element-not-found", "planted")
+        if spec == "TimeoutError":
+            return TimeoutError("planted")
+        if spec == "Exception":
+            return Exception("planted")
+        raise KeyError(f"unknown exception spec {spec!r}")  # loud, never a silent skip
+
+    wrong = [{"action": a, "exc": spec, "want": want, "got": got}
+             for a, spec, want in case["input"]["checks"]
+             if (got := classify(a, make(spec))) != want]
+    return {"passed": not wrong, "wrong": wrong}
+
+
+def _run_relocate_case(case: dict) -> dict:
+    """Relocation rungs: same intent, different tier, never the tier that just
+    failed. Pure function over a target and a snapshot — no browser needed."""
+    from .resolver import relocation_candidates
+
+    inp = case["input"]
+    wrong = []
+    for chk in inp["checks"]:
+        got = relocation_candidates(chk["target"], inp["observation"])
+        want = chk["expect"]
+        # Compare on the tier-defining keys only; `index` is intent, not tier.
+        thin = [{k: v for k, v in c.items() if k in ("role", "name", "text")} for c in got]
+        if thin != want:
+            wrong.append({"target": chk["target"], "want": want, "got": got})
+    return {"passed": not wrong, "wrong": wrong}
 
 
 def _run_mutation_case(case: dict) -> dict:
@@ -142,6 +215,41 @@ def _run_mutation_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong}
 
 
+def _run_schema_case(case: dict) -> dict:
+    """Field-by-field conformance to specs/001-browser-contract.md.
+
+    The contract is prose; prose does not fail a build. This case is the
+    executable half — it caught `anchor` being specced into TraceStep and never
+    emitted (M2 close-out)."""
+    inp = case["input"]
+    base = _base_url()
+    steps = json.loads(json.dumps(inp["stub_plan"]).replace(
+        "$FIXTURE_URL", f"{base}/fixtures/{inp['fixture']}"))
+    with tempfile.TemporaryDirectory() as run_dir:
+        result = asyncio.run(run_task(
+            inp["task"], f"{base}/fixtures/{inp['fixture']}", stub_planner([steps]), run_dir))
+
+    got = {
+        "result": list(result),
+        "evidence": list(result["evidence"]),
+        "verdict": list(result["verdict"]),
+        "budgets_spent": list(result["budgets_spent"]),
+        # Every step, not just the last: the pre-plan navigate record is built
+        # separately from the step-loop record and drifts on its own.
+        "trace_step": sorted({k for s in result["evidence"]["trace"] for k in s}),
+    }
+    wrong = {
+        k: {"missing": sorted(set(want) - set(got[k])), "extra": sorted(set(got[k]) - set(want))}
+        for k, want in case["expect"]["keys"].items()
+        if set(want) != set(got[k])
+    }
+    short = [s["i"] for s in result["evidence"]["trace"]
+             if set(s) != set(case["expect"]["keys"]["trace_step"])]
+    if short:
+        wrong["trace_step_incomplete"] = short
+    return {"passed": not wrong, "wrong": wrong, "got": got}
+
+
 def _run_verifier_case(case: dict) -> dict:
     """Direct probes of the grader itself. The grader is the only component
     with no other component checking it, so it gets unit-shaped cases."""
@@ -149,9 +257,20 @@ def _run_verifier_case(case: dict) -> dict:
 
     inp = case["input"]
     wrong = []
+    # A probe the adapter does not understand must be loud. Silently skipping an
+    # unknown key scored this case PASS while it checked nothing at all — a case
+    # that proves nothing is worse than no case, because it reads as coverage.
+    unknown = set(inp) - {"kind", "compare", "anchors", "superseded"}
+    if unknown:
+        return {"passed": False, "error": f"unknown verifier probe(s): {sorted(unknown)}"}
     for got, want, should_match in inp.get("compare", []):
         if answers_match(got, want) != should_match:
             wrong.append({"got": got, "want": want, "should_match": should_match})
+    for sc in inp.get("superseded", []):
+        v = verify(trace=sc["trace"], extractions=[{"value": "a", "page_text": "a"}], answer="a")
+        if (v["verdict"] == "PASS") != sc["pass"]:
+            wrong.append({"superseded": sc["note"], "should_pass": sc["pass"],
+                          "verdict": v["verdict"], "checks": v["checks"]})
     for sc in inp.get("anchors", []):
         v = verify(
             trace=[{"i": 1, "action": "extract", "postcondition_ok": True}],
@@ -211,10 +330,13 @@ def _run_fixture_case(case: dict) -> dict:
         fixture_url = f"{_base_url()}/fixtures/{inp['fixture']}"
         if inp.get("mut"):
             fixture_url += f"?mut={inp['mut']}"
-    steps = json.loads(json.dumps(inp.get("stub_plan", [])).replace("$FIXTURE_URL", fixture_url or ""))
+    # One plan per planner call: `stub_plans` is what a case uses to say what the
+    # replanner comes back with; `stub_plan` is the single-plan shorthand.
+    plans = inp.get("stub_plans") or [inp.get("stub_plan", [])]
+    plans = json.loads(json.dumps(plans).replace("$FIXTURE_URL", fixture_url or ""))
     with tempfile.TemporaryDirectory() as run_dir:
         result = asyncio.run(
-            run_task(inp["task"], inp.get("url", fixture_url), stub_planner(steps), run_dir)
+            run_task(inp["task"], inp.get("url", fixture_url), stub_planner(plans), run_dir)
         )
 
     # Re-verify with ground truth the runtime cannot have: hand labels, identity
@@ -237,10 +359,48 @@ def _run_fixture_case(case: dict) -> dict:
     )
     if want_verdict:
         checks["verdict"] = audit["verdict"] == want_verdict
+
+    trace = result["evidence"]["trace"]
+    recovered = [s for s in trace if s.get("retry_or_recovery") == "recovery"]
+    # `recovery: true` asserts the mechanism, not just the outcome: a strategy
+    # switch that was actually taken AND a run that then succeeded. A case that
+    # passes without one of those is passing for a different reason than it says.
+    if "recovery" in exp:
+        checks["recovery"] = bool(recovered) == exp["recovery"]
+    if "replans" in exp:
+        checks["replans"] = result["budgets_spent"]["replans"] == exp["replans"]
+
+    # Metrics the runner rolls up (docs/evals/evaluation-methodology.md). Counted
+    # from the trace and the injected ground truth, never from a claim.
+    metrics = {}
+    if inp.get("mut"):
+        metrics["mutation_cases"] = 1
+        metrics["mutation_passed"] = int(result["status"] == exp.get("status", "success"))
+        # Passing is not recovering. Two of the three B-floor mutations break a
+        # tier no plan was standing on, so they pass without anything being
+        # relocated; counting those as recoveries is the flattering lie ADR-002
+        # called out. Only a run that actually switched tiers counts here.
+        metrics["mutation_recovered"] = int(bool(recovered) and result["status"] == "success")
+    # Denominator = cases that ASSERT recovery, so a ladder that correctly fails
+    # to save a doomed run (resolver-substring-name) is not scored as a miss and
+    # not scored as a win. Rungs tried is reported beside it as raw context.
+    if recovered:
+        metrics["recovery_rungs"] = len(recovered)
+    if exp.get("recovery"):
+        metrics["recovery_expected"] = 1
+        metrics["recovery_verified"] = int(bool(recovered) and result["status"] == "success")
+    if str(exp.get("status", "")).startswith("failure:"):
+        metrics["diagnosis_cases"] = 1
+        metrics["diagnosis_correct"] = int(result["status"] == exp["status"])
+    if result["budgets_spent"]["replans"]:
+        metrics["replans"] = result["budgets_spent"]["replans"]
+
     return {
         "passed": all(checks.values()),
         "checks": checks,
         "audit": audit,
+        "metrics": metrics,
+        "tiers": [s["resolved"]["tier"] for s in trace if s.get("resolved")],
         "got": {"status": result["status"], "answer": result["answer"],
                 "reason": result["reason"]},
         "budgets": result["budgets_spent"],
@@ -260,6 +420,12 @@ def run_case(case: dict) -> dict:
         return _run_mutation_case(case)
     if kind == "verifier":
         return _run_verifier_case(case)
+    if kind == "classify":
+        return _run_classify_case(case)
+    if kind == "relocate":
+        return _run_relocate_case(case)
+    if kind == "schema":
+        return _run_schema_case(case)
     if kind == "url-guard":
         from .server import url_ok
 

@@ -66,14 +66,20 @@ def pctl(values, p):
     return s[min(len(s) - 1, int(round(p / 100 * len(s) + 0.5)) - 1)]
 
 
-def aggregate(results):
-    """Cost and latency roll-up. Adapters report spend under `budgets`; the
-    runner stays task-agnostic by summing whatever numeric keys it finds."""
+def sum_numeric(results, field):
+    """Sum whatever numeric keys the adapters put under `field`. The runner
+    stays task-agnostic: it does not know what a mutation or a recovery is."""
     totals: dict[str, float] = {}
     for r in results:
-        for k, v in (r.get("budgets") or {}).items():
+        for k, v in (r.get(field) or {}).items():
             if isinstance(v, (int, float)):
                 totals[k] = round(totals.get(k, 0) + v, 6)
+    return totals
+
+
+def aggregate(results):
+    """Cost and latency roll-up. Adapters report spend under `budgets`."""
+    totals = sum_numeric(results, "budgets")
     secs = [r["seconds"] for r in results]
     totals["wall_seconds"] = round(sum(secs), 2)
     totals["latency_p50"] = pctl(secs, 50)
@@ -101,6 +107,7 @@ def main():
     passed = sum(r["passed"] for r in results)
     score = passed / len(results)
     totals = aggregate(results)
+    metrics = sum_numeric(results, "metrics")
     for r in results:
         mark = "PASS" if r["passed"] else "FAIL"
         print(f"[{mark}] {r['id']} ({r['kind']}, {r['seconds']}s)")
@@ -110,12 +117,25 @@ def main():
     print(f"[eval] cost ${totals.get('llm_usd', 0):.4f} · {int(totals.get('llm_tokens', 0))} tok · "
           f"{int(totals.get('actions', 0))} actions · wall {totals['wall_seconds']}s · "
           f"p50 {totals['latency_p50']}s p95 {totals['latency_p95']}s")
+    if metrics:
+        # Ratios are printed as x/y, never as a bare rate: the denominator is
+        # the number of cases that could have exercised the mechanism, and it is
+        # small enough that hiding it would flatter the number.
+        def ratio(num, den):
+            return f"{int(metrics.get(num, 0))}/{int(metrics.get(den, 0))}"
+        print(f"[eval] recovery {ratio('recovery_verified', 'recovery_expected')} verified "
+              f"({int(metrics.get('recovery_rungs', 0))} rungs tried) · "
+              f"mutation {ratio('mutation_passed', 'mutation_cases')} passed, "
+              f"{int(metrics.get('mutation_recovered', 0))} by relocating · "
+              f"diagnosis {ratio('diagnosis_correct', 'diagnosis_cases')} · "
+              f"{int(metrics.get('replans', 0))} replans")
 
     if not args.no_report:
         REPORT_DIR.mkdir(parents=True, exist_ok=True)
         stamp = time.strftime("%Y%m%d-%H%M%S")
         (REPORT_DIR / f"{stamp}-{args.suite}.json").write_text(json.dumps(
-            {"suite": args.suite, "score": score, "totals": totals, "results": results}, indent=2))
+            {"suite": args.suite, "score": score, "totals": totals, "metrics": metrics,
+             "results": results}, indent=2))
 
     baseline_path = Path(args.baseline)
     baseline = json.loads(baseline_path.read_text()) if baseline_path.exists() else {}

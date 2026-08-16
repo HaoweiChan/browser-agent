@@ -1,9 +1,16 @@
-"""SemanticTarget -> Playwright locator, tier by tier.
+"""SemanticTarget -> Playwright locator, tier by tier, plus relocation.
 
 Tiers (docs/evals/failure-taxonomy.md): role+name -> text/label -> stable attrs
 -> structural. M1 ships role and text; attrs/structural land with the locator
 cache at M4.
+
+`relocation_candidates` is the self-maintenance half: given the target that
+just failed and a FRESH accessibility snapshot, it proposes the same semantic
+intent expressed at a *different* tier. Pure function — the agent owns the
+re-observe and the retry, this owns the rule about which rungs are legitimate.
 """
+
+from .verifier import normalize
 
 
 class ResolveError(Exception):
@@ -48,3 +55,33 @@ async def resolve(page, target: dict):
             "ambiguous-match", f"{ambiguous[1]} matches at tier {ambiguous[0]} for {target}"
         )
     raise ResolveError("element-not-found", f"no tier resolved {target}")
+
+
+def relocation_candidates(target: dict, obs: dict) -> list[dict]:
+    """Rungs for a `locate` failure: the same intent at a DIFFERENT tier.
+
+    A rung that re-runs the strategy that just failed is a retry wearing a
+    recovery label (docs/evals/failure-taxonomy.md), so each tier the failed
+    target already used is excluded — even when the fresh snapshot would
+    happily supply a candidate for it (case relocation-distinct-tier, row 4).
+
+    The intent is carried by the strings the target names itself with. A target
+    with neither `name` nor `text` — `{role: link, index: 0}` — has nothing to
+    relocate *by*, and gets no rungs: guessing from a role alone is how the
+    resolver picked wrong elements before (case resolver-substring-name).
+    """
+    wanted = [w for w in (target.get("name"), target.get("text")) if w]
+    if not wanted:
+        return []
+    rungs = []
+    if not (target.get("role") and target.get("name")):  # role+name tier untried
+        seen = {normalize(w) for w in wanted}
+        match = next((e for e in obs.get("elements", [])
+                      if e.get("name") and normalize(e["name"]) in seen), None)
+        if match:
+            rungs.append({"role": match["role"], "name": match["name"]})
+    if not target.get("text"):  # text tier untried
+        rungs += [{"text": w} for w in wanted]
+    # `index` is part of the intent ("the first result"), not part of the tier.
+    return [dict(r, index=target["index"]) if target.get("index") is not None else r
+            for r in rungs]

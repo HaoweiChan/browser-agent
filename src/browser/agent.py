@@ -1,9 +1,16 @@
 """The agent loop: screen -> plan -> execute step-by-step -> assemble result.
 
 Every step is postcondition-verified against the page (never self-reported).
-Failures carry exactly one top-level class from docs/evals/failure-taxonomy.md.
-Recovery ladders land at M3; at M1 a classified failure is a loud stop.
-Output shape: specs/001-browser-contract.md.
+Failures carry exactly one top-level class from docs/evals/failure-taxonomy.md,
+assigned by `classify` — rules over the action and the error, never an LLM.
+
+Two recovery ladders, both chosen from the observed failure distribution
+(docs/evals/scope-checkpoint.md) rather than from imagination:
+
+  locate -> re-observe -> relocate at a different tier -> act -> verify
+  act    -> re-observe -> replan the remaining steps -> continue
+
+Every other class stays a loud classified stop. Output: specs/001-browser-contract.md.
 """
 
 import json
@@ -11,14 +18,18 @@ import re
 import time
 from pathlib import Path
 
-from .resolver import ResolveError, resolve
+from .resolver import ResolveError, relocation_candidates, resolve
 from .verifier import verify
 
 MAX_ACTIONS = 30
+MAX_TOKENS = 100_000  # per run; the stub planner spends 0, a live one is capped here
+MAX_FIXES = 2         # relocation rungs per failed step
+MAX_REPLANS = 2       # replans per task
 SETTLE_TRIES, SETTLE_MS = 10, 200
 PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, bounded
 
-# ponytail: keyword screen — LLM-based scope screening only if evals demand it (M3).
+# ponytail: keyword screen — LLM-based scope screening only if evals demand it.
+# Still no eval has: every L5 refusal case is caught by the pattern below.
 # Latin terms need \b (case screening-word-boundary: 'signing' contains 'signin');
 # CJK terms must stay boundary-free — \b never matches inside a CJK run.
 SCOPE_BLOCK = re.compile(
@@ -27,6 +38,46 @@ SCOPE_BLOCK = re.compile(
     r"|登入|登录|密碼|密码|驗證碼|验证码|付款|購買|购买|刪除|删除|下載|下载",
     re.IGNORECASE,
 )
+
+
+class StepError(Exception):
+    """A step failure whose class the executor already knows — an empty
+    extraction, a missing identity anchor, a plan the executor cannot honour.
+    Everything else is classified from the action and the exception type."""
+
+    def __init__(self, cls: str, note: str):
+        self.cls = cls
+        super().__init__(note)
+
+
+def classify(action: str, exc: BaseException) -> str:
+    """Failed step -> exactly one taxonomy class (docs/evals/failure-taxonomy.md).
+
+    Deterministic rules, no LLM — this function is what diagnosis accuracy
+    grades. The action carries as much of the decision as the exception does:
+    the same Playwright timeout is `nav` on a navigate and `act` on a click.
+    """
+    if isinstance(exc, StepError):
+        return exc.cls
+    if isinstance(exc, ResolveError):
+        return "locate"
+    return "nav" if action == "navigate" else "act"
+
+
+RUN_BUDGETS = {"actions": MAX_ACTIONS, "llm_tokens": MAX_TOKENS}
+
+
+def budget_stop(spent: dict) -> str | None:
+    """Run-level resource check. Non-None means: stop now, loudly, classified.
+
+    Ladder budgets (fixes per step, replans per task) are deliberately not here.
+    Running out of actions or tokens is an `env` stop about resources; running
+    out of ladder rungs keeps the class of the failure the ladder was trying to
+    fix, because that is what the run actually died of.
+    """
+    over = [f"{k} {spent.get(k, 0)}/{cap}" for k, cap in RUN_BUDGETS.items()
+            if spent.get(k, 0) >= cap]
+    return "budget exhausted: " + ", ".join(over) if over else None
 
 
 def screen(task: str) -> str | None:
@@ -54,13 +105,13 @@ async def check_state(page, expected: dict | None) -> bool | None:
             loc = (page.get_by_role(want["role"], name=want["name"])
                    if want.get("name") else page.get_by_role(want["role"]))
             return await loc.count() >= 1 and await loc.first.is_visible()
-        raise ValueError(f"unknown expected_state key {key!r}")
+        raise StepError("task", f"unknown expected_state key {key!r}")
 
     for _ in range(SETTLE_TRIES):
         try:
             if all([await holds(k, v) for k, v in expected.items()]):
                 return True
-        except ValueError:
+        except StepError:
             raise
         except Exception:
             pass
@@ -118,7 +169,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     t0 = time.monotonic()
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
-    budgets = {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "ms": 0}
+    budgets = {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0}
     trace: list[dict] = []
     # Raw evidence for the OutcomeVerifier: what was read, and what the page
     # said at the moment it was read. The verifier never sees our conclusion.
@@ -146,17 +197,19 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
         try:
             # Pre-plan navigation + observation: the planner never plans blind
             # (live failures dee8ad5d / 2e70785a — guessed roles, invented
-            # postconditions). Evolving-prefix replan on invalidation lands at M3.
+            # postconditions). The evolving prefix itself is below: a step whose
+            # postcondition fails is replaced by a plan made from the page now.
             obs = None
             if url:
                 if url_guard and not url_guard(url):
                     return done(failure="task", reason=f"blocked URL: {url!r}")
                 s0 = time.monotonic()
                 rec = {
-                    "i": 1, "action": "navigate", "target": None, "value": url,
+                    "i": 1, "action": "navigate", "target": None, "value": url, "anchor": None,
                     "resolved": None, "expected_state": None, "postcondition_ok": None,
                     "failure_class": None, "note": "pre-plan observation",
-                    "retry_or_recovery": None, "screenshot": None, "ms": 0,
+                    "retry_or_recovery": None, "superseded_by": None,
+                    "screenshot": None, "ms": 0,
                 }
                 trace.append(rec)
                 budgets["actions"] += 1
@@ -178,78 +231,151 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
             except Exception as e:
                 return done(failure="env", reason=f"planner failed: {e}")
 
-            for i, step in enumerate(steps, len(trace) + 1):
-                if budgets["actions"] >= MAX_ACTIONS:
-                    return done(failure="env", reason=f"action budget ({MAX_ACTIONS}) exhausted")
-                budgets["actions"] += 1
-                s0 = time.monotonic()
+            async def execute(step, rec):
+                """Perform one step against the page. Raises; the caller classifies."""
+                action = step["action"]
+                if action == "navigate":
+                    if url_guard and not url_guard(step.get("value") or ""):
+                        raise StepError("task", f"blocked URL: {step.get('value')!r}")
+                    await page.goto(step["value"], timeout=20_000)
+                    return
+                if action not in ("click", "fill", "extract"):
+                    raise StepError("task", f"unknown action {action!r}")
+                loc, tier = await resolve(page, step.get("target") or {})
+                rec["resolved"] = {"tier": tier, "description": str(step.get("target"))}
+                if action == "click":
+                    await loc.click(timeout=10_000)
+                elif action == "fill":
+                    await loc.fill(step.get("value") or "", timeout=10_000)
+                    # A fill verifies itself by readback, so it needs no authored
+                    # postcondition to count as checked.
+                    back = await loc.input_value()
+                    if back != (step.get("value") or ""):
+                        raise StepError("act", f"field readback {back!r} != filled value")
+                    rec["postcondition_ok"] = True
+                else:
+                    val = (await loc.inner_text()).strip()
+                    if not val:
+                        raise StepError("extract", "extraction returned empty text")
+                    body = await page.inner_text("body")
+                    extractions.append({"value": val, "page_text": evidence_window(body, val)})
+                    answers.append(val)
+                    # Identity anchor (verifier L1): the entity the task names
+                    # must be present where the answer was read.
+                    anchor = step.get("anchor")
+                    if anchor and anchor not in body:
+                        raise StepError("semantic", f"identity anchor {anchor!r} absent from the page the answer was read from")
+
+            async def attempt(step, note=None, recovery=None):
+                """One execution of one step: appends its trace record, returns
+                (record, failure class or None). Every attempt is recorded —
+                including the ones a ladder later supersedes — because the trace
+                is what shows an evaluator that the strategy changed."""
                 rec = {
-                    "i": i, "action": step["action"], "target": step.get("target"),
-                    "value": step.get("value"), "resolved": None,
+                    "i": len(trace) + 1, "action": step["action"], "target": step.get("target"),
+                    "value": step.get("value"), "anchor": step.get("anchor"), "resolved": None,
                     "expected_state": step.get("expected_state"), "postcondition_ok": None,
-                    "failure_class": None, "note": None, "retry_or_recovery": None,
-                    "screenshot": None, "ms": 0,
+                    "failure_class": None, "note": note, "retry_or_recovery": recovery,
+                    "superseded_by": None, "screenshot": None, "ms": 0,
                 }
                 trace.append(rec)
-
-                def fail(cls, note):
-                    rec["failure_class"], rec["note"] = cls, note
-                    rec["ms"] = int((time.monotonic() - s0) * 1000)
-                    return done(failure=cls, reason=f"step {i} ({step['action']}): {note}")
-
+                budgets["actions"] += 1
+                s0 = time.monotonic()
+                cls = None
                 try:
-                    if step["action"] == "navigate":
-                        if url_guard and not url_guard(step.get("value") or ""):
-                            return fail("task", f"blocked URL: {step.get('value')!r}")
-                        await page.goto(step["value"], timeout=20_000)
-                    else:
-                        loc, tier = await resolve(page, step.get("target") or {})
-                        rec["resolved"] = {"tier": tier, "description": str(step.get("target"))}
-                        if step["action"] == "click":
-                            await loc.click(timeout=10_000)
-                        elif step["action"] == "fill":
-                            await loc.fill(step.get("value") or "", timeout=10_000)
-                            # A fill verifies itself by readback, so it needs no
-                            # authored postcondition to count as checked.
-                            back = await loc.input_value()
-                            if back != (step.get("value") or ""):
-                                return fail("act", f"field readback {back!r} != filled value")
-                            rec["postcondition_ok"] = True
-                        elif step["action"] == "extract":
-                            val = (await loc.inner_text()).strip()
-                            if not val:
-                                return fail("extract", "extraction returned empty text")
-                            body = await page.inner_text("body")
-                            extractions.append({"value": val, "page_text": evidence_window(body, val)})
-                            answers.append(val)
-                            # Identity anchor (verifier L1): the entity the task
-                            # names must be present where the answer was read.
-                            anchor = step.get("anchor")
-                            if anchor and anchor not in body:
-                                return fail("semantic", f"identity anchor {anchor!r} absent from the page the answer was read from")
-                        else:
-                            return fail("task", f"unknown action {step['action']!r}")
-                except ResolveError as e:
-                    return fail("locate", f"{e.kind}: {e}")
-                except Exception as e:
-                    cls = "nav" if step["action"] == "navigate" else "act"
-                    return fail(cls, f"{type(e).__name__}: {e}")
-
-                try:
+                    await execute(step, rec)
                     checked = await check_state(page, step.get("expected_state"))
-                except ValueError as e:
-                    return fail("task", f"malformed expected_state: {e}")
-                if checked is not None or rec["postcondition_ok"] is None:
-                    rec["postcondition_ok"] = checked
-                shot = f"step_{i}.png"
+                    if checked is not None or rec["postcondition_ok"] is None:
+                        rec["postcondition_ok"] = checked
+                    if rec["postcondition_ok"] is False:
+                        raise StepError("act", f"expected_state not reached: {step.get('expected_state')}")
+                except Exception as exc:
+                    cls = classify(step["action"], exc)
+                    rec["failure_class"] = cls
+                    rec["note"] = "; ".join(filter(None, [rec["note"], f"{type(exc).__name__}: {exc}"]))
+                shot = f"step_{rec['i']}.png"
                 try:
                     await page.screenshot(path=str(run_dir / shot))
                     rec["screenshot"] = shot
                 except Exception:
                     pass  # evidence best-effort; the postcondition is the gate
                 rec["ms"] = int((time.monotonic() - s0) * 1000)
-                if rec["postcondition_ok"] is False:
-                    return fail("act", f"expected_state not reached: {step.get('expected_state')}")
+                return rec, cls
+
+            async def look():
+                """Fresh observation for a ladder, or None if the page cannot be
+                observed. A ladder is a best-effort second chance: if looking at
+                the page fails too, the run must still end as the classified
+                failure it already is, never as an uncaught exception with no
+                class at all (INV-1)."""
+                try:
+                    return await observe(page)
+                except Exception:
+                    return None
+
+            si = 0
+            # A replan's strategy switch belongs on the FIRST step of the new
+            # plan — that is the attempt that differs from what failed. The rest
+            # of the plan is ordinary execution and is not labelled recovery.
+            pending = None
+            while si < len(steps):
+                if stop := budget_stop(budgets):
+                    return done(failure="env", reason=stop)
+                step = steps[si]
+                rec, cls = await attempt(step, note=pending,
+                                         recovery="recovery" if pending else None)
+                pending = None
+
+                # --- Family 1: locate -> relocation (self-maintenance) --------
+                # Stale locator -> fresh a11y snapshot -> same intent at a
+                # different tier -> act -> verify. Rungs come from the snapshot,
+                # never from stored site knowledge (CLAUDE.md rule 6).
+                if cls == "locate" and (fresh := await look()) is not None:
+                    for cand in relocation_candidates(step.get("target") or {}, fresh)[:MAX_FIXES]:
+                        rec["superseded_by"] = len(trace) + 1
+                        alt = {**step, "target": cand}
+                        rec, cls = await attempt(
+                            alt, note=f"relocation after locate failure: retargeting as {cand}",
+                            recovery="recovery")
+                        if cls is None:
+                            step = alt
+                            break
+
+                # --- Family 2: act -> postcondition invalidated -> replan -----
+                if cls == "act":
+                    if budgets["replans"] >= MAX_REPLANS:
+                        rec["note"] += f"; replan budget exhausted ({MAX_REPLANS})"
+                    elif (fresh := await look()) is not None:
+                        try:
+                            new_steps, usage = await planner(
+                                task, page.url, fresh,
+                                note=f"step {rec['i']} ({step['action']}) failed: {rec['note']}")
+                        except Exception as e:
+                            return done(failure="env", reason=f"replanner failed: {e}")
+                        budgets["llm_tokens"] += usage["llm_tokens"]
+                        budgets["llm_usd"] += usage["llm_usd"]
+                        if new_steps and new_steps != steps[si:]:
+                            budgets["replans"] += 1
+                            rec["superseded_by"] = len(trace) + 1
+                            pending = (f"replan #{budgets['replans']} after act failure at step "
+                                       f"{rec['i']}: {len(new_steps)} step(s) planned from the "
+                                       "page as it actually is")
+                            # Evolving prefix: what already executed stays; the
+                            # failed step and everything after it is replaced by
+                            # a plan made from what the page actually shows now.
+                            # ponytail: extractions from the executed prefix are
+                            # kept, so a replan that re-extracts the same value
+                            # would append it twice and turn a scalar answer into
+                            # a list. No case produces it (ADR-003); dedupe by
+                            # (value, step intent) if one ever does.
+                            steps = steps[:si] + new_steps
+                            continue
+                        rec["note"] += "; replan made no progress (identical or empty plan)"
+
+                if cls:
+                    return done(failure=cls,
+                                reason=f"step {rec['i']} ({step['action']}): {rec['note']}")
+                si += 1
 
             digest = (await page.inner_text("body"))[:500]
             final_url = page.url

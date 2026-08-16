@@ -1,0 +1,85 @@
+{
+  "id": "verifier-superseded-not-a-loophole",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "verifier",
+    "superseded": [
+      {
+        "note": "a failed step retried successfully is not graded on the failed attempt",
+        "trace": [
+          {
+            "i": 1,
+            "action": "click",
+            "postcondition_ok": false,
+            "superseded_by": 2
+          },
+          {
+            "i": 2,
+            "action": "click",
+            "postcondition_ok": true,
+            "retry_or_recovery": "recovery"
+          }
+        ],
+        "pass": true
+      },
+      {
+        "note": "an unverified click retried into a verified one is likewise graded on the retry",
+        "trace": [
+          {
+            "i": 1,
+            "action": "click",
+            "postcondition_ok": null,
+            "superseded_by": 2
+          },
+          {
+            "i": 2,
+            "action": "click",
+            "postcondition_ok": true,
+            "retry_or_recovery": "recovery"
+          }
+        ],
+        "pass": true
+      },
+      {
+        "note": "superseded_by pointing at a step that does not exist hides a real failure",
+        "trace": [
+          {
+            "i": 1,
+            "action": "click",
+            "postcondition_ok": false,
+            "superseded_by": 2
+          }
+        ],
+        "pass": false
+      },
+      {
+        "note": "the last attempt is never superseded, so its failure still counts",
+        "trace": [
+          {
+            "i": 1,
+            "action": "click",
+            "postcondition_ok": false,
+            "superseded_by": 2
+          },
+          {
+            "i": 2,
+            "action": "click",
+            "postcondition_ok": false,
+            "retry_or_recovery": "recovery"
+          }
+        ],
+        "pass": false
+      }
+    ]
+  },
+  "provenance": "the relocation and replan ladders need failed attempts to stop failing the whole run, or no recovery could ever be graded PASS. That exemption is a hole in the verifier by construction, so it gets pinned before it is trusted: a supersede is only honored when the step it points at is really in the trace, and the final attempt in a chain is never exempt. Written after noticing that `superseded_by: 999` would have silently laundered any failed step into a passing run.",
+  "triage": {
+    "class": "invariant-gap",
+    "note": "verifier exemption added for M3 ladders; watched red with the exemption ungated"
+  }
+}

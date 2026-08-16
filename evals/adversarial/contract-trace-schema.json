@@ -1,0 +1,77 @@
+{
+  "id": "contract-trace-schema",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "schema",
+    "task": "What is the price of the Aurora Desk Lamp on this page?",
+    "fixture": "shop-lamp-std.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "group",
+          "name": "Price"
+        },
+        "anchor": "LAMP-STD"
+      }
+    ]
+  },
+  "expect": {
+    "keys": {
+      "result": [
+        "status",
+        "answer",
+        "reason",
+        "verdict",
+        "evidence",
+        "budgets_spent"
+      ],
+      "evidence": [
+        "trace",
+        "screenshots",
+        "extractions",
+        "final_url",
+        "final_page_digest"
+      ],
+      "verdict": [
+        "verdict",
+        "layer",
+        "ground_truth",
+        "checks",
+        "reason"
+      ],
+      "budgets_spent": [
+        "actions",
+        "llm_tokens",
+        "llm_usd",
+        "replans",
+        "ms"
+      ],
+      "trace_step": [
+        "i",
+        "action",
+        "target",
+        "value",
+        "anchor",
+        "resolved",
+        "expected_state",
+        "postcondition_ok",
+        "failure_class",
+        "note",
+        "retry_or_recovery",
+        "superseded_by",
+        "screenshot",
+        "ms"
+      ]
+    }
+  },
+  "provenance": "field-by-field mirror of specs/001-browser-contract.md, checked against a real run rather than read. Written after M2 close-out, when documenting identity anchors added `anchor` to the specced TraceStep while the executor never emitted it — prose drifted from code inside a single session, in the one direction (spec ahead of code) that reads as a feature nobody built. Watched red on exactly that missing key before the executor was fixed. M3 added two fields to this table — `budgets_spent.replans` and `TraceStep.superseded_by` — and the case went red on both the moment the code emitted them, before the spec was updated. That is the intended direction: code and prose are reconciled deliberately, in one edit, instead of drifting apart quietly.",
+  "triage": {
+    "class": "contract-drift",
+    "note": "the contract is prose and prose does not fail a build; this case is its executable half. Tagged invariant — the frontend, the verifier and the EvalAuditor all consume this shape, so drift here breaks three consumers at once."
+  }
+}

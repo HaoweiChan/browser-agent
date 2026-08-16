@@ -83,9 +83,24 @@ def verify(*, trace, extractions, answer, expect=None, state=None) -> dict:
 
     # --- L1: deterministic predicates over the evidence itself ---------------
     check("trace_nonempty", bool(trace), "no trace: nothing was attempted")
+
+    # A recovery ladder only means something if the attempt it replaced stops
+    # failing the run — otherwise no recovered run could ever be graded PASS.
+    # That exemption is a hole by construction, so it is gated: a supersede is
+    # honored only when the attempt it points at is really in the trace, and the
+    # last attempt in a chain is never superseded, so its failure always counts
+    # (case verifier-superseded-not-a-loophole). The failed attempts stay in the
+    # trace either way — they are hidden from grading, not from the reader.
+    present = {s.get("i") for s in trace or []}
+    dangling = [s.get("i") for s in trace or []
+                if s.get("superseded_by") and s["superseded_by"] not in present]
+    check("supersedes_resolve", not dangling,
+          f"step(s) {dangling} claim a later attempt that is not in the trace")
+    graded = [s for s in trace or [] if not s.get("superseded_by")]
+
     check(
         "no_failed_postcondition",
-        not any(s.get("postcondition_ok") is False for s in trace or []),
+        not any(s.get("postcondition_ok") is False for s in graded),
         "a step's postcondition was not reached",
     )
     check("answer_nonempty", bool(answer), "answer is empty")
@@ -93,7 +108,7 @@ def verify(*, trace, extractions, answer, expect=None, state=None) -> dict:
     # A click changes state; an unverified state change is not a verified one.
     # `postcondition_ok is None` means "nothing was checked" — distinct from
     # False, and it must not read as success (case postcondition-unverified-click).
-    unverified = [s["i"] for s in trace or []
+    unverified = [s["i"] for s in graded
                   if s.get("action") == "click" and s.get("postcondition_ok") is None]
     check(
         "actions_verified",

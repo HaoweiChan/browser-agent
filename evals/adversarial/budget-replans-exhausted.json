@@ -1,0 +1,59 @@
+{
+  "id": "budget-replans-exhausted",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L5",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Sort by price (low to high)"
+          },
+          "expected_state": {
+            "text_visible": "sorted-marker-1"
+          }
+        }
+      ],
+      [
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Sort by price (low to high)"
+          },
+          "expected_state": {
+            "text_visible": "sorted-marker-2"
+          }
+        }
+      ],
+      [
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Sort by price (low to high)"
+          },
+          "expected_state": {
+            "text_visible": "sorted-marker-3"
+          }
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:act"
+  },
+  "provenance": "a replanner that keeps producing DIFFERENT wrong plans defeats the identical-plan no-progress guard, so only the replan budget stops it. Each plan asserts a distinct marker string that the fixture never renders. The budget must end the run loudly with the class of the failure it could not fix (act) and the full trace of all three attempts — exhaustion is a classified failure, never a quiet stop (taxonomy, budgets).",
+  "triage": {
+    "class": "capability-gap",
+    "note": "M3 budget enforcement. Watched red before budgets existed: the loop replanned until the action budget tripped, reporting failure:env — the wrong class and the wrong cause."
+  }
+}

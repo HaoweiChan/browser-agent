@@ -1,0 +1,18 @@
+{
+  "id": "inv3-budget-exhaustion-loud",
+  "task": "browser",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "inv3"
+  },
+  "provenance": "INV-3's backing case (specs/000-invariants.md). Pure code, no browser: budget_stop must fire at the cap and stay silent below it, and the resulting run must carry a failure class and its trace. An invariant without a case is decorative (specs/000 preamble); this is the one specs/001 promised would arrive with M3 budget enforcement.",
+  "triage": {
+    "class": "invariant-gap",
+    "note": "watched red as an unknown-invariant-check error before budget_stop existed"
+  }
+}

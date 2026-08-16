@@ -1,0 +1,75 @@
+{
+  "id": "relocation-distinct-tier",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "relocate",
+    "observation": {
+      "elements": [
+        {
+          "role": "button",
+          "name": "Sort by price (low to high)"
+        },
+        {
+          "role": "link",
+          "name": "Cobalt Floor Rug"
+        },
+        {
+          "role": "heading",
+          "name": ""
+        }
+      ]
+    },
+    "checks": [
+      {
+        "target": {
+          "text": "Sort by price (low to high)"
+        },
+        "expect": [
+          {
+            "role": "button",
+            "name": "Sort by price (low to high)"
+          }
+        ]
+      },
+      {
+        "target": {
+          "role": "button",
+          "name": "Cheapest first"
+        },
+        "expect": [
+          {
+            "text": "Cheapest first"
+          }
+        ]
+      },
+      {
+        "target": {
+          "role": "link",
+          "index": 0
+        },
+        "expect": []
+      },
+      {
+        "target": {
+          "role": "button",
+          "name": "Sort by price (low to high)"
+        },
+        "expect": [
+          {
+            "text": "Sort by price (low to high)"
+          }
+        ]
+      }
+    ]
+  },
+  "provenance": "a recovery ladder whose rungs repeat the failed strategy is retry wearing a recovery label (taxonomy: rungs must be different strategies). This pins the rule as a truth table. Row 1: a dead text tier relocates to role+name found in the fresh snapshot. Row 2: a dead role+name relocates to text — never back to role+name, even though the fresh observation is right there to search. Row 3: a target carrying no name and no text has nothing to relocate BY, so the honest answer is no rung and a loud locate failure, not a guess. Row 4 is the trap: the name IS in the observation, and rung 1 must still be refused because role+name is exactly what just failed.",
+  "triage": {
+    "class": "capability-gap",
+    "note": "watched red as an unknown case kind before relocation_candidates() existed"
+  }
+}

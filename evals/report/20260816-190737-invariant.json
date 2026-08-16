@@ -1,0 +1,83 @@
+{
+  "suite": "invariant",
+  "score": 0.8,
+  "totals": {
+    "wall_seconds": 0.04,
+    "latency_p50": 0.0,
+    "latency_p95": 0.04,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 428, in run_case\n    return _run_schema_case(case)\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 225, in _run_schema_case\n    base = _base_url()\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.04,
+      "id": "contract-trace-schema",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv3-budget-exhaustion-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 430, in run_case\n    from .server import url_ok\n  File \"/Users/willy/Documents/browser-agent/src/browser/server.py\", line 17, in <module>\n    from fastapi import FastAPI, HTTPException, Request\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-numeric-precision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-superseded-not-a-loophole",
+      "kind": "adversarial"
+    }
+  ]
+}

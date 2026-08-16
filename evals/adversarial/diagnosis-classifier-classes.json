@@ -1,0 +1,69 @@
+{
+  "id": "diagnosis-classifier-classes",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "classify",
+    "checks": [
+      [
+        "click",
+        "ResolveError",
+        "locate"
+      ],
+      [
+        "extract",
+        "ResolveError",
+        "locate"
+      ],
+      [
+        "extract",
+        "StepError:extract",
+        "extract"
+      ],
+      [
+        "extract",
+        "StepError:semantic",
+        "semantic"
+      ],
+      [
+        "click",
+        "StepError:task",
+        "task"
+      ],
+      [
+        "navigate",
+        "StepError:task",
+        "task"
+      ],
+      [
+        "navigate",
+        "TimeoutError",
+        "nav"
+      ],
+      [
+        "click",
+        "TimeoutError",
+        "act"
+      ],
+      [
+        "fill",
+        "TimeoutError",
+        "act"
+      ],
+      [
+        "click",
+        "Exception",
+        "act"
+      ]
+    ]
+  },
+  "provenance": "diagnosis accuracy needs a ground truth the classifier cannot argue with. The rows are the (action, error) pairs the executor can actually raise; the expected class is the taxonomy cell each belongs to (docs/evals/failure-taxonomy.md). Two rows carry the load: a ResolveError is `locate` whatever the action was, and the SAME TimeoutError is `nav` on a navigate and `act` on a click — the action, not the exception, decides. Classification is rules over errors and page state, never an LLM.",
+  "triage": {
+    "class": "capability-gap",
+    "note": "watched red as an unknown case kind before classify() existed"
+  }
+}

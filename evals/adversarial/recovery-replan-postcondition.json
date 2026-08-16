@@ -1,0 +1,57 @@
+{
+  "id": "recovery-replan-postcondition",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L4",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Sort by price (low to high)"
+          },
+          "expected_state": {
+            "text_visible": "Sorted cheapest first"
+          }
+        },
+        {
+          "action": "extract",
+          "target": {
+            "role": "link",
+            "index": 0
+          }
+        }
+      ],
+      [
+        {
+          "action": "extract",
+          "target": {
+            "role": "link",
+            "index": 0
+          }
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Cobalt Floor Rug",
+    "anchors": [
+      "Cobalt Floor Rug"
+    ],
+    "recovery": true,
+    "replans": 1
+  },
+  "provenance": "family 2 of the scope checkpoint, injected in the shape live run 2e70785a actually produced: the action lands but the planner asserted a postcondition it had no way to know ('Sorted cheapest first' is never rendered; the fixture says 'Sorted by price (low to high)'). The click really did sort the list, so the correct recovery is not to redo it — the replanner observes the already-sorted page and emits only the remaining extraction. That is the evolving plan prefix in docs/architecture/task1-overview.md doing something rather than describing something.",
+  "triage": {
+    "class": "capability-gap",
+    "note": "M3 family 2. Watched red before the ladder existed: failure:act on step 1."
+  }
+}

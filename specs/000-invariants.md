@@ -39,6 +39,20 @@ Format per invariant:
   `src/browser/agent.py::assemble_result`; proven red by deleting the verdict
   branch and watching the case fail.
 
+## INV-3: Budget exhaustion is a loud classified failure, never a quiet stop
+- Rationale: recovery ladders make a run able to spend more than it planned to.
+  A bounded loop that gives up quietly is indistinguishable from one that
+  finished, and it would let a run end with no answer and no failure class —
+  which is INV-0 and INV-1 defeated through the side door. Every budget
+  (actions, tokens, replans per task, relocation rungs per step) ends the run
+  with a class and the complete trace of what was tried.
+- Enforced by: evals/adversarial/inv3-budget-exhaustion-loud.json
+  (inv3-budget-exhaustion-loud) — guard lives in `src/browser/agent.py::budget_stop`
+  and the ladder branches in `run_task`; proven red before `budget_stop` existed,
+  when a replan loop ran until the action budget tripped and reported
+  `failure:env` — the wrong class for a run that died of an unfixable `act`.
+  The end-to-end half is `evals/adversarial/budget-replans-exhausted.json`.
+
 ---
 
 Task-specific invariants live below a `## <task>` heading as tasks are added.

@@ -1,0 +1,47 @@
+{
+  "id": "l4-recover-name-to-text",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L4",
+  "tc": "TC4",
+  "mutation": "button-text-renamed",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "mut": "button-text-renamed",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Cheapest first"
+        },
+        "expected_state": {
+          "text_visible": "Sorted by price (low to high)"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "index": 0
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Cobalt Floor Rug",
+    "anchors": [
+      "Cobalt Floor Rug"
+    ],
+    "recovery": true
+  },
+  "provenance": "the mirror image of l4-shop-button-text-renamed, and the reason the relocation ladder needs two rungs rather than one. Here the plan targets the sort control by ROLE+ACCESSIBLE NAME using the visible copy ('Cheapest first'); under button-text-renamed the accessible name is the old string held in aria-label, so tier 1 finds nothing while the visible text matches exactly. Recovery must therefore go role+name -> text, the opposite direction from the sibling case. Without both rungs one of the two cases is always red.",
+  "triage": {
+    "class": "capability-gap",
+    "note": "M3 relocation, rung 2 (text tier). Watched red before the ladder existed: failure:locate."
+  }
+}

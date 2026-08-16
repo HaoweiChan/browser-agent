@@ -83,6 +83,13 @@ so the reviewer-facing analysis must show the empty cells rather than a full
 table. That is the intended trade — `docs/evals/evaluation-methodology.md`
 already requires empty cells to be visible.
 
+**Addendum, same day.** `contract-trace-schema` landed immediately after this
+ADR was written — a conformance case that found `anchor` specced into
+TraceStep and never emitted. Current figures are 42/42 fast, 6/6 invariant.
+The observed table above is left at the numbers of the report it names: an ADR
+records a decision at a point in time, and the normative part of this one is
+the thresholds, not the case count.
+
 The `fast` suite baseline moving from 1.000 (9 cases) to 1.000 (41 cases) is
 recorded here as a deliberate baseline event: the score is unchanged, the
 population behind it is four and a half times larger, and five of the new cases

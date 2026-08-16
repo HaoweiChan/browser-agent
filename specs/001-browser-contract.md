@@ -24,6 +24,7 @@ contract-drift (spec-drift audits field-by-field).
     "actions": 0,
     "llm_tokens": 0,
     "llm_usd": 0.0,
+    "replans": 0,
     "ms": 0
   }
 }
@@ -71,6 +72,7 @@ appears, in order — no post-hoc reconstruction).
   "failure_class": null,
   "note": null,
   "retry_or_recovery": null,
+  "superseded_by": null,
   "screenshot": "step_1.png",
   "ms": 0
 }
@@ -82,7 +84,10 @@ appears, in order — no post-hoc reconstruction).
   `failure:semantic`; a `fill` verifies itself by field readback and needs no
   authored postcondition.
 - `resolved.tier` is the locator tier that won — the self-maintenance metric
-  reads this field.
+  reads this field. Only `role` and `text` are reachable today; `attrs` and
+  `structural` are named here because the taxonomy defines the full ladder, and
+  no run has ever emitted them. That is also why two of the three mutations
+  pass without recovering anything (ADR-002).
 - `target.index` (0-based) selects the k-th match instead of requiring
   uniqueness — "the first search result" is a browsing primitive, not site
   knowledge. Without it, several matches remain a loud `locate` failure.
@@ -96,8 +101,20 @@ appears, in order — no post-hoc reconstruction).
   Only ground-truth verification catches either, and a live run has none.
 - `retry_or_recovery` — null for first attempts; `"retry"` for same-strategy
   re-attempts; `"recovery"` only when a classified failure led to a different
-  strategy (M3). The recovery metric counts only `"recovery"` steps by
-  construction.
+  strategy. The recovery metric counts only `"recovery"` steps by construction.
+  Two ladders emit it (`docs/evals/scope-checkpoint.md`): a `locate` failure
+  relocated at a different tier, and an `act` failure replanned from a fresh
+  observation — on a replan the flag sits on the FIRST step of the new plan,
+  the one that differs from what failed. No `"retry"` rung exists yet; when a
+  re-observe or wait rung is added it logs as `retry` and stays out of the
+  recovery metric by construction, not by intention.
+- `superseded_by` — null, or the `i` of the attempt that replaced this one. A
+  failed attempt stays in the trace forever; this field is what stops it from
+  also failing the *run*, so that a recovered run can be graded PASS. The
+  exemption is gated in the verifier: a supersede pointing at an attempt that
+  is not in the trace is itself a FAIL, and the last attempt in a chain is
+  never superseded, so its failure always counts
+  (`evals/adversarial/verifier-superseded-not-a-loophole.json`).
 - Screenshots are written per step into the run directory alongside
   `trace.jsonl` and `result.json`.
 
@@ -109,5 +126,15 @@ appears, in order — no post-hoc reconstruction).
   `evals/adversarial/inv1-one-failure-class.json`.
 - INV-2: the verifier outranks the executor —
   `evals/adversarial/inv2-verifier-outranks-executor.json`.
-- Remaining planned invariant (budgets-enforced) enters specs/000 with its
-  backing case when the M3 budget enforcement lands.
+- Every field above is checked against a real run by
+  `evals/adversarial/contract-trace-schema.json` (invariant-tagged). This
+  document is prose, and prose does not fail a build; that case is its
+  executable half. Add a field here and the case goes red until the code emits
+  it — which is how `anchor` was caught, specced and never emitted, inside the
+  session that added it.
+- INV-3: budget exhaustion is a loud classified failure —
+  `evals/adversarial/inv3-budget-exhaustion-loud.json`, with the end-to-end half
+  in `budget-replans-exhausted`.
+- Remaining planned invariant (fast-suite-is-offline) enters specs/000 with its
+  backing case when it is written; the boundary is measured today (ADR-002
+  threshold 5) but not yet invariant-tagged.

@@ -15,7 +15,8 @@
       { "action": "extract", "target": { "role": "link", "index": 0 } }
     ]
   },
-  "expect": { "status": "failure:locate" },
-  "provenance": "the only B-floor mutation that actually breaks a tier the agent is standing on: the plan targets the sort control by visible TEXT, and button-text-renamed changes the visible copy to 'Cheapest first' while the accessible name stays 'Sort by price (low to high)'. Today the resolver has no relocation step, so the run stops loudly at failure:locate. Recorded as the current, honest behavior.",
-  "triage": { "class": "capability-gap", "note": "M3 flips this expectation to success via the relocation loop (text tier stale -> re-observe -> role+name tier). The report history is meant to show the flip; do not 'fix' it by rewriting the plan to use role+name." }
+  "expect": { "status": "success", "answer": "Cobalt Floor Rug",
+              "anchors": ["Cobalt Floor Rug"], "recovery": true },
+  "provenance": "the only B-floor mutation that actually breaks a tier the agent is standing on: the plan targets the sort control by visible TEXT, and button-text-renamed changes the visible copy to 'Cheapest first' while the accessible name stays 'Sort by price (low to high)'. Through M2 the resolver had no relocation step and the run stopped loudly at failure:locate; that expectation was committed as the honest behavior of the time.",
+  "triage": { "class": "capability-gap", "note": "M3 flipped this expectation from failure:locate to success — the same plan, unchanged, now recovers via the relocation loop (text tier dead -> re-observe -> role+name tier). The flip is visible in the committed report history, which is the point; do not 'fix' either side of it by rewriting the plan to use role+name." }
 }
