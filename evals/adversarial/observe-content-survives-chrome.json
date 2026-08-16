@@ -1,0 +1,18 @@
+{
+  "id": "observe-content-survives-chrome",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "observe",
+    "fixture": "nav-heavy.html"
+  },
+  "expect": {
+    "must_include_names": ["Atlas of Remote Islands", "Travel"],
+    "must_include_roles": ["group"]
+  },
+  "provenance": "found by adding the first live domain (books.toscrape.com), which is the only reason it was ever visible. observe() walks the a11y tree depth-first and stops at MAX_ELEMS=60, so on a real page the entire budget is spent on chrome: the Travel category listing observed as 60 elements of banner and sidebar navigation, ending mid-nav, with not one of its twenty products included. The planner then plans blind about the page's actual content — exactly the failure the M1 'observe before planning' fix exists to prevent, reintroduced by a budget rather than by an omission. Every fixture is small enough that the cap never bound, so 58 green cases said nothing about it. This is the offline twin: 35 sidebar links (a listitem plus a link each) exhaust the budget before the product is reached. Watched red on both names and the price group missing entirely.",
+  "triage": {
+    "class": "capability-gap",
+    "note": "the fix is a chrome budget, not a bigger cap — raising MAX_ELEMS moves the cliff to the next larger site and spends planner tokens on navigation nobody asked about. Document order is preserved so relocation candidate order is unchanged; only chrome elements past the sub-budget are dropped."
+  }
+}

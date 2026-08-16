@@ -310,10 +310,16 @@ def _run_observe_case(case: dict) -> dict:
     ]
     # An observation may only advertise names the resolver can actually use.
     unnameable = [e for e in obs["elements"] if e["role"] in exp.get("unnameable_roles", []) and e["name"]]
+    # The observation budget must not be spent entirely on chrome: content the
+    # task is about has to survive the cap (observe-content-survives-chrome).
+    names, roles = {e["name"] for e in obs["elements"]}, {e["role"] for e in obs["elements"]}
+    starved = ([n for n in exp.get("must_include_names", []) if n not in names]
+               + [r for r in exp.get("must_include_roles", []) if r not in roles])
     return {
-        "passed": not missing and not unnameable,
+        "passed": not missing and not unnameable and not starved,
         "missing": missing,
         "advertised_unresolvable": unnameable,
+        "starved_by_chrome": starved,
         "n_elements": len(obs["elements"]),
     }
 

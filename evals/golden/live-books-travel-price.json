@@ -1,0 +1,29 @@
+{
+  "id": "live-books-travel-price",
+  "task": "browser",
+  "suites": ["live", "full"],
+  "level": "L2",
+  "tc": "TC3",
+  "domain": "books.toscrape.com",
+  "input": {
+    "task": "In the Travel category, open the book \"It's Only the Himalayas\" and tell me its price.",
+    "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "link", "name": "It's Only the Himalayas", "index": 0 },
+        "expected_state": { "url_contains": "himalayas" } },
+      { "action": "extract", "target": { "role": "cell", "index": 5 },
+        "anchor": "It's Only the Himalayas" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "£45.17",
+    "anchors": ["It's Only the Himalayas"]
+  },
+  "provenance": "the first live domain in the eval set, and the B-floor '≥1 live domain' cell. books.toscrape.com is a sandbox published expressly for scraping practice, which satisfies R7 (public or self-created material only); one page load per run, no crawling. Chosen because a real listing→detail flow exercises what no fixture can: a DOM nobody on this project authored. It earned its place immediately — writing it surfaced that observe() spent its entire 60-element budget on banner and sidebar navigation, so not one of the category's twenty products was ever observed (case observe-content-survives-chrome). Ground truth is hand-labeled from the page, not from an API, because the site has none; the sandbox is frozen, but a drifted price would surface here as a loud L2 failure rather than as a wrong answer.",
+  "triage": {
+    "class": "coverage",
+    "index_5_is_brittle": "the price is reached by counting cells, because ARIA makes `rowheader` a subclass of `cell` and Playwright matches it — so the label cells interleave with the value cells (0 UPC, 1 value, 2 Product Type, 3 Books, 4 'Price (excl. tax)', 5 £45.17). The semantic way to say this is `near: 'Price (excl. tax)'`, which specs/001 advertises in the target schema and `src/browser/resolver.py` never implements. Recorded as spec-drift rather than fixed at the freeze; until it exists, live table extraction is positional and a re-ordered table would silently return the wrong cell.",
+    "note": "tagged `live`, not `fast`: it needs the network, so it must never gate a commit. It is NOT a planning test — the plan is still stubbed at the module boundary, so this measures the resolver/executor/verifier against a real DOM and says nothing about planning quality. The `full` tag is kept so a future run with a live planner picks it up; today it costs $0.00."
+  }
+}
