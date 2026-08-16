@@ -1,0 +1,24 @@
+{
+  "id": "live-books-cheapest-travel",
+  "task": "browser",
+  "suites": ["full"],
+  "level": "L3",
+  "tc": "TC4",
+  "domain": "books.toscrape.com",
+  "input": {
+    "task": "In the Travel category, find the cheapest book and tell me its exact price.",
+    "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+    "planner": "live"
+  },
+  "expect": {
+    "status": "success",
+    "answer": "£23.21",
+    "anchors": ["Little Dribbling"]
+  },
+  "provenance": "the first live-PLANNER case: no stub_plan, the plan must come from the real model, because the capability it grades — deriving 'cheapest' from a category with no sort control — is answer synthesis, which a hand-written plan would smuggle in. Ground truth hand-verified 2026-08-17 by an eval-side probe over all 11 Travel products: minimum price £23.21, 'The Road to Little Dribbling: Adventures of an American in Britain'. The sandbox's prices are frozen, so the label is stable. Graded on the price string with the book title as identity anchor — exact-matching a free-form title against a planner's phrasing would fail for the wrong reason. Tagged full only: it spends real LLM tokens and must never run in a gate.",
+  "triage": {
+    "class": "coverage",
+    "watched_red_twice": "red for two honest reasons, in order: (1) eval_adapter.run_case has no dispatch for `planner: 'live'` — today it would execute an empty stub plan and fail INV-0-loud; the adapter extension is the first M6 implementation step and THIS case is its red driver. (2) once dispatched, the M5 held-out probe (2/8) predicts the planner itself fails multi-entity comparison — the one-hop-deep gap named in docs/analysis.md. Green requires closing both, which is what makes it an L3 worth having.",
+    "cost_note": "one page load + one or two planner calls per run, ~$0.01 at the M5 average; needs OPENROUTER_API_KEY in the environment (absent → the run must fail loudly, never stub itself: hard rule 4)."
+  }
+}
