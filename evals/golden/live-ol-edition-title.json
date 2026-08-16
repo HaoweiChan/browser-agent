@@ -1,0 +1,25 @@
+{
+  "id": "live-ol-edition-title",
+  "task": "browser",
+  "suites": ["live", "full"],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "openlibrary.org",
+  "input": {
+    "task": "What is the title of the book edition by Arthur Cosslett Smith on this Open Library page?",
+    "url": "https://openlibrary.org/books/OL7025919M",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "heading", "index": 0 }, "anchor": "Cosslett" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "The monk and the dancer",
+    "anchors": ["Cosslett"]
+  },
+  "provenance": "third live domain (M6 live breadth). Edition pages are the stable unit on Open Library: a 1900 novel's edition record has no reason to change. Hand-verified 2026-08-17 with the eval-side probe: heading[0] is the edition title, heading[1] 'by Smith, Arthur Cosslett'. Chosen over a work page deliberately — see live-ol-work-title-dynamic in the triage of this batch: work pages render the title of a rotating featured edition (the probe caught /works/OL27482W, The Hobbit, titling itself 'Ka hopita', the Hawaiian edition), so a work-page title has no stable ground truth to hand-label. The anchor is the author surname, independent of the asked-for title. One page load per run.",
+  "triage": {
+    "class": "coverage",
+    "heading_0_note": "unlike HN, Open Library exposes real headings, so this is tier-1-adjacent rather than purely positional — but index 0 still assumes the edition title is the first heading, which held on both edition pages probed. If OL restructures, red and loud."
+  }
+}

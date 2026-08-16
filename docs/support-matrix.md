@@ -20,7 +20,9 @@ Entry shape (also served as JSON to the frontend):
 
 ## Current matrix
 
-Declared from the M5 baseline (`evals/report/20260817-005720-fast.json`, 60/60, plus the `live` run).
+Declared from the M5 baseline (`evals/report/20260817-005720-fast.json`, 60/60)
+plus the M6 live-breadth run (`evals/report/20260817-024235-live.json`, 3/5 —
+the two reds are deliberate, see the M6 limitation rows).
 Every status below rests on **offline fixtures with the planner stubbed** —
 this table measures the resolver/executor/verifier path, not planning quality
 and not any live site. Empty cells are shown, not hidden.
@@ -31,10 +33,21 @@ and not any live site. Empty cells are shown, not hidden.
 | forms fixture | — | — | — | — | supported |
 | hello fixture | supported | — | — | — | — |
 | books.toscrape.com (live) | — | — | unreliable | — | — |
+| news.ycombinator.com (live) | unreliable | — | — | — | — |
+| openlibrary.org (live) | unreliable | unsupported | — | — | — |
 | wikipedia.org | — | — | — | — | — |
 
 Statuses: `supported` / `unreliable` / `unsupported` / `—` (not yet evaluated).
 Unsupported and unreliable rows must cite a concrete failing case id.
+
+## Declared limitations (M6 live breadth)
+
+| Limitation | Evidence | Status |
+|---|---|---|
+| Live TC1 on news.ycombinator.com and openlibrary.org is stub-verified only | `live-hn-item1-title` and `live-ol-edition-title` pass with hand-written plans; the live planner has never been run against either domain | `unreliable` — the same stub-vs-planner asymmetry declared for books.toscrape.com. The resolver/executor/verifier path handles both real DOMs; planning quality on them is unmeasured until a `full` run |
+| A control invisible to both the a11y tree and the light DOM cannot be located | `live-ol-search-a11y-invisible`: Open Library's homepage search field exposes zero searchbox/combobox/textbox roles and no visible `<input>` — it is mounted by JS behind a reveal interaction | `unsupported` — no locator tier in the contract can reach it, a hostility class no fixture represents. The case is red until a reveal-interaction rung exists |
+| Relocation onto a non-actionable element launders the failure class | same case, report 20260817-024235-live (diagnosis 0/1): the unresolvable searchbox was relocated to a text-tier match on the literal string "Search", and the resulting `Locator.fill` error reported `failure:act` for a root cause of `locate` | `unreliable` — the relocate rung checks that a target resolves, not that it is actionable for the pending action, so a rescue can misfile the diagnosis and steer the wrong ladder |
+| Unknown target-schema keys are silently dropped by the resolver | `live-hn-item1-submitter`: the contract-advertised `near:` key resolved as bare `{role: link}` → `ResolveError: 39 matches` — ignored, not rejected | `unreliable` — plan semantics the resolver does not implement vanish without a sound. The spec-drift on `near:` was declared at the freeze; that its absence is *silent* is new |
 
 ## Declared limitations (M5)
 

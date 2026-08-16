@@ -1,0 +1,25 @@
+{
+  "id": "live-hn-item1-title",
+  "task": "browser",
+  "suites": ["live", "full"],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "news.ycombinator.com",
+  "input": {
+    "task": "What is the title of the story on this Hacker News item page?",
+    "url": "https://news.ycombinator.com/item?id=1",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "index": 11 }, "anchor": "pg" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Y Combinator",
+    "anchors": ["pg"]
+  },
+  "provenance": "second live domain (M6 live breadth). Item 1 is HN's first-ever story (Oct 9, 2006): title, submitter and URL are as frozen as the public web gets. Ground truth hand-verified 2026-08-17 with an eval-side Playwright probe: get_by_role('link') on the page yields the 10-link site header first, then [10] sitebit favicon, [11] 'Y Combinator' (the title), [12] 'ycombinator.com', [13] 'pg'. The anchor is the submitter 'pg', not the title itself — anchoring on the string the case asks for would let the extraction satisfy its own identity check. One page load per run, no crawling.",
+  "triage": {
+    "class": "coverage",
+    "index_11_is_brittle": "HN's table markup exposes no headings, so the title is reachable only positionally — index 11 holds only while the site header keeps exactly 10 links. Same declared limitation as live-books-travel-price's index 5: live extraction is positional until `near:` exists in the resolver. If HN adds a header link, this goes red loudly, which is the correct failure mode."
+  }
+}

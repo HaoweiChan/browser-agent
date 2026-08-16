@@ -1,0 +1,27 @@
+{
+  "id": "live-ol-search-a11y-invisible",
+  "task": "browser",
+  "suites": ["live", "full"],
+  "level": "L3",
+  "tc": "TC2",
+  "domain": "openlibrary.org",
+  "input": {
+    "task": "Search Open Library for 'the hobbit' and tell me the title of a matching book.",
+    "url": "https://openlibrary.org/",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "searchbox", "name": "Search" }, "value": "the hobbit",
+        "expected_state": null },
+      { "action": "extract", "target": { "role": "link", "name": "The Hobbit" }, "anchor": "Tolkien" }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "found while probing openlibrary.org for M6 cases (2026-08-17): the homepage's search field is invisible to BOTH the accessibility tree (zero searchbox/combobox/textbox roles) and the light DOM (querySelectorAll('input') returns only hidden inputs and two unnamed submit buttons) — the field is mounted by JS behind a reveal interaction. No locator tier in the contract can reach it, which makes this the first live instance of a whole hostility class the fixture set cannot represent: a control that exists on screen but not in any tree the agent observes.",
+  "triage": {
+    "class": "diagnosis",
+    "what_this_grades": "not the search — the diagnosis. The pipeline must classify this as failure:locate (loudly, no fabricated answer), exactly as the deployed run cd7121fc did for an unresolvable target. Passing = correct classification on a real site nobody here authored.",
+    "watched_red_2026-08-17": "first run (report 20260817-024235) failed BETTER than predicted: got failure:act, not a wrong locate. The relocation ladder 'rescued' the unresolvable searchbox into a text-tier match on the literal string 'Search' — a non-fillable element — and the subsequent Locator.fill error was classified act. So relocation onto a non-actionable target LAUNDERS the failure class: root cause locate, reported act, diagnosis metric 0/1. The expectation stays failure:locate on purpose; the fix this case drives is actionability-checking in the relocate rung (a relocated target must be fillable/clickable for the pending action, else the original locate class stands).",
+    "upgrade_path": "if a reveal-interaction rung (click the search toggle, re-observe, then fill) ever lands in the recovery ladder, this case's expectation flips to success in the same change — the ladder's eval-first driver, same pattern as l4-shop-button-text-renamed."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "live-hn-item1-submitter",
+  "task": "browser",
+  "suites": ["live", "full"],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "news.ycombinator.com",
+  "input": {
+    "task": "Who submitted the story 'Y Combinator' on this Hacker News page?",
+    "url": "https://news.ycombinator.com/item?id=1",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "near": "points by" }, "anchor": "Y Combinator" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "pg",
+    "anchors": ["Y Combinator"]
+  },
+  "provenance": "the twin of live-hn-item1-title, written in the form the contract advertises instead of the form the resolver implements. specs/001 §target-schema documents `near:` (nearest role-match to an anchor text); src/browser/resolver.py has never implemented it — recorded as spec-drift at the B-freeze (support matrix, 'Live extraction from a table is positional'). The subline 'points by pg on Oct 9, 2006' makes the submitter link the nearest link to the text 'points by'. Ground truth hand-verified 2026-08-17 (same probe as the title case).",
+  "triage": {
+    "class": "coverage",
+    "watched_red": "written red on purpose: this case fails with ResolveError (no tier handles `near:`) until the resolver implements the tier the contract has advertised since M1. It is the eval-first driver for closing that spec-drift — the M6 implementation step makes THIS case green, not the other way round."
+  }
+}

@@ -1,0 +1,233 @@
+{
+  "suite": "live",
+  "score": 0.6,
+  "totals": {
+    "actions": 12,
+    "llm_tokens": 0,
+    "llm_usd": 0.0,
+    "replans": 0,
+    "ms": 17250,
+    "wall_seconds": 17.31,
+    "latency_p50": 2.14,
+    "latency_p95": 6.92,
+    "cases_with_budgets": 5
+  },
+  "metrics": {
+    "recovery_rungs": 1,
+    "diagnosis_cases": 1,
+    "diagnosis_correct": 0
+  },
+  "results": [
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "\u00a345.17",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2115
+      },
+      "seconds": 2.14,
+      "id": "live-books-travel-price",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "checks": {
+        "status": false,
+        "verdict": false
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": false,
+          "answer_matches": false
+        },
+        "reason": "answer is empty; identity anchor(s) absent from evidence: ['Y Combinator']; answer None != expected 'pg'"
+      },
+      "metrics": {},
+      "tiers": [],
+      "got": {
+        "status": "failure:locate",
+        "answer": null,
+        "reason": "step 2 (extract): ResolveError: 39 matches at tier role for {'role': 'link', 'near': 'points by'}"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1123
+      },
+      "seconds": 1.14,
+      "id": "live-hn-item1-submitter",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "Y Combinator",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1176
+      },
+      "seconds": 1.18,
+      "id": "live-hn-item1-title",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "The monk and the dancer",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 6922
+      },
+      "seconds": 6.92,
+      "id": "live-ol-edition-title",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "checks": {
+        "status": false
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "answer is empty"
+      },
+      "metrics": {
+        "recovery_rungs": 1,
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 0
+      },
+      "tiers": [
+        "text"
+      ],
+      "got": {
+        "status": "failure:act",
+        "answer": null,
+        "reason": "step 3 (fill): relocation after locate failure: retargeting as {'text': 'Search'}; Error: Locator.fill: Error: Element is not an <input>, <textarea> or [contenteditable] element\nCall log:\n  - waiting for get_by_text(\"Search\", exact=True)\n  -     - locator resolved to <span class=\"search-bar-trigger__label\">Search</span>\n  -     - fill(\"the hobbit\")\n  -   - attempting fill action\n  -     - waiting for element to be visible, enabled and editable\n; replan made no progress (identical or empty plan)"
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 5914
+      },
+      "seconds": 5.93,
+      "id": "live-ol-search-a11y-invisible",
+      "kind": "adversarial"
+    }
+  ]
+}
