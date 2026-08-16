@@ -1,49 +1,165 @@
 # browser-agent
 
-Generalized browser automation agent — accepts natural-language task
-descriptions and executes them reliably across sites, with self-correction
-(diagnose failures, switch strategies) and self-maintenance (detect UI /
-selector drift and adapt locators).
+A browser automation agent that takes a natural-language task, plans it against
+what the page actually shows, executes it in a real headless Chromium, and then
+**has a separate component decide whether it worked**.
+
+**Live:** https://whaleforce-browser-agent.zeabur.app/ — submit a task, watch the
+trace stream, open a failed step and its screenshot.
 
 Built on [groundwork](https://github.com/HaoweiChan/groundwork), an eval-first
-scaffold: reliability here has no ground truth, so it is encoded as executable
-invariants and golden/adversarial cases instead of prose specs.
+scaffold. Reliability here has no public ground truth, so correctness is encoded
+as executable invariants and golden/adversarial cases instead of prose.
 
-## Status
+---
 
-M0–M4 done; M5 (freeze: analysis, README rewrite, held-out probe) is next.
-Milestones and their evidence: `tasks/TODO.md`.
+## The one idea
 
-Latest offline baseline — `evals/report/20260816-210730-fast.json`:
+Most of this repo exists to answer a single question: **how do you know the
+agent didn't just say something plausible?**
 
-```
-fast       58/58   invariant 16/16   $0.0000   32.0s
-recovery 3/3 verified (6 rungs tried) · mutation 4/4 passed, 2 by relocating
-diagnosis 8/8 · 3 replans
-```
+An agent that grades its own work will report success. So the executor never
+does. A run's status is assembled by a separate `OutcomeVerifier` that reads
+raw evidence — what was extracted, and what the page said *where* it was
+extracted — never the executor's conclusion. Three invariants hold that line:
 
-Read those numbers with their denominators. They are measured on **offline
-fixtures with the planner stubbed**, so they grade the resolver / executor /
-verifier path and say nothing about planning quality or any live site. Recovery
-is a floor on three injected cases, not a rate. "4/4 mutations passed, 2 by
-relocating" is the honest split: two of the three mutation types break a tier no
-plan was standing on, so they pass without recovering anything. What is not yet
-measured at all is listed in `docs/support-matrix.md`, which the frontend
-renders from the same file — including the largest open cell, no live domain.
+| | |
+|---|---|
+| **INV-0** | `success` requires a non-empty answer **and** a non-empty trace. An empty extraction is `failure:extract`, never a quiet success. |
+| **INV-2** | A non-PASS verdict can never be reported as `success`. The verifier outranks the executor. |
+| **INV-3** | Every budget exhaustion ends the run with a failure class and the full trace — never a quiet stop. |
+
+Each is backed by a case that has been watched go red. An invariant with no
+failing case is decoration.
+
+## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate, zero paid calls
-python3 -m evals.run --suite invariant   # must-always-hold, no LLM/network
+python3 -m evals.run --suite fast        # offline gate: 59 cases, zero paid calls
+python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
+python3 -m evals.run --suite live        # 1 case against a real site, still $0.00
 ```
 
-Run the reviewer UI locally (submit a task, watch the trace stream, inspect a
-failed attempt and its screenshot). The task-submit path needs
-`OPENROUTER_API_KEY`; everything else — guards, matrix, smoke test — works
-without one:
+The reviewer UI locally — task submission needs `OPENROUTER_API_KEY`; the
+guards, matrix and browser smoke test work without one:
 
 ```bash
 python3 -m uvicorn src.browser.server:app --port 8099
 ```
+
+## Where it stands
+
+Latest offline baseline — `evals/report/20260816-210730-fast.json`:
+
+```
+fast  60/60    invariant  18/18    live  1/1    $0.0000    32s
+recovery 3/3 verified (6 rungs tried) · mutation 4/4 passed, 2 by relocating
+diagnosis 8/8 · 3 replans
+```
+
+And the number that matters more, from 10 blind tasks a separate agent wrote
+and ran against the **deployed** URL ([raw table](docs/analysis.md)):
+
+```
+2 correct answers of 8 answer-seeking tasks · 1 of 2 refusals · $0.0681
+no run reported success with a wrong answer — 10/10
+```
+
+**Read those with their denominators**, which is why they are printed as `x/y`:
+
+- **`$0.0000` is honest and nearly useless.** No suite invokes a real planner —
+  that is deliberate, so the gate costs nothing and runs without a key, but it
+  means these numbers grade the resolver → executor → verifier path and say
+  **nothing about planning quality**. Real measured spend: one deployed task at
+  **$0.0065 / 1438 tokens / 6.5s**.
+- **`recovery 3/3` is a floor on three injected cases, not a rate.** Six rungs
+  were tried to produce three verified recoveries; that ratio is printed beside
+  it rather than folded into it.
+- **`mutation 4/4 passed, 2 by relocating`** is the load-bearing split. Only one
+  of the three DOM mutations breaks a locator tier a plan was actually standing
+  on; the other two pass without recovering anything. Reporting 4/4 as
+  self-maintenance would be the flattering lie.
+
+Full numbers, scalability limits and the complete not-measured list:
+[`docs/analysis.md`](docs/analysis.md). What works per site and what doesn't:
+[`docs/support-matrix.md`](docs/support-matrix.md) — the same file the live
+frontend renders, so the page and the repo cannot disagree.
+
+## Key design decisions
+
+Rationale lives in `specs/decisions/`; the short version:
+
+- **Semantic targets, never CSS selectors.** Steps name a role + accessible
+  name, or visible text. No site-specific selector, DOM path or navigation
+  recipe exists in the execution policy — a hard rule enforced by review, so
+  "supporting" a site is never a hardcoding exercise.
+- **Two recovery families, chosen from measured failures.** A scope checkpoint
+  counted 12 real failures before any recovery code was written, and picked the
+  two classes that tied for most frequent — then explicitly refused a third.
+  `locate` → relocate at a *different* semantic tier; `act` → replan from a
+  fresh observation, keeping the executed prefix. Retries are labelled `retry`
+  and excluded from the recovery metric by construction (ADR-003).
+- **A failed attempt stays in the trace forever.** Recovery marks it
+  `superseded_by`, which hides it from *grading* but never from the reader — so
+  the UI shows the strategy switch that actually happened.
+- **DOM mutations as self-maintenance ground truth.** `?mut=` deterministically
+  breaks exactly one locator tier, so surviving is evidence of relocating
+  rather than of luck.
+- **Budgets that carry the right class.** Running out of actions is `env`;
+  running out of ladder rungs is the class the ladder was fixing. Reporting the
+  latter as `env` would corrupt the failure distribution the next checkpoint
+  reads.
+
+## Honest failure modes
+
+The unusual thing in this repo is that the limitation list is generated from
+cases, not from memory — every `unreliable`/`unsupported` row in
+[`docs/support-matrix.md`](docs/support-matrix.md) cites a case id, and an
+invariant-suite case fails if a citation stops resolving, or if the document
+ever parses to zero declared limitations. The pre-commit eval gate runs it.
+
+The biggest ones, stated plainly:
+
+- **Capability is about one hop deep.** The held-out probe answered 2 of 8.
+  Second hops, aggregates ("which is cheapest"), and values living only in an
+  HTML attribute all fail — loudly, but they fail.
+- **Planning quality is unmeasured by the suite.** Every case stubs the planner,
+  so the probe is the only measurement of it, and it is the weakest link.
+- **One live domain, one task class, one case.** Fixtures are self-authored and
+  therefore friendly.
+- **No check asks whether an answer is *responsive*.** One probe run returned a
+  whole-page dump and was caught on a whitespace technicality, not on relevance.
+- **Identity anchors are satisfiable on aggregate pages** — on a listing, every
+  candidate entity appears in the page text, so the anchor certifies a wrong
+  answer too. Caught only by ground truth, which a live run does not have.
+- **No hand-labeled verifier sample**, so trap detection is reported as a floor
+  (6/6 traps caught) and never as verifier accuracy.
+- Seven further mechanism-level gaps carried deliberately, each written down in
+  [ADR-005](specs/decisions/ADR-005-cold-review-corrections.md).
+
+## Where AI helped, and where it was wrong
+
+The full record is [`prompts/`](prompts/) — curated correction chains, each
+ending in *assumed → eval said → corrected*, plus the raw session dumps.
+
+The honest headline is a measurement of this method's weak spot: **9 defects
+across five milestones were found by cold review or by adding a new domain —
+not by the eval suite — in code that was green at the time.** Adding the first
+live domain made it 10 within an hour, by revealing that the page observation
+spent its entire budget on navigation and never saw a single product on a real
+listing page.
+
+The eval set is not weak; it is 61 cases and it caught a *bad fix* mid-session
+during the last review. But an eval set written by the author of the code is
+blind in the direction the author was already looking, and the only two things
+observed to move that blind spot are adversarial review and unfamiliar input.
+That is why the cold review is a gate here rather than a nicety.
+
+Three examples of AI-proposed work being rejected or corrected, all recorded:
+a third recovery family refused because the checkpoint data didn't support it;
+a first attempt at the number-comparison fix that broke `$39.00 == 39` and was
+caught by the suite; and a case provenance narrowed after the red proof showed
+something weaker than what had been claimed.
 
 ---
 
@@ -161,4 +277,4 @@ failing eval case → implement (invariant hook watching) → cold review
 → findings become adversarial cases → eval gate green → commit
 ```
 
-Design rationale for the whole approach: `specs/decisions/ADR-000`.
+Design rationale for the whole approach: [ADR-000](specs/decisions/ADR-000-eval-first-scaffold.md).

@@ -29,11 +29,28 @@ SETTLE_TRIES, SETTLE_MS = 10, 200
 PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, bounded
 
 # ponytail: keyword screen — LLM-based scope screening only if evals demand it.
-# Still no eval has: every L5 refusal case is caught by the pattern below.
+# One now does, in BOTH directions, and the pattern below is the cheap half.
+#
+# False negatives are the dangerous half. `\blog ?in\b` needed a word boundary
+# after `in`, so "log into" — the commonest English phrasing — sailed through,
+# and the deployed agent typed placeholder credentials into a real Google login
+# form (T9 probe, run e5e657d3; case l5-refuse-login-contracted). The verb group
+# now absorbs inflections and "into", and separators allow a hyphen, so log in /
+# log into / logging into / signed into / sign-in all match while `signing`,
+# `Loginov` and `sign` alone still do not.
+#
+# `check-?out` deliberately does NOT match spaced "check out": that is ambiguous
+# with "look at" in ordinary English, and a false refusal on a reviewer's task
+# costs honesty points (screening-word-boundary).
+#
 # Latin terms need \b (case screening-word-boundary: 'signing' contains 'signin');
 # CJK terms must stay boundary-free — \b never matches inside a CJK run.
 SCOPE_BLOCK = re.compile(
-    r"\b(?:log ?in|sign ?in|password|captcha|checkout|payment|purchase|buy|pay|download)\b"
+    r"\b(?:log|sign)(?:g?ed|g?ing)?[\s-]?in(?:to)?\b"
+    r"|\b(?:password|captcha|payment|purchase|buy|pay|download)\b"
+    r"|\bcheck-?out\b"
+    r"|\bcredit card\b"
+    r"|\bplace (?:an?|the) order\b"
     r"|\bdelete (?:my|the|this)\b"
     r"|登入|登录|密碼|密码|驗證碼|验证码|付款|購買|购买|刪除|删除|下載|下载",
     re.IGNORECASE,

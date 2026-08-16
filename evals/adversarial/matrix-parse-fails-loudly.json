@@ -6,7 +6,7 @@
     "kind": "matrix-drift",
     "variants": [
       { "note": "section heading renamed at a later milestone",
-        "replace": ["## Declared limitations (M3)", "## Known limitations"] },
+        "replace": ["## Declared limitations", "## Known limitations"] },
       { "note": "a column added to the matrix grid",
         "replace": ["| shop fixture | supported |", "| shop fixture | supported | supported |"] },
       { "note": "unbalanced code fence swallows the rest of the document",
