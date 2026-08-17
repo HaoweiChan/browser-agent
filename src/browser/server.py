@@ -134,10 +134,10 @@ class TaskIn(BaseModel):
     url: str | None = None
 
 
-def _env_failure(task: str, reason: str) -> dict:
+def _env_failure(reason: str) -> dict:
     """A contract-shaped result for a run that never got off the ground."""
     return assemble_result(
-        task, [], None,
+        [], None,
         {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0},
         failure="env", reason=reason)
 
@@ -160,14 +160,14 @@ async def _execute(run_id: str, task: str, url: str | None):
             # frontend renders both (gateway-error-contract-shape). Empty trace is
             # correct — live_planner() validates the key before a browser opens,
             # so nothing was attempted; only the shape was ever wrong.
-            result = _env_failure(task, f"{type(e).__name__}: {e}")
+            result = _env_failure(f"{type(e).__name__}: {e}")
         finally:
             # A run must always reach a terminal state. When the error path
             # itself raised (a NameError, once), the record stayed "running" and
             # the SSE stream never closed — a hung connection on a public
             # endpoint, and a reviewer watching a spinner with no end.
             if result is None:
-                result = _env_failure(task, "run ended without producing a result")
+                result = _env_failure("run ended without producing a result")
             RUNS[run_id] = result
             q.put_nowait({"event": "done", "result": result})
 
