@@ -236,6 +236,7 @@ evals/golden/        hand-verified cases (provenance recorded per case)
 evals/adversarial/   inputs that broke, or are designed to break, the pipeline
 evals/report/        every run's scored output, committed — the progress narrative
 prompts/             AI-collaboration record: curated correction chains
+graphify-out/        knowledge graph of this repo — open graph.html, or read GRAPH_REPORT.md
 src/<task>/          implementations — each exposes eval_adapter.py to the runner
 ```
 

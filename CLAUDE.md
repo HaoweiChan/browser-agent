@@ -29,6 +29,8 @@ evals/adversarial/ cases known or designed to break the pipeline
 evals/report/      every run's output, committed to git
 prompts/           AI-collaboration record (curated 00N-*.md)
 src/<task>/        implementation + eval_adapter.py per task
+graphify-out/      knowledge graph — graph.html / graph.json / GRAPH_REPORT.md +
+                   cost.json / manifest.json tracked, cache/ ignored; /graphify --update
 ```
 
 ## Commands
