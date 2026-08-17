@@ -209,8 +209,6 @@ suggestion an agent can talk itself past.
 - Every commit → pre-commit hook runs the **fast suite** against
   `.eval-baseline.json`. A score below baseline blocks the commit. The
   baseline moves only by explicit decision, recorded in an ADR.
-- Every session end → the session's prompts are dumped to `prompts/raw/`,
-  so the AI-collaboration record builds itself.
 
 ### The execution layer in practice
 
@@ -230,14 +228,15 @@ CLAUDE.md            facts layer — working rules, < 150 lines (AGENTS.md symli
 .claude/settings.json  hooks registration + plugin wiring (ponytail auto-installs)
 .claude/skills/      eval-protocol · failure-triage · cost-discipline · graphify (vendored)
 .claude/agents/      cold-reviewer · eval-adversary · spec-drift
-.claude/hooks/       post-edit invariant runner · session prompt logger
+.claude/hooks/       post-edit invariant runner
 .githooks/           pre-commit eval gate
 specs/               ONLY three kinds: invariants · output contracts · ADRs (why, not what)
 evals/run.py         stdlib-only runner — defines the case + adapter contract
 evals/golden/        hand-verified cases (provenance recorded per case)
 evals/adversarial/   inputs that broke, or are designed to break, the pipeline
 evals/report/        every run's scored output, committed — the progress narrative
-prompts/             AI-collaboration record: auto-dumped raw/ + curated correction chains
+prompts/             AI-collaboration record: curated correction chains
+graphify-out/        knowledge graph of this repo — open graph.html, or read GRAPH_REPORT.md
 src/<task>/          implementations — each exposes eval_adapter.py to the runner
 ```
 

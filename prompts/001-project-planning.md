@@ -131,5 +131,4 @@ chains start at M1.)
 The correction chain above — initial proposal → adversarial review → scope
 problem identified → human rejection → compression → approval — is the AI
 collaboration evidence the assignment says it will read. The final plan is
-`docs/plans/active/task1-b-level-plan.md`; the raw session dump lands in
-`prompts/raw/` via the SessionEnd hook.
+`docs/plans/active/task1-b-level-plan.md`.
