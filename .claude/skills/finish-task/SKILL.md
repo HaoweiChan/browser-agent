@@ -27,4 +27,13 @@ report the milestone complete with a silently skipped item.
    the correction chain.
 8. **TODO.md**: milestone marked, next milestone's validation line still
    accurate; hour-guard tally updated (freeze at 20–24h total on Task 1).
-9. **Commit through the gate** — no `--no-verify` without an in-message reason.
+9. **Knowledge graph refreshed**: `/graphify --update`, then commit the four
+   tracked artifacts with the milestone. `graphify-out/` is a reviewer artifact
+   pinned to a milestone, not a live index — deliberately NOT a post-commit
+   hook. Three reasons, all checkable: `core.hooksPath` is `.githooks`, so
+   anything written to `.git/hooks/` never runs; the hook re-extracts code only
+   and skips docs, which is where this repo's ADRs and specs live, so it would
+   report currency it does not have; and rewriting four tracked files after
+   every commit leaves a dirty tree that PR-only `main` cannot absorb. Check
+   staleness with `graphify check-update .` if unsure.
+10. **Commit through the gate** — no `--no-verify` without an in-message reason.
