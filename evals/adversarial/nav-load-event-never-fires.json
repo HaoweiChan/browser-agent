@@ -1,0 +1,23 @@
+{
+  "id": "nav-load-event-never-fires",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the title on this page?",
+    "fixture": "slow-asset.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "heading", "index": 0 }, "anchor": "LAMP-SLOW" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "The monk and the dancer", "anchors": ["LAMP-SLOW"] },
+  "provenance": "found on 2026-08-18, when openlibrary.org came back from its outage and `live-ol-edition-title` kept failing `nav` anyway. The outage had been masking a real limitation: an eval-side probe loaded the same URL in **4.4s** under `wait_until=\"domcontentloaded\"`, with the expected heading 'The monk and the dancer' already in the accessibility tree, and timed out at **25s** under `wait_until=\"load\"` — Playwright's default, and what `run_task`'s `page.goto` relied on. One hanging subresource made a page whose every word was available unreadable to the agent.",
+  "triage": {
+    "class": "silent-failure",
+    "direction": "a FALSE failure, the safe direction — the same family as evidence-window-keeps-the-anchor. It never invents an answer; it refuses to read a page it can see. The cost is a `failure:nav` that blames the site for the agent's own wait condition, and a support-matrix row that would have recorded a live domain as unreachable when it was merely slow to finish decorating itself.",
+    "watched_red": "before the fix: failure:nav, 'Page.goto: Timeout 20000ms exceeded', after burning the full 20s budget. After: success in well under a second — `domcontentloaded` fires immediately and the image goes on hanging in the background, unwatched and unneeded.",
+    "why_domcontentloaded_is_not_a_downgrade": "DOMContentLoaded fires after the HTML is parsed and deferred/inline scripts have run — everything a JS-rendered page puts in the DOM synchronously is already there. What `load` adds is images, stylesheets and subframes, which no locator tier reads. Content that genuinely arrives later was never guaranteed by `load` either, and is covered by check_state's settle loop (SETTLE_TRIES × SETTLE_MS) and by the `render-delayed` mutation.",
+    "fixture_note": "/fixtures/hang.png sleeps 120s and is never awaited to completion; the eval closes the browser first. The 20s cost of this case is paid once, while watching it red — green, it is one of the fastest cases in the suite."
+  }
+}

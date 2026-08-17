@@ -1,0 +1,22 @@
+{
+  "id": "nav-action-load-event-never-fires",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC3",
+  "input": {
+    "task": "Navigate to the product page and tell me its title.",
+    "fixture": "slow-asset.html",
+    "stub_plan": [
+      { "action": "navigate", "value": "$FIXTURE_URL", "expected_state": { "text_visible": "LAMP-SLOW" } },
+      { "action": "extract", "target": { "role": "heading", "index": 0 }, "anchor": "LAMP-SLOW" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "The monk and the dancer", "anchors": ["LAMP-SLOW"] },
+  "provenance": "the twin of nav-load-event-never-fires, and the reason it exists is a review note rather than a run: `run_task` has **two** `page.goto` calls — the pre-plan navigation and the `navigate` action inside `execute()` — and the first case only exercises the first. Fixing one goto would have turned that case green with half the defect still live, on the path any multi-page plan actually uses. An eval that can pass while the bug survives is worth less than no eval, because it also stops anyone looking.",
+  "triage": {
+    "class": "coverage",
+    "watched_red": "written and run before either goto was touched: failure:nav on the pre-plan hop. Re-watched after fixing only the pre-plan goto, which is the state that matters — it stayed red, failing on the `navigate` STEP at 20s, which is exactly what this case was written to catch.",
+    "postcondition": "`text_visible: LAMP-SLOW` rather than a URL check: the point is that the page is READABLE after the hop, not merely that goto returned. A navigate whose wait condition is satisfied but whose content is not there would pass a `url_contains` and fail this."
+  }
+}

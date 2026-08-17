@@ -24,6 +24,7 @@ from .verifier import verify
 MAX_FIXES = 2         # relocation rungs per failed step
 MAX_REPLANS = 2       # replans per task
 SETTLE_TRIES, SETTLE_MS = 10, 200
+SETTLE_BUDGET_MS = SETTLE_TRIES * SETTLE_MS  # the same 2s a postcondition gets
 PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, bounded
 
 # ponytail: keyword screen — LLM-based scope screening only if evals demand it.
@@ -146,6 +147,46 @@ async def check_state(page, expected: dict | None) -> bool | None:
     return False
 
 
+async def navigate(page, url: str) -> None:
+    """Go to `url` and leave the page in a state that can be READ, not merely
+    one where `goto` returned.
+
+    Playwright's default `wait_until="load"` waits for every image, stylesheet
+    and subframe — none of which any locator tier reads — so a single hanging
+    subresource makes a fully rendered page unreachable. openlibrary.org's
+    edition pages did exactly that: content complete in 4.4s, `load` still
+    pending at 25s, and the agent blaming the site with `failure:nav` for a page
+    it could see (cases nav-load-event-never-fires and its `navigate`-step twin
+    nav-action-load-event-never-fires).
+
+    `domcontentloaded` alone would be the opposite mistake. The pre-plan path
+    snapshots the page for the planner on the very next line, and a snapshot
+    taken mid-hydration hands the planner roles that do not exist yet — which
+    surfaces later as a `locate` failure on a page that was fine: an
+    intermittent bug that also misattributes itself. So the wait for `load`
+    stays; it just stops being unbounded. A healthy page has already fired it
+    by the time `goto` returns and pays nothing, and a page that never fires it
+    costs 2s — the same budget a postcondition gets — and then proceeds to be
+    read, which was always possible.
+
+    `networkidle` was the other candidate and is stronger for hydration, but it
+    waits 500ms past the last request on EVERY navigation, healthy or not:
+    measured, that was +34s on the fast suite, breaching the 60s ADR-002
+    budget to buy a guarantee no case asks for. Bounded `load` keeps the
+    behaviour every existing case was written against and fixes only the case
+    that was broken.
+
+    Both call sites route through here (the pre-plan hop and the `navigate`
+    action), because fixing one would leave the other on the old behaviour and
+    the eval for it green.
+    """
+    await page.goto(url, timeout=20_000, wait_until="domcontentloaded")
+    try:
+        await page.wait_for_load_state("load", timeout=SETTLE_BUDGET_MS)
+    except Exception:
+        pass
+
+
 def evidence_window(body: str, value: str, anchor: str | None = None) -> str:
     """Bounded page-text evidence that still contains what it will be judged on:
     the extracted value, and the identity anchor if the page carries one.
@@ -262,7 +303,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 trace.append(rec)
                 budgets["actions"] += 1
                 try:
-                    await page.goto(url, timeout=20_000)
+                    await navigate(page, url)
                     obs = await observe(page)
                     (run_dir / "observation.json").write_text(json.dumps(obs, indent=2))
                     rec["postcondition_ok"] = True
@@ -288,7 +329,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 if action == "navigate":
                     if url_guard and not url_guard(step.get("value") or ""):
                         raise StepError("task", f"blocked URL: {step.get('value')!r}")
-                    await page.goto(step["value"], timeout=20_000)
+                    await navigate(page, step["value"])
                     return
                 if action not in ("click", "fill", "extract"):
                     raise StepError("task", f"unknown action {action!r}")
@@ -379,7 +420,15 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     rec["note"] = "; ".join(filter(None, [rec["note"], f"{type(exc).__name__}: {exc}"]))
                 shot = f"step_{rec['i']}.png"
                 try:
-                    await page.screenshot(path=str(run_dir / shot))
+                    # Bounded, because "best-effort" and "unbounded" cannot both
+                    # be true. Playwright waits for fonts before it shoots, and
+                    # on a page whose `load` never fires that wait runs to its
+                    # 30s default — per step, silently, inside a block whose
+                    # whole point is that failing here is acceptable. It cost
+                    # nav-load-event-never-fires 32s and its twin 64s, in a
+                    # suite ADR-002 budgets at 60s total.
+                    await page.screenshot(path=str(run_dir / shot),
+                                          timeout=SETTLE_BUDGET_MS)
                     rec["screenshot"] = shot
                 except Exception:
                     pass  # evidence best-effort; the postcondition is the gate

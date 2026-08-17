@@ -538,6 +538,18 @@ async def forms_reset():
     return {"ok": True}
 
 
+@app.get("/fixtures/hang.png")
+async def fixture_hang():
+    """A subresource that never arrives, so the page referencing it never fires
+    `load`. openlibrary.org's edition pages behave exactly like this in the
+    wild — the document and every word of its content are there in seconds
+    while one asset hangs (case nav-load-event-never-fires). Async sleep, so it
+    parks a coroutine rather than a worker; the eval closes the page long
+    before this returns."""
+    await asyncio.sleep(120)
+    raise HTTPException(504, "unreachable by design")
+
+
 @app.get("/fixtures/{name}", response_class=HTMLResponse)
 async def fixture(name: str, mut: str | None = None):
     path = (FIXTURE_DIR / name).resolve()
