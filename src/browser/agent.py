@@ -146,13 +146,12 @@ async def check_state(page, expected: dict | None) -> bool | None:
     return False
 
 
-def evidence_window(body: str, value: str, anchor: str | None = None,
-                    keep: int = PAGE_TEXT_KEEP) -> str:
+def evidence_window(body: str, value: str, anchor: str | None = None) -> str:
     """Bounded page-text evidence that still contains what it will be judged on:
     the extracted value, and the identity anchor if the page carries one.
 
-    A flat head-truncation would fail the verifier's grounding check on any
-    page longer than `keep` — a false `failure:semantic` on a correct run. The
+    A flat head-truncation would fail the verifier's grounding check on any page
+    longer than PAGE_TEXT_KEEP — a false `failure:semantic` on a correct run. The
     anchor is the same argument one field over, and it went unnoticed until a
     live product page put a wall of description between its title and its
     specification table (case evidence-window-keeps-the-anchor).
@@ -162,10 +161,10 @@ def evidence_window(body: str, value: str, anchor: str | None = None,
     the true verdict.
     """
     def around(i: int) -> str:
-        lo = max(0, i - keep // 2)
-        return body[lo:lo + keep]
+        lo = max(0, i - PAGE_TEXT_KEEP // 2)
+        return body[lo:lo + PAGE_TEXT_KEEP]
 
-    if len(body) <= keep:
+    if len(body) <= PAGE_TEXT_KEEP:
         return body
     i = body.find(value)
     win = around(i) if i >= 0 else body[:keep]
@@ -175,7 +174,7 @@ def evidence_window(body: str, value: str, anchor: str | None = None,
     return win
 
 
-def assemble_result(task, trace, answer, budgets, failure=None, reason=None, final_url=None,
+def assemble_result(trace, answer, budgets, failure=None, reason=None, final_url=None,
                     page_digest=None, extractions=None, verdict=None):
     if failure:
         status = "unsupported" if failure == "unsupported" else f"failure:{failure}"
@@ -226,7 +225,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
 
     def done(answer=None, failure=None, reason=None, final_url=None, digest=None, verdict=None):
         budgets["ms"] = int((time.monotonic() - t0) * 1000)
-        result = assemble_result(task, trace, answer, budgets, failure, reason, final_url,
+        result = assemble_result(trace, answer, budgets, failure, reason, final_url,
                                  digest, extractions, verdict)
         (run_dir / "trace.jsonl").write_text("\n".join(json.dumps(s) for s in trace) + "\n")
         (run_dir / "result.json").write_text(json.dumps(result, indent=2))

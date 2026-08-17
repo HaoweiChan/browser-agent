@@ -77,6 +77,19 @@ def _post(path: str):
     ).read()
 
 
+def _subst(obj, url: str):
+    """`$FIXTURE_URL` in a stub plan -> the URL this run's fixture is served from."""
+    return json.loads(json.dumps(obj).replace("$FIXTURE_URL", url))
+
+
+def _run_agent(task: str, url: str | None, planner, **kw) -> dict:
+    """One agent run in a throwaway run dir — what every E2E-shaped case needs.
+    The dir is temporary because the eval grades the returned result and the
+    trace inside it; the on-disk artifacts are for a human debugging a real run."""
+    with tempfile.TemporaryDirectory() as run_dir:
+        return asyncio.run(run_task(task, url, planner, run_dir, **kw))
+
+
 # --- pure-code invariant checks --------------------------------------------
 # Inert fixtures: assemble_result reads a trace only for emptiness and each
 # step's `screenshot`, so one step and one budget dict serve every check here.
@@ -86,7 +99,7 @@ _BUDGETS = {"actions": 1, "llm_tokens": 0, "llm_usd": 0.0, "ms": 1}
 
 def _check_inv0() -> dict:
     """INV-0: a completed run with empty output must not report success."""
-    r = assemble_result(task="x", trace=_TRACE, answer="", budgets=_BUDGETS)
+    r = assemble_result(trace=_TRACE, answer="", budgets=_BUDGETS)
     return {"passed": r["status"] != "success", "status": r["status"]}
 
 
@@ -97,11 +110,11 @@ def _check_inv1() -> dict:
     """INV-1: every non-success status carries exactly one known class."""
     wrong = []
     for cls in CLASSES:
-        st = assemble_result(task="x", trace=_TRACE, answer="a", budgets=_BUDGETS,
+        st = assemble_result(trace=_TRACE, answer="a", budgets=_BUDGETS,
                              failure=cls)["status"]
         if st != f"failure:{cls}" or st.count(":") != 1:
             wrong.append((cls, st))
-    st = assemble_result(task="x", trace=_TRACE, answer="a", budgets=_BUDGETS,
+    st = assemble_result(trace=_TRACE, answer="a", budgets=_BUDGETS,
                          failure="unsupported")["status"]
     if st != "unsupported":
         wrong.append(("unsupported", st))
@@ -112,11 +125,11 @@ def _check_inv2() -> dict:
     """INV-2: a FAIL/INCONCLUSIVE verdict can never be reported as success."""
     bad = []
     for v in ("FAIL", "INCONCLUSIVE"):
-        r = assemble_result(task="x", trace=_TRACE, answer="an answer", budgets=_BUDGETS,
+        r = assemble_result(trace=_TRACE, answer="an answer", budgets=_BUDGETS,
                             verdict={"verdict": v, "reason": "planted"})
         if r["status"] == "success":
             bad.append(v)
-    ok = assemble_result(task="x", trace=_TRACE, answer="an answer", budgets=_BUDGETS,
+    ok = assemble_result(trace=_TRACE, answer="an answer", budgets=_BUDGETS,
                          verdict={"verdict": "PASS", "reason": None})
     return {"passed": not bad and ok["status"] == "success", "leaked": bad}
 
@@ -141,7 +154,7 @@ def _check_inv3() -> dict:
             wrong.append(f"{k} did not stop past its cap")
     # ...and the stop must arrive as a classified failure carrying its trace,
     # which is the half that makes it loud rather than merely correct.
-    r = assemble_result(task="x", trace=_TRACE, answer="a",
+    r = assemble_result(trace=_TRACE, answer="a",
                         budgets={"actions": 30, "llm_tokens": 0, "llm_usd": 0.0,
                                  "replans": 0, "ms": 1},
                         failure="env", reason=budget_stop({"actions": 30}))
@@ -214,12 +227,9 @@ def _run_schema_case(case: dict) -> dict:
     executable half — it caught `anchor` being specced into TraceStep and never
     emitted (M2 close-out)."""
     inp = case["input"]
-    base = _base_url()
-    steps = json.loads(json.dumps(inp["stub_plan"]).replace(
-        "$FIXTURE_URL", f"{base}/fixtures/{inp['fixture']}"))
-    with tempfile.TemporaryDirectory() as run_dir:
-        result = asyncio.run(run_task(
-            inp["task"], f"{base}/fixtures/{inp['fixture']}", stub_planner([steps]), run_dir))
+    fixture_url = f"{_base_url()}/fixtures/{inp['fixture']}"
+    steps = _subst(inp["stub_plan"], fixture_url)
+    result = _run_agent(inp["task"], fixture_url, stub_planner([steps]))
 
     got = {
         "result": list(result),
@@ -331,7 +341,7 @@ def _run_fixture_case(case: dict) -> dict:
     # One plan per planner call: `stub_plans` is what a case uses to say what the
     # replanner comes back with; `stub_plan` is the single-plan shorthand.
     plans = inp.get("stub_plans") or [inp.get("stub_plan", [])]
-    plans = json.loads(json.dumps(plans).replace("$FIXTURE_URL", fixture_url or ""))
+    plans = _subst(plans, fixture_url or "")
     # An injected marker predicate, not the production url_ok: fixtures are
     # served on loopback and the real guard blocks loopback, so passing url_ok
     # here would fail every fixture case for the wrong reason. This grades that
@@ -343,11 +353,7 @@ def _run_fixture_case(case: dict) -> dict:
     # the case fails loudly; stubbing it would grade a capability nobody ran
     # (CLAUDE.md rule 4).
     planner = live_planner() if inp.get("planner") == "live" else stub_planner(plans)
-    with tempfile.TemporaryDirectory() as run_dir:
-        result = asyncio.run(
-            run_task(inp["task"], inp.get("url", fixture_url), planner, run_dir,
-                     url_guard=guard)
-        )
+    result = _run_agent(inp["task"], inp.get("url", fixture_url), planner, url_guard=guard)
 
     # Re-verify with ground truth the runtime cannot have: hand labels, identity
     # anchors, and the fixture's own record of what it received.
@@ -444,17 +450,16 @@ def _run_stream_case(case: dict) -> dict:
     fixture_url = f"{_base_url()}/fixtures/{inp['fixture']}"
     if inp.get("mut"):
         fixture_url += f"?mut={inp['mut']}"
-    steps = json.loads(json.dumps(inp["stub_plan"]).replace("$FIXTURE_URL", fixture_url))
+    steps = _subst(inp["stub_plan"], fixture_url)
 
     live: list[dict] = []
-    with tempfile.TemporaryDirectory() as run_dir:
-        result = asyncio.run(run_task(
-            inp["task"], fixture_url, stub_planner([steps]), run_dir,
-            # Copy on arrival: the executor mutates its record after emitting
-            # (screenshot, ms, superseded_by). Holding the live reference would
-            # compare the final trace against itself and pass unconditionally.
-            on_step=lambda rec: live.append(json.loads(json.dumps(rec))),
-        ))
+    result = _run_agent(
+        inp["task"], fixture_url, stub_planner([steps]),
+        # Copy on arrival: the executor mutates its record after emitting
+        # (screenshot, ms, superseded_by). Holding the live reference would
+        # compare the final trace against itself and pass unconditionally.
+        on_step=lambda rec: live.append(json.loads(json.dumps(rec))),
+    )
     final = result["evidence"]["trace"]
 
     checks = {}
@@ -588,10 +593,8 @@ def _check_supersede_dangling() -> dict:
         [{"action": "extract", "target": {"role": "link", "index": 0}}],
     ]
     try:
-        with tempfile.TemporaryDirectory() as run_dir:
-            result = asyncio.run(run_task(
-                "Sort by price and name the cheapest.", f"{base}/fixtures/shop.html",
-                stub_planner(plans), run_dir))
+        result = _run_agent("Sort by price and name the cheapest.",
+                            f"{base}/fixtures/shop.html", stub_planner(plans))
     finally:
         A.RUN_BUDGETS.clear()
         A.RUN_BUDGETS.update(orig)
