@@ -1,13 +1,11 @@
 # Prompt records
 
-The assignment reviewers read this folder. Two layers:
+The assignment reviewers read this folder. One layer:
 
-- `raw/` — auto-dumped by the SessionEnd hook: every user prompt from each
-  Claude Code session, one file per session. Unedited exhaust.
-- `00N-<topic>.md` (this directory) — curated records in reading order,
-  distilled from raw/ after each meaningful chunk of work (ADR-001). Each
-  contains: context, the prompt (condensed), the resulting decision, whether
-  the AI recommendation was accepted / rejected / modified, and why.
+- `00N-<topic>.md` (this directory) — curated records in reading order, one per
+  meaningful chunk of work (ADR-001). Each contains: context, the prompt
+  (condensed), the resulting decision, whether the AI recommendation was
+  accepted / rejected / modified, and why.
 
 ## Curated file format
 
