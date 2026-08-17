@@ -1,11 +1,14 @@
 #!/bin/sh
 # PR-only main (owner directive, 2026-08-17): direct pushes to main are refused.
 # Merges happen on GitHub through a PR with the eval-gate check green.
-# GitHub-side enforcement (branch protection / rulesets) needs Pro on a private
-# repo, so this hook is the enforcement we can version until submission makes
-# the repo public. --no-verify skips it, like every hook: an emergency door,
-# and using it without an explanation in the commit is a review failure
-# (CLAUDE.md hard rule 5).
+# Since the repo went public (2026-08-17) GitHub branch protection enforces this
+# server-side too: required check `eval-gate`, strict, no force pushes, and
+# enforce_admins on — so this hook is no longer the only thing standing there.
+# It stays because it fails in a second instead of after a round trip, and
+# because it is versioned: a fresh clone gets the rule without anyone
+# configuring it. --no-verify skips it, like every hook: an emergency door, and
+# using it without an explanation in the commit is a review failure (CLAUDE.md
+# hard rule 5). The server-side rule has no such door.
 while read -r _local_ref _local_sha remote_ref _remote_sha; do
   if [ "$remote_ref" = "refs/heads/main" ]; then
     echo "PUSH BLOCKED: main is PR-only."

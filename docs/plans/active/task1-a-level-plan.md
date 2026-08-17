@@ -60,7 +60,14 @@ Ranked by reviewer-value ÷ effort, measured-gaps first.
    inviolable**; correct-answer rate published raw against the 2/8 baseline
    (goal: ≥2×, reported honestly either way).
 6. Invariant suite still 100%; fast suite green; no baseline move without an ADR.
-7. Repo stays private until the owner flips it after A-freeze.
+7. ~~Repo stays private until the owner flips it after A-freeze.~~
+   **Superseded 2026-08-17, owner's call**: the repo went public before
+   A-freeze, because server-side branch protection on `main` (required
+   `eval-gate`, strict, `enforce_admins`) is unavailable on a free plan while
+   the repo is private. Struck rather than deleted — an exit criterion that
+   quietly disappears is the drift `spec-drift` exists to catch. A-freeze
+   inherits no privacy condition; the deliverable was always a public repo
+   (assignment R2).
 
 ## Hour guard
 
