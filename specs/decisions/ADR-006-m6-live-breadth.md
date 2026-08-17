@@ -1,7 +1,13 @@
 # ADR-006: What M6 (live breadth) implemented, and what live evidence still cannot say
 
 Date: 2026-08-17
-Status: accepted
+Status: accepted; Decision 5's coverage claims superseded 2026-08-18 by
+`ADR-007-navigation-wait-condition.md` — openlibrary.org came back, one of its
+two cases went green immediately, and the other turned out to be failing on a
+defect of ours rather than on the outage. The mechanism decisions below stand
+unchanged. The original text is left as written: it was accurate on its date,
+and a coverage claim that quietly improves itself is as much of a drift problem
+as one that quietly rots.
 
 ## Context
 

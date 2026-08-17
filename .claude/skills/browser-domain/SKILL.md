@@ -72,6 +72,12 @@ path. `src/browser/mutate.py` is the transform layer.
   Ground truth: `GET /fixtures/forms/state` returns the last submission;
   `POST /fixtures/forms/reset` clears it before a case.
 - `/fixtures/hello.html` — M1 walking-skeleton page, still the cheapest case.
+- `/fixtures/slow-asset.html` — references `/fixtures/hang.png`, an endpoint
+  that sleeps 120s, so the `load` event never fires while the document is
+  complete in milliseconds. openlibrary.org's edition pages behaved exactly
+  like this. Do NOT write an `observe`-kind case against it: that harness has
+  its own `goto` and still waits for `load`, so it would hang for 20s. Cases:
+  `nav-load-event-never-fires`, `nav-action-load-event-never-fires`.
 - `/fixtures/shop-order.html` (M6) — order summary + a one-line catalogue, the
   two shapes that broke `near` in cold review. "Total" is a *suffix* of
   "Subtotal" (anchor matching), and the order line ends in "Add to cart" so the
@@ -134,6 +140,17 @@ grading time, not something the executor asserts.
   not an excuse for `.first()`.
 - Overlay interception surfaces as a timeout on click — classify as `act`,
   check for dialog/modal roles before retrying anything.
+- **`page.goto` defaults to `wait_until="load"`**, which waits for every image,
+  stylesheet and subframe — none of which any locator tier reads. One hanging
+  subresource then makes a fully rendered page `failure:nav`. Navigate through
+  `agent.navigate()`: `domcontentloaded` plus a *bounded* 2s wait for `load`.
+  Don't reach for `networkidle` — it is stronger for hydration and costs 500ms
+  on every navigation, healthy or not (+34s on the fast suite, measured).
+- **`page.screenshot()` waits for fonts**, and on a page whose `load` never
+  fires that wait runs to its 30s default — per step. Always pass an explicit
+  `timeout`. More generally: a `try/except` whose comment says "best-effort" is
+  a place to check for an unbounded wait, not a reason to skip it. That comment
+  is why this one survived a close review of the same block.
 - `Locator.is_editable()` answers "enabled and not readonly" and returns **True
   for a `<button>`** (1.49). It cannot be used to ask whether an element can
   hold a value — that needs an explicit tag/type check (`agent.FILLABLE_JS`),

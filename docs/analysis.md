@@ -5,7 +5,7 @@ verification. Every number below is read out of a committed report in
 `evals/report/`, not estimated. Where a number does not exist, this document
 says so rather than supplying a plausible one.
 
-Baseline: `evals/report/20260817-133237-fast.json` plus the `live` and
+Baseline: the 2026-08-18 `fast` run (71/71) plus the `live` and
 `invariant` runs of the same working tree. Sections 1, 5 and 6 were refreshed
 at M6; every other section still carries its M5 numbers and says so. A full
 refresh is M10's job (`docs/plans/active/task1-a-level-plan.md`).
@@ -14,11 +14,11 @@ refresh is M10's job (`docs/plans/active/task1-a-level-plan.md`).
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 69 | 69/69 | 36.32s | 0.35s | 2.51s | $0.0000 |
+| `fast` (offline gate) | 71 | 71/71 | 48.58s | 0.35s | 2.55s | $0.0000 |
 | `invariant` (must-always-hold) | 18 | 18/18 | 3.74s | 0.00s | 2.50s | $0.0000 |
-| `live` (3 real sites) | 6 | 4/6 | 47.5s | 2.4s | 20.3s | $0.0000 |
+| `live` (3 real sites) | 6 | **6/6** | 26.4s | 2.2s | 11.9s | $0.0000 |
 
-76 distinct cases. 123 browser actions in a `fast` run; 46 of the 69 cases drive
+78 distinct cases. 128 browser actions in a `fast` run; 48 of the 71 cases drive
 a real Chromium end to end, the remaining 23 are pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser).
@@ -181,7 +181,7 @@ diagnosis 8/8 · 3 replans
 
 ### The eval set's own bias, measured
 
-Across six milestones, **18 of the defects found in this system were found by
+Across six milestones, **20 of the defects found in this system were found by
 cold review or by adding a new domain — not by the suite**, in code that was
 green at the time (3 at M2 close-out, 6 at the M3/M4 review, ADR-005). Adding
 the first live domain immediately exposed a tenth: `observe()` spent its entire
@@ -212,6 +212,14 @@ the constraint it was recovering, came from the drift audit rather than the
 cold read. The lesson did not change between M5 and M6; only the code it
 applied to did.
 
+It repeated once more the day after M6 merged, in the mildest possible form and
+from the cheapest possible source — a reviewer reading the diff, not running
+anything. The `load`-vs-`domcontentloaded` fix had two call sites and the case
+written for it exercised one; a note pointing that out is what turned a fix
+that would have gone green with half the defect alive into two cases, the
+second re-watched red after the first was fixed. Reading the diff found what
+running the suite could not, again.
+
 The conclusion is not that the suite is bad — it is that **an eval set written
 by the author of the code is blind in the direction the author was already
 looking**, and that adversarial review and unfamiliar domains are the two things
@@ -224,9 +232,9 @@ a gate rather than an option.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 20 | | L1 | 20 |
-| TC2 search-then-extract | 6 | | L2 | 20 |
-| TC3 navigate-then-extract | 8 | | **L3** | **2 — both live, one of them unrun** |
+| TC1 extract-on-page | 21 | | L1 | 20 |
+| TC2 search-then-extract | 6 | | L2 | 22 |
+| TC3 navigate-then-extract | 9 | | **L3** | **2 — both live, one of them unrun** |
 | TC4 interact-then-extract | 14 | | L4 (mutation/recovery) | 8 |
 | TC5 form submission | 5 | | L5 (refusal) | 7 |
 | mechanism/unit probes | 23 | | untagged (unit probes) | 19 |
@@ -254,10 +262,11 @@ The reviewer-facing version of this list, with per-row evidence, is
 1. **Planning quality — entirely.** Every case stubs the planner.
 2. **Real cost and end-to-end latency**, beyond one M1 run at $0.0029.
 3. **Verifier precision/recall** — no hand-labeled sample; traps are a floor.
-4. **Live *planning*** — three domains and three task classes are exercised
-   live as of M6, but every green live case runs a hand-written plan and the
-   one live-planner case is unrun (needs `OPENROUTER_API_KEY`). Live breadth
-   is no longer the gap; live planning quality still is.
+4. **Live *planning*** — the live suite is 6/6 across three domains and three
+   task classes as of 2026-08-18, but every green live case runs a hand-written
+   plan and the one live-planner case is unrun (needs `OPENROUTER_API_KEY`).
+   Live breadth is no longer the gap; live planning quality is the whole of
+   what remains.
 5. **The deployed system end-to-end** — see below.
 6. **L3-difficulty tasks** — two exist (both live, M6); one of them is unrun.
 7. Seven mechanism-level gaps carried deliberately, listed in ADR-005

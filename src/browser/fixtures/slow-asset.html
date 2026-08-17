@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Aurora Desk Lamp — Nimbus Shop</title>
+<h1>The monk and the dancer</h1>
+<p>SKU LAMP-SLOW.</p>
+<!-- The whole point of this fixture: /fixtures/hang.png never responds, so the
+     `load` event never fires, while the document above is complete and
+     readable within milliseconds. That is openlibrary.org's edition pages
+     during the 2026-08-17 recovery — heading and all content present in ~4s,
+     `load` still pending at 25s — and it is why navigation waits for
+     `domcontentloaded` (case nav-load-event-never-fires).
+
+     The heading deliberately repeats the live case's expected answer, so the
+     fixture and live-ol-edition-title fail and pass for the same reason and
+     are obviously twins to whoever reads them next. -->
+<img src="/fixtures/hang.png" alt="a subresource that never arrives">
