@@ -78,14 +78,15 @@ def _post(path: str):
 
 
 # --- pure-code invariant checks --------------------------------------------
+# Inert fixtures: assemble_result reads a trace only for emptiness and each
+# step's `screenshot`, so one step and one budget dict serve every check here.
+_TRACE = [{"i": 1, "action": "extract", "postcondition_ok": True, "screenshot": None}]
+_BUDGETS = {"actions": 1, "llm_tokens": 0, "llm_usd": 0.0, "ms": 1}
+
 
 def _check_inv0() -> dict:
     """INV-0: a completed run with empty output must not report success."""
-    fake_trace = [{"i": 1, "action": "extract", "postcondition_ok": True, "screenshot": None}]
-    r = assemble_result(
-        task="x", trace=fake_trace, answer="",
-        budgets={"actions": 1, "llm_tokens": 0, "llm_usd": 0.0, "ms": 1},
-    )
+    r = assemble_result(task="x", trace=_TRACE, answer="", budgets=_BUDGETS)
     return {"passed": r["status"] != "success", "status": r["status"]}
 
 
@@ -94,15 +95,13 @@ CLASSES = ["nav", "locate", "act", "extract", "semantic", "env", "task"]
 
 def _check_inv1() -> dict:
     """INV-1: every non-success status carries exactly one known class."""
-    trace = [{"i": 1, "action": "click", "postcondition_ok": True, "screenshot": None}]
-    budgets = {"actions": 1, "llm_tokens": 0, "llm_usd": 0.0, "ms": 1}
     wrong = []
     for cls in CLASSES:
-        st = assemble_result(task="x", trace=trace, answer="a", budgets=budgets,
+        st = assemble_result(task="x", trace=_TRACE, answer="a", budgets=_BUDGETS,
                              failure=cls)["status"]
         if st != f"failure:{cls}" or st.count(":") != 1:
             wrong.append((cls, st))
-    st = assemble_result(task="x", trace=trace, answer="a", budgets=budgets,
+    st = assemble_result(task="x", trace=_TRACE, answer="a", budgets=_BUDGETS,
                          failure="unsupported")["status"]
     if st != "unsupported":
         wrong.append(("unsupported", st))
@@ -111,15 +110,13 @@ def _check_inv1() -> dict:
 
 def _check_inv2() -> dict:
     """INV-2: a FAIL/INCONCLUSIVE verdict can never be reported as success."""
-    trace = [{"i": 1, "action": "extract", "postcondition_ok": True, "screenshot": None}]
-    budgets = {"actions": 1, "llm_tokens": 0, "llm_usd": 0.0, "ms": 1}
     bad = []
     for v in ("FAIL", "INCONCLUSIVE"):
-        r = assemble_result(task="x", trace=trace, answer="an answer", budgets=budgets,
+        r = assemble_result(task="x", trace=_TRACE, answer="an answer", budgets=_BUDGETS,
                             verdict={"verdict": v, "reason": "planted"})
         if r["status"] == "success":
             bad.append(v)
-    ok = assemble_result(task="x", trace=trace, answer="an answer", budgets=budgets,
+    ok = assemble_result(task="x", trace=_TRACE, answer="an answer", budgets=_BUDGETS,
                          verdict={"verdict": "PASS", "reason": None})
     return {"passed": not bad and ok["status"] == "success", "leaked": bad}
 
@@ -144,18 +141,13 @@ def _check_inv3() -> dict:
             wrong.append(f"{k} did not stop past its cap")
     # ...and the stop must arrive as a classified failure carrying its trace,
     # which is the half that makes it loud rather than merely correct.
-    trace = [{"i": 1, "action": "click", "postcondition_ok": True, "screenshot": None}]
-    r = assemble_result(task="x", trace=trace, answer="a",
+    r = assemble_result(task="x", trace=_TRACE, answer="a",
                         budgets={"actions": 30, "llm_tokens": 0, "llm_usd": 0.0,
                                  "replans": 0, "ms": 1},
                         failure="env", reason=budget_stop({"actions": 30}))
     if r["status"] != "failure:env" or not r["reason"] or not r["evidence"]["trace"]:
         wrong.append(f"exhaustion was not a loud classified failure: {r['status']}")
     return {"passed": not wrong, "wrong": wrong}
-
-
-INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
-              "inv3": _check_inv3, "supersede-dangling": lambda: _check_supersede_dangling()}
 
 
 def _run_classify_case(case: dict) -> dict:
@@ -607,53 +599,64 @@ def _check_supersede_dangling() -> dict:
             "got": {"status": result["status"], "steps": len(trace)}}
 
 
+def _run_url_guard_case(case: dict) -> dict:
+    from .server import url_ok
+
+    wrong = [u for u, want in case["input"]["checks"] if url_ok(u) != want]
+    return {"passed": not wrong, "wrong": wrong}
+
+
+def _run_screening_case(case: dict) -> dict:
+    from .agent import screen
+
+    wrong = [t for t, want in case["input"]["checks"] if (screen(t) is not None) != want]
+    return {"passed": not wrong, "wrong": wrong}
+
+
+def _run_parse_plan_case(case: dict) -> dict:
+    from .planner import PlanError, parse_plan
+
+    exp = case["expect"]
+    try:
+        steps = parse_plan(case["input"]["content"])
+    except PlanError as e:
+        return {"passed": False, "error": str(e)[:200]}
+    return {
+        "passed": len(steps) == exp["steps"] and steps[0]["action"] == exp["first_action"],
+        "got": {"steps": len(steps), "first_action": steps[0].get("action")},
+    }
+
+
+INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
+              "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling}
+
+
+def _run_invariant_case(case: dict) -> dict:
+    check = case["input"]["check"]
+    if check not in INVARIANTS:
+        return {"passed": False, "error": f"unknown invariant check {check}"}
+    return INVARIANTS[check]()
+
+
+# `input.kind` -> runner. An unknown kind is a fixture E2E case, which is the
+# default shape; every other kind names the narrower thing it grades.
+KINDS = {
+    "classify": _run_classify_case,
+    "gateway-error": _run_gateway_error_case,
+    "invariant": _run_invariant_case,
+    "matrix": _run_matrix_case,
+    "matrix-drift": _run_matrix_drift_case,
+    "mutation": _run_mutation_case,
+    "observe": _run_observe_case,
+    "parse-plan": _run_parse_plan_case,
+    "relocate": _run_relocate_case,
+    "schema": _run_schema_case,
+    "screening": _run_screening_case,
+    "stream": _run_stream_case,
+    "url-guard": _run_url_guard_case,
+    "verifier": _run_verifier_case,
+}
+
+
 def run_case(case: dict) -> dict:
-    kind = case["input"].get("kind")
-    if kind == "matrix-drift":
-        return _run_matrix_drift_case(case)
-    if kind == "gateway-error":
-        return _run_gateway_error_case(case)
-    if kind == "stream":
-        return _run_stream_case(case)
-    if kind == "matrix":
-        return _run_matrix_case(case)
-    if kind == "invariant":
-        check = case["input"]["check"]
-        if check not in INVARIANTS:
-            return {"passed": False, "error": f"unknown invariant check {check}"}
-        return INVARIANTS[check]()
-    if kind == "observe":
-        return _run_observe_case(case)
-    if kind == "mutation":
-        return _run_mutation_case(case)
-    if kind == "verifier":
-        return _run_verifier_case(case)
-    if kind == "classify":
-        return _run_classify_case(case)
-    if kind == "relocate":
-        return _run_relocate_case(case)
-    if kind == "schema":
-        return _run_schema_case(case)
-    if kind == "url-guard":
-        from .server import url_ok
-
-        wrong = [u for u, want in case["input"]["checks"] if url_ok(u) != want]
-        return {"passed": not wrong, "wrong": wrong}
-    if kind == "screening":
-        from .agent import screen
-
-        wrong = [t for t, want in case["input"]["checks"] if (screen(t) is not None) != want]
-        return {"passed": not wrong, "wrong": wrong}
-    if kind == "parse-plan":
-        from .planner import PlanError, parse_plan
-
-        exp = case["expect"]
-        try:
-            steps = parse_plan(case["input"]["content"])
-        except PlanError as e:
-            return {"passed": False, "error": str(e)[:200]}
-        return {
-            "passed": len(steps) == exp["steps"] and steps[0]["action"] == exp["first_action"],
-            "got": {"steps": len(steps), "first_action": steps[0].get("action")},
-        }
-    return _run_fixture_case(case)
+    return KINDS.get(case["input"].get("kind"), _run_fixture_case)(case)

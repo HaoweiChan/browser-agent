@@ -21,8 +21,6 @@ from pathlib import Path
 from .resolver import ResolveError, relocation_candidates, resolve
 from .verifier import verify
 
-MAX_ACTIONS = 30
-MAX_TOKENS = 100_000  # per run; the stub planner spends 0, a live one is capped here
 MAX_FIXES = 2         # relocation rungs per failed step
 MAX_REPLANS = 2       # replans per task
 SETTLE_TRIES, SETTLE_MS = 10, 200
@@ -81,7 +79,8 @@ def classify(action: str, exc: BaseException) -> str:
     return "nav" if action == "navigate" else "act"
 
 
-RUN_BUDGETS = {"actions": MAX_ACTIONS, "llm_tokens": MAX_TOKENS}
+# Per run. The stub planner spends 0 tokens; a live one is capped here.
+RUN_BUDGETS = {"actions": 30, "llm_tokens": 100_000}
 
 
 def budget_stop(spent: dict) -> str | None:
@@ -197,12 +196,10 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     # said at the moment it was read. The verifier never sees our conclusion.
     extractions: list[dict] = []
 
-    def emit(rec):
-        """Hand a finished step to a live watcher (the gateway's SSE endpoint).
-        Every attempt is emitted, including the ones a ladder supersedes: the
-        stream is the trace, not a highlight reel (stream-shows-every-step)."""
-        if on_step:
-            on_step(rec)
+    # Hand each finished step to a live watcher (the gateway's SSE endpoint).
+    # Every attempt is emitted, including the ones a ladder supersedes: the
+    # stream is the trace, not a highlight reel (stream-shows-every-step).
+    emit = on_step or (lambda _rec: None)
 
     def done(answer=None, failure=None, reason=None, final_url=None, digest=None, verdict=None):
         budgets["ms"] = int((time.monotonic() - t0) * 1000)

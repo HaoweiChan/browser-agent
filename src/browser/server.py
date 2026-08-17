@@ -468,8 +468,10 @@ function smoke() {
   s.onerror = () => s.close();
 }
 
-const TCS = ["TC1", "TC2", "TC3", "TC4", "TC5"];
 fetch("/support-matrix").then(r => r.json()).then(m => {
+  // The task-class columns come from the payload, not a second hardcoded list:
+  // parse_matrix refuses to return zero rows, so rows[0] is always there.
+  const TCS = Object.keys(m.rows[0].cells);
   $("matrix").innerHTML = `<table><tr><th>Domain</th>${
     TCS.map(t => `<th>${t}</th>`).join("")}</tr>${
     m.rows.map(row => `<tr><td>${esc(row.domain)}</td>${TCS.map(t => {
