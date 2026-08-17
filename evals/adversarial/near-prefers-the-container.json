@@ -1,0 +1,22 @@
+{
+  "id": "near-prefers-the-container",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "Which catalogue row costs $24.50?",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "listitem", "near": "$24.50" }, "anchor": "$24.50" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "Meridian Wall Clock $24.50", "anchors": ["$24.50"] },
+  "provenance": "M6 cold review, finding 2. `near-excludes-its-own-anchor` needed the anchor's own element out of the candidate set; the implementation excluded the anchor **and every ancestor of it**, which is a strictly larger rule that no case tested — in that case the anchor's ancestors are `tr`/`table`/`body`, so `c === anchor` would have satisfied it identically. The larger rule breaks the commonest use of proximity there is: the row, card or list item that CONTAINS the value. Worse than unreachable — the next sibling container wins on the forward tie-break, so 'which row costs $24.50' answered 'Cobalt Floor Rug $18.00': a different product at a different price, reported as success with a PASS verdict.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "that containment ranks ahead of adjacency. A candidate wrapping the anchor is not near the anchor, it holds it, and that is nearer than any neighbour can be. Only the anchor's own element stays excluded — `near` means beside or around, never is.",
+    "watched_red": "before the fix: status success, answer 'Cobalt Floor Rug $18.00'.",
+    "why_the_anchor_is_the_price": "the entity this task names is the price, not the product — the product is what is being asked for. Anchoring on the answer would make the identity check unfalsifiable (verifier-anchor-not-self-satisfied), which is the flaw the same cold review found in tc1-shop-price-near."
+  }
+}

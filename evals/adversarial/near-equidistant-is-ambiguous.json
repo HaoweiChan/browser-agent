@@ -1,0 +1,22 @@
+{
+  "id": "near-equidistant-is-ambiguous",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "Which product on this order line costs $24.50?",
+    "fixture": "shop-order.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "near": "$24.50" }, "anchor": "NIM-4417" }
+    ]
+  },
+  "expect": { "status": "failure:locate" },
+  "provenance": "M6 cold review, finding 3. The first `near` implementation broke distance ties with 'forward wins, because a label precedes its value more often than it follows'. On a listing row the anchor is a VALUE, not a label, and the rule points the wrong way: the product link sits one element before the price and the call-to-action link one element after, so the tie-break hands back 'Add to cart' as the product that costs $24.50 — success, PASS, grounded, identity anchor present. `tc1-shop-price-near` passes on exactly this margin (key 3 vs key 4) and inverts the moment anything is added after the price, which every real storefront row has.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "that a genuine tie is reported as one. Two candidates equidistant from the anchor are not a case for a heuristic — the plan did not say enough to identify an element, and `specs/000` treats ambiguity as a loud `locate` failure everywhere else (ResolveError ambiguous-match). Guessing costs a wrong answer; failing costs a run that says so.",
+    "watched_red": "before the fix: status success, answer 'Add to cart'.",
+    "upgrade_path": "if the target carried a role the CTA does not share, or a `name`, the ambiguity disappears without any new mechanism. This case flips to success in the same change as any rung that narrows candidates before proximity is applied."
+  }
+}

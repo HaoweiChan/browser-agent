@@ -18,7 +18,7 @@ import re
 import time
 from pathlib import Path
 
-from .resolver import ResolveError, relocation_candidates, resolve
+from .resolver import TARGET_KEYS, ResolveError, relocation_candidates, resolve
 from .verifier import verify
 
 MAX_FIXES = 2         # relocation rungs per failed step
@@ -53,6 +53,17 @@ SCOPE_BLOCK = re.compile(
     r"|登入|登录|密碼|密码|驗證碼|验证码|付款|購買|购买|刪除|删除|下載|下载",
     re.IGNORECASE,
 )
+
+
+# Can this element hold a typed value at all? Not `Locator.is_editable`, which
+# answers "enabled and not readonly" and cheerfully returns True for a <button>
+# (Playwright 1.49) — the exact element the OL relocation landed on. A readonly
+# or disabled input still passes here on purpose: the element is the right one
+# and its STATE is the problem, which is an `act` failure, not a `locate` one.
+FILLABLE_JS = """el => el.isContentEditable || el.tagName === 'TEXTAREA'
+  || (el.tagName === 'LABEL' && !!el.control)
+  || (el.tagName === 'INPUT'
+      && !['button', 'submit', 'reset', 'checkbox', 'radio', 'file', 'image'].includes(el.type))"""
 
 
 class StepError(Exception):
@@ -135,21 +146,33 @@ async def check_state(page, expected: dict | None) -> bool | None:
     return False
 
 
-def evidence_window(body: str, value: str, keep: int = PAGE_TEXT_KEEP) -> str:
-    """Bounded page-text evidence that still contains the extracted value.
+def evidence_window(body: str, value: str, anchor: str | None = None,
+                    keep: int = PAGE_TEXT_KEEP) -> str:
+    """Bounded page-text evidence that still contains what it will be judged on:
+    the extracted value, and the identity anchor if the page carries one.
 
     A flat head-truncation would fail the verifier's grounding check on any
-    page longer than `keep` — a false `failure:semantic` on a correct run.
-    Selecting the window is evidence handling, not grading: if the value is
-    absent the head is stored and grounding fails, which is the true verdict.
+    page longer than `keep` — a false `failure:semantic` on a correct run. The
+    anchor is the same argument one field over, and it went unnoticed until a
+    live product page put a wall of description between its title and its
+    specification table (case evidence-window-keeps-the-anchor).
+
+    Selecting the window is evidence handling, not grading: whatever is absent
+    from the page is absent from the window too, and the check fails, which is
+    the true verdict.
     """
+    def around(i: int) -> str:
+        lo = max(0, i - keep // 2)
+        return body[lo:lo + keep]
+
     if len(body) <= keep:
         return body
     i = body.find(value)
-    if i < 0:
-        return body[:keep]
-    lo = max(0, i - keep // 2)
-    return body[lo:lo + keep]
+    win = around(i) if i >= 0 else body[:keep]
+    j = body.find(anchor) if anchor else -1
+    if j >= 0 and anchor not in win:
+        win += "\n…\n" + around(j)
+    return win
 
 
 def assemble_result(task, trace, answer, budgets, failure=None, reason=None, final_url=None,
@@ -270,11 +293,26 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     return
                 if action not in ("click", "fill", "extract"):
                     raise StepError("task", f"unknown action {action!r}")
+                # A key the resolver does not implement used to be dropped, and
+                # the step ran against whatever was left of its target — the plan
+                # quietly reinterpreted, the run reported on the weaker task it
+                # actually did (case resolver-unknown-target-key).
+                if unknown := set(step.get("target") or {}) - TARGET_KEYS:
+                    raise StepError("task", f"unsupported target key(s) {sorted(unknown)}")
                 loc, tier = await resolve(page, step.get("target") or {})
                 rec["resolved"] = {"tier": tier, "description": str(step.get("target"))}
                 if action == "click":
                     await loc.click(timeout=10_000)
                 elif action == "fill":
+                    # An element that cannot hold a value is the WRONG element,
+                    # so this is a locate failure however Playwright phrases it.
+                    # Called it `act` and the act ladder (replan) chased a problem
+                    # the locate ladder (different tier) owns — which is how a
+                    # relocation onto a non-fillable match laundered its own
+                    # failure class on a live site (relocate-fill-non-editable,
+                    # live-ol-search-a11y-invisible).
+                    if not await loc.evaluate(FILLABLE_JS):
+                        raise StepError("locate", f"resolved element is not fillable: {step.get('target')}")
                     await loc.fill(step.get("value") or "", timeout=10_000)
                     # A fill verifies itself by readback, so it needs no authored
                     # postcondition to count as checked.
@@ -287,11 +325,12 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     if not val:
                         raise StepError("extract", "extraction returned empty text")
                     body = await page.inner_text("body")
-                    extractions.append({"value": val, "page_text": evidence_window(body, val)})
+                    anchor = step.get("anchor")
+                    extractions.append(
+                        {"value": val, "page_text": evidence_window(body, val, anchor)})
                     answers.append(val)
                     # Identity anchor (verifier L1): the entity the task names
                     # must be present where the answer was read.
-                    anchor = step.get("anchor")
                     if anchor and anchor not in body:
                         raise StepError("semantic", f"identity anchor {anchor!r} absent from the page the answer was read from")
 

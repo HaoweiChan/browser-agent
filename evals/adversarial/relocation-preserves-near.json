@@ -1,0 +1,22 @@
+{
+  "id": "relocation-preserves-near",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "Which catalogue link sits next to the battery-life note?",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "text": "Aurora Desk Lamp", "near": "Battery life" }, "anchor": "Nimbus Shop" }
+    ]
+  },
+  "expect": { "status": "failure:locate" },
+  "provenance": "M6 spec-drift audit, finding 4. `relocation_candidates` carries `index` onto every rung it proposes — 'part of the intent, not part of the tier' — and silently drops `near`, which is intent by the same argument (specs/001: they are alternative answers to the same question). So a target that fails to locate is relocated to a rung with the proximity constraint deleted, resolves a different element, and the run reports success. This is `resolver-unknown-target-key` surviving one layer down: there, an unhonourable key was dropped by the resolver; here, an honourable one is dropped by the ladder.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "that a recovery rung is the same request expressed differently, not a weaker request. 'Battery life' is nowhere on shop.html, so no rung can honour the proximity constraint and the run must stay a loud `locate` failure. A rung that answers an easier question than the one that failed is not recovery.",
+    "watched_red": "before the fix: status success, answer 'Aurora Desk Lamp' — reached by the rung {role: link, name: 'Aurora Desk Lamp'}, with `near` gone.",
+    "note": "the answer being coincidentally reasonable here is the point: nothing in the trace distinguishes it from the case where the dropped constraint was the only thing separating two candidates."
+  }
+}

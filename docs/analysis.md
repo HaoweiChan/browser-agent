@@ -5,18 +5,20 @@ verification. Every number below is read out of a committed report in
 `evals/report/`, not estimated. Where a number does not exist, this document
 says so rather than supplying a plausible one.
 
-Baseline: `evals/report/20260817-005720-fast.json` plus the `live` and
-`invariant` runs of the same working tree.
+Baseline: `evals/report/20260817-133237-fast.json` plus the `live` and
+`invariant` runs of the same working tree. Sections 1, 5 and 6 were refreshed
+at M6; every other section still carries its M5 numbers and says so. A full
+refresh is M10's job (`docs/plans/active/task1-a-level-plan.md`).
 
 ## 1. What was measured, and on what
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 60 | 60/60 | 32.74s | 0.34s | 2.51s | $0.0000 |
-| `invariant` (must-always-hold) | 18 | 18/18 | 3.95s | 0.00s | 2.45s | $0.0000 |
-| `live` (books.toscrape.com) | 1 | 1/1 | 2.41s | 2.41s | 2.41s | $0.0000 |
+| `fast` (offline gate) | 69 | 69/69 | 36.32s | 0.35s | 2.51s | $0.0000 |
+| `invariant` (must-always-hold) | 18 | 18/18 | 3.74s | 0.00s | 2.50s | $0.0000 |
+| `live` (3 real sites) | 6 | 4/6 | 47.5s | 2.4s | 20.3s | $0.0000 |
 
-61 distinct cases. 103 browser actions in a `fast` run; 37 of the 60 cases drive
+76 distinct cases. 123 browser actions in a `fast` run; 46 of the 69 cases drive
 a real Chromium end to end, the remaining 23 are pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser).
@@ -179,7 +181,7 @@ diagnosis 8/8 · 3 replans
 
 ### The eval set's own bias, measured
 
-Across five milestones, **9 of the defects found in this system were found by
+Across six milestones, **18 of the defects found in this system were found by
 cold review or by adding a new domain — not by the suite**, in code that was
 green at the time (3 at M2 close-out, 6 at the M3/M4 review, ADR-005). Adding
 the first live domain immediately exposed a tenth: `observe()` spent its entire
@@ -187,6 +189,28 @@ the first live domain immediately exposed a tenth: `observe()` spent its entire
 none of the products were ever observed and the planner planned blind about the
 only part of the page the task concerned. Every fixture was too small for that
 cap to bind.
+
+M6's two new live domains produced four more (ADR-006), and the pattern held
+exactly: each needed a page property no fixture had. A `<th>` without `scope`
+computes as role `cell`, so a proximity target answered with its own label. A
+product page with a long description put the identity anchor outside the stored
+evidence window, and a correct run was graded FAIL. An unresolvable search
+field relocated onto a submit button, and the fill error filed a `locate` root
+cause as `act`. An unimplemented target key was dropped in silence. Three of
+the four are the family this project exists to catch: the run reports on
+something other than what it did.
+
+Then M6 was cold-reviewed while green on 65 cases — four of them written for
+the new mechanism — and produced **four more**, three of which reported a
+confident wrong answer with `status: success`, `verdict: PASS` and nothing in
+the trace to suggest doubt: an anchor of "Total" binding to "Subtotal" and
+returning the subtotal as the order total; "which row costs $24.50" answered
+with a different product at a different price; "which product costs $24.50"
+answered "Add to cart". Each needed a page shape `shop.html` — the repo's only
+offline listing — happens not to have. The fourth, a recovery rung that dropped
+the constraint it was recovering, came from the drift audit rather than the
+cold read. The lesson did not change between M5 and M6; only the code it
+applied to did.
 
 The conclusion is not that the suite is bad — it is that **an eval set written
 by the author of the code is blind in the direction the author was already
@@ -196,14 +220,14 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-61 cases. Empty cells are shown, not hidden.
+76 cases (M6). Empty cells are shown, not hidden.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 9 | | L1 | 16 |
-| TC2 search-then-extract | 4 | | L2 | 11 |
-| TC3 navigate-then-extract | 7 | | **L3** | **0 — deferred to B-strong** |
-| TC4 interact-then-extract | 13 | | L4 (mutation/recovery) | 8 |
+| TC1 extract-on-page | 20 | | L1 | 20 |
+| TC2 search-then-extract | 6 | | L2 | 20 |
+| TC3 navigate-then-extract | 8 | | **L3** | **2 — both live, one of them unrun** |
+| TC4 interact-then-extract | 14 | | L4 (mutation/recovery) | 8 |
 | TC5 form submission | 5 | | L5 (refusal) | 7 |
 | mechanism/unit probes | 23 | | untagged (unit probes) | 19 |
 
@@ -214,10 +238,13 @@ a gate rather than an option.
 | hello fixture | self-authored | TC1 |
 | nav-heavy fixture | self-authored | observation budget |
 | offsite fixture | self-authored | URL-guard enforcement |
-| **books.toscrape.com** | **live** | **TC3, 1 case** |
+| lamp-spec fixture | self-authored | spec table + the only page past the evidence window |
+| **books.toscrape.com** | **live** | **TC3 ×2, TC4 ×1 (the TC4 case is the live-planner one, unrun)** |
+| **news.ycombinator.com** | **live** | **TC1 ×2** |
+| **openlibrary.org** | **live** | **TC1 ×1, TC2 ×1 (the TC2 case grades a correct failure diagnosis, not a working search)** |
 
 Also: 6 ZH-language cases (character-level, all with stubbed plans, so ZH
-*planning* is unmeasured), 5 refusal cases, 6 trap cases, 3 DOM mutation types.
+*planning* is unmeasured), 6 refusal cases, 6 trap cases, 3 DOM mutation types.
 
 ## 7. What is not measured — the complete list
 
@@ -227,15 +254,18 @@ The reviewer-facing version of this list, with per-row evidence, is
 1. **Planning quality — entirely.** Every case stubs the planner.
 2. **Real cost and end-to-end latency**, beyond one M1 run at $0.0029.
 3. **Verifier precision/recall** — no hand-labeled sample; traps are a floor.
-4. **Live-domain breadth** — one domain, one task class, one case.
+4. **Live *planning*** — three domains and three task classes are exercised
+   live as of M6, but every green live case runs a hand-written plan and the
+   one live-planner case is unrun (needs `OPENROUTER_API_KEY`). Live breadth
+   is no longer the gap; live planning quality still is.
 5. **The deployed system end-to-end** — see below.
-6. **L3-difficulty tasks** — none exist.
+6. **L3-difficulty tasks** — two exist (both live, M6); one of them is unrun.
 7. Seven mechanism-level gaps carried deliberately, listed in ADR-005
    (anchors satisfiable by discarded evidence, relocation rung 1 ignoring the
    target's role, the progress-stream case grading the executor hook rather than
-   the SSE endpoint, and four more), plus `near:` — advertised in the target
-   schema in `specs/001-browser-contract.md` and never implemented in the resolver, which is why
-   live table extraction is currently positional.
+   the SSE endpoint, and four more). `near:` is no longer among them — advertised
+   in the target schema since M1 and implemented at M6 (ADR-006), which is what
+   moved live table extraction off counting cells.
 
 ## 8a. Held-out probe (T9) — raw results
 

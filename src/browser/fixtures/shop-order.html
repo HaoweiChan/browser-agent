@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nimbus Shop — Order summary</title>
+<h1>Nimbus Shop</h1>
+<p>Order NIM-4417</p>
+
+<!-- Two shapes no other fixture has, both from the M6 cold review, both of
+     which made `near:` report a confident wrong answer.
+
+     1. "Total" is a SUFFIX of "Subtotal". Playwright's get_by_text is a
+        case-insensitive substring match, so an anchor of "Total" matches the
+        Subtotal row first in document order (case near-anchor-substring).
+        Labels are <td>, not <th>, on purpose: with <th> the case could pass on
+        a role-computation accident instead of on the anchor rule.
+
+     2. The catalogue row ends in a call to action, so the product link and the
+        CTA link sit one element either side of the price — equidistant. Every
+        real storefront row ends in one of these (Add to cart, Compare, Quick
+        view, a rating link); shop.html, the repo's only other listing, ends at
+        the price and is the reason this went unseen
+        (case near-equidistant-is-ambiguous). -->
+<table>
+  <tr><td>Subtotal</td><td>$39.00</td></tr>
+  <tr><td>Shipping</td><td>$6.00</td></tr>
+  <tr><td>Total</td><td>$45.00</td></tr>
+</table>
+
+<ul aria-label="Order lines">
+  <li><a href="shop-clock.html">Meridian Wall Clock</a> <span class="price">$24.50</span> <a href="shop.html?add=clock">Add to cart</a></li>
+</ul>

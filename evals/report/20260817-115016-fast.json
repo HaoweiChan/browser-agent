@@ -1,0 +1,586 @@
+{
+  "suite": "fast",
+  "score": 0.2857142857142857,
+  "totals": {
+    "actions": 0,
+    "llm_tokens": 0,
+    "llm_usd": 0.0,
+    "replans": 0,
+    "ms": 0,
+    "wall_seconds": 0.04,
+    "latency_p50": 0.0,
+    "latency_p95": 0.0,
+    "cases_with_budgets": 4
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 626, in run_case\n    return _run_observe_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 287, in _run_observe_case\n    from playwright.async_api import async_playwright\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.04,
+      "id": "observe-hello-elements",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-hello-heading",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-hello-reveal",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-shop-price-near",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-shop-price-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-shop-price",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc2-shop-search-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc2-shop-search",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc3-shop-detail-nav-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc3-shop-detail-nav",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc4-shop-sort-cheapest",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc4-shop-sort-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc5-forms-submit-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc5-forms-submit",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "budget-replans-exhausted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 636, in run_case\n    return _run_schema_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 225, in _run_schema_case\n    base = _base_url()\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "contract-trace-schema",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 615, in run_case\n    return _run_gateway_error_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 522, in _run_gateway_error_case\n    base = _base_url()\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "gateway-error-contract-shape",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv3-budget-exhaustion-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-recover-name-to-text",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-button-text-renamed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-ids-renamed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-wrapper-nesting",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": false,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "no trace: nothing was attempted; answer is empty"
+      },
+      "metrics": {},
+      "tiers": [],
+      "got": {
+        "status": "unsupported",
+        "answer": null,
+        "reason": "out of scope (matched 'captcha'): auth/CAPTCHA/payment/destructive/download tasks are unsupported"
+      },
+      "budgets": {
+        "actions": 0,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 0
+      },
+      "seconds": 0.0,
+      "id": "l5-refuse-captcha",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": false,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "no trace: nothing was attempted; answer is empty"
+      },
+      "metrics": {},
+      "tiers": [],
+      "got": {
+        "status": "unsupported",
+        "answer": null,
+        "reason": "out of scope (matched '\u522a\u9664'): auth/CAPTCHA/payment/destructive/download tasks are unsupported"
+      },
+      "budgets": {
+        "actions": 0,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 0
+      },
+      "seconds": 0.0,
+      "id": "l5-refuse-destructive-zh",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": false,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "no trace: nothing was attempted; answer is empty"
+      },
+      "metrics": {},
+      "tiers": [],
+      "got": {
+        "status": "unsupported",
+        "answer": null,
+        "reason": "out of scope (matched 'Download'): auth/CAPTCHA/payment/destructive/download tasks are unsupported"
+      },
+      "budgets": {
+        "actions": 0,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 0
+      },
+      "seconds": 0.0,
+      "id": "l5-refuse-download",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-login-contracted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": false,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "no trace: nothing was attempted; answer is empty"
+      },
+      "metrics": {},
+      "tiers": [],
+      "got": {
+        "status": "unsupported",
+        "answer": null,
+        "reason": "out of scope (matched 'Log in'): auth/CAPTCHA/payment/destructive/download tasks are unsupported"
+      },
+      "budgets": {
+        "actions": 0,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 0
+      },
+      "seconds": 0.0,
+      "id": "l5-refuse-login",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l5-refuse-payment",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 613, in run_case\n    return _run_matrix_drift_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 560, in _run_matrix_drift_case\n    from .server import MATRIX_DOC, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "matrix-parse-fails-loudly",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "multi-extract-list",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "mutation-catalog-integrity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 626, in run_case\n    return _run_observe_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 287, in _run_observe_case\n    from playwright.async_api import async_playwright\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "observe-content-survives-chrome",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 626, in run_case\n    return _run_observe_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 287, in _run_observe_case\n    from playwright.async_api import async_playwright\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "observe-name-prohibited-roles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "got": {
+        "steps": 1,
+        "first_action": "navigate"
+      },
+      "seconds": 0.0,
+      "id": "planner-fenced-json",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "postcondition-compound-keys",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "postcondition-unverified-click",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "recovery-label-requires-strategy-change",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "recovery-replan-postcondition",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "relocate-fill-non-editable",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "replan-cannot-launder-noop-action",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolver-substring-name",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolver-unknown-target-key",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "screening-word-boundary",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 617, in run_case\n    return _run_stream_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 447, in _run_stream_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "stream-shows-every-step",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 624, in run_case\n    return INVARIANTS[check]()\n           ~~~~~~~~~~~~~~~~~^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 158, in <lambda>\n    \"inv3\": _check_inv3, \"supersede-dangling\": lambda: _check_supersede_dangling()}\n                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "supersede-never-dangles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 619, in run_case\n    return _run_matrix_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 490, in _run_matrix_case\n    from .server import CASE_CITATION, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "support-matrix-cites-real-cases",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-empty-extraction",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-form-not-submitted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-near-miss-entity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-search-not-executed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-unsorted-cheapest",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-wrong-field",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 659, in run_case\n    return _run_fixture_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 335, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "url-guard-holds-after-navigation",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/eval_adapter.py\", line 638, in run_case\n    from .server import url_ok\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/a-level-implementation-c957e4/src/browser/server.py\", line 17, in <module>\n    from fastapi import FastAPI, HTTPException, Request\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-anchor-not-self-satisfied",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-numeric-precision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-sign-currency-percent",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-superseded-not-a-loophole",
+      "kind": "adversarial"
+    }
+  ]
+}

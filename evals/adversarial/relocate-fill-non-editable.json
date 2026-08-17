@@ -1,0 +1,22 @@
+{
+  "id": "relocate-fill-non-editable",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC2",
+  "input": {
+    "task": "Search the catalogue for 'lamp'.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "fill", "target": { "text": "Search" }, "value": "lamp", "expected_state": null }
+    ]
+  },
+  "expect": { "status": "failure:locate" },
+  "provenance": "the offline twin of live-ol-search-a11y-invisible (M6 eval-first batch, report 20260817-024235). On openlibrary.org the search field is invisible to both the a11y tree and the light DOM; the relocation ladder 'rescued' the locate failure onto the literal text 'Search' — a non-fillable element — and the ensuing Locator.fill error was classified `act`. Root cause locate, reported act, diagnosis 0/1. This fixture reproduces the laundering shape without the live dependency: shop.html's exact-text match for 'Search' is the submit BUTTON (the input's label reads 'Search products'), so a text-tier fill lands on a control that can never accept a value.",
+  "triage": {
+    "class": "diagnosis",
+    "what_this_grades": "the failure class, not the search. Filling an element that cannot hold a value means the resolver returned the wrong element — that is a locate failure however Playwright phrases the error. Reporting it as `act` steers the act ladder (re-observe -> replan) at a problem the locate ladder (re-observe -> different tier) owns, and inflates the act family in every distribution the analysis reports.",
+    "watched_red": "today: failure:act. Wanted: failure:locate, with the relocation ladder free to try another tier and the class surviving if none of them is fillable either.",
+    "scope_note": "the guard belongs in the executor's fill path, not in the relocation rung: a first-attempt plan that targets a non-fillable element is the same defect, and only the sibling callers of a shared guard are safe from it."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "near-anchor-substring",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the total on this order?",
+    "fixture": "shop-order.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "cell", "near": "Total" }, "anchor": "NIM-4417" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "$45.00", "anchors": ["NIM-4417"] },
+  "provenance": "M6 cold review, finding 1. `near` resolved its anchor with `page.get_by_text(near).first` — a case-insensitive SUBSTRING match, then the first result in document order. On an order summary that means the anchor 'Total' binds to **Subtotal**, and the cell beside it, $39.00, is returned as the order total with `status: success`, `verdict: PASS`, `tier: structural`, and nothing anywhere in the trace to suggest doubt.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "the anchor half of `near`, which the whole M6 case set had left unexercised. Every other `near` case uses an anchor string that happens to occur exactly once and to be a substring of nothing longer, so all of them stay green with the anchor matched sloppily. The domain is full of the opposite: Subtotal/Total, Price/Price (incl. tax), Shipping/Shipping address, UPC/UPC code — and on Hacker News' front page every row's subline contains 'points by'.",
+    "same_lesson_25_lines_up": "src/browser/resolver.py already carries this exact lesson for the CANDIDATE side: `exact=True` on role names, because 'substring matching resolved absent targets to superstring siblings and extracted the wrong element as a success' (resolver-substring-name). The anchor side shipped without it.",
+    "watched_red": "before the fix: status success, answer $39.00 — the Subtotal.",
+    "chosen_rule": "prefer an exact text match when one exists, fall back to substring; among the matches keep only the deepest (get_by_text also matches ancestors of a match, which is what makes HN's nested subline work); if two matches remain that do not contain one another, the anchor is genuinely ambiguous and the run fails loudly rather than picking one."
+  }
+}

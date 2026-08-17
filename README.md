@@ -35,9 +35,9 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 59 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 69 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
-python3 -m evals.run --suite live        # 1 case against a real site, still $0.00
+python3 -m evals.run --suite live        # 6 cases, 3 real sites, still $0.00
 ```
 
 The reviewer UI locally — task submission needs `OPENROUTER_API_KEY`; the
@@ -49,13 +49,17 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260816-210730-fast.json`:
+Latest offline baseline — `evals/report/20260817-133237-fast.json`:
 
 ```
-fast  60/60    invariant  18/18    live  1/1    $0.0000    32s
-recovery 3/3 verified (6 rungs tried) · mutation 4/4 passed, 2 by relocating
-diagnosis 8/8 · 3 replans
+fast  69/69    invariant  18/18    live  4/6    $0.0000    36s
+recovery 3/3 verified (8 rungs tried) · mutation 4/4 passed, 2 by relocating
+diagnosis 12/12 · 3 replans
 ```
+
+`live 4/6` is not a regression: both reds are openlibrary.org, which stopped
+responding entirely partway through M6 and fails `failure:nav` at page load.
+The two greens on the other two live domains ran in the same suite.
 
 And the number that matters more, from 10 blind tasks a separate agent wrote
 and ran against the **deployed** URL ([raw table](docs/analysis.md)):
@@ -71,8 +75,8 @@ no run reported success with a wrong answer — 10/10
   that is deliberate, so the gate costs nothing and runs without a key, but it
   means these numbers grade the resolver → executor → verifier path and say
   **nothing about planning quality**. Real measured spend: one deployed task at
-  **$0.0065 / 1438 tokens / 6.5s**.
-- **`recovery 3/3` is a floor on three injected cases, not a rate.** Six rungs
+  **$0.0029** and **$0.0065 / 1438 tokens / 6.5s**.
+- **`recovery 3/3` is a floor on three injected cases, not a rate.** Eight rungs
   were tried to produce three verified recoveries; that ratio is printed beside
   it rather than folded into it.
 - **`mutation 4/4 passed, 2 by relocating`** is the load-bearing split. Only one
@@ -125,8 +129,12 @@ The biggest ones, stated plainly:
   HTML attribute all fail — loudly, but they fail.
 - **Planning quality is unmeasured by the suite.** Every case stubs the planner,
   so the probe is the only measurement of it, and it is the weakest link.
-- **One live domain, one task class, one case.** Fixtures are self-authored and
-  therefore friendly.
+- **Live planning is still unmeasured on every live domain.** M6 took live
+  coverage to three domains and three task classes (TC1/TC2/TC3), but every
+  green live case runs a *hand-written* plan, and the one live-planner case
+  (`live-books-cheapest-travel`) is unrun. The live TC2 cell is a correctly
+  diagnosed unreachable control, not a working search. Fixtures remain
+  self-authored and therefore friendly.
 - **No check asks whether an answer is *responsive*.** One probe run returned a
   whole-page dump and was caught on a whitespace technicality, not on relevance.
 - **Identity anchors are satisfiable on aggregate pages** — on a listing, every
@@ -142,15 +150,20 @@ The biggest ones, stated plainly:
 The full record is [`prompts/`](prompts/) — curated correction chains, each
 ending in *assumed → eval said → corrected*, plus the raw session dumps.
 
-The honest headline is a measurement of this method's weak spot: **9 defects
-across five milestones were found by cold review or by adding a new domain —
-not by the eval suite — in code that was green at the time.** Adding the first
-live domain made it 10 within an hour, by revealing that the page observation
+The honest headline is a measurement of this method's weak spot: **18 defects
+across six milestones were found by cold review or by adding a new domain —
+not by the eval suite — in code that was green at the time.** The first live
+domain produced one within an hour, by revealing that the page observation
 spent its entire budget on navigation and never saw a single product on a real
-listing page.
+listing page. M6's two new domains produced four more. Then a cold review of M6's own green
+code — 65 cases passing, four of them written for the new mechanism — produced
+four more still, three of which answered a question confidently and wrongly
+with no error anywhere in the trace. Every one of those three needed a page
+shape the repo's only offline listing happens not to have.
 
-The eval set is not weak; it is 61 cases and it caught a *bad fix* mid-session
-during the last review. But an eval set written by the author of the code is
+The eval set is not weak; it is 76 cases, it caught a *bad fix* mid-session
+during the last review, and in M6 it caught a fix that passed its own case for
+the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
 observed to move that blind spot are adversarial review and unfamiliar input.
 That is why the cold review is a gate here rather than a nicety.

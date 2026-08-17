@@ -62,8 +62,17 @@ why* — this is the E1 (`mechanism-substance`) evidence.
 ## Self-maintenance
 
 - **Locator abstraction**: plans reference `SemanticTarget{role, name, text?,
-  near?}` — never concrete selectors. A deterministic Resolver compiles a
-  target against the current accessibility snapshot into ranked candidates.
+  near?, index?}` — never concrete selectors. A deterministic Resolver compiles
+  a target against the current accessibility snapshot into ranked candidates.
+
+**Status note (M6).** This section is the design, and three parts of it are not
+built. `src/browser/resolver.py` tries tiers in order and takes a tier that
+resolves to exactly one element, or the one `index`/`near` names: there is **no
+scoring** (no uniqueness × visibility × tier prior), **no locator cache**, and
+therefore **no drift event** — stale detection is just a failed resolve. `attrs`
+is unimplemented; `structural` landed at M6 as `near`, without the cache this
+section assumes it arrives with. Written down here rather than quietly diverging
+(M6 spec-drift audit).
 - **Tier order and tradeoffs**: role+accessible-name (survives cosmetic change,
   needs decent ARIA) → text/label (robust, breaks on copy changes) → stable
   attrs id/data-*/name (precise, most brittle under refactors) → structural
