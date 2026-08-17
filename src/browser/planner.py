@@ -17,14 +17,19 @@ DEFAULT_MODEL = "anthropic/claude-sonnet-4.5"
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
 Each step: {"action": "navigate|click|fill|extract",
- "target": {"role": str|null, "name": str|null, "text": str|null, "index": int|null} | null,
+ "target": {"role": str|null, "name": str|null, "text": str|null, "near": str|null, "index": int|null} | null,
  "value": str|null,
  "anchor": str|null,
  "expected_state": {"url_contains": str} | {"text_visible": str} | {"role_visible": {"role": str, "name": str|null}} | null}
 Rules: `navigate` puts the URL in `value`. `extract` reads the target element's
 text as the answer. Targets are semantic (ARIA role + accessible name) — never
 CSS selectors. `index` (0-based) picks the k-th match when several elements
-share a role, e.g. the first search result. On an `extract` step, `anchor` is
+share a role, e.g. the first search result. `near` picks the match closest to a
+visible string instead of counting: use it when the element you want has no name
+of its own but sits beside one that does — a price beside a product, a value
+beside its table label, an author beside a byline. Prefer `near` over `index`
+when such a string exists; only these five target keys exist, and any other key
+fails the run. On an `extract` step, `anchor` is
 the distinguishing name of the entity the task is about; the run fails if that
 string is absent from the page the answer was read from — use it whenever the
 task names a specific entity. Prefer few steps.

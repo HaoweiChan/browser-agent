@@ -16,7 +16,7 @@ contract-drift (spec-drift audits field-by-field).
   "evidence": {
     "trace": [ TraceStep, ... ],
     "screenshots": ["step_1.png", ...],
-    "extractions": [ {"value": "...", "page_text": "≤2000 chars around the value"} ],
+    "extractions": [ {"value": "...", "page_text": "window(s) around the value, and around the identity anchor if it falls outside"} ],
     "final_url": "string | null",
     "final_page_digest": "first ~500 chars of page text | null"
   },
@@ -84,14 +84,50 @@ appears, in order — no post-hoc reconstruction).
   hold. A `click` with a null postcondition is unverifiable and the run is
   `failure:semantic`; a `fill` verifies itself by field readback and needs no
   authored postcondition.
-- `resolved.tier` is the locator tier that won — the self-maintenance metric
-  reads this field. Only `role` and `text` are reachable today; `attrs` and
-  `structural` are named here because the taxonomy defines the full ladder, and
-  no run has ever emitted them. That is also why two of the three mutations
-  pass without recovering anything (ADR-002).
+- `resolved.tier` is the tier the winning locator is *attributed* to, which is
+  the tier that found it in every case but one: a target carrying `near` is
+  recorded as `structural` however its candidates were gathered, because
+  proximity is what identified the element. The self-maintenance metric reads
+  this field. `role`, `text` and `structural` are reachable; `attrs` is named
+  here because the taxonomy defines the full ladder, and no run has ever
+  emitted it. `structural` became reachable at M6 with `near` (below) and is
+  still not a relocation rung: the ladder climbs between `role` and `text`
+  only. That is *not* why two of the three mutations pass without recovering
+  anything — the reason for that is that no plan was standing on the tiers they
+  break (ADR-003).
+- The five keys above are the **whole** target schema. A key outside it is a
+  plan the executor cannot honour and stops the run as `failure:task`. It used
+  to be dropped, and the step ran against whatever was left of the target —
+  a plan quietly reinterpreted and a result reported for the weaker task that
+  actually ran (`resolver-unknown-target-key`).
 - `target.index` (0-based) selects the k-th match instead of requiring
   uniqueness — "the first search result" is a browsing primitive, not site
   knowledge. Without it, several matches remain a loud `locate` failure.
+- `target.near` resolves the same ambiguity semantically: among a tier's
+  matches, take the one closest **in document order** to a visible anchor
+  string, never the anchor's own element (`near-excludes-its-own-anchor`). It
+  is what reaches a value whose only identity is the label beside it — a price
+  in a spec table, the submitter in a Hacker News subline — and it wins as tier
+  `structural`, because proximity is a relation between elements rather than a
+  property of one. Document order, not pixels: a subline's bounding box
+  contains every link inside it, so layout distance ties exactly where `near`
+  is needed most.
+  `near` and `index` are alternative answers to the same question; when a plan
+  carries both, `near` decides. Both are *intent*, not tier, so a relocation
+  rung carries them forward — a rung that dropped `near` answered an easier
+  question than the one that failed and reported success for it
+  (`relocation-preserves-near`).
+
+  Proximity refuses rather than guesses, twice over. The anchor is matched
+  exactly if any element matches exactly and by substring otherwise, keeping
+  only the deepest matches; two matches that do not contain one another mean
+  the anchor names two places on the page, and the run fails `locate`
+  (`near-anchor-substring`). Two candidates equidistant from the anchor mean
+  the plan did not identify an element, and the run fails `locate` rather than
+  breaking the tie (`near-equidistant-is-ambiguous`). A candidate that *wraps*
+  the anchor outranks every neighbour — that is the row or card the value sits
+  in (`near-prefers-the-container`) — and only the anchor's own element is
+  excluded outright.
 - `anchor` (extract steps) is the identity anchor: the distinguishing string of
   the entity the task names. If it is absent from the page the answer was read
   from, the run is `failure:semantic`. Two known limits, both with cases: it is
@@ -186,6 +222,8 @@ path components are pattern-matched, so nothing else in a run directory —
 - INV-3: budget exhaustion is a loud classified failure —
   `evals/adversarial/inv3-budget-exhaustion-loud.json`, with the end-to-end half
   in `budget-replans-exhausted`.
-- Remaining planned invariant (fast-suite-is-offline) enters specs/000 with its
-  backing case when it is written; the boundary is measured today (ADR-002
-  threshold 5) but not yet invariant-tagged.
+- Remaining planned invariants, both listed in
+  `docs/evals/evaluation-methodology.md` and neither in specs/000: *fast suite
+  is offline* (the boundary is measured today — ADR-002 threshold 5 — but not
+  invariant-tagged) and *traces are complete* (every action carries pre/post
+  observation). Each enters specs/000 with its backing case, not before.

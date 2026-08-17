@@ -1,0 +1,22 @@
+{
+  "id": "tc1-shop-price-near",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "Which product on this page costs $24.50?",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "near": "$24.50" }, "anchor": "$24.50" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "Meridian Wall Clock", "anchors": ["$24.50"] },
+  "provenance": "the offline twin of live-hn-item1-submitter: the same contract-advertised `near:` key (specs/001 §TraceStep target schema), on a fixture, so the mechanism is graded in the fast suite where live cases never gate. Ground truth is literal in src/browser/fixtures/shop.html: the row `<li><a>Meridian Wall Clock</a> <span class=\"price\">$24.50</span></li>`. The anchor text PRECEDES nothing — the link comes before the price — so this grades the backward direction of proximity, where HN's subline ('N points by <a>pg</a>') grades the forward one. 'the product name next to this price' is a browsing primitive, not site knowledge (CLAUDE.md rule 6): no selector, no DOM path, only a role and a visible string.",
+  "triage": {
+    "class": "coverage",
+    "watched_red": "red until the resolver implements `near:`. Today the key is dropped silently, leaving a bare {role: link} against four catalogue links -> ResolveError ambiguous-match -> failure:locate. That silent drop is itself a defect with its own case (resolver-unknown-target-key).",
+    "anchor_corrected": "the identity anchor was first written as 'Meridian Wall Clock' — the case's own expected answer, which the `grounded` check already asserts is in the evidence. That made `identity_anchors` a check that could not go red, the exact shape verifier-anchor-not-self-satisfied exists to forbid, reintroduced at the case level instead of the code level (M6 cold review). It anchors on the price now: the entity the task names, independent of the answer.",
+    "narrow_margin": "this case passes on a one-element margin (the product link is one element before the price, the next product's link two after). A row with anything after the price — a CTA, a rating, a badge — makes those distances equal, which is a different question with its own case: near-equidistant-is-ambiguous."
+  }
+}

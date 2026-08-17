@@ -1,0 +1,29 @@
+{
+  "id": "live-books-detail-upc",
+  "task": "browser",
+  "suites": ["live", "full"],
+  "level": "L2",
+  "tc": "TC3",
+  "domain": "books.toscrape.com",
+  "input": {
+    "task": "Open the product page for 'Full Moon over Noah's Ark' in the Travel category and tell me its UPC product code.",
+    "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+    "stub_plan": [
+      { "action": "click",
+        "target": { "role": "link", "name": "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond" },
+        "expected_state": { "url_contains": "full-moon-over-noahs-ark" } },
+      { "action": "extract", "target": { "role": "cell", "near": "UPC" }, "anchor": "Full Moon over Noah" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "ce60436f52c5ee68",
+    "anchors": ["Full Moon over Noah"]
+  },
+  "provenance": "the live TC3 cell — until now every live case was TC1 (read one value off the page you were handed), which is the thinness the B-freeze recorded under criterion 2. Two hops: a click that must actually navigate (postcondition `url_contains`, so a click that changes nothing fails loudly) and an extraction from the product table on the page it lands on. Ground truth hand-verified 2026-08-17 with an eval-side Playwright probe: the Travel listing's link with that exact accessible name leads to /catalogue/full-moon-over-noahs-ark-.../index.html, whose table reads UPC ce60436f52c5ee68, price £49.43. books.toscrape.com is a frozen scraping sandbox, so the label is stable.",
+  "triage": {
+    "class": "coverage",
+    "why_upc_and_not_price": "the price would grade nothing. `Price (incl. tax)` and `Price (excl. tax)` hold the SAME string on this sandbox (tax is £0.00 site-wide), so a `near:` that picked the wrong neighbouring cell would still report £49.43 and the case would pass for the wrong reason. The UPC is a 16-hex-digit value that appears exactly once on the page: no other cell can be mistaken for it, and no run can reach it by accident.",
+    "also_grades": "the semantic form of live table extraction. live-books-travel-price reaches its value by counting (`{role: cell, index: 5}`) because ARIA makes rowheader a subclass of cell and label/value cells interleave — declared in the support matrix as `unreliable`. This case reaches the same kind of value by naming its label instead, which is what `near:` was specced for."
+  }
+}

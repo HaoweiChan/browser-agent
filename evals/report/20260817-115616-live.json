@@ -1,0 +1,229 @@
+{
+  "suite": "live",
+  "score": 0.6,
+  "totals": {
+    "actions": 9,
+    "llm_tokens": 0,
+    "llm_usd": 0.0,
+    "replans": 0,
+    "ms": 45143,
+    "wall_seconds": 45.22,
+    "latency_p50": 2.34,
+    "latency_p95": 20.27,
+    "cases_with_budgets": 5
+  },
+  "metrics": {
+    "diagnosis_cases": 1,
+    "diagnosis_correct": 0
+  },
+  "results": [
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "\u00a345.17",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2321
+      },
+      "seconds": 2.34,
+      "id": "live-books-travel-price",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "structural"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "pg",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1181
+      },
+      "seconds": 1.18,
+      "id": "live-hn-item1-submitter",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "Y Combinator",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1168
+      },
+      "seconds": 1.17,
+      "id": "live-hn-item1-title",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "checks": {
+        "status": false,
+        "verdict": false
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": false,
+          "answer_matches": false
+        },
+        "reason": "answer is empty; identity anchor(s) absent from evidence: ['Cosslett']; answer None != expected 'The monk and the dancer'"
+      },
+      "metrics": {},
+      "tiers": [],
+      "got": {
+        "status": "failure:nav",
+        "answer": null,
+        "reason": "pre-plan navigation failed: Page.goto: Timeout 20000ms exceeded.\nCall log:\n  - navigating to \"https://openlibrary.org/books/OL7025919M\", waiting until \"load\"\n"
+      },
+      "budgets": {
+        "actions": 1,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 20233
+      },
+      "seconds": 20.26,
+      "id": "live-ol-edition-title",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "checks": {
+        "status": false
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "answer is empty"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 0
+      },
+      "tiers": [],
+      "got": {
+        "status": "failure:nav",
+        "answer": null,
+        "reason": "pre-plan navigation failed: Page.goto: Timeout 20000ms exceeded.\nCall log:\n  - navigating to \"https://openlibrary.org/\", waiting until \"load\"\n"
+      },
+      "budgets": {
+        "actions": 1,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 20240
+      },
+      "seconds": 20.27,
+      "id": "live-ol-search-a11y-invisible",
+      "kind": "adversarial"
+    }
+  ]
+}

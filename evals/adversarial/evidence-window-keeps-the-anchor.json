@@ -1,0 +1,22 @@
+{
+  "id": "evidence-window-keeps-the-anchor",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the UPC product code of this lamp?",
+    "fixture": "shop-lamp-spec.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "cell", "near": "UPC" }, "anchor": "LAMP-SPEC" }
+    ]
+  },
+  "expect": { "status": "success", "answer": "a1b2c3d4e5f60718", "anchors": ["LAMP-SPEC"] },
+  "provenance": "found by live-books-detail-upc (M6): a correct run — right value, anchor present on the page, runtime anchor check passed — was graded FAIL by the eval-side verifier, which reported the identity anchor 'Full Moon over Noah' absent from evidence. It was not absent from the page; it was absent from the 2000-character window the agent stores around the extracted value. On a product page with a long description the title and the specification table are further apart than that.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "that the stored evidence still supports the check it will be graded by. agent.evidence_window already exists because a flat head-truncation produced false grounding failures on long pages (its own docstring); the anchor is the same argument one field over, and it was missed because no fixture rendered more than 2000 characters of text until this one. specs/001 defines the anchor test as 'absent from the page the answer was read from' — the page, not the excerpt.",
+    "watched_red": "before the fix: status success, answer a1b2c3d4e5f60718, verdict FAIL — 'identity anchor(s) absent from evidence: [LAMP-SPEC]'. A false FAIL is the safe direction of this defect and still a defect: it is indistinguishable, in the report, from the run that really did read an answer off the wrong entity's page, and M7 is about to compute verifier precision from exactly these verdicts.",
+    "not_a_loophole": "the anchor is still checked against PAGE evidence only, never against the answer (verifier-anchor-not-self-satisfied). Widening the stored window changes what the page said, not what counts as saying it."
+  }
+}

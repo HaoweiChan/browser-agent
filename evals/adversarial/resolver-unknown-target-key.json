@@ -1,0 +1,21 @@
+{
+  "id": "resolver-unknown-target-key",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "Which product on this page costs $24.50?",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "nearest": "$24.50" }, "anchor": "Nimbus Shop" }
+    ]
+  },
+  "expect": { "status": "failure:task" },
+  "provenance": "found by running live-hn-item1-submitter (report 20260817-024235, M6 eval-first batch). The case was written with the contract-advertised `near:` key; the resolver has never implemented it, and the freeze note said so. What the run exposed is worse than the drift: the unresolvable key is DROPPED SILENTLY. `{role: link, near: ...}` resolved as a bare `{role: link}` -> 39 matches -> ResolveError, so the run failed for ambiguity and never said that half its plan's meaning had evaporated. This case uses a key that is not in the schema at all (`nearest`), so it stays red-worthy after `near:` lands.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "not whether a key is implemented — whether an unimplemented one is LOUD. Plan semantics the executor cannot honour must stop the run as failure:task, the class specs/001 reserves for a plan the executor cannot honour. Degrading to a weaker target is the same family of defect as answering from a page the agent never reached: the run reports a result for a task it silently changed.",
+    "watched_red": "today: failure:locate (ambiguous-match on the degraded target). Wanted: failure:task naming the unknown key."
+  }
+}

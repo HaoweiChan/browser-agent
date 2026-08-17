@@ -31,7 +31,7 @@ import urllib.request
 from pathlib import Path
 
 from .agent import assemble_result, run_task
-from .planner import stub_planner
+from .planner import live_planner, stub_planner
 from .verifier import verify
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -338,9 +338,14 @@ def _run_fixture_case(case: dict) -> dict:
     # the guard is CONSULTED as the browser moves; url-guard-literal-ips grades
     # what it decides.
     guard = (lambda u: inp["block_host"] not in u) if inp.get("block_host") else None
+    # `planner: "live"` spends real tokens against the real model, so only a
+    # `full`-tagged case may ask for it. No key -> live_planner raises here and
+    # the case fails loudly; stubbing it would grade a capability nobody ran
+    # (CLAUDE.md rule 4).
+    planner = live_planner() if inp.get("planner") == "live" else stub_planner(plans)
     with tempfile.TemporaryDirectory() as run_dir:
         result = asyncio.run(
-            run_task(inp["task"], inp.get("url", fixture_url), stub_planner(plans), run_dir,
+            run_task(inp["task"], inp.get("url", fixture_url), planner, run_dir,
                      url_guard=guard)
         )
 

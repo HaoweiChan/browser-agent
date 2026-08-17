@@ -38,6 +38,7 @@ graphify-out/      knowledge graph — graph.html / graph.json / GRAPH_REPORT.md
 ```bash
 python3 -m evals.run --suite invariant         # must-always-hold, pure code, no LLM/network
 python3 -m evals.run --suite fast              # offline gate: fixtures + LLM stubs, zero paid calls
+python3 -m evals.run --suite live              # real sites, hand-written plans — network, still $0.00
 python3 -m evals.run --suite full              # live sites + real LLM — manual/scheduled only
 python3 -m evals.run --suite all               # every case regardless of tags
 python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
@@ -45,6 +46,9 @@ python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
 
 Suite names are case tags (`"suites": [...]`); `all` is the only selection-special
 CLI value, and `invariant` additionally gates at 100% regardless of baseline.
+`live` and `full` are separate tags on purpose: `live` is every case that needs
+the network, `full` adds the ones that also spend LLM tokens, so `--suite live`
+exercises real sites at $0.00 while the paid cases stay behind `full`.
 
 ## Hard rules
 
