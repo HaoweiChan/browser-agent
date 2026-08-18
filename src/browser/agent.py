@@ -25,6 +25,11 @@ MAX_FIXES = 2         # relocation rungs per failed step
 MAX_REPLANS = 2       # replans per task
 SETTLE_TRIES, SETTLE_MS = 10, 200
 SETTLE_BUDGET_MS = SETTLE_TRIES * SETTLE_MS  # the same 2s a postcondition gets
+# Deliberately its own knob, not SETTLE_BUDGET_MS. The two are equal today and
+# have no reason to move together: one bounds how long a page may take to go
+# quiet, the other how long a font may take to load. Sharing the name would
+# mean tightening the settle loop silently shortened evidence capture.
+SCREENSHOT_TIMEOUT_MS = 2_000
 PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, bounded
 
 # ponytail: keyword screen — LLM-based scope screening only if evals demand it.
@@ -179,12 +184,21 @@ async def navigate(page, url: str) -> None:
     Both call sites route through here (the pre-plan hop and the `navigate`
     action), because fixing one would leave the other on the old behaviour and
     the eval for it green.
+
+    Worst case is 22s, not the 20s the goto argument suggests: the document has
+    its own 20s, then the settle adds up to 2s on top.
     """
+    from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+
     await page.goto(url, timeout=20_000, wait_until="domcontentloaded")
     try:
         await page.wait_for_load_state("load", timeout=SETTLE_BUDGET_MS)
-    except Exception:
-        pass
+    except PlaywrightTimeoutError:
+        pass  # the page never went quiet; read it anyway, that is the point
+    # Anything else — a crash or a close inside that window — propagates and is
+    # classified. Swallowing it here would discard the real cause and let it
+    # resurface as a `locate` failure on the next line, which is the
+    # misattribution family this function exists to close.
 
 
 def evidence_window(body: str, value: str, anchor: str | None = None) -> str:
@@ -428,7 +442,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     # nav-load-event-never-fires 32s and its twin 64s, in a
                     # suite ADR-002 budgets at 60s total.
                     await page.screenshot(path=str(run_dir / shot),
-                                          timeout=SETTLE_BUDGET_MS)
+                                          timeout=SCREENSHOT_TIMEOUT_MS)
                     rec["screenshot"] = shot
                 except Exception:
                     pass  # evidence best-effort; the postcondition is the gate

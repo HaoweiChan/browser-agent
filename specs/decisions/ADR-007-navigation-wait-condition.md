@@ -2,7 +2,7 @@
 
 Date: 2026-08-18
 Status: accepted
-Supersedes: the live-coverage claims in ADR-006 Decision 5 (the mechanism
+Supersedes: the live-coverage claims in ADR-006 Decision 5 — see Decision 4 below (the mechanism
 decisions in ADR-006 stand unchanged)
 
 ## Context
@@ -68,8 +68,12 @@ proves anything.
 inside the `try/except` whose own comment reads "evidence best-effort; the
 postcondition is the gate". It cost the two new cases 32s and 64s.
 
-Best-effort and unbounded cannot both be true. The screenshot now gets the same
-2s budget, and the suite went from 70.7s to 48.6s.
+Best-effort and unbounded cannot both be true. The screenshot now gets a 2s
+bound of its own — `SCREENSHOT_TIMEOUT_MS`, not `SETTLE_BUDGET_MS`. They are
+equal today and share no reason to move together: one bounds how long a page
+may take to go quiet, the other how long a font may take to load, and spending
+the settle constant on a font wait would mean that tightening the postcondition
+loop silently shortened evidence capture. The suite went from 70.7s to 48.6s.
 
 Worth naming *why* this survived a close review of exactly that block (the one
 that produced the #6/#7 cleanups): **the comment asserted a property the code
@@ -84,7 +88,35 @@ two cases read 4.3s and 8.4s instead of 32s and 64s. Recorded here rather than
 implied, because an unmeasured claim in a performance section is exactly what
 `docs/analysis.md` §1 promises not to do.
 
-## Decision 3 — the coverage claim ADR-006 could not make
+## Decision 3 — three things the PR review caught, and what they were worth
+
+Reviewed on the branch, all three non-blocking, all three taken:
+
+- **One name for two knobs** (above). A latent coupling, not a bug — the kind
+  that is free now and expensive once discovered by a failing suite.
+- **`except Exception: pass` on the settle swallowed more than a timeout.** It
+  is house style in this file, and it was wrong here specifically: a page crash
+  or close inside that 2s window would be discarded and resurface on the next
+  line as a `locate` failure. That is the misattribution family this ADR
+  exists to close, one layer down. Now `PlaywrightTimeoutError` only;
+  everything else propagates and gets classified. Verified both directions —
+  the hanging fixture still reads its heading with the timeout swallowed, and a
+  page closed mid-navigation raises.
+- **The third `goto`.** `_run_observe_case` still uses Playwright's default
+  `load`, unbounded, and that is deliberate: it is ground truth about what a
+  settled page exposes, and an observation taken mid-load would make those
+  cases flake rather than grade. But the review measured the cost — pointed at
+  `slow-asset.html`, which lives in the same fixtures directory, it raises after
+  30s and the runner reports a traceback rather than a diagnosis. Left as `load`
+  with the trade and the trap written at the call site, because a comment there
+  is what the next person reads; the browser-domain skill's fixture map says the
+  same thing from the other end.
+
+The nit was also real: the pre-plan hop's worst case is 22s, not the 20s its
+`timeout=20_000` argument implies, since the settle adds up to 2s after the
+document's own budget. Stated in the docstring rather than left to arithmetic.
+
+## Decision 4 — the coverage claim ADR-006 could not make
 
 ADR-006 Decision 5 said two live domains and two task classes were verified,
 with openlibrary.org resting on one pre-implementation run. That was true when

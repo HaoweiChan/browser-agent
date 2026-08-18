@@ -1,0 +1,278 @@
+{
+  "suite": "live",
+  "score": 1.0,
+  "totals": {
+    "actions": 15,
+    "llm_tokens": 0,
+    "llm_usd": 0.0,
+    "replans": 0,
+    "ms": 17408,
+    "wall_seconds": 17.46,
+    "latency_p50": 2.29,
+    "latency_p95": 5.89,
+    "cases_with_budgets": 6
+  },
+  "metrics": {
+    "recovery_rungs": 1,
+    "diagnosis_cases": 1,
+    "diagnosis_correct": 1
+  },
+  "results": [
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role",
+        "structural"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "ce60436f52c5ee68",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2269
+      },
+      "seconds": 2.29,
+      "id": "live-books-detail-upc",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "\u00a345.17",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2146
+      },
+      "seconds": 2.15,
+      "id": "live-books-travel-price",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "structural"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "pg",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1167
+      },
+      "seconds": 1.17,
+      "id": "live-hn-item1-submitter",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "Y Combinator",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1165
+      },
+      "seconds": 1.17,
+      "id": "live-hn-item1-title",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "The monk and the dancer",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 5893
+      },
+      "seconds": 5.89,
+      "id": "live-ol-edition-title",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "identity_anchors": true
+        },
+        "reason": "answer is empty"
+      },
+      "metrics": {
+        "recovery_rungs": 1,
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "text"
+      ],
+      "got": {
+        "status": "failure:locate",
+        "answer": null,
+        "reason": "step 3 (fill): relocation after locate failure: retargeting as {'text': 'Search'}; StepError: resolved element is not fillable: {'text': 'Search'}"
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 4768
+      },
+      "seconds": 4.79,
+      "id": "live-ol-search-a11y-invisible",
+      "kind": "adversarial"
+    }
+  ]
+}
