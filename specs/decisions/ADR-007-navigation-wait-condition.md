@@ -102,15 +102,31 @@ Reviewed on the branch, all three non-blocking, all three taken:
   everything else propagates and gets classified. Verified both directions —
   the hanging fixture still reads its heading with the timeout swallowed, and a
   page closed mid-navigation raises.
-- **The third `goto`.** `_run_observe_case` still uses Playwright's default
-  `load`, unbounded, and that is deliberate: it is ground truth about what a
-  settled page exposes, and an observation taken mid-load would make those
-  cases flake rather than grade. But the review measured the cost — pointed at
-  `slow-asset.html`, which lives in the same fixtures directory, it raises after
-  30s and the runner reports a traceback rather than a diagnosis. Left as `load`
-  with the trade and the trap written at the call site, because a comment there
-  is what the next person reads; the browser-domain skill's fixture map says the
-  same thing from the other end.
+- **The third `goto`.** `_run_observe_case` keeps Playwright's strict `load`,
+  and that part is settled: production asks "is this page usable enough to act
+  on?", observe ground truth asks "what does a fully settled page expose?", and
+  forcing one navigation semantics onto both would leak the production
+  abstraction into the harness. Routing it through `navigate()` is the wrong
+  fix and is recorded here as rejected, not deferred.
+
+  What the review measured is still a defect, and my first answer to it — a
+  comment at the call site — was not enough. Documenting a trap is not the same
+  as making the harness diagnosable. The wait inherits Playwright's **30s
+  default rather than a budget anyone chose**, so an observe case pointed at
+  `slow-asset.html` (same fixtures directory) raises after 30.4s and reads as
+  "the observer broke" instead of "this fixture is not a valid strict-observe
+  subject". The end state, agreed with the reviewer and deferred as MEDIUM:
+  keep strict `load`, give it an explicit 5–10s eval budget, catch
+  `PlaywrightTimeoutError`, return a structured `eval_env` failure. Deferred
+  rather than done because it is eval-harness robustness with no production
+  path and no case reaching it, and folding eval infrastructure into a
+  navigation PR would blur a scope that is currently clean. Carried as a
+  `ponytail:` comment at the call site and a support-matrix row.
+
+  It is the screenshot lesson one level up, which is why it is worth this much
+  text: **`try/except` bounds error propagation, never latency.** An unbounded
+  default inside a handler is a budget nobody chose, and it will read as
+  handled to every future reader.
 
 The nit was also real: the pre-plan hop's worst case is 22s, not the 20s its
 `timeout=20_000` argument implies, since the settle adds up to 2s after the
