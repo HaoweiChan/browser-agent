@@ -378,6 +378,61 @@ exactly when you most want it. And a submit endpoint that costs real money has
 concrete demonstration of why that matters: a careless loop, not an attacker,
 was enough.
 
+## 8b. The first live-planner run, and the first wrong answer scored PASS
+
+Run `734d3d1f`, 2026-08-18, submitted through the deployed `POST /tasks` (the
+key lives in Zeabur's service env and was never copied anywhere else). This is
+the **first measurement of live planning quality on any domain** — every green
+live eval case runs a hand-written plan, so until this run the planner had been
+graded only by the M5 probe.
+
+```
+task    : "In the Travel category, find the cheapest book and tell me its exact price."
+url     : books.toscrape.com/catalogue/category/books/travel_2/index.html
+plan    : 1. navigate (pre-plan observation)
+          2. extract  target {"role": "article", "index": 0}, anchor "Travel"
+status  : success          verdict : PASS (layer 1, ground_truth false)
+answer  : "It's Only the Himalayas\n\n£45.17\n\n In stock\n\nAdd to basket"
+truth   : £23.21 — "The Road to Little Dribbling" (hand-verified over all 11 Travel products)
+budgets : 2 actions · 1446 llm_tokens · $0.005454 · 6342 ms
+```
+
+**It returned the first product on the listing and called it the cheapest.**
+
+Three separate things had to line up for that to be scored PASS, and each one
+is already a declared limitation rather than a surprise:
+
+1. **No comparison exists in the plan vocabulary.** `navigate | click | fill |
+   extract` cannot express "compare eleven prices and return the minimum", so
+   "cheapest" became "extract the first product tile" — the one-hop-deep
+   ceiling from the M5 probe, reproduced exactly.
+2. **The identity anchor was `"Travel"`** — the category, not the entity. On an
+   aggregate page every candidate satisfies it. This is `trap-search-not-executed`
+   in the wild: the anchor certifies the wrong answer as readily as the right
+   one.
+3. **Every layer-1 predicate was legitimately green.** The value really was on
+   the page it was read from; the extraction really did happen; nothing was
+   fabricated. Only layer 2 — external ground truth — separates £45.17 from
+   £23.21, and a live run has none.
+
+The eval set is not blind to this. `live-books-cheapest-travel` is the same
+task with the answer hand-labelled, its triage predicted this outcome in
+writing ("the M5 held-out probe (2/8) predicts the planner itself fails
+multi-entity comparison") before it had ever been dispatched, and it grades
+FAIL at layer 2. What this run adds is that the prediction is now confirmed on
+the deployed system rather than inferred.
+
+**What this does to the honesty headline.** The M5 probe's "no run reported
+success with a wrong answer — 10/10" was true of that probe and is not a
+property of the system. The property that survives is narrower and worth
+stating exactly: *no run has reported success with an answer the verifier could
+tell was wrong.* With ground truth, the gap is caught. Without it, on an
+aggregate page, it is not — and a reviewer submitting this task to the live URL
+would be told £45.17 with a green badge.
+
+Sizing that gap is M7's entire subject, and this run is its first labelled
+sample: a confirmed false PASS with a committed run id.
+
 ## 8. Deployment — verified against the live URL
 
 `https://whaleforce-browser-agent.zeabur.app/`

@@ -68,16 +68,40 @@ and ran against the **deployed** URL ([raw table](docs/analysis.md)):
 
 ```
 2 correct answers of 8 answer-seeking tasks · 1 of 2 refusals · $0.0681
-no run reported success with a wrong answer — 10/10
+no run reported success with a wrong answer — 10/10 in that probe
 ```
+
+**That last line is bounded by a counterexample, and the boundary is the honest
+part.** On 2026-08-18 a single deployed run (`734d3d1f`) asked for the cheapest
+book in a category and got back the *first* one — £45.17 instead of £23.21 —
+reported as `success` with a `PASS` verdict:
+
+```
+plan   : navigate → extract {"role": "article", "index": 0}, anchor "Travel"
+answer : "It's Only the Himalayas … £45.17 …"     truth: £23.21
+```
+
+Nothing was broken. There is no compare/rank/filter step in the plan
+vocabulary, so "cheapest" was planned as "read the first product tile"; the
+identity anchor was the *category*, which every product on a listing satisfies;
+and every runtime predicate was legitimately green, because the value really
+was on the page it was read from. Only ground truth separates those two prices,
+and a live run has none — the eval case for this exact task
+(`live-books-cheapest-travel`) grades it FAIL at layer 2 and predicted this
+outcome in writing before it was ever run.
+
+So the property that holds is narrower than the probe line suggests: **no run
+has reported success with an answer the *verifier could tell* was wrong.** With
+external ground truth, that gap is caught. Without it, on an aggregate page, it
+is not. Measuring the size of that gap is the next milestone's whole job.
 
 **Read those with their denominators**, which is why they are printed as `x/y`:
 
 - **`$0.0000` is honest and nearly useless.** No suite invokes a real planner —
   that is deliberate, so the gate costs nothing and runs without a key, but it
   means these numbers grade the resolver → executor → verifier path and say
-  **nothing about planning quality**. Real measured spend: one deployed task at
-  **$0.0029** and **$0.0065 / 1438 tokens / 6.5s**.
+  **nothing about planning quality**. Real measured spend: three deployed tasks, at
+  **$0.0029**, **$0.0065 / 1438 tokens / 6.5s** and **$0.0055 / 1446 tokens / 6.3s**.
 - **`recovery 3/3` is a floor on three injected cases, not a rate.** Eight rungs
   were tried to produce three verified recoveries; that ratio is printed beside
   it rather than folded into it.
