@@ -5,23 +5,25 @@ verification. Every number below is read out of a committed report in
 `evals/report/`, not estimated. Where a number does not exist, this document
 says so rather than supplying a plausible one.
 
-Baseline: `evals/report/20260817-133237-fast.json` plus the `live` and
-`invariant` runs of the same working tree. Sections 1, 5 and 6 were refreshed
-at M6; every other section still carries its M5 numbers and says so. A full
-refresh is M10's job (`docs/plans/active/task1-a-level-plan.md`).
+Baseline: `evals/report/20260819-031120-fast.json` plus the `live` and
+`invariant` runs of the same working tree. Sections 1 and 5 were refreshed at
+M7's final phase (case counts, precision/recall, and the chunking-evasion
+finding); section 6 still carries its M6 numbers and says so. A full refresh
+is M10's job (`docs/plans/active/task1-a-level-plan.md`).
 
 ## 1. What was measured, and on what
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 69 | 69/69 | 36.32s | 0.35s | 2.51s | $0.0000 |
-| `invariant` (must-always-hold) | 18 | 18/18 | 3.74s | 0.00s | 2.50s | $0.0000 |
+| `fast` (offline gate) | 73 | 73/73 | 35.95s | 0.32s | 2.49s | $0.0000 |
+| `invariant` (must-always-hold) | 19 | 19/19 | 3.56s | 0.00s | 2.49s | $0.0000 |
 | `live` (3 real sites) | 6 | 4/6 | 47.5s | 2.4s | 20.3s | $0.0000 |
 
-76 distinct cases. 123 browser actions in a `fast` run; 46 of the 69 cases drive
-a real Chromium end to end, the remaining 23 are pure-code probes of a single
-component (the grader, the classifier, the URL guard, the scope screen, the
-matrix parser).
+80 distinct cases (20 golden + 60 adversarial). 132 browser actions in a
+`fast` run; 52 of the 73 cases drive a real Chromium end to end, the
+remaining 21 are pure-code probes of a single component (the grader, the
+classifier, the URL guard, the scope screen, the matrix parser, and — added
+in M7's final phase — the evidence-window bound on a missing value).
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -151,13 +153,81 @@ Six `trap-*` cases encode wrong answers that look right (form not submitted,
 search not executed, unsorted "cheapest", wrong field, near-miss entity, empty
 extraction). All six are currently caught. That is reported as a **floor on
 detection**, not as verifier accuracy, because the traps were written by the
-same author as the verifier. There is **no hand-labeled precision/recall
-sample** — it is in the B-strong list and was not reached.
+same author as the verifier.
 
 Two anchor holes are known, declared, and unfixed (`docs/support-matrix.md`):
 a near-miss entity whose name contains the target's, and aggregate pages where
 every candidate is in the page text so the anchor certifies the wrong answer
 too. Both are caught only by ground truth, which a live run does not have.
+
+### Hand-labeled sample (M7): a second floor reading, not a promotion to accuracy
+
+25 runs (16 fixture — 13 general + 2 built to exercise the postcondition gate
++ 1 built at M7's final phase to demonstrate a chunking evasion — and 9 live:
+6 books.toscrape.com, 3 news.ycombinator.com) were captured, hand-labeled
+`correct`/`wrong` against their task, and replayed offline through the exact
+runtime `verify()` call — no `expect`, no `state`, the same call
+`agent.py:491` makes. Method, threshold measurement, and the `MIN_EVIDENCE`
+scaffolding correction are recorded in full in
+`specs/decisions/ADR-007-m7-verifier-accuracy.md`; pinned matrix in
+`evals/adversarial/verifier-precision-recall.json`.
+
+**The headline is not the precision figure.** Excluding the two
+postcondition-gate records, the runtime verifier — before this milestone's
+one addition (`not_a_dump`) — returned `PASS` on **23 of 23** records: 10
+correct answers and 13 wrong ones, with zero discrimination between them.
+This is provable by reading the code and confirmed empirically: every runtime
+L1 check (trace shape, supersede resolution, postcondition presence,
+non-empty answer, grounding) is mechanical, and none of them asks whether the
+answer answers the question. The eval suite has looked clean across six
+milestones because the adapter calls `verify()` a **second** time with ground
+truth (L2) — a layer no real user's run ever gets.
+
+`not_a_dump` (`DUMP_RATIO = 0.35`, measured against every `fast`-suite
+extraction: real non-dump ratios top out at 0.1786, the two known dumps sit
+at 0.4541 and 0.5231, 0.35 sits in the empty gap) is the **first** runtime
+check that can fail a mechanically-clean run on the *content* of its answer,
+but it closes only the **single-extraction** dump shape. Re-running the same
+23 records against the current code: **21/23 PASS** — the two original
+page-dump records (one whole-container extraction each) now correctly fail,
+but a third wrong record, `chunked-dump-cheapest` (the same task and fixture,
+the same page dumped across four separate per-row extractions instead of
+one), still passes: `verify()` never receives the task text, so nothing here
+can tell "list every product" from "which is cheapest" given identical
+per-extraction evidence shapes. That is the entire gain and its exact
+boundary — a bounded, real, and now-measured gap (D1, `docs/support-matrix.md`),
+not a general responsiveness check.
+
+Post-fix confusion matrix: tp=10, fp=11, fn=1, tn=3 → **precision 0.476,
+recall 0.909** (pre-`not_a_dump`, on the 24-record sample that predates the
+chunking-evasion record: tp=10, fp=12, fn=1, tn=1 → precision 0.455, same
+recall — the check never touches a correct answer). Precision as a ratio is a
+function of this sample's mix, which is **deliberately adversarial**: 13 of
+the 23 non-postcondition-gate records are constructed traps. Publishing 0.476
+without that context invites reading it as general accuracy, which this
+sample — constructed, stratified, n=25, drawn only from runs that reached
+`verify()` — cannot support.
+
+The 10 pre-existing false positives are short, focused, *wrong* answers, not
+dumps: wrong field, wrong table row, unsorted "cheapest", a search filled but
+never executed, a form filled but never submitted, a near-miss "Pro" variant
+— four of them on live sites. `not_a_dump` was never meant to reach these;
+closing that gap needs ground truth (L2, absent at runtime) or an
+evidence-only LLM check (L3, absent by design). An 11th false positive,
+`chunked-dump-cheapest`, is a different residue: `not_a_dump` was designed
+for exactly this shape (a page dump) and misses it because chunking the same
+dump across several extractions keeps every individual ratio under threshold
+(D1, `docs/support-matrix.md`). Full list: `evals/labels/verifier-sample.jsonl`.
+
+Two more bounds on the claimed gain, declared rather than cased
+(`docs/support-matrix.md`): the 0.35 threshold is measured against the
+*absolute size* of the evidence window, so it is chrome-sensitive (the same
+dump on a more boilerplate-heavy page dilutes toward and under it) and
+thinly calibrated — exactly two positive examples, 0.4541 and 0.5231, only
+~0.10 of headroom above 0.35 (D2). The same absolute-size ratio can also
+false-FAIL a *correct* answer that legitimately makes up most of a thin page
+— degenerate case, ratio 1.0, always fails — though no fixture in the repo is
+sparse enough to demonstrate it (D3, safe direction).
 
 ### What the reliability numbers mean
 
@@ -253,7 +323,12 @@ The reviewer-facing version of this list, with per-row evidence, is
 
 1. **Planning quality — entirely.** Every case stubs the planner.
 2. **Real cost and end-to-end latency**, beyond one M1 run at $0.0029.
-3. **Verifier precision/recall** — no hand-labeled sample; traps are a floor.
+3. **Verifier precision/recall** — measured at M7 (§5): 0.476/0.909 on a
+   25-record hand-labeled sample. A floor reading of a deliberately
+   adversarial, constructed sample, not a general accuracy claim; semantic
+   responsiveness (a short, wrong, well-formed answer) is still uncaught at
+   runtime, and neither is the same dump split across several extractions
+   (D1, `docs/support-matrix.md`).
 4. **Live *planning*** — three domains and three task classes are exercised
    live as of M6, but every green live case runs a hand-written plan and the
    one live-planner case is unrun (needs `OPENROUTER_API_KEY`). Live breadth

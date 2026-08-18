@@ -35,7 +35,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 69 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 73 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
 python3 -m evals.run --suite live        # 6 cases, 3 real sites, still $0.00
 ```
@@ -161,7 +161,7 @@ four more still, three of which answered a question confidently and wrongly
 with no error anywhere in the trace. Every one of those three needed a page
 shape the repo's only offline listing happens not to have.
 
-The eval set is not weak; it is 76 cases, it caught a *bad fix* mid-session
+The eval set is not weak; it is 80 cases, it caught a *bad fix* mid-session
 during the last review, and in M6 it caught a fix that passed its own case for
 the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

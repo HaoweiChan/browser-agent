@@ -134,6 +134,23 @@ def _check_inv2() -> dict:
     return {"passed": not bad and ok["status"] == "success", "leaked": bad}
 
 
+def _check_evidence_window_miss_bounded() -> dict:
+    """evidence_window must still return a bounded window when the value is
+    absent from the body on a page longer than PAGE_TEXT_KEEP — that window
+    is what `grounded` then correctly fails on. No browser: a pure probe of
+    the function itself (agent.py:170)."""
+    from .agent import PAGE_TEXT_KEEP, evidence_window
+
+    body = "x" * (PAGE_TEXT_KEEP + 1000)
+    win = evidence_window(body, "VALUE-NOT-ON-PAGE")
+    wrong = []
+    if len(win) > PAGE_TEXT_KEEP:
+        wrong.append(f"window length {len(win)} exceeds PAGE_TEXT_KEEP {PAGE_TEXT_KEEP}")
+    if win != body[:PAGE_TEXT_KEEP]:
+        wrong.append("window is not the head of the page when the value is absent")
+    return {"passed": not wrong, "wrong": wrong, "window_len": len(win)}
+
+
 def _check_inv3() -> dict:
     """INV-3: budget exhaustion is a loud classified failure, never a quiet stop.
 
@@ -268,15 +285,39 @@ def _run_verifier_case(case: dict) -> dict:
     for got, want, should_match in inp.get("compare", []):
         if answers_match(got, want) != should_match:
             wrong.append({"got": got, "want": want, "should_match": should_match})
+    # This probe only exercises supersede resolution — the evidence content is
+    # irrelevant to what it tests. A bare {"value": "a", "page_text": "a"} has
+    # a dump ratio of 1.0 (the value IS the whole window), which reads as a
+    # page dump to `not_a_dump` and once made this case fail for an unrelated
+    # reason: the placeholder scaffolding looked like a dump, not the run
+    # (ADR-007). Padded to a realistic evidence-window length so the ratio
+    # sits nowhere near DUMP_RATIO.
+    _INERT_PAGE_TEXT = (
+        "ok — inert placeholder evidence, padded to a realistic "
+        "evidence-window length so the dump ratio sits nowhere near the "
+        "DUMP_RATIO threshold; this probe only exercises supersede "
+        "resolution, not evidence content (see ADR-007)."
+    )
     for sc in inp.get("superseded", []):
-        v = verify(trace=sc["trace"], extractions=[{"value": "a", "page_text": "a"}], answer="a")
+        v = verify(trace=sc["trace"], extractions=[{"value": "ok", "page_text": _INERT_PAGE_TEXT}], answer="ok")
         if (v["verdict"] == "PASS") != sc["pass"]:
             wrong.append({"superseded": sc["note"], "should_pass": sc["pass"],
                           "verdict": v["verdict"], "checks": v["checks"]})
+    # Same padding, for the same reason: measured at ratio 0.27-0.32 unpadded
+    # (M7 phase 2), too close to DUMP_RATIO=0.35 for comfort even though this
+    # probe checks the `identity_anchors` key specifically, not the overall
+    # verdict. Filler contains none of the anchor strings under test, so it
+    # cannot change which anchors are present or absent.
+    _ANCHOR_PADDING = (
+        " Additional inert catalogue filler appended so this scaffolded "
+        "page_text reads at a realistic evidence-window length rather than "
+        "a synthetic short string whose dump ratio is noise near the "
+        "threshold (see ADR-007)."
+    )
     for sc in inp.get("anchors", []):
         v = verify(
             trace=[{"i": 1, "action": "extract", "postcondition_ok": True}],
-            extractions=[{"value": sc["answer"], "page_text": t} for t in sc["page_texts"]],
+            extractions=[{"value": sc["answer"], "page_text": t + _ANCHOR_PADDING} for t in sc["page_texts"]],
             answer=sc["answer"],
             expect={"anchors": sc["anchors"]},
         )
@@ -607,6 +648,48 @@ def _check_supersede_dangling() -> dict:
             "got": {"status": result["status"], "steps": len(trace)}}
 
 
+LABELS_PATH = Path(__file__).parents[2] / "evals" / "labels" / "verifier-sample.jsonl"
+
+
+def _run_verifier_labels_case(case: dict) -> dict:
+    """M7 verifier accuracy: replays the hand-labeled sample through the exact
+    runtime call agent.py makes (no `expect`, no `state` — docs/evals/
+    evaluation-methodology.md "Verifier accuracy estimation"), and grades the
+    verifier's PASS/FAIL against a human label of the ANSWER, never against
+    what the run itself claimed. Offline and frozen: it replays committed
+    JSONL, so it is `fast`-tagged even though half the records came from live
+    sites originally (evals/labels/capture.py)."""
+    records = [json.loads(line) for line in LABELS_PATH.read_text().splitlines() if line.strip()]
+    tp = fp = fn = tn = 0
+    fp_ids, fn_ids = [], []
+    for r in records:
+        v = verify(trace=r["trace"], extractions=r["extractions"], answer=r["answer"])
+        predicted_pass, actually_correct = v["verdict"] == "PASS", r["label"] == "correct"
+        if predicted_pass and actually_correct:
+            tp += 1
+        elif predicted_pass:
+            fp += 1
+            fp_ids.append(r["id"])
+        elif actually_correct:
+            fn += 1
+            fn_ids.append(r["id"])
+        else:
+            tn += 1
+    matrix = {"tp": tp, "fp": fp, "fn": fn, "tn": tn}
+    return {
+        "passed": matrix == case["expect"]["matrix"],
+        "matrix": matrix,
+        "want_matrix": case["expect"]["matrix"],
+        "metrics": {
+            "precision": tp / (tp + fp) if (tp + fp) else None,
+            "recall": tp / (tp + fn) if (tp + fn) else None,
+            "n": len(records),
+            "false_positive_ids": fp_ids,
+            "false_negative_ids": fn_ids,
+        },
+    }
+
+
 def _run_url_guard_case(case: dict) -> dict:
     from .server import url_ok
 
@@ -636,7 +719,8 @@ def _run_parse_plan_case(case: dict) -> dict:
 
 
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
-              "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling}
+              "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
+              "evidence-window-miss-bounded": _check_evidence_window_miss_bounded}
 
 
 def _run_invariant_case(case: dict) -> dict:
@@ -663,6 +747,7 @@ KINDS = {
     "stream": _run_stream_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
+    "verifier-labels": _run_verifier_labels_case,
 }
 
 

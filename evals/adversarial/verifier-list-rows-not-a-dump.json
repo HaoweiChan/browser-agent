@@ -1,0 +1,33 @@
+{
+  "id": "verifier-list-rows-not-a-dump",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC4",
+  "input": {
+    "task": "List every product in the catalogue with its price, cheapest first.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+        "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+      { "action": "extract", "target": { "role": "listitem", "index": 0 } },
+      { "action": "extract", "target": { "role": "listitem", "index": 1 } },
+      { "action": "extract", "target": { "role": "listitem", "index": 2 } },
+      { "action": "extract", "target": { "role": "listitem", "index": 3 } }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": [
+      "Cobalt Floor Rug $18.00",
+      "Meridian Wall Clock $24.50",
+      "Aurora Desk Lamp $39.00",
+      "Aurora Desk Lamp Pro $59.00"
+    ]
+  },
+  "provenance": "M7 phase 2, Task A #2 (benign twin). The near-prefers-the-container lesson (evals/adversarial/near-prefers-the-container.json) made into a case for THIS phase's check: a rule that flags 'the answer reproduces a lot of the page' is broader than the actual defect and would fail the commonest legitimate multi-item task there is. This task genuinely asks for every row, so the plan extracts each <li> individually (4 extractions -> a list answer, per multi-extract-list.json's shape) instead of one extraction of the whole container. Each extraction is judged against its own evidence window: 'Cobalt Floor Rug $18.00' is ~12% of the (short, whole-page) window it was read from, well under any dump threshold, and the same holds for the other three rows -- even though the four extractions TOGETHER enumerate the entire catalogue, exactly like the real dump case does in one extraction. The check must tell these apart by looking at each extraction on its own, never at the assembled answer's total coverage of the page.",
+  "triage": {
+    "class": "regression-guard",
+    "note": "must stay green before AND after the fix. If this goes red once the dump check lands, the rule is broader than intended and must be narrowed to the single-extraction case, not this one."
+  }
+}

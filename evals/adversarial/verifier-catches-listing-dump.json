@@ -1,0 +1,22 @@
+{
+  "id": "verifier-catches-listing-dump",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC4",
+  "input": {
+    "task": "Which product is the cheapest, and what is its price?",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+        "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+      { "action": "extract", "target": { "role": "list", "name": "Catalogue" } }
+    ]
+  },
+  "expect": { "status": "failure:semantic", "verdict": "FAIL" },
+  "provenance": "M7 phase 2, Task A #1 (red-first trap). Same shape as the frozen label probe5-shop-listing-dump (evals/labels/verifier-sample.jsonl), rebuilt as a live fixture case so it exercises the real runtime verify() call (agent.py:491, no expect) every suite run, not just the frozen replay. The task asks for ONE product and its price; the plan extracts the whole sorted <ul aria-label=\"Catalogue\"> container as a single value, so the answer is all four rows. Before the fix: status success, verdict PASS — trace_nonempty/supersedes_resolve/no_failed_postcondition/answer_nonempty/actions_verified/grounded/identity_anchors are all mechanically satisfied (grounded trivially: the value is Playwright's own inner_text of that container, so it is always a literal substring of the page body it was read from), and identity_anchors is vacuous because expect.anchors is empty at runtime. Nothing already in L1 objects to a value that IS the evidence it was read from — that is exactly the gap this phase's new check closes.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "the responsiveness/dump check (verifier.py) must be what turns this red; no other existing L1 predicate is expected to fire on this shape — confirmed against probe5-shop-listing-dump's recorded runtime_verdict.checks, which are all true."
+  }
+}

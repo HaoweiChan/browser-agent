@@ -167,7 +167,7 @@ def evidence_window(body: str, value: str, anchor: str | None = None) -> str:
     if len(body) <= PAGE_TEXT_KEEP:
         return body
     i = body.find(value)
-    win = around(i) if i >= 0 else body[:keep]
+    win = around(i) if i >= 0 else body[:PAGE_TEXT_KEEP]
     j = body.find(anchor) if anchor else -1
     if j >= 0 and anchor not in win:
         win += "\n…\n" + around(j)
