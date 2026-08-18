@@ -296,6 +296,17 @@ def _run_observe_case(case: dict) -> dict:
         async with async_playwright() as pw:
             browser = await pw.chromium.launch(args=["--no-sandbox"])
             page = await browser.new_page()
+            # Deliberately NOT agent.navigate(): this is ground truth about what
+            # a fully settled page exposes, so waiting for everything is the
+            # point, and an observation taken mid-load would make these cases
+            # flake rather than grade. The cost of that choice is real and
+            # belongs here rather than in a reviewer's head: pointed at
+            # `slow-asset.html` — whose `load` never fires, and which lives in
+            # this same fixtures directory — this raises after Playwright's 30s
+            # default nav timeout, and the runner reports it as a case error
+            # with a traceback, not as a diagnosis. Don't write an observe case
+            # against that fixture; the agent path has two of its own
+            # (nav-load-event-never-fires and its twin).
             await page.goto(url)
             obs = await observe(page)
             await browser.close()
