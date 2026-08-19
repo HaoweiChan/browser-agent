@@ -1,7 +1,10 @@
 {
   "id": "live-quotes-js-delayed-empty",
   "task": "browser",
-  "suites": ["live", "full"],
+  "suites": [
+    "live",
+    "full"
+  ],
   "level": "L3",
   "tc": "TC1",
   "domain": "quotes.toscrape.com",
@@ -9,11 +12,19 @@
     "task": "Confirm that this page quotes J.K. Rowling.",
     "url": "https://quotes.toscrape.com/js-delayed/",
     "stub_plan": [
-      { "action": "extract", "target": { "text": "J.K. Rowling" }, "anchor": "Harry" }
+      {
+        "action": "extract",
+        "target": {
+          "text": "J.K. Rowling"
+        },
+        "anchor": "Harry"
+      }
     ]
   },
-  "expect": { "status": "failure:locate" },
-  "provenance": "the same plan and the same site as live-quotes-js-text-tier-reaches, one URL apart: /js-delayed/ renders the identical content ~10s after load. Measured 2026-08-19: after `navigate()` (domcontentloaded plus a bounded 2s wait for `load`, ADR-007) the body is 78 characters — chrome only — against 1,499 on /js/. So the agent stops loudly at failure:locate, correctly classified, with no answer invented. This is the live twin of the render-delayed mutation (l4-shop-render-delayed) and it is what makes that fixture mutation more than a thought experiment: 3s of injected delay in the fixture, 10s of real delay here, the same stop.",
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "the same plan and the same site as live-quotes-js-text-tier-reaches, one URL apart: /js-delayed/ renders the identical content ~10s after load. Measured 2026-08-19: after `navigate()` (domcontentloaded plus a bounded 2s wait for `load`, ADR-007) the body is 78 characters — chrome only — against 1,499 on /js/. So the agent stops loudly at failure:locate, correctly classified, with no answer invented. This is the live twin of the render-delayed mutation (l4-shop-render-delayed) and it is what makes that fixture mutation more than a thought experiment: 10s of injected delay in the fixture, ~10s of real delay here, the same stop.",
   "triage": {
     "class": "diagnosis",
     "note": "passing = the correct classification, not the answer. support-matrix D6 declares the underlying gap: `resolve()` counts matches once with no wait, so late content is indistinguishable from absent content. If a bounded first-tier wait ever lands, this case's expectation flips to success in the same change — the same eval-first pattern as l4-shop-button-text-renamed."

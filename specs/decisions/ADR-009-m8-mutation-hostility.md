@@ -2,9 +2,9 @@
 
 Date: 2026-08-19
 Status: accepted; Decisions 5 and 6 were amended in the same PR (#12) by
-Decision 7, after review found that the metric fixed in Decision 5 had no case
-behind it and that the count published in Decision 6's numbers called a replan
-a relocation. The original text is left as written; Decision 7 says what moved.
+Decisions 7 and 8, after two review rounds found the same metric block wrong
+twice. The original text is left as written; Decisions 7 and 8 say what moved
+and — in round 2 — where round 1's own repair fell short.
 
 ## Context
 
@@ -251,6 +251,57 @@ suite nothing (the run ends long before the timer fires), so the only thing the
 number buys is margin over the 388ms run it bounds — 26x instead of 7.7x — in a
 suite ADR-002 calls deterministic.
 
+## Decision 8 — review round 2 (PR #12): both round-1 repairs moved the defect one step
+
+A second reviewer, with no memory of round 1, checked the repairs instead of
+trusting them. Both MEDIUMs were confirmed on the runtime before being relayed.
+
+1. **`mutation_relocated` still credited relocation for a replan's rescue.**
+   Round 1 read "a rescue whose superseded attempt failed `locate`" — but every
+   relocation rung wears the `recovery` label and supersedes the attempt before
+   it, *including the rungs that lose*. So a run that failed `locate`, lost every
+   rung, and was then saved by the replan family was still counted as relocated.
+   Measured on the real runtime (`shop.html?mut=overlay-modal`, first target
+   without a `role` so it cannot resolve): tiers `['role','text','role','role',
+   'role']`, both rungs failing `act`, `replans: 1`, 21s — `mutation_relocated`
+   **1 before, 0 after**. A rescue is now a labelled attempt that *succeeded*;
+   the family still comes from the superseded attempt's failure class.
+
+2. **`survived` still meant "matched its expectation".** The second term was
+   `status == exp["status"]`, so a case that expected *and got* `failure:locate`
+   counted as a survival unless its author remembered `mutation_survived: false`
+   — which is verbatim the defect Decision 5 claims to have closed, one opt-in
+   away. Surviving now requires `status == "success"` (plus: the case did not
+   expect a failure, and did not declare the run a loss). `l4-shop-render-delayed`
+   has had the key **removed** — its status excludes it — leaving exactly one
+   case that still needs it, the wrong-answer pin `l4-shop-element-reordered`.
+
+**No published figure moved**: 9/11 survived, 6 recovered, 5 by relocating,
+before and after. Both non-survivors were already excluded, one by its key and
+one (now) by its status. The counters were wrong; the catalogue's numbers were
+not — which is exactly why neither round could have been caught by reading the
+report.
+
+The reviewer's sharper point was about the guard, not the counters: six
+synthetic rows written by the author of the function can encode the
+implementation rather than the intent. `mutation-metrics-honesty` now carries
+ten rows chosen to discriminate against **named wrong implementations**, and the
+discrimination is measured rather than asserted — each of seven plausible wrong
+versions (the pre-M8 expression; the status term deleted; status-only; three
+variants of the relocation reading, including round 1's; and dropping the
+survival term from either recovery counter) turns the case red, and the case's
+provenance records which row catches which. Round 1's expression is now killed
+by exactly one row, "rungs lost, replan won" — the row this round added.
+
+Two LOWs from the same review, both fixed: `mutation-catalog-integrity` graded
+whatever `checks` blocks it happened to list rather than comparing them to
+`mutate.MUTATIONS`, so a sixth mutation added without a block would have shipped
+unguarded and green (watched red by adding one); and the round-1 D10 row was
+written outside its own markdown table, so the disclosure rendered as a
+pipe-delimited paragraph — the parser is line-based and could not see it, which
+is a fair reminder that `support-matrix-cites-real-cases` grades citations, not
+layout.
+
 ## What is deliberately NOT fixed
 
 1. **A bounded wait in `resolve()`** (would close render-delayed and
@@ -299,8 +350,8 @@ Costs: a pre-commit gate at 67.6s, over its own documented ceiling; two
 committed cases whose green means "the agent is reliably wrong here"; and a
 declared limitation list four rows longer (D5–D9).
 
-Numbers, 2026-08-19 (repair round, PR #12): `fast` 85/85 (68s), `invariant`
-21/21, `live` 9/9, $0.0000, mutation **9/11 survived, 6 recovered — 5 by
+Numbers, 2026-08-19 (after both repair rounds, PR #12): `fast` 85/85 (67.2s),
+`invariant` 21/21, `live` 9/9, $0.0000, mutation **9/11 survived, 6 recovered — 5 by
 relocating** (was 4/4, 2 relocating), recovery 7/7 verified over 13 rungs,
 diagnosis 14/14. The first commit published "6 by relocating"; Decision 7 is
 why that figure moved.

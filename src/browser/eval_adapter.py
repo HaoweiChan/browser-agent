@@ -267,10 +267,19 @@ def _run_relocate_case(case: dict) -> dict:
 def _run_mutation_case(case: dict) -> dict:
     """Mutation catalog integrity: each transform must break its own tier and
     leave the others alone. Without this the L4 evidence is unfalsifiable."""
-    from .mutate import apply_mutation
+    from .mutate import MUTATIONS, apply_mutation
 
     src = (FIXTURES / case["input"]["fixture"]).read_text()
-    wrong = []
+    # Coverage first: the catalogue's own docstring claims every entry in its
+    # table is pinned here, and that held by coincidence — this case graded
+    # whatever blocks it happened to list, so a new mutation added without one
+    # would ship unguarded and green (PR #12, R11). Missing BOTH ways: a
+    # mutation with no checks block is unguarded, a checks block naming no
+    # mutation is a guard pointed at nothing.
+    wrong = [{"uncovered_mutations": sorted(set(MUTATIONS) - set(case["input"]["checks"]))}] \
+        if set(MUTATIONS) - set(case["input"]["checks"]) else []
+    wrong += [{"checks_for_unknown_mutation": sorted(set(case["input"]["checks"]) - set(MUTATIONS))}] \
+        if set(case["input"]["checks"]) - set(MUTATIONS) else []
     for name, want in case["input"]["checks"].items():
         out = apply_mutation(src, name)
         for needle, should_be_present in want.items():
@@ -544,30 +553,43 @@ def mutation_metrics(exp: dict, status: str, trace: list) -> dict:
     "mutation N/M passed, K by relocating" line rested on code with no case
     behind it (case mutation-metrics-honesty).
     """
-    # Matching an expectation is not surviving a mutation. Two M8 cases expect
-    # the agent to lose: l4-shop-element-reordered expects the WRONG answer and
-    # l4-shop-render-delayed expects a loud failure:locate. Both match their
-    # expectation exactly, and counting them here would report 11/11 for a
-    # catalogue the agent survives 9 of. Latent since M2 — no mutation case had
-    # ever expected anything but success.
-    survived = bool(exp.get("mutation_survived", True)) and status == exp.get("status", "success")
-    recovered = [s for s in trace if s.get("retry_or_recovery") == "recovery"]
-    # `retry_or_recovery == "recovery"` is worn by BOTH ladders, so it cannot
-    # say which one ran. The attempt a rescue supersedes can: a `locate`
-    # failure is the relocation ladder (a different tier), an `act` failure is
-    # the replan ladder (a different plan). l4-shop-overlay-modal is rescued
-    # without any tier ever changing — its four resolved tiers are all `role` —
-    # and it was being published inside "N by relocating", the count ADR-002
-    # introduced precisely to keep the flattering reading out (PR #12, R1).
+    # Surviving a mutation means the run ended in a real answer. Three separate
+    # things can make that false, and each of them was counted as a survival at
+    # some point in M8's history:
+    #   1. the run did not succeed — the second term used to be "matched its
+    #      expectation", so a case that expected AND got failure:locate landed
+    #      in the numerator (PR #12, R8). `l4-shop-render-delayed` is now
+    #      excluded by its status alone, without needing the opt-in key;
+    #   2. the case expected a failure and the agent succeeded anyway — a
+    #      regression that makes the case red, and is not a survival to publish;
+    #   3. the case declares the run a loss even though it "succeeded": the
+    #      wrong-answer pin `l4-shop-element-reordered`, which is what
+    #      `mutation_survived: false` is for and the only remaining use of it.
+    survived = (status == "success" and exp.get("status", "success") == "success"
+                and bool(exp.get("mutation_survived", True)))
+    # A rescue is a labelled attempt that WORKED. Every relocation rung wears
+    # `retry_or_recovery: "recovery"` and supersedes the attempt before it,
+    # including the rungs that lose, so counting labels rather than successes
+    # credited relocation for a run where all rungs failed and the replan made
+    # the save (PR #12, R7).
+    rescues = [s for s in trace
+               if s.get("retry_or_recovery") == "recovery" and not s.get("failure_class")]
+    # `recovery` is worn by BOTH ladders, so the label cannot say which one ran.
+    # The attempt a rescue supersedes can: a `locate` failure is the relocation
+    # ladder (a different tier), an `act` failure is the replan ladder (a
+    # different plan). l4-shop-overlay-modal is rescued without any tier ever
+    # changing — its four resolved tiers are all `role` — and it was published
+    # inside "N by relocating", the count ADR-002 introduced precisely to keep
+    # the flattering reading out (PR #12, R1).
     failed = {s["superseded_by"]: s for s in trace if s.get("superseded_by")}
-    relocated = [s for s in recovered if failed.get(s["i"], {}).get("failure_class") == "locate"]
+    relocated = [s for s in rescues if failed.get(s["i"], {}).get("failure_class") == "locate"]
     # Both recovery counters are gated on survival: a run that lost is not a
     # rescue, whatever its trace tried on the way down (PR #12, R3). Rungs
     # tried are still reported, separately, as raw context.
     return {
         "mutation_cases": 1,
         "mutation_passed": int(survived),
-        "mutation_recovered": int(survived and bool(recovered)),
+        "mutation_recovered": int(survived and bool(rescues)),
         "mutation_relocated": int(survived and bool(relocated)),
     }
 
@@ -584,6 +606,18 @@ def _check_mutation_metrics() -> dict:
         return [{"i": 2, "failure_class": cls, "superseded_by": 3},
                 {"i": 3, "retry_or_recovery": "recovery"}]
 
+    # The relocation ladder tried, every rung lost, and the replan family made
+    # the save. Every rung wears the `recovery` label and supersedes the
+    # original `locate` failure, so any predicate that only reads "was a locate
+    # failure superseded by a labelled step" credits relocation for a rescue it
+    # did not make (PR #12, R7; measured on shop.html?mut=overlay-modal with a
+    # role-less first target).
+    rungs_lost_replan_won = [
+        {"i": 1, "failure_class": "locate", "superseded_by": 2},
+        {"i": 2, "retry_or_recovery": "recovery", "failure_class": "act", "superseded_by": 3},
+        {"i": 3, "retry_or_recovery": "recovery"},
+    ]
+
     rows = [
         ("relocation rescue (l4-shop-duplicate-labels)", {}, "success", reloc_trace("locate"),
          {"mutation_cases": 1, "mutation_passed": 1, "mutation_recovered": 1, "mutation_relocated": 1}),
@@ -598,6 +632,15 @@ def _check_mutation_metrics() -> dict:
          {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
         ("survived with nothing to recover (l4-shop-ids-renamed)", {}, "success", [],
          {"mutation_cases": 1, "mutation_passed": 1, "mutation_recovered": 0, "mutation_relocated": 0}),
+        ("rungs lost, replan won (PR #12, R7)", {}, "success", rungs_lost_replan_won,
+         {"mutation_cases": 1, "mutation_passed": 1, "mutation_recovered": 1, "mutation_relocated": 0}),
+        ("expected failure, no mutation_survived key (PR #12, R8)",
+         {"status": "failure:locate"}, "failure:locate", [],
+         {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
+        ("expected failure, agent succeeded anyway", {"status": "failure:locate"}, "success", [],
+         {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
+        ("expected success, run failed", {}, "failure:locate", reloc_trace("locate"),
+         {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
     ]
     wrong = [{"row": note, "want": want, "got": got}
              for note, exp, status, trace, want in rows
