@@ -332,13 +332,13 @@ def _run_verifier_case(case: dict) -> dict:
     # a dump ratio of 1.0 (the value IS the whole window), which reads as a
     # page dump to `not_a_dump` and once made this case fail for an unrelated
     # reason: the placeholder scaffolding looked like a dump, not the run
-    # (ADR-007). Padded to a realistic evidence-window length so the ratio
+    # (ADR-008). Padded to a realistic evidence-window length so the ratio
     # sits nowhere near DUMP_RATIO.
     _INERT_PAGE_TEXT = (
         "ok — inert placeholder evidence, padded to a realistic "
         "evidence-window length so the dump ratio sits nowhere near the "
         "DUMP_RATIO threshold; this probe only exercises supersede "
-        "resolution, not evidence content (see ADR-007)."
+        "resolution, not evidence content (see ADR-008)."
     )
     for sc in inp.get("superseded", []):
         v = verify(trace=sc["trace"], extractions=[{"value": "ok", "page_text": _INERT_PAGE_TEXT}], answer="ok")
@@ -354,7 +354,7 @@ def _run_verifier_case(case: dict) -> dict:
         " Additional inert catalogue filler appended so this scaffolded "
         "page_text reads at a realistic evidence-window length rather than "
         "a synthetic short string whose dump ratio is noise near the "
-        "threshold (see ADR-007)."
+        "threshold (see ADR-008)."
     )
     for sc in inp.get("anchors", []):
         v = verify(
