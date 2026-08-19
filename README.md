@@ -201,8 +201,8 @@ The biggest ones, stated plainly:
 The full record is [`prompts/`](prompts/) — curated correction chains, each
 ending in *assumed → eval said → corrected*, plus the raw session dumps.
 
-The honest headline is a measurement of this method's weak spot: **20 defects
-across six milestones were found by cold review, by a reviewer's note, or by
+The honest headline is a measurement of this method's weak spot: **26 defects
+across seven milestones were found by cold review, by a reviewer's note, or by
 adding a new domain — not by the eval suite — in code that was green at the
 time.** The first live
 domain produced one within an hour, by revealing that the page observation
@@ -213,9 +213,21 @@ four more still, three of which answered a question confidently and wrongly
 with no error anywhere in the trace. Every one of those three needed a page
 shape the repo's only offline listing happens not to have.
 
-The eval set is not weak; it is 84 cases, it caught a *bad fix* mid-session
-during the last review, and in M6 it caught a fix that passed its own case for
-the wrong reason. But an eval set written by the author of the code is
+M8 added six more, all in the same milestone's own review rounds, and they are
+the sharpest of the set because none of them were in the product: two readings
+of the recovery counter that each published a rescue as a relocation it was not,
+a survival rule that counted a loud failure as a survival, a submit shim that
+would have silently disabled any form whose button did not spell out
+`type="submit"`, and a committed report that showed `answer_matches: true` for
+an answer the same repo calls wrong. **The sharpest single instance is that the
+fix which made the survival rule honest was itself ungraded** — reverting it
+left the suite at 84/84 and restored the flattering number in silence
+(`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
+record all six).
+
+The eval set is not weak; it is 96 cases (86 of them in the offline gate), it
+caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
+passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
 observed to move that blind spot are adversarial review and unfamiliar input.
 That is why the cold review is a gate here rather than a nicety.

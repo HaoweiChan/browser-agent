@@ -1,7 +1,7 @@
 # ADR-002: Performance thresholds set from the M2 baseline
 
 Date: 2026-08-16
-Status: accepted
+Status: accepted; **Decision 4 (fast wall clock ≤ 60s) is knowingly breached since M8** — the gate measures 66.6-68.3s, 10.6s of it one case spending a deliberate Playwright click timeout. Declared rather than silently re-set: `specs/decisions/ADR-009-m8-mutation-hostility.md` Decision 6 and `docs/support-matrix.md` D8 carry the measurement, the reasoning, and the named fix (the parallel eval runner, still backlog). Decisions 1-3, 5 and 6 stand as written.
 
 ## Context
 

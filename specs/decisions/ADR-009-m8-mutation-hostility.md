@@ -155,8 +155,9 @@ resolves something positional targeting gets *wrong*.
 | `get_by_role('listitem')` | 1 — the pager | 1 |
 
 The planner is blind to content the verifier can read in full. Given an
-observation containing a heading, four chrome links, a navigation, a list, one
-listitem and a contentinfo, the most plausible target for "the first quote" is
+observation containing a WebArea, a heading, five chrome links, a navigation, a
+list, one listitem (the pager) and a contentinfo — eleven elements, none of them
+content — the most plausible target for "the first quote" is
 `{role: listitem, index: 0}` — and it resolves, to the pager. The run reports
 `success`, answer **"Next →"**, runtime verdict PASS
 (`live-quotes-js-role-tier-blind`). `identity_anchors` passes too, on
@@ -200,13 +201,15 @@ adapter's existing guard (`recovery_verified` requires all checks to pass)
 would have held here, but only by luck of this case's shape; the case
 documents the trap rather than relying on it.
 
-## Decision 6 — the `fast` gate now costs 67.6s, over ADR-002's 60s, and the case stays
+## Decision 6 — the `fast` gate now costs 66.6-68.3s, over ADR-002's 60s, and the case stays
 
-`l4-shop-overlay-modal` spends 10.6s of that on one Playwright click timeout
-(the committed suite has since measured **66.6-68.3s** across the runs on this
-branch — a range of observations on one machine, not a bound: a reviewer
-measured 68.6s on another. The heading's figure is the one this decision was
-taken on; `docs/support-matrix.md` D8 carries the same range).
+`l4-shop-overlay-modal` spends 10.6s of that on one Playwright click timeout.
+The decision was taken on a single 67.6s run; the heading carries the band the
+committed reports actually measure, **66.6-68.3s** (68.05s in
+`evals/report/20260820-020212-fast.json`) — observations on one machine, not a
+bound, since a reviewer measured 68.6s on another. `docs/support-matrix.md` D8
+carries the same range.
+
 That is not waste: Playwright retries the hit test until the timeout, so
 discovering that a resolved element cannot be clicked costs exactly one
 timeout, and there is no cheaper way to observe interception. The obvious
@@ -425,7 +428,8 @@ their red halves recorded (six new L4 cases, seven counting the `near` twin); a 
 published as it ran; two metrics that stop flattering; and a fourth live domain
 (nine rows in the support matrix, four of them live).
 
-Costs: a pre-commit gate at 67.6s, over its own documented ceiling; two
+Costs: a pre-commit gate at 66.6-68.3s across runs (68.05s in the committed
+`evals/report/20260820-020212-fast.json`), over its own documented ceiling; two
 committed cases whose green means "the agent is reliably wrong here"; and a
 declared limitation list seven rows longer (D5–D11).
 
