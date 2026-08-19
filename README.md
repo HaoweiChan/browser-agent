@@ -123,9 +123,9 @@ is not. Measuring the size of that gap is the next milestone's whole job.
   means these numbers grade the resolver → executor → verifier path and say
   **nothing about planning quality**. Real measured spend: three deployed tasks, at
   **$0.0029**, **$0.0065 / 1438 tokens / 6.5s** and **$0.0055 / 1446 tokens / 6.3s**.
-- **`recovery 3/3` is a floor on three injected cases, not a rate.** Eight rungs
-  were tried to produce three verified recoveries; that ratio is printed beside
-  it rather than folded into it.
+- **`recovery 7/7` is a floor on seven injected cases, not a rate.** Thirteen
+  rungs were tried to produce seven verified recoveries; that ratio is printed
+  beside it rather than folded into it.
 - **`mutation 9/11 passed, 6 recovered (5 by relocating)`** is the load-bearing
   split, and it has been narrowed twice by review. Two of the eleven mutation
   cases are pinned as **losses**: a re-ordered list turns a positional plan into

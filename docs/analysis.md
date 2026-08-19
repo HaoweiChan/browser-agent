@@ -318,8 +318,8 @@ recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 b
 diagnosis 14/14 · 4 replans
 ```
 
-- **recovery 3/3** is a floor on a denominator of three injected cases, not a
-  rate. Six rungs were tried to produce three verified recoveries, and that
+- **recovery 7/7** is a floor on a denominator of seven injected cases, not a
+  rate. Thirteen rungs were tried to produce seven verified recoveries, and that
   ratio is printed beside it rather than folded into it. Since ADR-005 it is
   graded on the audit, not on the runtime's own claim of success.
 - **mutation 9/11 passed, 6 recovered (5 by relocating)** is the load-bearing
@@ -331,7 +331,7 @@ diagnosis 14/14 · 4 replans
   relocation until review caught it. Counting 11/11 as "survived by
   self-maintenance" would be the flattering lie
   (`specs/decisions/ADR-009-m8-mutation-hostility.md`).
-- **diagnosis 8/8** is on injected classes only. Five of seven taxonomy classes
+- **diagnosis 14/14** is on injected classes only. Five of seven taxonomy classes
   are reachable by injection; `env` and `nav` have truth-table coverage but no
   end-to-end injected case.
 
