@@ -533,7 +533,7 @@ def _run_fixture_case(case: dict) -> dict:
     if result["budgets_spent"]["replans"]:
         metrics["replans"] = result["budgets_spent"]["replans"]
 
-    return {
+    out = {
         "passed": all(checks.values()),
         "checks": checks,
         "audit": audit,
@@ -543,6 +543,21 @@ def _run_fixture_case(case: dict) -> dict:
                 "reason": result["reason"]},
         "budgets": result["budgets_spent"],
     }
+    # A case may pin the WRONG answer as its expectation, because that is what
+    # the build really produces (l4-shop-element-reordered,
+    # live-quotes-js-role-tier-blind). `expect.answer` is layer-2 ground truth
+    # to verify(), so such a run publishes a fully green audit —
+    # `answer_matches: true`, `ground_truth: true` — for an answer every
+    # document here calls wrong. The prose said so; the committed report did
+    # not, and "hostile results published raw" is a claim about the artifact
+    # (PR #12, R14). This key travels with the result into evals/report/*.json
+    # so a reader with jq and no prose cannot read that PASS as "verified
+    # correct".
+    if exp.get("answer_is_known_wrong"):
+        out["known_wrong_ground_truth"] = (
+            "expect.answer pins the WRONG answer this build produces; a PASS here means "
+            "'the agent reproduced the known-wrong answer', never 'the answer is correct'")
+    return out
 
 
 def mutation_metrics(exp: dict, status: str, trace: list) -> dict:
@@ -581,6 +596,14 @@ def mutation_metrics(exp: dict, status: str, trace: list) -> dict:
     # changing — its four resolved tiers are all `role` — and it was published
     # inside "N by relocating", the count ADR-002 introduced precisely to keep
     # the flattering reading out (PR #12, R1).
+    # ponytail: the family is read from the IMMEDIATELY superseded attempt only.
+    # Ceiling (PR #12, R15, declared not fixed — support-matrix D11): if rung 1
+    # retargets at a new tier and then fails `act` — the laundering shape
+    # live-ol-search-a11y-invisible records — and rung 2 wins, the rescue's
+    # predecessor reads `act` and a real relocation is not counted. Undercount,
+    # never a flatter; no case in the suite produces it today. Upgrade: walk the
+    # supersede chain back to the failure that started the ladder, with a row in
+    # mutation-metrics-honesty pinning the intended answer first.
     failed = {s["superseded_by"]: s for s in trace if s.get("superseded_by")}
     relocated = [s for s in rescues if failed.get(s["i"], {}).get("failure_class") == "locate"]
     # Both recovery counters are gated on survival: a run that lost is not a
@@ -645,6 +668,35 @@ def _check_mutation_metrics() -> dict:
     wrong = [{"row": note, "want": want, "got": got}
              for note, exp, status, trace, want in rows
              if (got := mutation_metrics(exp, status, trace)) != want]
+    return {"passed": not wrong, "wrong": wrong}
+
+
+def _run_declared_keys_case(case: dict) -> dict:
+    """Which cases carry an opt-in `expect` key is a documented fact — grade it.
+
+    Both keys exist to make a case say something the harness cannot infer, and
+    both are described in prose that has already gone stale once: the
+    methodology doc still claimed `mutation_survived` kept two cases out of the
+    survival numerator, a round after one of them stopped using it (PR #12,
+    R12). Sets, not counts, so the failure names the file.
+    """
+    evals_dir = Path(__file__).parents[2] / "evals"
+    files = {p.stem: json.loads(p.read_text(encoding="utf-8"))
+             for d in ("golden", "adversarial") for p in (evals_dir / d).glob("*.json")}
+    wrong = []
+    for key, want in case["input"]["declared"].items():
+        # Presence, not truthiness: `mutation_survived` is meaningful precisely
+        # when it is `false`, so a `.get(key)` test finds nobody carrying it.
+        got = sorted(cid for cid, c in files.items() if key in (c.get("expect") or {}))
+        if got != sorted(want):
+            wrong.append({"key": key, "declared": sorted(want), "actual": got})
+    # A pin with no `expect.answer` marks nothing: the key only means anything
+    # where an answer is being asserted as ground truth.
+    empty = sorted(cid for cid, c in files.items()
+                   if (c.get("expect") or {}).get("answer_is_known_wrong")
+                   and "answer" not in (c.get("expect") or {}))
+    if empty:
+        wrong.append({"key": "answer_is_known_wrong", "marks_nothing_no_expect_answer": empty})
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -904,6 +956,7 @@ def _run_invariant_case(case: dict) -> dict:
 # default shape; every other kind names the narrower thing it grades.
 KINDS = {
     "classify": _run_classify_case,
+    "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,
     "invariant": _run_invariant_case,
     "matrix": _run_matrix_case,

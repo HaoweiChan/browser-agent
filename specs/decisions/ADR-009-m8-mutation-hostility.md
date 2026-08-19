@@ -2,8 +2,8 @@
 
 Date: 2026-08-19
 Status: accepted; Decisions 5 and 6 were amended in the same PR (#12) by
-Decisions 7 and 8, after two review rounds found the same metric block wrong
-twice. The original text is left as written; Decisions 7 and 8 say what moved
+Decisions 7, 8 and 9, after three review rounds: two found the same metric
+block wrong twice, the third found the documents describing it stale. The original text is left as written; Decisions 7 and 8 say what moved
 and — in round 2 — where round 1's own repair fell short.
 
 ## Context
@@ -125,8 +125,16 @@ anchors — the runtime `anchor not in body` gate and `verify()`'s
 row was read. There is no relocation either: `relocation_candidates` returns
 no rungs for a target that names no string, deliberately.
 
-So `l4-shop-element-reordered` is committed asserting the wrong answer, the
-same convention `live-ol-search-a11y-invisible` set at M6. Its pair,
+So `l4-shop-element-reordered` is committed asserting the wrong answer. That is
+**not** the `live-ol-search-a11y-invisible` convention, which this ADR first
+claimed it was: that case pins a *failure* and carries no `expect.answer`, so no
+ground truth is injected at all. These are the first two cases in the repo to
+pin a **wrong answer as layer-2 ground truth**, which means their committed
+audit reads `answer_matches: true, ground_truth: true, verdict: PASS` for an
+answer every document here calls wrong (PR #12, R14). They therefore carry
+`expect.answer_is_known_wrong: true`, and the adapter echoes
+`known_wrong_ground_truth` into the published result, so the artifact says what
+the prose says. Its pair,
 `l4-shop-element-reordered-near`, runs the identical task and mutation with
 `near:` instead of `index:` and answers correctly at tier `structural`. The
 pair is the first measurement of what `near` was built for at M6 — until now
@@ -195,7 +203,8 @@ documents the trap rather than relying on it.
 ## Decision 6 — the `fast` gate now costs 67.6s, over ADR-002's 60s, and the case stays
 
 `l4-shop-overlay-modal` spends 10.6s of that on one Playwright click timeout
-(68.2s as finally committed, with one more case added after the measurement).
+(the committed suite has since measured 66.9-68.2s across runs as cases were
+added; the heading's figure is the one this decision was taken on).
 That is not waste: Playwright retries the hit test until the timeout, so
 discovering that a resolved element cannot be clicked costs exactly one
 timeout, and there is no cheaper way to observe interception. The obvious
@@ -235,7 +244,8 @@ first milestone able to see.
    on `passed` only. The counters are now a pure function
    (`eval_adapter.mutation_metrics`) with an invariant case over synthetic
    traces (`mutation-metrics-honesty`), watched red first — and re-checked by
-   putting the old expression back, which turns three of its six rows red.
+   putting the old expression back, which turns three of its six rows red
+   (six rows at that point; ten after Decision 8).
 3. **`mutation_recovered` was not survival-gated**, so a future case shaped like
    `l4-shop-element-reordered` (a wrong-but-successful answer after a rung) would
    have counted inside "by relocating" while sitting outside "survived", making
@@ -302,6 +312,47 @@ pipe-delimited paragraph — the parser is line-based and could not see it, whic
 is a fair reminder that `support-matrix-cites-real-cases` grades citations, not
 layout.
 
+## Decision 9 — review round 4: the code was right, the declarations were not
+
+Round 3 verified that the round-2 repairs hold — no counter moved a third time
+— and every finding after it was declaration-vs-code drift. That is its own
+lesson, so it is recorded rather than quietly patched: **this PR changed the
+same metric rule three times and updated a different subset of its four
+descriptions each time.** The ADR and the support matrix were amended in rounds
+1 and 2; `docs/evals/evaluation-methodology.md` was not, and spent two rounds
+telling readers that the metric "counts matched its expectation" (the defect)
+and that two cases carry `mutation_survived: false` (one does). The prose that
+went stale was the prose nothing could grade.
+
+So the fix is not only the paragraph. `opt-in-expect-keys-declared` grades the
+claim itself: the declared users of `mutation_survived` and
+`answer_is_known_wrong` are compared against the case files, in sets, so the
+next time one moves the suite names the file instead of a reviewer naming it two
+rounds later. It joins the same family as `mutation-catalog-integrity`'s
+MUTATIONS coverage check (round 2) and `support-matrix-cites-real-cases`. The
+repo's own history is the argument for it: "no case shows this shape" has been
+falsified within days three times in this project.
+
+**The artifact, not just the prose (R14).** `l4-shop-element-reordered` and
+`live-quotes-js-role-tier-blind` pin wrong answers, and `expect.answer` is
+layer-2 ground truth to `verify()` — so the committed reports carry
+`verdict: PASS, ground_truth: true, answer_matches: true` for "Next →" as the
+author of a quote. The prose called it wrong; the raw artifact read as verified.
+M8's gate criterion is *hostile results published raw*, which is a claim about
+the artifact, so both cases now carry `expect.answer_is_known_wrong: true` and
+the adapter echoes `known_wrong_ground_truth` into the result. This ADR also
+cited `live-ol-search-a11y-invisible` as the precedent for pinning a wrong
+answer; it is not one — that case pins a *failure* and injects no ground truth
+at all. Corrected in Decision 3.
+
+**Declared, not fixed (R15).** `mutation_relocated` reads the recovery family
+from the immediately-superseded attempt, so a genuine relocation whose previous
+rung failed `act` — the laundering shape `live-ol-search-a11y-invisible`
+records — is undercounted. No case produces it, the error can only understate
+relocation, and the alternative was speculative counter surgery in the round
+meant to close the PR. Named at the call site with its upgrade path and in
+support-matrix D11.
+
 ## What is deliberately NOT fixed
 
 1. **A bounded wait in `resolve()`** (would close render-delayed and
@@ -344,14 +395,14 @@ budget the mutation catalogue and the hostile domain needed.
 Buys: five B-strong mutations that each break something a plan stands on, with
 their red halves recorded (six new L4 cases, seven counting the `near` twin); a hostile live domain whose result is a wrong answer
 published as it ran; two metrics that stop flattering; and a fourth live domain
-(seven rows in the support matrix, four of them live).
+(nine rows in the support matrix, four of them live).
 
 Costs: a pre-commit gate at 67.6s, over its own documented ceiling; two
 committed cases whose green means "the agent is reliably wrong here"; and a
-declared limitation list four rows longer (D5–D9).
+declared limitation list seven rows longer (D5–D11).
 
-Numbers, 2026-08-19 (after both repair rounds, PR #12): `fast` 85/85 (67.2s),
-`invariant` 21/21, `live` 9/9, $0.0000, mutation **9/11 survived, 6 recovered — 5 by
+Numbers, 2026-08-20 (after all repair rounds, PR #12): `fast` 86/86 (67.7s),
+`invariant` 22/22, `live` 9/9, $0.0000, mutation **9/11 survived, 6 recovered — 5 by
 relocating** (was 4/4, 2 relocating), recovery 7/7 verified over 13 rungs,
 diagnosis 14/14. The first commit published "6 by relocating"; Decision 7 is
 why that figure moved.

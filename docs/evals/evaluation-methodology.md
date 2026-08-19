@@ -91,11 +91,27 @@ changing anything measures the catalogue's size, not the agent
 (`specs/decisions/ADR-009-m8-mutation-hostility.md`).
 
 An L4 case = one base task × one mutation; pass = same semantic result as base
-**where the agent survives at all**. Two of the five above are committed with
-the failure as their expectation, because that is what the build really does,
-and `expect.mutation_survived: false` keeps them out of the survival numerator
-(the metric otherwise counts "matched its expectation", which for a case that
-expects a loud stop counts a failure as a survival).
+**where the agent survives at all**. Two of the five are committed asserting
+what the build really does rather than what it should do: render-delayed
+expects `failure:locate`, and element-reordered expects `success` **with the
+wrong answer**.
+
+Surviving a mutation is a stricter thing than passing its case, and the rule is
+in code (`eval_adapter.mutation_metrics`), not in this paragraph: a run
+survives when it ended in `status: success`, the case did not expect a failure,
+and the case did not declare the run a loss. The first two clauses cover
+render-delayed by themselves. The third is the opt-in key
+`expect.mutation_survived: false`, and **exactly one case needs it** —
+`l4-shop-element-reordered`, which succeeds with a wrong answer. A second
+opt-in, `expect.answer_is_known_wrong: true`, marks a case whose `expect.answer`
+pins that wrong answer as layer-2 ground truth, so the published report says so
+where a reader is looking (`known_wrong_ground_truth` in the result) instead of
+showing a green `answer_matches` with no context.
+
+Both of those claims about which cases carry which key are graded, not merely
+written here: `opt-in-expect-keys-declared` compares the declared sets against
+the case files, because this paragraph described the pre-repair rule for a full
+review round after the code changed underneath it (ADR-009 Decision 9).
 
 ## OutcomeVerifier — layered verification (executor never grades itself)
 
