@@ -505,7 +505,17 @@ def _run_fixture_case(case: dict) -> dict:
     metrics = {}
     if inp.get("mut"):
         metrics["mutation_cases"] = 1
-        metrics["mutation_passed"] = int(result["status"] == exp.get("status", "success"))
+        # Matching an expectation is not surviving a mutation. Two M8 cases
+        # expect the agent to lose: l4-shop-element-reordered expects the WRONG
+        # answer (positional targeting has no relocation rung and nothing
+        # catches the swap) and l4-shop-render-delayed expects a loud
+        # failure:locate. Both match their expectation exactly, and counting
+        # them in the survival numerator would report "10/10 mutations passed"
+        # for a catalogue the agent survives 8 of. Latent since M2 — no
+        # mutation case had ever expected anything but success.
+        survived = exp.get("mutation_survived", True)
+        metrics["mutation_passed"] = int(
+            survived and result["status"] == exp.get("status", "success"))
         # Passing is not recovering. Two of the three B-floor mutations break a
         # tier no plan was standing on, so they pass without anything being
         # relocated; counting those as recoveries is the flattering lie ADR-002

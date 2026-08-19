@@ -69,11 +69,33 @@ Deterministic server-side HTML transforms on fixture pages, selected by
 of waiting for real sites to change.
 
 B-floor (3 types, each chosen to break a specific locator tier) [MUST]:
-`ids-renamed` (breaks stable-attr tier) · `button-text-renamed` (breaks
-text/label tier) · `wrapper-nesting` (breaks structural assumptions).
-B-strong [SHOULD]: `classes-scrambled`, `element-reordered`, `duplicate-labels`,
-`render-delayed`, `overlay-modal`, `a11y-stripped` (hostile div-soup).
-An L4 case = one base task × one mutation; pass = same semantic result as base.
+ids-renamed (breaks stable-attr tier) · button-text-renamed (breaks
+text/label tier) · wrapper-nesting (breaks structural assumptions).
+
+B-strong [SHOULD], **implemented at M8** — the admission test is "does it break
+a capability a plan stands on", which is wider than "is it a locator tier" and
+narrower than the original wish-list:
+
+| mutation | breaks | the rung that survives | case |
+|---|---|---|---|
+| duplicate-labels | role+name **uniqueness** — the only source of `ambiguous-match` in the catalogue | text | l4-shop-duplicate-labels |
+| a11y-stripped | the role tier for controls (button → div, text and ids intact) | text | l4-shop-a11y-stripped, l4-forms-a11y-stripped |
+| element-reordered | positional `index` | none — `near` survives it, `index` has no rung | l4-shop-element-reordered (+ …-near) |
+| render-delayed | *when* the resolver looks (content arrives 3s late) | none | l4-shop-render-delayed |
+| overlay-modal | actionability — the element resolves and cannot be clicked | replan (the act family, not relocation) | l4-shop-overlay-modal |
+
+**classes-scrambled is dropped, not deferred**: the resolver has no class tier
+and no code path anywhere reads a class attribute, so scrambling classes would
+break nothing a locator stands on. A mutation every case survives without
+changing anything measures the catalogue's size, not the agent
+(`specs/decisions/ADR-009-m8-mutation-hostility.md`).
+
+An L4 case = one base task × one mutation; pass = same semantic result as base
+**where the agent survives at all**. Two of the five above are committed with
+the failure as their expectation, because that is what the build really does,
+and `expect.mutation_survived: false` keeps them out of the survival numerator
+(the metric otherwise counts "matched its expectation", which for a case that
+expects a loud stop counts a failure as a survival).
 
 ## OutcomeVerifier — layered verification (executor never grades itself)
 

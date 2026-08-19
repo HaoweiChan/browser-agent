@@ -1,7 +1,9 @@
 {
   "id": "mutation-catalog-integrity",
   "task": "browser",
-  "suites": ["fast"],
+  "suites": [
+    "fast"
+  ],
   "input": {
     "kind": "mutation",
     "fixture": "shop.html",
@@ -26,10 +28,48 @@
         "<div class=\"w-outer\">": true,
         "id=\"catalogue\"": true,
         ">Search<": true
+      },
+      "duplicate-labels": {
+        "<button id=\"sort-btn\" onclick=\"sortByPrice()\" aria-label=\"Search\">": true,
+        "<button id=\"search-btn\" type=\"submit\" aria-label=\"Search\">Search</button>": true,
+        ">Sort by price (low to high)</button>": true,
+        "id=\"catalogue\"": true
+      },
+      "a11y-stripped": {
+        "<button": false,
+        "<div id=\"sort-btn\" onclick=\"sortByPrice()\">Sort by price (low to high)</div>": true,
+        "<div id=\"search-btn\" type=\"submit\">Search</div>": true,
+        "div[type=\"submit\"]": true,
+        "<a href=\"shop-rug.html\">": true,
+        "id=\"catalogue\"": true
+      },
+      "element-reordered": {
+        "$18.00</span></li>\n  <li id=\"row-clock\"": true,
+        "$39.00</span></li>\n  <li id=\"row-lamp-pro\"": false,
+        ">Meridian Wall Clock</a>": true,
+        "<button": true
+      },
+      "render-delayed": {
+        "mut-render-delay": true,
+        "id=\"catalogue\"": true,
+        ">Search<": true
+      },
+      "overlay-modal": {
+        "id=\"mut-overlay\"": true,
+        "role=\"dialog\"": true,
+        ">Close</button>": true,
+        "Newsletter closed": true,
+        ">Sort by price (low to high)</button>": true,
+        "id=\"catalogue\"": true
       }
     }
   },
-  "expect": { "note": "each mutation breaks its own tier and leaves the other two alone" },
-  "provenance": "ground-truth integrity for the whole L4 story. If a mutation silently stopped mutating — a renamed fixture element, a regex that no longer matches — every mutation case would pass for the wrong reason and the self-maintenance evidence would be worthless. Checks are literal substrings of src/browser/fixtures/shop.html. The 'getElementById: false' check was added after l4-shop-ids-renamed went red on first run (2026-08-16): the mutation was renaming ids the fixture's own script depended on, so it broke the page rather than the agent's stable-attr dependency. A fault injector that damages the fixture measures nothing.",
-  "triage": { "class": "eval-integrity", "note": "guards the fault injector, not the product" }
+  "expect": {
+    "note": "each mutation breaks its own capability and leaves the others alone"
+  },
+  "provenance": "ground-truth integrity for the whole L4 story. If a mutation silently stopped mutating — a renamed fixture element, a regex that no longer matches — every mutation case would pass for the wrong reason and the self-maintenance evidence would be worthless. Checks are literal substrings of src/browser/fixtures/shop.html. The 'getElementById: false' check was added after l4-shop-ids-renamed went red on first run (2026-08-16): the mutation was renaming ids the fixture's own script depended on, so it broke the page rather than the agent's stable-attr dependency. A fault injector that damages the fixture measures nothing. M8 added five blocks. Three claims each of them makes are checked here rather than inferred: (1) the mutation fired at all; (2) the tier the L4 case relocates TO is untouched — '>Sort by price (low to high)</button>' under duplicate-labels, the shop-rug link under a11y-stripped; (3) the mutation did not damage the fixture — 'div[type=\"submit\"]' is the click shim without which a11y-stripped would silently disable the search form the case it guards depends on, and 'Newsletter closed' is the checkable consequence overlay-modal's dismissal leaves behind. element-reordered is the only mutation whose claim is about ORDER, so its two needles span a row boundary: rug must now precede clock, and the base order (lamp-std before lamp-pro) must be gone. render-delayed is the one mutation this file cannot fully guard — its effect happens at runtime, so only the injected script is visible as a substring; its L4 case guards the rest by expecting a failure that a dead mutation could not produce. Every other M8 case is self-guarding the same way: a dead mutation makes l4-shop-duplicate-labels, l4-shop-a11y-stripped and l4-shop-overlay-modal go RED, because each asserts the recovery (or replan) that only a live mutation forces.",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "guards the fault injector, not the product"
+  }
 }

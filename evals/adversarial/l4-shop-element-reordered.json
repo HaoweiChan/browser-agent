@@ -1,0 +1,28 @@
+{
+  "id": "l4-shop-element-reordered",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC1",
+  "mutation": "element-reordered",
+  "input": {
+    "task": "What does the catalogue row for the Meridian Wall Clock say?",
+    "fixture": "shop.html",
+    "mut": "element-reordered",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "listitem", "index": 2 }, "anchor": "Meridian Wall Clock" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Aurora Desk Lamp Pro $59.00",
+    "anchors": ["Meridian Wall Clock"],
+    "mutation_survived": false
+  },
+  "provenance": "the mutation that does NOT end in a recovery, committed with the wrong answer as its expectation because that is what the run really produces. `index` is not a locator tier but it is load-bearing: two of the three live domains reach their answer by counting (live-books-travel-price index 5, live-hn-item1-title index 11), and both cases already declare in their own triage that a re-ordered page would silently return the wrong element. element-reordered is that declaration made executable. Base order is lamp-std, lamp-pro, clock, rug; reversed it is rug, clock, lamp-pro, lamp-std, so `index: 2` moves from the Meridian row to the Aurora Pro row. Nothing catches it: `relocation_candidates` returns no rungs for a target that names no string (deliberate — resolver.py), and BOTH identity-anchor checks pass, because 'Meridian Wall Clock' is on the page whatever row was read. The pair to this case is l4-shop-element-reordered-near, where the same task expressed with `near:` survives the same mutation.",
+  "triage": {
+    "class": "declared-limitation",
+    "note": "support-matrix D5. `mutation_survived: false` keeps this case out of the mutation-survival metric: it matches its expectation, and the agent still got the task wrong. Do not 'fix' this case by re-writing the plan to use a name — the whole point is the positional plan.",
+    "what_would_catch_it": "an identity anchor scoped to the extracted ELEMENT rather than the page — which would break every case whose anchor is legitimately elsewhere on the page (live-hn-item1-title anchors on the submitter while extracting the title), so it is not a fix, it is a different contract. Ground-truth L2 catches it; a live run has no ground truth."
+  }
+}
