@@ -11,7 +11,7 @@ change (docs/evals/evaluation-methodology.md).
 | duplicate-labels     | role+name UNIQUENESS  | visible text (each control keeps its own) |
 | a11y-stripped        | role tier (controls)  | visible text, ids, list/link roles   |
 | element-reordered    | positional `index`    | roles, names, text, `near` proximity |
-| render-delayed       | the instant at which the resolver looks | every tier, 3s later |
+| render-delayed       | the instant at which the resolver looks | every tier, 10s later |
 | overlay-modal        | actionability (click) | every tier — the element resolves fine |
 
 The first three are the B-floor set (M2): each breaks exactly one locator tier,
@@ -127,9 +127,16 @@ def duplicate_labels(html: str) -> str:
 # shop.html's JS-handled search form — and submits nothing at all against
 # forms.html's real POST, which was watched red before this line changed
 # (case l4-forms-a11y-stripped; l4-shop-a11y-stripped stayed green throughout).
+#
+# Selected by `data-was-button`, not by `[type="submit"]`: HTML makes a bare
+# `<button>` inside a form a submitter by default, and both current fixtures
+# happen to spell the type out — so a type-keyed shim was correct only by
+# fixture accident and would have silently disabled the next implicit one
+# (PR #12, R4). `:not([type=button]):not([type=reset])` is the actual rule.
 _SUBMIT_SHIM = (
     "<script>document.addEventListener('DOMContentLoaded',function(){"
-    "for(const d of document.querySelectorAll('div[type=\"submit\"]'))"
+    "for(const d of document.querySelectorAll("
+    "'form div[data-was-button]:not([type=\"button\"]):not([type=\"reset\"])'))"
     "d.addEventListener('click',function(){const f=d.closest('form');"
     "if(f)f.requestSubmit();});});</script>"
 )
@@ -150,7 +157,7 @@ def a11y_stripped(html: str) -> str:
     Cases: l4-shop-a11y-stripped (JS-handled form), l4-forms-a11y-stripped
     (native POST — the one that keeps the shim below honest).
     """
-    html = _BUTTON_OPEN.sub(r"<div\1>", html).replace("</button>", "</div>")
+    html = _BUTTON_OPEN.sub(r"<div data-was-button\1>", html).replace("</button>", "</div>")
     return html + _SUBMIT_SHIM
 
 
@@ -173,11 +180,16 @@ def element_reordered(html: str) -> str:
     return _LI_ROW.sub(lambda m: next(it), html)
 
 
-# 3s: long enough that no rung of the relocation ladder can outlast it (the
-# whole locate->re-observe->retarget cycle runs in ~0.4s against a loopback
-# fixture), short enough that a human watching the page sees it fill in. The
-# live twin, quotes.toscrape.com/js-delayed, uses 10s.
-_RENDER_DELAY_MS = 3000
+# 10s, the same delay the live twin (quotes.toscrape.com/js-delayed) uses. The
+# delay costs the suite nothing — the run fails and the browser closes long
+# before the timer fires — so the only thing the number buys is margin, and
+# margin is the whole point: this is a `fast`-suite case whose expectation
+# depends on the agent giving up BEFORE the content lands, in a suite ADR-002
+# declares deterministic. Measured end-to-end cost of the run it bounds:
+# `budgets_spent.ms = 388`, i.e. a 26x margin (was 7.7x at 3s — PR #12, R5).
+# If a machine ever misses by 26x the case flips to `success` and goes red,
+# which is a loud stop, not a silent pass.
+_RENDER_DELAY_MS = 10_000
 _RENDER_DELAY = (
     "<script id='mut-render-delay'>document.addEventListener('DOMContentLoaded',function(){"
     "const el=document.querySelector('ul,ol,table');if(!el)return;"
@@ -187,7 +199,7 @@ _RENDER_DELAY = (
 
 
 def render_delayed(html: str) -> str:
-    """The content list arrives 3s after DOMContentLoaded.
+    """The content list arrives 10s after DOMContentLoaded.
 
     Breaks no tier — it breaks the *instant* the resolver looks. `resolve()`
     counts matches once, with no wait of any kind, so an element that is merely

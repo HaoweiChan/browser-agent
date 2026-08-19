@@ -81,7 +81,7 @@ narrower than the original wish-list:
 | duplicate-labels | role+name **uniqueness** — the only source of `ambiguous-match` in the catalogue | text | l4-shop-duplicate-labels |
 | a11y-stripped | the role tier for controls (button → div, text and ids intact) | text | l4-shop-a11y-stripped, l4-forms-a11y-stripped |
 | element-reordered | positional `index` | none — `near` survives it, `index` has no rung | l4-shop-element-reordered (+ …-near) |
-| render-delayed | *when* the resolver looks (content arrives 3s late) | none | l4-shop-render-delayed |
+| render-delayed | *when* the resolver looks (content arrives 10s late) | none | l4-shop-render-delayed |
 | overlay-modal | actionability — the element resolves and cannot be clicked | replan (the act family, not relocation) | l4-shop-overlay-modal |
 
 **classes-scrambled is dropped, not deferred**: the resolver has no class tier

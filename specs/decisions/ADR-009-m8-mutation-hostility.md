@@ -1,7 +1,10 @@
 # ADR-009: The mutation catalogue is five, not six, and the hostile domain answered "Next →"
 
 Date: 2026-08-19
-Status: accepted
+Status: accepted; Decisions 5 and 6 were amended in the same PR (#12) by
+Decision 7, after review found that the metric fixed in Decision 5 had no case
+behind it and that the count published in Decision 6's numbers called a replan
+a relocation. The original text is left as written; Decision 7 says what moved.
 
 ## Context
 
@@ -27,7 +30,7 @@ the agent could not have avoided by being written differently?**
 | duplicate-labels | yes | role+name **uniqueness** | text |
 | a11y-stripped | yes | the role tier, for controls | text |
 | element-reordered | yes | positional `index` | `near` (but nothing relocates) |
-| render-delayed | yes | *when* the resolver looks | nothing |
+| render-delayed | yes | *when* the resolver looks (10s late) | nothing |
 | overlay-modal | yes | actionability after a successful resolve | replan (the act family) |
 | classes-scrambled | **no** | nothing | — |
 
@@ -209,6 +212,45 @@ backlog since M0, and promoting it is a milestone of its own with its own
 evidence. Until then the pre-commit gate costs a minute, which is the number a
 reviewer should see rather than a threshold quietly rewritten to contain it.
 
+## Decision 7 — review round (PR #12): the relocation count, and a fix nobody could grade
+
+Three findings, all in the metric block, all of the same family as Decision 5 —
+a counter whose label had drifted from what it counts, and which M8 was the
+first milestone able to see.
+
+1. **"N by relocating" included a rescue that relocated nothing.**
+   `l4-shop-overlay-modal` is saved by the act-family replan: its four resolved
+   tiers are all `role`, `replans == 1`, no tier ever changes — and it was
+   inside the published 6. Both ladders write the same
+   `retry_or_recovery: "recovery"`, so the label cannot separate them; the
+   *failure class of the attempt a rescue supersedes* can (`locate` = relocation
+   ladder, `act` = replan ladder). Split into `mutation_recovered` (any family)
+   and `mutation_relocated`, and `evals/run.py` now prints
+   `N recovered (K by relocating)`. **Every published figure moves from
+   "6 by relocating" to "6 recovered, 5 by relocating"** — including the first
+   commit's message, which is left as history rather than rewritten.
+2. **Decision 5's own fix had no case.** Reverting `mutation_passed` to the
+   pre-M8 expression left `fast` at 84/84 and restored the flattering 11/11
+   silently: a case's `passed` never reads its `metrics`, and the runner gates
+   on `passed` only. The counters are now a pure function
+   (`eval_adapter.mutation_metrics`) with an invariant case over synthetic
+   traces (`mutation-metrics-honesty`), watched red first — and re-checked by
+   putting the old expression back, which turns three of its six rows red.
+3. **`mutation_recovered` was not survival-gated**, so a future case shaped like
+   `l4-shop-element-reordered` (a wrong-but-successful answer after a rung) would
+   have counted inside "by relocating" while sitting outside "survived", making
+   the subset larger than its superset. Both recovery counters now carry the
+   survival term.
+
+Two smaller ones from the same review: the a11y-stripped submit shim keyed on
+`[type="submit"]`, which HTML does not require of a submitter, so an implicit
+`<button>` in a form would have been silently disabled — exactly Decision 2b's
+failure mode, avoided only by fixture accident. It keys on `data-was-button`
+now. And `render-delayed`'s injected delay went 3s → 10s: the delay costs the
+suite nothing (the run ends long before the timer fires), so the only thing the
+number buys is margin over the 388ms run it bounds — 26x instead of 7.7x — in a
+suite ADR-002 calls deterministic.
+
 ## What is deliberately NOT fixed
 
 1. **A bounded wait in `resolve()`** (would close render-delayed and
@@ -257,6 +299,9 @@ Costs: a pre-commit gate at 67.6s, over its own documented ceiling; two
 committed cases whose green means "the agent is reliably wrong here"; and a
 declared limitation list four rows longer (D5–D9).
 
-Numbers, 2026-08-19: `fast` 84/84 (68.2s), `invariant` 20/20, `live` 9/9,
-$0.0000, mutation **9/11 survived, 6 by relocating** (was 4/4 and 2), recovery
-7/7 verified over 13 rungs, diagnosis 14/14.
+Numbers, 2026-08-19 (repair round, PR #12): `fast` 85/85 (68s), `invariant`
+21/21, `live` 9/9, $0.0000, mutation **9/11 survived, 6 recovered — 5 by
+relocating** (was 4/4, 2 relocating), recovery 7/7 verified over 13 rungs,
+diagnosis 14/14. The first commit published "6 by relocating"; Decision 7 is
+why that figure moved.
+

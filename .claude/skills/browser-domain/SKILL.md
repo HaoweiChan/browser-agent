@@ -99,7 +99,7 @@ path. `src/browser/mutate.py` is the transform layer.
   `a11y-stripped` (button → div; text tier survives, and the submit shim keeps
   the fixture's own form alive), `element-reordered` (positional `index`;
   **nothing recovers it** and the wrong row is reported as success),
-  `render-delayed` (content 3s late; the resolver never waits), `overlay-modal`
+  `render-delayed` (content 10s late; the resolver never waits), `overlay-modal`
   (resolves fine, cannot be clicked → the act/replan family).
   `classes-scrambled` is **dropped, not missing** — no class tier exists, so it
   would break nothing (ADR-009).

@@ -126,7 +126,8 @@ def main():
         print(f"[eval] recovery {ratio('recovery_verified', 'recovery_expected')} verified "
               f"({int(metrics.get('recovery_rungs', 0))} rungs tried) · "
               f"mutation {ratio('mutation_passed', 'mutation_cases')} passed, "
-              f"{int(metrics.get('mutation_recovered', 0))} by relocating · "
+              f"{int(metrics.get('mutation_recovered', 0))} recovered "
+              f"({int(metrics.get('mutation_relocated', 0))} by relocating) · "
               f"diagnosis {ratio('diagnosis_correct', 'diagnosis_cases')} · "
               f"{int(metrics.get('replans', 0))} replans")
 

@@ -1,0 +1,13 @@
+{
+  "id": "mutation-metrics-honesty",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "level": "L1",
+  "input": { "kind": "invariant", "check": "mutation-metrics" },
+  "expect": { "note": "each mutation counter counts what its published label says" },
+  "provenance": "the mutation counters are the M8 headline — 'mutation N/M passed, K by relocating' is printed by evals/run.py, quoted in ADR-009, the support matrix and the milestone tracker — and until this case they were the least-guarded lines in the harness: a case's own pass/fail never reads `metrics`, so reverting the counters to any earlier expression left the fast suite at 84/84 and silently restored the flattering number. Reviewer finding (PR #12, R1/R2/R3), all three watched red against the pre-repair expression: row 2 (`mutation_relocated` absent entirely → KeyError-equivalent mismatch) and row 4 (a non-survivor's rung counted as a recovery). Rows are synthetic traces in the shape of real runs, each naming the case it was measured from.",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "guards the counters, not the product. `mutation_relocated` is derived from the failure class of the attempt a recovery step supersedes — `locate` is the relocation ladder, `act` is the replan ladder — rather than from the `retry_or_recovery` label, which both families share."
+  }
+}
