@@ -108,10 +108,13 @@ pins that wrong answer as layer-2 ground truth, so the published report says so
 where a reader is looking (`known_wrong_ground_truth` in the result) instead of
 showing a green `answer_matches` with no context.
 
-Both of those claims about which cases carry which key are graded, not merely
-written here: `opt-in-expect-keys-declared` compares the declared sets against
-the case files, because this paragraph described the pre-repair rule for a full
-review round after the code changed underneath it (ADR-009 Decision 9).
+Which cases carry which key is pinned against a declared list
+(`opt-in-expect-keys-declared`), so a case that starts or stops carrying either
+one turns the suite red and names the file. **This paragraph is not graded** —
+no case parses it — and it stated the pre-repair rule for a full review round
+after the code changed underneath it (ADR-009 Decision 9). Treat the case files
+and `eval_adapter.mutation_metrics` as the source of truth if they ever
+disagree with this prose.
 
 ## OutcomeVerifier — layered verification (executor never grades itself)
 

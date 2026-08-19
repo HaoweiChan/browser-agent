@@ -203,8 +203,10 @@ documents the trap rather than relying on it.
 ## Decision 6 — the `fast` gate now costs 67.6s, over ADR-002's 60s, and the case stays
 
 `l4-shop-overlay-modal` spends 10.6s of that on one Playwright click timeout
-(the committed suite has since measured 66.9-68.2s across runs as cases were
-added; the heading's figure is the one this decision was taken on).
+(the committed suite has since measured **66.6-68.3s** across the runs on this
+branch — a range of observations on one machine, not a bound: a reviewer
+measured 68.6s on another. The heading's figure is the one this decision was
+taken on; `docs/support-matrix.md` D8 carries the same range).
 That is not waste: Playwright retries the hit test until the timeout, so
 discovering that a resolved element cannot be clicked costs exactly one
 timeout, and there is no cheaper way to observe interception. The obvious
@@ -325,7 +327,8 @@ and that two cases carry `mutation_survived: false` (one does). The prose that
 went stale was the prose nothing could grade.
 
 So the fix is not only the paragraph. `opt-in-expect-keys-declared` grades the
-claim itself: the declared users of `mutation_survived` and
+**case-file side** of the claim — not the prose, which no case parses (R17): the
+declared users of `mutation_survived` and
 `answer_is_known_wrong` are compared against the case files, in sets, so the
 next time one moves the suite names the file instead of a reviewer naming it two
 rounds later. It joins the same family as `mutation-catalog-integrity`'s
@@ -344,6 +347,31 @@ the adapter echoes `known_wrong_ground_truth` into the result. This ADR also
 cited `live-ol-search-a11y-invisible` as the precedent for pinning a wrong
 answer; it is not one — that case pins a *failure* and injects no ground truth
 at all. Corrected in Decision 3.
+
+**Superseded reports keep their green audits (R19), declared.** Only the final
+`fast` and `live` report of this branch carries `known_wrong_ground_truth`; the
+thirteen earlier ones committed here were produced before the marker existed and
+still show the two pins as `verdict: PASS, answer_matches: true` with nothing
+beside it. They are not deleted: `CLAUDE.md` makes `evals/report/` the record of
+**every** run, and removing an artifact to improve how the branch reads is the
+opposite of what that rule is for. So the rule is stated instead — a reader
+jq-ing across `evals/report/` should take the newest report of a suite as the
+one whose conventions are current, and the two pinned cases are named here, in
+`docs/support-matrix.md` D5/D7 and in the case files themselves.
+
+**Owner ratification of the amended M8 gate (R20), 2026-08-20.** The M8
+validation cell in `tasks/TODO.md` was amended during this PR: the original read
+"each new mutation red without relocation, green with", and two of the five
+mutations have no green half, because no ladder can rescue them. The amended
+cell reads "…**or**, where no ladder can save it, committed with the observed
+failure as its expectation (3 of 5 green, 2 pinned as losses)". A reviewer
+correctly flagged that a delivery agent editing its own acceptance criterion is
+not a self-closing question. It went to the owner, and **the owner ratified the
+amended wording as written**, on the grounds that the two unrescuable mutations
+are pinned as honest losses rather than faked rescues (CLAUDE.md rule 4) and
+that the cell discloses the split inline, so no reader can infer 5/5. Recorded
+here so a spec-drift audit finds an owner for the amendment instead of an
+unexplained edit.
 
 **Declared, not fixed (R15).** `mutation_relocated` reads the recovery family
 from the immediately-superseded attempt, so a genuine relocation whose previous
@@ -401,8 +429,9 @@ Costs: a pre-commit gate at 67.6s, over its own documented ceiling; two
 committed cases whose green means "the agent is reliably wrong here"; and a
 declared limitation list seven rows longer (D5–D11).
 
-Numbers, 2026-08-20 (after all repair rounds, PR #12): `fast` 86/86 (67.7s),
-`invariant` 22/22, `live` 9/9, $0.0000, mutation **9/11 survived, 6 recovered — 5 by
+Numbers, 2026-08-20 (after all repair rounds, PR #12): `fast` 86/86 in 68.05s
+(`evals/report/20260820-020212-fast.json`), `invariant` 22/22
+(`…-020104-invariant.json`), `live` 9/9 (`…-020100-live.json`), $0.0000, mutation **9/11 survived, 6 recovered — 5 by
 relocating** (was 4/4, 2 relocating), recovery 7/7 verified over 13 rungs,
 diagnosis 14/14. The first commit published "6 by relocating"; Decision 7 is
 why that figure moved.

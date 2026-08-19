@@ -679,10 +679,20 @@ def _run_declared_keys_case(case: dict) -> dict:
     methodology doc still claimed `mutation_survived` kept two cases out of the
     survival numerator, a round after one of them stopped using it (PR #12,
     R12). Sets, not counts, so the failure names the file.
+
+    ponytail: this grades the CASE FILES against a declared list, not the prose
+    that describes them — editing the markdown back to the stale claim leaves
+    the suite green (PR #12, R17). Parsing the doc the way parse_matrix parses
+    the support matrix is the upgrade, and it needs the doc to carry a
+    machine-readable shape first.
     """
     evals_dir = Path(__file__).parents[2] / "evals"
-    files = {p.stem: json.loads(p.read_text(encoding="utf-8"))
-             for d in ("golden", "adversarial") for p in (evals_dir / d).glob("*.json")}
+    # rglob and the case's own `id`, matching how evals/run.py discovers and
+    # names cases — filenames equal ids today, and a guard that quietly stopped
+    # seeing a subdirectory would be the same silence it exists to prevent.
+    cases = [json.loads(p.read_text(encoding="utf-8"))
+             for d in ("golden", "adversarial") for p in (evals_dir / d).rglob("*.json")]
+    files = {c.get("id", "<unnamed>"): c for c in cases}
     wrong = []
     for key, want in case["input"]["declared"].items():
         # Presence, not truthiness: `mutation_survived` is meaningful precisely
