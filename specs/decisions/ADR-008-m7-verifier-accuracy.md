@@ -1,7 +1,13 @@
-# ADR-007: What the M7 hand-labeled sample measures, and what it does not
+# ADR-008: What the M7 hand-labeled sample measures, and what it does not
 
 Date: 2026-08-19
-Status: accepted
+Status: accepted; Decision 3's removal of `MIN_EVIDENCE` was amended by
+Decision 7 in the same PR (#10, merge with main), once main's
+`slow-asset.html` supplied the case that removal said did not exist. Decision
+3's own reasoning is left as written: it was correct on the evidence
+available at the time, and the point of Decision 7 is that removal-on-no-
+evidence and restoration-on-new-evidence are both the right call, made twice,
+not a reversal to be quietly smoothed over.
 
 ## Context
 
@@ -281,6 +287,61 @@ independently re-measuring — every extraction dict passed into every
 `verify()` call across a full `--suite fast` run (73 cases as committed at
 `bd5eef1`), matching an independent recount by the reviewer.
 
+## Decision 7 — M7.2: the sparse-page false FAIL, removed then restored
+
+Decision 3 removed `MIN_EVIDENCE` (a 20-character floor below which
+`not_a_dump` was skipped) because the only thing it guarded — a page whose
+entire evidence text is short enough that the ratio is noise — had **no case
+demonstrating it was ever wrong**: "no fixture in the repo is sparse enough to
+demonstrate it" (Decision 3, restated as D3 in `docs/support-matrix.md`). That
+reasoning was correct on the evidence available at the time. A guard with no
+case behind it is speculative, and speculative guards are exactly what this
+repo does not carry.
+
+The evidence arrived a few days later, inside the PR that merged this
+milestone with main's navigation work. Main added `src/browser/fixtures/slow-asset.html`
+for its own navigation-timeout cases (`nav-load-event-never-fires`,
+`nav-action-load-event-never-fires`, ADR-007) — a page with **37 clean
+characters of body text**. Its correct answer, the page's `<h1>`, is 23 clean
+characters: **62% of the page**. `not_a_dump` FAILed it, taking both of
+main's cases down with it (they extract the same heading), and a third case
+written for exactly this shape (`verifier-sparse-page-not-a-dump`, this
+milestone). Watched red on the merged tree before any fix: `checks.not_a_dump:
+false`, `reason: "value reproduces most of its own evidence window: ['The
+monk and the dancer']"`, on all three cases identically.
+
+**The declaration was falsified inside the same PR that made it**, which is
+the sharpest version of the thing Decision 3 warned about happening
+eventually. The fix restores a page-size floor — `MIN_PAGE_CHARS = 100` in
+`verifier.py`, functionally `MIN_EVIDENCE`'s successor, not a re-add of the
+same constant (it gates the real page size / `body_len`, not the stored
+window, since Decision 6 changed what the denominator means) — below which
+`not_a_dump` does not apply at all. 100 sits between the sparse fixture (37
+page chars, 39 by `body_len`) and the smallest confirmed real dump,
+`probe5-shop-listing-dump` (195 chars) — roughly their geometric mean, ~85.
+
+**What "no other extraction sits between them" actually means, checked
+directly rather than assumed.** Every `verify()` call the `fast` suite makes
+was instrumented (115 extraction observations, no source file touched) to
+read off each one's `not_a_dump` denominator and ratio. The claim is **not**
+that no other page falls in the 37–195 character range — plenty do: forms.html's
+reference-number readback (denominator 59–68 chars), several shop-fixture
+price and SKU extractions (61–194 chars) — the claim that holds is narrower
+and is what the floor actually depends on: of every extraction below 100
+characters, **only the sparse-fixture case has a ratio anywhere near
+`DUMP_RATIO`** (0.59; the next highest is 0.17, the same ceiling Decision 2
+measured for real non-dump extractions generally), and no confirmed dump in
+the suite is smaller than 195 characters. The floor is not resting in an
+empty gap of page sizes; it is resting in an empty gap of *ratios that would
+flip* if it moved. Every one of the 25 frozen `verifier-sample.jsonl` records
+was checked the same way: only `tc5-forms-submit`'s window (65 chars) is
+below the new floor, its ratio (0.15) was never close to `DUMP_RATIO`, and
+the pinned confusion matrix (`tp=10, fp=11, fn=1, tn=3`) does not move.
+
+Re-run after the fix: `nav-load-event-never-fires`, `nav-action-load-event-never-fires`,
+and `verifier-sparse-page-not-a-dump` all green. Full `fast` suite 77/77,
+`invariant` 20/20.
+
 ## What stays deliberately not fixed
 
 - **Semantic responsiveness.** No mechanism added here, or existing, asks
@@ -311,18 +372,15 @@ independently re-measuring — every extraction dict passed into every
   exists. Calibrated on exactly two positive examples (0.4541, 0.5231) — only
   ~0.10 of headroom above 0.35. No fixture with heavier chrome exists to
   demonstrate the dilution (`docs/support-matrix.md`).
-- **A sparse page can false-FAIL `not_a_dump`.** The ratio is against the
-  real page's size, so any correct answer that legitimately makes up most of
-  a thin, single-purpose page reads as a dump — in the degenerate case, a
-  page whose entire body text *is* the value gives ratio 1.0 and always
-  fails. Broader than the short-evidence edge case `MIN_EVIDENCE` used to
-  guard (page text under ~20 characters): the mechanism is the same ratio,
-  not a character-count floor. No fixture in the repo is sparse enough to
-  demonstrate it — the smallest *real* evidence window measured across the
-  `fast` suite is 56 characters — so it is a declared limitation
-  (`docs/support-matrix.md`), not a guard, because a false FAIL there is the
-  safe direction and a guard with no case behind it is how the M6 `near:`
-  defects shipped in the first place.
+- **A sparse page can false-FAIL `not_a_dump` below `MIN_PAGE_CHARS` — closed,
+  Decision 7.** Was declared here as unfixed because no fixture was sparse
+  enough to demonstrate it; main's `slow-asset.html` supplied one inside this
+  same PR, and the floor is restored with a case (`verifier-sparse-page-not-a-dump`)
+  behind it. What is **not** closed: `MIN_PAGE_CHARS` is still exactly two
+  calibration points (37 and 195), same thinness as `DUMP_RATIO` itself
+  (Decision 2) — a fixture sparser than 37 but a genuine dump, or a real dump
+  smaller than 195, would each need their own case before this floor could be
+  trusted to move.
 - **A record with no `body_len` still saturates (Decision 6, D4).** Before
   Decision 6 this was universal; after it, only records captured before
   `body_len` existed can still exhibit it — permanently, since they cannot be
@@ -337,9 +395,11 @@ independently re-measuring — every extraction dict passed into every
   (Decision 6).
 - `src/browser/verifier.py`: `not_a_dump`'s denominator prefers `body_len`,
   falling back to `len(clean(page_text))` for records that predate it
-  (Decision 6). `MIN_EVIDENCE` removed; `not_a_dump`'s ratio
-  computation guards only the zero-length case (crash avoidance, not a
-  threshold).
+  (Decision 6). `MIN_EVIDENCE` removed at Decision 3, then restored as
+  `MIN_PAGE_CHARS = 100` at Decision 7 once main's `slow-asset.html` gave the
+  removed guard a real case; below it, `not_a_dump` does not apply. The `pt_len
+  and ...` check still separately guards the zero-length case (crash
+  avoidance, distinct from the floor).
 - `specs/001-browser-contract.md`: `evidence.extractions` now documents
   `body_len`.
 - `src/browser/eval_adapter.py`: both scaffolding sites in
@@ -357,3 +417,9 @@ independently re-measuring — every extraction dict passed into every
   hand-labeled runs (25), precision/recall reported, responsiveness gap
   partially closed (dump shape, with its chunking boundary now measured) and
   the remainder explicitly declared.
+- `evals/adversarial/verifier-sparse-page-not-a-dump.json` (Decision 7): pins
+  a correct extraction from `slow-asset.html` as PASS, red before
+  `MIN_PAGE_CHARS` existed.
+- `docs/support-matrix.md` D3 moves from `unreliable`, declared to `supported`,
+  closed (Decision 7) — kept as a row, not deleted, per this document's own
+  house style for closed limitations.

@@ -52,7 +52,7 @@ Ranked by reviewer-value ÷ effort, measured-gaps first.
    L1/L2/L3/L4/L5 all filled.
 2. Verifier precision/recall reported from ≥20 hand-labeled runs, committed;
    responsiveness gap closed or explicitly declared as a limitation.
-   **Met at M7** (`specs/decisions/ADR-007-m7-verifier-accuracy.md`,
+   **Met at M7** (`specs/decisions/ADR-008-m7-verifier-accuracy.md`,
    `docs/analysis.md` §5): 25 hand-labeled runs, precision 0.476 / recall
    0.909 (`verifier-precision-recall`) — reported as a floor on a
    deliberately adversarial sample, not general accuracy. The

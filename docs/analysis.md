@@ -5,29 +5,38 @@ verification. Every number below is read out of a committed report in
 `evals/report/`, not estimated. Where a number does not exist, this document
 says so rather than supplying a plausible one.
 
-Baseline: `evals/report/20260819-144058-fast.json` plus the `live` and
-`invariant` runs of the same working tree. Sections 1 and 5 were refreshed at
-M7's review round (case counts, precision/recall, the chunking-evasion finding,
-and the evidence-window denominator fix); section 6 still carries its M6
-numbers and says so. A full refresh
-is M10's job (`docs/plans/active/task1-a-level-plan.md`).
+Baseline: `evals/report/20260819-151917-fast.json` plus the `live`
+(`evals/report/20260819-015005-live.json`) and `invariant`
+(`evals/report/20260819-151925-invariant.json`) runs of the same working
+tree, taken after PR #10 merged M7 with main's navigation fix (post-M6 fix:
+`domcontentloaded` + bounded settle, live suite 6/6) **and** restored the
+`not_a_dump` sparse-page floor that main's own fixture required (ADR-008
+Decision 7). Sections 1 and 5 were refreshed for the merge (case counts,
+precision/recall, the chunking-evasion finding, the evidence-window
+denominator fix, and the sparse-page floor); section 6 still carries its M6
+numbers and says so. A full refresh is M10's job
+(`docs/plans/active/task1-a-level-plan.md`).
 
 ## 1. What was measured, and on what
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 74 | 74/74 | 36.46s | 0.33s | 2.47s | $0.0000 |
-| `invariant` (must-always-hold) | 20 | 20/20 | 3.57s | 0.00s | 2.48s | $0.0000 |
-| `live` (3 real sites) | 6 | 4/6 | 47.5s | 2.4s | 20.3s | $0.0000 |
+| `fast` (offline gate) | 77 | **77/77** | 53.3s | 0.34s | 4.3s | $0.0000 |
+| `invariant` (must-always-hold) | 20 | **20/20** | 3.58s | 0.0s | 2.51s | $0.0000 |
+| `live` (3 real sites) | 6 | **6/6** | 24.84s | 2.33s | 10.54s | $0.0000 |
 
-81 distinct cases (20 golden + 61 adversarial). 132 browser actions in a
-`fast` run; **43 of the 74** cases drive a real Chromium end to end — counted
-here as cases that actually recorded browser actions, which is why the figure
-is lower than the 52 this table used to report: the six L5 refusal cases are
+84 distinct cases (20 golden + 64 adversarial).
+139 browser actions in a `fast` run; **46 of the
+77** cases drive a real Chromium end to end — counted here as
+cases that actually recorded browser actions: the six L5 refusal cases are
 end-to-end cases that deliberately stop before a browser opens. The remaining
-31 are those refusals plus pure-code probes of a single component (the grader, the
-classifier, the URL guard, the scope screen, the matrix parser, and — added
-in M7's final phase — the evidence-window bound on a missing value).
+31 are those refusals plus pure-code probes of a single
+component (the grader, the classifier, the URL guard, the scope screen, the
+matrix parser, and — added in M7's final phase — the evidence-window bound on
+a missing value). `live` is 6/6 as of the post-M6 navigation fix (main,
+merged into this baseline): `page.goto` no longer waits for `load`, so a
+hanging subresource no longer turns a fully readable page into
+`failure:nav`.
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -173,7 +182,7 @@ too. Both are caught only by ground truth, which a live run does not have.
 runtime `verify()` call — no `expect`, no `state`, the same call
 `agent.py:491` makes. Method, threshold measurement, and the `MIN_EVIDENCE`
 scaffolding correction are recorded in full in
-`specs/decisions/ADR-007-m7-verifier-accuracy.md`; pinned matrix in
+`specs/decisions/ADR-008-m7-verifier-accuracy.md`; pinned matrix in
 `evals/adversarial/verifier-precision-recall.json`.
 
 **The headline is not the precision figure.** Excluding the two
@@ -223,15 +232,46 @@ for exactly this shape (a page dump) and misses it because chunking the same
 dump across several extractions keeps every individual ratio under threshold
 (D1, `docs/support-matrix.md`). Full list: `evals/labels/verifier-sample.jsonl`.
 
-Two more bounds on the claimed gain, declared rather than cased
+**Deployed run `734d3d1f` (§8b) is a live instance of exactly this class.**
+"Find the cheapest book in Travel" was planned as `extract {"role": "article",
+"index": 0}`, anchored on `"Travel"` — the category, not the entity — and
+returned the first product on the listing, £45.17 against a true £23.21. It
+was scored `success` + layer-1 `PASS`, the same shape as the 10 focused false
+positives above: a short, grounded, anchored, mechanically-clean answer that
+is simply wrong. **`not_a_dump` would not have caught it.** The answer is a
+single product tile — "It's Only the Himalayas\n\n£45.17\n\n In stock\n\nAdd
+to basket", well under a hundred characters — not a page dump, so its ratio
+against the category page it was read from would sit far below `DUMP_RATIO`
+(0.35), the same territory as the real non-dump ratios measured in this
+sample (topping out at 0.1786). The run's own evidence (the extraction
+record with `body_len`) is not in this tree — the deployment logs it, this
+repo does not capture it — so that is reasoning from the published answer and
+page shape, not a measured ratio; no figure is claimed for it. What the run
+adds beyond the hand-labeled sample is not a new failure mode: it is this
+milestone's exact "10 focused wrong answers that pass the runtime verifier
+untouched" finding, independently confirmed on the live deployment rather
+than in a replayed offline sample.
+
+One more bound on the claimed gain, declared rather than cased
 (`docs/support-matrix.md`): the 0.35 threshold is measured against the size
 of the real page the value was read from, so it is chrome-sensitive (the same
 dump on a more boilerplate-heavy page dilutes toward and under it) and
 thinly calibrated — exactly two positive examples, 0.4541 and 0.5231, only
-~0.10 of headroom above 0.35 (D2). The same ratio can also
-false-FAIL a *correct* answer that legitimately makes up most of a thin page
-— degenerate case, ratio 1.0, always fails — though no fixture in the repo is
-sparse enough to demonstrate it (D3, safe direction).
+~0.10 of headroom above 0.35 (D2).
+
+**A related bound was declared, then closed inside the PR that declared it.**
+The same ratio can also false-FAIL a *correct* answer that legitimately makes
+up most of a thin page — degenerate case, ratio 1.0, always fails. This was
+declared rather than cased on the grounds that no fixture in the repo was
+sparse enough to demonstrate it — and then main's `slow-asset.html` (added in
+the same PR, for its own navigation-timeout cases) turned out to be exactly
+that fixture: 37 clean characters of body text, correct answer 23 of them
+(62%). `not_a_dump` FAILed it, and took main's two navigation cases down with
+it. `MIN_PAGE_CHARS = 100` (`verifier.py`) restores the floor below which
+`not_a_dump` does not apply — the same guard M7 had removed as `MIN_EVIDENCE`
+for lack of exactly this evidence — pinned by
+`verifier-sparse-page-not-a-dump` (D3, `docs/support-matrix.md`, now
+`supported`; `specs/decisions/ADR-008-m7-verifier-accuracy.md` Decision 7).
 
 **M7.1 correction: the denominator was the stored window, not the page.**
 A reviewer found, and this milestone reproduced before fixing, that
@@ -255,7 +295,7 @@ of the six cross `DUMP_RATIO` in either direction, so the pinned confusion
 matrix (`tp=10, fp=11, fn=1, tn=3`) is unchanged, and the three unsaturated
 calibration points above (0.1786, 0.4541, 0.5231) are unchanged in the sense
 that matters (verdict) — full detail, including the re-measured band, in
-`specs/decisions/ADR-007-m7-verifier-accuracy.md` Decision 6 and
+`specs/decisions/ADR-008-m7-verifier-accuracy.md` Decision 6 and
 `docs/support-matrix.md` D4.
 
 ### What the reliability numbers mean
@@ -280,7 +320,7 @@ diagnosis 8/8 · 3 replans
 
 ### The eval set's own bias, measured
 
-Across six milestones, **18 of the defects found in this system were found by
+Across six milestones, **20 of the defects found in this system were found by
 cold review or by adding a new domain — not by the suite**, in code that was
 green at the time (3 at M2 close-out, 6 at the M3/M4 review, ADR-005). Adding
 the first live domain immediately exposed a tenth: `observe()` spent its entire
@@ -311,6 +351,14 @@ the constraint it was recovering, came from the drift audit rather than the
 cold read. The lesson did not change between M5 and M6; only the code it
 applied to did.
 
+It repeated once more the day after M6 merged, in the mildest possible form and
+from the cheapest possible source — a reviewer reading the diff, not running
+anything. The `load`-vs-`domcontentloaded` fix had two call sites and the case
+written for it exercised one; a note pointing that out is what turned a fix
+that would have gone green with half the defect alive into two cases, the
+second re-watched red after the first was fixed. Reading the diff found what
+running the suite could not, again.
+
 The conclusion is not that the suite is bad — it is that **an eval set written
 by the author of the code is blind in the direction the author was already
 looking**, and that adversarial review and unfamiliar domains are the two things
@@ -323,9 +371,9 @@ a gate rather than an option.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 20 | | L1 | 20 |
-| TC2 search-then-extract | 6 | | L2 | 20 |
-| TC3 navigate-then-extract | 8 | | **L3** | **2 — both live, one of them unrun** |
+| TC1 extract-on-page | 21 | | L1 | 20 |
+| TC2 search-then-extract | 6 | | L2 | 22 |
+| TC3 navigate-then-extract | 9 | | **L3** | **2 — both live, one of them unrun** |
 | TC4 interact-then-extract | 14 | | L4 (mutation/recovery) | 8 |
 | TC5 form submission | 5 | | L5 (refusal) | 7 |
 | mechanism/unit probes | 23 | | untagged (unit probes) | 19 |
@@ -357,11 +405,15 @@ The reviewer-facing version of this list, with per-row evidence, is
    adversarial, constructed sample, not a general accuracy claim; semantic
    responsiveness (a short, wrong, well-formed answer) is still uncaught at
    runtime, and neither is the same dump split across several extractions
-   (D1, `docs/support-matrix.md`).
-4. **Live *planning*** — three domains and three task classes are exercised
-   live as of M6, but every green live case runs a hand-written plan and the
-   one live-planner case is unrun (needs `OPENROUTER_API_KEY`). Live breadth
-   is no longer the gap; live planning quality still is.
+   (D1, `docs/support-matrix.md`) — deployed run `734d3d1f` (§5, §8b) is the
+   live confirmation of exactly this class.
+4. **Live *planning*** — the live suite is 6/6 across three domains and three
+   task classes as of the post-M6 navigation fix, but every green live case
+   runs a hand-written plan and the one live-planner case is unrun (needs
+   `OPENROUTER_API_KEY`). Live breadth is no longer the gap; live planning
+   quality is the whole of what remains — and the one live-planner run that
+   *has* happened (`734d3d1f`, deployed rather than eval) is the first
+   measurement of it, and it was wrong.
 5. **The deployed system end-to-end** — see below.
 6. **L3-difficulty tasks** — two exist (both live, M6); one of them is unrun.
 7. Seven mechanism-level gaps carried deliberately, listed in ADR-005
@@ -472,6 +524,66 @@ exactly when you most want it. And a submit endpoint that costs real money has
 **no per-IP rate limit** — listed as backlog in the plan, and this is the first
 concrete demonstration of why that matters: a careless loop, not an attacker,
 was enough.
+
+## 8b. The first live-planner run, and the first wrong answer scored PASS
+
+Run `734d3d1f`, 2026-08-18, submitted through the deployed `POST /tasks` (the
+key lives in Zeabur's service env and was never copied anywhere else). This is
+the **first measurement of live planning quality on any domain** — every green
+live eval case runs a hand-written plan, so until this run the planner had been
+graded only by the M5 probe.
+
+```
+task    : "In the Travel category, find the cheapest book and tell me its exact price."
+url     : books.toscrape.com/catalogue/category/books/travel_2/index.html
+plan    : 1. navigate (pre-plan observation)
+          2. extract  target {"role": "article", "index": 0}, anchor "Travel"
+status  : success          verdict : PASS (layer 1, ground_truth false)
+answer  : "It's Only the Himalayas\n\n£45.17\n\n In stock\n\nAdd to basket"
+truth   : £23.21 — "The Road to Little Dribbling" (hand-verified over all 11 Travel products)
+budgets : 2 actions · 1446 llm_tokens · $0.005454 · 6342 ms
+```
+
+**It returned the first product on the listing and called it the cheapest.**
+
+Three separate things had to line up for that to be scored PASS, and each one
+is already a declared limitation rather than a surprise:
+
+1. **No comparison exists in the plan vocabulary.** `navigate | click | fill |
+   extract` cannot express "compare eleven prices and return the minimum", so
+   "cheapest" became "extract the first product tile" — the one-hop-deep
+   ceiling from the M5 probe, reproduced exactly.
+2. **The identity anchor was `"Travel"`** — the category, not the entity. On an
+   aggregate page every candidate satisfies it. This is `trap-search-not-executed`
+   in the wild: the anchor certifies the wrong answer as readily as the right
+   one.
+3. **Every layer-1 predicate was legitimately green.** The value really was on
+   the page it was read from; the extraction really did happen; nothing was
+   fabricated. Only layer 2 — external ground truth — separates £45.17 from
+   £23.21, and a live run has none.
+
+The eval set is not blind to this. `live-books-cheapest-travel` is the same
+task with the answer hand-labelled, its triage predicted this outcome in
+writing ("the M5 held-out probe (2/8) predicts the planner itself fails
+multi-entity comparison") before it had ever been dispatched, and it grades
+FAIL at layer 2. What this run adds is that the prediction is now confirmed on
+the deployed system rather than inferred.
+
+**What this does to the honesty headline.** The M5 probe's "no run reported
+success with a wrong answer — 10/10" was true of that probe and is not a
+property of the system. The property that survives is narrower and worth
+stating exactly: *no run has reported success with an answer the verifier could
+tell was wrong.* With ground truth, the gap is caught. Without it, on an
+aggregate page, it is not — and a reviewer submitting this task to the live URL
+would be told £45.17 with a green badge.
+
+Sizing that gap is M7's entire subject, and this run is its first labelled
+sample: a confirmed false PASS with a committed run id. §5 is where that
+sizing actually happened — the hand-labeled sample's 10 focused false
+positives (grounded, anchored, mechanically clean, simply wrong) are the
+measured version of the same limitation this run demonstrates live; see the
+`734d3d1f` cross-reference there for the `not_a_dump` boundary in this run's
+specific case.
 
 ## 8. Deployment — verified against the live URL
 

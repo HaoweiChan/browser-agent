@@ -67,6 +67,25 @@ _CURRENCY = "$€£¥₩₹"
 # the empty gap between them.
 DUMP_RATIO = 0.35
 
+# Restored at M7.2, this time with a case behind it. Phase 2 had a guard here
+# (`MIN_EVIDENCE = 20`) and removed it (ADR-008 Decision 3) because nothing in
+# the repo demonstrated the false FAIL it existed to prevent — a guard with no
+# case behind it is speculative, and the removal was correct on the evidence
+# available at the time. Main's `slow-asset.html` (added for its own
+# navigation-timeout cases) then supplied that evidence inside the same PR:
+# its correct answer is 23 clean chars on a 37-char page, ratio 0.62, which
+# `not_a_dump` FAILed (case `verifier-sparse-page-not-a-dump`). 100 sits in
+# the gap between that page (37 chars, 2.7x below the floor) and the
+# smallest real dump in the suite, `probe5-shop-listing-dump` (195 chars,
+# 1.95x above it) -- roughly their geometric mean, ~85. Swept every
+# extraction the `fast` suite actually produces (115 observations): no page
+# below this floor carries a ratio anywhere near DUMP_RATIO except the sparse
+# fixture being fixed (next closest is 0.17, well clear), and no known real
+# dump is smaller than 195 -- so the floor is not merely unopposed, it is
+# never even close to being tested by anything else in the suite. Below this
+# many clean characters, `not_a_dump` does not apply at all.
+MIN_PAGE_CHARS = 100
+
 
 def _clean(value) -> str:
     return re.sub(r"\s+", " ", str(value)).strip().casefold().strip(".,;:!")
@@ -213,11 +232,11 @@ def verify(*, trace, extractions, answer, expect=None, state=None) -> dict:
     # ponytail: a dump LONGER than its own window is already caught by
     # `grounded` above (it can't be a substring of a window centred on
     # itself) — this only covers dumps up to roughly PAGE_TEXT_KEEP in size.
-    # A page whose whole text is only a handful of characters makes the ratio
-    # noise rather than signal (declared limitation, docs/support-matrix.md) —
-    # `pt_len and ...` only guards the zero-length case from a ZeroDivisionError,
-    # it is not a threshold: no case demonstrates a false FAIL here, and a false
-    # FAIL is the safe direction.
+    # Below MIN_PAGE_CHARS the ratio does not apply at all (see its comment
+    # above) — a correct answer that legitimately makes up most of a thin,
+    # single-purpose page (case verifier-sparse-page-not-a-dump) is not a
+    # dump, it is just a short page. `pt_len and ...` still separately guards
+    # the zero-length case from a ZeroDivisionError.
     #
     # The denominator is the PAGE the value was read from, not the stored
     # window: `page_text` is agent.evidence_window()'s output, capped at
@@ -229,6 +248,7 @@ def verify(*, trace, extractions, answer, expect=None, state=None) -> dict:
     # records, captured before this field existed, which must keep replaying.
     dumps = [e["value"] for e in extractions or []
              if (pt_len := e.get("body_len") or len(_clean(e.get("page_text", ""))))
+             and pt_len >= MIN_PAGE_CHARS
              and len(_clean(e["value"])) / pt_len >= DUMP_RATIO]
     check("not_a_dump", not dumps, f"value reproduces most of its own evidence window: {dumps}")
 

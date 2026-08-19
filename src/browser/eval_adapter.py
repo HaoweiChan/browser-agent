@@ -379,6 +379,26 @@ def _run_observe_case(case: dict) -> dict:
         async with async_playwright() as pw:
             browser = await pw.chromium.launch(args=["--no-sandbox"])
             page = await browser.new_page()
+            # Deliberately NOT agent.navigate(): production asks "is this page
+            # usable enough to act on?", observe ground truth asks "what does a
+            # fully settled page expose?". Forcing one navigation semantics onto
+            # both leaks the production abstraction into the harness, and an
+            # observation taken mid-load would make these cases flake rather
+            # than grade. Strict `load` is the right contract here.
+            #
+            # ponytail: strict, but on Playwright's 30s DEFAULT rather than a
+            # budget anyone chose. Pointed at `slow-asset.html` — whose `load`
+            # never fires, and which lives in this same fixtures directory —
+            # this raises after 30.4s and the runner reports a traceback, so an
+            # incompatible fixture reads as "the observer broke" instead of
+            # "this fixture is not a valid strict-observe subject". Ceiling:
+            # diagnosability, not correctness — no production path and no
+            # existing case touches it. Upgrade: keep strict `load`, give it an
+            # explicit 5-10s eval budget, catch PlaywrightTimeoutError and
+            # return {"passed": False, "failure": "eval_env", "reason": ...}.
+            # Do NOT route through navigate(): that changes the ground-truth
+            # contract. Same lesson as the screenshot bound one level up —
+            # try/except bounds error propagation, never latency.
             await page.goto(url)
             obs = await observe(page)
             await browser.close()

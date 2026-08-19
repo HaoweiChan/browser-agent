@@ -35,7 +35,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 73 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 77 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
 python3 -m evals.run --suite live        # 6 cases, 3 real sites, still $0.00
 ```
@@ -49,33 +49,59 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260817-133237-fast.json`:
+Latest offline baseline — `evals/report/20260819-151917-fast.json`:
 
 ```
-fast  69/69    invariant  18/18    live  4/6    $0.0000    36s
+fast  77/77    invariant  20/20    live  6/6    $0.0000    53.3s
 recovery 3/3 verified (8 rungs tried) · mutation 4/4 passed, 2 by relocating
-diagnosis 12/12 · 3 replans
+diagnosis 13/13 · 3 replans
 ```
 
-`live 4/6` is not a regression: both reds are openlibrary.org, which stopped
-responding entirely partway through M6 and fails `failure:nav` at page load.
-The two greens on the other two live domains ran in the same suite.
+`live 6/6` is one day old and was `4/6` at the M6 merge. Two of those reds were
+openlibrary.org during an outage — and when the host came back, one case went
+green immediately while the other kept failing, because the outage had been
+hiding a defect of ours: navigation waited for `load`, so one hanging
+subresource made a fully readable page `failure:nav` ([ADR-007](specs/decisions/ADR-007-navigation-wait-condition.md)).
 
 And the number that matters more, from 10 blind tasks a separate agent wrote
 and ran against the **deployed** URL ([raw table](docs/analysis.md)):
 
 ```
 2 correct answers of 8 answer-seeking tasks · 1 of 2 refusals · $0.0681
-no run reported success with a wrong answer — 10/10
+no run reported success with a wrong answer — 10/10 in that probe
 ```
+
+**That last line is bounded by a counterexample, and the boundary is the honest
+part.** On 2026-08-18 a single deployed run (`734d3d1f`) asked for the cheapest
+book in a category and got back the *first* one — £45.17 instead of £23.21 —
+reported as `success` with a `PASS` verdict:
+
+```
+plan   : navigate → extract {"role": "article", "index": 0}, anchor "Travel"
+answer : "It's Only the Himalayas … £45.17 …"     truth: £23.21
+```
+
+Nothing was broken. There is no compare/rank/filter step in the plan
+vocabulary, so "cheapest" was planned as "read the first product tile"; the
+identity anchor was the *category*, which every product on a listing satisfies;
+and every runtime predicate was legitimately green, because the value really
+was on the page it was read from. Only ground truth separates those two prices,
+and a live run has none — the eval case for this exact task
+(`live-books-cheapest-travel`) grades it FAIL at layer 2 and predicted this
+outcome in writing before it was ever run.
+
+So the property that holds is narrower than the probe line suggests: **no run
+has reported success with an answer the *verifier could tell* was wrong.** With
+external ground truth, that gap is caught. Without it, on an aggregate page, it
+is not. Measuring the size of that gap is the next milestone's whole job.
 
 **Read those with their denominators**, which is why they are printed as `x/y`:
 
 - **`$0.0000` is honest and nearly useless.** No suite invokes a real planner —
   that is deliberate, so the gate costs nothing and runs without a key, but it
   means these numbers grade the resolver → executor → verifier path and say
-  **nothing about planning quality**. Real measured spend: one deployed task at
-  **$0.0029** and **$0.0065 / 1438 tokens / 6.5s**.
+  **nothing about planning quality**. Real measured spend: three deployed tasks, at
+  **$0.0029**, **$0.0065 / 1438 tokens / 6.5s** and **$0.0055 / 1446 tokens / 6.3s**.
 - **`recovery 3/3` is a floor on three injected cases, not a rate.** Eight rungs
   were tried to produce three verified recoveries; that ratio is printed beside
   it rather than folded into it.
@@ -150,9 +176,10 @@ The biggest ones, stated plainly:
 The full record is [`prompts/`](prompts/) — curated correction chains, each
 ending in *assumed → eval said → corrected*, plus the raw session dumps.
 
-The honest headline is a measurement of this method's weak spot: **18 defects
-across six milestones were found by cold review or by adding a new domain —
-not by the eval suite — in code that was green at the time.** The first live
+The honest headline is a measurement of this method's weak spot: **20 defects
+across six milestones were found by cold review, by a reviewer's note, or by
+adding a new domain — not by the eval suite — in code that was green at the
+time.** The first live
 domain produced one within an hour, by revealing that the page observation
 spent its entire budget on navigation and never saw a single product on a real
 listing page. M6's two new domains produced four more. Then a cold review of M6's own green
@@ -161,7 +188,7 @@ four more still, three of which answered a question confidently and wrongly
 with no error anywhere in the trace. Every one of those three needed a page
 shape the repo's only offline listing happens not to have.
 
-The eval set is not weak; it is 81 cases, it caught a *bad fix* mid-session
+The eval set is not weak; it is 84 cases, it caught a *bad fix* mid-session
 during the last review, and in M6 it caught a fix that passed its own case for
 the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
