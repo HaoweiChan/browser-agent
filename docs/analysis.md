@@ -220,14 +220,39 @@ dump across several extractions keeps every individual ratio under threshold
 (D1, `docs/support-matrix.md`). Full list: `evals/labels/verifier-sample.jsonl`.
 
 Two more bounds on the claimed gain, declared rather than cased
-(`docs/support-matrix.md`): the 0.35 threshold is measured against the
-*absolute size* of the evidence window, so it is chrome-sensitive (the same
+(`docs/support-matrix.md`): the 0.35 threshold is measured against the size
+of the real page the value was read from, so it is chrome-sensitive (the same
 dump on a more boilerplate-heavy page dilutes toward and under it) and
 thinly calibrated — exactly two positive examples, 0.4541 and 0.5231, only
-~0.10 of headroom above 0.35 (D2). The same absolute-size ratio can also
+~0.10 of headroom above 0.35 (D2). The same ratio can also
 false-FAIL a *correct* answer that legitimately makes up most of a thin page
 — degenerate case, ratio 1.0, always fails — though no fixture in the repo is
 sparse enough to demonstrate it (D3, safe direction).
+
+**M7.1 correction: the denominator was the stored window, not the page.**
+A reviewer found, and this milestone reproduced before fixing, that
+`not_a_dump`'s ratio was computed against `len(page_text)` — the *stored*
+evidence window, capped at `PAGE_TEXT_KEEP` and doubled when a distant
+identity anchor forces a second window onto it — not against the page the
+value actually came from. Two consequences, both watched red: on any page
+longer than `PAGE_TEXT_KEEP`, a value over ~700 clean characters read as "a
+dump" regardless of true page size; and the *same* value on the *same* page
+could flip FAIL → PASS depending only on whether the plan carried a distant
+anchor (776-char value, 4,388-char page: ratio 0.388 FAIL with no anchor,
+0.2147 PASS with one). The fix records `body_len` — the real page length,
+already available in `agent.py` at extraction time — on every extraction, and
+`verify()` now prefers it, falling back to the old window-based formula only
+when `body_len` is absent. **Disclosed plainly: 6 of the 28 extractions in
+the committed hand-labeled sample (`evals/labels/verifier-sample.jsonl`) have
+a saturated window (max 3,560 characters) and predate `body_len`, so they
+permanently take the fallback — those six ratios are judged against a
+truncated-or-doubled window, not the page, and are not page-fractions.** None
+of the six cross `DUMP_RATIO` in either direction, so the pinned confusion
+matrix (`tp=10, fp=11, fn=1, tn=3`) is unchanged, and the three unsaturated
+calibration points above (0.1786, 0.4541, 0.5231) are unchanged in the sense
+that matters (verdict) — full detail, including the re-measured band, in
+`specs/decisions/ADR-007-m7-verifier-accuracy.md` Decision 6 and
+`docs/support-matrix.md` D4.
 
 ### What the reliability numbers mean
 

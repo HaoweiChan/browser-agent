@@ -19,6 +19,12 @@ of this script may still disagree with the committed JSONL if the site drifts
 Does NOT add "label"/"label_reason"/"labeled_from" — those are added by hand
 after reading each record's answer/trace/extractions against the task.
 
+REFUSES TO OVERWRITE `verifier-sample.jsonl`. Those hand labels are the one
+artifact in this milestone no code can regenerate; a plain `"w"` open here
+used to truncate the file silently on every re-run. If the output already
+exists, this writes `verifier-sample.new.jsonl` next to it instead — diff and
+hand-merge, never let this script touch the labeled file directly.
+
 `runtime_verdict_at_capture` is frozen at the moment this script ran, against
 whatever `verifier.py` was at the time — a historical snapshot, never ground
 truth. It predates `not_a_dump`, so old records (including the two probe-#5
@@ -200,6 +206,27 @@ RECORDS = [
 ]
 
 
+def _pick_output_path(out: Path) -> Path:
+    """Never write to `out` if it already exists -- caller must not clobber
+    hand labels no code can regenerate."""
+    return out.with_name("verifier-sample.new.jsonl") if out.exists() else out
+
+
+def _selfcheck():
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as d:
+        existing = Path(d) / "verifier-sample.jsonl"
+        existing.write_text("keep me\n")
+        got = _pick_output_path(existing)
+        assert got.name == "verifier-sample.new.jsonl", got
+        assert existing.read_text() == "keep me\n", "must never touch the existing file"
+
+        missing = Path(d) / "verifier-sample.jsonl"
+        missing.unlink()
+        assert _pick_output_path(missing) == missing
+
+
 def main():
     kept, skipped = [], []
     for spec in RECORDS:
@@ -222,7 +249,16 @@ def main():
             "captured_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         })
 
-    with open(OUT, "w") as f:
+    # ponytail: refuse-to-clobber, not a lock or a merge tool -- the hand
+    # labels are irreplaceable, so the safe default is "write somewhere else
+    # and make a human look," not "guess how to merge."
+    out = _pick_output_path(OUT)
+    if out != OUT:
+        print(f"{OUT} already exists -- hand labels live there and this script "
+              f"cannot regenerate them. Writing {out} instead; diff and "
+              f"hand-merge, never overwrite {OUT}.")
+
+    with open(out, "w") as f:
         for rec in kept:
             f.write(json.dumps(rec) + "\n")
 
@@ -232,4 +268,5 @@ def main():
 
 
 if __name__ == "__main__":
+    _selfcheck()
     main()

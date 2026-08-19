@@ -147,7 +147,11 @@ def answers_match(got, want) -> bool:
 def verify(*, trace, extractions, answer, expect=None, state=None) -> dict:
     """Return {"verdict": PASS|FAIL|INCONCLUSIVE, "layer", "checks", "reason"}.
 
-    `extractions` — [{"value", "page_text"}] captured at extraction time.
+    `extractions` — [{"value", "page_text", "body_len"?}] captured at
+                    extraction time. `body_len` (the real page length) is
+                    optional and preferred by `not_a_dump` over `page_text`'s
+                    own length when present; absent on records captured before
+                    it existed (evals/labels/verifier-sample.jsonl).
     `state`       — external ground truth fetched by the caller (or None).
     """
     expect = expect or {}
@@ -214,8 +218,17 @@ def verify(*, trace, extractions, answer, expect=None, state=None) -> dict:
     # `pt_len and ...` only guards the zero-length case from a ZeroDivisionError,
     # it is not a threshold: no case demonstrates a false FAIL here, and a false
     # FAIL is the safe direction.
+    #
+    # The denominator is the PAGE the value was read from, not the stored
+    # window: `page_text` is agent.evidence_window()'s output, capped at
+    # PAGE_TEXT_KEEP and doubled when a distant `anchor` forces a second window
+    # onto it, so a ratio against it depends on storage, not the page (case
+    # verifier-dump-ratio-anchor-flip). `body_len` — the real page length,
+    # which agent.py already has in hand at extraction time — is preferred;
+    # `page_text` is the fallback for the 25 frozen evals/labels/verifier-sample.jsonl
+    # records, captured before this field existed, which must keep replaying.
     dumps = [e["value"] for e in extractions or []
-             if (pt_len := len(_clean(e.get("page_text", ""))))
+             if (pt_len := e.get("body_len") or len(_clean(e.get("page_text", ""))))
              and len(_clean(e["value"])) / pt_len >= DUMP_RATIO]
     check("not_a_dump", not dumps, f"value reproduces most of its own evidence window: {dumps}")
 

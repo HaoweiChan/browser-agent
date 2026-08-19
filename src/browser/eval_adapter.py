@@ -151,6 +151,48 @@ def _check_evidence_window_miss_bounded() -> dict:
     return {"passed": not wrong, "wrong": wrong, "window_len": len(win)}
 
 
+def _check_dump_ratio_anchor_flip() -> dict:
+    """`not_a_dump`'s denominator must be the real page (`body_len`), not the
+    stored evidence window -- which agent.py caps at PAGE_TEXT_KEEP and can
+    double when a distant `anchor` forces a second window onto it (agent.py:
+    171-173). Reviewer-reported defect: the SAME value on the SAME page
+    flipped FAIL -> PASS depending only on whether the plan carried a distant
+    anchor, because the window (not the page) was the denominator. Pure probe
+    of evidence_window() and verify() directly, no browser."""
+    from .agent import evidence_window
+    from .verifier import verify
+
+    value = "V" * 776
+    anchor = "ANCHOR_TOKEN"
+    body = "p" * 2000 + value + "m" * 1000 + anchor + "a" * 600
+    win_plain = evidence_window(body, value)
+    win_anchored = evidence_window(body, value, anchor)
+    trace = [{"i": 1, "action": "extract", "postcondition_ok": True}]
+
+    def not_a_dump(page_text, body_len=None):
+        e = {"value": value, "page_text": page_text}
+        if body_len is not None:
+            e["body_len"] = body_len
+        return verify(trace=trace, extractions=[e], answer=value)["checks"]["not_a_dump"]
+
+    wrong = []
+    if win_plain == win_anchored:
+        wrong.append("windows must differ (anchor must force a second window) for this probe to mean anything")
+    # With body_len supplied -- what agent.py now records at extraction time --
+    # both windows are judged against the same real page, so the verdict must
+    # not depend on which window happened to get stored.
+    plain_ok, anchored_ok = not_a_dump(win_plain, len(body)), not_a_dump(win_anchored, len(body))
+    if plain_ok != anchored_ok:
+        wrong.append(f"verdict still depends on the anchor with body_len present: "
+                     f"plain={plain_ok} anchored={anchored_ok}")
+    # The true page fraction (776/4388 ~= 0.18) is well under DUMP_RATIO, so a
+    # correct fix reads this as a real answer, not a dump, on either window.
+    if not plain_ok or not anchored_ok:
+        wrong.append(f"body_len-denominated ratio should read as a real answer: plain={plain_ok} anchored={anchored_ok}")
+    return {"passed": not wrong, "wrong": wrong,
+            "win_plain_len": len(win_plain), "win_anchored_len": len(win_anchored)}
+
+
 def _check_inv3() -> dict:
     """INV-3: budget exhaustion is a loud classified failure, never a quiet stop.
 
@@ -720,7 +762,8 @@ def _run_parse_plan_case(case: dict) -> dict:
 
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
-              "evidence-window-miss-bounded": _check_evidence_window_miss_bounded}
+              "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
+              "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 
 
 def _run_invariant_case(case: dict) -> dict:

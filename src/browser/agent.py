@@ -325,8 +325,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         raise StepError("extract", "extraction returned empty text")
                     body = await page.inner_text("body")
                     anchor = step.get("anchor")
+                    # body_len is the real page the value was read from -- verify()'s
+                    # not_a_dump denominator prefers this over len(page_text), because
+                    # page_text is evidence_window()'s output: capped at PAGE_TEXT_KEEP
+                    # and doubled when a distant anchor forces a second window onto it
+                    # (case verifier-dump-ratio-anchor-flip).
                     extractions.append(
-                        {"value": val, "page_text": evidence_window(body, val, anchor)})
+                        {"value": val, "page_text": evidence_window(body, val, anchor),
+                         "body_len": len(body)})
                     answers.append(val)
                     # Identity anchor (verifier L1): the entity the task names
                     # must be present where the answer was read.

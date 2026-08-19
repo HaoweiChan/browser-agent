@@ -39,8 +39,17 @@ happened.
 ## Decision 2 — the `not_a_dump` threshold and its measured band
 
 `DUMP_RATIO = 0.35` was set from `len(clean(value))/len(clean(page_text))`
-measured across every extraction in the whole `fast` suite (66 extractions,
-not just the 24 labeled runs):
+measured across every extraction in the whole `fast` suite (**107
+extractions**, not just the 24 labeled runs). This corrects a miscount that
+stood here until M7.1 review: originally recorded as "66 extractions", a
+number nobody could reproduce from a script (none was committed). Re-measured
+for M7.1 by counting every extraction dict passed into every `verify()` call
+made by a full `evals.run --suite fast` run against the tree as committed at
+`bd5eef1` (73 cases; both the runtime-shaped call inside `run_task` and the
+eval adapter's ground-truth-shaped audit call count separately, since
+`not_a_dump` is evaluated fresh at each site) — **107**, confirmed
+independently against the reviewer's own count of 107, not the "66" this
+section previously claimed:
 
 - Highest non-dump ratio: **0.1786** (`tc5-forms-submit-zh`, a 10-character
   reference-number readback against a 56-character evidence window).
@@ -193,6 +202,85 @@ fix would need either the task text at the `verify()` call site (a scope
 change to the verifier's own contract: it takes raw evidence, never the task)
 or ground-truth L2, neither of which this milestone adds.
 
+## Decision 6 — M7.1: the denominator was the stored window, not the page
+
+Reviewer-reported, reproduced before any fix landed (case
+`verifier-dump-ratio-anchor-flip`, pure-code, no browser): `not_a_dump`
+divided `len(clean(value))` by `len(clean(page_text))`, but `page_text` is
+`agent.evidence_window()`'s output — a *storage artifact* capped at
+`PAGE_TEXT_KEEP` (2000 chars) and **doubled** (agent.py:171-173) when a
+distant `anchor` forces a second window to be appended. Two consequences,
+both watched red before the fix:
+
+- On any page longer than `PAGE_TEXT_KEEP` the check degenerates into an
+  absolute cap: a value over ~700 clean characters reads as "a dump"
+  regardless of true page size.
+- The SAME value on the SAME page flips verdict depending only on whether the
+  plan carried a distant anchor. Reproduced directly: a 776-char value on a
+  4,388-char page — plain window 2000 chars, ratio 0.388, `not_a_dump` FAILs;
+  the identical value/page with a distant anchor — window 3615 chars, ratio
+  0.2147, `not_a_dump` PASSes. The true page fraction is 776/4388 ≈ 0.177,
+  well clear of `DUMP_RATIO` either way — the pre-fix FAIL was itself wrong,
+  not just inconsistent.
+
+**The fix**: `agent.py` now records `body_len` (`len(body)`, already in hand
+at extraction time) alongside `value`/`page_text` on every extraction.
+`verify()`'s `not_a_dump` prefers `body_len` as its denominator, falling back
+to `len(clean(page_text))` — the old formula, unchanged — when `body_len` is
+absent. That fallback is deliberate, not a gap: the 25 frozen records in
+`evals/labels/verifier-sample.jsonl` predate this field and must keep
+replaying exactly as before.
+
+**Re-measured band** (`evals.run --suite fast`, 47 browser E2E-shaped cases,
+35 real extractions, current tree):
+
+- The two calibration points that live entirely in the `fast` suite are both
+  unsaturated (their window is the whole real page — no truncation), so
+  `body_len` and the old `len(clean(page_text))` are nearly identical, and
+  both move only in the third decimal place: `tc5-forms-submit-zh` (window 56
+  clean chars) 0.1786 → 0.1695; `verifier-catches-listing-dump`'s dump (window
+  195 clean chars) 0.5231 → 0.5204. Neither crosses `DUMP_RATIO` in either
+  direction — **unchanged** in the sense that matters (verdict), moved only in
+  the sense of raw-vs-cleaned-length bookkeeping.
+- The third named calibration point, `probe5-books-travel-dump` (window 1339
+  clean chars, live-only, ratio 0.4541), lives only in the frozen sample and
+  therefore has no `body_len` — its ratio is **exactly** unchanged (byte-for-
+  byte the same formula, not just numerically close).
+- Two real, previously-saturated fixture extractions now demonstrate the fix
+  directly: `near-excludes-its-own-anchor` and
+  `evidence-window-keeps-the-anchor`, both against `shop-lamp-spec.html`
+  (`body_len=2455`), gave old ratios of 0.0080 (plain window, 2000 chars) and
+  0.0052 (anchored window, 3062 chars) — different from each other purely
+  because of window storage, the exact defect this fixes. Both now compute
+  the identical `body_len`-denominated ratio, 0.0065. No verdict in the
+  current suite flips either way; the flip case above is what pins the fix.
+
+**Confusion matrix**: `evals/adversarial/verifier-precision-recall.json`'s
+pinned matrix (`tp=10, fp=11, fn=1, tn=3`, precision 0.4762, recall 0.9091)
+is **unchanged**, re-verified by re-running `_run_verifier_labels_case`
+against the current code. Every one of the 25 frozen records lacks
+`body_len` by construction, so all 28 of their extractions take the
+unmodified fallback.
+
+**Honest disclosure**: of the 28 extractions across the 25 frozen records,
+**6 are saturated (window length ≥ `PAGE_TEXT_KEEP`, max 3,560 characters)**
+— `near-excludes-its-own-anchor`, `live-books-detail-upc` (3,560),
+`live-books-travel-price`, `live-wrong-field-upc`, `live-unsorted-cheapest`,
+`live-wrong-field-availability`. Those six extractions' `not_a_dump` ratios
+were, and remain, judged against a truncated-or-doubled storage window rather
+than the page the value was actually read from — they are not page-fractions.
+None of the six cross `DUMP_RATIO` in either direction, so this does not move
+the pinned matrix, but it is a real gap in what that matrix's ratios mean,
+not a hypothetical one, and it cannot be closed without re-capturing (and
+re-hand-labeling) the sample. Declared in full in `docs/support-matrix.md`
+(D4).
+
+**Count correction (Decision 2)**: "66 extractions" in Decision 2 could not
+be reproduced from any committed script and was replaced with **107** after
+independently re-measuring — every extraction dict passed into every
+`verify()` call across a full `--suite fast` run (73 cases as committed at
+`bd5eef1`), matching an independent recount by the reviewer.
+
 ## What stays deliberately not fixed
 
 - **Semantic responsiveness.** No mechanism added here, or existing, asks
@@ -216,14 +304,16 @@ or ground-truth L2, neither of which this milestone adds.
   means the sample says nothing about how often real runs reach `verify()` at
   all.
 - **The threshold is chrome-sensitive and thinly calibrated.** The ratio is
-  computed against the absolute size of the evidence window, so the same dump
-  on a page with more surrounding boilerplate dilutes toward and under 0.35.
-  Calibrated on exactly two positive examples (0.4541, 0.5231) — only ~0.10 of
-  headroom above 0.35. No fixture with heavier chrome exists to demonstrate
-  the dilution (`docs/support-matrix.md`).
-- **A sparse page can false-FAIL `not_a_dump`.** The ratio is against
-  absolute page size, so any correct answer that legitimately makes up most
-  of a thin, single-purpose page reads as a dump — in the degenerate case, a
+  computed against the size of the real page the value was read from
+  (`body_len`, since Decision 6), so the same dump on a page with more
+  surrounding boilerplate dilutes toward and under 0.35 exactly as before the
+  fix — the fix changed what the denominator measures, not that dilution
+  exists. Calibrated on exactly two positive examples (0.4541, 0.5231) — only
+  ~0.10 of headroom above 0.35. No fixture with heavier chrome exists to
+  demonstrate the dilution (`docs/support-matrix.md`).
+- **A sparse page can false-FAIL `not_a_dump`.** The ratio is against the
+  real page's size, so any correct answer that legitimately makes up most of
+  a thin, single-purpose page reads as a dump — in the degenerate case, a
   page whose entire body text *is* the value gives ratio 1.0 and always
   fails. Broader than the short-evidence edge case `MIN_EVIDENCE` used to
   guard (page text under ~20 characters): the mechanism is the same ratio,
@@ -233,12 +323,25 @@ or ground-truth L2, neither of which this milestone adds.
   (`docs/support-matrix.md`), not a guard, because a false FAIL there is the
   safe direction and a guard with no case behind it is how the M6 `near:`
   defects shipped in the first place.
+- **A record with no `body_len` still saturates (Decision 6, D4).** Before
+  Decision 6 this was universal; after it, only records captured before
+  `body_len` existed can still exhibit it — permanently, since they cannot be
+  re-captured without breaking the frozen replay. 6 of the labeled sample's
+  28 extractions are saturated (window ≥ `PAGE_TEXT_KEEP`); none happen to
+  cross `DUMP_RATIO`, but their ratios are not page-fractions.
 
 ## Consequences
 
-- `src/browser/verifier.py`: `MIN_EVIDENCE` removed; `not_a_dump`'s ratio
+- `src/browser/agent.py`: every extraction record now carries `body_len`
+  (`len(body)` at extraction time), alongside `value` and `page_text`
+  (Decision 6).
+- `src/browser/verifier.py`: `not_a_dump`'s denominator prefers `body_len`,
+  falling back to `len(clean(page_text))` for records that predate it
+  (Decision 6). `MIN_EVIDENCE` removed; `not_a_dump`'s ratio
   computation guards only the zero-length case (crash avoidance, not a
   threshold).
+- `specs/001-browser-contract.md`: `evidence.extractions` now documents
+  `body_len`.
 - `src/browser/eval_adapter.py`: both scaffolding sites in
   `_run_verifier_case` (the `superseded` placeholder and the `anchors`
   padding) now use realistic-length inert evidence, with the reasoning
