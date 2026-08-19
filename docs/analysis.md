@@ -5,23 +5,27 @@ verification. Every number below is read out of a committed report in
 `evals/report/`, not estimated. Where a number does not exist, this document
 says so rather than supplying a plausible one.
 
-Baseline: `evals/report/20260819-031120-fast.json` plus the `live` and
+Baseline: `evals/report/20260819-144058-fast.json` plus the `live` and
 `invariant` runs of the same working tree. Sections 1 and 5 were refreshed at
-M7's final phase (case counts, precision/recall, and the chunking-evasion
-finding); section 6 still carries its M6 numbers and says so. A full refresh
+M7's review round (case counts, precision/recall, the chunking-evasion finding,
+and the evidence-window denominator fix); section 6 still carries its M6
+numbers and says so. A full refresh
 is M10's job (`docs/plans/active/task1-a-level-plan.md`).
 
 ## 1. What was measured, and on what
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 73 | 73/73 | 35.95s | 0.32s | 2.49s | $0.0000 |
-| `invariant` (must-always-hold) | 19 | 19/19 | 3.56s | 0.00s | 2.49s | $0.0000 |
+| `fast` (offline gate) | 74 | 74/74 | 36.46s | 0.33s | 2.47s | $0.0000 |
+| `invariant` (must-always-hold) | 20 | 20/20 | 3.57s | 0.00s | 2.48s | $0.0000 |
 | `live` (3 real sites) | 6 | 4/6 | 47.5s | 2.4s | 20.3s | $0.0000 |
 
-80 distinct cases (20 golden + 60 adversarial). 132 browser actions in a
-`fast` run; 52 of the 73 cases drive a real Chromium end to end, the
-remaining 21 are pure-code probes of a single component (the grader, the
+81 distinct cases (20 golden + 61 adversarial). 132 browser actions in a
+`fast` run; **43 of the 74** cases drive a real Chromium end to end — counted
+here as cases that actually recorded browser actions, which is why the figure
+is lower than the 52 this table used to report: the six L5 refusal cases are
+end-to-end cases that deliberately stop before a browser opens. The remaining
+31 are those refusals plus pure-code probes of a single component (the grader, the
 classifier, the URL guard, the scope screen, the matrix parser, and — added
 in M7's final phase — the evidence-window bound on a missing value).
 

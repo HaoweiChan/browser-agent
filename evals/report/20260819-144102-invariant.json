@@ -6,8 +6,8 @@
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 338,
-    "wall_seconds": 3.54,
+    "ms": 326,
+    "wall_seconds": 3.57,
     "latency_p50": 0.0,
     "latency_p95": 2.48,
     "cases_with_budgets": 1
@@ -68,7 +68,7 @@
           "value"
         ]
       },
-      "seconds": 0.44,
+      "seconds": 0.46,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -77,6 +77,14 @@
       "wrong": [],
       "seconds": 0.0,
       "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "window_len": 2000,
+      "seconds": 0.0,
+      "id": "evidence-window-miss-is-bounded",
       "kind": "adversarial"
     },
     {
@@ -144,7 +152,7 @@
       "advertised_unresolvable": [],
       "starved_by_chrome": [],
       "n_elements": 26,
-      "seconds": 0.27,
+      "seconds": 0.28,
       "id": "observe-content-survives-chrome",
       "kind": "adversarial"
     },
@@ -176,8 +184,8 @@
       },
       "got": {
         "rows": 8,
-        "limitations": 36,
-        "citations": 30
+        "limitations": 39,
+        "citations": 31
       },
       "seconds": 0.0,
       "id": "support-matrix-cites-real-cases",
@@ -215,14 +223,14 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:50985/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:59882/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 338
+        "ms": 326
       },
       "seconds": 0.35,
       "id": "url-guard-holds-after-navigation",
@@ -233,6 +241,15 @@
       "wrong": [],
       "seconds": 0.0,
       "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "win_plain_len": 2000,
+      "win_anchored_len": 3615,
+      "seconds": 0.0,
+      "id": "verifier-dump-ratio-anchor-flip",
       "kind": "adversarial"
     },
     {

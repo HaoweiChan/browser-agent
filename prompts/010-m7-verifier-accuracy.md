@@ -11,6 +11,13 @@ a 25th record added to demonstrate that `not_a_dump` is evadable by chunking
 a dump across several extractions — matrix moves to tp=10/fp=11/fn=1/tn=3
 (precision 0.476, recall 0.909); 73/73 fast, 19/19 invariant, $0.00. See
 `specs/decisions/ADR-007-m7-verifier-accuracy.md` Decision 5.
+**Updated again in M7's review round** (a peer Claude session reviewing PR #10):
+`not_a_dump` divided by the stored evidence *window* rather than the page, so
+the same value on the same page flipped verdict when a distant anchor doubled
+the window — cased red first, then fixed with a `body_len` recorded at
+extraction time; `capture.py` was found to truncate its own output and write no
+labels, so a re-run would have destroyed all 25 hand labels. 74/74 fast, 20/20
+invariant, $0.00. Decision 6.
 
 ## Context
 
