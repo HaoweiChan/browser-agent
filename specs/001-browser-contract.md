@@ -16,7 +16,7 @@ contract-drift (spec-drift audits field-by-field).
   "evidence": {
     "trace": [ TraceStep, ... ],
     "screenshots": ["step_1.png", ...],
-    "extractions": [ {"value": "...", "page_text": "window(s) around the value, and around the identity anchor if it falls outside"} ],
+    "extractions": [ {"value": "...", "page_text": "window(s) around the value, and around the identity anchor if it falls outside", "body_len": 0} ],
     "final_url": "string | null",
     "final_page_digest": "first ~500 chars of page text | null"
   },
@@ -46,6 +46,14 @@ contract-drift (spec-drift audits field-by-field).
 - `evidence.extractions` — what was read and what the page said where it was
   read, captured at extraction time. This is the verifier's input; it exists so
   verification consumes raw evidence rather than the executor's conclusion.
+  `body_len` is the length of the real page (`body`) the value was read from —
+  distinct from `len(page_text)`, since `page_text` is a bounded evidence
+  window (capped at `PAGE_TEXT_KEEP`, and doubled when a distant identity
+  anchor forces a second window onto it). `verify()`'s `not_a_dump` check
+  prefers `body_len` as its denominator and falls back to `len(page_text)`
+  when it is absent — every record in the frozen M7 hand-labeled sample
+  (`evals/labels/verifier-sample.jsonl`) predates this field and always takes
+  the fallback (case `verifier-dump-ratio-anchor-flip`).
 - `partial` — only for enumerable multi-item tasks: `answer` holds the correct
   subset, `reason` states what is missing. Honesty note: no code path produces
   `partial` yet. It was scheduled for M2 with OutcomeVerifier L2 and did not

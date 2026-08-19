@@ -1,0 +1,13 @@
+{
+  "id": "evidence-window-miss-is-bounded",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "level": "L1",
+  "input": { "kind": "invariant", "check": "evidence-window-miss-bounded" },
+  "expect": { "note": "evidence_window on a page longer than PAGE_TEXT_KEEP, for a value absent from the body, must return a bounded window (the head of the page) rather than crash — that window is what `grounded` then correctly fails on" },
+  "provenance": "cold review, final M7 phase. agent.py:170 read `body[:keep]` on the value-not-found branch, but the local is named PAGE_TEXT_KEEP — `keep` was never defined, so every extraction whose value is not a verbatim substring of the page body (reachable at runtime through whitespace normalisation, exactly the probe-#5 shape) crashed with NameError on any page longer than PAGE_TEXT_KEEP instead of failing the run loudly and classified. Pure-code probe of evidence_window directly, no browser: `evidence_window('x'*3000, 'VALUE-NOT-ON-PAGE')` raises NameError before the fix.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "not silent in the sense of a wrong PASS — the opposite defect, an unhandled crash where a classified failure:semantic was owed. Watched red on the NameError before `keep` was corrected to PAGE_TEXT_KEEP."
+  }
+}

@@ -26,6 +26,7 @@ docs/              planning package: product/ specs/ architecture/ evals/ plans/
 tasks/TODO.md      milestone-level tracker only — micro-tasks stay in-session (ADR-001)
 evals/golden/      hand-labeled cases (JSON, one per case)
 evals/adversarial/ cases known or designed to break the pipeline
+evals/labels/      frozen raw evidence + hand labels for accuracy sampling (JSONL)
 evals/report/      every run's output, committed to git
 prompts/           AI-collaboration record (curated 00N-*.md)
 src/<task>/        implementation + eval_adapter.py per task

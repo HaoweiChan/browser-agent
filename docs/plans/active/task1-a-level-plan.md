@@ -52,6 +52,17 @@ Ranked by reviewer-value ÷ effort, measured-gaps first.
    L1/L2/L3/L4/L5 all filled.
 2. Verifier precision/recall reported from ≥20 hand-labeled runs, committed;
    responsiveness gap closed or explicitly declared as a limitation.
+   **Met at M7** (`specs/decisions/ADR-008-m7-verifier-accuracy.md`,
+   `docs/analysis.md` §5): 25 hand-labeled runs, precision 0.476 / recall
+   0.909 (`verifier-precision-recall`) — reported as a floor on a
+   deliberately adversarial sample, not general accuracy. The
+   responsiveness gap is *partially* closed: `not_a_dump` catches the
+   single-extraction page-dump shape (moves 23/23 pre-fix `PASS` regardless
+   of correctness to 21/23), but not the same dump split across several
+   extractions (`chunked-dump-cheapest`, cold review, final phase);
+   semantic responsiveness for a short, focused, wrong answer is
+   explicitly declared unfixed (`docs/support-matrix.md`, 10 surviving
+   false positives + the chunking evasion).
 3. Full mutation catalog passing, each case seen red first; hostile-domain
    results published raw.
 4. Cost/model ablation table in `docs/analysis.md` from committed runs; ADR

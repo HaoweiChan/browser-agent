@@ -5,23 +5,38 @@ verification. Every number below is read out of a committed report in
 `evals/report/`, not estimated. Where a number does not exist, this document
 says so rather than supplying a plausible one.
 
-Baseline: the 2026-08-18 `fast` run (71/71) plus the `live` and
-`invariant` runs of the same working tree. Sections 1, 5 and 6 were refreshed
-at M6; every other section still carries its M5 numbers and says so. A full
-refresh is M10's job (`docs/plans/active/task1-a-level-plan.md`).
+Baseline: `evals/report/20260819-151917-fast.json` plus the `live`
+(`evals/report/20260819-015005-live.json`) and `invariant`
+(`evals/report/20260819-151925-invariant.json`) runs of the same working
+tree, taken after PR #10 merged M7 with main's navigation fix (post-M6 fix:
+`domcontentloaded` + bounded settle, live suite 6/6) **and** restored the
+`not_a_dump` sparse-page floor that main's own fixture required (ADR-008
+Decision 7). Sections 1 and 5 were refreshed for the merge (case counts,
+precision/recall, the chunking-evasion finding, the evidence-window
+denominator fix, and the sparse-page floor); section 6 still carries its M6
+numbers and says so. A full refresh is M10's job
+(`docs/plans/active/task1-a-level-plan.md`).
 
 ## 1. What was measured, and on what
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 71 | 71/71 | 48.58s | 0.35s | 2.55s | $0.0000 |
-| `invariant` (must-always-hold) | 18 | 18/18 | 3.74s | 0.00s | 2.50s | $0.0000 |
-| `live` (3 real sites) | 6 | **6/6** | 26.4s | 2.2s | 11.9s | $0.0000 |
+| `fast` (offline gate) | 77 | **77/77** | 53.3s | 0.34s | 4.3s | $0.0000 |
+| `invariant` (must-always-hold) | 20 | **20/20** | 3.58s | 0.0s | 2.51s | $0.0000 |
+| `live` (3 real sites) | 6 | **6/6** | 24.84s | 2.33s | 10.54s | $0.0000 |
 
-78 distinct cases. 128 browser actions in a `fast` run; 48 of the 71 cases drive
-a real Chromium end to end, the remaining 23 are pure-code probes of a single
+84 distinct cases (20 golden + 64 adversarial).
+139 browser actions in a `fast` run; **46 of the
+77** cases drive a real Chromium end to end — counted here as
+cases that actually recorded browser actions: the six L5 refusal cases are
+end-to-end cases that deliberately stop before a browser opens. The remaining
+31 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
-matrix parser).
+matrix parser, and — added in M7's final phase — the evidence-window bound on
+a missing value). `live` is 6/6 as of the post-M6 navigation fix (main,
+merged into this baseline): `page.goto` no longer waits for `load`, so a
+hanging subresource no longer turns a fully readable page into
+`failure:nav`.
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -151,13 +166,137 @@ Six `trap-*` cases encode wrong answers that look right (form not submitted,
 search not executed, unsorted "cheapest", wrong field, near-miss entity, empty
 extraction). All six are currently caught. That is reported as a **floor on
 detection**, not as verifier accuracy, because the traps were written by the
-same author as the verifier. There is **no hand-labeled precision/recall
-sample** — it is in the B-strong list and was not reached.
+same author as the verifier.
 
 Two anchor holes are known, declared, and unfixed (`docs/support-matrix.md`):
 a near-miss entity whose name contains the target's, and aggregate pages where
 every candidate is in the page text so the anchor certifies the wrong answer
 too. Both are caught only by ground truth, which a live run does not have.
+
+### Hand-labeled sample (M7): a second floor reading, not a promotion to accuracy
+
+25 runs (16 fixture — 13 general + 2 built to exercise the postcondition gate
++ 1 built at M7's final phase to demonstrate a chunking evasion — and 9 live:
+6 books.toscrape.com, 3 news.ycombinator.com) were captured, hand-labeled
+`correct`/`wrong` against their task, and replayed offline through the exact
+runtime `verify()` call — no `expect`, no `state`, the same call
+`agent.py:491` makes. Method, threshold measurement, and the `MIN_EVIDENCE`
+scaffolding correction are recorded in full in
+`specs/decisions/ADR-008-m7-verifier-accuracy.md`; pinned matrix in
+`evals/adversarial/verifier-precision-recall.json`.
+
+**The headline is not the precision figure.** Excluding the two
+postcondition-gate records, the runtime verifier — before this milestone's
+one addition (`not_a_dump`) — returned `PASS` on **23 of 23** records: 10
+correct answers and 13 wrong ones, with zero discrimination between them.
+This is provable by reading the code and confirmed empirically: every runtime
+L1 check (trace shape, supersede resolution, postcondition presence,
+non-empty answer, grounding) is mechanical, and none of them asks whether the
+answer answers the question. The eval suite has looked clean across six
+milestones because the adapter calls `verify()` a **second** time with ground
+truth (L2) — a layer no real user's run ever gets.
+
+`not_a_dump` (`DUMP_RATIO = 0.35`, measured against every `fast`-suite
+extraction: real non-dump ratios top out at 0.1786, the two known dumps sit
+at 0.4541 and 0.5231, 0.35 sits in the empty gap) is the **first** runtime
+check that can fail a mechanically-clean run on the *content* of its answer,
+but it closes only the **single-extraction** dump shape. Re-running the same
+23 records against the current code: **21/23 PASS** — the two original
+page-dump records (one whole-container extraction each) now correctly fail,
+but a third wrong record, `chunked-dump-cheapest` (the same task and fixture,
+the same page dumped across four separate per-row extractions instead of
+one), still passes: `verify()` never receives the task text, so nothing here
+can tell "list every product" from "which is cheapest" given identical
+per-extraction evidence shapes. That is the entire gain and its exact
+boundary — a bounded, real, and now-measured gap (D1, `docs/support-matrix.md`),
+not a general responsiveness check.
+
+Post-fix confusion matrix: tp=10, fp=11, fn=1, tn=3 → **precision 0.476,
+recall 0.909** (pre-`not_a_dump`, on the 24-record sample that predates the
+chunking-evasion record: tp=10, fp=12, fn=1, tn=1 → precision 0.455, same
+recall — the check never touches a correct answer). Precision as a ratio is a
+function of this sample's mix, which is **deliberately adversarial**: 13 of
+the 23 non-postcondition-gate records are constructed traps. Publishing 0.476
+without that context invites reading it as general accuracy, which this
+sample — constructed, stratified, n=25, drawn only from runs that reached
+`verify()` — cannot support.
+
+The 10 pre-existing false positives are short, focused, *wrong* answers, not
+dumps: wrong field, wrong table row, unsorted "cheapest", a search filled but
+never executed, a form filled but never submitted, a near-miss "Pro" variant
+— four of them on live sites. `not_a_dump` was never meant to reach these;
+closing that gap needs ground truth (L2, absent at runtime) or an
+evidence-only LLM check (L3, absent by design). An 11th false positive,
+`chunked-dump-cheapest`, is a different residue: `not_a_dump` was designed
+for exactly this shape (a page dump) and misses it because chunking the same
+dump across several extractions keeps every individual ratio under threshold
+(D1, `docs/support-matrix.md`). Full list: `evals/labels/verifier-sample.jsonl`.
+
+**Deployed run `734d3d1f` (§8b) is a live instance of exactly this class.**
+"Find the cheapest book in Travel" was planned as `extract {"role": "article",
+"index": 0}`, anchored on `"Travel"` — the category, not the entity — and
+returned the first product on the listing, £45.17 against a true £23.21. It
+was scored `success` + layer-1 `PASS`, the same shape as the 10 focused false
+positives above: a short, grounded, anchored, mechanically-clean answer that
+is simply wrong. **`not_a_dump` would not have caught it.** The answer is a
+single product tile — "It's Only the Himalayas\n\n£45.17\n\n In stock\n\nAdd
+to basket", well under a hundred characters — not a page dump, so its ratio
+against the category page it was read from would sit far below `DUMP_RATIO`
+(0.35), the same territory as the real non-dump ratios measured in this
+sample (topping out at 0.1786). The run's own evidence (the extraction
+record with `body_len`) is not in this tree — the deployment logs it, this
+repo does not capture it — so that is reasoning from the published answer and
+page shape, not a measured ratio; no figure is claimed for it. What the run
+adds beyond the hand-labeled sample is not a new failure mode: it is this
+milestone's exact "10 focused wrong answers that pass the runtime verifier
+untouched" finding, independently confirmed on the live deployment rather
+than in a replayed offline sample.
+
+One more bound on the claimed gain, declared rather than cased
+(`docs/support-matrix.md`): the 0.35 threshold is measured against the size
+of the real page the value was read from, so it is chrome-sensitive (the same
+dump on a more boilerplate-heavy page dilutes toward and under it) and
+thinly calibrated — exactly two positive examples, 0.4541 and 0.5231, only
+~0.10 of headroom above 0.35 (D2).
+
+**A related bound was declared, then closed inside the PR that declared it.**
+The same ratio can also false-FAIL a *correct* answer that legitimately makes
+up most of a thin page — degenerate case, ratio 1.0, always fails. This was
+declared rather than cased on the grounds that no fixture in the repo was
+sparse enough to demonstrate it — and then main's `slow-asset.html` (added in
+the same PR, for its own navigation-timeout cases) turned out to be exactly
+that fixture: 37 clean characters of body text, correct answer 23 of them
+(62%). `not_a_dump` FAILed it, and took main's two navigation cases down with
+it. `MIN_PAGE_CHARS = 100` (`verifier.py`) restores the floor below which
+`not_a_dump` does not apply — the same guard M7 had removed as `MIN_EVIDENCE`
+for lack of exactly this evidence — pinned by
+`verifier-sparse-page-not-a-dump` (D3, `docs/support-matrix.md`, now
+`supported`; `specs/decisions/ADR-008-m7-verifier-accuracy.md` Decision 7).
+
+**M7.1 correction: the denominator was the stored window, not the page.**
+A reviewer found, and this milestone reproduced before fixing, that
+`not_a_dump`'s ratio was computed against `len(page_text)` — the *stored*
+evidence window, capped at `PAGE_TEXT_KEEP` and doubled when a distant
+identity anchor forces a second window onto it — not against the page the
+value actually came from. Two consequences, both watched red: on any page
+longer than `PAGE_TEXT_KEEP`, a value over ~700 clean characters read as "a
+dump" regardless of true page size; and the *same* value on the *same* page
+could flip FAIL → PASS depending only on whether the plan carried a distant
+anchor (776-char value, 4,388-char page: ratio 0.388 FAIL with no anchor,
+0.2147 PASS with one). The fix records `body_len` — the real page length,
+already available in `agent.py` at extraction time — on every extraction, and
+`verify()` now prefers it, falling back to the old window-based formula only
+when `body_len` is absent. **Disclosed plainly: 6 of the 28 extractions in
+the committed hand-labeled sample (`evals/labels/verifier-sample.jsonl`) have
+a saturated window (max 3,560 characters) and predate `body_len`, so they
+permanently take the fallback — those six ratios are judged against a
+truncated-or-doubled window, not the page, and are not page-fractions.** None
+of the six cross `DUMP_RATIO` in either direction, so the pinned confusion
+matrix (`tp=10, fp=11, fn=1, tn=3`) is unchanged, and the three unsaturated
+calibration points above (0.1786, 0.4541, 0.5231) are unchanged in the sense
+that matters (verdict) — full detail, including the re-measured band, in
+`specs/decisions/ADR-008-m7-verifier-accuracy.md` Decision 6 and
+`docs/support-matrix.md` D4.
 
 ### What the reliability numbers mean
 
@@ -261,12 +400,20 @@ The reviewer-facing version of this list, with per-row evidence, is
 
 1. **Planning quality — entirely.** Every case stubs the planner.
 2. **Real cost and end-to-end latency**, beyond one M1 run at $0.0029.
-3. **Verifier precision/recall** — no hand-labeled sample; traps are a floor.
+3. **Verifier precision/recall** — measured at M7 (§5): 0.476/0.909 on a
+   25-record hand-labeled sample. A floor reading of a deliberately
+   adversarial, constructed sample, not a general accuracy claim; semantic
+   responsiveness (a short, wrong, well-formed answer) is still uncaught at
+   runtime, and neither is the same dump split across several extractions
+   (D1, `docs/support-matrix.md`) — deployed run `734d3d1f` (§5, §8b) is the
+   live confirmation of exactly this class.
 4. **Live *planning*** — the live suite is 6/6 across three domains and three
-   task classes as of 2026-08-18, but every green live case runs a hand-written
-   plan and the one live-planner case is unrun (needs `OPENROUTER_API_KEY`).
-   Live breadth is no longer the gap; live planning quality is the whole of
-   what remains.
+   task classes as of the post-M6 navigation fix, but every green live case
+   runs a hand-written plan and the one live-planner case is unrun (needs
+   `OPENROUTER_API_KEY`). Live breadth is no longer the gap; live planning
+   quality is the whole of what remains — and the one live-planner run that
+   *has* happened (`734d3d1f`, deployed rather than eval) is the first
+   measurement of it, and it was wrong.
 5. **The deployed system end-to-end** — see below.
 6. **L3-difficulty tasks** — two exist (both live, M6); one of them is unrun.
 7. Seven mechanism-level gaps carried deliberately, listed in ADR-005
@@ -431,7 +578,12 @@ aggregate page, it is not — and a reviewer submitting this task to the live UR
 would be told £45.17 with a green badge.
 
 Sizing that gap is M7's entire subject, and this run is its first labelled
-sample: a confirmed false PASS with a committed run id.
+sample: a confirmed false PASS with a committed run id. §5 is where that
+sizing actually happened — the hand-labeled sample's 10 focused false
+positives (grounded, anchored, mechanically clean, simply wrong) are the
+measured version of the same limitation this run demonstrates live; see the
+`734d3d1f` cross-reference there for the `not_a_dump` boundary in this run's
+specific case.
 
 ## 8. Deployment — verified against the live URL
 

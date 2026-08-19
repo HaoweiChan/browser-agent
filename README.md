@@ -35,7 +35,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 71 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 77 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
 python3 -m evals.run --suite live        # 6 cases, 3 real sites, still $0.00
 ```
@@ -49,12 +49,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260817-133237-fast.json`:
+Latest offline baseline — `evals/report/20260819-151917-fast.json`:
 
 ```
-fast  71/71    invariant  18/18    live  6/6    $0.0000    48.6s
+fast  77/77    invariant  20/20    live  6/6    $0.0000    53.3s
 recovery 3/3 verified (8 rungs tried) · mutation 4/4 passed, 2 by relocating
-diagnosis 12/12 · 3 replans
+diagnosis 13/13 · 3 replans
 ```
 
 `live 6/6` is one day old and was `4/6` at the M6 merge. Two of those reds were
@@ -188,7 +188,7 @@ four more still, three of which answered a question confidently and wrongly
 with no error anywhere in the trace. Every one of those three needed a page
 shape the repo's only offline listing happens not to have.
 
-The eval set is not weak; it is 78 cases, it caught a *bad fix* mid-session
+The eval set is not weak; it is 84 cases, it caught a *bad fix* mid-session
 during the last review, and in M6 it caught a fix that passed its own case for
 the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
