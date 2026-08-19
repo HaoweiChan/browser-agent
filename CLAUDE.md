@@ -85,6 +85,13 @@ exercises real sites at $0.00 while the paid cases stay behind `full`.
 5. New cases into the eval set → back to 3
 6. Eval gate green → commit
 
+For a full tasks/TODO.md task that should end in a PR, run the loop through
+**/pr-loop <task-id>** instead: one orchestrator session drives
+implement → gate → review → repair with subagents (implementer in a worktree,
+pr-reviewer with fresh context); the human only writes the spec and merges.
+The PR carries role-tagged structured findings and an evidence pack — never
+agent chatter. Protocol: `.claude/skills/pr-loop/SKILL.md`.
+
 ## Adding a task
 
 1. `src/<task>/` with an `eval_adapter.py` exposing `run_case(case) -> {"passed": bool, ...}`
