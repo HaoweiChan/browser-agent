@@ -3,6 +3,12 @@
 Date: 2026-08-16
 Status: accepted
 
+**Ruling**: Answer comparison checks value, unit and currency as three separate facts, never one normalized string; a replan may not drop a superseded step and extract anyway unless that step provably never changed the page (`page_changed`); a recovery only counts when its first replacement step differs from the one it replaced; the URL guard re-checks `final_url` after every action, not just the submitted string; and a `superseded_by` pointer is written when its replacement step is created, never before.
+**Because**: Six cold-review defects shared one shape — a wrong or unverified answer scoring PASS on a suite that was already green on 52 cases.
+**Enforced by**: `evals/adversarial/verifier-sign-currency-percent.json`, `replan-cannot-launder-noop-action.json`, `supersede-never-dangles.json`
+
+---
+
 ## Context
 
 M1 and M2 were closed with a cold review; M3 and M4 were not, and were committed

@@ -8,6 +8,7 @@ expectations, identity anchors, and external ground truth from the fixture
 
 Case kinds (`input.kind`):
 - `invariant`    — pure-code property check, no browser (`check`: inv0 | inv1 | inv2)
+- `adr-header-index` — decision-first ADR header + INDEX.md hygiene (no browser)
 - `observe`      — a11y observation shape
 - `url-guard`    — SSRF guard truth table
 - `screening`    — pre-flight scope screen truth table
@@ -710,6 +711,49 @@ def _run_declared_keys_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong}
 
 
+def _run_adr_header_index_case(case: dict) -> dict:
+    """The decision-first ADR retrofit (groundwork GW-006) must not rot.
+
+    Pure code, no network: every specs/decisions/ADR-*.md must carry a
+    `**Ruling**:` block of at most 3 lines before its first `---`, and
+    specs/decisions/INDEX.md must list each ADR exactly once, matched by
+    number so a renamed slug can't hide a missing or duplicated entry.
+    """
+    import re
+
+    decisions_dir = Path(__file__).parents[2] / "specs" / "decisions"
+    adr_files = sorted(decisions_dir.glob("ADR-*.md"))
+    missing_ruling, bad_length = [], []
+    for p in adr_files:
+        before_hr = p.read_text(encoding="utf-8").split("\n---\n", 1)[0]
+        lines = before_hr.splitlines()
+        starts = [i for i, l in enumerate(lines) if l.startswith("**Ruling**:")]
+        if not starts:
+            missing_ruling.append(p.name)
+            continue
+        block = []
+        for l in lines[starts[0]:]:
+            if l.startswith("**Because**:"):
+                break
+            block.append(l)
+        if len(block) > 3:
+            bad_length.append({"file": p.name, "lines": len(block)})
+
+    adr_nums = [m.group(1) for p in adr_files if (m := re.match(r"ADR-(\d+)", p.name))]
+    index_path = decisions_dir / "INDEX.md"
+    index_text = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
+    index_nums = re.findall(r"^- ADR-(\d+)", index_text, re.MULTILINE)
+    missing_index = sorted(set(adr_nums) - set(index_nums))
+    dup_index = sorted({n for n in index_nums if index_nums.count(n) > 1})
+
+    wrong = {k: v for k, v in {
+        "missing_ruling": missing_ruling, "ruling_too_long": bad_length,
+        "missing_from_index": missing_index, "duplicated_in_index": dup_index,
+    }.items() if v}
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"adr_files": len(adr_files), "index_entries": len(index_nums)}}
+
+
 def _run_stream_case(case: dict) -> dict:
     """The progress stream must show the run that happened, not a tidier one.
 
@@ -965,6 +1009,7 @@ def _run_invariant_case(case: dict) -> dict:
 # `input.kind` -> runner. An unknown kind is a fixture E2E case, which is the
 # default shape; every other kind names the narrower thing it grades.
 KINDS = {
+    "adr-header-index": _run_adr_header_index_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,

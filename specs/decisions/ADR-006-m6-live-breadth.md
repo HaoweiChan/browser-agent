@@ -9,6 +9,14 @@ unchanged. The original text is left as written: it was accurate on its date,
 and a coverage claim that quietly improves itself is as much of a drift problem
 as one that quietly rots.
 
+**Amended by**: ADR-007 (Decision 5's live-coverage claims; the mechanism decisions stand)
+
+**Ruling**: Implements the `near:` target key as the `structural` tier — nearest visible anchor in document order, excluding the anchor's own subtree, exact-match before substring, refusing on ambiguity on either side — and closes three quiet-wrong-answer defects: an unimplemented target key now fails loud instead of being silently dropped, a fill onto a non-fillable element classifies `locate` not `act`, and the evidence window keeps a slice around the identity anchor.
+**Because**: On a real page the interesting value usually has no name of its own, only a label beside it, and the first `near` implementation answered three cold-review inputs confidently and wrongly with nothing in the trace to suggest doubt.
+**Enforced by**: `evals/adversarial/near-prefers-the-container.json`, `near-anchor-substring.json`, `relocate-fill-non-editable.json`
+
+---
+
 ## Context
 
 The B-freeze met 5 of 6 exit criteria. Criterion 2 was partial for one reason:
