@@ -9,6 +9,12 @@ available at the time, and the point of Decision 7 is that removal-on-no-
 evidence and restoration-on-new-evidence are both the right call, made twice,
 not a reversal to be quietly smoothed over.
 
+**Ruling**: `verify()`'s `not_a_dump` check divides the extracted value's clean length by the real page size (`body_len`, falling back to the stored window for records captured before that field existed) against `DUMP_RATIO = 0.35`, gated by a `MIN_PAGE_CHARS = 100` floor below which it does not apply; both constants are calibrated against a 25-record hand-labeled sample with a pinned confusion matrix (tp=10, fp=11, fn=1, tn=3 — precision 0.4762, recall 0.9091), and no production constant may be widened just to tolerate eval scaffolding.
+**Because**: The runtime verifier's mechanical checks ask nothing about whether an answer answers the question, so before this ADR every well-formed wrong answer that reached `verify()` scored PASS.
+**Enforced by**: `evals/adversarial/verifier-precision-recall.json`, `verifier-sparse-page-not-a-dump.json`, `verifier-dump-ratio-anchor-flip.json`
+
+---
+
 ## Context
 
 The B-freeze and M6 both declared the same gap: "there is no hand-labeled

@@ -3,6 +3,12 @@
 Date: 2026-08-16
 Status: accepted
 
+**Ruling**: The SSE trace stream emits every attempted step in order, including ones a recovery ladder superseded, and `postcondition_ok` renders three-valued (`null` = unverified, never a tick); `docs/support-matrix.md` is parsed live at request time, never duplicated into JSON; every gateway failure path returns the RunResult contract shape through one shared assembler.
+**Because**: A UI can fail quietly by rendering a truthful run flatteringly, in a way no execution-shaped eval would ever catch.
+**Enforced by**: `evals/adversarial/stream-shows-every-step.json`, `support-matrix-cites-real-cases.json`, `gateway-error-contract-shape.json`
+
+---
+
 ## Context
 
 M4's validation is a stranger test: someone who has not read this repo should be

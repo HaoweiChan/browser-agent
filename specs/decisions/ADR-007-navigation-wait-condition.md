@@ -5,6 +5,12 @@ Status: accepted
 Supersedes: the live-coverage claims in ADR-006 Decision 5 — see Decision 4 below (the mechanism
 decisions in ADR-006 stand unchanged)
 
+**Ruling**: Navigation waits for `domcontentloaded` then best-effort for `load` (bounded by `SETTLE_BUDGET_MS`, swallowed only on `PlaywrightTimeoutError`) rather than blocking on `load` or `networkidle`; the screenshot's font-wait gets its own 2s bound (`SCREENSHOT_TIMEOUT_MS`); and the M6 live-coverage table is corrected — openlibrary.org is reachable and both its cases are green.
+**Because**: One hanging subresource made a fully-rendered, curl-reachable page unreachable to the agent, which reported `failure:nav` — blaming the site — for a page it could read in 4.4s.
+**Enforced by**: `evals/adversarial/nav-load-event-never-fires.json`, `nav-action-load-event-never-fires.json`
+
+---
+
 ## Context
 
 M6 declared openlibrary.org "evidenced but not currently verified" and its live

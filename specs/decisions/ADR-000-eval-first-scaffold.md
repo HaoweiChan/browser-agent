@@ -3,6 +3,14 @@
 Date: 2026-08-15 · Status: accepted — the "no tasks.md / plan files" consequence
 is amended by ADR-001 (bounded docs/ layer + milestone-level TODO)
 
+**Amended by**: ADR-001
+
+**Ruling**: `specs/` holds only three artifact kinds — invariants, output contracts, and ADRs (why, not what); the eval set is the spec, and enforcement lives in hooks, never in prose, because hooks are the only layer that can actually block an agent.
+**Because**: A prose requirement like "extracted correctly" is unfalsifiable when there is no public ground truth to check it against; an executable eval case is not.
+**Enforced by**: `.githooks/pre-commit`, `.claude/hooks/post-edit-invariant.sh`
+
+---
+
 ## Context
 
 Standard SDD (OpenSpec / Spec Kit style) assumes requirements are ambiguous and

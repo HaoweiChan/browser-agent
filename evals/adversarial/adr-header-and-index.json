@@ -1,0 +1,16 @@
+{
+  "id": "adr-header-and-index",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "adr-header-index"
+  },
+  "expect": {
+    "note": "every specs/decisions/ADR-*.md carries a **Ruling**: block of at most 3 lines before its first `---`, and specs/decisions/INDEX.md lists each ADR number exactly once"
+  },
+  "provenance": "groundwork GW-006's decision-first ADR retrofit adds a mandatory compressed header (Ruling/Because/Enforced by) to every ADR plus a one-line-per-ADR index, so a reader who wants 'what are the current rules' does not have to read the incident narrative behind each one. Nothing enforced the header's shape or the index's completeness once written by hand, so both were free to rot the next time an ADR is added or an existing one is edited. Watched red twice while building this case: once with the header stripped from ADR-003 down to just a bare '**Ruling**:' line followed by 4 lines of prose before '**Because**:' (missing_ruling/ruling_too_long both empty, ruling_too_long: [{'file': 'ADR-003-m3-recovery-thresholds.md', 'lines': 4}]), and once with the ADR-006 line deleted from INDEX.md (missing_from_index: ['006']).",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "same shape as support-matrix-cites-real-cases and opt-in-expect-keys-declared: this guards a documentation contract, not the product, so it stays pure code with no network and no browser. It checks the header EXISTS and is short, and that INDEX.md's coverage is complete and non-duplicated — it does not grade whether a Ruling sentence is an honest compression of the ADR's Decision section, which is a human judgment act the same way declaring a support-matrix status is."
+  }
+}

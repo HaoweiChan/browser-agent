@@ -3,6 +3,14 @@
 Date: 2026-08-16
 Status: accepted; **Decision 4 (fast wall clock ≤ 60s) is knowingly breached since M8** — the gate measures 66.6-68.3s, 10.6s of it one case spending a deliberate Playwright click timeout. Declared rather than silently re-set: `specs/decisions/ADR-009-m8-mutation-hostility.md` Decision 6 and `docs/support-matrix.md` D8 carry the measurement, the reasoning, and the named fix (the parallel eval runner, still backlog). Decisions 1-3, 5 and 6 stand as written.
 
+**Amended by**: ADR-009 (Decision 4's 60s wall-clock ceiling, declared breached rather than reset)
+
+**Ruling**: Sets the pre-commit gate: `fast` suite ≥ the committed baseline (1.000), `invariant` suite = 100% unconditional, trap-catch ≥ 90% as a floor never a verifier-accuracy claim, `fast` suite cost = $0.00 exactly, and `fast` suite wall clock ≤ 60s (later knowingly breached, see Amended by).
+**Because**: Naming performance targets before a baseline exists invites goalpost-moving in a history reviewers read.
+**Enforced by**: `.eval-baseline.json` + `.githooks/pre-commit` (fast-suite gate); `invariant` suite = 100% enforced unconditionally in `evals/run.py`.
+
+---
+
 ## Context
 
 `docs/evals/evaluation-methodology.md` fixes two thresholds a priori, because
