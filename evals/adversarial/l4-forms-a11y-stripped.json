@@ -1,0 +1,77 @@
+{
+  "id": "l4-forms-a11y-stripped",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L4",
+  "tc": "TC5",
+  "mutation": "a11y-stripped",
+  "input": {
+    "task": "Send an enquiry from Ada Lovelace (ada@example.com) asking whether the Aurora lamp is dimmable, and report the reference number.",
+    "fixture": "forms.html",
+    "mut": "a11y-stripped",
+    "stub_plan": [
+      {
+        "action": "fill",
+        "target": {
+          "role": "textbox",
+          "name": "Full name"
+        },
+        "value": "Ada Lovelace"
+      },
+      {
+        "action": "fill",
+        "target": {
+          "role": "textbox",
+          "name": "Email"
+        },
+        "value": "ada@example.com"
+      },
+      {
+        "action": "fill",
+        "target": {
+          "role": "textbox",
+          "name": "Message"
+        },
+        "value": "Is the Aurora lamp dimmable?"
+      },
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Submit enquiry"
+        },
+        "expected_state": {
+          "text_visible": "Enquiry received"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "group",
+          "name": "Reference"
+        },
+        "anchor": "Ada Lovelace"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "REF-6B5159",
+    "anchors": [
+      "Ada Lovelace"
+    ],
+    "state": {
+      "name": "Ada Lovelace",
+      "email": "ada@example.com",
+      "message": "Is the Aurora lamp dimmable?"
+    },
+    "recovery": true
+  },
+  "provenance": "tc5-forms-submit under a11y-stripped, and the only case that can hold the mutation's submit shim honest. shop.html's form is JS-handled (`onsubmit=\"return doSearch(event)\"`), so a shim built on `dispatchEvent(new Event('submit'))` looks correct there — it fires the inline handler. forms.html is a REAL POST form, and against it that shim submits nothing at all: no request, no server record, and l4-shop-a11y-stripped stays green while the mutation quietly damages every other fixture it touches. Watched red against that shim before it was replaced: failure:act, postcondition 'Enquiry received' never reached, and the server's record still {'name': None, 'email': None, 'message': None} — while l4-shop-a11y-stripped stayed green in the same run. The shim is now `form.requestSubmit()`, which fires the submit event AND performs the native submission. The pass condition is external ground truth — the server's own record at /fixtures/forms/state (verifier layer 2) — so a green here means the POST really landed, not that a postcondition looked right.",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "M3 relocation, rung 2 (text tier): the submit control is a div under this mutation, so role+name finds nothing and `{text: 'Submit enquiry'}` clicks it. Also the only mutation coverage of TC5."
+  }
+}

@@ -5,7 +5,12 @@ verification. Every number below is read out of a committed report in
 `evals/report/`, not estimated. Where a number does not exist, this document
 says so rather than supplying a plausible one.
 
-Baseline: `evals/report/20260819-151917-fast.json` plus the `live`
+Baseline: **sections 1 and 5's reliability line were refreshed at M8** to
+`evals/report/20260820-020212-fast.json` plus the `live`
+(`…-020100-live.json`) and `invariant` (`…-020104-invariant.json`) runs of the
+same tree — the rest of this document still reads on the M7 baseline below and
+its full refresh belongs to M10 (`tasks/TODO.md`). M7 baseline:
+`evals/report/20260819-151917-fast.json` plus the `live`
 (`evals/report/20260819-015005-live.json`) and `invariant`
 (`evals/report/20260819-151925-invariant.json`) runs of the same working
 tree, taken after PR #10 merged M7 with main's navigation fix (post-M6 fix:
@@ -21,22 +26,30 @@ numbers and says so. A full refresh is M10's job
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 77 | **77/77** | 53.3s | 0.34s | 4.3s | $0.0000 |
-| `invariant` (must-always-hold) | 20 | **20/20** | 3.58s | 0.0s | 2.51s | $0.0000 |
-| `live` (3 real sites) | 6 | **6/6** | 24.84s | 2.33s | 10.54s | $0.0000 |
+| `fast` (offline gate) | 86 | **86/86** | 68.05s | 0.37s | 4.34s | $0.0000 |
+| `invariant` (must-always-hold) | 22 | **22/22** | 3.68s | 0.0s | 0.54s | $0.0000 |
+| `live` (4 real sites) | 9 | **9/9** | 58.13s | 1.68s | 23.64s | $0.0000 |
 
-84 distinct cases (20 golden + 64 adversarial).
-139 browser actions in a `fast` run; **46 of the
-77** cases drive a real Chromium end to end — counted here as
+96 distinct cases (20 golden + 76 adversarial).
+168 browser actions in a `fast` run; **53 of the
+86** cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions: the six L5 refusal cases are
 end-to-end cases that deliberately stop before a browser opens. The remaining
-31 are those refusals plus pure-code probes of a single
+33 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
-matrix parser, and — added in M7's final phase — the evidence-window bound on
-a missing value). `live` is 6/6 as of the post-M6 navigation fix (main,
-merged into this baseline): `page.goto` no longer waits for `load`, so a
-hanging subresource no longer turns a fully readable page into
-`failure:nav`.
+matrix parser, the evidence-window bound on a missing value, and — added in
+M8 — the mutation counters and the opt-in `expect` keys). `live` is 9/9 across
+four real sites, the fourth added at M8 to be hostile rather than to be passed:
+`quotes.toscrape.com` renders its content invisibly to the accessibility tree,
+and the run there answers confidently and wrongly (§ the M8 rows in
+`docs/support-matrix.md`, D5–D11).
+
+**The `fast` gate now costs 68s against the 60s ceiling ADR-002 set** (66.6–68.3s
+across runs on this branch). 10.6s of that is one case spending a deliberate
+Playwright click timeout to discover that a resolved element cannot be clicked;
+the rest is the pre-existing trend (13s at M2, 48.6s at M6, 55.4s at M7).
+Declared rather than fixed, with the parallel eval runner named as the honest
+fix (`docs/support-matrix.md` D8).
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -301,20 +314,24 @@ that matters (verdict) — full detail, including the re-measured band, in
 ### What the reliability numbers mean
 
 ```
-recovery 3/3 verified (6 rungs tried) · mutation 4/4 passed, 2 by relocating
-diagnosis 8/8 · 3 replans
+recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
+diagnosis 14/14 · 4 replans
 ```
 
-- **recovery 3/3** is a floor on a denominator of three injected cases, not a
-  rate. Six rungs were tried to produce three verified recoveries, and that
+- **recovery 7/7** is a floor on a denominator of seven injected cases, not a
+  rate. Thirteen rungs were tried to produce seven verified recoveries, and that
   ratio is printed beside it rather than folded into it. Since ADR-005 it is
   graded on the audit, not on the runtime's own claim of success.
-- **mutation 4/4 passed, 2 by relocating** is the load-bearing distinction.
-  Only one of the three mutation types (`button-text-renamed`) breaks a tier a
-  plan was actually standing on; the other two pass without recovering
-  anything. Counting 4/4 as "survived by self-maintenance" would be the
-  flattering lie, so the adapter counts relocation separately.
-- **diagnosis 8/8** is on injected classes only. Five of seven taxonomy classes
+- **mutation 9/11 passed, 6 recovered (5 by relocating)** is the load-bearing
+  distinction, and M8 sharpened it twice. Two of the eleven cases are pinned as
+  losses the agent does not survive at all (a re-ordered list answered with the
+  wrong row; content that renders late read as content that is absent), and of
+  the six rescues only five relocate — the sixth escapes an overlay by
+  replanning, which is a different mechanism and was being published as
+  relocation until review caught it. Counting 11/11 as "survived by
+  self-maintenance" would be the flattering lie
+  (`specs/decisions/ADR-009-m8-mutation-hostility.md`).
+- **diagnosis 14/14** is on injected classes only. Five of seven taxonomy classes
   are reachable by injection; `env` and `nav` have truth-table coverage but no
   end-to-end injected case.
 
@@ -407,10 +424,13 @@ The reviewer-facing version of this list, with per-row evidence, is
    runtime, and neither is the same dump split across several extractions
    (D1, `docs/support-matrix.md`) — deployed run `734d3d1f` (§5, §8b) is the
    live confirmation of exactly this class.
-4. **Live *planning*** — the live suite is 6/6 across three domains and three
-   task classes as of the post-M6 navigation fix, but every green live case
-   runs a hand-written plan and the one live-planner case is unrun (needs
-   `OPENROUTER_API_KEY`). Live breadth is no longer the gap; live planning
+4. **Live *planning*** — the live suite is 9/9 across four domains and three
+   task classes as of M8 (three domains and 6/6 at the post-M6 navigation fix),
+   but every green live case runs a hand-written plan and the one live-planner
+   case is unrun (needs `OPENROUTER_API_KEY`). M8's fourth domain sharpens this
+   rather than softening it: on `quotes.toscrape.com` the observation a planner
+   would be given contains none of the page's content, so the case is green on a
+   hand-written plan **and** its TC1 cell is `unsupported`. Live breadth is no longer the gap; live planning
    quality is the whole of what remains — and the one live-planner run that
    *has* happened (`734d3d1f`, deployed rather than eval) is the first
    measurement of it, and it was wrong.

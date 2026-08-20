@@ -1,0 +1,19 @@
+{
+  "id": "opt-in-expect-keys-declared",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "level": "L1",
+  "input": {
+    "kind": "declared-keys",
+    "declared": {
+      "mutation_survived": ["l4-shop-element-reordered"],
+      "answer_is_known_wrong": ["l4-shop-element-reordered", "live-quotes-js-role-tier-blind"]
+    }
+  },
+  "expect": { "note": "the opt-in expect keys are carried by exactly the cases the docs name" },
+  "provenance": "two `expect` keys exist so a case can say something the harness cannot infer — `mutation_survived: false` (this run succeeded and is still not a survival) and `answer_is_known_wrong: true` (this expectation pins the wrong answer as ground truth). Both are described in prose across ADR-009, docs/support-matrix.md and docs/evals/evaluation-methodology.md, and that prose has already gone stale once: after round 2 removed the key from l4-shop-render-delayed (its status excludes it now), the methodology doc still said the key kept BOTH non-survivors out of the numerator, for a whole review round (PR #12, R12). Sets rather than counts, so a mismatch names the file that moved. Watched red by adding `mutation_survived` to a second case: the check reports declared ['l4-shop-element-reordered'] vs actual two ids.",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "guards a documentation claim, not the product — the same shape as support-matrix-cites-real-cases and the MUTATIONS coverage check in mutation-catalog-integrity. Also refuses `answer_is_known_wrong` on a case with no `expect.answer`, where the marker would label nothing."
+  }
+}

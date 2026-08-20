@@ -1,0 +1,23 @@
+{
+  "id": "l4-shop-element-reordered-near",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC1",
+  "mutation": "element-reordered",
+  "input": {
+    "task": "What does the catalogue row for the Meridian Wall Clock say?",
+    "fixture": "shop.html",
+    "mut": "element-reordered",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "listitem", "near": "Meridian Wall Clock" }, "anchor": "Meridian Wall Clock" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Meridian Wall Clock $24.50",
+    "anchors": ["Meridian Wall Clock"]
+  },
+  "provenance": "the same task, the same mutation and the same fixture as l4-shop-element-reordered, differing in one key: `near` instead of `index`. Proximity is a relation between elements, so reversing document order moves the anchor and its row together and the answer is unchanged. This is the first case that measures WHY `near` was built (M6 built it to remove positional counting from live table extraction, and then no case ever demonstrated the order-fragility it removes). Together the two cases are the argument the support matrix cites: positional targeting is order-fragile AND silent; proximity targeting is neither.",
+  "triage": { "class": "coverage", "note": "resolves at the `structural` tier via resolver._nearest's 'a candidate that wraps the anchor beats every neighbour' rule (near-prefers-the-container)." }
+}

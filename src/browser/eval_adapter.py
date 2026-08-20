@@ -267,10 +267,19 @@ def _run_relocate_case(case: dict) -> dict:
 def _run_mutation_case(case: dict) -> dict:
     """Mutation catalog integrity: each transform must break its own tier and
     leave the others alone. Without this the L4 evidence is unfalsifiable."""
-    from .mutate import apply_mutation
+    from .mutate import MUTATIONS, apply_mutation
 
     src = (FIXTURES / case["input"]["fixture"]).read_text()
-    wrong = []
+    # Coverage first: the catalogue's own docstring claims every entry in its
+    # table is pinned here, and that held by coincidence — this case graded
+    # whatever blocks it happened to list, so a new mutation added without one
+    # would ship unguarded and green (PR #12, R11). Missing BOTH ways: a
+    # mutation with no checks block is unguarded, a checks block naming no
+    # mutation is a guard pointed at nothing.
+    wrong = [{"uncovered_mutations": sorted(set(MUTATIONS) - set(case["input"]["checks"]))}] \
+        if set(MUTATIONS) - set(case["input"]["checks"]) else []
+    wrong += [{"checks_for_unknown_mutation": sorted(set(case["input"]["checks"]) - set(MUTATIONS))}] \
+        if set(case["input"]["checks"]) - set(MUTATIONS) else []
     for name, want in case["input"]["checks"].items():
         out = apply_mutation(src, name)
         for needle, should_be_present in want.items():
@@ -504,13 +513,7 @@ def _run_fixture_case(case: dict) -> dict:
     # from the trace and the injected ground truth, never from a claim.
     metrics = {}
     if inp.get("mut"):
-        metrics["mutation_cases"] = 1
-        metrics["mutation_passed"] = int(result["status"] == exp.get("status", "success"))
-        # Passing is not recovering. Two of the three B-floor mutations break a
-        # tier no plan was standing on, so they pass without anything being
-        # relocated; counting those as recoveries is the flattering lie ADR-002
-        # called out. Only a run that actually switched tiers counts here.
-        metrics["mutation_recovered"] = int(bool(recovered) and result["status"] == "success")
+        metrics.update(mutation_metrics(exp, result["status"], trace))
     # Denominator = cases that ASSERT recovery, so a ladder that correctly fails
     # to save a doomed run (resolver-substring-name) is not scored as a miss and
     # not scored as a win. Rungs tried is reported beside it as raw context.
@@ -530,7 +533,7 @@ def _run_fixture_case(case: dict) -> dict:
     if result["budgets_spent"]["replans"]:
         metrics["replans"] = result["budgets_spent"]["replans"]
 
-    return {
+    out = {
         "passed": all(checks.values()),
         "checks": checks,
         "audit": audit,
@@ -540,6 +543,171 @@ def _run_fixture_case(case: dict) -> dict:
                 "reason": result["reason"]},
         "budgets": result["budgets_spent"],
     }
+    # A case may pin the WRONG answer as its expectation, because that is what
+    # the build really produces (l4-shop-element-reordered,
+    # live-quotes-js-role-tier-blind). `expect.answer` is layer-2 ground truth
+    # to verify(), so such a run publishes a fully green audit —
+    # `answer_matches: true`, `ground_truth: true` — for an answer every
+    # document here calls wrong. The prose said so; the committed report did
+    # not, and "hostile results published raw" is a claim about the artifact
+    # (PR #12, R14). This key travels with the result into evals/report/*.json
+    # so a reader with jq and no prose cannot read that PASS as "verified
+    # correct".
+    if exp.get("answer_is_known_wrong"):
+        out["known_wrong_ground_truth"] = (
+            "expect.answer pins the WRONG answer this build produces; a PASS here means "
+            "'the agent reproduced the known-wrong answer', never 'the answer is correct'")
+    return out
+
+
+def mutation_metrics(exp: dict, status: str, trace: list) -> dict:
+    """Mutation counters for one L4 case — extracted so they can be graded.
+
+    They were inline in `_run_fixture_case`, where nothing could assert them:
+    the case's own `passed` never reads `metrics`, so the whole published
+    "mutation N/M passed, K by relocating" line rested on code with no case
+    behind it (case mutation-metrics-honesty).
+    """
+    # Surviving a mutation means the run ended in a real answer. Three separate
+    # things can make that false, and each of them was counted as a survival at
+    # some point in M8's history:
+    #   1. the run did not succeed — the second term used to be "matched its
+    #      expectation", so a case that expected AND got failure:locate landed
+    #      in the numerator (PR #12, R8). `l4-shop-render-delayed` is now
+    #      excluded by its status alone, without needing the opt-in key;
+    #   2. the case expected a failure and the agent succeeded anyway — a
+    #      regression that makes the case red, and is not a survival to publish;
+    #   3. the case declares the run a loss even though it "succeeded": the
+    #      wrong-answer pin `l4-shop-element-reordered`, which is what
+    #      `mutation_survived: false` is for and the only remaining use of it.
+    survived = (status == "success" and exp.get("status", "success") == "success"
+                and bool(exp.get("mutation_survived", True)))
+    # A rescue is a labelled attempt that WORKED. Every relocation rung wears
+    # `retry_or_recovery: "recovery"` and supersedes the attempt before it,
+    # including the rungs that lose, so counting labels rather than successes
+    # credited relocation for a run where all rungs failed and the replan made
+    # the save (PR #12, R7).
+    rescues = [s for s in trace
+               if s.get("retry_or_recovery") == "recovery" and not s.get("failure_class")]
+    # `recovery` is worn by BOTH ladders, so the label cannot say which one ran.
+    # The attempt a rescue supersedes can: a `locate` failure is the relocation
+    # ladder (a different tier), an `act` failure is the replan ladder (a
+    # different plan). l4-shop-overlay-modal is rescued without any tier ever
+    # changing — its four resolved tiers are all `role` — and it was published
+    # inside "N by relocating", the count ADR-002 introduced precisely to keep
+    # the flattering reading out (PR #12, R1).
+    # ponytail: the family is read from the IMMEDIATELY superseded attempt only.
+    # Ceiling (PR #12, R15, declared not fixed — support-matrix D11): if rung 1
+    # retargets at a new tier and then fails `act` — the laundering shape
+    # live-ol-search-a11y-invisible records — and rung 2 wins, the rescue's
+    # predecessor reads `act` and a real relocation is not counted. Undercount,
+    # never a flatter; no case in the suite produces it today. Upgrade: walk the
+    # supersede chain back to the failure that started the ladder, with a row in
+    # mutation-metrics-honesty pinning the intended answer first.
+    failed = {s["superseded_by"]: s for s in trace if s.get("superseded_by")}
+    relocated = [s for s in rescues if failed.get(s["i"], {}).get("failure_class") == "locate"]
+    # Both recovery counters are gated on survival: a run that lost is not a
+    # rescue, whatever its trace tried on the way down (PR #12, R3). Rungs
+    # tried are still reported, separately, as raw context.
+    return {
+        "mutation_cases": 1,
+        "mutation_passed": int(survived),
+        "mutation_recovered": int(survived and bool(rescues)),
+        "mutation_relocated": int(survived and bool(relocated)),
+    }
+
+def _check_mutation_metrics() -> dict:
+    """The mutation counters must count what their label says.
+
+    Pure code over synthetic traces — the shapes are taken from real runs, so
+    each row names the case it was measured from. Rows 2 and 4 are the ones no
+    browser case can assert: a replan-family rescue must not be counted as a
+    relocation, and a run that did not survive must not appear in any recovery
+    numerator (its rungs were tried and lost).
+    """
+    def reloc_trace(cls):  # step 2 fails, step 3 is the labelled rescue
+        return [{"i": 2, "failure_class": cls, "superseded_by": 3},
+                {"i": 3, "retry_or_recovery": "recovery"}]
+
+    # The relocation ladder tried, every rung lost, and the replan family made
+    # the save. Every rung wears the `recovery` label and supersedes the
+    # original `locate` failure, so any predicate that only reads "was a locate
+    # failure superseded by a labelled step" credits relocation for a rescue it
+    # did not make (PR #12, R7; measured on shop.html?mut=overlay-modal with a
+    # role-less first target).
+    rungs_lost_replan_won = [
+        {"i": 1, "failure_class": "locate", "superseded_by": 2},
+        {"i": 2, "retry_or_recovery": "recovery", "failure_class": "act", "superseded_by": 3},
+        {"i": 3, "retry_or_recovery": "recovery"},
+    ]
+
+    rows = [
+        ("relocation rescue (l4-shop-duplicate-labels)", {}, "success", reloc_trace("locate"),
+         {"mutation_cases": 1, "mutation_passed": 1, "mutation_recovered": 1, "mutation_relocated": 1}),
+        ("replan rescue, nothing relocated (l4-shop-overlay-modal)", {}, "success", reloc_trace("act"),
+         {"mutation_cases": 1, "mutation_passed": 1, "mutation_recovered": 1, "mutation_relocated": 0}),
+        ("declared non-survivor (l4-shop-element-reordered)", {"mutation_survived": False}, "success", [],
+         {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
+        ("non-survivor that still tried a rung", {"mutation_survived": False}, "success", reloc_trace("locate"),
+         {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
+        ("expected failure, correctly diagnosed (l4-shop-render-delayed)",
+         {"status": "failure:locate", "mutation_survived": False}, "failure:locate", reloc_trace("locate"),
+         {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
+        ("survived with nothing to recover (l4-shop-ids-renamed)", {}, "success", [],
+         {"mutation_cases": 1, "mutation_passed": 1, "mutation_recovered": 0, "mutation_relocated": 0}),
+        ("rungs lost, replan won (PR #12, R7)", {}, "success", rungs_lost_replan_won,
+         {"mutation_cases": 1, "mutation_passed": 1, "mutation_recovered": 1, "mutation_relocated": 0}),
+        ("expected failure, no mutation_survived key (PR #12, R8)",
+         {"status": "failure:locate"}, "failure:locate", [],
+         {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
+        ("expected failure, agent succeeded anyway", {"status": "failure:locate"}, "success", [],
+         {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
+        ("expected success, run failed", {}, "failure:locate", reloc_trace("locate"),
+         {"mutation_cases": 1, "mutation_passed": 0, "mutation_recovered": 0, "mutation_relocated": 0}),
+    ]
+    wrong = [{"row": note, "want": want, "got": got}
+             for note, exp, status, trace, want in rows
+             if (got := mutation_metrics(exp, status, trace)) != want]
+    return {"passed": not wrong, "wrong": wrong}
+
+
+def _run_declared_keys_case(case: dict) -> dict:
+    """Which cases carry an opt-in `expect` key is a documented fact — grade it.
+
+    Both keys exist to make a case say something the harness cannot infer, and
+    both are described in prose that has already gone stale once: the
+    methodology doc still claimed `mutation_survived` kept two cases out of the
+    survival numerator, a round after one of them stopped using it (PR #12,
+    R12). Sets, not counts, so the failure names the file.
+
+    ponytail: this grades the CASE FILES against a declared list, not the prose
+    that describes them — editing the markdown back to the stale claim leaves
+    the suite green (PR #12, R17). Parsing the doc the way parse_matrix parses
+    the support matrix is the upgrade, and it needs the doc to carry a
+    machine-readable shape first.
+    """
+    evals_dir = Path(__file__).parents[2] / "evals"
+    # rglob and the case's own `id`, matching how evals/run.py discovers and
+    # names cases — filenames equal ids today, and a guard that quietly stopped
+    # seeing a subdirectory would be the same silence it exists to prevent.
+    cases = [json.loads(p.read_text(encoding="utf-8"))
+             for d in ("golden", "adversarial") for p in (evals_dir / d).rglob("*.json")]
+    files = {c.get("id", "<unnamed>"): c for c in cases}
+    wrong = []
+    for key, want in case["input"]["declared"].items():
+        # Presence, not truthiness: `mutation_survived` is meaningful precisely
+        # when it is `false`, so a `.get(key)` test finds nobody carrying it.
+        got = sorted(cid for cid, c in files.items() if key in (c.get("expect") or {}))
+        if got != sorted(want):
+            wrong.append({"key": key, "declared": sorted(want), "actual": got})
+    # A pin with no `expect.answer` marks nothing: the key only means anything
+    # where an answer is being asserted as ground truth.
+    empty = sorted(cid for cid, c in files.items()
+                   if (c.get("expect") or {}).get("answer_is_known_wrong")
+                   and "answer" not in (c.get("expect") or {}))
+    if empty:
+        wrong.append({"key": "answer_is_known_wrong", "marks_nothing_no_expect_answer": empty})
+    return {"passed": not wrong, "wrong": wrong}
 
 
 def _run_stream_case(case: dict) -> dict:
@@ -783,6 +951,7 @@ def _run_parse_plan_case(case: dict) -> dict:
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
+              "mutation-metrics": _check_mutation_metrics,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 
 
@@ -797,6 +966,7 @@ def _run_invariant_case(case: dict) -> dict:
 # default shape; every other kind names the narrower thing it grades.
 KINDS = {
     "classify": _run_classify_case,
+    "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,
     "invariant": _run_invariant_case,
     "matrix": _run_matrix_case,

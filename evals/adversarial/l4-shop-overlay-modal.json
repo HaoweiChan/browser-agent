@@ -1,0 +1,40 @@
+{
+  "id": "l4-shop-overlay-modal",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC4",
+  "mutation": "overlay-modal",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "mut": "overlay-modal",
+    "stub_plans": [
+      [
+        { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+          "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ],
+      [
+        { "action": "click", "target": { "role": "button", "name": "Close" },
+          "expected_state": { "text_visible": "Newsletter closed" } },
+        { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+          "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Cobalt Floor Rug",
+    "anchors": ["Cobalt Floor Rug"],
+    "recovery": true,
+    "replans": 1
+  },
+  "provenance": "the only mutation in the catalogue that is not a locate problem: a full-viewport modal covers the page, every locator still resolves at its usual tier, and the click then cannot land. This is the case that pins the browser-domain skill's claim — 'overlay interception surfaces as a timeout on click, classify as act' — which had been prose in a skill file with nothing executable behind it. It therefore exercises the OTHER recovery family: locate -> relocate is useless here (the element was found), and the run is rescued by act -> re-observe -> replan, the family that had exactly one case (recovery-replan-postcondition). The modal's Close leaves a visible note behind because a click with no checkable consequence is a click verify() fails the run for (actions_verified); real cookie and newsletter modals usually leave one too.",
+  "triage": {
+    "class": "capability-gap",
+    "note": "costs one full Playwright click timeout (10s, agent.py) — 10s of the fast suite's 60s ADR-002 budget, and the only case in the suite that spends real time on purpose. That cost is the honest price of discovering non-actionability: Playwright retries the hit test until the timeout, so there is no cheaper way to observe an intercepted click. Recorded rather than avoided (ADR-009 Decision 6); the alternative was a production timeout tuned to make an eval cheap, which is the exact anti-pattern ADR-008 caught with MIN_EVIDENCE.",
+    "watched_red": "with `agent.MAX_REPLANS = 0` the same run stops at failure:act, 'expected_state not reached'/timeout — the replan is what makes it green, and the first plan is unchanged between the two runs."
+  }
+}

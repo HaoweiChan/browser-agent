@@ -1,0 +1,27 @@
+{
+  "id": "l4-shop-a11y-stripped",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC2",
+  "mutation": "a11y-stripped",
+  "input": {
+    "task": "Search the catalogue for 'Meridian' and name the product you find.",
+    "fixture": "shop.html",
+    "mut": "a11y-stripped",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "searchbox", "name": "Search products" }, "value": "Meridian" },
+      { "action": "click", "target": { "role": "button", "name": "Search" },
+        "expected_state": { "text_visible": "1 result(s) for \"meridian\"" } },
+      { "action": "extract", "target": { "role": "link", "index": 0 }, "anchor": "Meridian" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Meridian Wall Clock",
+    "anchors": ["Meridian Wall Clock"],
+    "recovery": true
+  },
+  "provenance": "kills the role tier for controls: every <button> becomes a <div> with its attributes and visible text intact, so no accessible name is computed for it and `{role: button, name: 'Search'}` finds nothing, while `{text: 'Search'}` still matches exactly what a human reads. Deliberately the SAME plan as l4-shop-duplicate-labels: the two cases differ only in the mutation, so the pair separates 'the name resolves to nothing' from 'the name resolves to two things' — one ends in element-not-found, the other in ambiguous-match, and both are rescued by the same text rung. The search flow rather than the sort flow is chosen on purpose: it is the flow the mutation's submit shim keeps alive, so a green here is also the evidence that the mutation breaks the agent and not the fixture (the ids-renamed lesson, mutation-catalog-integrity). Watched red by ablation (ADR-009): with `agent.MAX_FIXES = 0` the run stops at failure:locate, 'no tier resolved'. Live twin: quotes.toscrape.com renders its whole content as div/span and the observation contains none of it (live-quotes-js-role-tier-blind).",
+  "triage": { "class": "capability-gap", "note": "M3 relocation, rung 2 (text tier)." }
+}

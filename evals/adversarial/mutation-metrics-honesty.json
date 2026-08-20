@@ -1,0 +1,21 @@
+{
+  "id": "mutation-metrics-honesty",
+  "task": "browser",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "mutation-metrics"
+  },
+  "expect": {
+    "note": "each mutation counter counts what its published label says"
+  },
+  "provenance": "the mutation counters are the M8 headline — 'mutation N/M passed, K recovered (J by relocating)' is printed by evals/run.py and quoted in ADR-009, the support matrix and the milestone tracker — and they are the least-guardable lines in the harness: a case's own pass/fail never reads `metrics`, so ANY wrong expression leaves the fast suite green. Ten rows, each a synthetic trace in the shape of a real run. Reviewer meta-point (PR #12, round 2): rows written by the author of the function can encode the implementation instead of the intent, so the rows are chosen to discriminate against named WRONG implementations, and each is measured to go red against them: (W1) `passed = matched its expectation` — the pre-M8 expression — dies on the three `mutation_survived` rows and on 'expected failure, no mutation_survived key'; (W2) `passed = the opt-in key alone`, status term deleted, dies on the three status rows; (W3) `passed = the run succeeded` dies on the two declared-loss rows and on 'expected failure, agent succeeded anyway'; (W4) `relocated = every rescue` — reading the shared `recovery` label — dies on the overlay row and the rungs-lost row; (W5) `relocated = any rescue whose superseded step failed locate`, the round-1 expression, dies ONLY on 'rungs lost, replan won', which is why that row exists; (W6)/(W7) dropping the survival term from either recovery counter dies on the three non-survivor rows. Findings this case pins, all watched red against the expression in force at the time: R1/R2/R3 (round 1) and R7/R8 (round 2 — `relocated` still credited relocation when every rung lost and the replan won, and `survived` still meant 'matched its expectation', so a case that expected AND got a loud failure counted as a survival). R7's row is confirmed against the real runtime as well: shop.html?mut=overlay-modal with a role-less first target, tiers ['role','text','role','role','role'], both rungs failing `act`, replans 1, 21s — `mutation_relocated` 1 before the fix, 0 after. That probe is not committed as a case because it costs two deliberate 10s click timeouts; the synthetic row is the guard, the probe is the confirmation.",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "guards the counters, not the product. `mutation_relocated` is derived from two facts the trace already carries: the rescue itself succeeded (`failure_class` empty), and the attempt it supersedes failed `locate` — the relocation ladder — rather than `act`, which is the replan ladder. Neither is readable from `retry_or_recovery`, which both ladders share."
+  }
+}

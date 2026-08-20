@@ -35,9 +35,9 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 77 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 86 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
-python3 -m evals.run --suite live        # 6 cases, 3 real sites, still $0.00
+python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
 
 The reviewer UI locally — task submission needs `OPENROUTER_API_KEY`; the
@@ -49,19 +49,40 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260819-151917-fast.json`:
+Latest offline baseline — `evals/report/20260820-020212-fast.json`, with
+`…-020104-invariant.json` and `…-020100-live.json`:
 
 ```
-fast  77/77    invariant  20/20    live  6/6    $0.0000    53.3s
-recovery 3/3 verified (8 rungs tried) · mutation 4/4 passed, 2 by relocating
-diagnosis 13/13 · 3 replans
+fast  86/86    invariant  22/22    live  9/9    $0.0000    68.1s
+recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
+diagnosis 14/14 · 4 replans
 ```
 
-`live 6/6` is one day old and was `4/6` at the M6 merge. Two of those reds were
-openlibrary.org during an outage — and when the host came back, one case went
-green immediately while the other kept failing, because the outage had been
-hiding a defect of ours: navigation waited for `load`, so one hanging
+`live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those
+reds were openlibrary.org during an outage — and when the host came back, one
+case went green immediately while the other kept failing, because the outage had
+been hiding a defect of ours: navigation waited for `load`, so one hanging
 subresource made a fully readable page `failure:nav` ([ADR-007](specs/decisions/ADR-007-navigation-wait-condition.md)).
+
+**The fourth live site is there to fail.** `quotes.toscrape.com/js` renders every
+quote with `document.write`, so the body text the verifier reads carries all ten
+of them (1,499 characters) while the accessibility tree the *planner* is handed
+carries none — 11 elements, every one of them chrome. Asked who wrote the first
+quote, the run answers the pager link and reports success:
+
+```
+answer : "Next →"          truth: Albert Einstein
+audit  : verdict PASS · grounded ✓ · not_a_dump ✓ · identity anchor ✓
+```
+
+Both identity-anchor checks pass, because "Albert Einstein" *is* in the page
+text — just nowhere the agent could target it. The case is committed asserting
+that wrong answer (`live-quotes-js-role-tier-blind`), and the published report
+carries a `known_wrong_ground_truth` marker beside the green audit, so the raw
+artifact cannot be read as "verified correct" either
+([ADR-009](specs/decisions/ADR-009-m8-mutation-hostility.md)). The same page's
+content *is* reachable by the text tier — it is not unreadable, it is
+unplannable.
 
 And the number that matters more, from 10 blind tasks a separate agent wrote
 and ran against the **deployed** URL ([raw table](docs/analysis.md)):
@@ -102,13 +123,17 @@ is not. Measuring the size of that gap is the next milestone's whole job.
   means these numbers grade the resolver → executor → verifier path and say
   **nothing about planning quality**. Real measured spend: three deployed tasks, at
   **$0.0029**, **$0.0065 / 1438 tokens / 6.5s** and **$0.0055 / 1446 tokens / 6.3s**.
-- **`recovery 3/3` is a floor on three injected cases, not a rate.** Eight rungs
-  were tried to produce three verified recoveries; that ratio is printed beside
-  it rather than folded into it.
-- **`mutation 4/4 passed, 2 by relocating`** is the load-bearing split. Only one
-  of the three DOM mutations breaks a locator tier a plan was actually standing
-  on; the other two pass without recovering anything. Reporting 4/4 as
-  self-maintenance would be the flattering lie.
+- **`recovery 7/7` is a floor on seven injected cases, not a rate.** Thirteen
+  rungs were tried to produce seven verified recoveries; that ratio is printed
+  beside it rather than folded into it.
+- **`mutation 9/11 passed, 6 recovered (5 by relocating)`** is the load-bearing
+  split, and it has been narrowed twice by review. Two of the eleven mutation
+  cases are pinned as **losses**: a re-ordered list turns a positional plan into
+  a confident wrong answer, and content that renders late is indistinguishable
+  from content that is absent. Of the six rescues only five relocate — the sixth
+  is an overlay the agent escapes by replanning, and calling that "by relocating"
+  was a real defect this PR fixed. Reporting 11/11 as self-maintenance would be
+  the flattering lie.
 
 Full numbers, scalability limits and the complete not-measured list:
 [`docs/analysis.md`](docs/analysis.md). What works per site and what doesn't:
@@ -176,8 +201,8 @@ The biggest ones, stated plainly:
 The full record is [`prompts/`](prompts/) — curated correction chains, each
 ending in *assumed → eval said → corrected*, plus the raw session dumps.
 
-The honest headline is a measurement of this method's weak spot: **20 defects
-across six milestones were found by cold review, by a reviewer's note, or by
+The honest headline is a measurement of this method's weak spot: **26 defects
+across seven milestones were found by cold review, by a reviewer's note, or by
 adding a new domain — not by the eval suite — in code that was green at the
 time.** The first live
 domain produced one within an hour, by revealing that the page observation
@@ -188,9 +213,21 @@ four more still, three of which answered a question confidently and wrongly
 with no error anywhere in the trace. Every one of those three needed a page
 shape the repo's only offline listing happens not to have.
 
-The eval set is not weak; it is 84 cases, it caught a *bad fix* mid-session
-during the last review, and in M6 it caught a fix that passed its own case for
-the wrong reason. But an eval set written by the author of the code is
+M8 added six more, all in the same milestone's own review rounds, and they are
+the sharpest of the set because none of them were in the product: two readings
+of the recovery counter that each published a rescue as a relocation it was not,
+a survival rule that counted a loud failure as a survival, a submit shim that
+would have silently disabled any form whose button did not spell out
+`type="submit"`, and a committed report that showed `answer_matches: true` for
+an answer the same repo calls wrong. **The sharpest single instance is that the
+fix which made the survival rule honest was itself ungraded** — reverting it
+left the suite at 84/84 and restored the flattering number in silence
+(`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
+record all six).
+
+The eval set is not weak; it is 96 cases (86 of them in the offline gate), it
+caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
+passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
 observed to move that blind spot are adversarial review and unfamiliar input.
 That is why the cold review is a gate here rather than a nicety.

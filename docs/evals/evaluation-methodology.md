@@ -69,11 +69,52 @@ Deterministic server-side HTML transforms on fixture pages, selected by
 of waiting for real sites to change.
 
 B-floor (3 types, each chosen to break a specific locator tier) [MUST]:
-`ids-renamed` (breaks stable-attr tier) · `button-text-renamed` (breaks
-text/label tier) · `wrapper-nesting` (breaks structural assumptions).
-B-strong [SHOULD]: `classes-scrambled`, `element-reordered`, `duplicate-labels`,
-`render-delayed`, `overlay-modal`, `a11y-stripped` (hostile div-soup).
-An L4 case = one base task × one mutation; pass = same semantic result as base.
+ids-renamed (breaks stable-attr tier) · button-text-renamed (breaks
+text/label tier) · wrapper-nesting (breaks structural assumptions).
+
+B-strong [SHOULD], **implemented at M8** — the admission test is "does it break
+a capability a plan stands on", which is wider than "is it a locator tier" and
+narrower than the original wish-list:
+
+| mutation | breaks | the rung that survives | case |
+|---|---|---|---|
+| duplicate-labels | role+name **uniqueness** — the only source of `ambiguous-match` in the catalogue | text | l4-shop-duplicate-labels |
+| a11y-stripped | the role tier for controls (button → div, text and ids intact) | text | l4-shop-a11y-stripped, l4-forms-a11y-stripped |
+| element-reordered | positional `index` | none — `near` survives it, `index` has no rung | l4-shop-element-reordered (+ …-near) |
+| render-delayed | *when* the resolver looks (content arrives 10s late) | none | l4-shop-render-delayed |
+| overlay-modal | actionability — the element resolves and cannot be clicked | replan (the act family, not relocation) | l4-shop-overlay-modal |
+
+**classes-scrambled is dropped, not deferred**: the resolver has no class tier
+and no code path anywhere reads a class attribute, so scrambling classes would
+break nothing a locator stands on. A mutation every case survives without
+changing anything measures the catalogue's size, not the agent
+(`specs/decisions/ADR-009-m8-mutation-hostility.md`).
+
+An L4 case = one base task × one mutation; pass = same semantic result as base
+**where the agent survives at all**. Two of the five are committed asserting
+what the build really does rather than what it should do: render-delayed
+expects `failure:locate`, and element-reordered expects `success` **with the
+wrong answer**.
+
+Surviving a mutation is a stricter thing than passing its case, and the rule is
+in code (`eval_adapter.mutation_metrics`), not in this paragraph: a run
+survives when it ended in `status: success`, the case did not expect a failure,
+and the case did not declare the run a loss. The first two clauses cover
+render-delayed by themselves. The third is the opt-in key
+`expect.mutation_survived: false`, and **exactly one case needs it** —
+`l4-shop-element-reordered`, which succeeds with a wrong answer. A second
+opt-in, `expect.answer_is_known_wrong: true`, marks a case whose `expect.answer`
+pins that wrong answer as layer-2 ground truth, so the published report says so
+where a reader is looking (`known_wrong_ground_truth` in the result) instead of
+showing a green `answer_matches` with no context.
+
+Which cases carry which key is pinned against a declared list
+(`opt-in-expect-keys-declared`), so a case that starts or stops carrying either
+one turns the suite red and names the file. **This paragraph is not graded** —
+no case parses it — and it stated the pre-repair rule for a full review round
+after the code changed underneath it (ADR-009 Decision 9). Treat the case files
+and `eval_adapter.mutation_metrics` as the source of truth if they ever
+disagree with this prose.
 
 ## OutcomeVerifier — layered verification (executor never grades itself)
 

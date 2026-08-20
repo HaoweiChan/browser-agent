@@ -1,0 +1,36 @@
+{
+  "id": "l4-shop-render-delayed",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L4",
+  "tc": "TC3",
+  "mutation": "render-delayed",
+  "input": {
+    "task": "Open the product page for the Cobalt Floor Rug.",
+    "fixture": "shop.html",
+    "mut": "render-delayed",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Cobalt Floor Rug"
+        },
+        "expected_state": {
+          "url_contains": "shop-rug"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "breaks no tier — it breaks the instant the resolver looks. The catalogue is removed at DOMContentLoaded and re-inserted 10s later, and `resolve()` counts matches exactly once with no wait of any kind, so an element that is merely late is indistinguishable from one that does not exist. The relocation ladder does the right thing and it does not help: it re-observes and retargets at the text tier, which is a genuinely different tier and still finds an empty page, so the run stops loudly at failure:locate instead of answering. Committed with the failure as its expectation because that is the honest behaviour of this build. It carries no `mutation_survived` key: a run that did not end in `success` is not a survival whatever the case expected, which is the rule since PR #12 R8 — the opt-in key is now needed only by the one case that succeeds with a wrong answer (l4-shop-element-reordered). `recovery` is deliberately NOT asserted here: the ladder's attempts ARE labelled recovery in the trace, and asserting the label on a run that failed would score a failed rescue as a verified recovery. Live twin: quotes.toscrape.com/js-delayed renders 10s late and produces exactly this stop (live-quotes-js-delayed-empty).",
+  "triage": {
+    "class": "capability-gap",
+    "note": "support-matrix D6. Deliberately NOT fixed: a bounded wait inside `resolve()` would make every legitimately-absent element pay the same wait, and the fast suite is full of cases whose whole point is that a tier finds nothing (resolver-substring-name, relocate-fill-non-editable, every first rung of every L4 case above). Measured cost of the naive fix at a 2s bound: ~2s x every failing tier in the suite, against a 60s pre-commit budget (ADR-002 D4). The honest upgrade is a wait on the FIRST tier only, driven by its own case, in a milestone that can pay for the measurement.",
+    "timing_dependency": "this case's expectation depends on the agent giving up BEFORE the content lands, which makes it the one `fast` case with a wall-clock margin rather than a deterministic outcome (PR #12, R5). Measured: the whole run costs `budgets_spent.ms = 388` against a 10,000ms delay — a 26x margin, raised from 7.7x in the repair round. The delay is free (the run ends and the browser closes long before the timer fires), so margin is the only thing the number buys. Flake mode if a machine ever misses by 26x: the catalogue re-inserts before the last resolve, the click succeeds, and this case goes RED against `failure:locate` — loud, and never a silent pass."
+  }
+}

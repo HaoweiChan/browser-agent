@@ -1,0 +1,27 @@
+{
+  "id": "l4-shop-duplicate-labels",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L4",
+  "tc": "TC2",
+  "mutation": "duplicate-labels",
+  "input": {
+    "task": "Search the catalogue for 'Meridian' and name the product you find.",
+    "fixture": "shop.html",
+    "mut": "duplicate-labels",
+    "stub_plan": [
+      { "action": "fill", "target": { "role": "searchbox", "name": "Search products" }, "value": "Meridian" },
+      { "action": "click", "target": { "role": "button", "name": "Search" },
+        "expected_state": { "text_visible": "1 result(s) for \"meridian\"" } },
+      { "action": "extract", "target": { "role": "link", "index": 0 }, "anchor": "Meridian" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Meridian Wall Clock",
+    "anchors": ["Meridian Wall Clock"],
+    "recovery": true
+  },
+  "provenance": "kills role+name UNIQUENESS, not the tier: duplicate-labels copies the first button's visible text onto every button as an aria-label, so `{role: button, name: 'Search'}` resolves to two elements and the resolver raises `ambiguous-match` — the half of the locate class that no other mutation in the catalogue produces (ids-renamed, button-text-renamed and a11y-stripped all produce `element-not-found`). Visible text is deliberately untouched, so each control still says its own name to a reader, and the text tier is the rung the ladder climbs to: role+name -> text. Watched red by ablation before it was committed green (ADR-009): with `agent.MAX_FIXES = 0` the same run stops at failure:locate with reason 'ambiguous-match: 2 matches at tier role'.",
+  "triage": { "class": "capability-gap", "note": "M3 relocation, rung 2 (text tier). The distinct-tier rule (relocation-distinct-tier) is what makes this legal: rung 1 is skipped because the target already used role+name." }
+}

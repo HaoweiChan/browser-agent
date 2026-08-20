@@ -1,0 +1,22 @@
+{
+  "id": "live-quotes-js-text-tier-reaches",
+  "task": "browser",
+  "suites": ["live", "full"],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "quotes.toscrape.com",
+  "input": {
+    "task": "Confirm that this page quotes J.K. Rowling.",
+    "url": "https://quotes.toscrape.com/js/",
+    "stub_plan": [
+      { "action": "extract", "target": { "text": "J.K. Rowling" }, "anchor": "Harry" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "J.K. Rowling",
+    "anchors": ["Harry"]
+  },
+  "provenance": "the control for the two cases around it: same site, same JS-rendered content, and the one tier that reaches it. The role tier sees none of this page's content (live-quotes-js-role-tier-blind) and the text tier resolves it exactly, at tier `text` — so the failure on this domain is specifically a role/observation failure, not 'the agent cannot read JS-rendered pages'. Read this one narrowly and it is honest: the task names the entity, the plan targets that entity's own string, and the answer is the confirmation the task asked for — the same shape as tc1-hello-heading. It measures reachability, not planning: a planner could only write this plan if it already knew the name was there, which on this page it cannot, because the observation does not contain it. The anchor is 'Harry' (from the quote's text, 'It is our choices, Harry...'), not the answer, so the identity check cannot satisfy itself (verifier-anchor-not-self-satisfied).",
+  "triage": { "class": "coverage", "note": "J.K. Rowling rather than Albert Einstein deliberately: Einstein is quoted twice on page 1, so `{text: 'Albert Einstein'}` raises ambiguous-match — measured, 2026-08-19." }
+}

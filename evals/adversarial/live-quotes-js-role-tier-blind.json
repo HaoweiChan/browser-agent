@@ -1,0 +1,40 @@
+{
+  "id": "live-quotes-js-role-tier-blind",
+  "task": "browser",
+  "suites": [
+    "live",
+    "full"
+  ],
+  "level": "L3",
+  "tc": "TC1",
+  "domain": "quotes.toscrape.com",
+  "input": {
+    "task": "Who is the author of the first quote on this page?",
+    "url": "https://quotes.toscrape.com/js/",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "listitem",
+          "index": 0
+        },
+        "anchor": "Albert Einstein"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Next →",
+    "anchors": [
+      "Albert Einstein"
+    ],
+    "answer_is_known_wrong": true
+  },
+  "provenance": "the hostile live domain (M8), published raw: the run reports SUCCESS with the answer 'Next →' — the pager link — to the question 'who is the author of the first quote'. quotes.toscrape.com/js is the JS-rendered twin of the sandbox books.toscrape.com is served from, published by the same authors expressly for scraping practice (R7: public or self-created material only); one page load per run, no crawling. What makes it hostile is measured, not asserted (probe, 2026-08-19): the page renders all ten quotes with document.write into span/div, so `page.inner_text('body')` is 1,499 characters and contains every quote — while `observe()` returns 11 elements, of which ZERO are content: WebArea, heading, 5 chrome links (2 header, 1 pager 'Next', 2 footer), navigation, list, one listitem (the pager), contentinfo. get_by_role('link') counts 5, all chrome; get_by_role('listitem') counts 1, the pager. The planner is blind to the content the verifier can see. `{role: listitem, index: 0}` is the most plausible target a planner constrained to 'roles/names present in the observation' could pick for 'the first item', and it resolves — to the pager. The plan is hand-written, like every live plan in this repo.",
+  "triage": {
+    "class": "declared-limitation",
+    "note": "support-matrix D7. Three separate guards all pass on this wrong answer, and the case exists to show exactly that: `grounded` (the pager text IS on the page), `not_a_dump` (6 characters of 1,499), and BOTH identity-anchor checks — the runtime `anchor not in body` gate and verify()'s `identity_anchors` — because 'Albert Einstein' is in the body text whether or not the agent ever reached it. This is the aggregate-page hole verifier.py declares in its own docstring, instantiated on a real site: the anchor proves the entity is on the page, never that the answer came from it. Only ground-truth L2 separates them, and a live run has no ground truth (M7, ADR-008).",
+    "expectation_is_the_observed_behaviour": "committed with the wrong answer as the expectation. NOT the same as live-ol-search-a11y-invisible, which was claimed as the precedent in the first commit and is not one: that case pins a failure and carries no `expect.answer`, so nothing is injected as ground truth. Here `expect.answer` IS ground truth to verify() (layer 2), so this case's committed audit reads verdict PASS, ground_truth true, answer_matches true — for 'Next →' as the author of a quote. `expect.answer_is_known_wrong: true` is why the published result carries `known_wrong_ground_truth`: the gate criterion is 'hostile results published raw', and a raw artifact that reads as verified-correct fails it however careful the prose is (PR #12, R14). Do not 'fix' this by rewriting the plan to use `text` — that is a different case (live-quotes-js-text-tier-reaches), and it is the pair that carries the finding.",
+    "what_would_fix_it": "nothing in the executor without site knowledge (CLAUDE.md rule 6). The honest routes are upstream: an observation that falls back to text nodes when a page exposes no content roles, and an L3 evidence-only LLM check that asks whether the answer answers the question. Both are named in ADR-009 as deliberately NOT done here."
+  }
+}

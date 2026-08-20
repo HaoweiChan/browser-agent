@@ -91,11 +91,18 @@ path. `src/browser/mutate.py` is the transform layer.
   past the evidence window from the table. Lengthening or reordering that page
   silently disarms `near-excludes-its-own-anchor` and
   `evidence-window-keeps-the-anchor`.
-- `?mut=<name>` applies deterministic HTML transforms:
-  B-floor: `ids-renamed`, `button-text-renamed`, `wrapper-nesting`
-  (each breaks exactly one locator tier — that's the point).
-  B-strong: `classes-scrambled`, `element-reordered`, `duplicate-labels`,
-  `render-delayed`, `overlay-modal`, `a11y-stripped`.
+- `?mut=<name>` applies deterministic HTML transforms (`src/browser/mutate.py`
+  has the full table). B-floor, one locator tier each: `ids-renamed`,
+  `button-text-renamed`, `wrapper-nesting`. B-strong (M8), admitted on "breaks
+  a capability a plan stands on" rather than "is a tier": `duplicate-labels`
+  (role+name *uniqueness* → the catalogue's only `ambiguous-match`),
+  `a11y-stripped` (button → div; text tier survives, and the submit shim keeps
+  the fixture's own form alive), `element-reordered` (positional `index`;
+  **nothing recovers it** and the wrong row is reported as success),
+  `render-delayed` (content 10s late; the resolver never waits), `overlay-modal`
+  (resolves fine, cannot be clicked → the act/replan family).
+  `classes-scrambled` is **dropped, not missing** — no class tier exists, so it
+  would break nothing (ADR-009).
 
 **A fixture must survive its own mutations.** `ids-renamed` renames every
 `id`/`for`/`data-testid`, so fixture scripts resolve their own elements by
@@ -139,7 +146,10 @@ grading time, not something the executor asserts.
 - `strict` mode violations (multiple matches) are a `locate/ambiguous` failure,
   not an excuse for `.first()`.
 - Overlay interception surfaces as a timeout on click — classify as `act`,
-  check for dialog/modal roles before retrying anything.
+  check for dialog/modal roles before retrying anything. Measured at M8 and no
+  longer just advice: `l4-shop-overlay-modal` costs a full 10s click timeout,
+  classifies `act`, and is rescued by replan, not by relocation. Relocation is
+  useless here on purpose — the element was found.
 - **`page.goto` defaults to `wait_until="load"`**, which waits for every image,
   stylesheet and subframe — none of which any locator tier reads. One hanging
   subresource then makes a fully rendered page `failure:nav`. Navigate through
