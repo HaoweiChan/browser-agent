@@ -23,7 +23,8 @@ def main():
 
     run_dir = f"runs/{time.strftime('%Y%m%d-%H%M%S')}"
     result = asyncio.run(
-        run_task(args.task, args.url, live_planner(args.model), run_dir, headless=not args.headed)
+        run_task(args.task, args.url, live_planner(args.model), run_dir,
+                 headless=not args.headed, model=args.model)
     )
     print(json.dumps(result, indent=2, ensure_ascii=False))
     print(f"\n[trace] {run_dir}/trace.jsonl")

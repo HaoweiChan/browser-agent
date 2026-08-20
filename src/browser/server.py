@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from .agent import assemble_result, run_task
 from .mutate import apply_mutation
-from .planner import live_planner
+from .planner import ALLOWED_MODELS, DEFAULT_MODEL, live_planner
 
 app = FastAPI(title="browser-agent")
 FIXTURE_DIR = (Path(__file__).parent / "fixtures").resolve()
@@ -56,7 +56,7 @@ def parse_matrix(text: str | None = None) -> dict:
     example in the doc cites `tc2-wiki-004`, which is illustrative and has no
     case file behind it."""
     text = MATRIX_DOC.read_text(encoding="utf-8") if text is None else text
-    body, section, fenced = [], "", False
+    body, section, fenced, block = [], "", False, []
     rows, limitations = [], []
     for line in text.splitlines():
         if line.startswith("```"):
@@ -68,7 +68,20 @@ def parse_matrix(text: str | None = None) -> dict:
         if line.startswith("## "):
             section = line[3:].strip().lower()
         if not line.startswith("|"):
+            block = []  # any non-table line ends the current table block
             continue
+        # A table is a CONTIGUOUS block whose second line is the delimiter. A row
+        # that drifts a blank line away from its table still parses fine here —
+        # and renders as a literal paragraph of pipes. That has now happened
+        # twice: D10 in PR #12, fixed by hand and unguarded, and D14 in PR #15
+        # (R20), which is the disclosure that no ablation cell measures the model
+        # the system actually runs on. An honesty row that quietly stops being a
+        # row is the honesty artifact failing in the flattering direction.
+        block.append(line)
+        if len(block) == 2 and set("".join(block[1].strip("|").split("|"))) > set("-: "):
+            raise ValueError(f"support matrix: table row {block[0][:60]!r} is not part of a "
+                             "table — no delimiter row follows its header. A row separated "
+                             "from its table by a blank line renders as a paragraph of pipes")
         cells = [c.strip() for c in line.strip("|").split("|")]
         if set("".join(cells)) <= set("-: "):
             continue  # header underline
@@ -132,23 +145,35 @@ def url_ok(u: str) -> bool:
 class TaskIn(BaseModel):
     task: str
     url: str | None = None
+    # The M9 ablation's independent variable. Absent means the default; anything
+    # else must be on `planner.ALLOWED_MODELS` — the ablation set plus the
+    # incumbent default, which stays reachable by explicit name even though it is
+    # priced out of the comparison (ADR-010 Decision 6). This endpoint is public and
+    # unauthenticated and OpenRouter bills whatever id it is handed, so an
+    # unbounded field here is a stranger pointing this deployment's key at the
+    # priciest model on the platform — and the run budgets would not notice,
+    # because they count tokens, not price (case gateway-model-not-allowlisted).
+    model: str | None = None
 
 
-def _env_failure(reason: str) -> dict:
+def _env_failure(reason: str, model: str | None = None) -> dict:
     """A contract-shaped result for a run that never got off the ground."""
     return assemble_result(
         [], None,
         {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0},
-        failure="env", reason=reason)
+        failure="env", reason=reason, model=model)
 
 
-async def _execute(run_id: str, task: str, url: str | None):
+async def _execute(run_id: str, task: str, url: str | None, model: str):
     q = STREAMS[run_id]
     result = None
     async with SEM:
         try:
             result = await run_task(
-                task, url, live_planner(), RUN_ROOT / run_id, url_guard=url_ok,
+                task, url, live_planner(model), RUN_ROOT / run_id, url_guard=url_ok,
+                # Echoed back on the record so a committed ablation report is
+                # self-attributing rather than trusting the driver's loop variable.
+                model=model,
                 # Copy on emit: the executor keeps mutating its record (a later
                 # supersede lands on an attempt already sent). The final `done`
                 # event carries the authoritative trace; steps stream as they are.
@@ -160,14 +185,14 @@ async def _execute(run_id: str, task: str, url: str | None):
             # frontend renders both (gateway-error-contract-shape). Empty trace is
             # correct — live_planner() validates the key before a browser opens,
             # so nothing was attempted; only the shape was ever wrong.
-            result = _env_failure(f"{type(e).__name__}: {e}")
+            result = _env_failure(f"{type(e).__name__}: {e}", model)
         finally:
             # A run must always reach a terminal state. When the error path
             # itself raised (a NameError, once), the record stayed "running" and
             # the SSE stream never closed — a hung connection on a public
             # endpoint, and a reviewer watching a spinner with no end.
             if result is None:
-                result = _env_failure("run ended without producing a result")
+                result = _env_failure("run ended without producing a result", model)
             RUNS[run_id] = result
             q.put_nowait({"event": "done", "result": result})
 
@@ -178,10 +203,19 @@ async def submit_task(t: TaskIn):
         raise HTTPException(422, "task must be 1-500 chars")
     if t.url and not url_ok(t.url):
         raise HTTPException(422, "url blocked: http/https public hosts only")
+    # `is not None`, not truthiness: an absent field and an explicit `null` both
+    # mean "not specified" and default; `""` does not. JSON null IS the absent
+    # value for an optional field, and Pydantic cannot tell the two apart here
+    # anyway — so the rule is written as it behaves rather than the other way
+    # round, and pinned by a row in gateway-model-reaches-planner (PR #15, R8).
+    if t.model is not None and t.model not in ALLOWED_MODELS:
+        raise HTTPException(422, "model blocked: allowlisted models only — "
+                                 + ", ".join(ALLOWED_MODELS))
     run_id = uuid.uuid4().hex[:8]
     RUNS[run_id] = {"status": "running"}
     STREAMS[run_id] = asyncio.Queue()
-    asyncio.get_event_loop().create_task(_execute(run_id, t.task, t.url))
+    asyncio.get_event_loop().create_task(
+        _execute(run_id, t.task, t.url, t.model or DEFAULT_MODEL))
     return {"run_id": run_id}
 
 
@@ -308,7 +342,10 @@ ladder replaced.</p>
   </div>
   <p class="note" id="guards">Guards live on this deployment: URL allow-list (no
     loopback/private/link-local in any spelling), 30 actions and 100k LLM tokens per run,
-    2 replans per task, one run at a time. A blocked URL is refused before a browser opens.</p>
+    2 replans per task, one run at a time. A blocked URL is refused before a browser opens.
+    <code>POST /tasks</code> also takes an optional <code>model</code> field, gated on a
+    five-model allow-list and refused the same way — this form never sends one, so every
+    run started here uses the default planner model.</p>
   <pre id="err" hidden></pre>
 </div>
 

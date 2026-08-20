@@ -9,6 +9,7 @@ contract-drift (spec-drift audits field-by-field).
 ```json
 {
   "status": "success | partial | failure:<class> | unsupported",
+  "model": "planner model id | null",
   "answer": "string | list | null",
   "reason": "string | null",
   "verdict": { "verdict": "PASS | FAIL | INCONCLUSIVE", "layer": 1,
@@ -30,6 +31,13 @@ contract-drift (spec-drift audits field-by-field).
 }
 ```
 
+- `model` — the planner model this run was built with, echoed so a run record is
+  self-attributing. `null` where no named model planned it (the `fast` suite
+  stubs the planner at the module boundary). Added at M9: the ablation submits a
+  model and writes the answer into a committed report, and without an echo the
+  attribution of every row is the driver's own assertion about a deployment that
+  can redeploy mid-sweep (`specs/decisions/ADR-010-m9-model-ablation.md`
+  Decision 13).
 - `status` — `failure:<class>` uses exactly one of the 7 top-level classes in
   `docs/evals/failure-taxonomy.md` (nav, locate, act, extract, semantic, env,
   task). `unsupported` comes from pre-flight screening or mid-run discovery.

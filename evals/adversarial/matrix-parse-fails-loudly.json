@@ -1,20 +1,47 @@
 {
   "id": "matrix-parse-fails-loudly",
   "task": "browser",
-  "suites": ["fast", "invariant"],
+  "suites": [
+    "fast",
+    "invariant"
+  ],
   "input": {
     "kind": "matrix-drift",
     "variants": [
-      { "note": "section heading renamed at a later milestone",
-        "replace": ["## Declared limitations", "## Known limitations"] },
-      { "note": "a column added to the matrix grid",
-        "replace": ["| shop fixture | supported |", "| shop fixture | supported | supported |"] },
-      { "note": "unbalanced code fence swallows the rest of the document",
-        "replace": ["## Current matrix", "```\n\n## Current matrix"] }
+      {
+        "note": "section heading renamed at a later milestone",
+        "replace": [
+          "## Declared limitations",
+          "## Known limitations"
+        ]
+      },
+      {
+        "note": "a column added to the matrix grid",
+        "replace": [
+          "| shop fixture | supported |",
+          "| shop fixture | supported | supported |"
+        ]
+      },
+      {
+        "note": "unbalanced code fence swallows the rest of the document",
+        "replace": [
+          "## Current matrix",
+          "```\n\n## Current matrix"
+        ]
+      },
+      {
+        "note": "a limitation row separated from its table by a blank line — it renders as a paragraph of pipes, not a row (PR #15, R20; third recurrence, after D10 in PR #12)",
+        "replace": [
+          "| **D5** — positional targeting",
+          "\n| **D5** — positional targeting"
+        ]
+      }
     ]
   },
-  "expect": { "raises": true },
-  "provenance": "cold review of M4, finding 2. parse_matrix keyed rows on `section.startswith(...)` plus an exact cell count, and asserted nothing about having found anything. Renaming a heading, adding a TC6 or an Owner column, or leaving one unbalanced fence made a section silently parse to zero entries — and support-matrix-cites-real-cases stayed GREEN on it, because bad_status iterates the rows it did not find and every surviving citation still resolves. The frontend then rendered a clean, authoritative, header-only table: an agent declaring no limitations at all. Watched red as three variants that parsed quietly instead of raising.",
+  "expect": {
+    "raises": true
+  },
+  "provenance": "cold review of M4, finding 2. parse_matrix keyed rows on `section.startswith(...)` plus an exact cell count, and asserted nothing about having found anything. Renaming a heading, adding a TC6 or an Owner column, or leaving one unbalanced fence made a section silently parse to zero entries — and support-matrix-cites-real-cases stayed GREEN on it, because bad_status iterates the rows it did not find and every surviving citation still resolves. The frontend then rendered a clean, authoritative, header-only table: an agent declaring no limitations at all. Watched red as three variants that parsed quietly instead of raising. PR #15 R20 added the third variant family: D14 — the disclosure that no cell measures the model the system actually runs on — had drifted a blank line away from its table, so it rendered as a literal paragraph of pipes rather than a row. `parse_matrix` is line-based and picked it up regardless, and the cell-count checks stayed green, so nothing was red. This is the SAME defect PR #12 fixed by hand for D10 and nobody guarded. A table block whose second line is not a delimiter is now a loud failure: the honesty artifact must not be able to stop rendering as a table while still parsing as one.",
   "triage": {
     "class": "silent-failure",
     "note": "this is the honesty artifact failing in the flattering direction, which is the one direction that must never be quiet (CLAUDE.md rule 4). The fix is loudness, not tolerance: an empty section raises, so the /support-matrix endpoint 500s and the page shows an error rather than an empty promise. Also fixed alongside: the citation checker built its set of known case ids from evals/*/*.json, which included evals/report/*.json, so a report filename like `20260816-192727-fast` was accepted as a valid case citation."

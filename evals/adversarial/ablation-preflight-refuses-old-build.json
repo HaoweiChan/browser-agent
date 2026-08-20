@@ -1,0 +1,20 @@
+{
+  "id": "ablation-preflight-refuses-old-build",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "ablation-preflight",
+    "probe_task": "log in to the admin account — preflight probe, must not run"
+  },
+  "expect": {
+    "note": "the shipped build passes preflight; a build that accepts any model must abort it"
+  },
+  "provenance": "spec-drift audit, M9: `evals.ablation.preflight` was the only M9 code path with no case behind it, and it is the one guarding twenty paid runs. Zeabur keeps serving the previous build until the deploy flips and the app exposes no /version, so a driver run started too soon after the merge would hit a build that drops the unknown `model` field, answers 200, and plans with the default — four rows that are all the default model wearing four names, published as a model comparison. Watched red by patching the server's allowlist to accept anything (a stand-in for the pre-M9 build): preflight returned instead of raising, i.e. the driver would have gone on to spend. Re-watched red at the owner's model-set change (2026-08-20), when the allowlist and the ablation set were split: the case patched `server.ABLATION_MODELS`, a name the endpoint no longer reads. It failed loudly only because that attribute had stopped existing at all — had it still existed as a re-export, the patch would have been a silent no-op, the endpoint would have kept refusing, `preflight` would have kept raising, and this case would have reported PASS while grading nothing. It now asserts the simulated old build really does accept the bogus model before drawing any conclusion from it, and that assertion was itself watched red by aiming the patch at a decoy object.",
+  "triage": {
+    "class": "spend-hole",
+    "note": "tagged invariant — 'do not spend twenty runs measuring one model' is not a property that may regress to a baseline. Costs $0.00 in both directions and needs no key: the refusal branch never constructs a planner, and the accepting branch's probe task trips `agent.screen`, which `run_task` applies before it plans. That second property is asserted by the case rather than assumed, because it is the whole reason this probe is safe to fire at a deployment that does have a key. `gateway-model-not-allowlisted` grades the guard; this grades the driver's use of it."
+  }
+}

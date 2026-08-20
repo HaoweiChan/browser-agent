@@ -1,0 +1,283 @@
+{
+  "id": "ablation-env-failure-is-a-result",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "ablation-run-one",
+    "checks": [
+      [
+        "success",
+        null,
+        true
+      ],
+      [
+        "failure:locate",
+        "no tier resolved",
+        true
+      ],
+      [
+        "failure:act",
+        "Locator.click: intercepted",
+        true
+      ],
+      [
+        "failure:extract",
+        "empty answer or empty trace",
+        true
+      ],
+      [
+        "failure:semantic",
+        "verifier FAIL: identity_anchors",
+        true
+      ],
+      [
+        "failure:task",
+        "unknown target key(s): ['selector']",
+        true
+      ],
+      [
+        "failure:env",
+        "planner rejected: planner returned non-plan output: I'd be happy to help!",
+        true
+      ],
+      [
+        "failure:env",
+        "replanner rejected: planner returned non-plan output: Sure!",
+        true
+      ],
+      [
+        "failure:env",
+        "budget exhausted: actions",
+        true
+      ],
+      [
+        "failure:env",
+        "budget exhausted: llm_tokens",
+        true
+      ],
+      [
+        "failure:nav",
+        "pre-plan navigation failed: Page.goto: net::ERR_UNSAFE_PORT",
+        false
+      ],
+      [
+        "failure:nav",
+        "navigate step failed: Timeout 30000ms exceeded",
+        false
+      ],
+      [
+        "failure:task",
+        "blocked URL: 'http://127.0.0.1/admin'",
+        false
+      ],
+      [
+        "failure:env",
+        "planner failed: HTTP Error 402: Payment Required",
+        false
+      ],
+      [
+        "failure:env",
+        "planner failed: HTTP Error 429: Too Many Requests",
+        false
+      ],
+      [
+        "failure:env",
+        "planner failed: unreadable planner response envelope: KeyError: 'choices'",
+        false
+      ],
+      [
+        "failure:env",
+        "planner failed: provider error: rate limited",
+        false
+      ],
+      [
+        "failure:env",
+        "planner rejected: model returned no plan content (finish_reason=length)",
+        true
+      ],
+      [
+        "failure:env",
+        "replanner failed: <urlopen error [Errno 54] Connection reset by peer>",
+        false
+      ],
+      [
+        "failure:env",
+        "PlanError: OPENROUTER_API_KEY is not set",
+        false
+      ],
+      [
+        "failure:env",
+        "run ended without producing a result",
+        false
+      ],
+      [
+        "unsupported",
+        "out of scope (matched 'log in')",
+        false
+      ],
+      [
+        "failure:brand-new-class-nobody-added-yet",
+        "whatever",
+        false
+      ]
+    ],
+    "e2e": {
+      "model": "tencent/hy3",
+      "fixture": "shop-lamp-std.html",
+      "task": "What is the price of the Aurora Desk Lamp on this page?",
+      "plan_error": "planner returned non-plan output: Expecting value: line 1 column 1 (char 0): I'd be happy to help you with that!",
+      "billed_usage": {
+        "llm_tokens": 1873,
+        "llm_usd": 0.0012
+      }
+    },
+    "model_echo": {
+      "submits": "tencent/hy3",
+      "echoes": "anthropic/claude-sonnet-4.5"
+    },
+    "e2e_fatal": {
+      "model": "tencent/hy3",
+      "fixture": "shop-lamp-std.html",
+      "task": "What is the price of the Aurora Desk Lamp on this page?",
+      "http_status": 402,
+      "http_reason": "Payment Required"
+    },
+    "planner_usage": [
+      {
+        "note": "prose instead of a JSON array",
+        "content": "I'd be happy to help you with that! First I would open the catalogue page.",
+        "usage": {
+          "total_tokens": 1873,
+          "cost": 0.0012
+        },
+        "expect_usage": {
+          "llm_tokens": 1873,
+          "llm_usd": 0.0012
+        }
+      },
+      {
+        "note": "content:null with reasoning — what a reasoning model returns when it runs out of tokens",
+        "message": {
+          "content": null,
+          "reasoning": "Let me think about this..."
+        },
+        "finish_reason": "length",
+        "usage": {
+          "total_tokens": 4096,
+          "cost": 0.0064
+        },
+        "expect_usage": {
+          "llm_tokens": 4096,
+          "llm_usd": 0.0064
+        }
+      },
+      {
+        "note": "the message carries no content key at all",
+        "message": {
+          "reasoning": "..."
+        },
+        "usage": {
+          "total_tokens": 512,
+          "cost": 0.0003
+        },
+        "expect_usage": {
+          "llm_tokens": 512,
+          "llm_usd": 0.0003
+        }
+      }
+    ],
+    "e2e_unreachable": {
+      "model": "tencent/hy3",
+      "task": "In the Travel category, open a book and tell me its price.",
+      "url": "http://127.0.0.1:9/catalogue/category/books/travel_2/index.html"
+    },
+    "prefixes_must_be_reachable": true,
+    "planner_envelope": [
+      {
+        "note": "200 with no choices key at all",
+        "body": {
+          "usage": {
+            "total_tokens": 10,
+            "cost": 0.001
+          }
+        }
+      },
+      {
+        "note": "200 with a string error field, which an isinstance(dict) guard misses",
+        "body": {
+          "error": "rate limited",
+          "usage": {
+            "total_tokens": 0,
+            "cost": 0.0
+          }
+        }
+      },
+      {
+        "note": "200 with choices: null",
+        "body": {
+          "choices": null,
+          "usage": {
+            "total_tokens": 5,
+            "cost": 0.0
+          }
+        }
+      },
+      {
+        "note": "a gateway envelope that is not an OpenRouter response at all",
+        "body": {
+          "message": "Bad gateway"
+        }
+      },
+      {
+        "note": "200 with an error object and no choices",
+        "body": {
+          "error": {
+            "code": 429,
+            "message": "rate limited"
+          }
+        }
+      },
+      {
+        "note": "an empty choices list — a well-formed envelope carrying no completion at all",
+        "body": {
+          "choices": [],
+          "usage": {
+            "total_tokens": 77,
+            "cost": 5e-05
+          }
+        }
+      },
+      {
+        "note": "an error field ALONGSIDE a readable choices array — the only shape where the error check does work the envelope guard does not",
+        "body": {
+          "error": {
+            "code": 502,
+            "message": "upstream timeout"
+          },
+          "choices": [
+            {
+              "message": {
+                "content": "[]"
+              }
+            }
+          ],
+          "usage": {
+            "total_tokens": 40,
+            "cost": 0.0002
+          }
+        }
+      }
+    ]
+  },
+  "expect": {
+    "note": "a model that cannot plan scores an incorrect cell; only a genuine environment fault aborts the sweep"
+  },
+  "provenance": "PR #15 review round 1, R1 (HIGH). The driver aborted the entire sweep on any `failure:env`, on the stated grounds that the class is 'infrastructure, never a statement about planning'. It is not: `agent.py` returns `failure:env` for a planner exception (including `PlanError` from `parse_plan` — the model answered with prose instead of a JSON array), for a replan that raised, and for budget exhaustion. Reproduced end to end against the app on loopback with a planner raising PlanError: `status: failure:env, reason: 'planner failed: planner returned non-plan output: ... I'd be happy to help you with that!'`, budgets_spent 1 action. On row 3 of model 4 that is 15 already-paid runs echoed to stderr and no committed artifact. Worse than the abort: the whole reason a $0.14/M model is in the set is to find out whether the plan vocabulary breaks down at the bottom of the price range, and 'emitted prose instead of a plan' is precisely that finding — the driver refused to record the observation it exists to collect. The `model_echo` half is R4 (MEDIUM), watched red separately: the run record carried no model at all, so every row's attribution was the driver's own assertion, checked once by preflight at the start of a ~20-run sweep. Review round 2 (PR #15) found the round-1 repair had INVERTED the defect rather than closed it (R9): `agent.py` wraps every planner exception into `planner failed: {e}`, transport ones included, so `env_is_fatal('planner failed: HTTP Error 402: Payment Required')` returned False and a provider outage would be published as a model scoring 0/5 at $0.000000 — the precise artifact ADR-010 claims to prevent, arriving through the repair meant to prevent it. The case could not have caught it: its only fatal HTTP row was spelled `HTTPError: HTTP Error 402: ...`, the gateway catch-all's format, which is reachable only when `live_planner()` fails at CONSTRUCTION (missing key) and never when OpenRouter rejects a request. Re-watched red on the real spelling. R10, same cells: the row was recorded at $0.000000 / 0 tokens even though the provider billed the completion, because `live_planner` built `usage` AFTER `parse_plan`, so a billed-but-unparseable response discarded its own cost — while four documents claimed 'with their real cost and tokens still counted'. Review round 3 (PR #15) found the whole three-round argument had been about the wrong axis. R14 (HIGH): the driver inspected `failure:env` and nothing else, so a PRE-PLAN navigation failure — written by `agent.py` before the planner is ever called, always at $0.00 — was published as a model scoring 0/5. Task 5 of the fixed set is live and gets hit once per model, and this repo has already been bitten twice by `failure:nav` from a site's behaviour rather than the agent's (M6's openlibrary outage; the post-M6 hanging-subresource fix). Reproduced against an unreachable start URL: no abort, row `{status: failure:nav, correct: false, llm_usd: 0.0}`, rendering as `| 0/1 | $0.000000 |`. The denylist had been extended three times, each time by a reviewer rather than by the code, so it is now an ALLOWLIST: a status must be named as a measurement to be published, and an unrecognised one aborts. R15 (MEDIUM): `content` was extracted one line ABOVE the guarded block, so `content: null` — what a reasoning model returns on `finish_reason: length`, and `deepseek/deepseek-v4-pro` lists `reasoning.default_effort: high` — raised AttributeError, was classed `planner failed:`, aborted the sweep and discarded $0.0064 the provider had billed. Both round-2 repairs failed on the same input. Review round 4 (R18): the round-3 repair guarded the whole response handling with a bare `except Exception -> PlanError`, which classifies everything it does NOT recognise as the model's fault — the R9 defect with the polarity flipped. A 200 with no `choices` key, a string `error` field, `choices: null`, or a gateway envelope all became `planner rejected:` and scored the model 0/5, while `docs/analysis.md` §9 published the opposite rule ('unreadable body ... abort'). Default-deny is the principle already adopted for the status allowlist, so it applies here too: only a response positively recognised as 'the model answered, and the answer is not a plan' is scored. The stale half was the more interesting one — the truth table pinned `planner failed: KeyError: 'choices'`, a string production could no longer emit, so it graded a dead state. `prefixes_must_be_reachable` closes that class rather than that instance: every prefix `is_measurement` keys on must appear literally in the production source AND be exercised by a row here, so renaming one without updating the table is red. One round-3 expectation is deliberately REVERSED here: `choices: []` was pinned as 'the model did not produce a plan' (scored) on R15's acceptance, and is now pinned as an envelope that aborts. The two rounds' principles genuinely conflict, and default-deny wins — an empty choices list carries no completion to judge, so it is not the model answering badly, and aborting is the direction that can never publish a wrong cell. The reversal is recorded rather than quietly re-pinned.",
+  "triage": {
+    "class": "measurement-refused",
+    "note": "tagged invariant — 'do not discard paid runs', 'do not publish an outage as a model's incompetence', 'do not publish a model's incompetence as free', and 'do not mis-attribute a row to a model that never ran' are all must-always-hold. The discrimination is no longer a string the driver guesses at: `agent.py` catches `PlanError` — the type `parse_plan` raises, and the only thing in the system that means 'the model did not produce a plan' — separately from every other exception, and writes `planner rejected:` / `replanner rejected:` for it. Transport faults keep `planner failed:` and are fatal. The prefix is now authored at the one place the type is known rather than pattern-matched downstream, which is why widening the match a third time was the wrong move (PR #15 R9). `PlanError` also carries the usage of the call that produced it, so a billed prose completion is counted against the model that emitted it (R10). Three halves: a truth table over reasons, a real `run_one` whose planner returns usage and then emits prose (must be SCORED, and must report the billed cost), and a real `run_one` whose planner raises HTTPError 402 (must ABORT)."
+  }
+}

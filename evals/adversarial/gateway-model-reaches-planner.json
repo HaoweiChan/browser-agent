@@ -1,0 +1,59 @@
+{
+  "id": "gateway-model-reaches-planner",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "gateway-model",
+    "task": "What is the main heading on this page?",
+    "checks": [
+      {
+        "model": null,
+        "http": 200,
+        "planner_model": "anthropic/claude-sonnet-4.5"
+      },
+      {
+        "model": "__EXPLICIT_NULL__",
+        "http": 200,
+        "planner_model": "anthropic/claude-sonnet-4.5"
+      },
+      {
+        "model": "anthropic/claude-sonnet-4.5",
+        "http": 200,
+        "planner_model": "anthropic/claude-sonnet-4.5"
+      },
+      {
+        "model": "deepseek/deepseek-v4-pro",
+        "http": 200,
+        "planner_model": "deepseek/deepseek-v4-pro"
+      },
+      {
+        "model": "openai/gpt-5.6-luna",
+        "http": 200,
+        "planner_model": "openai/gpt-5.6-luna"
+      },
+      {
+        "model": "tencent/hy3",
+        "http": 200,
+        "planner_model": "tencent/hy3"
+      },
+      {
+        "model": "deepseek/deepseek-v4-flash-0731",
+        "http": 200,
+        "planner_model": "deepseek/deepseek-v4-flash-0731"
+      }
+    ],
+    "verified_ids_file": "evals/labels/openrouter-models-20260820.json",
+    "price_ceiling": true
+  },
+  "expect": {
+    "note": "rows 1-2 are the two ways of not specifying a model (absent, explicit null) and must both default; row 3 is the default by explicit name (allowlisted, NOT ablated); rows 4-7 are the four ablation ids"
+  },
+  "provenance": "the other half of the allowlist, and the half an outside observer cannot see. A `model` field that is accepted and then dropped on the floor returns exactly the same 200 and the same run_id as one that works, so the M9 ablation would have run four times against the default model and produced a tradeoff table in which every row was the same model wearing four names — an artifact indistinguishable from a real measurement and completely false. Watched red before any of it existed: the field was not on `TaskIn` and `_execute` called `live_planner()` with no argument, so all five rows returned 200 and the recorder captured `null` — not the wrong model, no model at all. Row 1 was red for the same reason and had to be, since 'the default still reaches the planner' is the thing the other four are measured against. Re-watched red at the owner's model-set change (2026-08-20): with the endpoint still gating on ABLATION_MODELS, the four new ids reached the planner but row 2 — the incumbent default named explicitly — came back 422 with planner_model null, because the one list was doing both jobs and the default had just been priced out of the ablation set. That is the whole reason ALLOWED_MODELS and ABLATION_MODELS are now separate. Row 2 added in review round 1 (PR #15, R8): posting `{\"model\": null}` returns 200 and the planner receives the default, which is sane but was not what ADR-010 Decision 7 said ('only an ABSENT field falls back'). Reproduced, then the rule was written to match the behaviour rather than the behaviour bent to match the rule — JSON null is the absent value for an optional field. The row exists so whichever way it is decided, it is decided once and stays decided.",
+  "triage": {
+    "class": "silent-drop",
+    "note": "tagged invariant for the same reason as the refusal half: this is what makes the ablation's independent variable actually independent, and it is unobservable from the HTTP response. Row 1 pins the no-model default so M9 cannot change the default model as a side effect (ADR-010 Decision 6 — the default is unchanged in this PR because no data exists yet). `verified_ids_file` pins `planner.ALLOWED_MODELS` — order included — against the frozen snapshot of the OpenRouter response it was verified from, so editing either list without re-verifying is a red case rather than a stale ADR sentence. `price_ceiling` grades the owner's constraint itself: every ablated model must be at or under `deepseek/deepseek-v4-pro`'s list price on BOTH prompt and completion, and the incumbent default must be OVER it — the second half is what makes ADR-010's 'no cell measures the incumbent' a graded fact rather than a sentence that can go stale when prices move."
+  }
+}

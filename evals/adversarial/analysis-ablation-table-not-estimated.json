@@ -1,0 +1,178 @@
+{
+  "id": "analysis-ablation-table-not-estimated",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "ablation-table",
+    "doc": "docs/analysis.md",
+    "heading": "## 9. Cost/model ablation",
+    "variants": [
+      {
+        "note": "an illustrative row pasted under the empty table 'just to show the shape'",
+        "replace": [
+          "|---|---|---|---|---|---|---|",
+          "|---|---|---|---|---|---|---|\n| `tencent/hy3` | 4/5 | $0.008000 | $0.001600 | 6000 | 3.00 | 9.00 |"
+        ]
+      },
+      {
+        "note": "the pending declaration quietly dropped while the table is still empty",
+        "replace": [
+          "PENDING — no ablation report exists yet",
+          "The ablation is complete"
+        ]
+      },
+      {
+        "note": "a column dropped from the header, so a row could carry fewer cells than the report produces",
+        "replace": [
+          "| Model | Correct | LLM cost | Cost/run | Tokens | p50 s | p95 s |",
+          "| Model | Correct | LLM cost | Tokens | p50 s | p95 s |"
+        ]
+      },
+      {
+        "note": "a second copy of the tradeoff table parked elsewhere in the section, where only the marked one is graded",
+        "replace": [
+          "<!-- ablation-table -->",
+          "| Model | Correct | LLM cost | Cost/run | Tokens | p50 s | p95 s |\n|---|---|---|---|---|---|---|\n| `tencent/hy3` | 5/5 | $0.007000 | $0.001400 | 5200 | 2.80 | 7.10 |\n\n<!-- ablation-table -->"
+        ]
+      },
+      {
+        "note": "an 'expected shape' table with a different header, parked elsewhere in the section, carrying per-model numbers",
+        "replace": [
+          "**The default model is unchanged by this PR**",
+          "### Expected shape once stage two runs\n\n| Model | Correct | Cost/run |\n|---|---|---|\n| `tencent/hy3` | 4/5 | $0.0011 |\n\n**The default model is unchanged by this PR**"
+        ]
+      },
+      {
+        "note": "the marker itself renamed, leaving the grader with no table to grade",
+        "replace": [
+          "<!-- ablation-table -->",
+          "<!-- ablation table -->"
+        ]
+      },
+      {
+        "note": "a results table spelling the models informally, so no allowlisted id appears literally (PR #15, R2)",
+        "replace": [
+          "**The default model is unchanged by this PR**",
+          "| Model | Correct | Cost/run |\n|---|---|---|\n| Tencent Hy3 | 4/5 | $0.0011 |\n| DeepSeek V4 Flash | 5/5 | $0.0004 |\n\n**The default model is unchanged by this PR**"
+        ]
+      },
+      {
+        "note": "the same results as a bullet list instead of a table (PR #15, R2)",
+        "replace": [
+          "**The default model is unchanged by this PR**",
+          "- `tencent/hy3`: 4/5 correct, $0.0016/run, p50 3.0s\n- `deepseek/deepseek-v4-flash-0731`: 5/5 correct, $0.0004/run, p50 2.1s\n\n**The default model is unchanged by this PR**"
+        ]
+      },
+      {
+        "note": "a numbered list item carrying per-model results — matches no table row and no `- `/`* ` bullet (PR #15, R11)",
+        "replace": [
+          "**The default model is unchanged by this PR**",
+          "1. `tencent/hy3` — 4/5 correct, $0.0031/run, p50 12.4s\n\n**The default model is unchanged by this PR**"
+        ]
+      },
+      {
+        "note": "a `+` bullet carrying the same results (PR #15, R11)",
+        "replace": [
+          "**The default model is unchanged by this PR**",
+          "+ `tencent/hy3` — 4/5 correct, $0.0031/run, p50 12.4s\n\n**The default model is unchanged by this PR**"
+        ]
+      },
+      {
+        "note": "results in a blockquote (PR #15, R11)",
+        "replace": [
+          "**The default model is unchanged by this PR**",
+          "> `tencent/hy3`: 4/5 correct, $0.0031/run\n\n**The default model is unchanged by this PR**"
+        ]
+      },
+      {
+        "note": "results in an indented code block, which is neither a table nor a list (PR #15, R11)",
+        "replace": [
+          "**The default model is unchanged by this PR**",
+          "    tencent/hy3   4/5   $0.0031/run   p50 12.4s\n\n**The default model is unchanged by this PR**"
+        ]
+      },
+      {
+        "note": "a full results table respelled past every figure pattern — '4 of 5', unsigned costs, no p50 (PR #15, R17)",
+        "replace": [
+          "**The default model is unchanged by this PR**",
+          "| Model | Correct | Cost/run (USD) |\n|---|---|---|\n| `tencent/hy3` | 4 of 5 | 0.0016 |\n| `deepseek/deepseek-v4-flash-0731` | 5 of 5 | 0.0004 |\n\n**The default model is unchanged by this PR**"
+        ]
+      },
+      {
+        "note": "the same numbers as a percentage and cents, in a table (PR #15, R17)",
+        "replace": [
+          "**The default model is unchanged by this PR**",
+          "| Model | Score | Price |\n|---|---|---|\n| `tencent/hy3` | 80% correct | 0.04 cents per run |\n\n**The default model is unchanged by this PR**"
+        ]
+      }
+    ],
+    "synthetic": {
+      "report": {
+        "models": [
+          "example/synthetic-model-a",
+          "example/synthetic-model-b"
+        ],
+        "by_model": {
+          "example/synthetic-model-a": {
+            "n": 2,
+            "correct": 1,
+            "totals": {
+              "llm_usd": 0.02,
+              "llm_tokens": 1000
+            },
+            "run_p50_s": 1.0,
+            "run_p95_s": 2.0
+          },
+          "example/synthetic-model-b": {
+            "n": 2,
+            "correct": 2,
+            "totals": {
+              "llm_usd": 0.01,
+              "llm_tokens": 900
+            },
+            "run_p50_s": 3.0,
+            "run_p95_s": 4.0
+          }
+        },
+        "_note": "SCAFFOLDING, not a measurement. The model ids do not exist on OpenRouter precisely so no number here can ever be misread as a result for a real model. It exercises the report-mode branch of the grader, which has no committed report to grade against until stage two."
+      },
+      "tamper": [
+        "$0.020000",
+        "$0.002000"
+      ]
+    },
+    "append_variants": [
+      {
+        "note": "a results table parked under a new `## 9a` heading immediately after the graded one (PR #15, R3)",
+        "text": "\n\n## 9a. Preliminary ablation numbers\n\n| Model | Correct | LLM cost | Cost/run | Tokens | p50 s | p95 s |\n|---|---|---|---|---|---|---|\n| `tencent/hy3` | 4/5 | $0.008000 | $0.001600 | 6000 | 3.00 | 9.00 |\n"
+      },
+      {
+        "note": "a DIFFERENTLY-shaped results table under `## 9a`, which the document-wide header sweep cannot see — only the section boundary catches it (PR #15, R3)",
+        "text": "\n\n## 9a. Preliminary ablation numbers\n\n| Model | Correct | Cost/run |\n|---|---|---|\n| `tencent/hy3` | 4/5 | $0.0016 |\n"
+      },
+      {
+        "note": "the same table appended under an unrelated later heading, far from section 9",
+        "text": "\n\n## 12. Appendix\n\n| Model | Correct | LLM cost | Cost/run | Tokens | p50 s | p95 s |\n|---|---|---|---|---|---|---|\n| `tencent/hy3` | 4/5 | $0.008000 | $0.001600 | 6000 | 3.00 | 9.00 |\n"
+      },
+      {
+        "note": "a verbatim copy of the graded table pasted into ANOTHER section of the real document — the document-wide sweep must grade the committed file, not only synthetic inputs (PR #15, R12)",
+        "text": "",
+        "insert_before": "## 8. Deployment — verified against the live URL",
+        "table_copy": true
+      }
+    ],
+    "report_mode_must_reject_pending": true,
+    "stage_two_writable": true
+  },
+  "expect": {
+    "note": "the committed section must be honest, every variant must be caught, and the driver's own table must round-trip"
+  },
+  "provenance": "M9's deliverable is split in two by a sequencing constraint nobody can code around: the deployment cannot vary the model until a model parameter is deployed, so this PR ships the mechanism and the numbers land after the redeploy. That leaves a cost/latency table sitting empty in docs/analysis.md across at least one PR boundary — which is precisely where a plausible illustrative row gets pasted in to show the shape, survives review because it looks like data, and is read as a measurement six weeks later. The whole repo's honesty apparatus exists to prevent exactly that (CLAUDE.md rule 4; the M9 plan's validation line is literally 'table from committed report runs, not estimates'). Watched red twice: first with no such section in docs/analysis.md at all ('docs/analysis.md has no section'), then — with the pending section written — by pasting a fabricated haiku row under the separator, which the grader rejected as `numeric_rows_with_no_report_behind_them`. Review round 1 on PR #15 found three more holes, each reproduced against the committed §9 text before it was fixed. R2: the stray net matched full model ids literally, so a second results table spelling them 'Tencent Hy3' / 'DeepSeek V4 Flash' was accepted, as was a bullet list carrying the real ids (which contains the id but is not a table line). R3: `_doc_section` cut the section at the next `## `, so a byte-identical copy of the graded table under `## 9a. Preliminary ablation numbers` was invisible to all three checks while sitting directly under the pending table for any reader. R7: report mode never re-checked the PENDING banner, so a section could name a committed report, carry matching rows, and still tell the reader no report exists. Review round 2 found the round-1 R2 repair had only widened the net to `- `/`* ` bullets, so a numbered list, a `+` bullet, a blockquote and an indented code block all still smuggled per-model results into §9 with the case green (R11) — the third widening of the same enumeration. The net is now syntax-blind: any result-shaped figure anywhere in the section outside the graded table, which also forced §9's own list prices out into ADR-010 where they belong. And R12, the sharpest of the round: the document-wide duplicate-table sweep added in round 1 was never applied to the real `docs/analysis.md` at all, because the live grading call omitted `document=` — only the synthetic append-variants exercised it, so a verbatim copy of the graded table pasted into §8 was accepted. A guard that grades its own constructed inputs and never the artifact it protects is a case that passes by grading nothing. Review round 3 (R17): the round-2 repair swapped an enumeration of markdown syntaxes for an enumeration of number spellings, so the same results table written '4 of 5' with unsigned costs was accepted while the section still declared itself PENDING — the third iteration of one net (round 1 enumerated model ids, round 2 syntaxes, round 3 spellings). The rule is now structural and cannot be respelled: §9 contains exactly ONE table, the graded one. The figure net stays for prose and lists. `stage_two_writable` is the other half a reviewer asked for — the guard must ACCEPT the real table when a report exists, or it is a defect that would have to be weakened at stage two to publish correct content.",
+  "triage": {
+    "class": "honesty-guard",
+    "note": "tagged invariant: 'no number without a committed run behind it' is not a property that may regress to a baseline. Two modes, and the case grades both. PENDING mode (today): the section declares itself pending, names no report, and the table under the `<!-- ablation-table -->` marker must have zero data rows. REPORT mode (stage two): the section names `evals/report/<stamp>-ablation.json` and every row must equal what `evals.ablation.markdown_rows` derives from that file — the same formatter the driver prints, so the table is machine-derived in effect and a hand-edited cell is a red case. Report mode has no committed report to point at yet, so it is exercised against a synthetic one instead: dead-on-arrival is how a two-stage delivery loses its guard between the stages. The marker is an HTML comment because the section also contains prose and the grader must know which table is the graded one."
+  }
+}
