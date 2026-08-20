@@ -150,15 +150,54 @@ def _fatal(msg: str, rows: list) -> None:
     raise SystemExit(f"[ablation] ABORTED: {msg}")
 
 
-def _http(url: str, payload: dict | None = None, timeout: int = 30) -> dict:
+# 30s was too tight, measured rather than guessed: two full sweeps aborted on
+# `URLError: timed out` (runs 11 and 17 of 20), while `/healthz` answered in 0.21s
+# either side of both. The deployment is one uvicorn worker launching a Chromium
+# per run, and the run right before the second abort reported `ms: 29151`
+# SERVER-side for the cheapest task in the set — i.e. observed server latency had
+# reached the socket ceiling. The stall is the event loop, not a fault, so the
+# budget moves and the rule does not: a transport error still aborts the sweep
+# unrecorded (PR #15, R9). ponytail: one constant, raised to ~4x the worst
+# observed stall; if it trips again the deployment is the thing to fix, not this.
+def _http(url: str, payload: dict | None = None, timeout: int = 120) -> dict:
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode() if payload is not None else None,
         headers={"Content-Type": "application/json"} if payload is not None else {},
         method="POST" if payload is not None else "GET",
     )
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.load(r)
+    # Bounded retry, and ONLY for a failure that never delivered the request.
+    #
+    # Four sweeps died on the transport while `/healthz` answered in ~0.13s on
+    # either side, and a plain urllib POST loop scored 6/6 at 0.21s minutes later.
+    # The container is one uvicorn worker launching a Chromium per run: while a
+    # run is hot it stops accepting connections, and an aborted sweep leaves a run
+    # in flight that the next sweep's first submit walks straight into.
+    #
+    # The distinction that makes retrying safe here is connect-phase vs read-phase.
+    # `urllib` wraps a failure to establish the connection in `URLError` (that is
+    # what `[Errno 60] Operation timed out` and `<urlopen error timed out>` both
+    # were, every time) — nothing reached the server, so nothing was billed and a
+    # resubmit cannot double-spend. A read timeout after the request landed raises
+    # a bare `TimeoutError`, and that is NOT retried: the run may already be
+    # running, and resubmitting it would spend twice and record once.
+    #
+    # This does not soften PR #15's R9 rule. That rule is about never SCORING a
+    # transport fault as a model's result; it stays exact. Retrying a connection
+    # that was never made is not scoring anything, and if the retries are
+    # exhausted the sweep still aborts unrecorded.
+    last = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.load(r)
+        except urllib.error.HTTPError:
+            raise                     # a real answer from the server — never retried
+        except urllib.error.URLError as e:
+            last = e                  # connect phase: nothing delivered, nothing billed
+            if attempt < 2:
+                time.sleep(5 * (attempt + 1))
+    raise last
 
 
 # Which runs count as a measurement of a MODEL. An allowlist, default-deny —
@@ -306,7 +345,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--base", default=LIVE_BASE, help="deployed instance to drive")
     ap.add_argument("--models", nargs="+", default=ABLATION_MODELS)
-    ap.add_argument("--timeout", type=int, default=180, help="seconds to wait per run")
+    ap.add_argument("--timeout", type=int, default=900,
+                    help="seconds to wait per run (measured: the slowest observed cell is\n"
+                         "deepseek-v4-flash-0731/tc3 at 361s late in a degrading sweep\n"
+                         "(6.7s for its own tc1 minutes earlier), so 180s and then 420s each\n"
+                         "aborted a run still legitimately working; 900s clears it, and a\n"
+                         "genuinely stuck run still aborts rather than being recorded)")
     args = ap.parse_args()
 
     # Before a cent is spent: an id the deployment would refuse is a typo, and a
@@ -332,8 +376,27 @@ def main() -> int:
     print(f"[ablation] {len(args.models)} models x {len(tasks)} tasks against {base} "
           "(preflight ok: the model guard is live on this build)")
     rows: list[dict] = []
+    # Settle gap between runs. Three sweeps aborted on a transport fault — twice
+    # `URLError: timed out` mid-poll, once `[Errno 60]` refusing the CONNECT for
+    # the next submit — and every one landed on the run immediately after a heavy
+    # one, while `/healthz` answered in ~0.13s both before and after. The
+    # deployment is a single uvicorn worker launching a Chromium per run, and a
+    # run is marked done when its result is assembled, not when the browser is
+    # torn down: submitting into that window is submitting into a worker that
+    # cannot accept a connection. So the driver waits instead of racing it.
+    # ponytail: a sleep, not a retry — a retry would silently redo paid work, and
+    # the abort-on-transport-fault rule (PR #15, R9) has to keep meaning what it
+    # says. If this stops being enough, the deployment is the thing to fix.
+    # 8s was not enough. A full sweep reached 19/20 and the per-run wall clock rose
+    # monotonically as it went: deepseek-v4-flash did tc1 in 6.7s and then tc3 in
+    # 361s and tc4 in 181s, against 24-42s for tc3 on every other model minutes
+    # earlier. That is the container degrading over ~20 Chromium launches, not a
+    # model getting slower, and it is why the last cell blew a 420s budget.
+    SETTLE_S = 30
     for model in args.models:
         for spec in tasks:
+            if rows:
+                time.sleep(SETTLE_S)
             # Outer net: `run_one` names the faults it expects, but anything that
             # escapes it — a dropped connection mid-poll, a malformed body — must
             # still land in `_fatal`, or the completed rows are lost along with

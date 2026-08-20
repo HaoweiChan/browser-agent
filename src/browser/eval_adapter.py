@@ -910,13 +910,27 @@ def _run_gateway_model_case(case: dict) -> dict:
     # <date>" is a claim about a list that can be edited independently of the
     # snapshot it was verified from (spec-drift audit, M9).
     if verified := case["input"].get("verified_ids_file"):
-        from .planner import ABLATION_MODELS, ALLOWED_MODELS, CEILING_MODEL, DEFAULT_MODEL
+        from .planner import (ABLATION_MODELS, ALLOWED_MODELS, CEILING_MODEL,
+                              DEFAULT_MODEL, SUPERSEDED_INCUMBENT)
 
         snap = json.loads((Path(__file__).parents[2] / verified).read_text(encoding="utf-8"))
         snap_ids = [m["id"] for m in snap["models"]]
-        if snap_ids != list(ALLOWED_MODELS):
-            wrong.append({"allowlist": list(ALLOWED_MODELS), "verified_snapshot": snap_ids,
-                          "read_on": snap.get("_read_on")})
+        # Every allowlisted id must be frozen evidence. Containment, not equality:
+        # since 2026-08-21 the snapshot is deliberately a superset, because it
+        # still carries the SUPERSEDED incumbent (`anthropic/claude-sonnet-4.5`),
+        # which is the evidence for Decision 6's exclusion and is no longer
+        # accepted by the endpoint. Equality would force a choice between deleting
+        # that evidence and re-accepting a model the system stopped paying for.
+        if unfrozen := [m for m in ALLOWED_MODELS if m not in snap_ids]:
+            wrong.append({"allowlisted_but_not_in_the_verified_snapshot": unfrozen,
+                          "verified_snapshot": snap_ids, "read_on": snap.get("_read_on")})
+        if SUPERSEDED_INCUMBENT in ALLOWED_MODELS:
+            wrong.append({"superseded_incumbent_still_accepted": SUPERSEDED_INCUMBENT})
+        if SUPERSEDED_INCUMBENT not in snap_ids:
+            wrong.append({"superseded_incumbent_dropped_from_the_snapshot":
+                          SUPERSEDED_INCUMBENT,
+                          "note": "it is the evidence for ADR-010 Decision 6; without it "
+                                  "the reason the default moved is unfalsifiable"})
         # The owner's ceiling, DERIVED from the snapshot rather than compared
         # against a second copy of the same numbers. The old version held a
         # literal in planner.py and checked the snapshot against it, so it could
@@ -938,13 +952,38 @@ def _run_gateway_model_case(case: dict) -> dict:
                            "ceiling": cap}
                           for mid in ABLATION_MODELS for k, cap in ceiling.items()
                           if mid in price and float(price[mid][k]) > cap]
-                # The other direction, and the one that keeps ADR-010 Decision 6
-                # honest: the incumbent must still be OVER the bar. If a price
-                # move ever brought it under, the exclusion needs re-deciding,
-                # not re-asserting.
-                if all(float(price[DEFAULT_MODEL][k]) <= cap for k, cap in ceiling.items()):
-                    wrong.append({"default_now_fits_the_ceiling": DEFAULT_MODEL,
+                # The other direction. Until 2026-08-21 this asserted that the
+                # INCUMBENT was still over the bar, so that a price move would
+                # force the exclusion to be re-decided rather than re-asserted.
+                # It fired exactly as designed when the default was changed, which
+                # is the signal that retired it: the default is no longer an
+                # unmeasured model held outside the comparison, it is the model
+                # the comparison PICKED (Decision 5's rule, Decision 16's data).
+                #
+                # So the property inverts, and gets stronger. The default must be
+                # a model the ablation actually measured — which makes it at or
+                # under the ceiling by construction, and makes "the default was
+                # chosen by a rule written before the numbers" checkable rather
+                # than merely written down.
+                if DEFAULT_MODEL not in ABLATION_MODELS:
+                    wrong.append({"default_not_measured_by_the_ablation": DEFAULT_MODEL,
+                                  "ablated": list(ABLATION_MODELS),
+                                  "note": "since ADR-010 Decision 16 the default is the "
+                                          "ablation's own pick; a default no cell measured "
+                                          "is the arrangement M9 existed to end"})
+                elif any(float(price[DEFAULT_MODEL][k]) > cap for k, cap in ceiling.items()):
+                    wrong.append({"default_over_the_owner_ceiling": DEFAULT_MODEL,
                                   "pricing": price[DEFAULT_MODEL], "ceiling": ceiling})
+                # And the superseded incumbent must still be over it — that is
+                # what Decision 6 claims, and it is now claimed about a model the
+                # allowlist no longer contains, so nothing else would check it.
+                if SUPERSEDED_INCUMBENT in price and all(
+                        float(price[SUPERSEDED_INCUMBENT][k]) <= cap for k, cap in ceiling.items()):
+                    wrong.append({"superseded_incumbent_now_fits_the_ceiling":
+                                  SUPERSEDED_INCUMBENT,
+                                  "pricing": price[SUPERSEDED_INCUMBENT], "ceiling": ceiling,
+                                  "note": "Decision 6 excluded it on price; if that stopped "
+                                          "being true the exclusion needs re-deciding"})
     # The swap goes INSIDE the try whose finally restores it. It used to sit above
     # the snapshot block, so a renamed or malformed snapshot file raised with the
     # recorder still installed, breaking every later case in the same process and

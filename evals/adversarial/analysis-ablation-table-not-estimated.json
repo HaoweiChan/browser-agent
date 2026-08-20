@@ -18,10 +18,10 @@
         ]
       },
       {
-        "note": "the pending declaration quietly dropped while the table is still empty",
+        "note": "report mode's mirror of the old pending check: the committed report reference quietly dropped while the table still carries rows, so the numbers stop being traceable to anything. Replaced the pending-mode variant it supersedes when section 9 transitioned to measured (stage two) — the pending anchor no longer exists in the document, and deleting the row rather than replacing it would have shrunk coverage silently.",
         "replace": [
-          "PENDING — no ablation report exists yet",
-          "The ablation is complete"
+          "evals/report/20260821-004617-ablation.json",
+          "a report that was run at some point"
         ]
       },
       {
@@ -41,8 +41,8 @@
       {
         "note": "an 'expected shape' table with a different header, parked elsewhere in the section, carrying per-model numbers",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "### Expected shape once stage two runs\n\n| Model | Correct | Cost/run |\n|---|---|---|\n| `tencent/hy3` | 4/5 | $0.0011 |\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "### Expected shape once stage two runs\n\n| Model | Correct | Cost/run |\n|---|---|---|\n| `tencent/hy3` | 4/5 | $0.0011 |\n\n<!-- ablation-table -->"
         ]
       },
       {
@@ -55,78 +55,78 @@
       {
         "note": "a results table spelling the models informally, so no allowlisted id appears literally (PR #15, R2)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "| Model | Correct | Cost/run |\n|---|---|---|\n| Tencent Hy3 | 4/5 | $0.0011 |\n| DeepSeek V4 Flash | 5/5 | $0.0004 |\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "| Model | Correct | Cost/run |\n|---|---|---|\n| Tencent Hy3 | 4/5 | $0.0011 |\n| DeepSeek V4 Flash | 5/5 | $0.0004 |\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "the same results as a bullet list instead of a table (PR #15, R2)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "- `tencent/hy3`: 4/5 correct, $0.0016/run, p50 3.0s\n- `deepseek/deepseek-v4-flash-0731`: 5/5 correct, $0.0004/run, p50 2.1s\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "- `tencent/hy3`: 4/5 correct, $0.0016/run, p50 3.0s\n- `deepseek/deepseek-v4-flash-0731`: 5/5 correct, $0.0004/run, p50 2.1s\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "a numbered list item carrying per-model results — matches no table row and no `- `/`* ` bullet (PR #15, R11)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "1. `tencent/hy3` — 4/5 correct, $0.0031/run, p50 12.4s\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "1. `tencent/hy3` — 4/5 correct, $0.0031/run, p50 12.4s\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "a `+` bullet carrying the same results (PR #15, R11)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "+ `tencent/hy3` — 4/5 correct, $0.0031/run, p50 12.4s\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "+ `tencent/hy3` — 4/5 correct, $0.0031/run, p50 12.4s\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "results in a blockquote (PR #15, R11)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "> `tencent/hy3`: 4/5 correct, $0.0031/run\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "> `tencent/hy3`: 4/5 correct, $0.0031/run\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "results in an indented code block, which is neither a table nor a list (PR #15, R11)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "    tencent/hy3   4/5   $0.0031/run   p50 12.4s\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "    tencent/hy3   4/5   $0.0031/run   p50 12.4s\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "a full results table respelled past every figure pattern — '4 of 5', unsigned costs, no p50 (PR #15, R17)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "| Model | Correct | Cost/run (USD) |\n|---|---|---|\n| `tencent/hy3` | 4 of 5 | 0.0016 |\n| `deepseek/deepseek-v4-flash-0731` | 5 of 5 | 0.0004 |\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "| Model | Correct | Cost/run (USD) |\n|---|---|---|\n| `tencent/hy3` | 4 of 5 | 0.0016 |\n| `deepseek/deepseek-v4-flash-0731` | 5 of 5 | 0.0004 |\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "the same numbers as a percentage and cents, in a table (PR #15, R17)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "| Model | Score | Price |\n|---|---|---|\n| `tencent/hy3` | 80% correct | 0.04 cents per run |\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "| Model | Score | Price |\n|---|---|---|\n| `tencent/hy3` | 80% correct | 0.04 cents per run |\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "a bullet list of per-model results using R17's spellings — 'N of 5', bare cents, 'median N s' — none of which the currency/n-of-five/percentile net matched (PR #15, R21)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "- `tencent/hy3` — 4 of 5 correct, 0.9 cents per run, median 11.8 s, slowest 19.0 s\n- `deepseek/deepseek-v4-flash-0731` — 5 of 5 correct, 0.04 cents per run, median 8.1 s\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "- `tencent/hy3` — 4 of 5 correct, 0.9 cents per run, median 11.8 s, slowest 19.0 s\n- `deepseek/deepseek-v4-flash-0731` — 5 of 5 correct, 0.04 cents per run, median 8.1 s\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "the same estimate as a prose sentence (PR #15, R21)",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "The cheapest model got 4 of five right at 0.04 cents per run, median 8.1 s.\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "The cheapest model got 4 of five right at 0.04 cents per run, median 8.1 s.\n\n<!-- ablation-table -->"
         ]
       },
       {
         "note": "percentages instead of scores, in prose",
         "replace": [
-          "**The default model is unchanged by this PR**",
-          "Preliminary: `tencent/hy3` scored 80% correct, `openai/gpt-5.6-luna` 60%.\n\n**The default model is unchanged by this PR**"
+          "<!-- ablation-table -->",
+          "Preliminary: `tencent/hy3` scored 80% correct, `openai/gpt-5.6-luna` 60%.\n\n<!-- ablation-table -->"
         ]
       }
     ],
@@ -186,7 +186,8 @@
       }
     ],
     "report_mode_must_reject_pending": true,
-    "stage_two_writable": true
+    "stage_two_writable_retired": "Retired at stage two (2026-08-21), when the transition it simulated actually happened. The probe rewrote the committed section from pending to measured and required the result to grade clean without touching the grader — it answered 'would the guard have to be weakened to publish the real table?'. It cannot answer that any more: it keys on PENDING_MARKER, which section 9 no longer contains, so its rewrite is a no-op that leaves the real report named while the probe's resolver only knows the synthetic one — the check reports a failure of its own scaffolding, not of the document. The property is not lost, it is now demonstrated rather than simulated: section 9 publishes the real table, names the real report, and the grader accepts it with no change to the grader. That is the stronger form of the same evidence. The synthetic round-trip above still runs and still covers the three things the simulation was really for — the driver's own formatter is accepted, one edited cell is not, and a named-but-absent report is not.",
+    "anchor_note_2026_08_21": "Variants that anchored on the prose sentence '**The default model is unchanged by this PR**' were re-anchored to the `<!-- ablation-table -->` marker. That sentence was true only while the table was empty; stage two made it false, and an anchor that dies when the document it guards changes takes the guard down with it — the case went red on its own scaffolding, not on a defect. The marker is the one string this section cannot lose without the grader failing for a real reason."
   },
   "expect": {
     "note": "the committed section must be honest, every variant must be caught, and the driver's own table must round-trip"

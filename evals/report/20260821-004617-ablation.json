@@ -1,0 +1,572 @@
+{
+  "suite": "ablation",
+  "base": "https://whaleforce-browser-agent.zeabur.app",
+  "generated": "2026-08-21T00:46:17+0800",
+  "models": [
+    "deepseek/deepseek-v4-pro",
+    "openai/gpt-5.6-luna",
+    "tencent/hy3",
+    "deepseek/deepseek-v4-flash-0731"
+  ],
+  "task_set": [
+    {
+      "id": "tc1-shop-price",
+      "task": "What is the price of the Aurora Desk Lamp on this page?",
+      "url": null,
+      "answer": "$39.00",
+      "ground_truth": "evals/golden/tc1-shop-price.json"
+    },
+    {
+      "id": "tc2-shop-search",
+      "task": "Search the catalogue for 'Meridian' and name the product you find.",
+      "url": null,
+      "answer": "Meridian Wall Clock",
+      "ground_truth": "evals/golden/tc2-shop-search.json"
+    },
+    {
+      "id": "tc3-shop-detail-nav",
+      "task": "From the catalogue, open the Aurora Desk Lamp and report its material.",
+      "url": null,
+      "answer": "Anodised aluminium",
+      "ground_truth": "evals/golden/tc3-shop-detail-nav.json"
+    },
+    {
+      "id": "tc4-shop-sort-cheapest",
+      "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+      "url": null,
+      "answer": "Cobalt Floor Rug",
+      "ground_truth": "evals/golden/tc4-shop-sort-cheapest.json"
+    },
+    {
+      "id": "live-books-travel-price",
+      "task": "In the Travel category, open the book \"It's Only the Himalayas\" and tell me its price.",
+      "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+      "answer": "£45.17",
+      "ground_truth": "evals/golden/live-books-travel-price.json"
+    }
+  ],
+  "score": 0.6,
+  "totals": {
+    "actions": 61,
+    "llm_tokens": 69394,
+    "llm_usd": 0.0669,
+    "replans": 0,
+    "ms": 879969,
+    "wall_seconds": 974.36,
+    "latency_p50": 17.95,
+    "latency_p95": 236.98,
+    "cases_with_budgets": 20
+  },
+  "by_model": {
+    "deepseek/deepseek-v4-pro": {
+      "n": 5,
+      "correct": 3,
+      "run_p50_s": 22.824,
+      "run_p95_s": 169.135,
+      "totals": {
+        "actions": 16,
+        "llm_tokens": 19450,
+        "llm_usd": 0.050466,
+        "replans": 0,
+        "ms": 260811,
+        "wall_seconds": 333.68,
+        "latency_p50": 23.9,
+        "latency_p95": 236.98,
+        "cases_with_budgets": 5
+      }
+    },
+    "openai/gpt-5.6-luna": {
+      "n": 5,
+      "correct": 3,
+      "run_p50_s": 6.305,
+      "run_p95_s": 11.295,
+      "totals": {
+        "actions": 16,
+        "llm_tokens": 5887,
+        "llm_usd": 0.002946,
+        "replans": 0,
+        "ms": 32924,
+        "wall_seconds": 38.78,
+        "latency_p50": 7.1,
+        "latency_p95": 13.19,
+        "cases_with_budgets": 5
+      }
+    },
+    "tencent/hy3": {
+      "n": 5,
+      "correct": 3,
+      "run_p50_s": 34.589,
+      "run_p95_s": 54.769,
+      "totals": {
+        "actions": 15,
+        "llm_tokens": 15300,
+        "llm_usd": 0.007013,
+        "replans": 0,
+        "ms": 174613,
+        "wall_seconds": 183.05,
+        "latency_p50": 35.32,
+        "latency_p95": 56.88,
+        "cases_with_budgets": 5
+      }
+    },
+    "deepseek/deepseek-v4-flash-0731": {
+      "n": 5,
+      "correct": 3,
+      "run_p50_s": 64.653,
+      "run_p95_s": 165.45,
+      "totals": {
+        "actions": 14,
+        "llm_tokens": 28757,
+        "llm_usd": 0.006475,
+        "replans": 0,
+        "ms": 411621,
+        "wall_seconds": 418.85,
+        "latency_p50": 65.84,
+        "latency_p95": 167.63,
+        "cases_with_budgets": 5
+      }
+    }
+  },
+  "results": [
+    {
+      "model": "deepseek/deepseek-v4-pro",
+      "task_id": "tc1-shop-price",
+      "task": "What is the price of the Aurora Desk Lamp on this page?",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop-lamp-std.html",
+      "run_id": "e0f694c7",
+      "status": "success",
+      "answer": "$39.00",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "$39.00",
+      "ground_truth": "evals/golden/tc1-shop-price.json",
+      "correct": true,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 1065,
+        "llm_usd": 0.001969656,
+        "replans": 0,
+        "ms": 6605
+      },
+      "seconds": 6.93
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro",
+      "task_id": "tc2-shop-search",
+      "task": "Search the catalogue for 'Meridian' and name the product you find.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "6693d8d3",
+      "status": "success",
+      "answer": "Meridian Wall Clock",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "Meridian Wall Clock",
+      "ground_truth": "evals/golden/tc2-shop-search.json",
+      "correct": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 3557,
+        "llm_usd": 0.009418464,
+        "replans": 0,
+        "ms": 46217
+      },
+      "seconds": 47.92
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro",
+      "task_id": "tc3-shop-detail-nav",
+      "task": "From the catalogue, open the Aurora Desk Lamp and report its material.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "8b3fe61d",
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 3 (extract): ResolveError: no tier resolved {'role': None, 'name': None, 'text': None, 'near': 'Material', 'index': None}",
+      "verdict": null,
+      "expect_answer": "Anodised aluminium",
+      "ground_truth": "evals/golden/tc3-shop-detail-nav.json",
+      "correct": false,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 1649,
+        "llm_usd": 0.0028533824,
+        "replans": 0,
+        "ms": 16030
+      },
+      "seconds": 17.95
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro",
+      "task_id": "tc4-shop-sort-cheapest",
+      "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "7d5f4fd2",
+      "status": "success",
+      "answer": "Cobalt Floor Rug",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "Cobalt Floor Rug",
+      "ground_truth": "evals/golden/tc4-shop-sort-cheapest.json",
+      "correct": true,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 11022,
+        "llm_usd": 0.03312149574,
+        "replans": 0,
+        "ms": 169135
+      },
+      "seconds": 236.98
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro",
+      "task_id": "live-books-travel-price",
+      "task": "In the Travel category, open the book \"It's Only the Himalayas\" and tell me its price.",
+      "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+      "run_id": "064d178e",
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 4 (extract): ResolveError: no tier resolved {'near': 'Price'}",
+      "verdict": null,
+      "expect_answer": "£45.17",
+      "ground_truth": "evals/golden/live-books-travel-price.json",
+      "correct": false,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 2157,
+        "llm_usd": 0.0031039723,
+        "replans": 0,
+        "ms": 22824
+      },
+      "seconds": 23.9
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "task_id": "tc1-shop-price",
+      "task": "What is the price of the Aurora Desk Lamp on this page?",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop-lamp-std.html",
+      "run_id": "2705925e",
+      "status": "success",
+      "answer": "$39.00",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "$39.00",
+      "ground_truth": "evals/golden/tc1-shop-price.json",
+      "correct": true,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 758,
+        "llm_usd": 0.0001996,
+        "replans": 0,
+        "ms": 2024
+      },
+      "seconds": 2.69
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "task_id": "tc2-shop-search",
+      "task": "Search the catalogue for 'Meridian' and name the product you find.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "596c1f32",
+      "status": "success",
+      "answer": "Meridian Wall Clock",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "Meridian Wall Clock",
+      "ground_truth": "evals/golden/tc2-shop-search.json",
+      "correct": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1124,
+        "llm_usd": 0.0005848,
+        "replans": 0,
+        "ms": 6305
+      },
+      "seconds": 7.1
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "task_id": "tc3-shop-detail-nav",
+      "task": "From the catalogue, open the Aurora Desk Lamp and report its material.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "40da7e2d",
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 3 (extract): ResolveError: no tier resolved {'role': 'text', 'name': None, 'text': None, 'near': 'Material', 'index': None}",
+      "verdict": null,
+      "expect_answer": "Anodised aluminium",
+      "ground_truth": "evals/golden/tc3-shop-detail-nav.json",
+      "correct": false,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 1024,
+        "llm_usd": 0.0004658,
+        "replans": 0,
+        "ms": 5105
+      },
+      "seconds": 6.86
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "task_id": "tc4-shop-sort-cheapest",
+      "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "d67dfe9e",
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "step 3 (extract): StepError: identity anchor 'Catalogue' absent from the page the answer was read from",
+      "verdict": null,
+      "expect_answer": "Cobalt Floor Rug",
+      "ground_truth": "evals/golden/tc4-shop-sort-cheapest.json",
+      "correct": false,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 1288,
+        "llm_usd": 0.0007806,
+        "replans": 0,
+        "ms": 8195
+      },
+      "seconds": 8.94
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "task_id": "live-books-travel-price",
+      "task": "In the Travel category, open the book \"It's Only the Himalayas\" and tell me its price.",
+      "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+      "run_id": "95468d56",
+      "status": "success",
+      "answer": "£45.17",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "£45.17",
+      "ground_truth": "evals/golden/live-books-travel-price.json",
+      "correct": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1693,
+        "llm_usd": 0.00091425,
+        "replans": 0,
+        "ms": 11295
+      },
+      "seconds": 13.19
+    },
+    {
+      "model": "tencent/hy3",
+      "task_id": "tc1-shop-price",
+      "task": "What is the price of the Aurora Desk Lamp on this page?",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop-lamp-std.html",
+      "run_id": "742724ed",
+      "status": "success",
+      "answer": "$39.00",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "$39.00",
+      "ground_truth": "evals/golden/tc1-shop-price.json",
+      "correct": true,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 1415,
+        "llm_usd": 0.0004521,
+        "replans": 0,
+        "ms": 10171
+      },
+      "seconds": 11.5
+    },
+    {
+      "model": "tencent/hy3",
+      "task_id": "tc2-shop-search",
+      "task": "Search the catalogue for 'Meridian' and name the product you find.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "94866e81",
+      "status": "success",
+      "answer": "Meridian Wall Clock",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "Meridian Wall Clock",
+      "ground_truth": "evals/golden/tc2-shop-search.json",
+      "correct": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 3963,
+        "llm_usd": 0.001722996,
+        "replans": 0,
+        "ms": 54769
+      },
+      "seconds": 56.88
+    },
+    {
+      "model": "tencent/hy3",
+      "task_id": "tc3-shop-detail-nav",
+      "task": "From the catalogue, open the Aurora Desk Lamp and report its material.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "7f13b8c5",
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 3 (extract): ResolveError: no tier resolved {'role': None, 'name': None, 'text': None, 'near': 'Material', 'index': None}",
+      "verdict": null,
+      "expect_answer": "Anodised aluminium",
+      "ground_truth": "evals/golden/tc3-shop-detail-nav.json",
+      "correct": false,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 3097,
+        "llm_usd": 0.0018992,
+        "replans": 0,
+        "ms": 33026
+      },
+      "seconds": 35.23
+    },
+    {
+      "model": "tencent/hy3",
+      "task_id": "tc4-shop-sort-cheapest",
+      "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "9b7ba2e3",
+      "status": "success",
+      "answer": "Cobalt Floor Rug",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "Cobalt Floor Rug",
+      "ground_truth": "evals/golden/tc4-shop-sort-cheapest.json",
+      "correct": true,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 3204,
+        "llm_usd": 0.001372536,
+        "replans": 0,
+        "ms": 34589
+      },
+      "seconds": 35.32
+    },
+    {
+      "model": "tencent/hy3",
+      "task_id": "live-books-travel-price",
+      "task": "In the Travel category, open the book \"It's Only the Himalayas\" and tell me its price.",
+      "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+      "run_id": "9485cefd",
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 3 (extract): ResolveError: proximity to \"It's Only the Himalayas\" does not identify one element for {'role': 'paragraph', 'near': \"It's Only the Himalayas\"}",
+      "verdict": null,
+      "expect_answer": "£45.17",
+      "ground_truth": "evals/golden/live-books-travel-price.json",
+      "correct": false,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 3621,
+        "llm_usd": 0.00156646,
+        "replans": 0,
+        "ms": 42058
+      },
+      "seconds": 44.12
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "task_id": "tc1-shop-price",
+      "task": "What is the price of the Aurora Desk Lamp on this page?",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop-lamp-std.html",
+      "run_id": "807f2ebb",
+      "status": "success",
+      "answer": "$39.00",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "$39.00",
+      "ground_truth": "evals/golden/tc1-shop-price.json",
+      "correct": true,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 1232,
+        "llm_usd": 0.00023411,
+        "replans": 0,
+        "ms": 11253
+      },
+      "seconds": 13.22
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "task_id": "tc2-shop-search",
+      "task": "Search the catalogue for 'Meridian' and name the product you find.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "799132d5",
+      "status": "success",
+      "answer": "Meridian Wall Clock",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "Meridian Wall Clock",
+      "ground_truth": "evals/golden/tc2-shop-search.json",
+      "correct": true,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 3873,
+        "llm_usd": 0.0005315985,
+        "replans": 0,
+        "ms": 64653
+      },
+      "seconds": 65.84
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "task_id": "tc3-shop-detail-nav",
+      "task": "From the catalogue, open the Aurora Desk Lamp and report its material.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "aed183d3",
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 3 (extract): ResolveError: no tier resolved {'role': None, 'name': None, 'text': None, 'near': 'Material', 'index': None}",
+      "verdict": null,
+      "expect_answer": "Anodised aluminium",
+      "ground_truth": "evals/golden/tc3-shop-detail-nav.json",
+      "correct": false,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 2666,
+        "llm_usd": 0.000499184,
+        "replans": 0,
+        "ms": 15256
+      },
+      "seconds": 15.92
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "task_id": "tc4-shop-sort-cheapest",
+      "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "run_id": "3e232aa3",
+      "status": "success",
+      "answer": "Cobalt Floor Rug",
+      "reason": null,
+      "verdict": "PASS",
+      "expect_answer": "Cobalt Floor Rug",
+      "ground_truth": "evals/golden/tc4-shop-sort-cheapest.json",
+      "correct": true,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 17754,
+        "llm_usd": 0.00484834,
+        "replans": 0,
+        "ms": 155009
+      },
+      "seconds": 156.24
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "task_id": "live-books-travel-price",
+      "task": "In the Travel category, open the book \"It's Only the Himalayas\" and tell me its price.",
+      "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+      "run_id": "27d66554",
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 4 (extract): ResolveError: no tier resolved {'role': 'WebArea', 'name': None}",
+      "verdict": null,
+      "expect_answer": "£45.17",
+      "ground_truth": "evals/golden/live-books-travel-price.json",
+      "correct": false,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 3232,
+        "llm_usd": 0.000362405,
+        "replans": 0,
+        "ms": 165450
+      },
+      "seconds": 167.63
+    }
+  ]
+}
