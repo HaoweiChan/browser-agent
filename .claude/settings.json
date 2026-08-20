@@ -5,10 +5,17 @@
         "source": "git",
         "url": "https://github.com/DietrichGebert/ponytail.git"
       }
+    },
+    "groundwork": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/HaoweiChan/groundwork.git"
+      }
     }
   },
   "enabledPlugins": {
-    "ponytail@ponytail": true
+    "ponytail@ponytail": true,
+    "groundwork@groundwork": true
   },
   "hooks": {
     "PostToolUse": [
