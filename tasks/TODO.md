@@ -1,60 +1,149 @@
-# Task 1 milestones
+# Task 1 milestones — pr-loop queue
 
-Milestone-level only (ADR-001) — micro-tasks live in the session. Every row
-names the reviewer evidence it buys (rubric cells:
-`docs/product/assignment-requirements.md` §E1–E5). Hour guard: at **20–24
-cumulative engineering hours on Task 1, freeze and start Task 2** regardless of
-backlog appeal. *(B-freeze executed at M5; guard superseded 2026-08-17 by the
-owner's reopen decision — see the Reopen note below. A-phase guard: +12h.)*
+Block format: groundwork pr-loop (`### <id> — title [status: …]`);
+`python3 tasks/ready.py` lists what is unblocked; protocol in the groundwork
+plugin's `pr-loop` skill. Milestone-level only (ADR-001) — micro-tasks stay
+in the session. Reviewer evidence tags reference the rubric cells in
+`docs/product/assignment-requirements.md` §E1–E5. Converted 2026-08-20 from
+the milestone table: the full per-milestone evidence prose lives in git
+history (`tasks/TODO.md` as of `98de1a6`) and in each milestone's ADR —
+blocks here carry the decision pointers, not the narrative. A-phase hour
+guard: +12h (Reopen note below).
 
-| # | Milestone | Contents | Reviewer evidence | Validation | Status |
-|---|-----------|----------|-------------------|------------|--------|
-| M0 | Harness | Planning package, ADR-001, prompts convention, CLAUDE.md amendments, suite naming, browser-domain + finish-task skills, agent charter tweaks | collab, deliverable | spec-drift finds no contradiction; fast suite still exits 0 | **done** |
-| M1 | Walking Skeleton (~day 1) | `specs/001-browser-contract.md` first (task id `browser`) → trace schema → NL task → plan → execute → result via CLI · minimal pre-flight screening · **deploy spike: Dockerfile + SSE hello-world + trivial Playwright run live on Zeabur** · first golden fixture cases red → green, **including the `invariant`-tagged case that backs INV-0** | deliverable, mechanism-substance (trace spine) | deployed URL runs a real browser task end-to-end; INV-0 no longer decorative | **done** — validated on the deployed instance (run 09b21b3a: success, secret-42, $0.0029); prompts/002 records the three eval-driven corrections |
-| M2 | Eval Backbone (~day 1–2) | Fixtures + 3 tier-breaking mutations · EvalAuditor adapter · OutcomeVerifier L1–L2 incl. identity anchors · TC1–TC5 coverage cells · LLM stub boundary · OpenRouter cost fields in reports · baseline run → **ADR-002 sets performance thresholds** | eval-depth, silent-failure | fast suite green offline; baseline report committed | **done** — 41/41 fast, 5/5 invariant, 6/6 traps caught, $0.00; INV-1/INV-2 added with cases proven red; close-out cold review found 3 more wrong-answer-scores-PASS paths, all now cases and all fixed; ADR-002 records what is measured and what is deliberately still unset |
-| — | **Scope checkpoint** (after M2 baseline, before M3 — short committed note, not a re-plan) | Observed failure distribution · highest evidence-ROI mechanisms · **what we are explicitly NOT implementing** | analysis, honesty | note committed; M3 scope follows it | **done** — `docs/evals/scope-checkpoint.md`: 12 observed failures, `locate` 4 and `act` 4 → relocation + postcondition-replan, 2 families, third refused |
-| M3 | Reliability (~day 2) | Classifier (7 classes) · ladders for checkpoint-chosen families (≤3, ≥2 genuinely distinct) · budgets · injected-failure cases · self-maintenance relocation loop · recovery + diagnosis + mutation metrics | mechanism-substance | recovery metric counts only strategy-switch traces; each L4 case watched red without relocation, green with | **done** — 49/49 fast, 10/10 invariant, $0.00, 23.4s; recovery 3/3 verified (6 rungs tried), mutation 4/4 passed **2 by relocating**, diagnosis 5/5; `l4-shop-button-text-renamed` flipped failure:locate → success on an unchanged plan (report history: `20260816-154959` red → `20260816-160339` green); INV-3 added; ADR-003 records what is measured and that recovery-as-a-rate stays unset |
-| M4 | Reviewer UI (~day 2–3) | Full frontend on the live deployment · trace viewer · support matrix live · spend/URL guards verified | deliverable, honesty | a stranger can submit a task, watch it, inspect a failure | **done** — 52/52 fast, 12/12 invariant, $0.00, 24.3s; SSE trace stream (every attempt, incl. superseded), per-step screenshots, matrix served from `docs/support-matrix.md` itself; guard refused `http://127.1/admin` in-browser before a browser opened; ADR-004 records what the UI is not allowed to hide. **Live-planner submit path is unverified on the deployment** — needs the key, folded into M5's held-out probe |
-| — | **Cold review** (M3 + M4, before the M5 freeze — the first two milestones committed without one) | Two scopes: reliability core, gateway/UI · findings → cases → fixes · unfixed findings declared | eval-depth, honesty | every new case watched red against its own fix | **done** — 6 defects in code already green on 52 cases, 3 of them wrong-or-unverified-answer-scores-PASS: grader equated `-39`/`39` and `€18`/`$18`; a replan laundered an action that never landed (success + wrong answer); a retry wore recovery's badge; the URL guard was an input filter only (and **no eval ever passed it into `run_task`**); the support matrix could parse quietly to zero limitations; a supersede dangled on the failure path. 58/58 fast, 16/16 invariant, $0.00, 31.9s. ADR-005 records all six and the 7 findings deliberately **not** fixed |
-| M5 | B-Freeze (~day 3) | Coverage cells verified · cost/latency numbers · `docs/analysis.md` from report data · README rewrite · prompts curated · **eval-adversary held-out probe vs deployed URL (mandatory gate, raw results in analysis)** | analysis, collab, all | B-floor exit criteria in `docs/plans/completed/task1-b-level-plan.md` all green → **STOP, start Task 2** | **done** — 60/60 fast, 18/18 invariant, 1/1 live. First live domain (books.toscrape.com) + the observation-budget bug it found; M2–M4 **deployed at last** (the URL had served the M1 build for four milestones) and guards re-verified live; `docs/analysis.md`, README rewrite, prompts 004–007. Held-out probe run: **2/8 correct answers, 1/2 refusals, $0.0681, no wrong answer ever reported as success** — it found the `log into` scope bypass that let the agent touch a real credential field (fixed). B-floor: **5 of 6 criteria met**, criterion 2 (coverage) short on live breadth — see below |
-| M6 | Live breadth & depth (A-phase, top-ranked — closes the one partial B-floor criterion) | ≥2 new live domains (candidates: Hacker News, Open Library) · ≥3 task classes exercised live · L3-difficulty cases · support-matrix rows per new domain | eval-depth (E2), T2 | criterion 2 fully met; every new case watched red first; live cases carry the `live` tag (and `full`), so the offline gate never touches the network | **done** — 69/69 fast, 18/18 invariant, $0.00, 36s (`20260817-133237-fast`, `20260817-132741-invariant`); live 4/6. Live **cases** for 3 domains and 3 task classes; **verified green against this build: 2 domains (books.toscrape.com, news.ycombinator.com) and 2 classes (TC1, TC3)** — openlibrary.org stopped responding partway through the milestone and its two cases fail `failure:nav`, so the third domain rests on one pre-implementation run and the live TC2 case has never been green (ADR-006 Decision 5). `near:` implemented — advertised since M1, in no code path until now — and it is the first mechanism ever to emit the `structural` tier. Three silent-wrongness defects the live sites found and the fixtures now hold shut: an unknown target key was dropped instead of refused, a fill onto a non-fillable element reported `act` for a `locate` root cause, and a correct run was graded FAIL because the stored evidence window was narrower than the page. Then a cold review of that green code found **four more**, three of them wrong-answer-scores-PASS in the new `near:` mechanism itself — an anchor of "Total" binding to "Subtotal", a container query answered with the next sibling, an equidistant tie broken by guesswork — each needing a page shape `shop.html` does not have. All four are cases now. ADR-006 records what the numbers do **not** license: every green live case still runs a hand-written plan, and `live-books-cheapest-travel` (the live-planner case) is **unrun** — it needs `OPENROUTER_API_KEY`, which is on Zeabur and deliberately not pulled into a local shell |
-| — | **Post-M6 fix** (2026-08-18, after the M6 merge) | openlibrary.org recovered and the live suite went to **6/6** — but only after a defect the outage had been hiding: `page.goto` waited for `load`, so one hanging subresource made a fully readable page `failure:nav`. Fixed at both goto call sites via one `navigate()` helper (`domcontentloaded` + a bounded 2s wait for `load`); `networkidle` was tried and rejected on measurement (+34s, over the ADR-002 budget). A best-effort screenshot was also blocking 30s per step on such a page. ADR-007 | eval-depth (E2), honesty | 2 cases watched red, the second re-watched red after the first was fixed | **done** — 71/71 fast, 18/18 invariant, **6/6 live**, $0.00, 48.6s |
-| M7 | Verifier accuracy | ~20–30 hand-labeled runs → precision/recall in `docs/analysis.md` · answer-responsiveness check (probe #5: a page dump was rejected only on a whitespace technicality) · new trap cases | silent-failure (E3), analysis (E4), E5 | precision/recall from committed labels; responsiveness trap case red before the fix | **done** — 77/77 fast, 20/20 invariant, $0.00; 25 hand-labeled runs (16 fixture, 9 live: 6 books.toscrape.com, 3 news.ycombinator.com), frozen and replayed offline through the exact runtime `verify()` call. `not_a_dump` (L1) added, `DUMP_RATIO=0.35` measured against the whole `fast` suite (non-dumps top out at 0.1786, the two known dumps sit at 0.4541/0.5231). Matrix tp=10 fp=11 fn=1 tn=3 → precision 0.476, recall 0.909 (`verifier-precision-recall`) — **the headline is not the ratio**: excluding the two postcondition-gate probes, the pre-fix runtime verifier passed 23/23 records regardless of correctness (10 right, 13 wrong), because every L1 check is mechanical and none asks whether the answer answers the question; `not_a_dump` moves that to 21/23, closing exactly the single-extraction page-dump shape. 10 focused wrong-answer false positives remain, declared (`docs/support-matrix.md`) rather than chased — they need ground truth (L2) or an LLM check (L3, absent by design). **Deployed run `734d3d1f` (2026-08-18, analysis §5/§8b) is the live confirmation of exactly this class**: "cheapest book" answered with the first product, £45.17 for £23.21, `success` + layer-1 `PASS`, and `not_a_dump` would not have caught it — the answer is one product tile, not a dump. Phase-2 audit caught a production constant (`MIN_EVIDENCE`) that was added to tolerate unrealistic eval scaffolding rather than fixing the scaffolding; removed, scaffolding fixed instead, matrix unchanged. **Final phase (cold review + spec-drift audit):** a real crash bug in `evidence_window` (undefined `keep`, NameError on any page > `PAGE_TEXT_KEEP` whose extracted value isn't a verbatim substring) fixed, red-first; `runtime_verdict` renamed `runtime_verdict_at_capture` in the label sample (a frozen field predating `not_a_dump`, never read by grading); a 25th record, `chunked-dump-cheapest`, measures that `not_a_dump` is evadable by chunking the same dump across several per-row extractions — declared as a limitation (D1, `docs/support-matrix.md`), not fixed, because `verify()`'s contract is raw evidence only, never the task text. **Review round (peer session on PR #10):** `not_a_dump`'s denominator was the stored evidence *window*, not the page — so on any page over `PAGE_TEXT_KEEP` the check degenerated into an absolute ~700-character cap, and the same value on the same page flipped FAIL→PASS when a distant `anchor` doubled the window. Cased red first (`verifier-dump-ratio-anchor-flip`), then fixed by recording `body_len` at extraction time and dividing by that; the pinned matrix is unchanged because all 25 frozen records predate the field and take the fallback. **6 of the sample's 28 extractions have saturated windows (max 3,560 chars), so six of the published ratios are not page-fractions** — disclosed rather than quietly re-measured (ADR-008 Decision 6, support-matrix D4). Also: `capture.py` truncated its own output and wrote no labels, so re-running it would have silently destroyed all 25 hand labels — the one artifact no code can regenerate; it now refuses to overwrite. **Merge collision (PR #10, resolving with main's navigation work):** main's `src/browser/fixtures/slow-asset.html` (37 clean chars of body text, added for its own timeout cases) turned out to be exactly the sparse-page shape M7 had declared undemonstrated when `MIN_EVIDENCE` was removed — its correct 23-char answer (62% of the page) false-FAILed `not_a_dump`, taking main's `nav-load-event-never-fires` and `nav-action-load-event-never-fires` red too. Restored the guard as `MIN_PAGE_CHARS = 100`, this time with a case behind it (`verifier-sparse-page-not-a-dump`, watched red on the merged tree first): 100 sits between the sparse fixture (37/39 chars) and the smallest confirmed real dump (195 chars); every extraction below 100 chars in the whole `fast` suite was checked directly and only the sparse fixture has a ratio near threshold. Pinned confusion matrix and the 25-record hand-labeled sample are both unchanged (the new case is a `fast`-suite fixture case, not a labeled record); adversarial case files 63 → 64, fast 77/77, invariant 20/20. ADR-008 (Decisions 1–7) records the method, the deliberately-unfixed list, and the removal-then-restoration in full |
-| M8 | Mutation & hostility hardening | full mutation catalog · hostile live domain · live-drift snapshot replay (SHOULD) | mechanism-substance (E1), eval-depth (E2) | each new mutation red without relocation, green with — **or**, where no ladder can save it, committed with the observed failure as its expectation (3 of 5 green, 2 pinned as losses); hostile results published raw | **pr** — 86/86 fast, 22/22 invariant, **9/9 live**, $0.00; mutation **9/11 survived, 6 recovered — 5 by relocating** (was 4/4, 2 relocating), recovery 7/7 verified over 13 rungs, diagnosis 14/14. Five B-strong mutations added on a stated admission test — *breaks a capability a plan stands on*, which is wider than "is a locator tier" — and **classes-scrambled dropped, not deferred**: no class tier exists anywhere in the resolver, so it would have passed every case the day it was written and been counted as a survival. Each of the three recoverable ones was watched red by **ablation** rather than by prose (`MAX_FIXES=0` → `ambiguous-match: 2 matches at tier role` and `no tier resolved`; `MAX_REPLANS=0` → `failure:act`, Playwright's log naming the overlay subtree that intercepts pointer events). The other two are committed with the failure as their expectation, because that is what the build does: **element-reordered** turns a positional plan into a confident wrong answer (`Aurora Desk Lamp Pro $59.00` for a task about the Meridian clock) past `grounded`, `not_a_dump` and BOTH identity-anchor checks, while its `near:` twin answers correctly under the same mutation — the first measurement of what `near` was built for at M6; **render-delayed** stops loudly at `failure:locate` because `resolve()` never waits. Hostile domain **quotes.toscrape.com** (4th live domain), published raw: on `/js` the body carries all ten quotes in 1,499 characters while `observe()` returns 11 elements of which **zero are content**, so the only plausible target the planner is offered resolves to the pager and the run reports `success` with the answer **"Next →"**, runtime verdict PASS — the aggregate-page anchor hole, live. Its two companions keep the finding narrow: the text tier reaches the same content exactly, and `/js-delayed` (~10s) fails loudly, the live twin of render-delayed. Two metrics were counting the wrong thing and M8 is the first milestone that could see it: mutation survival counted "matched its expectation" (10/10 vs 8/10 on the cases that existed when it was found), and a failed rescue would have scored `recovery_verified` had the delayed case asserted the label. **Declared, not fixed**: the `fast` gate is now 68.2s against ADR-002 D4's 60s — 10.6s of it one deliberate click timeout, the other 57.6s a trend that would have crossed 60s at M9 with or without this milestone (support-matrix D8). **SHOULD still open**: live-drift snapshot replay. ADR-009 records the admission test, the ablations, the raw hostile result, and the five things deliberately not fixed. **Review round (PR #12):** three findings in the same metric block, all the family Decision 5 had already caught once — "N by relocating" counted the overlay case, which is rescued by a replan with all four resolved tiers `role` and nothing relocated (published figure moves to 6 recovered, 5 by relocating); Decision 5's own fix had no case, so reverting it left the suite at 84/84 and silently restored 11/11; and `mutation_recovered` was not survival-gated, so a future wrong-but-successful run would have made the subset larger than its superset. Counters extracted to `eval_adapter.mutation_metrics` and pinned by `mutation-metrics-honesty` (watched red, then re-checked by putting the old expression back). Also from that review: the a11y-stripped submit shim keyed on `[type="submit"]`, which HTML does not require of a submitter — it keys on `data-was-button` now — and render-delayed's injected delay went 3s → 10s, buying 26x margin over the 388ms run it bounds at zero suite cost. ADR-009 Decision 7. **Review round 2 (fresh reviewer, verified the repairs rather than trusting them):** both round-1 MEDIUMs had moved the defect one step rather than closing it — `mutation_relocated` still credited relocation when every rung LOST and the replan made the save (every rung wears the same `recovery` label and supersedes the attempt before it; measured 1 → 0 on a real 21s run), and `survived` still meant "matched its expectation", so a case that expected and got a loud failure counted as a survival unless its author opted out by hand. A rescue is now a labelled attempt that *succeeded*, and surviving requires `status == "success"` — `l4-shop-render-delayed` has had its opt-out key removed, leaving one case that needs it. **No published figure moved** (9/11, 6 recovered, 5 relocating, before and after): the counters were wrong, the catalogue's numbers were not, which is why no report could have shown it. The guard was the real finding — six author-written rows can encode the implementation — so `mutation-metrics-honesty` now has ten rows chosen against **named** wrong implementations, with the discrimination measured: seven plausible wrong versions all turn it red, and round 1's own expression is killed by exactly one row. Also fixed: `mutation-catalog-integrity` now compares its blocks against `mutate.MUTATIONS` (a new mutation without a block used to ship green), and the D10 row was orphaned outside its markdown table. ADR-009 Decision 8. **Review round 4 (declaration-vs-code drift; round 3 confirmed the metric repairs hold):** the same metric rule changed three times in this PR and a different subset of its four descriptions was updated each time — `docs/evals/evaluation-methodology.md` spent two rounds describing the defect as current. Fixed, and the claim is now graded rather than written: `opt-in-expect-keys-declared` compares the declared users of `mutation_survived` / `answer_is_known_wrong` against the case files. **The bigger one is the artifact**: the two wrong-answer pins put a known-wrong string in `expect.answer`, which the adapter feeds `verify()` as layer-2 ground truth, so the committed reports read `verdict: PASS, ground_truth: true, answer_matches: true` for "Next →" as the author of a quote — the prose said wrong, the raw evidence said verified, and "published raw" is a claim about the evidence. Both pins now carry `answer_is_known_wrong` and the result carries `known_wrong_ground_truth`; the ADR's claim that this followed the `live-ol-search-a11y-invisible` convention was also wrong (that case pins a failure and injects no ground truth) and is corrected. **Declared not fixed:** `mutation_relocated` reads the family from the immediately-superseded attempt, so a relocation after a class-laundered rung is undercounted — no case produces the shape, it can only understate, and it is named at the call site and in support-matrix D11. ADR-009 Decision 9 |
-| M9 | Cost/model ablation | ≥2-model OpenRouter ablation · cost/latency tradeoff table · ADR for the default-model choice | analysis (E4), E5 tradeoffs | table from committed report runs, not estimates | planned |
-| M10 | A-Freeze | analysis/README/support-matrix refresh · prompts curated · **second held-out probe vs deployed URL (mandatory gate, raw results committed)** | all, esp. E5 | A-exit criteria in `docs/plans/active/task1-a-level-plan.md` all green → owner decides submission/public | gate |
-| — | Still backlog (not promoted) | adaptive locator learning · parallel eval runner · verifier-accuracy dashboard UI · visual fallback · per-IP rate limiting | — | each would need its own eval evidence | backlog |
+## Queue
 
-## B-floor exit criteria — status at freeze
+### M9 — Cost/model ablation            [status: todo]
+Spec: ≥2-model OpenRouter ablation, cost/latency tradeoff table, ADR for the
+default-model choice. Reviewer evidence: analysis (E4), E5 tradeoffs.
+Acceptance: table built from committed report runs, not estimates.
 
-| # | Criterion | Status |
-|---|-----------|--------|
-| 1 | Deployed frontend passes the smoke path (submit → live progress → inspect a failure) | **met** — walked end to end against the live URL; run `cd7121fc` streamed, failed loudly, screenshots served |
-| 2 | Coverage: ~20–25 cases, 3 domains incl. both fixtures + ≥1 live, TC1–TC5, L1/L2/L4/L5 | **met 2026-08-18** (partial at the freeze: 1 live case, 1 live task class; "substantially closed" at the M6 merge, while openlibrary.org was unreachable). 84 cases; live suite **6/6** — 3 live domains and 3 live task classes (TC1/TC2/TC3), all green against current code. **M8: 4 live domains, live suite 9/9, 86 fast cases** — the added domain is hostile and its TC1 cell is `unsupported`, so coverage grew and the honest reading did not improve. The surviving qualification is not about coverage: every green live case runs a **hand-written plan**, so live *planning* quality is still unmeasured on all three (ADR-007) |
-| 3 | Invariant 100%; trap-catch ≥90%; performance meets ADR-002 | **met at the freeze** — 18/18 invariant, 6/6 traps (a floor, not accuracy), 32s ≪ 60s, $0.00. **M8: the performance half no longer holds** — 22/22 invariant and 6/6 traps still, but the `fast` gate measures 66.6–68.3s against ADR-002 D4's 60s ceiling, declared rather than fixed (`docs/support-matrix.md` D8, ADR-009 Decision 6) |
-| 4 | Real self-correction (≥2 distinct families, strategy-switch traces); relocation passes all 3 mutations | **met at the freeze** — 2 families, `recovery 3/3 verified (6 rungs)`, `mutation 4/4 passed, 2 by relocating`. **M8:** `recovery 7/7 verified (13 rungs)`, `mutation 9/11 passed, 6 recovered (5 by relocating)` — the B-floor 3 still pass; of the 5 added, 3 are rescued and 2 are pinned as losses no ladder can save |
-| 5 | Spend cap, per-run budgets, URL guard live on the public deployment | **met** — all guards re-verified against the live host, incl. cloud-metadata IP and traversal |
-| 6 | Requirement matrix evidenced; support matrix eval-backed; unsupported list cites failing cases; cost/latency in analysis | **met** — every R/T row evidenced, declared limitations each citing a case or a deployed run id (23 at the freeze, 43 at M7, **50 at M8** — counted from `docs/support-matrix.md`) |
+### M10 — A-Freeze            [status: todo]
+Depends: M9
+Spec: analysis/README/support-matrix refresh, prompts curated, second
+held-out probe vs the deployed URL (mandatory gate, raw results committed).
+Acceptance: A-exit criteria in `docs/plans/active/task1-a-level-plan.md` all
+green → owner decides submission/public.
 
-**5 of 6 met at the freeze; criterion 2 partial.** Per the freeze rule, Task 1
-stopped there and Live breadth was recorded as the top item if it were ever
-reopened. It was (see Reopen below), and **M6 closed criterion 2** — the table
-above is updated in place rather than re-stated, so the freeze's own reading
-and its correction sit in one place.
+## Debt
 
-## Reopen — A-phase (2026-08-17)
+### M11 — Live-drift snapshot replay            [status: todo]
+Origin: M8's SHOULD item, left open at the M8 merge (PR #12)
+Spec: replay committed live-page snapshots so live-site drift is detected
+without network. Acceptance: a drifted snapshot turns a case red offline.
 
-Owner decision, recorded in `prompts/008-a-level-reopen.md`: **B-baseline is
-accepted; the repo does not go public yet; Task 1 reopens for A-level before
-submission.** This supersedes the freeze rule above by explicit instruction —
-Task 2 start is deferred by the same decision, and the A-phase carries its own
-hour guard (+12h default) so the reopen stays bounded. Milestones M6–M10 above
-are the A-phase roadmap, ranked by reviewer-value ÷ effort against the two gaps
-the freeze measured (live breadth, verifier accuracy). Per-feature loop is
-unchanged: eval cases first, watch them red, then implement — **no
-implementation has started under this reopen; planning docs only.**
+### M12 — Fast-suite wall-clock over budget            [status: todo]
+Origin: PR #12, declared in support-matrix D8
+Spec: `fast` is 68.2s against ADR-002 D4's 60s budget — 10.6s is one
+deliberate click timeout, the rest a growth trend that crosses the budget
+regardless of any one milestone. Acceptance: fast < 60s again, or ADR-002 D4
+amended with the measured floor and why.
 
-A-plan: `docs/plans/active/task1-a-level-plan.md` ·
-B-plan: `docs/plans/completed/task1-b-level-plan.md` ·
+### M13 — Adaptive locator learning            [status: todo]
+Origin: backlog (pre-pr-loop, never promoted)
+Spec: promote only with its own eval evidence.
+
+### M14 — Parallel eval runner            [status: todo]
+Origin: backlog (pre-pr-loop, never promoted)
+Spec: promote only with its own eval evidence; M12 is the motivating symptom.
+
+### M15 — Verifier-accuracy dashboard UI            [status: todo]
+Origin: backlog (pre-pr-loop, never promoted)
+Spec: promote only with its own eval evidence.
+
+### M16 — Visual fallback            [status: todo]
+Origin: backlog (pre-pr-loop, never promoted)
+Spec: promote only with its own eval evidence.
+
+### M17 — Per-IP rate limiting            [status: todo]
+Origin: backlog (pre-pr-loop, never promoted)
+Spec: promote only with its own eval evidence.
+
+## Done
+
+### M0 — Harness            [status: done]
+Planning package, ADR-001, prompts convention, CLAUDE.md amendments, suite
+naming, browser-domain + finish-task skills, agent charters. Validation:
+spec-drift found no contradiction; fast suite exits 0.
+
+### M1 — Walking Skeleton            [status: done]
+`specs/001-browser-contract.md`, trace schema, NL task → plan → execute →
+result via CLI, pre-flight screening, Zeabur deploy spike. Validated on the
+deployed instance (run `09b21b3a`); INV-0 no longer decorative. Details:
+prompts/002.
+
+### M2 — Eval Backbone            [status: done]
+Fixtures + 3 tier-breaking mutations, EvalAuditor adapter, OutcomeVerifier
+L1–L2, TC1–TC5 coverage, LLM stub boundary, cost fields. 41/41 fast, 5/5
+invariant, 6/6 traps. Thresholds: ADR-002. Preceded M3 with the committed
+scope checkpoint (`docs/evals/scope-checkpoint.md`: 12 observed failures →
+2 mechanism families chosen, third refused).
+
+### M3 — Reliability            [status: done]
+7-class failure classifier, recovery ladders for the checkpoint-chosen
+families, budgets, self-maintenance relocation loop. First relocated-success
+measured (`l4-shop-button-text-renamed` red → green on an unchanged plan);
+INV-3 added. Details: ADR-003.
+
+### M4 — Reviewer UI            [status: done]
+Full frontend on the live deployment: SSE trace stream, per-step screenshots,
+support matrix served from its own markdown, spend/URL guards verified
+in-browser. Details: ADR-004. Post-hoc cold review of M3+M4 (ADR-005): 6
+defects in already-green code found and fixed (3 wrong-answer-scores-PASS),
+7 findings deliberately not fixed, declared.
+
+### M5 — B-Freeze            [status: done]
+Coverage verified, `docs/analysis.md` from report data, README rewrite,
+held-out probe vs the deployed URL (2/8 correct, 1/2 refusals, no wrong
+answer reported as success — found and fixed the `log into` scope bypass).
+B-floor: 5 of 6 criteria met; criterion 2 (live breadth) short → M6.
+Exit criteria: `docs/plans/completed/task1-b-level-plan.md`.
+
+### M6 — Live breadth & depth            [status: done]
+3 live domains / 3 task classes cased; `near:` implemented (advertised since
+M1, first code path now); 3 silent-wrongness defects from live sites + 4 more
+from cold review, all cased. Closed B-floor criterion 2. Details: ADR-006.
+Post-M6 fix (ADR-007): `navigate()` helper — `domcontentloaded` + bounded
+`load` wait — took live to 6/6 after openlibrary recovered.
+
+### M7 — Verifier accuracy            [status: done]
+25 hand-labeled runs frozen and replayed through runtime `verify()`:
+precision 0.476 / recall 0.909, headline being that the pre-fix verifier
+passed 23/23 records right or wrong; `not_a_dump` added (measured threshold),
+10 wrong-answer false positives declared not chased. Merged via peer-review
+round on PR #10 (window-denominator fix, red first). Details: ADR-008,
+support-matrix D1–D4.
+
+### M8 — Mutation & hostility hardening            [status: done]
+Five B-strong mutations on a stated admission test (2 committed as pinned
+losses — element-reordered's confident wrong answer is the first measurement
+of what `near:` was built for); hostile 4th live domain quotes.toscrape.com
+published raw — the `/js` aggregate-page anchor hole reports `success` with
+answer "Next →". First full pr-loop delivery (PR #12, 4 review rounds):
+mutation metrics extracted to `mutation_metrics()` and pinned by a 10-row
+discrimination-measured honesty case; known-wrong ground-truth pins now carry
+`answer_is_known_wrong` end to end. mutation 9/11, 6 recovered (5 by
+relocating); 86/86 fast, 22/22 invariant, 9/9 live. Details: ADR-009 D1–D9,
+support-matrix D5–D11.
+
+## Notes
+
+### Reopen — A-phase (2026-08-17)
+Owner decision, recorded in `prompts/008-a-level-reopen.md`: B-baseline
+accepted; repo does not go public yet; Task 1 reopened for A-level before
+submission. Task 2 start deferred by the same decision; the A-phase carries
+its own +12h hour guard. M6–M10 are the A-phase roadmap, ranked by
+reviewer-value ÷ effort against the two gaps the freeze measured (live
+breadth, verifier accuracy).
+
+### B-floor exit criteria — final status
+All 6 met: criterion 2 (coverage/live breadth) was partial at the M5 freeze
+and closed by M6 (3 live domains, 3 live task classes, live 6/6 after
+ADR-007). Full criterion table with evidence: `tasks/TODO.md` at `98de1a6`
+and `docs/plans/completed/task1-b-level-plan.md`. Standing qualification:
+green live cases run hand-written plans, so live *planning* quality is
+unmeasured (ADR-007) — the M5/M10 held-out probes are the counterweight.
+
+Plans: `docs/plans/active/task1-a-level-plan.md` ·
+`docs/plans/completed/task1-b-level-plan.md` ·
 Methodology: `docs/evals/evaluation-methodology.md` ·
 Architecture: `docs/architecture/task1-overview.md`
