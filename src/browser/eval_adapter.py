@@ -760,6 +760,99 @@ def _run_adr_header_index_case(case: dict) -> dict:
             "got": {"adr_files": len(adr_files), "index_entries": len(index_nums)}}
 
 
+def _run_readyz_case(case: dict) -> dict:
+    """/readyz must track the run slot: idle -> busy(with this run) -> idle.
+
+    A status-code assertion would prove nothing here — /readyz answers 200 in
+    every state by design (a concurrency-1 demo that 503s while working invites
+    the platform to restart it). So the contract graded is the TRANSITION, and
+    all three samples come from one submission: a hardcoded `ready: true` dies on
+    the middle sample, a hardcoded `false` dies on the outer two, and a field that
+    is merely present but static dies on both.
+
+    The busy window is made deterministic by stubbing the planner to hold for a
+    fixed interval — the planner is awaited inside `async with SEM`, so the slot
+    is genuinely held, with no browser and no spend.
+    """
+    import asyncio as _a
+
+    from . import server as S
+
+    inp = case["input"]
+    hold = float(inp.get("hold_seconds", 3.0))
+    base, prev = _base_url(), S.live_planner
+    # The guard refuses loopback in every spelling, which is exactly right for a
+    # public endpoint and exactly wrong for an in-process fixture run. Patched
+    # eval-side for the duration and restored in the `finally`, never softened in
+    # `server.py` — the same trade `_run_gateway_model_case` documents.
+    prev_guard = S.url_ok
+
+    def holding_planner(model=None):
+        async def plan(task, url, observation=None, note=None):
+            await _a.sleep(hold)
+            return [{"action": "extract", "target": {"role": "heading"}, "anchor": None,
+                     "value": None, "expected_state": None}], {"llm_tokens": 0, "llm_usd": 0.0}
+        return plan
+
+    S.live_planner, S.url_ok = holding_planner, lambda u: True
+    try:
+        before = _get_json("/readyz")
+        t0 = time.monotonic()
+        req = urllib.request.Request(
+            f"{base}/tasks",
+            data=json.dumps({"task": inp["task"],
+                             "url": f"{base}/fixtures/hello.html"}).encode(),
+            headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=10) as r:
+            run_id = json.load(r)["run_id"]
+        # Sample while the stubbed planner is still holding the semaphore.
+        time.sleep(min(1.0, hold / 3))
+        during_t = time.monotonic()
+        during = _get_json("/readyz")
+        during_latency = round(time.monotonic() - during_t, 3)
+        deadline = time.monotonic() + hold + 30
+        while time.monotonic() < deadline:
+            if S.RUNS.get(run_id, {}).get("status") != "running":
+                break
+            time.sleep(0.2)
+        after = _get_json("/readyz")
+        elapsed = round(time.monotonic() - t0, 2)
+    finally:
+        S.live_planner, S.url_ok = prev, prev_guard
+
+    def state(r):
+        return "idle" if (r.get("ready") and not r.get("busy")) else (
+            "busy" if (r.get("busy") and not r.get("ready")) else "incoherent")
+
+    got = [state(before), state(during), state(after)]
+    wrong = {}
+    if got != case["expect"]["transitions"]:
+        wrong["transitions"] = {"want": case["expect"]["transitions"], "got": got,
+                                "samples": [before, during, after]}
+    # Identity, not just a boolean: `busy` alone cannot tell you WHICH run holds
+    # the slot, and that is the field an operator needs when a submission hangs.
+    if during.get("active_run_id") != run_id:
+        wrong["active_run_id_during"] = {"want": run_id, "got": during.get("active_run_id")}
+    if before.get("active_run_id") is not None or after.get("active_run_id") is not None:
+        wrong["active_run_id_when_idle"] = {"before": before.get("active_run_id"),
+                                            "after": after.get("active_run_id")}
+    if during.get("running", 0) < 1:
+        wrong["running_count_during"] = during.get("running")
+    # `reason` is the operator-facing half of the contract: present exactly when
+    # not ready, absent exactly when ready.
+    if before.get("reason") is not None or after.get("reason") is not None or not during.get("reason"):
+        wrong["reason_polarity"] = {"before": before.get("reason"), "during": during.get("reason"),
+                                    "after": after.get("reason")}
+    # /readyz shares the agent's event loop. A prompt `busy` answer WHILE a run
+    # holds the slot is positive evidence the loop is not blocked — the point of
+    # the endpoint, and one of D18's open candidates. Loose bound: this is a
+    # liveness property, not a benchmark.
+    if during_latency > 2.0:
+        wrong["readyz_slow_while_busy"] = during_latency
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"states": got, "during_latency_s": during_latency, "run_seconds": elapsed}}
+
+
 def _run_stream_case(case: dict) -> dict:
     """The progress stream must show the run that happened, not a tidier one.
 
@@ -1804,6 +1897,7 @@ KINDS = {
     "ablation-run-one": _run_ablation_run_one_case,
     "ablation-table": _run_ablation_table_case,
     "adr-header-index": _run_adr_header_index_case,
+    "readyz-transitions": _run_readyz_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,

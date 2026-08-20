@@ -991,7 +991,7 @@ rather than merely written down. Watched red four ways — a default the ablatio
 never measured, the incumbent back on the allowlist, the incumbent deleted from
 the snapshot, and the snapshot repriced so the incumbent fits.
 
-## Decision 19 — the deployment could not sustain the sweep, and that is published
+## Decision 19 — five sweeps aborted, and the cause is still not known
 
 **Five sweeps aborted before one completed.** Every abort was the deployment's
 transport or wall clock, never a model: connection timeouts mid-poll, a refused
@@ -1002,7 +1002,17 @@ The per-run wall clock also climbed steadily across a twenty-run sweep — one
 model did an early task in seconds and a later one in minutes, against tens of
 seconds for the same task on every other model.
 
-**The cause is not established, and this section previously claimed otherwise.**
+**Dashboard evidence, added after the fact.** Over the window covering every
+sweep: peak memory about 175 MB against 8 GB, returning to a ~55 MB baseline
+between runs; peak CPU about 18-20% of 2 vCPU, usually under 10%; and no
+container restart, one deployment spanning all five sweeps. So the workload left
+large CPU and memory headroom, and resource exhaustion is not supported. One
+caveat on that negative: Zeabur samples coarsely, so a sub-minute peak could be
+missed — the shape (return to baseline, no upward drift) survives that, the
+absolute peak does not.
+
+**The cause is not established, and this section has now claimed two that the
+evidence did not support.**
 The first version of this decision explained the aborts as a submit landing in a
 browser-teardown window, on the reasoning that a run is marked done when its
 result is assembled rather than when Chromium is closed. **The code refutes
@@ -1012,8 +1022,16 @@ that.** `agent.py` closes the browser in a `finally` inside the
 is therefore still held at the moment a run goes terminal, and the window the
 explanation depended on does not exist.
 
-The explanation is removed rather than replaced. What is known is the
-configuration — one uvicorn worker, `asyncio.Semaphore(1)`, one Chromium launched
+The second wrong claim was the heading this decision shipped with — *the
+deployment could not sustain the sweep* — which implies capacity, and the
+dashboard refutes it. The sweep ran with roughly 98% of memory and 80% of CPU
+idle. Both wrong claims are kept on the record rather than quietly edited,
+because being wrong twice in the same direction is itself the finding.
+
+**No third mechanism is offered.** The remaining candidate areas are unranked and
+untested: request-path or event-loop blocking inside the single worker, Zeabur
+ingress behaviour, and the ablation client's own connection and timeout handling.
+What is known is the configuration — one uvicorn worker, `asyncio.Semaphore(1)`, one Chromium launched
 and closed per run — and the symptom. What is missing is any server-side number:
 the deployment has **no resource telemetry whatsoever**, `/healthz` returns a
 literal `{"ok": True}`, and nothing records memory, CPU or restarts. So the

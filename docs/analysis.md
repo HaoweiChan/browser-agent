@@ -686,10 +686,15 @@ the model comparison it was run for. It is recorded as such in
 The runs also cost more attempts than the report shows. **Five sweeps aborted
 before this one completed**, every one on the deployment's transport rather than
 on a model, and the per-run wall clock climbed steadily over a twenty-run sweep.
-Why is not known: the deployment records no memory, CPU or restart figures at
-all, so the failures are measured and their cause is not. An earlier draft
-asserted a cause here and the code refuted it — see ADR-010 Decision 19, which
-keeps the wrong claim on the record rather than quietly dropping it. That spend is real and was recorded only on
+Why is not known. The deployment's own dashboard, read afterwards, rules out the
+obvious answer: over the window covering every sweep it shows peak memory of about
+175 MB against 8 GB, returning to baseline between runs, peak CPU under a fifth of
+two cores, and no restart. The workload left large headroom, so resource
+exhaustion is not supported — with the caveat that the sampling is coarse enough
+to miss a short peak, which weakens the absolute number but not the shape. Two
+causal explanations have been written here and withdrawn, one refuted by the code
+and one by that dashboard; ADR-010 Decision 19 and support-matrix D18 keep both on
+the record rather than dropping them quietly, and no third is offered. That spend is real and was recorded only on
 stderr, because a partial sweep is not a result (CLAUDE.md rule 4). What changed
 to get a clean sweep were three measured constants in the driver — socket budget,
 settle gap between runs, per-run completion budget — and a retry narrowed to

@@ -353,7 +353,7 @@ def main() -> int:
     ap.add_argument("--models", nargs="+", default=ABLATION_MODELS)
     ap.add_argument("--timeout", type=int, default=900,
                     help="seconds to wait per run (measured: the slowest observed cell is\n"
-                         "deepseek-v4-flash-0731/tc3 at 361s late in a degrading sweep\n"
+                         "deepseek-v4-flash-0731/tc3 at 361s late in a long sweep\n"
                          "(6.7s for its own tc1 minutes earlier), so 180s and then 420s each\n"
                          "aborted a run still legitimately working; 900s clears it, and a\n"
                          "genuinely stuck run still aborts rather than being recorded)")
@@ -398,8 +398,12 @@ def main() -> int:
     # 8s was not enough. A full sweep reached 19/20 and the per-run wall clock rose
     # monotonically as it went: deepseek-v4-flash did tc1 in 6.7s and then tc3 in
     # 361s and tc4 in 181s, against 24-42s for tc3 on every other model minutes
-    # earlier. That is the container degrading over ~20 Chromium launches, not a
-    # model getting slower, and it is why the last cell blew a 420s budget.
+    # earlier, and it is why the last cell blew a 420s budget. WHAT that is remains
+    # unknown: the Zeabur dashboard shows the same window at ~175 MB of 8 GB and
+    # under 20% of 2 vCPU with no restart, so it is not resource exhaustion, and no
+    # replacement mechanism is claimed here (ADR-010 Decision 19, support-matrix
+    # D18). A rising wall clock, stated as one — this constant is fitted to the
+    # observation, not to a theory about it.
     SETTLE_S = 30
     for model in args.models:
         for spec in tasks:
