@@ -1,0 +1,170 @@
+{
+  "suite": "invariant",
+  "score": 0.6363636363636364,
+  "totals": {
+    "wall_seconds": 0.04,
+    "latency_p50": 0.0,
+    "latency_p95": 0.0,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 988, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 298, in _run_schema_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.04,
+      "id": "contract-trace-schema",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "window_len": 2000,
+      "seconds": 0.0,
+      "id": "evidence-window-miss-is-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 988, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 795, in _run_gateway_error_case\n    base = _base_url()\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "gateway-error-contract-shape",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv3-budget-exhaustion-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-login-contracted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 988, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 833, in _run_matrix_drift_case\n    from .server import MATRIX_DOC, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "matrix-parse-fails-loudly",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "mutation-metrics-honesty",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 988, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 381, in _run_observe_case\n    from playwright.async_api import async_playwright\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "observe-content-survives-chrome",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "opt-in-expect-keys-declared",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 988, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 962, in _run_invariant_case\n    return INVARIANTS[check]()\n           ~~~~~~~~~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "supersede-never-dangles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 988, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 763, in _run_matrix_case\n    from .server import CASE_CITATION, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "support-matrix-cites-real-cases",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 988, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 449, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "url-guard-holds-after-navigation",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/evals/run.py\", line 51, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 988, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/claude-501/-Users-willy--hermes/8bc48d2e-bd5b-4a47-bcd1-a42e169ed593/scratchpad/ba-adr/src/browser/eval_adapter.py\", line 924, in _run_url_guard_case\n    from .server import url_ok\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "win_plain_len": 2000,
+      "win_anchored_len": 3615,
+      "seconds": 0.0,
+      "id": "verifier-dump-ratio-anchor-flip",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-numeric-precision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-sign-currency-percent",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-superseded-not-a-loophole",
+      "kind": "adversarial"
+    }
+  ]
+}

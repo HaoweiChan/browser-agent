@@ -3,6 +3,12 @@
 Date: 2026-08-15
 Status: accepted
 
+**Ruling**: Amends ADR-000: a bounded `docs/` planning layer (product/, specs/, architecture/, evals/, plans/, plus cross-cutting files like support-matrix.md) and a milestone-level `tasks/TODO.md` are allowed; `specs/` keeps its three-kind charter unchanged, and micro-tasks still live in-session, never in TODO.md.
+**Because**: The Whaleforce assignment makes the planning package itself a graded deliverable that reviewers read, not internal exhaust invisible to them.
+**Enforced by**: advisory — reviewed by the cold-reviewer subagent and CLAUDE.md hard rule 3; no eval case grades `docs/` layout or TODO.md task granularity.
+
+---
+
 ## Context
 
 ADR-000 banned tasks.md and plan files: task lists live in the session, so they

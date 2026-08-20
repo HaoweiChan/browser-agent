@@ -1,6 +1,14 @@
 # ADR-010: The model ablation ships as a mechanism, and its table is committed empty
 
-Status: accepted · 2026-08-20 · milestone M9
+Status: accepted · 2026-08-20 · milestone M9. Decisions 13–17 amend earlier
+ones across five review rounds on PR #15; the original text is left as written
+and each amendment says what moved and where the previous repair fell short.
+
+**Ruling**: M9 ships the ablation *mechanism* with its tradeoff table committed empty and graded — the key lives only on the deployment, so no number can exist until this merges and redeploys, and `analysis-ablation-table-not-estimated` refuses any data row in §9 while it declares itself pending and requires every cell to equal the driver's own formatter output once it names a report; the price ceiling is the **model** `deepseek/deepseek-v4-pro` rather than a number (its list price moved 11% inside one working session), so no literal ceiling lives in code and the incumbent `claude-sonnet-4.5` is priced out and measured by no cell; and a run is published only if its terminal status is on an allowlist of statuses that measure the *model*, everything else aborting the sweep unrecorded.
+**Because**: A cost table is worth exactly what its worst cell is worth — a provider outage published as a model scoring 0/5, or a billed completion recorded at $0.00, corrupts the comparison the milestone exists to produce; and an empty section with no guard becomes an estimated section the moment someone is in a hurry.
+**Enforced by**: `evals/adversarial/analysis-ablation-table-not-estimated.json`, `ablation-env-failure-is-a-result.json`, `gateway-model-reaches-planner.json`, `gateway-model-not-allowlisted.json`, `ablation-preflight-refuses-old-build.json`
+
+---
 
 ## Context
 

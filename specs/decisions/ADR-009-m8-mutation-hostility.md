@@ -6,6 +6,12 @@ Decisions 7, 8 and 9, after three review rounds: two found the same metric
 block wrong twice, the third found the documents describing it stale. The original text is left as written; Decisions 7 and 8 say what moved
 and — in round 2 — where round 1's own repair fell short.
 
+**Ruling**: The mutation catalogue admits five mutations, each of which breaks a capability a plan actually stands on rather than a locator tier (`classes-scrambled` is dropped as decoration, not deferred); two of the five have no rescuing ladder and are committed with the losing or wrong-answer outcome pinned honestly (`expect.answer_is_known_wrong` / no `mutation_survived`), never smoothed into a fake pass; the survival/recovery/relocation counters are pure functions gated on both expectation and status, never on "matched its expectation" alone; and quotes.toscrape.com/js is published `unsupported` (TC1) because the planner is structurally blind to content the verifier can read in full.
+**Because**: A metric whose label drifts from what it counts, or a mutation admitted because it was already on a list, is exactly the decoration the milestone's own risk statement warned against.
+**Enforced by**: `evals/adversarial/mutation-metrics-honesty.json`, `mutation-catalog-integrity.json`, `opt-in-expect-keys-declared.json`
+
+---
+
 ## Context
 
 M8's brief (`tasks/TODO.md`) is three things: finish the mutation catalogue,

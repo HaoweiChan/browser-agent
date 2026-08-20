@@ -3,6 +3,12 @@
 Date: 2026-08-16
 Status: accepted
 
+**Ruling**: Recovery runs on two dispatch-classified ladders — `locate` failures relocate to a fresh a11y tier distinct from the one that failed (never from stored site knowledge), `act` failures replan the remaining steps against the current page; relocation is capped at 2 rungs/step and replans at 2/task, and exhausting either ends the run classified by the failure class it died of, never `failure:env`.
+**Because**: Running out of actions is an environment fact, but running out of ladder rungs means the run died of the failure it could not fix, and reporting that as `env` would corrupt the failure distribution the next scope checkpoint reads.
+**Enforced by**: `evals/adversarial/diagnosis-classifier-classes.json`, `relocation-distinct-tier.json`, `budget-replans-exhausted.json`
+
+---
+
 ## Context
 
 ADR-002 left three thresholds deliberately unset, one of them because "there is
