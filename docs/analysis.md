@@ -30,7 +30,16 @@ numbers and says so. A full refresh is M10's job
 | `invariant` (must-always-hold) | 22 | **22/22** | 3.68s | 0.0s | 0.54s | $0.0000 |
 | `live` (4 real sites) | 9 | **9/9** | 58.13s | 1.68s | 23.64s | $0.0000 |
 
-96 distinct cases (20 golden + 76 adversarial).
+**M9 correction to this table:** the three rows above are the M8 report they name
+and are left as read; M9 added five cases, all offline, taking `fast` to 91/91 and `invariant` to
+27/27; the `fast` gate measures 71.3-76.5s. Committed
+M9 runs: `evals/report/20260820-162200-fast.json` (91/91, 76.34s, $0.0000) and
+`evals/report/20260820-162043-invariant.json` (27/27) — the runs after PR #15
+review round 4, which is the state §9 describes. The
+counts below are updated to the current tree; the timings and per-case numbers
+elsewhere in this document are not, and their refresh is M10's.
+
+101 distinct cases (20 golden + 81 adversarial).
 168 browser actions in a `fast` run; **53 of the
 86** cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions: the six L5 refusal cases are
@@ -38,7 +47,9 @@ end-to-end cases that deliberately stop before a browser opens. The remaining
 33 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value, and — added in
-M8 — the mutation counters and the opt-in `expect` keys). `live` is 9/9 across
+M8 — the mutation counters and the opt-in `expect` keys; and in M9 — the model
+allowlist, the ablation driver's preflight and its `failure:env` classifier, and
+the ablation table's honesty guard). `live` is 9/9 across
 four real sites, the fourth added at M8 to be hostile rather than to be passed:
 `quotes.toscrape.com` renders its content invisibly to the accessibility tree,
 and the run there answers confidently and wrongly (§ the M8 rows in
@@ -639,3 +650,167 @@ answer and no fabrication, having correctly navigated and clicked first. It is
 the single most informative data point in this document: the two verified
 steps show the resolver working on a real DOM, and the third shows that
 **planning is the weakest link and the one thing no suite here measures.**
+
+## 9. Cost/model ablation — the mechanism, and an empty table on purpose
+
+**PENDING — no ablation report exists yet.** No model comparison has been run,
+so there are no numbers, and this section publishes none. The table below is
+empty because an empty table is the honest artifact today; a plausible-looking
+row would not be.
+
+Why it is empty is a sequencing fact, not an oversight. The paid runs happen on
+the deployment (`OPENROUTER_API_KEY` lives in Zeabur's service environment and
+deliberately nowhere else — CLAUDE.md rule 8), and until this PR the deployment
+had no way to be told which model to plan with. So the mechanism has to be
+merged and redeployed *before* the first ablation run can exist. This PR is that
+mechanism:
+
+- **`model` field on `POST /tasks`, gated on an allowlist** — `src/browser/server.py`,
+  `src/browser/planner.py` (`ALLOWED_MODELS` = the default plus the four ablated)
+- **the ablation driver** — submits the task set once per model, polls, writes a
+  report: `evals/ablation.py`
+- **the question, the model set, the task set, the decision rule** —
+  `specs/decisions/ADR-010-m9-model-ablation.md`
+- **the guard on this section** —
+  `evals/adversarial/analysis-ablation-table-not-estimated.json`
+
+(A list rather than a table on purpose: this section contains exactly one table,
+the graded one, which is what makes "any other table row is a results row"
+checkable without caring how its numbers are spelled.)
+
+Four models, five tasks, ground truth taken verbatim from the committed golden
+cases. Only the planner varies — executor, resolver and verifier are
+byte-identical across models, and four of the five pages are fixtures this
+deployment serves itself. **This is the first measurement in the repository that
+grades planning at all**; every pass rate in sections 1–6 stubs the planner (§1's
+headline caveat).
+
+The models are the owner's selection, on two criteria set on 2026-08-20: popular
+on OpenRouter's usage leaderboard, and at or under the price of
+`deepseek/deepseek-v4-pro`. All four ids and prices were read from
+`https://openrouter.ai/api/v1/models` and frozen in
+`evals/labels/openrouter-models-20260820.json`.
+
+The four, cheapest last: `deepseek/deepseek-v4-pro` (the ceiling itself),
+`openai/gpt-5.6-luna`, `tencent/hy3`, and `deepseek/deepseek-v4-flash-0731` (the
+most-used model on OpenRouter). Their list prices live **only** in
+`evals/labels/openrouter-models-20260820.json` and are deliberately not in this
+section — nor in code, nor in the ADR's table. The ceiling model's own price
+moved inside this one working session, which is what settled it: a figure quoted
+in prose goes stale in hours, and four documents were quoting it. The magnitude
+is in ADR-010 Decision 15 and the snapshot, which are allowed to carry numbers
+because nothing grades them as a pending results table. List prices are not measurements, and the simplest way
+for a section whose subject is "no numbers exist yet" to be checkable is for it
+to contain no numbers at all. The guard enforced exactly that against its own
+author, twice: first refusing this paragraph as a table, then refusing it as
+prose.
+
+**The model this system runs on today is not among them.**
+`anthropic/claude-sonnet-4.5` lists above the ceiling on both prompt and
+completion (multiples, not margins — the figures are in ADR-010 Decision 2), so
+it is excluded by the owner's constraint before any measurement, and **no cell in
+the table below will measure it**. That is a
+reframing, not an omission: if the owner will not pay above the ceiling, the
+incumbent cannot remain the default on cost grounds alone, whatever a run would
+have shown. So the question this table answers is *which affordable popular model
+should replace the default, and what does the cheapest one cost in correctness* —
+not *is the default worth its price*, which is no longer answerable here. No
+claim of the form "the cheap model is as good as what we had" is available from
+this data, in either direction (`docs/support-matrix.md` D14, ADR-010 Decisions
+1, 2b and 6).
+
+Two notes on the selection, because both are easy to lose. The leaderboard says
+of itself that it measures *"adoption, not quality"* and does *"not rank models
+by accuracy, reasoning ability, or benchmark performance"* — popularity chose
+what to test and is not evidence about what is good. And two of the four are
+DeepSeek on purpose, at opposite ends of the allowed band — the cheapest entry
+and the ceiling model — which isolates price from vendor: three vendors across
+four cells, one sampled twice, rather than the flattering "four vendors". No
+multiple is quoted for the spread; the input drifts, so the snapshot carries the
+arithmetic.
+
+After this merges and Zeabur redeploys, one command produces the table:
+
+```
+python3 -m evals.ablation                 # 4 models x 5 tasks against the live URL
+```
+
+It writes `evals/report/<stamp>-ablation.json`, prints the table below in
+markdown, and aborts without writing anything if any run 4xx/5xxs, times out,
+comes back attributed to a different model than the one submitted, ends
+`failure:env` *for an environmental reason* — a missing key, or a planning call
+that failed at the provider or on the wire — or names a
+model that is not on the allowlist — that last check is local, against
+`planner.ABLATION_MODELS` (narrower than the endpoint's allowlist, which also accepts the unablated default), so a typo costs nothing rather than fifteen runs. It also refuses to start at all against a
+deployment that has not picked up the model parameter yet: a build without it
+answers 200 to a `model` field it silently drops, which would produce four rows
+that are all the default model wearing four names, so the driver first submits a
+model the allowlist must refuse and aborts unless it gets a 422 (ADR-010
+Decision 9 — the probe is free either way, spending nothing on either branch). Stage two is: run it, commit the
+report, paste the table under the marker, and name that report file here.
+
+The driver publishes a cell only for runs that measure the **model**, and that is
+an allowlist: a terminal status must be named as a measurement, and anything
+unrecognised aborts the sweep. A plan that ran and went wrong is scored. A call
+that succeeded and returned something that is not a plan is scored, carrying
+whatever the provider billed for it. A planning call that *failed* — provider
+4xx/5xx, dropped connection, unreadable body — a start URL our own guard refused,
+a page that would not load, and any failure class a later milestone invents all
+abort instead.
+
+That list is an allowlist because the denylist it replaced was extended three
+times, each time by a reviewer rather than by the code (ADR-010 Decision 16). The
+one it kept missing is the one that matters here: task 5 is live, so a site being
+down would otherwise have published as a model scoring zero, at zero cost, in
+every column the decision rule compares.
+
+Two things about the columns, fixed now so they are not decided by whatever the
+numbers turn out to be. The latency columns are percentiles over each **run's
+own recorded duration** (`budgets_spent.ms`), not over the driver's wall clock:
+the deployment serialises runs behind one semaphore, so a client-side clock would
+charge a model for however long its run sat queued behind a reviewer using the
+demo page. And with five runs per model, the upper percentile is simply the
+slowest of the five.
+
+<!-- ablation-table -->
+| Model | Correct | LLM cost | Cost/run | Tokens | p50 s | p95 s |
+|---|---|---|---|---|---|---|
+
+The table is graded, not merely promised. `analysis-ablation-table-not-estimated`
+(tagged `invariant`) reads this section and fails while it declares itself
+pending and contains any data row at all; once the section names a committed
+`-ablation.json` report, every cell must equal what the driver's own formatter
+derives from that report, so a hand-typed number is a red case, and the pending
+banner must be gone. Per-model result numbers are refused on any table row or
+line in this section outside the graded table: a currency amount, a score
+written as so-many-of-five, a bare cents or percent figure, or a latency word
+next to a number — in whatever markdown carries it. **And, structurally, this
+section contains exactly one table**: any other table row is a results table
+however its cells are spelled, which is also why the list above is a list.
+
+The structural rule is the complete one; the figure list is not, and saying so is
+the point. It has been walked around in four review rounds — first by naming
+models it did not list, then by markdown syntaxes it did not enumerate, then by
+number spellings it did not know — and each round widened it. **A determined
+author can still write a per-model estimate as an ordinary English sentence and
+this guard will not catch it.** What the guard does close is every shape an
+estimate has actually been smuggled in as, plus every table. That is a declared
+hole rather than a claim the code cannot honour. A second copy of the
+ablation table is refused anywhere in this document — graded against the real
+file, which for one round it was not. Both directions
+are exercised — a fabricated row, a dropped pending declaration, a changed
+column, a second copy of the table parked elsewhere in the section, an
+"expected shape" table with a different header carrying per-model numbers, the
+marker itself renamed, and a tampered cell in a round-trip against the driver's
+own formatter. Each is a
+committed variant, so they keep being checked rather than having been checked
+once. The last two came from a cold review that found the guard reading exactly
+one table in a section with room for many.
+
+**The default model is unchanged by this PR** (`anthropic/claude-sonnet-4.5`),
+because the ceiling says it cannot stay but says nothing about which of the four
+replaces it — and that is what the run is for. The rule that picks the
+replacement is fixed in advance in ADR-010 Decision 5, written before the
+numbers, so it cannot be chosen to fit them. The endpoint still accepts the
+default by explicit name: it is priced out of the comparison, not out of the
+system.

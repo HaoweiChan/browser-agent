@@ -1,0 +1,92 @@
+{
+  "_what": "Frozen evidence for ADR-010 Decision 2: the five ids POST /tasks accepts (the incumbent default first, then the four the M9 ablation runs), as https://openrouter.ai/api/v1/models returned them.",
+  "_source": "https://openrouter.ai/api/v1/models",
+  "_read_on": "2026-08-20",
+  "_refrozen_on": "2026-08-20, later the same session",
+  "_why_refrozen": "`deepseek/deepseek-v4-pro` \u2014 the model that DEFINES the owner's price ceiling \u2014 moved from 0.00000144/0.00000288 to 0.0000016/0.0000032 per token inside a single working session. Caught by review round 3 (PR #15, R16) comparing this file against the live endpoint. The other four entries were unchanged to the digit and _total_models_in_response was 414 in both reads, so this is real supplier drift, not a transcription error \u2014 and it is the strongest possible argument for the snapshot existing at all: a list price quoted in prose goes stale in hours.",
+  "_ceiling_model": "deepseek/deepseek-v4-pro",
+  "_ceiling_rule": "The owner's ruling (2026-08-20) is that the CEILING IS THE MODEL, NOT THE NUMBER: `deepseek/deepseek-v4-pro` stays in the ablation set at whatever it lists for, and every other ablated model must price at or under it on both prompt and completion. `planner.CEILING_MODEL` names it; the effective ceiling is derived from this file's entry for it, so a number here and a number in code can no longer disagree.",
+  "_total_models_in_response": 414,
+  "_selection_source": "https://openrouter.ai/rankings#leaderboard-table, 'Usage data through Aug 19, 2026'. That page states: 'These rankings measure adoption, not quality. They do not rank models by accuracy, reasoning ability, or benchmark performance' \u2014 verified first-hand. The rank positions in ADR-010 come from the coordinating session's in-app browser read; the table itself is script-rendered and not readable here.",
+  "models": [
+    {
+      "id": "anthropic/claude-sonnet-4.5",
+      "name": "Anthropic: Claude Sonnet 4.5",
+      "context_length": 1000000,
+      "pricing": {
+        "prompt": "0.000003",
+        "completion": "0.000015",
+        "web_search": "0.01",
+        "input_cache_read": "0.0000003",
+        "input_cache_write": "0.00000375",
+        "input_cache_write_1h": "0.000006",
+        "overrides": [
+          {
+            "min_prompt_tokens": 200000,
+            "prompt": "0.000006",
+            "completion": "0.0000225",
+            "input_cache_read": "0.0000006",
+            "input_cache_write": "0.0000075",
+            "input_cache_write_1h": "0.000012"
+          }
+        ]
+      },
+      "_role": "incumbent default, NOT ablated (over the ceiling)"
+    },
+    {
+      "id": "deepseek/deepseek-v4-pro",
+      "name": "DeepSeek: DeepSeek V4 Pro 0423",
+      "context_length": 1048576,
+      "pricing": {
+        "prompt": "0.0000016",
+        "completion": "0.0000032",
+        "input_cache_read": "0.000000135"
+      },
+      "_role": "ablation set"
+    },
+    {
+      "id": "openai/gpt-5.6-luna",
+      "name": "OpenAI: GPT-5.6 Luna",
+      "context_length": 1050000,
+      "pricing": {
+        "prompt": "0.0000002",
+        "completion": "0.0000012",
+        "web_search": "0.01",
+        "input_cache_read": "0.00000002",
+        "input_cache_write": "0.00000025",
+        "overrides": [
+          {
+            "min_prompt_tokens": 272000,
+            "prompt": "0.0000004",
+            "completion": "0.0000018",
+            "input_cache_read": "0.00000004",
+            "input_cache_write": "0.0000005"
+          }
+        ]
+      },
+      "_role": "ablation set"
+    },
+    {
+      "id": "tencent/hy3",
+      "name": "Tencent: Hy3",
+      "context_length": 262144,
+      "pricing": {
+        "prompt": "0.000000132",
+        "completion": "0.000000528",
+        "input_cache_read": "0.000000033"
+      },
+      "_role": "ablation set"
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash-0731",
+      "name": "DeepSeek: DeepSeek V4 Flash 0731",
+      "context_length": 1310720,
+      "pricing": {
+        "prompt": "0.00000014",
+        "completion": "0.00000028",
+        "input_cache_read": "0.000000028"
+      },
+      "_role": "ablation set"
+    }
+  ]
+}

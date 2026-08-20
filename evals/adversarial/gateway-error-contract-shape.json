@@ -1,7 +1,10 @@
 {
   "id": "gateway-error-contract-shape",
   "task": "browser",
-  "suites": ["fast", "invariant"],
+  "suites": [
+    "fast",
+    "invariant"
+  ],
   "input": {
     "kind": "gateway-error",
     "task": "What is the main heading on this page?"
@@ -9,12 +12,32 @@
   "expect": {
     "status_prefix": "failure:",
     "keys": {
-      "result": ["status", "answer", "reason", "verdict", "evidence", "budgets_spent"],
-      "evidence": ["trace", "screenshots", "extractions", "final_url", "final_page_digest"],
-      "budgets_spent": ["actions", "llm_tokens", "llm_usd", "replans", "ms"]
+      "result": [
+        "status",
+        "model",
+        "answer",
+        "reason",
+        "verdict",
+        "evidence",
+        "budgets_spent"
+      ],
+      "evidence": [
+        "trace",
+        "screenshots",
+        "extractions",
+        "final_url",
+        "final_page_digest"
+      ],
+      "budgets_spent": [
+        "actions",
+        "llm_tokens",
+        "llm_usd",
+        "replans",
+        "ms"
+      ]
     }
   },
-  "provenance": "found by actually driving the M4 frontend, not by reading it. Submitting a task with no OPENROUTER_API_KEY returned {status: failure:env, evidence: null, budgets_spent: null} — loud and correctly classified, but not the RunResult shape specs/001 promises every caller. Cause: live_planner() validates the key at CONSTRUCTION, so it raises as an argument expression before run_task is entered, and the gateway's catch-all hand-built a result dict instead of going through assemble_result. contract-trace-schema never saw it: that case checks run_task's return value, and this path never reaches run_task. Watched red on exactly the two null fields before _execute was routed through assemble_result.",
+  "provenance": "found by actually driving the M4 frontend, not by reading it. Submitting a task with no OPENROUTER_API_KEY returned {status: failure:env, evidence: null, budgets_spent: null} — loud and correctly classified, but not the RunResult shape specs/001 promises every caller. Cause: live_planner() validates the key at CONSTRUCTION, so it raises as an argument expression before run_task is entered, and the gateway's catch-all hand-built a result dict instead of going through assemble_result. contract-trace-schema never saw it: that case checks run_task's return value, and this path never reaches run_task. Watched red on exactly the two null fields before _execute was routed through assemble_result. M9 (PR #15, R4) added `model` to RunResult so a run record says which planner produced it; this case went red on the new key first, which is the guard working — the shape may not grow by accident.",
   "triage": {
     "class": "contract-drift",
     "note": "the frontend is the injured party — it renders evidence.trace and budgets_spent, so a null there is a blank trace viewer on the single most likely production failure (a deployment that lost its key). Forces the no-key path by blanking the env var for the duration, so the case costs $0.00 and behaves identically on a machine that has a key. Fail-fast is kept deliberately: a missing key is diagnosed before a browser is launched, so an empty trace here is correct and only the SHAPE was wrong."

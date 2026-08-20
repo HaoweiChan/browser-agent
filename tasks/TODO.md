@@ -12,10 +12,27 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M9 — Cost/model ablation            [status: todo]
+### M9 — Cost/model ablation            [status: pr]
+PR: #15 · evidence pack in the PR body · ADR-010
 Spec: ≥2-model OpenRouter ablation, cost/latency tradeoff table, ADR for the
 default-model choice. Reviewer evidence: analysis (E4), E5 tradeoffs.
 Acceptance: table built from committed report runs, not estimates.
+State: **the mechanism ships; the table ships empty and graded.** The key lives
+only in Zeabur and `POST /tasks` could not vary the model, so the numbers cannot
+exist until this merges and redeploys. `analysis-ablation-table-not-estimated`
+holds the gap shut: while §9 declares itself pending it must carry zero data
+rows, and once it names a committed report every cell must equal what the
+driver's formatter derives from that report.
+Ceiling: the **model** `deepseek/deepseek-v4-pro`, not a number — its list price
+moved $1.44/$2.88 → $1.60/$3.20 per M inside one working session (two reads, two
+hours apart), so `PRICE_CEILING` was deleted and the eval derives the ceiling
+from the snapshot entry. No cell measures the incumbent `claude-sonnet-4.5`
+($3/$15, priced out), so the question is now "which affordable model replaces
+the default", with the ceiling an owner input, not a measurement (D14).
+Loop: 5 review rounds, 24 findings (4H/12M/8L), none rejected, 0 gate failures,
+$0.00 spent. Gate at merge: invariant 27/27, fast 91/91.
+Stage two after merge+redeploy: `python3 -m evals.ablation` → commit the report
+→ paste the table under `<!-- ablation-table -->` → name the report in §9.
 
 ### M12 — Fast-suite wall-clock over budget            [status: todo]
 Origin: PR #12, declared in support-matrix D8 (promoted from Debt 2026-08-20 —
