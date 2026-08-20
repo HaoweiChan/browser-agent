@@ -170,9 +170,15 @@ def _http(url: str, payload: dict | None = None, timeout: int = 120) -> dict:
     #
     # Four sweeps died on the transport while `/healthz` answered in ~0.13s on
     # either side, and a plain urllib POST loop scored 6/6 at 0.21s minutes later.
-    # The container is one uvicorn worker launching a Chromium per run: while a
-    # run is hot it stops accepting connections, and an aborted sweep leaves a run
-    # in flight that the next sweep's first submit walks straight into.
+    # WHY they died is not known. The deployment publishes no resource telemetry —
+    # `/healthz` returns a literal {"ok": True} — so there is no server-side number
+    # behind any of this. An earlier version of this comment blamed a
+    # browser-teardown window and the CODE REFUTES IT: agent.py closes the browser
+    # in a `finally` inside the Playwright context, before run_task returns, and
+    # server.py assigns the terminal record inside `async with SEM`, so the
+    # semaphore is still held when a run goes terminal (ADR-010 Decision 19).
+    # The retry below stands on the observed failure mode alone, which is all it
+    # needs — it does not depend on knowing the cause.
     #
     # The distinction that makes retrying safe here is connect-phase vs read-phase.
     # `urllib` wraps a failure to establish the connection in `URLError` (that is
@@ -380,10 +386,12 @@ def main() -> int:
     # `URLError: timed out` mid-poll, once `[Errno 60]` refusing the CONNECT for
     # the next submit — and every one landed on the run immediately after a heavy
     # one, while `/healthz` answered in ~0.13s both before and after. The
-    # deployment is a single uvicorn worker launching a Chromium per run, and a
-    # run is marked done when its result is assembled, not when the browser is
-    # torn down: submitting into that window is submitting into a worker that
-    # cannot accept a connection. So the driver waits instead of racing it.
+    # deployment is a single uvicorn worker with `asyncio.Semaphore(1)`, launching
+    # and closing one Chromium per run. Why a gap helps is NOT established — the
+    # earlier claim here, that a submit was racing a browser teardown, is refuted
+    # by the code (ADR-010 Decision 19). The gap stays because it is what made a
+    # clean sweep reproducible, and that is an empirical reason, stated as no more
+    # than one.
     # ponytail: a sleep, not a retry — a retry would silently redo paid work, and
     # the abort-on-transport-fault rule (PR #15, R9) has to keep meaning what it
     # says. If this stops being enough, the deployment is the thing to fix.

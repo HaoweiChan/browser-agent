@@ -998,13 +998,34 @@ transport or wall clock, never a model: connection timeouts mid-poll, a refused
 connect on the next submit, and twice a run that outlived its completion budget.
 `/healthz` answered in a fifth of a second either side of every one of them.
 
-The cause is not mysterious. The container is a single uvicorn worker launching a
-Chromium per run; it stops accepting connections while one is hot, an aborted
-sweep leaves a run in flight that the next sweep's first submit walks into, and
-the per-run wall clock climbed steadily across a twenty-run sweep — one model did
-an early task in seconds and a later one in minutes, against tens of seconds for
-the same task on every other model. That is degradation under repeated browser
-launches, not a model getting slower.
+The per-run wall clock also climbed steadily across a twenty-run sweep — one
+model did an early task in seconds and a later one in minutes, against tens of
+seconds for the same task on every other model.
+
+**The cause is not established, and this section previously claimed otherwise.**
+The first version of this decision explained the aborts as a submit landing in a
+browser-teardown window, on the reasoning that a run is marked done when its
+result is assembled rather than when Chromium is closed. **The code refutes
+that.** `agent.py` closes the browser in a `finally` inside the
+`async_playwright()` context, so teardown completes before `run_task` returns;
+`server.py` assigns the terminal record *inside* `async with SEM`. The semaphore
+is therefore still held at the moment a run goes terminal, and the window the
+explanation depended on does not exist.
+
+The explanation is removed rather than replaced. What is known is the
+configuration — one uvicorn worker, `asyncio.Semaphore(1)`, one Chromium launched
+and closed per run — and the symptom. What is missing is any server-side number:
+the deployment has **no resource telemetry whatsoever**, `/healthz` returns a
+literal `{"ok": True}`, and nothing records memory, CPU or restarts. So the
+aborts are measured and the reason for them is not.
+
+Two things make this worth stating at length rather than quietly deleting. No
+eval case could have caught the wrong claim, because nothing in the suite asserts
+anything about resources — the same shape as every guard in this ADR that was
+proved against constructed inputs rather than the artifact. And an invented
+mechanism is more dangerous than an admitted gap: it would have justified
+provisioning decisions, and the first thing anyone would have done with it is
+buy a bigger container to fix a problem nobody had located.
 
 Three driver constants moved, each from a measurement rather than a guess: the
 socket budget (observed server latency had reached the old ceiling), a settle gap
