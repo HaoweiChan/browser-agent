@@ -1072,6 +1072,22 @@ def _run_ablation_run_one_case(case: dict) -> dict:
                       for f in sorted(Path(__file__).parent.glob("*.py"))
                       if f.name != "eval_adapter.py")
         pinned = [r or "" for _, r, _ in inp["checks"]]
+        # EVERY pinned reason, not only the prefix-keyed ones. A row describing a
+        # string production stopped writing grades a dead state, and one did:
+        # `unknown target key(s)` where agent.py writes `unsupported target
+        # key(s)`. It passed anyway because `failure:task` is tested by exclusion
+        # (PR #15, R24). Reasons whose text comes from Playwright, the verifier or
+        # an exception repr must be DECLARED external, never silently exempt.
+        external = set(inp.get("external_reasons", []))
+        for r in pinned:
+            if not r or r in external:
+                continue
+            if r[:12] not in src:
+                wrong.append({"pinned_reason_production_does_not_write": r[:70],
+                              "note": "either production renamed it, or it belongs in "
+                                      "external_reasons with a reason"})
+        if (unused := external - set(pinned)):
+            wrong.append({"external_reasons_naming_no_row": sorted(unused)})
         for pref in AB.MODEL_FAULT_REASONS + (AB.OUR_OWN_REFUSAL,):
             if pref not in src:
                 wrong.append({"prefix_not_written_in_production": pref,
@@ -1294,9 +1310,28 @@ def _run_ablation_preflight_case(case: dict) -> dict:
 ABLATION_MARKER = "<!-- ablation-table -->"
 PENDING_MARKER = "PENDING — no ablation report exists yet"
 ABLATION_REPORT_REF = re.compile(r"evals/report/([0-9A-Za-z._-]+-ablation\.json)")
-# The shape of a published result, for lines that name no model id at all:
-# a dollar figure, an n-of-five score, or a latency percentile.
-RESULT_FIGURE = re.compile(r"\$\s?\d|\b\d+\s*/\s*5\b|\bp(?:50|95)\b", re.I)
+# The shape of a published result on a non-table line. Each alternative was added
+# after a reviewer walked through the previous set, and the spellings below are
+# the ones actually used against it (PR #15, R11/R17/R21):
+#   a currency amount            $0.0016
+#   an n-of-five score           4/5, 4 of 5, 4 of five
+#   a bare cents or percent      0.04 cents, 80% correct
+#   a latency word plus a number median 11.8 s, slowest 19.0, p95 4.3
+#
+# ponytail: this is an enumeration, and an enumeration over natural language is
+# never complete — "the cheap one got most of them right for about a penny" is
+# not matched and cannot be, short of reading the prose. That residual is
+# DECLARED, in §9 and support-matrix D12, rather than papered over with a
+# "syntax-blind" claim the code cannot honour. The complete guard is the
+# structural one beside it: this section contains exactly one table, so a
+# results *table* cannot be smuggled in however its cells are spelled, and a
+# results *sentence* is the only remaining shape.
+RESULT_FIGURE = re.compile(
+    r"\$\s?\d"
+    r"|\b\d+\s*(?:/|\s+of\s+)\s*(?:5|five)\b"
+    r"|\b\d+(?:\.\d+)?\s*(?:cents?|%)"
+    r"|\b(?:p50|p95|median|mean|average|slowest|fastest)\b[^|]{0,24}?\d",
+    re.I)
 
 
 # `## 9.` -> "9", so `## 9a.` and `## 9.1` read as continuations of it. Cutting

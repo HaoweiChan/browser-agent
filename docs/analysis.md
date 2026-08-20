@@ -695,10 +695,11 @@ The four, cheapest last: `deepseek/deepseek-v4-pro` (the ceiling itself),
 `openai/gpt-5.6-luna`, `tencent/hy3`, and `deepseek/deepseek-v4-flash-0731` (the
 most-used model on OpenRouter). Their list prices live **only** in
 `evals/labels/openrouter-models-20260820.json` and are deliberately not in this
-section — nor in code, nor in the ADR's table. The ceiling model's price moved
-about 11% inside this one working session, which is what settled that: a figure
-quoted in prose goes stale in hours, and four documents were quoting it (ADR-010
-Decision 15). List prices are not measurements, and the simplest way
+section — nor in code, nor in the ADR's table. The ceiling model's own price
+moved inside this one working session, which is what settled it: a figure quoted
+in prose goes stale in hours, and four documents were quoting it. The magnitude
+is in ADR-010 Decision 15 and the snapshot, which are allowed to carry numbers
+because nothing grades them as a pending results table. List prices are not measurements, and the simplest way
 for a section whose subject is "no numbers exist yet" to be checkable is for it
 to contain no numbers at all. The guard enforced exactly that against its own
 author, twice: first refusing this paragraph as a table, then refusing it as
@@ -781,13 +782,20 @@ pending and contains any data row at all; once the section names a committed
 `-ablation.json` report, every cell must equal what the driver's own formatter
 derives from that report, so a hand-typed number is a red case, and the pending
 banner must be gone. Per-model result numbers are refused on any table row or
-line in this section outside the graded table — a currency amount, an n-of-five
-score, or a latency percentile — **whatever markdown syntax carries it**. And,
-structurally, **this section contains exactly one table**: any other table row is
-a results table however its cells are spelled. That second rule exists because
-the first one was walked around three times — by model ids, then by markdown
-syntax, then by number spelling ("4 of 5", unsigned costs). Structure cannot be
-respelled. It is also why the list above is a list and not a table. A second copy of the
+line in this section outside the graded table: a currency amount, a score
+written as so-many-of-five, a bare cents or percent figure, or a latency word
+next to a number — in whatever markdown carries it. **And, structurally, this
+section contains exactly one table**: any other table row is a results table
+however its cells are spelled, which is also why the list above is a list.
+
+The structural rule is the complete one; the figure list is not, and saying so is
+the point. It has been walked around in four review rounds — first by naming
+models it did not list, then by markdown syntaxes it did not enumerate, then by
+number spellings it did not know — and each round widened it. **A determined
+author can still write a per-model estimate as an ordinary English sentence and
+this guard will not catch it.** What the guard does close is every shape an
+estimate has actually been smuggled in as, plus every table. That is a declared
+hole rather than a claim the code cannot honour. A second copy of the
 ablation table is refused anywhere in this document — graded against the real
 file, which for one round it was not. Both directions
 are exercised — a fabricated row, a dropped pending declaration, a changed

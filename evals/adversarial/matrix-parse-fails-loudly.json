@@ -35,13 +35,34 @@
           "| **D5** — positional targeting",
           "\n| **D5** — positional targeting"
         ]
+      },
+      {
+        "note": "D14 orphaned — the LAST row of its table, and the exact row R20 was filed against (PR #15, R22)",
+        "replace": [
+          "| **D14** — the model the system",
+          "\n| **D14** — the model the system"
+        ]
+      },
+      {
+        "note": "a Current-matrix domain row orphaned; its neighbours use em-dashes, which a subset-of('-: ') test reads as a delimiter (PR #15, R22)",
+        "replace": [
+          "| forms fixture |",
+          "\n| forms fixture |"
+        ]
+      },
+      {
+        "note": "the first data row of a limitations table orphaned from its header",
+        "replace": [
+          "| **D1** — `not_a_dump` closes",
+          "\n| **D1** — `not_a_dump` closes"
+        ]
       }
     ]
   },
   "expect": {
     "raises": true
   },
-  "provenance": "cold review of M4, finding 2. parse_matrix keyed rows on `section.startswith(...)` plus an exact cell count, and asserted nothing about having found anything. Renaming a heading, adding a TC6 or an Owner column, or leaving one unbalanced fence made a section silently parse to zero entries — and support-matrix-cites-real-cases stayed GREEN on it, because bad_status iterates the rows it did not find and every surviving citation still resolves. The frontend then rendered a clean, authoritative, header-only table: an agent declaring no limitations at all. Watched red as three variants that parsed quietly instead of raising. PR #15 R20 added the third variant family: D14 — the disclosure that no cell measures the model the system actually runs on — had drifted a blank line away from its table, so it rendered as a literal paragraph of pipes rather than a row. `parse_matrix` is line-based and picked it up regardless, and the cell-count checks stayed green, so nothing was red. This is the SAME defect PR #12 fixed by hand for D10 and nobody guarded. A table block whose second line is not a delimiter is now a loud failure: the honesty artifact must not be able to stop rendering as a table while still parsing as one.",
+  "provenance": "cold review of M4, finding 2. parse_matrix keyed rows on `section.startswith(...)` plus an exact cell count, and asserted nothing about having found anything. Renaming a heading, adding a TC6 or an Owner column, or leaving one unbalanced fence made a section silently parse to zero entries — and support-matrix-cites-real-cases stayed GREEN on it, because bad_status iterates the rows it did not find and every surviving citation still resolves. The frontend then rendered a clean, authoritative, header-only table: an agent declaring no limitations at all. Watched red as three variants that parsed quietly instead of raising. PR #15 R20 added the third variant family: D14 — the disclosure that no cell measures the model the system actually runs on — had drifted a blank line away from its table, so it rendered as a literal paragraph of pipes rather than a row. `parse_matrix` is line-based and picked it up regardless, and the cell-count checks stayed green, so nothing was red. This is the SAME defect PR #12 fixed by hand for D10 and nobody guarded. A table block whose second line is not a delimiter is now a loud failure: the honesty artifact must not be able to stop rendering as a table while still parsing as one. Round 5 (R22) found the round-4 guard did not catch the row it was written for. Two independent gaps: it only ran at `len(block) == 2`, so a row orphaned as the LAST of its table — D14's position — formed a one-line block and was never checked; and its predicate was a proper-superset test that fired only when the following line happened to contain all of `-`, `:` and space, so an em-dash row read as a delimiter. Measured over the committed file: orphaning each of the 33 data rows left 29 parsing quietly, including D14 and every Current-matrix domain row. The round-4 variant landed on D5, one of the four positions that happened to fire — which is why the case was green. The lesson is now in docs/evals/evaluation-methodology.md: a guard's own motivating case must be one of its committed variants.",
   "triage": {
     "class": "silent-failure",
     "note": "this is the honesty artifact failing in the flattering direction, which is the one direction that must never be quiet (CLAUDE.md rule 4). The fix is loudness, not tolerance: an empty section raises, so the /support-matrix endpoint 500s and the page shows an error rather than an empty promise. Also fixed alongside: the citation checker built its set of known case ids from evals/*/*.json, which included evals/report/*.json, so a report filename like `20260816-192727-fast` was accepted as a valid case citation."

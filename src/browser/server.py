@@ -49,6 +49,40 @@ CASE_CITATION = re.compile(r"`([a-z0-9]+(?:-[a-z0-9]+)+)`")
 SHOT = re.compile(r"step_\d+\.png")
 
 
+def _is_delimiter(line: str) -> bool:
+    """`|---|---|` and friends. Nothing else: an em-dash cell is content."""
+    cells = line.strip("|").split("|")
+    return bool(cells) and "-" in line and set("".join(cells)) <= set("-: ")
+
+
+def _check_block(block: list) -> None:
+    """A markdown table is a CONTIGUOUS run of `|` lines: header, delimiter, rows.
+
+    A row that drifts a blank line away from its table still parses line-by-line
+    and renders as a literal paragraph of pipes. That has now happened three
+    times — D10 (PR #12, fixed by hand, unguarded), D14 (PR #15 R20), and D14
+    again because the first guard missed it (R22). D14 is the disclosure that no
+    ablation cell measures the model the system actually runs on, so an honesty
+    row that stops being a row is the honesty artifact failing in the flattering
+    direction.
+
+    Both of the first guard's bugs are worth naming, because both made it pass on
+    the case it was written for: it only ran when a block reached exactly two
+    lines, so a row orphaned as the LAST of its table (D14's position) formed a
+    one-line block nothing checked; and it tested `> set("-: ")`, a proper
+    superset, so it fired only when the next line happened to contain all of
+    `-`, `:` and space — an em-dash row read as a delimiter. 29 of the file's 33
+    data rows could be orphaned silently. Checking the whole block, at the point
+    it closes, has neither hole."""
+    if not block:
+        return
+    if len(block) < 2 or not _is_delimiter(block[1]):
+        raise ValueError(
+            f"support matrix: table row {block[0][:60]!r} is not part of a table — a "
+            f"{len(block)}-line block with no header/delimiter pair. A row separated from "
+            "its table by a blank line renders as a paragraph of pipes")
+
+
 def parse_matrix(text: str | None = None) -> dict:
     """Markdown tables -> {rows, limitations, citation_text}.
 
@@ -68,20 +102,10 @@ def parse_matrix(text: str | None = None) -> dict:
         if line.startswith("## "):
             section = line[3:].strip().lower()
         if not line.startswith("|"):
-            block = []  # any non-table line ends the current table block
+            _check_block(block)  # any non-table line ends the current block
+            block = []
             continue
-        # A table is a CONTIGUOUS block whose second line is the delimiter. A row
-        # that drifts a blank line away from its table still parses fine here —
-        # and renders as a literal paragraph of pipes. That has now happened
-        # twice: D10 in PR #12, fixed by hand and unguarded, and D14 in PR #15
-        # (R20), which is the disclosure that no ablation cell measures the model
-        # the system actually runs on. An honesty row that quietly stops being a
-        # row is the honesty artifact failing in the flattering direction.
         block.append(line)
-        if len(block) == 2 and set("".join(block[1].strip("|").split("|"))) > set("-: "):
-            raise ValueError(f"support matrix: table row {block[0][:60]!r} is not part of a "
-                             "table — no delimiter row follows its header. A row separated "
-                             "from its table by a blank line renders as a paragraph of pipes")
         cells = [c.strip() for c in line.strip("|").split("|")]
         if set("".join(cells)) <= set("-: "):
             continue  # header underline
@@ -98,6 +122,7 @@ def parse_matrix(text: str | None = None) -> dict:
                 raise ValueError(f"support matrix: limitation {cells[0][:40]!r} has "
                                  f"{len(cells)} cells, expected 3")
             limitations.append(dict(zip(("limitation", "evidence", "status"), cells)))
+    _check_block(block)  # a table running to EOF still has to be a table
     # Loud, never quietly empty. Both sections are keyed on a heading prefix and
     # an exact cell count, so a renamed heading, an added column or one
     # unbalanced fence used to yield zero entries — and the frontend rendered a

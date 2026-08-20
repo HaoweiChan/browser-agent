@@ -49,10 +49,14 @@ ABLATION_MODELS = [
     "deepseek/deepseek-v4-flash-0731",    # cheapest, and most-used model on OpenRouter
 ]
 
-# The default is NOT ablated: at $3.00 / $15.00 it is 2x the ceiling on prompt and
-# 5x on completion, so no cell measures it and it cannot stay the default on cost
-# grounds alone (ADR-010 Decision 6). It stays accepted so the default path is
-# reachable by explicit name and the no-`model` behaviour is unchanged.
+# The default is NOT ablated: it lists above CEILING_MODEL on both prompt and
+# completion, so no cell measures it and it cannot stay the default on cost
+# grounds alone (ADR-010 Decision 6). No figures or multiples here — the comment
+# eight lines up says why, and the multiples quoted in an earlier draft were
+# themselves stale within a session (PR #15, R23). The snapshot carries the
+# numbers and gateway-model-reaches-planner derives the comparison from it, in
+# both directions. The default stays accepted so its path is reachable by
+# explicit name and the no-`model` behaviour is unchanged.
 ALLOWED_MODELS = [DEFAULT_MODEL, *ABLATION_MODELS]
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
