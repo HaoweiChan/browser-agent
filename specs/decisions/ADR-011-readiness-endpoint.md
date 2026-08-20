@@ -94,3 +94,51 @@ cleared, `reason` always present, and `running` pinned to zero.
 The busy window is made deterministic by stubbing the planner to hold for a fixed
 interval. The planner is awaited inside `async with SEM`, so the slot is
 genuinely held, with no browser work and no spend.
+
+## Decision 6 — the soak, and what it concluded
+
+`evals/soak.py` runs five representative tasks sequentially against a deployment
+and records, per task: `/readyz` before, submission outcome, `/readyz` and
+`/healthz` mid-run, terminal status, answer, correctness, the run's own duration,
+the client's wall clock, `/readyz` after, and any transport failure **tagged with
+the phase it happened in**. The phases exist because D18's unanswered question is
+*where*: client could not connect, server rejected, accepted but stalled, poll
+path failed, or completed-but-result-lost. "It timed out" does not distinguish
+those, and they have different fixes.
+
+Correctness is recorded and is deliberately **not** the pass criterion. One task
+in the set carries a known capability limitation (D17), and picking a set that
+scores 5/5 would mean picking tasks that flatter the system.
+
+**Result: 10/10 across two back-to-back sequences, zero infrastructure failures**,
+no transport error in any phase, client wall clock 4.68-13.53s with no upward
+drift. Spend $0.0622.
+
+**Conclusion: the current 2 vCPU / 8 GB deployment is demo-ready under
+interview-shaped sequential workloads** — demonstrated, on the deployment, not
+argued from headroom.
+
+Three things that conclusion does not carry:
+
+- It does **not** retro-diagnose D18. The honest reading of the contrast between
+  ten clean runs and five aborted sweeps is that **workload shape** differs, not
+  capacity — same container, same limits. No mechanism is inferred from it, and
+  D18's open candidates stay open.
+- The runs were served by the **deployed** build, whose default is still
+  `anthropic/claude-sonnet-4.5`. PR #19's move to `openai/gpt-5.6-luna` is not
+  merged, so the latency and correctness numbers belong to the previous default.
+  The infrastructure conclusion holds either way; the per-task numbers should be
+  re-read after the merge.
+- `/readyz` answered **404 on all thirty probes**, because it is not deployed
+  yet. The soak records the 404 rather than dropping the column, so the gap is
+  visible in the artifact. The readiness-transition half of this evidence is
+  pending a redeploy, and re-running the soak afterwards is the one outstanding
+  step — not a new experiment, the same one with the column filled in.
+
+**If it had failed**, the discipline was fixed in advance: classify the phase
+first, then propose the single smallest experiment that discriminates between
+event-loop blocking, ingress, and client timeout handling — never patch a timeout
+constant or add a retry as the first move. The existing side-effect rule stands
+either way: a connection-phase failure that provably never reached the server may
+be retried; an ambiguous read timeout must not be, because execution may already
+have started.
