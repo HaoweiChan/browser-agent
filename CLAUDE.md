@@ -34,6 +34,16 @@ graphify-out/      knowledge graph — graph.html / graph.json / GRAPH_REPORT.md
                    cost.json / manifest.json tracked, cache/ ignored; /graphify --update
 ```
 
+## Gate
+
+The objective pass/fail for this repo. pr-loop, the hooks, and any reviewer
+run exactly these, in order:
+
+```bash
+python3 -m evals.run --suite invariant   # pass: 100%
+python3 -m evals.run --suite fast        # pass: score >= .eval-baseline.json
+```
+
 ## Commands
 
 ```bash
@@ -91,7 +101,7 @@ For a full tasks/TODO.md task that should end in a PR, run the loop through
 implement → gate → review → repair with subagents (implementer in a worktree,
 pr-reviewer with fresh context); the human only writes the spec and merges.
 The PR carries role-tagged structured findings and an evidence pack — never
-agent chatter. Protocol: `.claude/skills/pr-loop/SKILL.md`.
+agent chatter. Protocol: the groundwork plugin's `pr-loop` skill (see `.groundwork-version` for the pinned upstream).
 
 ## Adding a task
 
