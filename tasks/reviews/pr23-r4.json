@@ -1,0 +1,115 @@
+{
+  "round": 4,
+  "reviewed": "d0e2f81..4ed4b08 — the N1 repair, the merge of origin/main with three hand-resolved conflicts, and the README case-count fix. Round 3+ reviews the repair diff plus the standing findings, not a fresh full-diff sweep.",
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 34/34 = 1.000 (7.81s) · fast 102/102 = 1.000 (59.7s, exit 0) · $0.0000 — run by the reviewer on 4ed4b08, not taken on report",
+  "verifications": [
+    {
+      "id": "R1",
+      "status": "verified",
+      "evidence": "Not regressed by the merge — src/browser/server.py:360 (`min-width:0` on the input) and :390 (`.hd > code { min-width:0; overflow-wrap:anywhere }`) are untouched by d0e2f81..4ed4b08 (server.py is absent from the diffstat). Live measurement of `ui-rendered-narrow` on the merged tree: dark and light both `inner_width: 390, document_width: 390`. Mutation proof it can still go red: replacing line 390 with `.hd > code { }` yields `passed=false, dark_overflow {document_width: 665, inner_width: 390}` and the same for light."
+    },
+    {
+      "id": "R2",
+      "status": "verified",
+      "evidence": "Merged tree measures effective placeholder contrast 7.26:1 dark (rgb(145,160,173) on rgb(9,13,19)) and 5.18:1 light (rgb(83,96,106) on rgb(233,230,220)), both >= the case's 4.5 minimum. Mutation proof: changing src/browser/server.py:363 to `color-mix(in srgb, var(--dim) 60%, transparent)` drops it to 3.28 dark / 2.42 light and the case fails, so the alpha-compositing path in the grader (eval_adapter.py:2004-2017) is live."
+    },
+    {
+      "id": "R3",
+      "status": "verified",
+      "evidence": "`re.findall(r'\\$\\(\"([^\"]+)\"\\)', server.py)` yields exactly {budgets, err, go, limits, live, matrix, result, runid, status, steps, task, url} — 12 ids — and evals/adversarial/ui-tinboker-style.json `input.ids` lists all 12. Mutation proof the grader asserts them rather than mentioning them: renaming `id=\"budgets\"`, `id=\"runid\"` and `id=\"status\"` in server.py each turns the case red with `missing_hook_ids`."
+    },
+    {
+      "id": "N1",
+      "status": "verified",
+      "evidence": "evals/adversarial/ui-rendered-narrow.json now reads `\"suites\": [\"fast\"]` (the only change in that file across d0e2f81..4ed4b08). Independently confirmed by running both suites on the merged tree: `--suite invariant` selects 34 cases, `ui-rendered-narrow` is not among them, result 34/34 = 1.000 in 7.81s; `--suite fast` selects 102 and prints `[PASS] ui-rendered-narrow (adversarial, 0.31s)`, result 102/102 = 1.000 in 59.7s, exit 0 against `.eval-baseline.json` fast=1.0. Rendered coverage is retained in `fast` (see R1/R2 mutation evidence, both run through this case). Caveat filed separately as R7: the invariant suite still requires Chromium for six inherited cases, so the retag closes the instance, not the class."
+    },
+    {
+      "id": "merge/history.jsonl",
+      "status": "verified",
+      "evidence": "294 lines at fcdc6b0 vs a 296-line naive union of the parents (180 + 273). The 3 lines present only in the branch parent (20260816-223444, 20260816-225140, 20260817-005722 live) were deliberately deleted on main in d5849c8 and are present in the merge base 80870f0, so the 3-way result correctly honours the deletion rather than resurrecting them. One line not in either parent (20260822-003338, fast, sha 7e33c13, 96/96, 80.89s) is a real post-repair run appended to the working tree before the merge was committed, timestamp-consistent with its neighbours. Zero exact-duplicate lines; `ts` is strictly non-decreasing across all 294 lines."
+    },
+    {
+      "id": "merge/ADR-renumber",
+      "status": "verified",
+      "evidence": "15 ADR files, numbers 000-014 with no gap and no duplicate; INDEX.md has exactly 15 `- ADR-NNN` entries and each number matches its file. Graded and green: `adr-header-and-index` (kind `adr-header-index`, suites fast+invariant) checks number-matched INDEX membership and passes in both suites. Every remaining `ADR-013` reference in src/, evals/, docs/, README.md, .github/ and specs/ resolves to main's wall-clock ADR; the only `ADR-013`-as-tinboker references are in the frozen review artifact tasks/reviews/pr23-r1.json:29 (round-1 evidence, pre-renumber) and the deliberate \"written as ADR-013, shipped as ADR-014\" note in tasks/TODO.md. ADR-014's own header, Ruling and Enforced-by lines are self-consistent."
+    },
+    {
+      "id": "merge/tasks-TODO.md",
+      "status": "verified",
+      "evidence": "No duplicate ids and no Queue/Debt block was lost: the merged TODO is branch-M18 plus every one of main's blocks, with M9 and M12 correctly retired to tasks/DONE.md. Two artifact cross-links do not resolve — filed as R9."
+    },
+    {
+      "id": "merge/eval_adapter.py",
+      "status": "verified",
+      "evidence": "No conflict markers, no duplicate top-level `def` or module-level assignment; `KINDS` registers both `ui-style` and `ui-rendered`. The UI cases exercise what they claim: `_run_ui_style_case` fails on any missing `$()` id (3 mutations red, see R3) and `_run_ui_rendered_case` fails on both overflow and contrast (2 mutations red, see R1/R2). Shared-browser lifecycle: `_run_ui_rendered_case` does NOT participate — it runs `asyncio.run` on its own loop with its own driver and browser. That is not a correctness break (both suites are green, `_await` uses the explicit `_LOOP` object so `asyncio.run`'s `set_event_loop(None)` cannot clobber it, and `_shutdown` is state-guarded), but it is an undeclared exception to ADR-013 Decision 1 with a measurable wall-clock cost — filed as R5."
+    },
+    {
+      "id": "gate",
+      "status": "verified",
+      "evidence": "Run by the reviewer on 4ed4b08 in the worktree with the main repo's venv on PATH: `python3 -m evals.run --suite invariant` -> 34/34 = 1.000, wall 7.81s, $0.0000. `python3 -m evals.run --suite fast` -> 102/102 = 1.000, wall 59.7s, $0.0000, exit 0, against `.eval-baseline.json` {\"fast\": 1.0}. README's 102/112 counts match `load_cases` exactly (fast 102, invariant 34, live 9, full 10, all 112 = 20 golden + 92 adversarial), and the red-first evidence for that fix is committed (evals/report/20260822-003621-invariant.json and -003633 both fail `docs-numbers-are-derived` with `readme_does_not_say: 'offline gate: 102 cases...'`). history.jsonl was restored to HEAD after the reviewer's runs; worktree left clean."
+    }
+  ],
+  "findings": [
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "A published number in a document of record is wrong — README's own committed reports contradict its \"Where it stands\" block.",
+      "claim": "The README case-count fix updated the three graded count lines but left the adjacent \"Latest offline baseline\" block publishing the pre-merge eval set, so the branch's document of record is contradicted by the branch's own committed reports.",
+      "evidence": "README.md:52-56 says `Latest offline baseline — evals/report/20260821-224446-fast.json` / `fast  98/98    invariant  30/30    live  9/9    $0.0000    59.4s`. That report is 98 results at 59.35s (a main-only sha). The same commit 4ed4b08 edited README.md:38 and :255 to 102/112. The branch commits newer reports at its own head: evals/report/20260822-003801-fast.json is 102 results at 60.28s and evals/report/20260822-003633-invariant.json is 34 results. Reviewer's own run on the merged tree: fast 102/102 in 59.7s, invariant 34/34. `docs-numbers-are-derived` only grades the three quoted strings in its `readme_quotes` (evals/adversarial/docs-numbers-are-derived.json:8-12), so lines 52-56 are ungraded and drifted the moment the merge landed. README.md:61 (\"seven runs of the merged tree measured 59.35-60.16s\") describes M12's merged tree, not this one, whose recorded band is 59.62-60.28s.",
+      "repro": "export PATH=\"/Users/willy/Documents/browser-agent/.venv/bin:$PATH\"; cd /private/tmp/groundwork-M18.0cROvS/worktree; sed -n '50,62p' README.md; python3 -c \"import json;d=json.load(open('evals/report/20260822-003801-fast.json'));print(d['suite'],len(d['results']),d['totals']['wall_seconds'])\"",
+      "acceptance": "README's \"Where it stands\" block cites a report committed on this branch and its numbers equal that report's `len(results)` and `totals.wall_seconds`, or `docs-numbers-are-derived` is extended to recompute that block so it reddens on drift the way the count lines already do."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "Undeclared exception to a standing ADR ruling, on a suite whose ceiling this branch's own committed gate run breached; the recovered 0.21s is ~3/4 of that overrun, so it bears directly on whether the gate is red.",
+      "claim": "The branch's new `ui-rendered` case opts out of ADR-013 Decision 1's shared-Chromium ruling — it starts its own Playwright driver and launches its own browser on every invocation — costing ~0.21s more than the shared path on a suite whose ceiling this branch's own committed gate run already breached.",
+      "evidence": "src/browser/eval_adapter.py:1981-1992 (`async with async_playwright() as pw:` / `browser = await pw.chromium.launch(...)`) and :2035 (`asyncio.run(go())`), bypassing the module's `_browser()`/`_await()` shared browser and loop at :99-127. INDEX.md's ADR-013 line rules \"the suite shares one Chromium (own BrowserContext per run, re-launched if it dies)\"; the one sanctioned exception is documented in `_run_agent`'s docstring (:161-164, `agent-launches-its-own-browser`) — this case has no such statement. Measured on the merged tree with the shared browser already warm: own-playwright 0.291 / 0.293 / 0.288 s; the same two renders through `_browser()` + `new_context()` 0.076 / 0.074 / 0.075 s. The branch's committed report evals/report/20260822-003801-fast.json is 60.28s against WALL_BUDGET_S={'fast':60} (evals/run.py:80), and evals/run.py:260-266 returns 1 on that — the recovered 0.21s is ~3/4 of that run's overrun.",
+      "repro": "export PATH=\"/Users/willy/Documents/browser-agent/.venv/bin:$PATH\"; cd /private/tmp/groundwork-M18.0cROvS/worktree; python3 -c \"\nimport json,time\nfrom src.browser import eval_adapter as A\nA._await(A._browser())\nc=json.load(open('evals/adversarial/ui-rendered-narrow.json'))\nt=time.time(); A.run_case(c); print('own', round(time.time()-t,3))\"; git checkout -- evals/report/history.jsonl",
+      "acceptance": "`_run_ui_rendered_case` renders through `_browser()` + a per-case `new_context(viewport=..., color_scheme=...)` on the shared `_LOOP` (the grader's assertions and both mutation reds are unchanged), or ADR-014 and the case's `triage` state why this case must own its browser, the way `agent-launches-its-own-browser` does."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "The PR body is the document a human reads to decide the merge, and every number in it is falsified by the head it describes. Owned by the orchestrator, not the implementer — the rolling evidence pack is rewritten after every gate run and every review.",
+      "claim": "The PR body's Verification block is falsified by the branch head it describes: every number, the base sha, the debt line and the N1 disposition are pre-merge, and it does not disclose that the branch's own committed gate run at the merge commit is over the now-enforced 60s ceiling.",
+      "evidence": "`gh pr view 23 --json body` still says \"Gate: pass — 2026-08-21 — invariant 32/32, fast 96/96\", \"Base: main@80870f0\", \"Debt: M12 (pre-existing fast-suite wall-clock budget breach; observed here at 80.75s)\" and \"`N1` ... **Decision**: circuit breaker — awaiting human choice\". At 4ed4b08: invariant is 34 cases and fast is 102 (verified by run), the merge base is main@a467458 (fcdc6b0^2), M12 is closed in tasks/DONE.md with the ceiling enforced at 60s local, evals/adversarial/ui-rendered-narrow.json now reads `\"suites\": [\"fast\"]` so N1 is repaired, and evals/report/20260822-003801-fast.json records 102/102 at 60.28s — a run `evals/run.py:260-266` exits 1 on (the report exists only because `over_budget` forced the red-report path, evals/run.py:218-224). The honest characterisation is that the branch straddles the ceiling (60.28 / 59.69 / 59.83 / 59.62 / 59.79 / 59.85 committed, 59.70 measured by the reviewer = 1 of 7 over) and adds ~0.3s to the band, not that M12 is open debt at 80.75s.",
+      "repro": "cd /private/tmp/groundwork-M18.0cROvS/worktree && gh pr view 23 --json body -q .body; export PATH=\"/Users/willy/Documents/browser-agent/.venv/bin:$PATH\"; python3 -m evals.run --suite fast; git checkout -- evals/report/history.jsonl",
+      "acceptance": "The PR body's Verification block reports the gate at the current head (invariant 34/34, fast 102/102), names main@a467458 as the base, drops the closed-M12 debt line, records N1 as repaired, and states the post-merge wall-clock band including the 60.28s over-ceiling run rather than omitting it."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "route_reason": "LOW — routed per the scope rule. The one overstated sentence in the committed r3 resolution artifact is corrected in this round as an honesty fix to a document of record; the graded-purity case it asks for is the debt.",
+      "claim": "The N1 repair is narrower than the premise it was accepted on, and the resolution artifact overstates it: the `invariant` suite still needs a real Chromium in six cases, so \"invariant is pure code, no browser\" is not restored — only the newest violation was retagged, and nothing grades the rule.",
+      "evidence": "tasks/reviews/pr23-r3-resolution.json:9 claims the fix retains coverage \"without an invariant Playwright import\". With a broken browser path the invariant suite drops to 28/34: ablation-env-failure-is-a-result, contract-trace-schema, observe-content-survives-chrome, readyz-tracks-the-run-slot, supersede-never-dangles and url-guard-holds-after-navigation all fail. `_check_supersede_dangling` (src/browser/eval_adapter.py:2051-2079) calls `_run_agent` without `own_browser`, which routes to `_browser()` at :166. These six are inherited from main, but they make the resolution's green sentence untrue of the suite, and no case reddens if `ui-rendered-narrow` is retagged back into `invariant`.",
+      "repro": "export PATH=\"/Users/willy/Documents/browser-agent/.venv/bin:$PATH\"; cd /private/tmp/groundwork-M18.0cROvS/worktree && PLAYWRIGHT_BROWSERS_PATH=/nonexistent-browsers python3 -m evals.run --suite invariant --no-report 2>&1 | grep -E \"^\\[FAIL\\]|suite 'invariant'\"; git checkout -- evals/report/history.jsonl",
+      "acceptance": "Either the resolution's `green` text is narrowed to \"this case no longer imports Playwright in invariant; six other invariant cases still launch Chromium (pre-existing, tracked as debt)\", or a case grades the invariant suite's purity so the retag cannot silently reverse."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "route_reason": "LOW, and inherited byte-identical from main rather than introduced by the hand resolution — not this PR's to fix.",
+      "claim": "specs/decisions/INDEX.md's ADR-002 line still publishes the withdrawn 70s local ceiling, contradicting ADR-002 itself and INDEX's own ADR-013 line.",
+      "evidence": "specs/decisions/INDEX.md:11 — \"fast wall clock <= each environment's own measured ceiling (70s local, 80s CI — ADR-013 Decisions 3 and 4)\" vs INDEX.md:22 \"60s locally (a straddling band briefly moved it to 70s, withdrawn the same day ...)\", specs/decisions/ADR-002-performance-thresholds.md:4 \"60s locally, 80s on CI\", and evals/run.py:80 `WALL_BUDGET_S = {\"fast\": 60}`. Inherited: byte-identical to `git show fcdc6b0^2:specs/decisions/INDEX.md` line 11, so the hand resolution did not introduce it — but INDEX.md was one of the three hand-resolved files in this diff and `adr-header-and-index` only checks numbers, never the prose.",
+      "repro": "cd /private/tmp/groundwork-M18.0cROvS/worktree && sed -n '11p;22p' specs/decisions/INDEX.md && sed -n '80p' evals/run.py",
+      "acceptance": "INDEX.md:11 reads \"60s local, 80s CI\", matching ADR-002:4, INDEX.md:22 and `WALL_BUDGET_S`."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "route_reason": "LOW — routed per the scope rule. The M18->M27 renumber this PR performed is cross-linked in TODO.md; repointing frozen artifacts from merged PRs is separate work.",
+      "claim": "Task-id bookkeeping around the M18/M27 renumber leaves two artifacts pointing at ids that no longer resolve.",
+      "evidence": "tasks/reviews/pr21-r1-resolution.json:32 still routes the soak finding to `{\"id\": \"M18\", \"origin\": \"PR #21 R1\"}` while that block is now tasks/TODO.md `### M27`; TODO.md documents the renumber but the artifact is not cross-linked, so a reader following pr21-r1-resolution lands on the TinBoker restyle. Separately, tasks/reviews/pr21-r2-resolution.json:11 routes R14 to `debt_id: \"M24\"` and no `### M24` block exists in tasks/TODO.md on this branch or on `fcdc6b0^2` (inherited from main). No duplicate ids and no Queue/Debt block was lost: the merged TODO is branch-M18 plus every one of main's blocks, with M9 and M12 correctly retired to tasks/DONE.md.",
+      "repro": "cd /private/tmp/groundwork-M18.0cROvS/worktree && grep -n '\"M18\"\\|M24' tasks/reviews/pr21-r*.json && grep -nE '^### (M24|M27)' tasks/TODO.md",
+      "acceptance": "pr21-r1-resolution.json's debt id reads M27 (or carries a `renumbered_to` field), and M24 either exists in TODO.md or the pr21-r2 routing is corrected."
+    }
+  ]
+}

@@ -49,17 +49,25 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260821-224446-fast.json`, with
-`…-170753-invariant.json` and `…-164456-live.json`:
+Latest offline baseline — `evals/report/20260822-010408-fast.json`, with
+`evals/report/20260822-010308-invariant.json` and
+`evals/report/20260821-164456-live.json`:
 
 ```
-fast  98/98    invariant  30/30    live  9/9    $0.0000    59.4s
+fast  102/102    invariant  34/34    live  9/9    $0.0000    59.6s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 14/14 · 4 replans
 ```
 
+Every number in that block is recomputed from those three report files by
+`docs-numbers-are-derived`, so it can only go stale by citing a stale report —
+which is how it went stale last time (PR #23 R4).
+
 That is this machine, where seven runs of the merged tree measured
-**59.35-60.16s**. The same suite on CI (ubuntu-latest) measured
+**59.62 / 59.69 / 59.70 / 59.79 / 59.83 / 59.85 / 60.28s** — one of the seven
+over the 60s ceiling, and that run exited non-zero for exactly that reason. The
+two runs since (`ui-rendered` moved back onto the shared Chromium, PR #23 R5)
+measured **59.56 / 59.60s**. The same suite on CI (ubuntu-latest) measured
 **59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
 on byte-identical code, which is why the wall-clock ceiling is per-environment
 rather than one number pretending to be portable. CI's ceiling is the slowest

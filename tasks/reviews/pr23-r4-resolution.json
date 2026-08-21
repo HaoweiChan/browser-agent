@@ -1,0 +1,48 @@
+{
+  "review": "pr23-r4",
+  "result": "FIXED",
+  "gate": "invariant 34/34 = 1.000 (7.29s) · fast 102/102 = 1.000 (59.2s, exit 0) · $0.0000 — run by the implementer on the repair tree",
+  "resolutions": [
+    {
+      "id": "R4",
+      "disposition": "fixed",
+      "case_id": "docs-numbers-are-derived",
+      "note": "Took the second half of the acceptance: the case now recomputes README's \"Where it stands\" block from the three reports the block itself cites — the citation strings, passed/total per suite, cost, wall clock, and the recovery/mutation/diagnosis line — so the block can only go stale by citing a stale report, which the citation check makes visible. The block's numbers were then fixed to the branch's own committed reports (evals/report/20260822-010408-fast.json 102/102 at 59.56s, 20260822-010308-invariant.json 34/34, 20260821-164456-live.json 9/9), both committed at this branch's head, and README.md's wall-clock band was corrected from M12's merged tree to this one.",
+      "red": "run_case(docs-numbers-are-derived) against README at 4ed4b08 → passed=False, wrong.docs = [{readme_does_not_cite: 20260822-010408-fast.json}, {readme_does_not_cite: 20260822-010308-invariant.json}, {readme_does_not_cite: 20260821-164456-live.json}, {readme_does_not_say: 'fast  102/102', from: 20260822-010408-fast.json}, {readme_does_not_say: 'invariant  34/34', from: 20260822-010308-invariant.json}, {readme_does_not_say: '59.6s', from: 20260822-010408-fast.json}]; the suite run shows [FAIL] docs-numbers-are-derived (adversarial, 0.02s).",
+      "green": "After the README fix: passed=True, wrong.docs = []. Suite: invariant 34/34 = 1.000, fast 102/102 = 1.000.",
+      "band_correction": "README.md previously said \"seven runs of the merged tree measured 59.35-60.16s\", which describes M12's merged tree. This branch's recorded band is 59.62 / 59.69 / 59.70 / 59.79 / 59.83 / 59.85 / 60.28s — one of the seven over the 60s ceiling, and that run exited non-zero for exactly that reason. Both facts are now in README, together with the two post-R5 runs at 59.56 / 59.60s."
+    },
+    {
+      "id": "R5",
+      "disposition": "fixed",
+      "case_id": "ui-rendered-narrow",
+      "note": "Took the first half of the acceptance: `_run_ui_rendered_case` now renders on the suite's shared Chromium via `_browser()` with one `new_context(viewport=..., color_scheme=...)` per scheme on the shared `_LOOP`, instead of starting its own Playwright driver and launching its own browser per invocation. `viewport` and `color_scheme` are context options, so the grader's assertions are byte-identical. No ADR-014 exception was written because none is needed.",
+      "red": "Both mutation reds re-verified on the shared-browser implementation, unchanged from the reviewer's measurements. (a) server.py's `.hd > code { min-width:0; overflow-wrap:anywhere }` emptied to `.hd > code { }` → passed=False, dark_overflow {document_width: 665, inner_width: 390} and light_overflow {document_width: 665, inner_width: 390}. (b) `input::placeholder { color:var(--dim) }` changed to `color-mix(in srgb, var(--dim) 60%, transparent)` → passed=False, dark_placeholder_contrast {got: 3.28, minimum: 4.5} and light_placeholder_contrast {got: 2.42, minimum: 4.5}. server.py restored to HEAD after each (git diff clean).",
+      "green": "Unmutated: passed=True, wrong={}. Timed three times with the shared browser already warm: 0.129 / 0.182 / 0.101s, against the 0.291 / 0.293 / 0.288s the reviewer measured for the own-browser path. Suite wall clock across the repair: 59.56 / 59.60 / 59.2s, against 60.28s on the branch's committed pre-repair run.",
+      "sibling_case": "`agent-launches-its-own-browser` did NOT miss this and was not widened. It grades `run_task(browser=None)` — the production launch branch every real caller takes — and `ui-rendered-narrow` never routes through `run_task`, so no scope it could reasonably have had would have caught this. What is missing is a check on the eval harness's own renderers; logged as debt T-R24, not fixed here."
+    },
+    {
+      "id": "R6",
+      "disposition": "orchestrator",
+      "note": "Not the implementer's to take — the PR body's rolling Verification block is rewritten by the orchestrator after every gate run. Two facts the rewrite now has: the branch head is 34 invariant / 102 fast cases, and the 60.28s ceiling breach the reviewer asks the body to disclose is closed by the R5 repair — three post-repair fast runs measured 59.56 / 59.60 / 59.2s, all exit 0."
+    },
+    {
+      "id": "R7",
+      "disposition": "debt",
+      "debt_id": "T-R24",
+      "note": "The graded-purity case is the debt. The overstated sentence in tasks/reviews/pr23-r3-resolution.json's `green` field was narrowed in this round — it now claims only what it verified (ui-rendered-narrow is out of the invariant suite), and a `narrowed_by` field records that six inherited cases still need a real Chromium. Re-measured here: PLAYWRIGHT_BROWSERS_PATH=/nonexistent-browsers python3 -m evals.run --suite invariant → 28/34 = 0.824, failing exactly ablation-env-failure-is-a-result, contract-trace-schema, observe-content-survives-chrome, readyz-tracks-the-run-slot, supersede-never-dangles, url-guard-holds-after-navigation."
+    },
+    {
+      "id": "R8",
+      "disposition": "debt",
+      "debt_id": "T-R25",
+      "note": "Logged rather than fixed by instruction. The one-word edit to specs/decisions/INDEX.md:11 is not the point — a guard that reads the ceiling out of `WALL_BUDGET_S` instead of out of prose is, and `adr-header-and-index` checks only numbers. Confirmed still present at this head."
+    },
+    {
+      "id": "R9",
+      "disposition": "debt",
+      "debt_id": "T-R26",
+      "note": "Logged rather than fixed by instruction. Same root cause as T-ADR-NUM's fourth instance (\"next free\" id allocation across concurrent branches); the block says to fix them together."
+    }
+  ]
+}

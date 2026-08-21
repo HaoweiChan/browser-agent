@@ -1979,60 +1979,64 @@ def _run_ui_style_case(case: dict) -> dict:
 
 
 def _run_ui_rendered_case(case: dict) -> dict:
-    """Rendered narrow-screen overflow and effective placeholder contrast."""
-    from playwright.async_api import async_playwright
+    """Rendered narrow-screen overflow and effective placeholder contrast.
 
+    Renders on the suite's shared Chromium (ADR-013 Decision 1) with one
+    BrowserContext per colour scheme -- `viewport` and `color_scheme` are
+    context options, so owning a browser bought nothing and cost 0.29s per
+    invocation against 0.075s here, on a suite whose wall clock is the gate
+    (PR #23 R5).
+    """
     inp = case["input"]
     page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
     page_html = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
 
     async def go():
         results = {}
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch(args=["--no-sandbox"])
-            for scheme in inp["schemes"]:
-                page = await browser.new_page(
-                    viewport={"width": inp["viewport_width"], "height": 844},
-                    color_scheme=scheme)
-                await page.set_content(page_html)
-                results[scheme] = await page.evaluate("""(targetLength) => {
-                  document.getElementById("live").hidden = false;
-                  document.getElementById("steps").innerHTML = stepEl({
-                    i:1, action:"extract", value:"x".repeat(targetLength),
-                    ms:1, postcondition_ok:true
-                  });
-                  const rgba = (css) => {
-                    const values = (css.match(/[0-9]*[.]?[0-9]+/g) || []).map(Number);
-                    if (css.startsWith("color(srgb")) {
-                      return [values[0] * 255, values[1] * 255, values[2] * 255,
-                              values.length > 3 ? values[3] : 1];
-                    }
-                    return [values[0], values[1], values[2],
-                            values.length > 3 ? values[3] : 1];
-                  };
-                  const input = document.getElementById("task");
-                  const foreground = rgba(getComputedStyle(input, "::placeholder").color);
-                  const background = rgba(getComputedStyle(input).backgroundColor);
-                  const effective = foreground.slice(0, 3).map(
-                    (channel, i) => channel * foreground[3] + background[i] * (1 - foreground[3]));
-                  const luminance = (rgb) => rgb.map(channel => channel / 255)
-                    .map(channel => channel <= .04045 ? channel / 12.92
-                      : Math.pow((channel + .055) / 1.055, 2.4))
-                    .reduce((sum, channel, i) => sum + channel * [.2126,.7152,.0722][i], 0);
-                  const a = luminance(effective), b = luminance(background.slice(0, 3));
-                  return {
-                    inner_width: innerWidth,
-                    document_width: document.documentElement.scrollWidth,
-                    placeholder_contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05),
-                    placeholder_color: getComputedStyle(input, "::placeholder").color,
-                    input_background: getComputedStyle(input).backgroundColor
-                  };
-                }""", inp["target_length"])
-                await page.close()
-            await browser.close()
+        browser = await _browser()
+        for scheme in inp["schemes"]:
+            context = await browser.new_context(
+                viewport={"width": inp["viewport_width"], "height": 844},
+                color_scheme=scheme)
+            page = await context.new_page()
+            await page.set_content(page_html)
+            results[scheme] = await page.evaluate("""(targetLength) => {
+              document.getElementById("live").hidden = false;
+              document.getElementById("steps").innerHTML = stepEl({
+                i:1, action:"extract", value:"x".repeat(targetLength),
+                ms:1, postcondition_ok:true
+              });
+              const rgba = (css) => {
+                const values = (css.match(/[0-9]*[.]?[0-9]+/g) || []).map(Number);
+                if (css.startsWith("color(srgb")) {
+                  return [values[0] * 255, values[1] * 255, values[2] * 255,
+                          values.length > 3 ? values[3] : 1];
+                }
+                return [values[0], values[1], values[2],
+                        values.length > 3 ? values[3] : 1];
+              };
+              const input = document.getElementById("task");
+              const foreground = rgba(getComputedStyle(input, "::placeholder").color);
+              const background = rgba(getComputedStyle(input).backgroundColor);
+              const effective = foreground.slice(0, 3).map(
+                (channel, i) => channel * foreground[3] + background[i] * (1 - foreground[3]));
+              const luminance = (rgb) => rgb.map(channel => channel / 255)
+                .map(channel => channel <= .04045 ? channel / 12.92
+                  : Math.pow((channel + .055) / 1.055, 2.4))
+                .reduce((sum, channel, i) => sum + channel * [.2126,.7152,.0722][i], 0);
+              const a = luminance(effective), b = luminance(background.slice(0, 3));
+              return {
+                inner_width: innerWidth,
+                document_width: document.documentElement.scrollWidth,
+                placeholder_contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05),
+                placeholder_color: getComputedStyle(input, "::placeholder").color,
+                input_background: getComputedStyle(input).backgroundColor
+              };
+            }""", inp["target_length"])
+            await context.close()
         return results
 
-    got = asyncio.run(go())
+    got = _await(go())
     wrong = {}
     for scheme, rendered in got.items():
         if rendered["document_width"] > rendered["inner_width"]:
@@ -2340,6 +2344,14 @@ def _run_doc_counts_case(case: dict) -> dict:
     is counted by hand here: suite sizes come from the runner's own `load_cases`,
     and D8's range is recomputed from the reports D8 itself cites — so the next
     case added to the suite turns this red instead of quietly aging the prose.
+
+    README's "Where it stands" block is recomputed the same way, from the three
+    reports it names: it drifted the moment M18's merge landed, because only the
+    three count strings were graded and the baseline block beside them still
+    published the pre-merge run (PR #23 R4). Every number there — passed/total
+    per suite, cost, wall clock, and the recovery/mutation/diagnosis line — is
+    read out of those report files, so the block can only be stale by citing a
+    stale report, which the citation check makes visible.
     """
     from evals.run import ROOT as RUN_ROOT
     from evals.run import load_cases
@@ -2351,6 +2363,37 @@ def _run_doc_counts_case(case: dict) -> dict:
         want = quote.format(**counts)
         if want not in readme:
             wrong.append({"readme_does_not_say": want})
+
+    ws = inp.get("where_it_stands")
+    if ws:
+        reports = {}
+        for suite, rid in ws["reports"].items():
+            path = RUN_ROOT / "evals" / "report" / rid
+            if not path.is_file():
+                wrong.append({"cites_a_report_that_does_not_exist": rid})
+                continue
+            reports[suite] = json.loads(path.read_text())
+            if f"evals/report/{rid}" not in readme:
+                wrong.append({"readme_does_not_cite": rid})
+        for suite, rep in reports.items():
+            n = len(rep["results"])
+            want = f"{suite}  {sum(1 for r in rep['results'] if r['passed'])}/{n}"
+            if want not in readme:
+                wrong.append({"readme_does_not_say": want, "from": ws["reports"][suite]})
+        head = reports.get(ws["headline"])
+        if head:
+            t, m = head["totals"], head["metrics"]
+            for want in (f"${t['llm_usd']:.4f}", f"{t['wall_seconds']:.1f}s",
+                         f"recovery {m['recovery_verified']}/{m['recovery_expected']} verified"
+                         f" ({m['recovery_rungs']} rungs tried)",
+                         f"mutation {m['mutation_passed']}/{m['mutation_cases']} passed,"
+                         f" {m['mutation_recovered']} recovered"
+                         f" ({m['mutation_relocated']} by relocating)",
+                         f"diagnosis {m['diagnosis_correct']}/{m['diagnosis_cases']}"
+                         f" · {m['replans']} replans"):
+                if want not in readme:
+                    wrong.append({"readme_does_not_say": want,
+                                  "from": ws["reports"][ws["headline"]]})
 
     d8 = inp.get("d8")
     if d8:

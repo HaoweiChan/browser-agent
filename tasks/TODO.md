@@ -290,6 +290,71 @@ deployment fault without ever letting it count as a clean completion.
 Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence.
 
+### T-R24 — nothing grades which browser an eval case is allowed to use            [status: todo]
+Origin: PR #23 R7 (LOW, routed debt by the reviewer)
+Spec (claim): the N1 repair is narrower than the premise it was accepted on, and
+the resolution artifact overstated it: the `invariant` suite still needs a real
+Chromium in six cases, so "invariant is pure code, no browser" is not restored —
+only the newest violation was retagged, and nothing grades the rule.
+Evidence: `tasks/reviews/pr23-r3-resolution.json` claimed the fix retains
+coverage "without an invariant Playwright import". With a broken browser path the
+invariant suite drops to 28/34: `ablation-env-failure-is-a-result`,
+`contract-trace-schema`, `observe-content-survives-chrome`,
+`readyz-tracks-the-run-slot`, `supersede-never-dangles` and
+`url-guard-holds-after-navigation` all fail. `_check_supersede_dangling`
+(`src/browser/eval_adapter.py`) calls `_run_agent` without `own_browser`, which
+routes to `_browser()`. These six are inherited from main, but they make the
+resolution's green sentence untrue of the suite, and no case reddens if
+`ui-rendered-narrow` is retagged back into `invariant`.
+Repro: PLAYWRIGHT_BROWSERS_PATH=/nonexistent-browsers python3 -m evals.run --suite invariant --no-report 2>&1 | grep -E "^\[FAIL\]|suite 'invariant'"
+(reproduced in PR #23 R4 repair: 28/34, exactly those six).
+Acceptance: a case grades the invariant suite's purity so the retag cannot
+silently reverse. The R3 resolution's `green` text was narrowed in the R4 repair,
+which is the honesty half; this block is the graded half.
+Same family, same gap, found in the same round: ADR-013 Decision 1 says the suite
+shares one Chromium, and `ui-rendered-narrow` owned its own for a whole review
+round with nothing red (PR #23 R5). `agent-launches-its-own-browser` did NOT miss
+it — that case grades `run_task(browser=None)`, the production launch branch, and
+`ui-rendered-narrow` never routes through `run_task`. Do not widen that case:
+what is missing is a check on the eval harness's own renderers, not on the agent.
+
+### T-R25 — INDEX.md's ADR-002 line still publishes the withdrawn 70s local ceiling            [status: todo]
+Origin: PR #23 R8 (LOW, routed debt by the reviewer)
+Spec (claim): `specs/decisions/INDEX.md`'s ADR-002 line still publishes the
+withdrawn 70s local ceiling, contradicting ADR-002 itself and INDEX's own ADR-013
+line.
+Evidence: `specs/decisions/INDEX.md:11` — "fast wall clock ≤ each environment's
+own measured ceiling (70s local, 80s CI — ADR-013 Decisions 3 and 4)" vs
+`INDEX.md:22` "60s locally (a straddling band briefly moved it to 70s, withdrawn
+the same day ...)", `specs/decisions/ADR-002-performance-thresholds.md:4` "60s
+locally, 80s on CI", and `evals/run.py:80` `WALL_BUDGET_S = {"fast": 60}`.
+Inherited: byte-identical to `git show fcdc6b0^2:specs/decisions/INDEX.md` line
+11, so the hand resolution did not introduce it — but INDEX.md was one of the
+three hand-resolved files in this diff and `adr-header-and-index` only checks
+numbers, never the prose.
+Repro: sed -n '11p;22p' specs/decisions/INDEX.md && sed -n '80p' evals/run.py
+Acceptance: INDEX.md:11 reads "60s local, 80s CI", matching ADR-002:4,
+INDEX.md:22 and `WALL_BUDGET_S`. Held out of PR #23 deliberately: the one-word
+edit is not the point, a guard that reads the ceiling out of `WALL_BUDGET_S`
+instead of out of prose is.
+
+### T-R26 — two review artifacts route to task ids that no longer resolve            [status: todo]
+Origin: PR #23 R9 (LOW, routed debt by the reviewer)
+Spec (claim): task-id bookkeeping around the M18/M27 renumber leaves two
+artifacts pointing at ids that no longer resolve.
+Evidence: `tasks/reviews/pr21-r1-resolution.json:32` still routes the soak
+finding to `{"id": "M18", "origin": "PR #21 R1"}` while that block is now
+`tasks/TODO.md` `### M27`; TODO.md documents the renumber but the artifact is not
+cross-linked, so a reader following pr21-r1-resolution lands on the TinBoker
+restyle. Separately, `tasks/reviews/pr21-r2-resolution.json:11` routes R14 to
+`debt_id: "M24"` and no `### M24` block exists in `tasks/TODO.md` on this branch
+or on `fcdc6b0^2` (inherited from main).
+Repro: grep -n '"M18"\|M24' tasks/reviews/pr21-r*.json && grep -nE '^### (M24|M27)' tasks/TODO.md
+Acceptance: pr21-r1-resolution.json's debt id reads M27 (or carries a
+`renumbered_to` field), and M24 either exists in TODO.md or the pr21-r2 routing
+is corrected. Same root cause as T-ADR-NUM's fourth instance — fix them together
+or the next renumber re-opens this.
+
 ## Notes
 
 ### Reopen — A-phase (2026-08-17)
