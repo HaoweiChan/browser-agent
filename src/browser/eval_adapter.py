@@ -925,6 +925,36 @@ def _run_matrix_case(case: dict) -> dict:
     }
 
 
+REPORT_CITATION_SCOPE = ("docs", "specs", "tasks", "README.md", "src",
+                          "evals/golden", "evals/adversarial", ".github", "prompts")
+REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
+
+
+def _run_report_citations_case(case: dict) -> dict:
+    """Every full-report citation outside evals/report/ must resolve to a real file.
+
+    Pure code, no network. groundwork GW-008 prunes routine gate dumps out of
+    evals/report/, keeping on disk only the ones something outside that
+    directory cites as evidence — ADRs, docs, tasks, eval cases. Nothing
+    enforced that a citation stays live once the report it names is later
+    pruned or renamed; this is that guard, scanning the exact scope GW-008
+    used to decide what was prunable in the first place. Same boundary as
+    support-matrix-cites-real-cases: it checks the citation RESOLVES, not that
+    the number it's attached to is still an honest measurement.
+    """
+    root = Path(__file__).parents[2]
+    cited: set[str] = set()
+    for rel in REPORT_CITATION_SCOPE:
+        p = root / rel
+        for f in ([p] if p.is_file() else p.rglob("*") if p.is_dir() else []):
+            if not f.is_file():
+                continue
+            cited |= set(REPORT_CITATION.findall(f.read_text(encoding="utf-8", errors="ignore")))
+    missing = sorted(n for n in cited if not (root / "evals" / "report" / n).exists())
+    return {"passed": not missing, "wrong": {"missing_reports": missing},
+            "got": {"citations": len(cited)}}
+
+
 def _run_gateway_error_case(case: dict) -> dict:
     """The gateway's catch-all must return the contract shape, not a stub dict.
 
@@ -1905,6 +1935,7 @@ KINDS = {
     "invariant": _run_invariant_case,
     "matrix": _run_matrix_case,
     "matrix-drift": _run_matrix_drift_case,
+    "report-citations": _run_report_citations_case,
     "mutation": _run_mutation_case,
     "observe": _run_observe_case,
     "parse-plan": _run_parse_plan_case,

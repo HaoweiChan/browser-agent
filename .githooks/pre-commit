@@ -11,7 +11,12 @@ if git diff --cached | grep -qE 'sk-or-v1-[A-Za-z0-9]{8,}'; then
 fi
 [ -f evals/run.py ] || exit 0  # project removed the eval harness — no gate
 PY=python3; [ -x .venv/bin/python ] && PY=.venv/bin/python  # task deps live in .venv
-"$PY" -m evals.run --suite fast --baseline .eval-baseline.json --no-report
+# No --no-report: a green run writes only the history line (evals/run.py's
+# default policy); a red run (which blocks the commit below) also gets the
+# full per-case report so the failure is inspectable. The history line lands
+# in the working tree unstaged — it rides into the NEXT commit, same as any
+# other writer the vault-sync-style sweeper model expects (see ADR).
+"$PY" -m evals.run --suite fast --baseline .eval-baseline.json
 status=$?
 if [ $status -ne 0 ]; then
   echo ""
