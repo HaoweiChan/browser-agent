@@ -299,7 +299,7 @@ SMOKE_URL = "https://example.com"
 # and a form; a bundler would be more machinery than the thing it ships.
 PAGE = r"""<!doctype html>
 <meta charset="utf-8">
-<title>browser-agent</title>
+<title>Browser Agent</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#090d13">
 <style>
@@ -327,7 +327,7 @@ PAGE = r"""<!doctype html>
   * { box-sizing:border-box }
   html { min-height:100%; background:var(--bg) }
   body { margin:0; min-height:100vh; background-color:var(--bg); color:var(--fg);
-         font:13px/1.6 var(--mono); letter-spacing:-.01em;
+         font:14px/1.6 var(--mono); letter-spacing:-.01em;
          background-image:linear-gradient(var(--grid) 1px,transparent 1px),
            linear-gradient(90deg,var(--grid) 1px,transparent 1px),
            radial-gradient(900px 520px at 50% -12%,rgb(58 198 216 / .08),transparent 65%);
@@ -337,14 +337,14 @@ PAGE = r"""<!doctype html>
   header, main, footer { width:min(100% - 2.5rem,78rem); margin-inline:auto }
   header { padding:2.6rem 0 1.35rem; border-bottom:1px solid var(--line) }
   .mast { display:flex; justify-content:space-between; gap:1.5rem; align-items:flex-start }
-  .eyebrow { color:var(--amber-ink); font-size:10px; font-weight:700;
+  .eyebrow { color:var(--amber-ink); font-size:11px; font-weight:700;
          letter-spacing:.14em; text-transform:uppercase }
   .signal { color:var(--accent); border:1px solid var(--accent); padding:.16rem .45rem;
-         font-size:10px; letter-spacing:.09em; text-transform:uppercase; white-space:nowrap }
-  h1 { font-size:clamp(1.55rem,4vw,2.25rem); line-height:1.1; margin:.35rem 0 .55rem;
+         font-size:11px; letter-spacing:.09em; text-transform:uppercase; white-space:nowrap }
+  h1 { font-size:clamp(1.7rem,4.4vw,2.48rem); line-height:1.1; margin:.35rem 0 .55rem;
          letter-spacing:-.055em; font-weight:800 }
   h1::before { content:"> "; color:var(--amber-ink); font-weight:600 }
-  h2 { display:flex; align-items:center; gap:.65rem; color:var(--fg); font-size:11px;
+  h2 { display:flex; align-items:center; gap:.65rem; color:var(--fg); font-size:12px;
        text-transform:uppercase; letter-spacing:.12em; margin:2rem 0 .7rem; font-weight:700 }
   h2::after { content:""; height:1px; background:var(--line); flex:1 }
   .section-no { color:var(--amber-ink) }
@@ -353,7 +353,7 @@ PAGE = r"""<!doctype html>
   .panel { background:var(--panel); border:1px solid var(--line);
        border-radius:var(--radius); padding:1rem; box-shadow:0 18px 50px rgb(0 0 0 / .08) }
   .command { border-top:2px solid var(--amber) }
-  label { display:block; color:var(--dim); font-size:10px; font-weight:700;
+  label { display:block; color:var(--dim); font-size:11px; font-weight:700;
        letter-spacing:.1em; text-transform:uppercase; margin:0 0 .3rem }
   input, button, select { font:inherit }
   input, select { background:var(--bg); border:1px solid var(--line); color:var(--fg);
@@ -366,14 +366,14 @@ PAGE = r"""<!doctype html>
   .actions { display:flex; gap:.55rem; flex:0 0 auto }
   button { background:var(--amber); border:1px solid var(--amber); color:var(--on-amber);
        font-weight:800; border-radius:var(--radius); padding:.6rem 1rem; cursor:pointer;
-       flex:0 0 auto; text-transform:uppercase; letter-spacing:.06em; font-size:11px;
+       flex:0 0 auto; text-transform:uppercase; letter-spacing:.06em; font-size:12px;
        transition:background-color var(--speed),border-color var(--speed),color var(--speed),transform var(--speed) }
   button:not(.ghost):hover:not(:disabled) { background:color-mix(in srgb,var(--amber) 86%,var(--bg)); transform:translateY(-1px) }
   button.ghost { background:transparent; border-color:var(--accent); color:var(--accent) }
   button.ghost:hover:not(:disabled) { background:color-mix(in srgb,var(--accent) 10%,transparent) }
   button:disabled { opacity:.5; cursor:not-allowed }
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px }
-  code, pre { font-family:var(--mono); font-size:12px }
+  code, pre { font-family:var(--mono); font-size:13px }
   pre { overflow-x:auto; background:var(--bg); border:1px solid var(--line);
        border-radius:var(--radius); padding:.8rem; margin:.55rem 0 0;
        white-space:pre-wrap; word-break:break-word }
@@ -390,35 +390,35 @@ PAGE = r"""<!doctype html>
   .hd > code { min-width:0; overflow-wrap:anywhere }
   .i { color:var(--amber-ink); font-weight:700 }
   .act { font-weight:750 }
-  .badge { font-size:10px; padding:.1rem .4rem; border-radius:var(--radius);
+  .badge { font-size:11px; padding:.1rem .4rem; border-radius:var(--radius);
        border:1px solid var(--line); color:var(--dim); white-space:nowrap;
        text-transform:uppercase; letter-spacing:.04em }
   .badge.ok { color:var(--ok); border-color:var(--ok) }
   .badge.bad { color:var(--bad); border-color:var(--bad) }
   .badge.warn { color:var(--warn); border-color:var(--warn) }
   .badge.acc { color:var(--accent); border-color:var(--accent) }
-  .ms { margin-left:auto; color:var(--dim); font-size:11px }
-  details summary { cursor:pointer; color:var(--dim); font-size:11px; margin-top:.5rem;
+  .ms { margin-left:auto; color:var(--dim); font-size:12px }
+  details summary { cursor:pointer; color:var(--dim); font-size:12px; margin-top:.5rem;
        text-transform:uppercase; letter-spacing:.06em }
   details summary:hover { color:var(--accent) }
   img.shot { max-width:100%; border:1px solid var(--line); border-radius:var(--radius); margin-top:.65rem }
   .table-wrap { overflow:auto; padding:0 }
-  table { border-collapse:collapse; width:100%; min-width:42rem; font-size:12px }
+  table { border-collapse:collapse; width:100%; min-width:42rem; font-size:13px }
   th, td { border:1px solid var(--line); padding:.55rem .65rem; text-align:left; vertical-align:top }
   th { color:var(--amber-ink); font-weight:700; background:var(--raised);
-       text-transform:uppercase; font-size:10px; letter-spacing:.07em }
+       text-transform:uppercase; font-size:11px; letter-spacing:.07em }
   td.supported { color:var(--ok) } td.unreliable { color:var(--warn) }
   td.unsupported { color:var(--bad) } td.none { color:var(--dim) }
-  .note { color:var(--dim); font-size:12px }
+  .note { color:var(--dim); font-size:13px }
   #guards::before { content:"guardrails :: "; color:var(--amber-ink); font-weight:700 }
   .status-line { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin-bottom:.7rem }
-  .big { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em;
+  .big { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.08em;
        border:1px solid currentColor; padding:.17rem .45rem }
   .big.success { color:var(--ok) } .big.failure { color:var(--bad) }
   .big.unsupported { color:var(--warn) } .big.running { color:var(--accent) }
   a { color:var(--accent) }
   footer { color:var(--dim); border-top:1px solid var(--line); padding:1rem 0 2.5rem;
-       font-size:11px; display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap }
+       font-size:12px; display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap }
   @media (max-width:680px) {
     header, main, footer { width:min(100% - 1.25rem,78rem) }
     header { padding-top:1.8rem }
@@ -437,7 +437,7 @@ PAGE = r"""<!doctype html>
   <div class="mast">
     <div>
       <div class="eyebrow">human-review console / browser runtime</div>
-      <h1>browser-agent</h1>
+      <h1>Browser Agent</h1>
       <p class="sub">Natural-language task &rarr; plan &rarr; execute in a real headless Chromium
       &rarr; verified result. Every attempt is traced, including the ones a recovery
       ladder replaced.</p>
@@ -488,7 +488,7 @@ PAGE = r"""<!doctype html>
 <div id="limits" class="panel table-wrap">loading&hellip;</div>
 </main>
 
-<footer><span>browser-agent / reviewer evidence surface</span><span>amber = command · cyan = interaction / recovery</span></footer>
+<footer><span>Browser Agent / reviewer evidence surface</span><span>amber = command · cyan = interaction / recovery</span></footer>
 
 <script>
 const $ = (id) => document.getElementById(id);
