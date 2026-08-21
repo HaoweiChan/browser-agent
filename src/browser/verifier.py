@@ -101,6 +101,16 @@ MIN_PAGE_CHARS = 100
 # ONLY the superlative-over-a-set shape, not "cheapest"/"most expensive"
 # (a price comparison, tracked separately — D14, `live-books-cheapest-travel`
 # — and deliberately different wording so this does not collide with it).
+# The other cost, undeclared until PR #25 R2: this fires on EVERY matching
+# task with no ground truth, including one a single extraction answers
+# correctly (a badge that states the superlative directly) — the same
+# fail-closed shape as SCOPE_BLOCK's over-refusal, and just as deliberately
+# accepted, but it went unwritten the first time this file shipped it.
+# Declared now rather than left for a third probe to find (D22,
+# docs/support-matrix.md). The ground-truth (L2) path below is untouched by
+# this guard — pinned by verifier-aggregate-ground-truth-untouched, not just
+# claimed in this comment.
+#
 # ponytail: a regex over English, same ceiling as SCOPE_BLOCK (agent.py) —
 # it can be walked around by rephrasing, same as `log ?into` was. Widen when
 # a probe finds the next phrasing, the way l5-refuse-login-contracted did.
@@ -291,7 +301,11 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     # a wrong one here — the plan vocabulary has no comparison primitive to
     # have gotten it right WITH. Ground-truth (L2) callers are untouched: if a
     # future case supplies `expect.answer` for this shape, answers_match still
-    # decides it on its own merits.
+    # decides it on its own merits — pinned by
+    # verifier-aggregate-ground-truth-untouched, which is also the case that
+    # proves a WRONG expect.answer still fails for the L2 reason, not because
+    # this guard double-fires. The cost of failing closed with no ground truth
+    # is declared, not just paid: D22, docs/support-matrix.md.
     has_ground_truth = "answer" in expect or "state" in expect
     if task and not has_ground_truth:
         check("aggregate_needs_comparison", not _AGGREGATE.search(task),

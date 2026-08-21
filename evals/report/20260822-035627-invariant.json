@@ -6,8 +6,8 @@
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 261,
-    "wall_seconds": 7.54,
+    "ms": 269,
+    "wall_seconds": 7.3,
     "latency_p50": 0.0,
     "latency_p95": 2.3,
     "cases_with_budgets": 2
@@ -20,7 +20,7 @@
     {
       "passed": true,
       "wrong": [],
-      "seconds": 1.84,
+      "seconds": 1.82,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
@@ -101,7 +101,7 @@
           "value"
         ]
       },
-      "seconds": 0.34,
+      "seconds": 0.31,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -119,11 +119,11 @@
       },
       "got": {
         "counts": {
-          "fast": 104,
-          "invariant": 36,
+          "fast": 105,
+          "invariant": 37,
           "live": 9,
           "full": 10,
-          "all": 114
+          "all": 115
         },
         "domains": {
           "books.toscrape.com": 3,
@@ -266,10 +266,10 @@
           "busy",
           "idle"
         ],
-        "during_latency_s": 0.001,
-        "run_seconds": 2.53
+        "during_latency_s": 0.004,
+        "run_seconds": 2.34
       },
-      "seconds": 2.53,
+      "seconds": 2.34,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -284,12 +284,12 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "citations": 28,
+        "citations": 29,
         "skip": [
           "29991231-235959-fast.json"
         ]
       },
-      "seconds": 0.02,
+      "seconds": 0.01,
       "id": "report-citations-resolve",
       "kind": "adversarial"
     },
@@ -298,7 +298,7 @@
       "wrong": {
         "soak": []
       },
-      "seconds": 0.07,
+      "seconds": 0.08,
       "id": "soak-counts-only-real-completions",
       "kind": "adversarial"
     },
@@ -323,8 +323,8 @@
       },
       "got": {
         "rows": 9,
-        "limitations": 59,
-        "citations": 52
+        "limitations": 61,
+        "citations": 55
       },
       "seconds": 0.0,
       "id": "support-matrix-cites-real-cases",
@@ -370,16 +370,16 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:63476/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:50519/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 147
+        "ms": 152
       },
-      "seconds": 0.15,
+      "seconds": 0.16,
       "id": "url-guard-holds-after-navigation",
       "kind": "adversarial"
     },
@@ -388,6 +388,13 @@
       "wrong": [],
       "seconds": 0.0,
       "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-aggregate-ground-truth-untouched",
       "kind": "adversarial"
     },
     {
@@ -430,7 +437,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114
+        "ms": 117
       },
       "seconds": 0.12,
       "id": "verifier-aggregate-superlative-fails-loud",
@@ -470,10 +477,10 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 350,
-        "after": 350
+        "before": 368,
+        "after": 368
       },
-      "seconds": 0.05,
+      "seconds": 0.04,
       "id": "wall-clock-probe-history-isolated",
       "kind": "adversarial"
     }

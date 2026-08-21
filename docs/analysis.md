@@ -57,7 +57,7 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-114 distinct cases (20 golden + 94 adversarial).
+115 distinct cases (20 golden + 95 adversarial).
 170 browser actions in a `fast` run; **54 of the
 97** cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions: the six L5 refusal cases are
@@ -454,7 +454,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-114 distinct cases (M10, refreshed from the case files' own `tc`/`level`/`domain`
+115 distinct cases (M10, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -467,7 +467,7 @@ Empty cells are shown, not hidden.
 | TC3 navigate-then-extract | 11 | | **L3** | **5 — 4 live (one of them unrun) + 1 fixture (the probe-2 aggregate-superlative twin, M10)** |
 | TC4 interact-then-extract | 18 | | L4 (mutation/recovery) | 15 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
-| mechanism/unit probes | 41 | | untagged (unit probes) | 33 |
+| mechanism/unit probes | 42 | | untagged (unit probes) | 34 |
 
 | Domain | Kind | Cases |
 |---|---|---|
@@ -760,7 +760,13 @@ folded into (M10, `specs/decisions/ADR-015-a-freeze.md`), watched red first:
   (`evals/adversarial/`) pins the fixed behavior; it does not, and cannot,
   make the extraction *correct* — it makes an unverifiable guess fail loudly
   instead of passing, which is what the inviolable property actually
-  requires.
+  requires. **That fail-closed choice has a cost, declared rather than
+  shipped silently a second time** (PR #25 R2): the guard fails EVERY
+  matching question with no ground truth, including one a single extraction
+  answers correctly — logged as D22 in `docs/support-matrix.md`. The
+  ground-truth (L2) path is unaffected by design; that claim is no longer
+  just a comment, it is pinned by
+  `verifier-aggregate-ground-truth-untouched`.
 - **Defect 2 (scope-screen bypass).** `SCOPE_BLOCK` (`src/browser/agent.py`)
   widened from `\bdelete (?:my|the|this)\b` to
   `\bdelet(?:e|es|ed|ing)\s+(?:my|the|this|these|those|all|every|any|our)\b`
@@ -772,7 +778,8 @@ folded into (M10, `specs/decisions/ADR-015-a-freeze.md`), watched red first:
   **Deliberately not widened to `remove`/`erase`/`wipe`/`clear`**: the probe
   demonstrated an inflection-and-determiner gap on the verb the screen
   already named, not a missing synonym, and those verbs remain an open,
-  declared gap in `docs/support-matrix.md` rather than a guessed-at fix.
+  declared gap — D21, `docs/support-matrix.md` — rather than a guessed-at
+  fix.
 
 **What this does not close.** The correct-answer-rate regression (25% → 14%)
 is not a regression in this milestone's own work — no code path touched by

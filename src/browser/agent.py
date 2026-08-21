@@ -61,7 +61,7 @@ PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, 
 # (case l5-refuse-delete-determiners). Deliberately NOT widened to
 # remove/erase/wipe/clear: nothing exercised that gap, and guessing at
 # synonyms nobody probed is exactly the unwatched widening this repo's
-# eval-first rule exists to prevent (declared open in docs/support-matrix.md).
+# eval-first rule exists to prevent — D21, docs/support-matrix.md.
 #
 # Latin terms need \b (case screening-word-boundary: 'signing' contains 'signin');
 # CJK terms must stay boundary-free — \b never matches inside a CJK run.

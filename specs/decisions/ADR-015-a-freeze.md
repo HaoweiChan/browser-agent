@@ -5,7 +5,7 @@ Status: accepted
 
 **Ruling**: the second held-out probe (criterion 5) came back RED — the inviolable property was violated, reproduced three times — and a scope-screen bypass beside it; both defects are fixed and eval-pinned in this same PR, and criterion 5 is now green offline, with live re-confirmation against the deployed URL pending the post-merge redeploy. All 6 A-exit criteria are green or (criterion 2, unchanged) honestly partial.
 **Because**: the owner's decision on the RED probe was fix-then-freeze, not freeze-with-an-open-gate — CLAUDE.md rule 2 requires every new failure to become a case before it is fixed, and the M5 precedent (commit `d3f4daf`) established that a probe's fix is verified offline first and live only after the human merges and redeploys.
-**Enforced by**: `docs-numbers-are-derived`, `report-citations-resolve`, `support-matrix-cites-real-cases`, `adr-header-and-index`, `verifier-aggregate-superlative-fails-loud`, `l5-refuse-delete-determiners`
+**Enforced by**: `docs-numbers-are-derived`, `report-citations-resolve`, `support-matrix-cites-real-cases`, `adr-header-and-index`, `verifier-aggregate-superlative-fails-loud`, `l5-refuse-delete-determiners`, `verifier-aggregate-ground-truth-untouched`
 
 ---
 
@@ -91,10 +91,10 @@ what is actually committed, not what the plan hoped for:
    omitted or reframed — the regression is not explained by anything this
    PR changed, since no code path this repair touches overlaps the tasks
    that regressed.
-6. **Gate — green.** `evals/report/20260822-032600-fast.json` and
-   `evals/report/20260822-032500-invariant.json` (cited in `README.md`'s
+6. **Gate — green.** `evals/report/20260822-035727-fast.json` and
+   `evals/report/20260822-035627-invariant.json` (cited in `README.md`'s
    "Where it stands" block, recomputed by `docs-numbers-are-derived`):
-   invariant 36/36 = 1.000, fast 104/104 = 1.000 against
+   invariant 37/37 = 1.000, fast 105/105 = 1.000 against
    `.eval-baseline.json`'s `{"fast": 1.0}`, unmoved since M1 — no
    `--update-baseline` anywhere in this milestone's history. `live` stays on
    its pre-probe citation (`evals/report/20260821-164456-live.json`, 9/9):
@@ -146,3 +146,20 @@ verdict on a superlative/aggregate question over a set; `SCOPE_BLOCK`
 inflections and a wider determiner set, the same shape as the M5 probe's
 `log ?into` fix. Owner decides submission/public once the post-merge live
 re-confirmation of both fixes lands.
+
+**Round-1 review (`tasks/reviews/pr25-r1.json`) found this ADR's own repair
+citing declarations that did not exist.** Two MEDIUMs, both repaired here,
+both routed to repair rather than debt because an undeclared cost inside the
+very PR whose subject is "a declared-but-unguarded gap gets falsified" would
+have been the same mistake a third time: **D21** (`docs/support-matrix.md`)
+declares the `remove`/`erase`/`wipe`/`clear` gap the agent.py comment and
+`docs/analysis.md` §8a-2 already claimed was declared but was not (R1);
+**D22** declares the aggregate guard's false-refusal ceiling — it fails
+every matching question with no ground truth, including one a single
+extraction answers correctly — and case
+`verifier-aggregate-ground-truth-untouched` pins the ground-truth (L2) path
+the guard's own comment claimed was untouched but nothing had proven (R2).
+Two LOWs (over-refusal on informational delete phrasing; the aggregate
+regex's own keyword ceiling) are debt, `T-R30`/`T-R31`
+(`tasks/TODO.md`) — both already the safe-direction cost of a fail-closed
+design, neither a new defect.

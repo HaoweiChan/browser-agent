@@ -410,7 +410,7 @@ def _run_verifier_case(case: dict) -> dict:
     # A probe the adapter does not understand must be loud. Silently skipping an
     # unknown key scored this case PASS while it checked nothing at all — a case
     # that proves nothing is worse than no case, because it reads as coverage.
-    unknown = set(inp) - {"kind", "compare", "anchors", "superseded"}
+    unknown = set(inp) - {"kind", "compare", "anchors", "superseded", "aggregate"}
     if unknown:
         return {"passed": False, "error": f"unknown verifier probe(s): {sorted(unknown)}"}
     for got, want, should_match in inp.get("compare", []):
@@ -454,6 +454,23 @@ def _run_verifier_case(case: dict) -> dict:
         )
         if v["checks"]["identity_anchors"] != sc["pass"]:
             wrong.append({"anchors": sc["anchors"], "should_pass": sc["pass"]})
+    # PR #25 R2: the aggregate/superlative guard (verify()'s task kwarg) is
+    # pinned FAIL-only by verifier-aggregate-superlative-fails-loud. This is
+    # the other direction -- proof that supplying expect.answer (ground truth)
+    # bypasses the guard entirely and answers_match decides on its own merits,
+    # which is what the comment above the guard in verifier.py claims and
+    # nothing previously checked.
+    for sc in inp.get("aggregate", []):
+        v = verify(
+            trace=[{"i": 1, "action": "extract", "postcondition_ok": True}],
+            extractions=[{"value": sc["value"], "page_text": sc["page_text"]}],
+            answer=sc["value"],
+            expect=sc.get("expect"),
+            task=sc["task"],
+        )
+        if (v["verdict"] == "PASS") != sc["pass"]:
+            wrong.append({"aggregate": sc["task"], "should_pass": sc["pass"],
+                          "verdict": v["verdict"], "checks": v["checks"]})
     return {"passed": not wrong, "wrong": wrong}
 
 

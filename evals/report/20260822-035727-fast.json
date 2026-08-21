@@ -6,10 +6,10 @@
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 4,
-    "ms": 51727,
-    "wall_seconds": 59.71,
+    "ms": 51768,
+    "wall_seconds": 59.5,
     "latency_p50": 0.11,
-    "latency_p95": 2.53,
+    "latency_p95": 2.35,
     "cases_with_budgets": 60
   },
   "metrics": {
@@ -34,7 +34,7 @@
       "advertised_unresolvable": [],
       "starved_by_chrome": [],
       "n_elements": 5,
-      "seconds": 0.41,
+      "seconds": 0.37,
       "id": "observe-hello-elements",
       "kind": "golden"
     },
@@ -75,7 +75,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 106
+        "ms": 111
       },
       "seconds": 0.11,
       "id": "tc1-hello-heading",
@@ -119,9 +119,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 207
+        "ms": 190
       },
-      "seconds": 0.21,
+      "seconds": 0.19,
       "id": "tc1-hello-reveal",
       "kind": "golden"
     },
@@ -164,7 +164,7 @@
         "replans": 0,
         "ms": 113
       },
-      "seconds": 0.11,
+      "seconds": 0.12,
       "id": "tc1-shop-price-near",
       "kind": "golden"
     },
@@ -248,7 +248,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 99
+        "ms": 98
       },
       "seconds": 0.1,
       "id": "tc1-shop-price",
@@ -294,7 +294,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 365
+        "ms": 366
       },
       "seconds": 0.37,
       "id": "tc2-shop-search-zh",
@@ -339,9 +339,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 247
+        "ms": 282
       },
-      "seconds": 0.25,
+      "seconds": 0.28,
       "id": "tc2-shop-search",
       "kind": "golden"
     },
@@ -383,7 +383,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 196
+        "ms": 197
       },
       "seconds": 0.2,
       "id": "tc3-shop-detail-nav-zh",
@@ -427,9 +427,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 200
+        "ms": 180
       },
-      "seconds": 0.2,
+      "seconds": 0.18,
       "id": "tc3-shop-detail-nav",
       "kind": "golden"
     },
@@ -471,7 +471,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 198
+        "ms": 200
       },
       "seconds": 0.2,
       "id": "tc4-shop-sort-cheapest",
@@ -563,7 +563,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 414
+        "ms": 416
       },
       "seconds": 0.42,
       "id": "tc5-forms-submit-zh",
@@ -611,16 +611,16 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 398
+        "ms": 363
       },
-      "seconds": 0.4,
+      "seconds": 0.37,
       "id": "tc5-forms-submit",
       "kind": "golden"
     },
     {
       "passed": true,
       "wrong": [],
-      "seconds": 1.69,
+      "seconds": 1.7,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
@@ -679,9 +679,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 360
+        "ms": 336
       },
-      "seconds": 0.36,
+      "seconds": 0.34,
       "id": "agent-launches-its-own-browser",
       "kind": "adversarial"
     },
@@ -735,9 +735,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 2,
-        "ms": 6644
+        "ms": 6733
       },
-      "seconds": 6.65,
+      "seconds": 6.74,
       "id": "budget-replans-exhausted",
       "kind": "adversarial"
     },
@@ -793,7 +793,7 @@
           "value"
         ]
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -811,11 +811,11 @@
       },
       "got": {
         "counts": {
-          "fast": 104,
-          "invariant": 36,
+          "fast": 105,
+          "invariant": 37,
           "live": 9,
           "full": 10,
-          "all": 114
+          "all": 115
         },
         "domains": {
           "books.toscrape.com": 3,
@@ -865,7 +865,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 107
+        "ms": 111
       },
       "seconds": 0.11,
       "id": "evidence-window-keeps-the-anchor",
@@ -900,7 +900,7 @@
           }
         ]
       },
-      "seconds": 0.05,
+      "seconds": 0.04,
       "id": "fast-wall-clock-budget",
       "kind": "adversarial"
     },
@@ -938,7 +938,7 @@
         "tencent/hy3",
         "deepseek/deepseek-v4-flash-0731"
       ],
-      "seconds": 0.0,
+      "seconds": 0.01,
       "id": "gateway-model-reaches-planner",
       "kind": "adversarial"
     },
@@ -1021,9 +1021,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 451
+        "ms": 395
       },
-      "seconds": 0.45,
+      "seconds": 0.4,
       "id": "l4-forms-a11y-stripped",
       "kind": "adversarial"
     },
@@ -1128,9 +1128,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 351
+        "ms": 333
       },
-      "seconds": 0.35,
+      "seconds": 0.33,
       "id": "l4-shop-a11y-stripped",
       "kind": "adversarial"
     },
@@ -1181,9 +1181,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 261
+        "ms": 230
       },
-      "seconds": 0.26,
+      "seconds": 0.23,
       "id": "l4-shop-button-text-renamed",
       "kind": "adversarial"
     },
@@ -1235,9 +1235,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 297
+        "ms": 315
       },
-      "seconds": 0.3,
+      "seconds": 0.32,
       "id": "l4-shop-duplicate-labels",
       "kind": "adversarial"
     },
@@ -1331,10 +1331,10 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 116
+        "ms": 121
       },
       "known_wrong_ground_truth": "expect.answer pins the WRONG answer this build produces; a PASS here means 'the agent reproduced the known-wrong answer', never 'the answer is correct'",
-      "seconds": 0.12,
+      "seconds": 0.13,
       "id": "l4-shop-element-reordered",
       "kind": "adversarial"
     },
@@ -1381,9 +1381,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 199
+        "ms": 204
       },
-      "seconds": 0.2,
+      "seconds": 0.21,
       "id": "l4-shop-ids-renamed",
       "kind": "adversarial"
     },
@@ -1440,7 +1440,7 @@
         "replans": 1,
         "ms": 10373
       },
-      "seconds": 10.37,
+      "seconds": 10.38,
       "id": "l4-shop-overlay-modal",
       "kind": "adversarial"
     },
@@ -1486,7 +1486,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 146
+        "ms": 148
       },
       "seconds": 0.15,
       "id": "l4-shop-render-delayed",
@@ -1536,9 +1536,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 283
+        "ms": 299
       },
-      "seconds": 0.29,
+      "seconds": 0.3,
       "id": "l4-shop-wrapper-nesting",
       "kind": "adversarial"
     },
@@ -1807,9 +1807,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 228
+        "ms": 243
       },
-      "seconds": 0.23,
+      "seconds": 0.25,
       "id": "multi-extract-list",
       "kind": "adversarial"
     },
@@ -1864,9 +1864,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 8125
+        "ms": 8137
       },
-      "seconds": 8.13,
+      "seconds": 8.14,
       "id": "nav-action-load-event-never-fires",
       "kind": "adversarial"
     },
@@ -1907,9 +1907,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4098
+        "ms": 4105
       },
-      "seconds": 4.1,
+      "seconds": 4.11,
       "id": "nav-load-event-never-fires",
       "kind": "adversarial"
     },
@@ -1950,7 +1950,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 118
+        "ms": 116
       },
       "seconds": 0.12,
       "id": "near-anchor-substring",
@@ -1993,7 +1993,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 96
+        "ms": 95
       },
       "seconds": 0.1,
       "id": "near-equidistant-is-ambiguous",
@@ -2036,9 +2036,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 118
+        "ms": 101
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "near-excludes-its-own-anchor",
       "kind": "adversarial"
     },
@@ -2079,7 +2079,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 109
+        "ms": 111
       },
       "seconds": 0.11,
       "id": "near-prefers-the-container",
@@ -2101,7 +2101,7 @@
       "advertised_unresolvable": [],
       "starved_by_chrome": [],
       "n_elements": 9,
-      "seconds": 0.05,
+      "seconds": 0.04,
       "id": "observe-name-prohibited-roles",
       "kind": "adversarial"
     },
@@ -2161,9 +2161,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2256
+        "ms": 2264
       },
-      "seconds": 2.26,
+      "seconds": 2.27,
       "id": "postcondition-compound-keys",
       "kind": "adversarial"
     },
@@ -2207,9 +2207,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 216
+        "ms": 212
       },
-      "seconds": 0.22,
+      "seconds": 0.21,
       "id": "postcondition-unverified-click",
       "kind": "adversarial"
     },
@@ -2222,10 +2222,10 @@
           "busy",
           "idle"
         ],
-        "during_latency_s": 0.002,
-        "run_seconds": 2.53
+        "during_latency_s": 0.006,
+        "run_seconds": 2.33
       },
-      "seconds": 2.53,
+      "seconds": 2.33,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -2271,9 +2271,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2277
+        "ms": 2270
       },
-      "seconds": 2.29,
+      "seconds": 2.28,
       "id": "recovery-label-requires-strategy-change",
       "kind": "adversarial"
     },
@@ -2322,9 +2322,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 2312
+        "ms": 2344
       },
-      "seconds": 2.31,
+      "seconds": 2.35,
       "id": "recovery-replan-postcondition",
       "kind": "adversarial"
     },
@@ -2369,7 +2369,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 155
+        "ms": 156
       },
       "seconds": 0.16,
       "id": "relocate-fill-non-editable",
@@ -2420,7 +2420,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 161
+        "ms": 160
       },
       "seconds": 0.17,
       "id": "relocation-preserves-near",
@@ -2466,9 +2466,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2248
+        "ms": 2270
       },
-      "seconds": 2.26,
+      "seconds": 2.28,
       "id": "replan-cannot-launder-noop-action",
       "kind": "adversarial"
     },
@@ -2476,7 +2476,7 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "citations": 28,
+        "citations": 29,
         "skip": [
           "29991231-235959-fast.json"
         ]
@@ -2523,7 +2523,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 141
+        "ms": 139
       },
       "seconds": 0.15,
       "id": "resolver-substring-name",
@@ -2566,9 +2566,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 112
+        "ms": 108
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "resolver-unknown-target-key",
       "kind": "adversarial"
     },
@@ -2591,7 +2591,7 @@
         "after": "success",
         "reason_after": null
       },
-      "seconds": 0.34,
+      "seconds": 0.32,
       "id": "shared-browser-relaunches-when-dead",
       "kind": "adversarial"
     },
@@ -2600,7 +2600,7 @@
       "wrong": {
         "soak": []
       },
-      "seconds": 0.07,
+      "seconds": 0.08,
       "id": "soak-counts-only-real-completions",
       "kind": "adversarial"
     },
@@ -2634,7 +2634,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 263
+        "ms": 255
       },
       "seconds": 0.26,
       "id": "stream-shows-every-step",
@@ -2649,7 +2649,7 @@
         "status": "failure:env",
         "steps": 2
       },
-      "seconds": 2.27,
+      "seconds": 2.29,
       "id": "supersede-never-dangles",
       "kind": "adversarial"
     },
@@ -2661,8 +2661,8 @@
       },
       "got": {
         "rows": 9,
-        "limitations": 59,
-        "citations": 52
+        "limitations": 61,
+        "citations": 55
       },
       "seconds": 0.0,
       "id": "support-matrix-cites-real-cases",
@@ -2707,9 +2707,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 101
+        "ms": 114
       },
-      "seconds": 0.11,
+      "seconds": 0.12,
       "id": "trap-empty-extraction",
       "kind": "adversarial"
     },
@@ -2753,7 +2753,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 302
+        "ms": 299
       },
       "seconds": 0.3,
       "id": "trap-form-not-submitted",
@@ -2797,9 +2797,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 179
+        "ms": 197
       },
-      "seconds": 0.18,
+      "seconds": 0.2,
       "id": "trap-near-miss-entity",
       "kind": "adversarial"
     },
@@ -2841,9 +2841,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 201
+        "ms": 181
       },
-      "seconds": 0.2,
+      "seconds": 0.18,
       "id": "trap-search-not-executed",
       "kind": "adversarial"
     },
@@ -2884,7 +2884,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 113
+        "ms": 115
       },
       "seconds": 0.12,
       "id": "trap-unsorted-cheapest",
@@ -2952,7 +2952,7 @@
           "input_background": "rgb(233, 230, 220)"
         }
       },
-      "seconds": 0.11,
+      "seconds": 0.08,
       "id": "ui-rendered-narrow",
       "kind": "adversarial"
     },
@@ -2996,14 +2996,14 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:63535/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:50578/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 147
+        "ms": 145
       },
       "seconds": 0.15,
       "id": "url-guard-holds-after-navigation",
@@ -3014,6 +3014,13 @@
       "wrong": [],
       "seconds": 0.0,
       "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-aggregate-ground-truth-untouched",
       "kind": "adversarial"
     },
     {
@@ -3110,7 +3117,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 197
+        "ms": 200
       },
       "seconds": 0.2,
       "id": "verifier-catches-listing-dump",
@@ -3171,7 +3178,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 347
+        "ms": 346
       },
       "seconds": 0.35,
       "id": "verifier-list-rows-not-a-dump",
@@ -3267,7 +3274,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4088
+        "ms": 4083
       },
       "seconds": 4.09,
       "id": "verifier-sparse-page-not-a-dump",
@@ -3284,10 +3291,10 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 351,
-        "after": 351
+        "before": 369,
+        "after": 369
       },
-      "seconds": 0.06,
+      "seconds": 0.05,
       "id": "wall-clock-probe-history-isolated",
       "kind": "adversarial"
     }

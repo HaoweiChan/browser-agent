@@ -24,6 +24,35 @@ green → owner decides submission/public.
 
 ## Debt
 
+### T-R30 — the widened SCOPE_BLOCK determiner regex over-refuses informational/hypothetical delete questions            [status: todo]
+Origin: PR #25 R3 (LOW, routed debt)
+Spec (claim): the widened determiner regex over-refuses informational/hypothetical
+questions about deletion that use the same verb+determiner adjacency as a real
+command.
+Evidence: SCOPE_BLOCK matches 'Can you explain how to delete our test entry?' and
+'What happens when I delete all the drafts?' — both informational. The pinned
+case l5-refuse-delete-determiners tests three informational rows, none combining
+an interrogative frame with an adjacent determiner.
+Repro: `SCOPE_BLOCK.search('What happens when I delete all the drafts?')` -> match.
+Acceptance: either accept as consistent with the already-declared over-refusal
+tradeoff and note it for the delete clause, or add a case.
+Orchestrator note: LOW, and in the safe direction — same shape as the
+already-declared login over-refusal. Debt.
+
+### T-R31 — the aggregate-superlative regex misses phrasings outside the which/what/who + keyword shape            [status: todo]
+Origin: PR #25 R4 (LOW, routed debt)
+Spec (claim): the aggregate-superlative regex misses phrasings that don't use
+which/what/who alongside the exact keyword list, so the same defect class can
+recur one step removed from the probe's wording.
+Evidence: `_AGGREGATE` requires `\b(which|what|who)\b.{0,80}\b(most|least|fewest|highest|lowest|greatest)\b`;
+'Rank the books by price and give me the top one.' does not match.
+Repro: `_AGGREGATE.search('Rank the books by price and give me the top one.')` -> no match.
+Acceptance: already disclosed by the ponytail comment in verifier.py; logged for
+completeness, not blocking.
+Orchestrator note: LOW and already acknowledged in-code. Debt — and the honest
+name for the ceiling this PR ships.
+
+
 ### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: todo]
 Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
 Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
