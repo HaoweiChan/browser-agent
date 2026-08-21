@@ -1,0 +1,73 @@
+{
+  "pr": 20,
+  "round": 1,
+  "task": "M12",
+  "gate": {
+    "invariant": "23/23 = 1.000",
+    "fast": "90/90 = 1.000, wall 55.17s (budget 60s)",
+    "reports": [
+      "evals/report/20260821-121905-invariant.json",
+      "evals/report/20260821-121835-fast.json",
+      "evals/report/20260821-121943-live.json"
+    ]
+  },
+  "resolutions": [
+    {
+      "id": "R1",
+      "status": "fixed",
+      "route_taken": "mechanism, not disclosure",
+      "covered_by": "fast-wall-clock-budget (rewritten) + evals/run.py over_budget()",
+      "what_changed": "The ceiling moved out of the case and into the runner. evals/run.py now holds WALL_BUDGET_S = {\"fast\": 60} and a pure over_budget(suite, wall_seconds), applies it to totals[\"wall_seconds\"] of the run it has just finished, prints a named line and returns 1 — the same shape as the invariant-100% rule beside it. No report file is involved, so a fresh CI clone and a --no-report pre-commit run are both covered. fast-wall-clock-budget no longer reads evals/report/ at all; it grades the ruling: the 60.00/60.01 boundary, that `fast` is the only suite carrying a ceiling, and that the constant still equals the ADR's number.",
+      "watched_red": "Case rewritten and run before over_budget existed: `[FAIL] fast-wall-clock-budget`, 88/89 = 0.989 against baseline 1.000, `ImportError: cannot import name 'WALL_BUDGET_S' from 'evals.run'`.",
+      "repro_after_fix": "The reviewer's own repro, replayed against the repaired tree (0.25s added per case inside the runner's timed region, no repo file edited, --no-report): `[eval] OVER BUDGET: suite 'fast' wall clock 78.42s > 60s (ADR-002 Decision 4)` and exit 1. Before the repair the same slowdown gave 89/89 = 1.000 and exit 0.",
+      "note_for_reviewer": "One detail found while reproducing: totals[\"wall_seconds\"] is the SUM of per-case `seconds`, not true elapsed, so a slowdown injected outside run_case is invisible to it (measured: sum 55.49s for a run whose real elapsed was ~78s). The two agree to ~0.1% on a normal run because the runner does almost nothing between cases. Not changed here — it would move every historical number in the reports — and stated rather than papered over.",
+      "docs_updated": [
+        "specs/decisions/ADR-010-fast-suite-wall-clock.md Decision 2 (rewritten; the falsified version is described, not deleted)",
+        "docs/support-matrix.md D8",
+        "docs/analysis.md",
+        "README.md",
+        "specs/decisions/INDEX.md"
+      ]
+    },
+    {
+      "id": "R2",
+      "status": "fixed",
+      "covered_by": "shared-browser-relaunches-when-dead",
+      "what_changed": "src/browser/eval_adapter.py `_browser()` now re-launches when `_BROWSER is None or not _BROWSER.is_connected()`. ADR-010 Decision 1's isolation claim is narrowed in writing: STATE isolation (cookies, storage) is unchanged and was always the claim that held; PROCESS isolation was lost when per-case launches went away, and is what this repair restores. A browser that is alive but wedged is named as still shared, bounded only by the per-action Playwright timeouts.",
+      "watched_red": "New case added before the fix. The red is the cascade the finding describes, not one case: 77/90 = 0.856 against baseline 1.000 — thirteen cases down, this one plus every case the runner reached after it, each ending `TargetClosedError: Browser.new_context: Target page, context or browser has been closed`. After the fix: 90/90 = 1.000, the case passing in 0.42s (one extra launch).",
+      "docs_updated": ["specs/decisions/ADR-010-fast-suite-wall-clock.md Decision 1", "specs/decisions/INDEX.md"]
+    },
+    {
+      "id": "R3",
+      "status": "fixed",
+      "covered_by": "no new case — figures restated from evals/report/20260821-121835-fast.json",
+      "what_changed": "docs/analysis.md §1 keeps the M8 table at the numbers of the report it cites and now prints the current triple in full beside it (fast 90/90 55.17s p50 0.12s p95 4.10s; invariant 23/23 2.96s; live 9/9 38.10s) with all three report filenames. The derived counts underneath are restated: 168 browser actions → 170, `53 of the 86` → `54 of the 90`, `96 distinct cases (20 golden + 76 adversarial)` → `100 distinct cases (20 golden + 80 adversarial)`, and the remainder 33 → 36. The note that claimed only two figures had moved is gone; the replacement says M12 moved every row of the table.",
+      "note_for_reviewer": "The count of cases that drive a real Chromium is computed from the report, not asserted: 54 of 90 results carry a non-zero budgets.actions."
+    },
+    {
+      "id": "R7",
+      "status": "fixed",
+      "covered_by": "no new case — README citation",
+      "what_changed": "README.md's `Where it stands` now cites the newest committed triple (20260821-121835-fast / -121905-invariant / -121943-live) and reports 90/90, 23/23, 9/9, 55.2s. docs/analysis.md and docs/support-matrix.md cite the same fast report, so the document of record and the enforcement point no longer disagree — and the enforcement point is no longer a report at all (R1)."
+    },
+    {
+      "id": "R4",
+      "status": "fixed",
+      "covered_by": "removed by R1's repair — no code left to guard",
+      "deviation_note": "The repair instruction routed R4 to Debt. Logging it would have created a debt block against code that no longer exists: R1's repair deleted the `sorted(evals/report/*-fast.json)[-1]` glob from `_run_wall_clock_case` outright, so neither half of the finding survives — there is no filesystem read to be git-unaware, no \"newest committed\" wording left to be wrong, and no report with `len(results) == 0` to grade. The review's own route_reason anticipated the first half (\"naturally corrected by R1's repair\"). Verified: `grep` for a report glob in src/browser/eval_adapter.py returns nothing. Recorded here rather than as Debt so the ledger does not carry a phantom.",
+      "reject_reason": null
+    },
+    {
+      "id": "R5",
+      "status": "debt",
+      "became": "T-R5 — Borrowed-browser context leak on a failed new_page",
+      "note": "Logged verbatim under `## Debt` in tasks/TODO.md with its evidence, repro and acceptance. Untouched in this round: not reachable from any committed case, and the fix wants a case that leaks first."
+    },
+    {
+      "id": "R6",
+      "status": "debt",
+      "became": "T-R6 — No sanctioned escape when the wall-clock ceiling is unreachable",
+      "note": "Logged under `## Debt` with its evidence and acceptance, and named in ADR-010 Decision 2 and in fast-wall-clock-budget's `not_covered` as an open policy question. R1's repair changes the finding's shape and the debt block says so: the ceiling is now enforced in the runner, so deleting a report no longer unblocks a slow machine (that accidental escape is gone) but the failure is at least loud and named instead of surfacing as a mysterious 89/90. Choosing the sanctioned escape is a repo-owner call, not something to improvise inside this PR."
+    }
+  ]
+}

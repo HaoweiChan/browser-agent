@@ -3,16 +3,27 @@
   "task": "browser",
   "suites": ["fast"],
   "input": {
-    "kind": "wall-clock"
+    "kind": "wall-clock",
+    "rows": [
+      { "suite": "fast", "wall_seconds": 13.0, "over": false },
+      { "suite": "fast", "wall_seconds": 54.35, "over": false },
+      { "suite": "fast", "wall_seconds": 60.0, "over": false },
+      { "suite": "fast", "wall_seconds": 60.01, "over": true },
+      { "suite": "fast", "wall_seconds": 67.45, "over": true },
+      { "suite": "fast", "wall_seconds": 77.23, "over": true },
+      { "suite": "invariant", "wall_seconds": 999.0, "over": false },
+      { "suite": "live", "wall_seconds": 999.0, "over": false },
+      { "suite": "all", "wall_seconds": 999.0, "over": false }
+    ]
   },
   "expect": {
     "max_wall_seconds": 60,
-    "note": "the newest committed evals/report/*-fast.json must report totals.wall_seconds within ADR-002 Decision 4's ceiling"
+    "note": "evals.run.over_budget is the whole ruling: only `fast` carries a ceiling, 60.00s is inside it and 60.01s is not, and evals/run.py applies it to the run it just measured"
   },
-  "provenance": "the `fast` gate's wall clock went 13s (M2) -> 48.6s (M6) -> 55.4s (M7) -> 67.5s (M8) without one run ever turning red, because ADR-002 Decision 4's 60s ceiling was prose in an ADR and nothing read it. The breach was eventually noticed by a human reading a report, declared in ADR-009 Decision 6 and docs/support-matrix.md D8, and carried for two milestones. A budget nothing checks is a comment. Watched red before the M12 fix: the newest committed report (evals/report/20260821-021051-fast.json) measured wall_seconds 67.45 against budget 60, got.wall_seconds 67.45, passed false.",
+  "provenance": "the `fast` gate's wall clock went 13s (M2) -> 48.6s (M6) -> 55.4s (M7) -> 67.5s (M8) without one run ever turning red, because ADR-002 Decision 4's 60s ceiling was prose in an ADR and nothing read it. The first version of this case read `sorted(evals/report/*-fast.json)[-1]` and was falsified in review (PR #20 R1): on a fresh clone — which is exactly what `.github/workflows/eval.yml` does — the newest file is always the report the branch committed, so a tree measuring 77.23s still scored 89/89 = 1.000 and the gate stayed green. A guard that cannot see the run it belongs to is the same comment the prose ceiling was. The ruling now lives in `evals.run.over_budget`, is applied to the current run's `totals.wall_seconds`, and exits non-zero; this case grades the ruling. Watched red before the fix existed: `ImportError: cannot import name 'WALL_BUDGET_S' from 'evals.run'`, this case alone, 88/89 = 0.989 against baseline 1.000.",
   "triage": {
     "class": "eval-integrity",
-    "note": "grades the PREVIOUS run's committed report, because a suite cannot measure itself from inside. One run of lag is the whole cost, and it is far cheaper than the six milestones of lag the prose ceiling actually had. Deliberately NOT tagged `invariant`: invariants are absolute and machine-independent, and a wall clock is neither — ADR-009 Decision 6 records the same suite measuring 66.6-68.3s here and 68.6s on a reviewer's machine. This is a performance threshold that belongs to the baseline-gated suite, where a red run is a decision to make rather than a violation.",
-    "not_covered": "it cannot see a run that was never reported (`--no-report`, which is how the pre-commit hook runs), and it grades total wall clock only — a case that gets 10s slower while another gets 10s faster is invisible to it. Per-case timings are in the same report for anyone looking."
+    "note": "two halves that have to stay in sync: `evals/run.py` applies the ceiling to the run it just measured (a report written after the run, and discarded with a CI workspace, can never gate it), and this case pins the ruling — the boundary at 60.00/60.01, and that `fast` is the only suite carrying one, so a later edit cannot quietly widen it or move it onto another suite. Deliberately NOT tagged `invariant`: invariants are absolute and machine-independent, and a wall clock is neither — ADR-009 Decision 6 records the same suite measuring 66.6-68.3s here and 68.6s on a reviewer's machine.",
+    "not_covered": "it grades total wall clock only — a case that gets 10s slower while another gets 10s faster is invisible to it; per-case timings are in every committed report for anyone looking. It also does not settle what a contributor on slower hardware should do when the ceiling is genuinely unreachable there, which is an open policy question (PR #20 R6, Debt T-R6)."
   }
 }

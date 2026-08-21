@@ -58,6 +58,20 @@ def run_case(case):
     return result
 
 
+# Wall-clock ceilings, by suite. Repo policy in the same sense as the
+# invariant-100% rule below: `fast` is the pre-commit gate, and past 60s it
+# stops being run honestly (specs/decisions/ADR-002-performance-thresholds.md
+# Decision 4, re-measured by ADR-010). Pinned by the case `fast-wall-clock-budget`.
+WALL_BUDGET_S = {"fast": 60}
+
+
+def over_budget(suite, wall_seconds):
+    """The whole ruling, pure so a case can grade it. Applied to the run being
+    measured — a report is written after the run and does not survive a CI
+    workspace, so it can never gate the tree that produced it (PR #20 R1)."""
+    return wall_seconds > WALL_BUDGET_S.get(suite, float("inf"))
+
+
 def pctl(values, p):
     """Nearest-rank percentile — no numpy for a list of a few dozen floats."""
     if not values:
@@ -148,6 +162,11 @@ def main():
     if args.suite == "invariant" and passed < len(results):
         print("[eval] INVARIANT VIOLATION: invariants are absolute, 100% required",
               file=sys.stderr)
+        return 1
+    if over_budget(args.suite, totals["wall_seconds"]):
+        print(f"[eval] OVER BUDGET: suite '{args.suite}' wall clock "
+              f"{totals['wall_seconds']}s > {WALL_BUDGET_S[args.suite]}s "
+              "(ADR-002 Decision 4)", file=sys.stderr)
         return 1
     if args.suite in baseline and score < baseline[args.suite]:
         print(f"[eval] REGRESSION: {score:.3f} < baseline {baseline[args.suite]:.3f}",

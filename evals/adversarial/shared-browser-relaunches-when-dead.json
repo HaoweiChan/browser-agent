@@ -1,0 +1,25 @@
+{
+  "id": "shared-browser-relaunches-when-dead",
+  "task": "browser",
+  "suites": ["fast"],
+  "tc": "TC1",
+  "level": "L1",
+  "input": {
+    "kind": "browser-liveness",
+    "task": "What does the main heading on the page say?",
+    "fixture": "hello.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "heading", "name": "Hello Fixture" } }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "note": "the same run succeeds before and after the shared Chromium dies, and the harness holds a different browser object afterwards"
+  },
+  "provenance": "found in review of PR #20 (R2). M12 replaced 58 per-case Chromium launches with one shared browser, and per-case launches had been containing a browser crash to the case that caused it. `_browser()` tested only `_BROWSER is None`, so a Chromium that died mid-suite was handed to every later case, each failing with `TargetClosedError: Browser.new_context: Target page, context or browser has been closed` attributed to itself — one fault reported as dozens, with the real cause in whichever case died first. Watched red before the fix, with this case in the suite, and the red is the cascade itself rather than one case: **77/90 = 0.856** against baseline 1.000, thirteen cases down — this one plus every case the runner reached after it, each ending `TargetClosedError: Browser.new_context: Target page, context or browser has been closed`. That is the shape the finding describes, reproduced: one death, twelve later cases blaming themselves.",
+  "triage": {
+    "class": "capability-gap",
+    "note": "the closest observable stand-in for the real fault: a Chromium that is gone is gone whether it crashed, was OOM-killed, or was closed, and `is_connected()` is the same false in every case. Simulating it by closing is the only version of this that is deterministic and costs one extra launch (~0.25s). The fix is `_browser()` re-launching when `is_connected()` is false, which is also what makes the next case after a real crash report ITS own result instead of inheriting one.",
+    "not_covered": "a browser that is alive but wedged (hung renderer, unresponsive protocol) still reports `is_connected() == true` and is still handed out; the per-action Playwright timeouts are what bound that, not this. This case also does not pin the failure ATTRIBUTION story — it grades that the cascade does not happen, not that a first-crashing case is named as the cause."
+  }
+}

@@ -27,8 +27,10 @@ amended with the measured floor and why.
 Resolved by acceptance branch 1 (`specs/decisions/ADR-010-fast-suite-wall-clock.md`):
 per-call measurement put 11.3s of the 67.0s in per-case browser process
 lifecycle, which the harness no longer pays; 42.2s of deliberate waiting was
-left alone. `fast` is 54.1-55.9s over 89 cases, ADR-002 D4's 60s is unmoved,
-and it is now enforced by `fast-wall-clock-budget` instead of asserted.
+left alone. `fast` is 54.1-55.9s over 90 cases and ADR-002 D4's 60s is unmoved.
+Review round 1 (PR #20) falsified the first enforcement — a case reading the
+newest committed report cannot go red on a fresh CI clone — so the ceiling now
+lives in `evals/run.py` and gates the run it measured.
 
 ### M10 — A-Freeze            [status: todo]
 Depends: M9, M12
@@ -46,6 +48,36 @@ green → owner decides submission/public.
 Origin: M8's SHOULD item, left open at the M8 merge (PR #12)
 Spec: replay committed live-page snapshots so live-site drift is detected
 without network. Acceptance: a drifted snapshot turns a case red offline.
+
+### T-R5 — Borrowed-browser context leak on a failed new_page            [status: todo]
+Origin: PR #20 R5 (LOW, routed debt — unreachable from any committed case)
+Spec: `src/browser/agent.py:311-312` creates the `BrowserContext` and its page
+before the `try:` whose `finally: await ctx.close()` is the only close, so a
+failure inside `ctx.new_page()` leaks that context for the life of the eval
+process. The own-browser path is swept by the exit stack; the borrowed path has
+no `stack.push_async_callback(browser.close)` to fall back on. Not reachable
+from a committed case — a full `fast` run in reverse case order leaves
+`len(_BROWSER.contexts) == 0` — and reachable only by making `ctx.new_page()`
+raise on the shared path. Acceptance: `ctx` created inside the exit stack
+(`stack.push_async_callback(ctx.close)`) or inside the `try`, so both paths
+close it on any failure, with a case that leaks before the fix.
+
+### T-R6 — No sanctioned escape when the wall-clock ceiling is unreachable            [status: todo]
+Origin: PR #20 R6 (LOW, routed debt — a repo-owner policy call, not a fix to improvise)
+Spec: ADR-010 keeps the wall-clock ruling out of `invariant` because a wall
+clock is machine-dependent, then hard-gates it anyway: since round 1 the repo
+`evals/run.py` exits non-zero on any `fast` run over 60s, and `.githooks/pre-commit`
+runs exactly that. ADR-009 Decision 6 records this same suite at 68.6s on a
+reviewer's machine, CLAUDE.md rule 1 forbids `--update-baseline` to clear a
+gate, and rule 5 makes `--no-verify` an emergency — so a contributor on slower
+hardware has no sanctioned move. (Round 1 removed the accidental escape the
+finding names: with the ceiling in the runner rather than in a report-reading
+case, deleting a report no longer unblocks anything, and the failure is at
+least loud — `OVER BUDGET: suite 'fast' wall clock …s > 60s` — instead of a
+mysterious 89/90.) Acceptance: ADR-010 names the escape (documented env-var
+override, per-machine calibration factor, or an explicit "run the gate on
+reference hardware" rule), or the ceiling is re-expressed as something
+machine-independent (summed deliberate-wait budget, per-case counts).
 
 ### M13 — Adaptive locator learning            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)

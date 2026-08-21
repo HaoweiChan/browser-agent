@@ -1,11 +1,11 @@
-# ADR-010: the `fast` gate's wall clock — one browser for the suite, and a guard that reads it
+# ADR-010: the `fast` gate's wall clock — one browser for the suite, and a ceiling that gates the run
 
-Date: 2026-08-21
+Date: 2026-08-21 (Decisions 1 and 2 amended the same day, PR #20 round 1)
 Status: accepted
 
-**Ruling**: ADR-002 Decision 4's 60s ceiling stands unchanged and is now *enforced* by an eval case; the `fast` suite gets one shared Chromium (each case still runs in its own BrowserContext) and measures 54.1-55.9s over 89 cases.
+**Ruling**: ADR-002 Decision 4's 60s ceiling stands unchanged, and `evals/run.py` now applies it to the run it just measured and exits non-zero; the `fast` suite gets one shared Chromium, re-launched if it dies, with each run in its own BrowserContext, and measures 54.1-55.9s over 90 cases.
 **Because**: 11.3s of the 67.0s breach was per-case browser process lifecycle — scaffolding, not evidence — and a budget nothing reads drifts from 13s to 68s without one run turning red.
-**Enforced by**: `fast-wall-clock-budget` (the ceiling), `agent-launches-its-own-browser` (the production launch path the sharing would otherwise leave ungraded).
+**Enforced by**: `evals/run.py` `over_budget()` (the ceiling itself), `fast-wall-clock-budget` (the ruling it applies), `agent-launches-its-own-browser` and `shared-browser-relaunches-when-dead` (what sharing a browser would otherwise leave ungraded).
 
 **Amends**: ADR-002 Decision 4 (breach closed, ceiling unmoved, enforcement added); ADR-009 Decision 6 and `docs/support-matrix.md` D8 (the declared breach they carry is resolved)
 
@@ -62,8 +62,16 @@ timeout, no case deleted, no case moved out of `fast`.
    harness (`src/browser/eval_adapter.py`) starts one driver and one browser on
    one event loop — a Playwright browser belongs to the loop that created it,
    so a shared browser needs a shared loop — and every case borrows it.
-   Isolation is unchanged: `run_task` now opens its own `BrowserContext` per
-   run on either path, so cookies and storage never cross between runs.
+   **State** isolation is unchanged: `run_task` opens its own `BrowserContext`
+   per run on either path, so cookies and storage never cross between runs.
+   **Process** isolation is not, and that was missed until review (PR #20 R2):
+   per-case launches contained a browser crash to the case that caused it, and
+   `_browser()` returning a dead-but-not-`None` Chromium turned one death into
+   twelve later cases failing with `TargetClosedError` attributed to themselves
+   (measured: 77/90). `_browser()` now re-launches when `is_connected()` is
+   false, pinned by `shared-browser-relaunches-when-dead`. What is still shared
+   is a *wedged* browser — alive to `is_connected()`, unresponsive in fact —
+   which only the per-action Playwright timeouts bound.
 
    This is not the `MIN_EVIDENCE` shape. That was a *production constant* bent
    so an eval would pass; this is an argument that production declines, whose
@@ -73,14 +81,28 @@ timeout, no case deleted, no case moved out of `fast`.
    recovery 7/7, mutation 9/11 with 6 recovered / 5 by relocating, diagnosis
    14/14, 4 replans, `fast` 1.000, `live` 9/9 against real sites.
 
-2. **The ceiling is enforced, not asserted.** `fast-wall-clock-budget` reads
-   the newest committed `evals/report/*-fast.json` and fails when
-   `totals.wall_seconds` exceeds 60. A suite cannot measure itself from inside,
-   so it grades the previous run — one run of lag, against the six milestones
-   of lag the prose ceiling actually had. Deliberately not tagged `invariant`:
-   invariants are absolute and machine-independent, and a wall clock is neither
-   (ADR-009 Decision 6 records 66.6-68.3s here and 68.6s on a reviewer's
-   machine).
+2. **The ceiling gates the run that measures it.** `evals/run.py` holds the
+   ruling (`WALL_BUDGET_S = {"fast": 60}` and the pure `over_budget()`), applies
+   it to `totals["wall_seconds"]` of the run it has just finished, and exits
+   non-zero with a named line — the same shape as the invariant-100% rule beside
+   it. `fast-wall-clock-budget` grades the ruling: the boundary at 60.00/60.01,
+   and that `fast` is the only suite carrying a ceiling.
+
+   The first version of this decision had the case read the newest report in
+   `evals/report/` instead, and review falsified it (PR #20 R1). A report is
+   written *after* the run and does not survive a CI workspace, so on the fresh
+   clone `.github/workflows/eval.yml` builds, the newest file is always the one
+   the branch committed: a tree measuring 77.23s — 28% over — still scored 89/89
+   = 1.000 and the gate stayed green. "Enforced, not asserted" was itself an
+   assertion. Re-run against the repaired tree, the same 0.25s-per-case
+   slowdown now prints `OVER BUDGET: suite 'fast' wall clock 78.42s > 60s` and
+   exits 1, on a `--no-report` run with no report file involved at all.
+
+   Deliberately not tagged `invariant`: invariants are absolute and
+   machine-independent, and a wall clock is neither (ADR-009 Decision 6 records
+   66.6-68.3s here and 68.6s on a reviewer's machine). What a contributor on
+   slower hardware is supposed to do when the ceiling is genuinely out of reach
+   there is a policy question this ADR does not settle (PR #20 R6, Debt T-R6).
 
 3. **The un-shared launch keeps a case.** Sharing the browser on every case
    left `browser is None` — the branch every real caller takes — graded by
@@ -90,8 +112,10 @@ timeout, no case deleted, no case moved out of `fast`.
 
 ## Consequences
 
-`fast` measures **54.1-55.9s over 4 runs, 89 cases** (up from 67.0-68.3s over
-86-87), and the suite got two cases larger while getting 13s faster. Headroom
+`fast` measures **54.1-55.9s, 90 cases** (`evals/report/20260821-121835-fast.json`;
+up from 67.0-68.3s over 86-87 cases), and the suite got three cases larger while
+getting 13s faster — the third, `shared-browser-relaunches-when-dead`, came out
+of review. Headroom
 against the 60s ceiling is ~4-6s on this machine, which is real but not
 generous: the 42.2s of deliberate waiting is the floor this route cannot touch,
 and the growth trend ADR-009 Decision 6 described (13s → 48.6s → 55.4s → 67s)

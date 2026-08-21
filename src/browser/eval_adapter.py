@@ -104,9 +104,14 @@ async def _browser():
     starts + launches + closes cost 11.3s of 67.0s, which is scaffolding, not
     evidence (ADR-010). The driver and browser are left running until the process
     exits — there is nothing after the last case to close them for, and an atexit
-    hook on an already-closed event loop is its own bug."""
+    hook on an already-closed event loop is its own bug.
+
+    Re-launched when it is gone: a dead browser is not None, and handing it out
+    turns one crash into every later case failing with `TargetClosedError`
+    attributed to itself — the containment per-case launches gave for free
+    (PR #20 R2, case `shared-browser-relaunches-when-dead`)."""
     global _BROWSER
-    if _BROWSER is None:
+    if _BROWSER is None or not _BROWSER.is_connected():
         from playwright.async_api import async_playwright
         _BROWSER = await (await async_playwright().start()).chromium.launch(args=["--no-sandbox"])
     return _BROWSER
@@ -1037,20 +1042,52 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
 
 
 def _run_wall_clock_case(case: dict) -> dict:
-    """ADR-002 Decision 4's wall-clock ceiling, enforced rather than asserted.
+    """ADR-002 Decision 4's wall-clock ceiling: grades the RULING, not a report.
 
-    Grades the newest committed `fast` report, i.e. the run before this one — a
-    suite cannot measure itself from inside. One run of lag is the entire cost,
-    against the six milestones of lag the prose ceiling actually had."""
-    reports = sorted((Path(__file__).parents[2] / "evals" / "report").glob("*-fast.json"))
-    if not reports:
-        # Loud: no report is "unmeasured", never "within budget" (CLAUDE.md rule 4).
-        return {"passed": False, "error": "no committed fast report to measure"}
-    got = json.loads(reports[-1].read_text())
-    wall, budget = got["totals"]["wall_seconds"], case["expect"]["max_wall_seconds"]
-    return {"passed": wall <= budget,
-            "got": {"report": reports[-1].name, "wall_seconds": wall, "budget": budget,
-                    "cases": len(got["results"])}}
+    The ceiling is applied by `evals/run.py` to `totals["wall_seconds"]` of the
+    run it just measured, and exits non-zero. This case pins the rule it applies:
+    the boundary, and that `fast` is the only suite carrying one.
+
+    The first version read the newest report in `evals/report/` instead, which is
+    written after the run and thrown away with a CI workspace — so on a fresh
+    clone it always graded the report the branch had committed and could not go
+    red however slow the tree was (PR #20 R1)."""
+    from evals.run import WALL_BUDGET_S, over_budget
+
+    wrong = [r for r in case["input"]["rows"]
+             if over_budget(r["suite"], r["wall_seconds"]) is not r["over"]]
+    budget = WALL_BUDGET_S.get("fast")
+    if budget != case["expect"]["max_wall_seconds"]:
+        wrong.append({"ruling": "fast", "budget": budget,
+                      "declared": case["expect"]["max_wall_seconds"]})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"budgets": WALL_BUDGET_S}}
+
+
+def _run_browser_liveness_case(case: dict) -> dict:
+    """A shared browser that has died must be re-launched, not handed out dead.
+
+    Per-case launches used to contain a browser crash to the case that caused it.
+    One shared browser turns it into a cascade: every later case fails with
+    `TargetClosedError` attributed to itself, and the real cause is whichever
+    case died first (PR #20 R2). Closing it is the deterministic stand-in — a
+    Chromium that is gone reads the same to `is_connected()` however it went."""
+    inp = case["input"]
+    url = f"{_base_url()}/fixtures/{inp['fixture']}"
+
+    def once():
+        return _run_agent(inp["task"], url, stub_planner([_subst(inp["stub_plan"], url)]))
+
+    before = once()
+    dead = _await(_browser())
+    _await(dead.close())
+    after = once()
+    checks = {"before": before["status"] == case["expect"]["status"],
+              "after": after["status"] == case["expect"]["status"],
+              "relaunched": _BROWSER is not dead}
+    return {"passed": all(checks.values()), "checks": checks,
+            "got": {"before": before["status"], "after": after["status"],
+                    "reason_after": after.get("reason")}}
 
 
 def _run_invariant_case(case: dict) -> dict:
@@ -1064,6 +1101,7 @@ def _run_invariant_case(case: dict) -> dict:
 # default shape; every other kind names the narrower thing it grades.
 KINDS = {
     "adr-header-index": _run_adr_header_index_case,
+    "browser-liveness": _run_browser_liveness_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,
