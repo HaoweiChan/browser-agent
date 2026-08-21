@@ -1,0 +1,18 @@
+{
+  "id": "ui-rendered-narrow",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "input": {
+    "kind": "ui-rendered",
+    "viewport_width": 390,
+    "target_length": 90,
+    "schemes": ["dark", "light"],
+    "placeholder_minimum": 4.5
+  },
+  "expect": {},
+  "provenance": "PR #23 round 1 R1/R2. The initial TinBoker restyle kept the empty page within 390px but did not exercise a rendered trace target: 90 unbroken characters expanded the document to 665px. The light placeholder also mixed --dim at 82% with transparency, rendering at 3.61:1 against the paper-terminal input background. This browser case renders the actual stepEl output in both color schemes and measures document width plus the effective computed placeholder color.",
+  "triage": {
+    "class": "visual-regression",
+    "note": "Narrow responsiveness and contrast must be checked in the populated UI, not inferred only from static container widths and opaque palette tokens."
+  }
+}

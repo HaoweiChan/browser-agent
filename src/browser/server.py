@@ -360,7 +360,7 @@ PAGE = r"""<!doctype html>
        border-radius:var(--radius); padding:.6rem .7rem; width:100%; min-width:0;
        transition:border-color var(--speed),background-color var(--speed) }
   input:hover, select:hover { border-color:color-mix(in srgb,var(--fg) 32%,var(--line)) }
-  input::placeholder { color:color-mix(in srgb,var(--dim) 82%,transparent) }
+  input::placeholder { color:var(--dim) }
   .row { display:flex; gap:.65rem; flex-wrap:wrap; margin-bottom:.7rem; align-items:flex-end }
   .field { flex:1 1 20rem }
   .actions { display:flex; gap:.55rem; flex:0 0 auto }
@@ -387,6 +387,7 @@ PAGE = r"""<!doctype html>
   .step.recovered { border-left-color:var(--accent) }
   .step.superseded { border-style:dashed; background:color-mix(in srgb,var(--dim) 5%,var(--panel)) }
   .hd { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap }
+  .hd > code { min-width:0; overflow-wrap:anywhere }
   .i { color:var(--amber-ink); font-weight:700 }
   .act { font-weight:750 }
   .badge { font-size:10px; padding:.1rem .4rem; border-radius:var(--radius);

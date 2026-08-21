@@ -32,7 +32,7 @@
     ],
     "ids": [
       "task", "url", "go", "err", "live", "steps", "result",
-      "matrix", "limits"
+      "matrix", "limits", "budgets", "runid", "status"
     ],
     "forbid": ["fonts.googleapis.com", "fonts.gstatic.com"]
   },

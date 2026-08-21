@@ -1,0 +1,27 @@
+{
+  "review": "pr23-r1",
+  "result": "FIXED",
+  "resolutions": [
+    {
+      "id": "R1",
+      "disposition": "fixed",
+      "case_id": "ui-rendered-narrow",
+      "red": "At 390px with stepEl rendering a 90-character unbroken target, document_width was 665 against inner_width 390 in both dark and light schemes.",
+      "green": "With .hd > code allowed to shrink and wrap anywhere, document_width equals inner_width at 390 in both schemes."
+    },
+    {
+      "id": "R2",
+      "disposition": "fixed",
+      "case_id": "ui-rendered-narrow",
+      "red": "The rendered light placeholder was color(srgb 0.32549 0.376471 0.415686 / 0.82) on rgb(233, 230, 220), measured at 3.61:1 against the 4.5:1 minimum.",
+      "green": "Using the opaque --dim token renders placeholder contrast at 7.26:1 dark and 5.18:1 light, both above 4.5:1."
+    },
+    {
+      "id": "R3",
+      "disposition": "fixed",
+      "case_id": "ui-tinboker-style",
+      "red": "After planting id=\"status-missing\", the case failed with missing_hook_ids: [\"status\"].",
+      "green": "The case derives every literal id consumed by $() and passes with all 12 hooks present; budgets, runid, and status are also explicit in input.ids."
+    }
+  ]
+}

@@ -15,6 +15,7 @@ Case kinds (`input.kind`):
 - `parse-plan`   — planner output tolerance
 - `mutation`     — mutation catalog integrity (pure code, no browser)
 - `ui-style`     — reviewer-page TinBoker tokens, contrast and stable DOM hooks
+- `ui-rendered`  — narrow trace overflow and effective placeholder contrast
 - `gateway-model` — `POST /tasks`'s model allowlist, and that the model actually
   reaches the planner factory (the planner is swapped for a recorder: $0.00)
 - `ablation-table` — the M9 cost/model table in docs/analysis.md carries no
@@ -1868,11 +1869,88 @@ def _run_ui_style_case(case: dict) -> dict:
     if missing_ids:
         wrong["ids"] = missing_ids
 
+    script = page.split("<script>", 1)[1].split("</script>", 1)[0]
+    used_ids = sorted(set(re.findall(r'\$\(["\']([^"\']+)["\']\)', script)))
+    missing_hooks = [i for i in used_ids
+                     if not re.search(rf'id=["\']{re.escape(i)}["\']', page)]
+    if missing_hooks:
+        wrong["missing_hook_ids"] = missing_hooks
+
     forbidden = [s for s in inp.get("forbid", []) if s in page]
     if forbidden:
         wrong["forbidden"] = forbidden
 
     return {"passed": not wrong, "wrong": wrong}
+
+
+def _run_ui_rendered_case(case: dict) -> dict:
+    """Rendered narrow-screen overflow and effective placeholder contrast."""
+    from playwright.async_api import async_playwright
+
+    inp = case["input"]
+    page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    page_html = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
+
+    async def go():
+        results = {}
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(args=["--no-sandbox"])
+            for scheme in inp["schemes"]:
+                page = await browser.new_page(
+                    viewport={"width": inp["viewport_width"], "height": 844},
+                    color_scheme=scheme)
+                await page.set_content(page_html)
+                results[scheme] = await page.evaluate("""(targetLength) => {
+                  document.getElementById("live").hidden = false;
+                  document.getElementById("steps").innerHTML = stepEl({
+                    i:1, action:"extract", value:"x".repeat(targetLength),
+                    ms:1, postcondition_ok:true
+                  });
+                  const rgba = (css) => {
+                    const values = (css.match(/[0-9]*[.]?[0-9]+/g) || []).map(Number);
+                    if (css.startsWith("color(srgb")) {
+                      return [values[0] * 255, values[1] * 255, values[2] * 255,
+                              values.length > 3 ? values[3] : 1];
+                    }
+                    return [values[0], values[1], values[2],
+                            values.length > 3 ? values[3] : 1];
+                  };
+                  const input = document.getElementById("task");
+                  const foreground = rgba(getComputedStyle(input, "::placeholder").color);
+                  const background = rgba(getComputedStyle(input).backgroundColor);
+                  const effective = foreground.slice(0, 3).map(
+                    (channel, i) => channel * foreground[3] + background[i] * (1 - foreground[3]));
+                  const luminance = (rgb) => rgb.map(channel => channel / 255)
+                    .map(channel => channel <= .04045 ? channel / 12.92
+                      : Math.pow((channel + .055) / 1.055, 2.4))
+                    .reduce((sum, channel, i) => sum + channel * [.2126,.7152,.0722][i], 0);
+                  const a = luminance(effective), b = luminance(background.slice(0, 3));
+                  return {
+                    inner_width: innerWidth,
+                    document_width: document.documentElement.scrollWidth,
+                    placeholder_contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05),
+                    placeholder_color: getComputedStyle(input, "::placeholder").color,
+                    input_background: getComputedStyle(input).backgroundColor
+                  };
+                }""", inp["target_length"])
+                await page.close()
+            await browser.close()
+        return results
+
+    got = asyncio.run(go())
+    wrong = {}
+    for scheme, rendered in got.items():
+        if rendered["document_width"] > rendered["inner_width"]:
+            wrong[f"{scheme}_overflow"] = {
+                "document_width": rendered["document_width"],
+                "inner_width": rendered["inner_width"]}
+        if rendered["placeholder_contrast"] < inp["placeholder_minimum"]:
+            wrong[f"{scheme}_placeholder_contrast"] = {
+                "got": round(rendered["placeholder_contrast"], 2),
+                "minimum": inp["placeholder_minimum"],
+                "foreground": rendered["placeholder_color"],
+                "background": rendered["input_background"]}
+    return {"passed": not wrong, "wrong": wrong, "got": got}
 
 
 def _check_supersede_dangling() -> dict:
@@ -2014,6 +2092,7 @@ KINDS = {
     "screening": _run_screening_case,
     "stream": _run_stream_case,
     "ui-style": _run_ui_style_case,
+    "ui-rendered": _run_ui_rendered_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
     "verifier-labels": _run_verifier_labels_case,

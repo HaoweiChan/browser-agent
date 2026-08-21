@@ -5,7 +5,7 @@ Status: accepted
 
 **Ruling**: The reviewer UI uses the TinBoker terminal language—amber commands, cyan interaction/recovery, compact squared surfaces, dark terminal and light paper-terminal palettes—without changing the trace-first information architecture or its stable DOM hooks; it remains a single inline page with no build step or external font dependency.
 **Because**: The visual system should make command, recovery, failure and evidence states easier to scan without turning the review surface into a decorative dashboard or creating a second frontend architecture.
-**Enforced by**: `evals/adversarial/ui-tinboker-style.json`, `stream-shows-every-step`, `gateway-error-contract-shape`
+**Enforced by**: `evals/adversarial/ui-tinboker-style.json`, `evals/adversarial/ui-rendered-narrow.json`, `stream-shows-every-step`, `gateway-error-contract-shape`
 
 ---
 
@@ -40,5 +40,6 @@ The page now adapts to the OS light/dark preference, provides explicit focus
 outlines and reduced-motion handling, and lets wide evidence tables scroll on
 narrow screens. Exact pixels and spacing are deliberately not part of the
 case; the executable contract guards the style's distinguishing decisions and
-the stable UI hooks, while ADR-004's existing cases continue to guard what the
-page says about a run.
+the stable UI hooks, while the rendered narrow-screen case guards populated
+trace width and effective placeholder contrast. ADR-004's existing cases
+continue to guard what the page says about a run.

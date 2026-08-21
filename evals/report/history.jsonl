@@ -162,3 +162,10 @@
 {"ts": "20260821-203259", "suite": "invariant", "sha": "80870f0", "dirty": true, "passed": 21, "total": 31, "score": 0.677419, "wall_s": 0.18, "cost_usd": null, "report": null, "p95_s": 0.02}
 {"ts": "20260821-203323", "suite": "invariant", "sha": "80870f0", "dirty": true, "passed": 31, "total": 31, "score": 1.0, "wall_s": 15.32, "cost_usd": 0.0, "report": null, "p95_s": 3.45}
 {"ts": "20260821-203451", "suite": "fast", "sha": "80870f0", "dirty": true, "passed": 95, "total": 95, "score": 1.0, "wall_s": 80.79, "cost_usd": 0.0, "report": null, "p95_s": 4.36, "recovery": "7/7", "mutation": "9/11"}
+{"ts": "20260821-203725", "suite": "fast", "sha": "80870f0", "dirty": true, "passed": 95, "total": 95, "score": 1.0, "wall_s": 80.97, "cost_usd": 0.0, "report": null, "p95_s": 4.37, "recovery": "7/7", "mutation": "9/11"}
+{"ts": "20260821-203926", "suite": "invariant", "sha": "219fd1e", "dirty": false, "passed": 31, "total": 31, "score": 1.0, "wall_s": 15.39, "cost_usd": 0.0, "report": null, "p95_s": 3.49}
+{"ts": "20260821-204046", "suite": "fast", "sha": "219fd1e", "dirty": false, "passed": 95, "total": 95, "score": 1.0, "wall_s": 80.75, "cost_usd": 0.0, "report": null, "p95_s": 4.34, "recovery": "7/7", "mutation": "9/11"}
+{"ts": "20260821-204649", "suite": "fast", "sha": "219fd1e", "dirty": true, "passed": 27, "total": 95, "score": 0.284211, "wall_s": 0.09, "cost_usd": 0.0, "report": null, "p95_s": 0.0}
+{"ts": "20260821-204831", "suite": "fast", "sha": "219fd1e", "dirty": true, "passed": 95, "total": 95, "score": 1.0, "wall_s": 81.53, "cost_usd": 0.0, "report": null, "p95_s": 4.37, "recovery": "7/7", "mutation": "9/11"}
+{"ts": "20260821-205312", "suite": "invariant", "sha": "bcb47aa", "dirty": true, "passed": 32, "total": 32, "score": 1.0, "wall_s": 15.81, "cost_usd": 0.0, "report": null, "p95_s": 3.5}
+{"ts": "20260821-205441", "suite": "fast", "sha": "bcb47aa", "dirty": true, "passed": 96, "total": 96, "score": 1.0, "wall_s": 81.59, "cost_usd": 0.0, "report": null, "p95_s": 4.35, "recovery": "7/7", "mutation": "9/11"}
