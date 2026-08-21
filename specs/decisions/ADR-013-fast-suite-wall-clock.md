@@ -5,7 +5,7 @@ Decision 3 added on first contact with CI, Decision 4 on the M9-stage-2 merge �
 all the same day)
 Status: accepted
 
-**Ruling**: ADR-002 Decision 4's `fast` wall-clock ceiling is per-environment and each number is measured as the slowest observed run +15% — 70s locally, 75s on CI via `EVAL_WALL_BUDGET_S` — applied by `evals/run.py` to the run it just measured, exiting non-zero; the suite gets one shared Chromium, re-launched if it dies, with each run in its own BrowserContext.
+**Ruling**: ADR-002 Decision 4's `fast` wall-clock ceiling is per-environment and each number is measured as the slowest observed run +15% — 70s locally, 80s on CI via `EVAL_WALL_BUDGET_S` — applied by `evals/run.py` to the run it just measured, exiting non-zero; the suite gets one shared Chromium, re-launched if it dies, with each run in its own BrowserContext.
 **Because**: 11.3s of the 67.0s breach was per-case browser process lifecycle — scaffolding, not evidence — and a budget nothing reads drifts from 13s to 68s without one run turning red.
 **Enforced by**: `evals/run.py` `over_budget()` (the ceiling itself), `fast-wall-clock-budget` (the ruling it applies), `agent-launches-its-own-browser` and `shared-browser-relaunches-when-dead` (what sharing a browser would otherwise leave ungraded).
 
@@ -124,7 +124,7 @@ timeout, no case deleted, no case moved out of `fast`.
 
 3. **The ceiling is per-environment, and both numbers are measured.**
    `WALL_BUDGET_S = {"fast": 60}` is the local ruling. `EVAL_WALL_BUDGET_S`
-   overrides it, `.github/workflows/eval.yml` sets it to **75**, and anything
+   overrides it, `.github/workflows/eval.yml` sets it to **80**, and anything
    that is not a positive number — unset, empty, `banana`, `60s`, `0`, `-5` —
    falls back to the committed 60. `fast-wall-clock-budget` grades all of that,
    including the value the workflow declares, because an override nothing reads
@@ -140,15 +140,23 @@ timeout, no case deleted, no case moved out of `fast`.
    89.62s to 59.8-64.7s while adding three cases. That is finding D6/R6 arriving
    with a trigger hours after being filed as debt without one.
 
-   **The CI number, and what it rests on.** Four runs of the same commit
-   (`09b9740`, 95 cases, `ubuntu-latest`, run `32455716866` and three re-runs):
-   **59.77 / 60.84 / 64.61 / 64.67s** — a 4.90s spread, 8% of the fastest, on
-   byte-identical code. **The rule, applied to both environments: the slowest
-   observed run plus 15%, rounded up to a multiple of five.** 64.67 × 1.15 = 74.4
-   → **75s**. Four runs of one commit is what this rests on: it is a band, not a
-   distribution, and it says nothing about a runner class other than
-   `ubuntu-latest`. ADR-009 Decision 6 published a single-run number and had to be
-   corrected to a band, which is why the count is stated rather than implied.
+   **The CI number, and what it rests on.** First measured at 95 cases (commit
+   `09b9740`, run `32455716866` and three re-runs): **59.77 / 60.84 / 64.61 /
+   64.67s**, a 4.90s spread — 8% of the fastest — on byte-identical code. Then
+   re-measured after the M9-stage-2 merge, because 75 had been derived from code
+   that no longer existed: four runs at 97 cases (`7a2869a`, runs `32465066308`
+   and `32465584897` with two re-runs) gave **64.29 / 67.51 / 68.94 / 68.96s**, a
+   4.67s spread — 7% — reproducing the same variance on a suite ~3.5s heavier.
+
+   **The rule, applied to both environments: the slowest observed run plus 15%,
+   rounded up to a multiple of five.** 68.96 × 1.15 = 79.3 → **80s** on CI;
+   60.16 × 1.15 = 69.2 → **70s** locally (Decision 4). Unlike the first
+   measurement, this band does **not** straddle its ceiling — 68.96s against 80s
+   — where 59.77-64.67s straddled the old 60s on four of eight runs. Four runs of
+   one commit is what each number rests on: a band, not a distribution, and
+   nothing about any runner class other than `ubuntu-latest`. ADR-009 Decision 6
+   published a single-run number and had to be corrected to a band, which is why
+   the count is stated rather than implied.
 
    **What was rejected, so the alternatives are visible.** One ceiling raised
    until CI fits would put ~18s of drift room in front of the local gate, which
@@ -201,9 +209,9 @@ timeout, no case deleted, no case moved out of `fast`.
 
 ## Consequences
 
-`fast` measures **60.15s over 97 cases** (`evals/report/20260821-164556-fast.json`),
+`fast` measures **60.51s over 97 cases** (`evals/report/20260821-170854-fast.json`),
 against 67.0-68.3s over 86-87 before this ADR and 71.3-76.5s once M9's cases
-arrived, and 60.15s over 97 once M9 stage 2 landed. Headroom against the
+arrived, and 60.51s over 97 once M9 stage 2 landed. Headroom against the
 re-measured 70s local ceiling is ~10s, which is real but not generous: the 42.2s of deliberate waiting is the floor this route cannot
 touch, and the growth trend ADR-009 Decision 6 described (13s → 48.6s → 55.4s →
 67s) has not been repealed, only set back. The next milestone that adds a handful

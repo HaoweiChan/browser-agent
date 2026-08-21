@@ -220,7 +220,7 @@ documents the trap rather than relying on it.
 > + `browser.close`, i.e. harness scaffolding rather than evidence. The suite now
 > shares one browser (each run in its own BrowserContext) and measures
 > 56.47s over 95 cases after the M9 merge, inside ADR-002 Decision 4's ceiling,
-> which is now per-environment and measured (70s local, 75s CI — ADR-013
+> which is now per-environment and measured (70s local, 80s CI — ADR-013
 > Decisions 3 and 4), with the ceiling
 > enforced by `fast-wall-clock-budget` instead of asserted in prose. The parallel
 > runner is still backlog and still the fix for the 42.2s of deliberate waiting

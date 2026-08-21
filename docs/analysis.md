@@ -36,12 +36,12 @@ all offline** (`fast` to 91/91, `invariant` to 27/27, the gate at 71.3-76.5s —
 `evals/report/20260820-162200-fast.json`, `…-162043-invariant.json`), and
 **M12 stopped launching a Chromium per case**, which took the gate back under
 ADR-002's ceiling. The merged tree is given here in full rather than left to be
-inferred — `evals/report/20260821-164556-fast.json`, `…-164432-invariant.json`, `…-164456-live.json`:
+inferred — `evals/report/20260821-170854-fast.json`, `…-170753-invariant.json`, `…-164456-live.json`:
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 97 | **97/97** | 60.15s | 0.12s | 4.09s | $0.0000 |
-| `invariant` (must-always-hold) | 30 | **30/30** | 8.06s | 0.0s | 2.24s | $0.0000 |
+| `fast` (offline gate) | 97 | **97/97** | 60.51s | 0.12s | 4.10s | $0.0000 |
+| `invariant` (must-always-hold) | 30 | **30/30** | 8.18s | 0.0s | 2.29s | $0.0000 |
 | `live` (4 real sites) | 9 | **9/9** | 24.03s | 2.10s | 5.74s | $0.0000 |
 
 `fast`'s wall clock and p50 both fell against M9's numbers because M12 stopped
@@ -72,7 +72,7 @@ and the run there answers confidently and wrongly (§ the M8 rows in
 `docs/support-matrix.md`, D5–D11).
 
 **The `fast` gate cost 68s against the 60s ceiling ADR-002 set for two
-milestones, and is inside a re-measured one at 60.15s (97 cases).** It was declared
+milestones, and is inside a re-measured one at 60.51s (97 cases).** It was declared
 rather than fixed at M8 on the assumption that the 57s under the one deliberate
 10.6s click timeout was irreducible trend (13s at M2, 48.6s at M6, 55.4s at M7).
 M12 measured it per call instead: 42.2s is deliberate waiting at bounds the
@@ -91,13 +91,14 @@ removed rather than absorbed into the ceiling. Then it fired again on the branch
 first CI run, which is the more useful of the two: `main`'s own CI does `fast` in
 **89.62s** (run `32385032004`), so CI had been ~50% over the ceiling for its entire
 existence and nothing had ever checked there. This branch cuts that to 59.8-64.7s
-across four runs. CI now carries its own measured ceiling of 75s while local stays
+across four runs. CI now carries its own measured ceiling (80s after re-measurement) while local stays
 at 60s, both enforced. The local number was then re-measured too: the
 M9-stage-2 merge added a readiness case that holds a run slot for 3.0s on
 purpose, the suite straddled 60s across seven runs (59.35-60.16s), and the excess
 measured out as evidence rather than waste — so ADR-002 Decision 4's local
-ceiling became **70s** and CI's stayed 75s, each the slowest observed run plus
-15% (ADR-013 Decision 4). The parallel eval runner stays the named next lever.
+ceiling became **70s**, and CI's was re-measured to **80s** on the merged tree
+(64.29-68.96s over four runs) — each the slowest observed run plus 15%
+(ADR-013 Decisions 3 and 4). The parallel eval runner stays the named next lever.
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -171,7 +172,7 @@ than mocked. A successful step never waits it out.
 
 The per-case numbers in that table each still carried a cold Chromium launch,
 ~0.20s of the ~0.35s median. Since M12 the suite shares one browser and the
-median case is **0.12s** (p95 4.09s, `evals/report/20260821-164556-fast.json`);
+median case is **0.12s** (p95 4.10s, `evals/report/20260821-170854-fast.json`);
 the tall cases above are unchanged, because what they spend is the settle loop,
 not the launch.
 
@@ -186,7 +187,7 @@ Suite wall time grew 24s → 32s at the cold review (ADR-005), entirely from one
 extra `inner_text` per action to capture `page_changed`. That evidence is what
 separates a legitimate replan from one laundering an action that never landed,
 so it was bought deliberately. The `fast` gate remains inside the threshold set
-in ADR-002 — a measured 70s locally and 75s on CI since ADR-013 Decisions 3 and 4.
+in ADR-002 — a measured 70s locally and 80s on CI since ADR-013 Decisions 3 and 4.
 
 ## 4. Scalability
 

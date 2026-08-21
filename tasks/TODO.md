@@ -41,8 +41,8 @@ amended with the measured floor and why.
 Resolved by acceptance branch 1 (`specs/decisions/ADR-013-fast-suite-wall-clock.md`):
 per-call measurement put 11.3s of the 67.0s in per-case browser process
 lifecycle, which the harness no longer pays; 42.2s of deliberate waiting was
-left alone. `fast` is 60.15s over 97 cases. ADR-002 D4's ceiling is now
-per-environment and both numbers are measured: CI got 75s (Decision 3) after its
+left alone. `fast` is 60.51s over 97 cases. ADR-002 D4's ceiling is now
+per-environment and both numbers are measured: CI got its own (80s, Decision 3) after its
 first run showed main had been at 89.62s against an unchecked 60s, and the local
 number moved 60 -> 70 (Decision 4) when the M9-stage-2 merge made the suite
 straddle 60 with the excess measured as evidence, not waste.
@@ -160,7 +160,7 @@ Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence. M12 resolved without amending
 ADR-002 D4 — it removed 11.3s of per-case browser launch and left the 42.2s of
 deliberate waiting (settle loops, bounded load/screenshot waits, one 10s click
-timeout) that only parallelism can hide. `fast` now sits at 60.15s with
+timeout) that only parallelism can hide. `fast` now sits at 60.51s with
 ~10s of headroom against the re-measured 70s local ceiling, so this is the next lever when the ceiling
 goes red rather than an urgent one today (ADR-013).
 

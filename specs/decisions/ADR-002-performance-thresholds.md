@@ -1,11 +1,11 @@
 # ADR-002: Performance thresholds set from the M2 baseline
 
 Date: 2026-08-16
-Status: accepted; all six decisions stand as written. **Decision 4 (fast wall clock ≤ 60s) was knowingly breached from M8 to M12** — the gate measured 66.6-68.3s — and the breach is **closed at M12 without moving the ceiling**: `specs/decisions/ADR-013-fast-suite-wall-clock.md` measured 11.3s of the 67.0s as per-case browser process lifecycle, removed it, and left the deliberate 42.2s of timeouts untouched. **Decision 4 is also amended in scope**: the ceiling is per-environment since ADR-013 Decision 3 and its local number was re-measured in Decision 4 — **70s locally, 75s on CI** via `EVAL_WALL_BUDGET_S`, both measured and both enforced — because CI had been running `fast` in 89.62s against this same 60s for its entire existence with nothing checking. Enforced by `evals/run.py` and graded by `fast-wall-clock-budget` rather than asserted in this file.
+Status: accepted; all six decisions stand as written. **Decision 4 (fast wall clock ≤ 60s) was knowingly breached from M8 to M12** — the gate measured 66.6-68.3s — and the breach is **closed at M12 without moving the ceiling**: `specs/decisions/ADR-013-fast-suite-wall-clock.md` measured 11.3s of the 67.0s as per-case browser process lifecycle, removed it, and left the deliberate 42.2s of timeouts untouched. **Decision 4 is also amended in scope**: the ceiling is per-environment since ADR-013 Decision 3 and its local number was re-measured in Decision 4 — **70s locally, 80s on CI** via `EVAL_WALL_BUDGET_S`, both measured and both enforced — because CI had been running `fast` in 89.62s against this same 60s for its entire existence with nothing checking. Enforced by `evals/run.py` and graded by `fast-wall-clock-budget` rather than asserted in this file.
 
 **Amended by**: ADR-009 (Decision 4's 60s wall-clock ceiling, declared breached rather than reset); ADR-013 (that breach closed, enforcement added, the ceiling made per-environment in its Decision 3, and the local number re-measured from 60s to 70s in its Decision 4)
 
-**Ruling**: Sets the pre-commit gate: `fast` suite ≥ the committed baseline (1.000), `invariant` suite = 100% unconditional, trap-catch ≥ 90% as a floor never a verifier-accuracy claim, `fast` suite cost = $0.00 exactly, and `fast` suite wall clock ≤ the environment's own measured ceiling — 70s local, 75s CI (breached M8-M12, restored, made per-environment, then the local number re-measured — see Amended by).
+**Ruling**: Sets the pre-commit gate: `fast` suite ≥ the committed baseline (1.000), `invariant` suite = 100% unconditional, trap-catch ≥ 90% as a floor never a verifier-accuracy claim, `fast` suite cost = $0.00 exactly, and `fast` suite wall clock ≤ the environment's own measured ceiling — 70s local, 80s CI (breached M8-M12, restored, made per-environment, then the local number re-measured — see Amended by).
 **Because**: Naming performance targets before a baseline exists invites goalpost-moving in a history reviewers read.
 **Enforced by**: `.eval-baseline.json` + `.githooks/pre-commit` (fast-suite gate); `invariant` suite = 100% enforced unconditionally in `evals/run.py`; wall clock by `fast-wall-clock-budget` (ADR-013).
 
@@ -62,7 +62,7 @@ file:
    the point sharper than any prose could: it produced three wrong-answer
    inputs the trap set did not contain.
 4. **`fast` suite wall clock ≤ the environment's measured ceiling** —
-   **70s locally**, 75s on CI. At ~13s there is room for M3–M4 cases; past the
+   **70s locally**, 80s on CI. At ~13s there is room for M3–M4 cases; past the
    ceiling the pre-commit gate stops being run honestly, which is what the number
    is for. (Breached M8-M12 at 66.6-68.3s and declared rather than reset; closed
    at M12 at 56.47s and applied by `evals/run.py` to the run it measured;
