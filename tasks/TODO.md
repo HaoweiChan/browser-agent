@@ -54,6 +54,36 @@ Spec: promote only with its own eval evidence.
 Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence.
 
+### M19 — ADR-011 quotes a readiness latency no report supports            [status: todo]
+Origin: PR #21 R8
+Spec: ADR-011 Decision 4 says "Measured in the case: 5 ms, mid-run". The eight
+committed reports carrying `readyz-tracks-the-run-slot` record `during_latency_s`
+of 0.001-0.007 and never 0.005. The substance holds (all <=7ms); the figure is
+unsourced.
+Acceptance: the ADR quotes a value that appears in a named committed report, or
+states it as a range.
+
+### M20 — ADR-011's "invariants, all graded" overstates what the case asserts            [status: todo]
+Origin: PR #21 R9
+Spec: Decision 3 lists five invariants as graded. Invariant 5 (starts nothing,
+spends nothing) is asserted nowhere, and every sample comes from a single
+submission — so moving `ACTIVE_RUN = run_id` out of `async with SEM` to
+submit-time leaves `readyz-tracks-the-run-slot` PASSING, i.e. `active_run_id`
+non-null while `busy` is false is undetectable. The reviewer confirmed the
+seven-ablation claim in Decision 5 does reproduce; this is the eighth mutation.
+Acceptance: either the ADR narrows "all graded" to what the case asserts, or the
+case adds a second in-flight submission so the state is detectable — watched red.
+
+### M21 — the soak's mid-run readiness probe is one instant, not a series            [status: todo]
+Origin: PR #21 R10
+Spec: `soak.py` captures `mid` once, ~2s after submission, in runs lasting
+4.7-13.7s — and at ~2s the run is provably inside an await (playwright launch,
+navigate, observe, the awaited planner call). D20 and ADR-011 D7 say "measured
+ten times", which is ten single instants, not ten runs observed throughout. Both
+documents already hedge ("narrowed, not eliminated"), which is why this is LOW.
+Acceptance: the probe samples repeatedly across the run and the report carries
+the series, or both documents say "one probe per run, taken ~2s in".
+
 ### M18 — The soak cannot separate a bad deployment from a bad third-party site            [status: todo]
 Origin: PR #21 R1
 Spec: `summarize` now borrows `ablation.is_measurement` to decide what a
