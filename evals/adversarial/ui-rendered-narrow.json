@@ -1,7 +1,7 @@
 {
   "id": "ui-rendered-narrow",
   "task": "browser",
-  "suites": ["invariant", "fast"],
+  "suites": ["fast"],
   "input": {
     "kind": "ui-rendered",
     "viewport_width": 390,

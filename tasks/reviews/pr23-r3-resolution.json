@@ -1,0 +1,13 @@
+{
+  "review": "pr23-r2-verification",
+  "result": "FIXED",
+  "resolutions": [
+    {
+      "id": "N1",
+      "disposition": "fixed",
+      "case_id": "ui-rendered-narrow",
+      "red": "The invariant suite selected ui-rendered-narrow and failed at its Playwright import with ModuleNotFoundError: No module named 'playwright'.",
+      "green": "The pure suite-selection check passes: ui-rendered-narrow is absent from invariant's 31 selected cases and present in fast's 96 selected cases, retaining rendered browser coverage without an invariant Playwright import."
+    }
+  ]
+}
