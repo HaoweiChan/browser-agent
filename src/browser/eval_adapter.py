@@ -14,6 +14,7 @@ Case kinds (`input.kind`):
 - `screening`    — pre-flight scope screen truth table
 - `parse-plan`   — planner output tolerance
 - `mutation`     — mutation catalog integrity (pure code, no browser)
+- `ui-style`     — reviewer-page TinBoker tokens, contrast and stable DOM hooks
 - `gateway-model` — `POST /tasks`'s model allowlist, and that the model actually
   reaches the planner factory (the planner is swapped for a recorder: $0.00)
 - `ablation-table` — the M9 cost/model table in docs/analysis.md carries no
@@ -1805,6 +1806,75 @@ def _run_matrix_drift_case(case: dict) -> dict:
     return {"passed": not quiet, "wrong": {"parsed_quietly": quiet}}
 
 
+def _run_ui_style_case(case: dict) -> dict:
+    """The reviewer page keeps its TinBoker terminal language and UI hooks.
+
+    Pure source check: no browser, network or screenshot oracle. It pins the
+    small set of decisions that distinguish the style (dual palettes, grid,
+    keyline, focus/motion handling) while leaving layout values free to move.
+    """
+    inp = case["input"]
+    page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    page = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
+    dark = re.search(r":root\s*{([^}]*)}", page, re.S)
+    light = re.search(
+        r"@media\s*\(prefers-color-scheme:light\)\s*{\s*:root\s*{([^}]*)}",
+        page, re.S)
+
+    def declarations(match):
+        return dict(re.findall(r"(--[a-z0-9-]+)\s*:\s*([^;]+)",
+                               match.group(1))) if match else {}
+
+    def luminance(value):
+        if not re.fullmatch(r"#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?", value):
+            raise ValueError(f"contrast token is not a flat hex color: {value}")
+        raw = value[1:]
+        if len(raw) == 3:
+            raw = "".join(c * 2 for c in raw)
+        channels = [int(raw[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        linear = [c / 12.92 if c <= .04045 else ((c + .055) / 1.055) ** 2.4
+                  for c in channels]
+        return sum(a * b for a, b in zip((.2126, .7152, .0722), linear))
+
+    def contrast(a, b):
+        hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
+        return (hi + .05) / (lo + .05)
+
+    wrong = {}
+    for scheme, match in (("dark", dark), ("light", light)):
+        declared = declarations(match)
+        missing = sorted(set(inp["tokens"]) - set(declared))
+        if missing:
+            wrong[f"{scheme}_tokens"] = missing
+        low = []
+        for fg, bg, minimum in inp.get("contrast", []):
+            try:
+                got = contrast(declared[fg], declared[bg])
+            except (KeyError, ValueError) as e:
+                low.append({"pair": f"{fg}/{bg}", "error": str(e)})
+                continue
+            if got < minimum:
+                low.append({"pair": f"{fg}/{bg}", "got": round(got, 2),
+                            "minimum": minimum})
+        if low:
+            wrong[f"{scheme}_contrast"] = low
+
+    missing_fragments = [s for s in inp["fragments"] if s not in page]
+    if missing_fragments:
+        wrong["fragments"] = missing_fragments
+
+    missing_ids = [i for i in inp["ids"]
+                   if not re.search(rf'id=["\']{re.escape(i)}["\']', page)]
+    if missing_ids:
+        wrong["ids"] = missing_ids
+
+    forbidden = [s for s in inp.get("forbid", []) if s in page]
+    if forbidden:
+        wrong["forbidden"] = forbidden
+
+    return {"passed": not wrong, "wrong": wrong}
+
+
 def _check_supersede_dangling() -> dict:
     """No emitted trace may point superseded_by at a step that does not exist.
 
@@ -1943,6 +2013,7 @@ KINDS = {
     "schema": _run_schema_case,
     "screening": _run_screening_case,
     "stream": _run_stream_case,
+    "ui-style": _run_ui_style_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
     "verifier-labels": _run_verifier_labels_case,

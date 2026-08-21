@@ -39,6 +39,17 @@ deliberate click timeout, the rest a growth trend that crosses the budget
 regardless of any one milestone. Acceptance: fast < 60s again, or ADR-002 D4
 amended with the measured floor and why.
 
+### M18 — TinBoker reviewer UI restyle            [status: in-progress]
+Spec: Restyle the existing single-page reviewer UI with the TinBoker terminal
+language while preserving task submission, SSE trace, screenshots, results,
+support matrix, limitations, stable DOM hooks, and the no-build/no-framework
+architecture.
+Acceptance: dark terminal and light paper-terminal palettes, amber commands,
+cyan interaction/recovery, compact squared surfaces, a no-overflow 390px layout,
+explicit focus and reduced-motion handling, no external dependency, declared
+contrast pairs at least 4.5:1, focused fail-before/mutation/pass-after evidence,
+and the repo gate green in order.
+
 ### M10 — A-Freeze            [status: todo]
 Depends: M9, M12
 Spec: analysis/README/support-matrix refresh, prompts curated, second

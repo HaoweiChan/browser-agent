@@ -301,77 +301,165 @@ PAGE = r"""<!doctype html>
 <meta charset="utf-8">
 <title>browser-agent</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090d13">
 <style>
+  /* TinBoker terminal language, blended into this repo's evidence-first UI:
+     amber drives commands, cyan marks interaction/recovery, and the trace keeps
+     the room that the SEC inspector gives its document pane. */
   :root {
-    --bg:#0f1115; --panel:#161a21; --line:#262c36; --fg:#dbe1ea; --dim:#8b95a5;
-    --ok:#4ade80; --bad:#f87171; --warn:#fbbf24; --accent:#60a5fa;
+    --bg:#090d13; --panel:#0f151d; --raised:#141c26; --line:#253240;
+    --fg:#dce7ee; --dim:#91a0ad; --amber:#f4ae2b; --amber-ink:#ffc65c;
+    --on-amber:#171004; --accent:#3ac6d8; --ok:#47d683; --bad:#ff7a83;
+    --warn:var(--amber-ink); --grid:rgb(58 198 216 / .07);
+    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+    --radius:3px; --speed:150ms cubic-bezier(.4,0,.2,1);
+    color-scheme:dark;
   }
+  @media (prefers-color-scheme:light) { :root {
+    --bg:#e9e6dc; --panel:#f7f4eb; --raised:#efebe1; --line:#c9c2b2;
+    --fg:#1a222a; --dim:#53606a; --amber:#965600; --amber-ink:#744100;
+    --on-amber:#fff; --accent:#006d7a; --ok:#0d6b3a; --bad:#a82b3a;
+    --warn:var(--amber-ink); --grid:rgb(56 72 84 / .08);
+    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+    --radius:3px; --speed:150ms cubic-bezier(.4,0,.2,1);
+    color-scheme:light;
+  } }
   * { box-sizing:border-box }
-  body { margin:0; padding:2rem 1.25rem 4rem; background:var(--bg); color:var(--fg);
-         font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif }
-  main { max-width:60rem; margin:0 auto }
-  h1 { font-size:1.4rem; margin:0 0 .25rem }
-  h2 { font-size:1rem; text-transform:uppercase; letter-spacing:.08em; color:var(--dim);
-       margin:2.5rem 0 .75rem; font-weight:600 }
-  p.sub { color:var(--dim); margin:0 0 1.5rem }
-  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:1rem }
+  html { min-height:100%; background:var(--bg) }
+  body { margin:0; min-height:100vh; background-color:var(--bg); color:var(--fg);
+         font:13px/1.6 var(--mono); letter-spacing:-.01em;
+         background-image:linear-gradient(var(--grid) 1px,transparent 1px),
+           linear-gradient(90deg,var(--grid) 1px,transparent 1px),
+           radial-gradient(900px 520px at 50% -12%,rgb(58 198 216 / .08),transparent 65%);
+         background-size:44px 44px,44px 44px,100% 100%; background-attachment:fixed }
+  body::before { content:""; position:fixed; inset:0 0 auto; height:2px; z-index:100;
+         pointer-events:none; background:linear-gradient(90deg,var(--amber),var(--accent),var(--amber)) }
+  header, main, footer { width:min(100% - 2.5rem,78rem); margin-inline:auto }
+  header { padding:2.6rem 0 1.35rem; border-bottom:1px solid var(--line) }
+  .mast { display:flex; justify-content:space-between; gap:1.5rem; align-items:flex-start }
+  .eyebrow { color:var(--amber-ink); font-size:10px; font-weight:700;
+         letter-spacing:.14em; text-transform:uppercase }
+  .signal { color:var(--accent); border:1px solid var(--accent); padding:.16rem .45rem;
+         font-size:10px; letter-spacing:.09em; text-transform:uppercase; white-space:nowrap }
+  h1 { font-size:clamp(1.55rem,4vw,2.25rem); line-height:1.1; margin:.35rem 0 .55rem;
+         letter-spacing:-.055em; font-weight:800 }
+  h1::before { content:"> "; color:var(--amber-ink); font-weight:600 }
+  h2 { display:flex; align-items:center; gap:.65rem; color:var(--fg); font-size:11px;
+       text-transform:uppercase; letter-spacing:.12em; margin:2rem 0 .7rem; font-weight:700 }
+  h2::after { content:""; height:1px; background:var(--line); flex:1 }
+  .section-no { color:var(--amber-ink) }
+  p.sub { color:var(--dim); max-width:52rem; margin:0 }
+  main { padding-bottom:1rem }
+  .panel { background:var(--panel); border:1px solid var(--line);
+       border-radius:var(--radius); padding:1rem; box-shadow:0 18px 50px rgb(0 0 0 / .08) }
+  .command { border-top:2px solid var(--amber) }
+  label { display:block; color:var(--dim); font-size:10px; font-weight:700;
+       letter-spacing:.1em; text-transform:uppercase; margin:0 0 .3rem }
   input, button, select { font:inherit }
-  input, select { background:#0b0e13; border:1px solid var(--line); color:var(--fg);
-          border-radius:6px; padding:.55rem .7rem; width:100% }
-  .row { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:.6rem }
-  .row > * { flex:1 1 16rem }
-  button { background:var(--accent); border:0; color:#06121f; font-weight:600;
-           border-radius:6px; padding:.55rem 1.1rem; cursor:pointer; flex:0 0 auto }
-  button.ghost { background:transparent; border:1px solid var(--line); color:var(--dim) }
+  input, select { background:var(--bg); border:1px solid var(--line); color:var(--fg);
+       border-radius:var(--radius); padding:.6rem .7rem; width:100%; min-width:0;
+       transition:border-color var(--speed),background-color var(--speed) }
+  input:hover, select:hover { border-color:color-mix(in srgb,var(--fg) 32%,var(--line)) }
+  input::placeholder { color:color-mix(in srgb,var(--dim) 82%,transparent) }
+  .row { display:flex; gap:.65rem; flex-wrap:wrap; margin-bottom:.7rem; align-items:flex-end }
+  .field { flex:1 1 20rem }
+  .actions { display:flex; gap:.55rem; flex:0 0 auto }
+  button { background:var(--amber); border:1px solid var(--amber); color:var(--on-amber);
+       font-weight:800; border-radius:var(--radius); padding:.6rem 1rem; cursor:pointer;
+       flex:0 0 auto; text-transform:uppercase; letter-spacing:.06em; font-size:11px;
+       transition:background-color var(--speed),border-color var(--speed),color var(--speed),transform var(--speed) }
+  button:not(.ghost):hover:not(:disabled) { background:color-mix(in srgb,var(--amber) 86%,var(--bg)); transform:translateY(-1px) }
+  button.ghost { background:transparent; border-color:var(--accent); color:var(--accent) }
+  button.ghost:hover:not(:disabled) { background:color-mix(in srgb,var(--accent) 10%,transparent) }
   button:disabled { opacity:.5; cursor:not-allowed }
-  code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px }
-  pre { overflow-x:auto; background:#0b0e13; border:1px solid var(--line); border-radius:6px;
-        padding:.7rem; margin:.5rem 0 0; white-space:pre-wrap; word-break:break-word }
-  .step { border:1px solid var(--line); border-left:3px solid var(--line);
-          border-radius:6px; padding:.6rem .8rem; margin-bottom:.5rem; background:var(--panel) }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px }
+  code, pre { font-family:var(--mono); font-size:12px }
+  pre { overflow-x:auto; background:var(--bg); border:1px solid var(--line);
+       border-radius:var(--radius); padding:.8rem; margin:.55rem 0 0;
+       white-space:pre-wrap; word-break:break-word }
+  #err { border-color:var(--bad); color:var(--bad) }
+  #live { scroll-margin-top:1rem }
+  .step { position:relative; border:1px solid var(--line); border-left:3px solid var(--line);
+       border-radius:var(--radius); padding:.72rem .85rem; margin-bottom:.55rem;
+       background:var(--panel); transition:border-color var(--speed),background-color var(--speed) }
+  .step:hover { background:var(--raised) }
   .step.failed { border-left-color:var(--bad) }
   .step.recovered { border-left-color:var(--accent) }
-  .step.superseded { opacity:.62 }
+  .step.superseded { border-style:dashed; background:color-mix(in srgb,var(--dim) 5%,var(--panel)) }
   .hd { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap }
-  .i { color:var(--dim); font-family:ui-monospace,monospace }
-  .act { font-weight:650 }
-  .badge { font-size:11px; padding:.1rem .45rem; border-radius:99px; border:1px solid var(--line);
-           color:var(--dim); font-family:ui-monospace,monospace; white-space:nowrap }
-  .badge.ok { color:var(--ok); border-color:#1e4b32 }
-  .badge.bad { color:var(--bad); border-color:#5b2626 }
-  .badge.warn { color:var(--warn); border-color:#5c451a }
-  .badge.acc { color:var(--accent); border-color:#204066 }
-  .ms { margin-left:auto; color:var(--dim); font-size:12px; font-family:ui-monospace,monospace }
-  details summary { cursor:pointer; color:var(--dim); font-size:12.5px; margin-top:.5rem }
-  img.shot { max-width:100%; border:1px solid var(--line); border-radius:6px; margin-top:.5rem }
-  table { border-collapse:collapse; width:100%; font-size:13.5px }
-  th, td { border:1px solid var(--line); padding:.45rem .6rem; text-align:left; vertical-align:top }
-  th { color:var(--dim); font-weight:600; background:#12161d }
+  .i { color:var(--amber-ink); font-weight:700 }
+  .act { font-weight:750 }
+  .badge { font-size:10px; padding:.1rem .4rem; border-radius:var(--radius);
+       border:1px solid var(--line); color:var(--dim); white-space:nowrap;
+       text-transform:uppercase; letter-spacing:.04em }
+  .badge.ok { color:var(--ok); border-color:var(--ok) }
+  .badge.bad { color:var(--bad); border-color:var(--bad) }
+  .badge.warn { color:var(--warn); border-color:var(--warn) }
+  .badge.acc { color:var(--accent); border-color:var(--accent) }
+  .ms { margin-left:auto; color:var(--dim); font-size:11px }
+  details summary { cursor:pointer; color:var(--dim); font-size:11px; margin-top:.5rem;
+       text-transform:uppercase; letter-spacing:.06em }
+  details summary:hover { color:var(--accent) }
+  img.shot { max-width:100%; border:1px solid var(--line); border-radius:var(--radius); margin-top:.65rem }
+  .table-wrap { overflow:auto; padding:0 }
+  table { border-collapse:collapse; width:100%; min-width:42rem; font-size:12px }
+  th, td { border:1px solid var(--line); padding:.55rem .65rem; text-align:left; vertical-align:top }
+  th { color:var(--amber-ink); font-weight:700; background:var(--raised);
+       text-transform:uppercase; font-size:10px; letter-spacing:.07em }
   td.supported { color:var(--ok) } td.unreliable { color:var(--warn) }
-  td.unsupported { color:var(--bad) } td.none { color:#4b5563 }
-  .note { color:var(--dim); font-size:13px }
-  .status-line { display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.6rem }
-  .big { font-size:1.05rem; font-weight:650 }
+  td.unsupported { color:var(--bad) } td.none { color:var(--dim) }
+  .note { color:var(--dim); font-size:12px }
+  #guards::before { content:"guardrails :: "; color:var(--amber-ink); font-weight:700 }
+  .status-line { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin-bottom:.7rem }
+  .big { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em;
+       border:1px solid currentColor; padding:.17rem .45rem }
   .big.success { color:var(--ok) } .big.failure { color:var(--bad) }
   .big.unsupported { color:var(--warn) } .big.running { color:var(--accent) }
   a { color:var(--accent) }
+  footer { color:var(--dim); border-top:1px solid var(--line); padding:1rem 0 2.5rem;
+       font-size:11px; display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap }
+  @media (max-width:680px) {
+    header, main, footer { width:min(100% - 1.25rem,78rem) }
+    header { padding-top:1.8rem }
+    .mast { display:block }
+    .signal { display:inline-block; margin-top:.8rem }
+    .actions, .actions button { width:100% }
+    .actions { flex-wrap:wrap }
+    .ms { margin-left:0; width:100% }
+    .panel { padding:.8rem }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important }
+  }
 </style>
-<main>
-<h1>browser-agent</h1>
-<p class="sub">Natural-language task &rarr; plan &rarr; execute in a real headless Chromium
-&rarr; verified result. Every attempt is traced, including the ones a recovery
-ladder replaced.</p>
+<header>
+  <div class="mast">
+    <div>
+      <div class="eyebrow">human-review console / browser runtime</div>
+      <h1>browser-agent</h1>
+      <p class="sub">Natural-language task &rarr; plan &rarr; execute in a real headless Chromium
+      &rarr; verified result. Every attempt is traced, including the ones a recovery
+      ladder replaced.</p>
+    </div>
+    <span class="signal">trace first</span>
+  </div>
+</header>
 
-<div class="panel">
+<main>
+<h2><span class="section-no">01</span> Run task</h2>
+
+<div class="panel command">
   <div class="row">
-    <input id="task" placeholder="e.g. What is the price of the Aurora Desk Lamp?">
+    <div class="field"><label for="task">Task instruction</label>
+      <input id="task" placeholder="e.g. What is the price of the Aurora Desk Lamp?"></div>
+    <div class="field"><label for="url">Start URL / optional</label>
+      <input id="url" placeholder="http/https, public hosts only"></div>
+    <div class="actions">
+      <button id="go" onclick="submitTask()">Run task</button>
+      <button class="ghost" onclick="smoke()">Smoke test</button>
+    </div>
   </div>
-  <div class="row">
-    <input id="url" placeholder="start URL (optional) — http/https, public hosts only">
-    <button id="go" onclick="submitTask()">Run task</button>
-    <button class="ghost" onclick="smoke()">Browser smoke test</button>
-  </div>
-  <p class="note" id="guards">Guards live on this deployment: URL allow-list (no
+  <p class="note" id="guards">URL allow-list (no
     loopback/private/link-local in any spelling), 30 actions and 100k LLM tokens per run,
     2 replans per task, one run at a time. A blocked URL is refused before a browser opens.
     <code>POST /tasks</code> also takes an optional <code>model</code> field, gated on a
@@ -381,23 +469,25 @@ ladder replaced.</p>
 </div>
 
 <div id="live" hidden>
-  <h2>Trace <span class="note" id="runid"></span></h2>
+  <h2><span class="section-no">02</span> Trace <span class="note" id="runid"></span></h2>
   <div class="status-line"><span class="big running" id="status">running</span>
     <span class="note" id="budgets"></span></div>
   <div id="steps"></div>
   <div id="result"></div>
 </div>
 
-<h2>Support matrix</h2>
+<h2><span class="section-no">03</span> Support matrix</h2>
 <p class="note">Report-assisted, human-declared: the eval report suggests a status, a human
   declares it with a reason. A pass rate does not threshold itself into &ldquo;supported&rdquo;.
   Served from <code>docs/support-matrix.md</code> — the same file the README renders.</p>
-<div id="matrix" class="panel">loading&hellip;</div>
+<div id="matrix" class="panel table-wrap">loading&hellip;</div>
 
-<h2>Declared limitations</h2>
+<h2><span class="section-no">04</span> Declared limitations</h2>
 <p class="note">What this agent does <em>not</em> do, each citing the case that shows it.</p>
-<div id="limits" class="panel">loading&hellip;</div>
+<div id="limits" class="panel table-wrap">loading&hellip;</div>
 </main>
+
+<footer><span>browser-agent / reviewer evidence surface</span><span>amber = command · cyan = interaction / recovery</span></footer>
 
 <script>
 const $ = (id) => document.getElementById(id);

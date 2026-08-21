@@ -1,0 +1,45 @@
+{
+  "id": "ui-tinboker-style",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "input": {
+    "kind": "ui-style",
+    "tokens": [
+      "--bg", "--panel", "--raised", "--line", "--fg", "--dim",
+      "--amber", "--amber-ink", "--on-amber", "--accent", "--ok",
+      "--bad", "--grid", "--mono"
+    ],
+    "contrast": [
+      ["--fg", "--bg", 4.5],
+      ["--dim", "--bg", 4.5],
+      ["--fg", "--panel", 4.5],
+      ["--dim", "--panel", 4.5],
+      ["--amber-ink", "--bg", 4.5],
+      ["--accent", "--bg", 4.5],
+      ["--ok", "--bg", 4.5],
+      ["--bad", "--bg", 4.5],
+      ["--on-amber", "--amber", 4.5]
+    ],
+    "fragments": [
+      "color-scheme:dark",
+      "color-scheme:light",
+      "@media (prefers-color-scheme:light)",
+      "@media (prefers-reduced-motion:reduce)",
+      ":focus-visible",
+      "body::before",
+      "background-image:",
+      "button:not(.ghost):hover:not(:disabled)"
+    ],
+    "ids": [
+      "task", "url", "go", "err", "live", "steps", "result",
+      "matrix", "limits"
+    ],
+    "forbid": ["fonts.googleapis.com", "fonts.gstatic.com"]
+  },
+  "expect": {},
+  "provenance": "TinBoker restyle requested on 2026-08-21, adapted from sec-10k-extract PR #18 rather than copied: this reviewer UI keeps its trace-first information architecture and existing DOM hooks. Watched red against the pre-restyle PAGE: no light palette, grid, viewport keyline, focus-visible treatment, reduced-motion branch, or amber button scoping; the old page also lacked the raised/amber-ink/grid/mono tokens. Contrast was then watched red independently by changing light --accent to #8a8a8a: the case reported 2.76:1 against --bg. The committed dark floor is 6.84:1 (dim/panel) and light floor is 4.85:1 (accent/bg) across the declared pairs. The case deliberately checks the source-level visual contract, contrast pairs and stable UI hooks, not pixel output or exact spacing, so future refinements remain possible.",
+  "triage": {
+    "class": "visual-regression",
+    "note": "The interface worked but did not carry the requested TinBoker terminal language. This check makes the distinguishing style and accessibility decisions executable while the existing stream and gateway cases continue to grade behavior."
+  }
+}
