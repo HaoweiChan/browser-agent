@@ -2040,13 +2040,23 @@ def _run_wall_clock_case(case: dict) -> dict:
     from evals.run import WALL_BUDGET_ENV, WALL_BUDGET_S, over_budget, wall_budget
 
     exp = case["expect"]
-    wrong = [r for r in case["input"]["rows"]
-             if over_budget(r["suite"], r["wall_seconds"]) is not r["over"]]
-    # The per-environment override (ADR-013 amendment). A positive number moves
-    # the ceiling; everything else must fall back to the committed 60 rather than
-    # switch the gate off, which is the quiet direction this PR keeps finding.
+    wrong = []
+    # Everything below is graded with the override CLEARED, because `rows` and
+    # `applied_in_main` pin the committed local ruling and `over_budget` reads the
+    # ambient environment. Without this the case grades whatever the machine
+    # happens to export: it passed locally and failed on CI, where the workflow
+    # exports EVAL_WALL_BUDGET_S=75, so the 70.01s row was correctly not-over and
+    # the assertion that it IS over was wrong. A case about environment-dependent
+    # ceilings that was itself environment-dependent (PR #20, found by CI).
     prev = os.environ.get(WALL_BUDGET_ENV)
     try:
+        os.environ.pop(WALL_BUDGET_ENV, None)
+        wrong += [r for r in case["input"]["rows"]
+                  if over_budget(r["suite"], r["wall_seconds"]) is not r["over"]]
+        # The per-environment override itself. A positive number moves the
+        # ceiling; everything else must fall back to the committed number rather
+        # than switch the gate off, which is the quiet direction this PR keeps
+        # finding.
         for r in case["input"]["env_override"]:
             os.environ.pop(WALL_BUDGET_ENV, None)
             if r["value"] is not None:
@@ -2055,6 +2065,10 @@ def _run_wall_clock_case(case: dict) -> dict:
             if got != r["budget"]:
                 wrong.append({"env": r["value"], "expected_ceiling": r["budget"], "got": got,
                               "note": r["note"]})
+        os.environ.pop(WALL_BUDGET_ENV, None)
+        applied = [dict(r, got=_main_exit_code(r["wall_seconds"]))
+                   for r in case["input"]["applied_in_main"]]
+        wrong += [r for r in applied if r["got"] != r["exit"]]
     finally:
         os.environ.pop(WALL_BUDGET_ENV, None)
         if prev is not None:
@@ -2076,9 +2090,6 @@ def _run_wall_clock_case(case: dict) -> dict:
     if sorted(WALL_BUDGET_S) != sorted(exp["suites_with_a_ceiling"]):
         wrong.append({"ruling": "suites", "budgets": sorted(WALL_BUDGET_S),
                       "declared": sorted(exp["suites_with_a_ceiling"])})
-    applied = [dict(r, got=_main_exit_code(r["wall_seconds"]))
-               for r in case["input"]["applied_in_main"]]
-    wrong += [r for r in applied if r["got"] != r["exit"]]
     return {"passed": not wrong, "wrong": wrong,
             "got": {"budgets": WALL_BUDGET_S, "ci_ceiling": exp["ci_wall_seconds"],
                     "main_exit": applied}}
