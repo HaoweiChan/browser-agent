@@ -1,0 +1,16 @@
+{
+  "id": "wall-clock-probe-history-isolated",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "history-ledger-isolated"
+  },
+  "expect": {
+    "note": "calling _main_exit_code (the in-process evals.run.main() probe fast-wall-clock-budget drives) must add zero lines to the real evals/report/history.jsonl -- it is a probe of the exit-code path, not a run, and the ledger it may touch must be a redirected temp path"
+  },
+  "provenance": "PR #20 R18: --no-report in _main_exit_code suppresses the full per-case report but evals.run.main() appends its history line unconditionally, so every fast run that exercised fast-wall-clock-budget (which calls _main_exit_code twice) injected two fabricated rows into the committed time series ADR-012 exists to preserve -- 52 of 241 committed lines were exactly that (wall_s 59.88 and 79.02, total=1, a shape no real run produces). Fixed by redirecting R.HISTORY/R.REPORT_DIR to a tempfile.TemporaryDirectory() inside _main_exit_code's existing try/finally. Watched red pre-fix: two calls to _main_exit_code added two lines to the real evals/report/history.jsonl; post-fix, zero.",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "grades the isolation of a probe that runs inside the suite itself, the same self-referential shape as fast-wall-clock-budget's _main_exit_code call. Does not check the two fabricated rows already committed at HEAD before this fix landed -- those were deleted by hand as part of the same repair, not detected by this case, since a case cannot retroactively grade history that predates it."
+  }
+}

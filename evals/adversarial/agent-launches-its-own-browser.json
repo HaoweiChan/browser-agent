@@ -1,0 +1,25 @@
+{
+  "id": "agent-launches-its-own-browser",
+  "task": "browser",
+  "suites": ["fast"],
+  "tc": "TC1",
+  "level": "L1",
+  "input": {
+    "task": "What does the main heading on the page say?",
+    "fixture": "hello.html",
+    "own_browser": true,
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "heading", "name": "Hello Fixture" } }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Hello Fixture"
+  },
+  "provenance": "M12 gave `run_task` an optional `browser` argument so the eval suite can share one Chromium across cases (11.3s of the fast suite's 67.0s was per-case driver start + launch + close). The harness then passed a browser on EVERY case, which left `browser=None` — the branch the gateway and the CLI, i.e. every real caller, actually take — graded by nothing at all: it could be deleted and the suite would stay 1.000. This case is the one run that refuses the shared browser. Watched red before the case existed by deleting the `if browser is None:` launch block from agent.py: the whole suite stayed green, which is the failure. Watched red with the case present by the same edit: `AttributeError: 'NoneType' object has no attribute 'new_context'`, this case alone.",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "the same family as `nav-action-load-event-never-fires`: two code paths do the same job, one of them is exercised by the suite, and a defect in the other survives a green run. It duplicates `tc1-hello-heading` on purpose — cheapest possible run (~0.3s, one extract, no navigation of consequence), because what it grades is the launch, not the extraction.",
+    "not_covered": "it does not grade browser ISOLATION between shared-browser cases. Each run gets its own BrowserContext, so cookies and storage cannot cross, and every derived figure reproduced across the browser-sharing change on the same 88-case suite — 168 actions, recovery 7/7, mutation 9/11 with 6 recovered / 5 relocated, diagnosis 14/14, 4 replans, before and after (this case then took the suite to 89 cases and 170 actions). But nothing pins isolation itself."
+  }
+}

@@ -29,6 +29,7 @@ per process) so eval and production exercise the same serving path.
 """
 
 import asyncio
+import atexit
 import json
 import re
 import socket
@@ -91,12 +92,82 @@ def _subst(obj, url: str):
     return json.loads(json.dumps(obj).replace("$FIXTURE_URL", url))
 
 
-def _run_agent(task: str, url: str | None, planner, **kw) -> dict:
+_LOOP: asyncio.AbstractEventLoop | None = None
+_BROWSER = _PW = None
+
+
+def _await(coro):
+    """One event loop for every case in the process. `asyncio.run` per case would
+    be fine on its own, but a Playwright browser belongs to the loop that created
+    it, so a shared browser needs a shared loop."""
+    global _LOOP
+    if _LOOP is None:
+        _LOOP = asyncio.new_event_loop()
+    return _LOOP.run_until_complete(coro)
+
+
+async def _browser():
+    """One Chromium for the whole suite. Each case still gets its own
+    BrowserContext (run_task, _run_observe_case), so nothing crosses between
+    cases; what is shared is the process. Measured on the `fast` suite: 58 driver
+    starts + launches + closes cost 11.3s of 67.0s, which is scaffolding, not
+    evidence (ADR-013). Both live until `_shutdown` below closes them.
+
+    Re-launched when it is gone: a dead browser is not None, and handing it out
+    turns one crash into every later case failing with `TargetClosedError`
+    attributed to itself — the containment per-case launches gave for free
+    (PR #20 R2, case `shared-browser-relaunches-when-dead`). The driver is NOT
+    restarted with it: one node process serves every browser this run opens."""
+    global _BROWSER, _PW
+    if _PW is None:
+        from playwright.async_api import async_playwright
+        _PW = await async_playwright().start()
+    if _BROWSER is None or not _BROWSER.is_connected():
+        _BROWSER = await _PW.chromium.launch(args=["--no-sandbox"])
+    return _BROWSER
+
+
+@atexit.register
+def _shutdown():
+    """Close the shared browser, driver and loop before the interpreter goes.
+
+    Not correctness — noise. Left open, Playwright's connection tasks are still
+    pending when CPython tears the loop down, and the run ends in
+    `RuntimeError: Event loop is closed` and two `Task was destroyed but it is
+    pending!` tracebacks after the suite's last line (CI run 32455716866). The
+    exit code was never wrong; a green run that ends in tracebacks just reads as
+    a broken one, and this repo is read.
+
+    Guarded on state, not assumed: a suite that opened no browser leaves every
+    global None, and a loop somebody else already closed is left alone — the
+    objection to doing this at all was an atexit hook running against a closed
+    loop, and that is the branch above."""
+    global _BROWSER, _PW
+    if _LOOP is None or _LOOP.is_closed():
+        return
+    if _BROWSER is not None and _BROWSER.is_connected():
+        _LOOP.run_until_complete(_BROWSER.close())
+    if _PW is not None:
+        _LOOP.run_until_complete(_PW.stop())
+    _BROWSER = _PW = None
+    _LOOP.close()
+
+
+def _run_agent(task: str, url: str | None, planner, own_browser: bool = False, **kw) -> dict:
     """One agent run in a throwaway run dir — what every E2E-shaped case needs.
     The dir is temporary because the eval grades the returned result and the
-    trace inside it; the on-disk artifacts are for a human debugging a real run."""
+    trace inside it; the on-disk artifacts are for a human debugging a real run.
+
+    `own_browser` gives this run the production path — `run_task` launching its
+    own Chromium — instead of the suite's shared one. Exactly one case asks for
+    it (`agent-launches-its-own-browser`), because a shared browser everywhere
+    would leave the branch every real caller takes graded by nothing."""
+    async def go(run_dir):
+        browser = None if own_browser else await _browser()
+        return await run_task(task, url, planner, run_dir, browser=browser, **kw)
+
     with tempfile.TemporaryDirectory() as run_dir:
-        return asyncio.run(run_task(task, url, planner, run_dir, **kw))
+        return _await(go(run_dir))
 
 
 # --- pure-code invariant checks --------------------------------------------
@@ -387,16 +458,14 @@ def _run_verifier_case(case: dict) -> dict:
 
 
 def _run_observe_case(case: dict) -> dict:
-    from playwright.async_api import async_playwright
-
     from .observe import observe
 
     url = f"{_base_url()}/fixtures/{case['input']['fixture']}"
 
     async def go():
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch(args=["--no-sandbox"])
-            page = await browser.new_page()
+        ctx = await (await _browser()).new_context()
+        try:
+            page = await ctx.new_page()
             # Deliberately NOT agent.navigate(): production asks "is this page
             # usable enough to act on?", observe ground truth asks "what does a
             # fully settled page expose?". Forcing one navigation semantics onto
@@ -418,11 +487,11 @@ def _run_observe_case(case: dict) -> dict:
             # contract. Same lesson as the screenshot bound one level up —
             # try/except bounds error propagation, never latency.
             await page.goto(url)
-            obs = await observe(page)
-            await browser.close()
-            return obs
+            return await observe(page)
+        finally:
+            await ctx.close()
 
-    obs = asyncio.run(go())
+    obs = _await(go())
     exp = case["expect"]
     missing = [
         want for want in exp.get("contains", [])
@@ -474,7 +543,8 @@ def _run_fixture_case(case: dict) -> dict:
     # the case fails loudly; stubbing it would grade a capability nobody ran
     # (CLAUDE.md rule 4).
     planner = live_planner() if inp.get("planner") == "live" else stub_planner(plans)
-    result = _run_agent(inp["task"], inp.get("url", fixture_url), planner, url_guard=guard)
+    result = _run_agent(inp["task"], inp.get("url", fixture_url), planner, url_guard=guard,
+                        own_browser=inp.get("own_browser", False))
 
     # Re-verify with ground truth the runtime cannot have: hand labels, identity
     # anchors, and the fixture's own record of what it received.
@@ -930,6 +1000,17 @@ def _run_matrix_case(case: dict) -> dict:
 REPORT_CITATION_SCOPE = ("docs", "specs", "tasks", "README.md", "src",
                           "evals/golden", "evals/adversarial", ".github", "prompts")
 REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
+# `tasks/reviews/` holds verbatim reviewer records, and one repro instruction
+# names a file it tells you to CREATE — R1 of PR #20 says to write a report
+# dated 29991231 into evals/report/ and then run the case. That is not a
+# citation of evidence, and the review text is the record, so it is not
+# edited to dodge a regex. The rest of tasks/reviews/ is real citations —
+# genuine evidence for round-1/2/4 findings — and skipping the whole
+# directory by path (R20 of PR #20) blinded this guard to all of them, so the
+# exclusion is the one literal name, not the directory. (Spelled out in prose
+# here on purpose: writing the literal path in a comment near the regex would
+# make the comment itself a dangling citation.)
+REPORT_CITATION_SKIP = ("29991231-235959-fast.json",)
 
 
 def _run_report_citations_case(case: dict) -> dict:
@@ -943,6 +1024,12 @@ def _run_report_citations_case(case: dict) -> dict:
     used to decide what was prunable in the first place. Same boundary as
     support-matrix-cites-real-cases: it checks the citation RESOLVES, not that
     the number it's attached to is still an honest measurement.
+
+    `REPORT_CITATION_SKIP` grades its own width too: it was a `tasks/reviews`
+    path prefix once, which blinded this guard to 8 genuine review citations
+    (PR #20 R20) — narrowed to the one literal synthetic filename that isn't
+    real evidence, and `expect.skip_exactly` pins that it stays exactly that
+    literal rather than widening back into a path prefix.
     """
     root = Path(__file__).parents[2]
     cited: set[str] = set()
@@ -952,9 +1039,17 @@ def _run_report_citations_case(case: dict) -> dict:
             if not f.is_file():
                 continue
             cited |= set(REPORT_CITATION.findall(f.read_text(encoding="utf-8", errors="ignore")))
+    cited -= set(REPORT_CITATION_SKIP)
     missing = sorted(n for n in cited if not (root / "evals" / "report" / n).exists())
-    return {"passed": not missing, "wrong": {"missing_reports": missing},
-            "got": {"citations": len(cited)}}
+    wrong: dict = {}
+    if missing:
+        wrong["missing_reports"] = missing
+    want_skip = sorted(case.get("expect", {}).get("skip_exactly", []))
+    got_skip = sorted(REPORT_CITATION_SKIP)
+    if want_skip and got_skip != want_skip:
+        wrong["skip"] = {"want": want_skip, "got": got_skip}
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"citations": len(cited), "skip": got_skip}}
 
 
 def _run_gateway_error_case(case: dict) -> dict:
@@ -2054,11 +2149,401 @@ def _run_parse_plan_case(case: dict) -> dict:
     }
 
 
+def _run_soak_accounting_case(case: dict) -> dict:
+    """The soak's own arithmetic, graded against a stubbed transport.
+
+    `evals/soak.py` produces every number in support-matrix D20 and ADR-011
+    Decisions 6 and 7, and shipped with no case of any kind (PR #21, R4) — which
+    is why R1, R2 and R3 were all live in a tree the gate called green. Four
+    halves, one per way the driver can publish a number that is not true:
+
+      - `submit_failures`: the exception -> phase table, driven through the real
+        `run_one` rather than asserted against a lookup. Phase 1 is a claim —
+        *nothing was delivered* — and a read timeout after the POST landed, a
+        200 whose body will not parse, and a 200 with no `run_id` are all NOT
+        that: the run may be executing and billing right now (R2).
+      - `terminal_records`: a terminal record that is not a measurement is not a
+        completion. A deployment whose planner cannot start answers every poll
+        with `failure:env`, and that must not publish `demo_ready: true` (R1).
+      - `retry_probe`: `ablation._http` retries connect-phase failures silently,
+        so the one failure family the soak exists to observe could be swallowed
+        whole. "No transport error in any phase" has to be readable off the
+        artifact that sentence cites (R3).
+      - correctness is the production `verifier.answers_match` plus a successful
+        terminal status — the ablation's rule — because D20 compares the two
+        directly and `'$39.00' == '39.00'` is False while the repo's own
+        correctness metric says those are the same answer (R7).
+
+    No network, no browser, no spend: every response is a stub.
+    """
+    import io
+
+    import evals.ablation as AB
+    import evals.soak as SK
+
+    inp, wrong = case["input"], []
+    BASE = "http://stub.invalid"
+
+    def make_exc(name):
+        if name == "HTTPError":
+            return urllib.error.HTTPError(f"{BASE}/tasks", 503, "Service Unavailable",
+                                          {}, io.BytesIO(b"upstream not ready"))
+        if name == "URLError":
+            return urllib.error.URLError("[Errno 61] Connection refused")
+        if name == "TimeoutError":
+            # What urllib raises for a read timeout: the request was delivered.
+            return TimeoutError("timed out")
+        raise AssertionError(f"case names an exception the adapter cannot build: {name}")
+
+    def responder(script):
+        """`script(url, method) -> dict | bytes | Exception` as the whole server."""
+        def fake(req, *a, **k):
+            url = getattr(req, "full_url", req)
+            method = req.get_method() if hasattr(req, "get_method") else "GET"
+            out = script(url, method)
+            if isinstance(out, BaseException):
+                raise out
+            return io.BytesIO(out if isinstance(out, bytes) else json.dumps(out).encode())
+        return fake
+
+    def with_stub(script, fn):
+        # `soak.probe` and `ablation._http` both reach through the `urllib.request`
+        # module object, so one patch covers both. The two driver constants are
+        # zeroed so a retry probe costs milliseconds instead of 15 seconds.
+        prev = (urllib.request.urlopen, SK.POLL_SECONDS, AB.RETRY_SLEEPS)
+        urllib.request.urlopen = responder(script)
+        SK.POLL_SECONDS, AB.RETRY_SLEEPS = 0.01, (0.0, 0.0)
+        try:
+            return fn()
+        finally:
+            urllib.request.urlopen, SK.POLL_SECONDS, AB.RETRY_SLEEPS = prev
+
+    def spec_for(answer=None):
+        return {"id": "stub-case", "task": "What is the price?", "fixture": "shop.html",
+                "url": None, "answer": answer, "ground_truth": "evals/golden/stub.json"}
+
+    # --- the exception -> phase table, through the real submit path -----------
+    infra_rows = []
+    for probe in inp.get("submit_failures", []):
+        outcome = make_exc(probe["raise"]) if probe.get("raise") else probe["body"]
+
+        def script(url, method, _o=outcome):
+            if method == "POST":
+                return _o.encode() if isinstance(_o, str) else _o
+            return {"ready": True}
+
+        row = with_stub(script, lambda: SK.run_one(BASE, spec_for("x"), 5))
+        infra_rows.append(row)
+        if row.get("phase") != probe["phase"]:
+            wrong.append({"submit": probe["note"], "want_phase": probe["phase"],
+                          "got_phase": row.get("phase"),
+                          "transport_error": row.get("transport_error")})
+    # The phase on the row is half the claim; the other half is what `summarize`
+    # does with it. `infrastructure_failures` and `phases_seen` are the two
+    # figures D20 headlines ("zero infrastructure failures — no transport error
+    # in any phase") and nothing recomputed them, which is R1's shape one level
+    # up: a summarize that published 0 and [] regardless of its rows stayed
+    # green (PR #21 round 2, R11). So the rows this half already builds are fed
+    # through the real summarize and every field it publishes about them pinned.
+    if infra_rows:
+        report = SK.summarize(infra_rows, BASE, 1)
+        want = {"infrastructure_failures": len(infra_rows), "attempted": len(infra_rows),
+                "completed": 0, "correct": 0, "not_a_measurement": [],
+                "phases_seen": sorted({p["phase"] for p in inp["submit_failures"]}),
+                "demo_ready": False}
+        got = {k: report.get(k) for k in want}
+        if got != want:
+            wrong.append({"summary": "a report made only of transport failures",
+                          "want": want, "got": got})
+
+    # --- what counts as a completion -----------------------------------------
+    rows = []
+    for probe in inp.get("terminal_records", []):
+        def script(url, method, _r=probe["record"]):
+            if method == "POST":
+                return {"run_id": "stub-run"}
+            if "/tasks/" in url:
+                return _r
+            return {"ready": True}
+
+        row = with_stub(script,
+                        lambda _p=probe: SK.run_one(BASE, spec_for(_p.get("spec_answer")), 5))
+        rows.append(row)
+        got = {"measured": row.get("measured"), "correct": row.get("correct")}
+        if got != probe["expect"]:
+            wrong.append({"terminal": probe["note"], "want": probe["expect"], "got": got,
+                          "status": row.get("status"), "answer": row.get("answer"),
+                          "expect_answer": row.get("expect_answer")})
+    if rows:
+        report = SK.summarize(rows, BASE, 1)
+        want = {"completed": sum(1 for p in inp["terminal_records"] if p["expect"]["measured"]),
+                "correct": sum(1 for p in inp["terminal_records"] if p["expect"]["correct"]),
+                "attempted": len(rows), "demo_ready": False,
+                # The other direction of the same two fields: no row here failed
+                # in transport, so a summarize that invents either is red too.
+                "infrastructure_failures": 0, "phases_seen": [],
+                # The ledger that has to name what was excluded and why — a
+                # completion count that drops rows silently is the R1 defect
+                # wearing a different number.
+                "not_a_measurement": [{"task_id": "stub-case",
+                                       "status": p["record"]["status"],
+                                       "reason": p["record"].get("reason")}
+                                      for p in inp["terminal_records"]
+                                      if not p["expect"]["measured"]]}
+        got = {k: report.get(k) for k in want}
+        if got != want:
+            wrong.append({"summary": "a terminal record that is not a measurement was counted "
+                                     "as a clean completion", "want": want, "got": got})
+
+    # --- a swallowed retry must still be readable off the report --------------
+    rp = inp.get("retry_probe")
+    if rp:
+        seen = {"post": 0}
+
+        def script(url, method, _n=rp["connect_failures"]):
+            if method == "POST":
+                seen["post"] += 1
+                return (urllib.error.URLError("[Errno 61] Connection refused")
+                        if seen["post"] <= _n else {"run_id": "stub-run"})
+            if "/tasks/" in url:
+                return {"status": "success", "answer": "$39.00"}
+            return {"ready": True}
+
+        row = with_stub(script, lambda: SK.run_one(BASE, spec_for("$39.00"), 5))
+        report = SK.summarize([row], BASE, 1)
+        if seen["post"] != rp["connect_failures"] + 1:
+            wrong.append({"retry_probe": "the transport did not retry the connect failure",
+                          "post_attempts": seen["post"]})
+        elif "URLError" not in json.dumps(report):
+            wrong.append({"retry_probe": rp["note"], "swallowed": rp["connect_failures"],
+                          "report_says": {k: report[k] for k in
+                                          ("infrastructure_failures", "demo_ready",
+                                           "phases_seen", "completed")},
+                          "note": "the retried connect failure left no trace in the artifact "
+                                  "D20 cites for 'no transport error in any phase'"})
+        # The other direction of demo_ready: this row retried through and landed
+        # a clean, correct, measured completion, so a report that says the
+        # deployment is not demo-ready here is wrong too (R16 — the only two
+        # demo_ready checks elsewhere in this case both want False).
+        elif report.get("demo_ready") is not True:
+            wrong.append({"retry_probe": "a clean, fully measured, retried-through run "
+                                         "must be demo_ready",
+                          "demo_ready": report.get("demo_ready")})
+    return {"passed": not wrong, "wrong": {"soak": wrong}}
+
+
+def _run_doc_counts_case(case: dict) -> dict:
+    """Numbers in the documents of record, derived rather than re-typed.
+
+    README's case counts and support-matrix D8's fast-suite wall clock were both
+    contradicted by artifacts committed in the same PR (#21, R6 and R5). Nothing
+    is counted by hand here: suite sizes come from the runner's own `load_cases`,
+    and D8's range is recomputed from the reports D8 itself cites — so the next
+    case added to the suite turns this red instead of quietly aging the prose.
+    """
+    from evals.run import ROOT as RUN_ROOT
+    from evals.run import load_cases
+
+    inp, wrong = case["input"], []
+    counts = {s: len(load_cases(s)) for s in ("fast", "invariant", "live", "full", "all")}
+    readme = (RUN_ROOT / "README.md").read_text(encoding="utf-8")
+    for quote in inp.get("readme_quotes", []):
+        want = quote.format(**counts)
+        if want not in readme:
+            wrong.append({"readme_does_not_say": want})
+
+    d8 = inp.get("d8")
+    if d8:
+        matrix = (RUN_ROOT / "docs" / "support-matrix.md").read_text(encoding="utf-8")
+        row = next((ln for ln in matrix.splitlines()
+                    if ln.startswith(f"| **{d8['row']}**")), "")
+        walls = []
+        for rid in d8["reports"]:
+            path = RUN_ROOT / "evals" / "report" / rid
+            if not path.is_file():
+                wrong.append({"cites_a_report_that_does_not_exist": rid})
+                continue
+            walls.append(json.loads(path.read_text())["totals"]["wall_seconds"])
+            if rid not in row:
+                wrong.append({"row_does_not_cite": rid})
+        stated = f"{min(walls):.1f}-{max(walls):.1f}s" if walls else None
+        if stated and stated not in row:
+            wrong.append({"d8_range": {"the_cited_reports_show": stated,
+                                       "row": row[:300]}})
+    return {"passed": not wrong, "wrong": {"docs": wrong}, "got": {"counts": counts}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
               "mutation-metrics": _check_mutation_metrics,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
+
+
+def _main_exit_code(wall_seconds: float) -> int:
+    """`evals.run.main()` over one stub case whose only property is its duration.
+
+    Grades the CALL SITE, not the rule: `over_budget()` being correct buys
+    nothing if `main()` never asks it, and deleting the five-line block that does
+    left a 79.02s run reporting 90/90 = 1.000 at exit 0 (PR #20 R8). Stubs
+    `load_cases`/`run_case` so no case actually runs and no report is written;
+    output is swallowed so a probe cannot be mistaken for the real run.
+
+    `--no-report` only suppresses the full per-case dump — the history line in
+    `evals/run.py::main()` is written unconditionally, so without redirecting
+    `R.HISTORY`/`R.REPORT_DIR` this probe injected two fabricated rows (this
+    duration and 59.88) into the committed `evals/report/history.jsonl` on
+    every real `fast` run (PR #20 R18: 52 of 241 committed lines were exactly
+    that). Redirected to a throwaway temp dir for the call and restored after,
+    same as the sys.argv/module-function patch above."""
+    import contextlib
+    import io
+    import sys
+    import tempfile
+    from pathlib import Path as _Path
+
+    import evals.run as R
+
+    stub = {"id": "wall-clock-probe", "_kind": "adversarial"}
+    argv, load, run = sys.argv, R.load_cases, R.run_case
+    report_dir, history = R.REPORT_DIR, R.HISTORY
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            sys.argv = ["run", "--suite", "fast", "--no-report"]
+            R.load_cases = lambda suite: [stub]
+            R.run_case = lambda c: {"passed": True, "seconds": wall_seconds,
+                                    "id": c["id"], "kind": c["_kind"]}
+            R.REPORT_DIR = _Path(tmp)
+            R.HISTORY = _Path(tmp) / "history.jsonl"
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                return R.main()
+    finally:
+        sys.argv, R.load_cases, R.run_case = argv, load, run
+        R.REPORT_DIR, R.HISTORY = report_dir, history
+
+
+def _run_wall_clock_case(case: dict) -> dict:
+    """ADR-002 Decision 4's wall-clock ceiling: grades the RULING and the CALL SITE.
+
+    Both halves, because each has been the hole once. The ruling
+    (`evals.run.over_budget`) is graded on its boundary and on carrying exactly
+    one suite; the call site is graded by driving `evals.run.main()` and reading
+    the exit code, since a ruling nothing consults is the same comment the prose
+    ceiling was.
+
+    The first version read the newest report in `evals/report/` instead, which is
+    written after the run and thrown away with a CI workspace — so on a fresh
+    clone it always graded the report the branch had committed and could not go
+    red however slow the tree was (PR #20 R1). The second graded the ruling only,
+    and the block in `main()` that applies it could be deleted with the whole
+    suite still green (PR #20 R8)."""
+    import os
+    import re
+
+    from evals.run import WALL_BUDGET_ENV, WALL_BUDGET_S, over_budget, wall_budget
+
+    exp = case["expect"]
+    wrong = []
+    # Everything below is graded with the override CLEARED, because `rows` and
+    # `applied_in_main` pin the committed local ruling and `over_budget` reads the
+    # ambient environment. Without this the case grades whatever the machine
+    # happens to export: it passed locally and failed on CI, where the workflow
+    # exports EVAL_WALL_BUDGET_S=75, so the 70.01s row was correctly not-over and
+    # the assertion that it IS over was wrong. A case about environment-dependent
+    # ceilings that was itself environment-dependent (PR #20, found by CI).
+    prev = os.environ.get(WALL_BUDGET_ENV)
+    try:
+        os.environ.pop(WALL_BUDGET_ENV, None)
+        wrong += [r for r in case["input"]["rows"]
+                  if over_budget(r["suite"], r["wall_seconds"]) is not r["over"]]
+        # The per-environment override itself. A positive number moves the
+        # ceiling; everything else must fall back to the committed number rather
+        # than switch the gate off, which is the quiet direction this PR keeps
+        # finding.
+        for r in case["input"]["env_override"]:
+            os.environ.pop(WALL_BUDGET_ENV, None)
+            if r["value"] is not None:
+                os.environ[WALL_BUDGET_ENV] = r["value"]
+            got = wall_budget("fast")
+            if got != r["budget"]:
+                wrong.append({"env": r["value"], "expected_ceiling": r["budget"], "got": got,
+                              "note": r["note"]})
+        os.environ.pop(WALL_BUDGET_ENV, None)
+        applied = [dict(r, got=_main_exit_code(r["wall_seconds"]))
+                   for r in case["input"]["applied_in_main"]]
+        wrong += [r for r in applied if r["got"] != r["exit"]]
+    finally:
+        os.environ.pop(WALL_BUDGET_ENV, None)
+        if prev is not None:
+            os.environ[WALL_BUDGET_ENV] = prev
+    # CI's ceiling is a committed number, not a YAML string nobody reads: the
+    # workflow is the only place it takes effect, so the value it declares is
+    # part of the ruling (the R8 lesson — a mechanism nothing consults).
+    wf = (Path(__file__).parents[2] / ".github" / "workflows" / "eval.yml").read_text()
+    declared = re.search(rf"{WALL_BUDGET_ENV}:\s*\"?([0-9.]+)\"?", wf)
+    if not declared or float(declared.group(1)) != exp["ci_wall_seconds"]:
+        wrong.append({"workflow": WALL_BUDGET_ENV,
+                      "declared": declared.group(1) if declared else None,
+                      "expected": exp["ci_wall_seconds"]})
+    if WALL_BUDGET_S.get("fast") != exp["max_wall_seconds"]:
+        wrong.append({"ruling": "fast", "budget": WALL_BUDGET_S.get("fast"),
+                      "declared": exp["max_wall_seconds"]})
+    # Every suite name the repo uses, not only the ones the rows happen to list:
+    # `full` was missing and WALL_BUDGET_S["full"] = 1 slipped in green (R11).
+    if sorted(WALL_BUDGET_S) != sorted(exp["suites_with_a_ceiling"]):
+        wrong.append({"ruling": "suites", "budgets": sorted(WALL_BUDGET_S),
+                      "declared": sorted(exp["suites_with_a_ceiling"])})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"budgets": WALL_BUDGET_S, "ci_ceiling": exp["ci_wall_seconds"],
+                    "main_exit": applied}}
+
+
+def _run_browser_liveness_case(case: dict) -> dict:
+    """A shared browser that has died must be re-launched, not handed out dead.
+
+    Per-case launches used to contain a browser crash to the case that caused it.
+    One shared browser turns it into a cascade: every later case fails with
+    `TargetClosedError` attributed to itself, and the real cause is whichever
+    case died first (PR #20 R2). Closing it is the deterministic stand-in — a
+    Chromium that is gone reads the same to `is_connected()` however it went."""
+    inp = case["input"]
+    url = f"{_base_url()}/fixtures/{inp['fixture']}"
+
+    def once():
+        return _run_agent(inp["task"], url, stub_planner([_subst(inp["stub_plan"], url)]))
+
+    before = once()
+    dead = _await(_browser())
+    _await(dead.close())
+    after = once()
+    checks = {"before": before["status"] == case["expect"]["status"],
+              "after": after["status"] == case["expect"]["status"],
+              "relaunched": _BROWSER is not dead}
+    return {"passed": all(checks.values()), "checks": checks,
+            "got": {"before": before["status"], "after": after["status"],
+                    "reason_after": after.get("reason")}}
+
+
+def _run_history_ledger_isolated_case(case: dict) -> dict:
+    """The wall-clock probe must never write to the real history ledger.
+
+    `--no-report` in `_main_exit_code` only suppresses the full per-case dump;
+    `evals.run.main()` writes its history line unconditionally, so before
+    `R.HISTORY`/`R.REPORT_DIR` were redirected, every real `fast` run drove
+    this probe twice and injected two fabricated rows (this call's duration,
+    then 59.88) into the committed `evals/report/history.jsonl` (PR #20 R18 —
+    52 of 241 committed lines were exactly that). Watched red pre-fix: two
+    calls added two lines to the real file; the redirect makes it zero."""
+    from evals.run import HISTORY
+
+    before = HISTORY.read_text().count("\n") if HISTORY.exists() else 0
+    _main_exit_code(1.23)
+    _main_exit_code(4.56)
+    after = HISTORY.read_text().count("\n") if HISTORY.exists() else 0
+    added = after - before
+    return {"passed": added == 0, "wrong": {"history_lines_added": added} if added else {},
+            "got": {"before": before, "after": after}}
 
 
 def _run_invariant_case(case: dict) -> dict:
@@ -2076,10 +2561,14 @@ KINDS = {
     "ablation-table": _run_ablation_table_case,
     "adr-header-index": _run_adr_header_index_case,
     "readyz-transitions": _run_readyz_case,
+    "soak-accounting": _run_soak_accounting_case,
+    "doc-counts": _run_doc_counts_case,
+    "browser-liveness": _run_browser_liveness_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,
     "gateway-model": _run_gateway_model_case,
+    "history-ledger-isolated": _run_history_ledger_isolated_case,
     "invariant": _run_invariant_case,
     "matrix": _run_matrix_case,
     "matrix-drift": _run_matrix_drift_case,
@@ -2087,6 +2576,7 @@ KINDS = {
     "mutation": _run_mutation_case,
     "observe": _run_observe_case,
     "parse-plan": _run_parse_plan_case,
+    "readyz-transitions": _run_readyz_case,
     "relocate": _run_relocate_case,
     "schema": _run_schema_case,
     "screening": _run_screening_case,
@@ -2096,6 +2586,7 @@ KINDS = {
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
     "verifier-labels": _run_verifier_labels_case,
+    "wall-clock": _run_wall_clock_case,
 }
 
 

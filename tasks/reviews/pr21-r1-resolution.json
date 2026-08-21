@@ -1,0 +1,35 @@
+{
+  "pr": 21, "round": 1, "commit": "ff9150b",
+  "gate_after": {"invariant": "31/31", "fast": "95/95", "cost_usd": 0.0},
+  "orchestrator_verification": "Gate run by the orchestrator, not taken on report. Independently ablated the two highest-value fixes: reverting R1 (is_measurement gating) and reverting R7 (answers_match -> string ==) each turn soak-counts-only-real-completions red. Baseline green.",
+  "resolutions": [
+    {"id": "R1", "outcome": "fixed", "case": "soak-counts-only-real-completions (half: terminal_records)",
+     "red_watched": "want {completed:2, demo_ready:false} / got {completed:4, demo_ready:true} on a stubbed sweep whose rows all end failure:env",
+     "note": "summarize() extracted from main(); a completion is now a row ablation.is_measurement accepts, the rest listed under not_a_measurement and blocking demo_ready. Every committed soak row is measured:true, so the published 10/10 is unaffected."},
+    {"id": "R2", "outcome": "fixed", "case": "soak-counts-only-real-completions (half: submit_failures)",
+     "red_watched": "TimeoutError, JSONDecodeError and KeyError all returned phase 1-client-could-not-connect",
+     "note": "New submit_phase(): HTTPError -> phase 2, URLError -> phase 1, everything else -> new PHASE_SUBMIT_UNKNOWN '2b-delivered-but-outcome-unknown'. Driven through the real run_one, not asserted against a lookup table."},
+    {"id": "R3", "outcome": "fixed", "case": "soak-counts-only-real-completions (half: retry_probe)",
+     "red_watched": "one swallowed connect failure; report still {infrastructure_failures:0, demo_ready:true, phases_seen:[]}",
+     "note": "Retry-ledger option chosen over non-retrying transport. ablation._http takes an optional retries out-list, backoff extracted to RETRY_SLEEPS so a case can zero it; run_one collects submit and poll retries; summarize publishes transport_retries with count + phase + failing URL. The three committed reports predate the ledger, so D20 now scopes their claim: infrastructure_failures:0 there means no connect failure that survived up to three retries."},
+    {"id": "R4", "outcome": "fixed", "case": "soak-counts-only-real-completions + docs-numbers-are-derived",
+     "red_watched": "both watched red against the pre-fix tree",
+     "note": "Both tagged fast+invariant. A single case would have caught R1, R2, R3 and R7 together — which is what R4's acceptance asked for."},
+    {"id": "R5", "outcome": "fixed", "case": "docs-numbers-are-derived",
+     "red_watched": "{d8_range: {the_cited_reports_show: '79.0-79.8s', row: '...71.3-76.5s at M9 with five more cases...'}} plus four row_does_not_cite",
+     "note": "D8 recomputed from the wall_seconds of the reports it cites: now 79.0-79.8s at 93 cases, citing all four report ids with their individual numbers, and naming the step (75.83s at 92 cases -> readyz-tracks-the-run-slot, 3.45s of self-reported run_seconds)."},
+    {"id": "R6", "outcome": "fixed", "case": "docs-numbers-are-derived",
+     "red_watched": "readme_does_not_say 'offline gate: 95 cases, zero paid calls' / 'it is 105 cases (95 of them in the offline gate)'",
+     "note": "Derived from evals.run.load_cases — the runner's own discovery rather than a report snapshot, so it goes red the moment a case is added. README now 95 fast / 105 total; the live count (9) was already right."},
+    {"id": "R7", "outcome": "fixed", "case": "soak-counts-only-real-completions",
+     "red_watched": "'$39.00' vs '39.00' graded incorrect; a failure:semantic row with a string-identical answer graded correct",
+     "note": "Chose answers_match + status=='success' over the disclaimer option, because D20 and ADR-011 D7 compare the two drivers' cells directly and a disclaimer leaves that comparison unusable. Recomputing every committed soak row under the ablation's rule gives the SAME 8/10 and 7/10 — published figures do not move. Recorded in D20 and ADR-011 Decision 8."},
+    {"id": "R8", "outcome": "debt", "debt_id": "logged by orchestrator", "note": "LOW — out of scope per the routing rule."},
+    {"id": "R9", "outcome": "debt", "debt_id": "logged by orchestrator", "note": "LOW — out of scope per the routing rule."},
+    {"id": "R10", "outcome": "debt", "debt_id": "logged by orchestrator", "note": "LOW — out of scope per the routing rule."}
+  ],
+  "debt_logged_by_implementer": [
+    {"id": "M18", "origin": "PR #21 R1",
+     "note": "borrowing is_measurement means a live task ending failure:nav because the SITE was down now drops demo_ready — safe direction, but conflates 'could not measure' with 'deployment could not complete'"}
+  ]
+}

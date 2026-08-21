@@ -1,4 +1,4 @@
-# ADR-013: TinBoker terminal styling belongs to the evidence surface
+# ADR-014: TinBoker terminal styling belongs to the evidence surface
 
 Date: 2026-08-21
 Status: accepted

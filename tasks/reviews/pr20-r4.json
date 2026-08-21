@@ -1,0 +1,111 @@
+{
+  "pr": 20,
+  "round": 4,
+  "task": "M12",
+  "result": "REQUEST_CHANGES",
+  "scope": "post-approval commits 94f1a42, 7a2869a, 57be711 (merge of main + ADR-011->013 renumber + ceiling re-measure). Rounds 1-3 settled; round 3 APPROVED at 3f24a21.",
+  "headline": "The threshold amendment 60->70 was avoidable. A third reducible shape (a 2.2s fixture hold whose graded contract is the transition, not the duration) was still in the suite; removing it puts fast at ~58s, so acceptance branch 1 was still open. The ADR's claim that the sweep found no third shape is false.",
+  "scope_note": "R22 is LOW but routed repair, folded: it is two false counts inside the very ADR that argues for measurement discipline, and correcting them is a sentence each. R21 and R23 stay debt \u2014 one is verified-working-but-unpinned, the other is a tally in a commit message.",
+  "findings": [
+    {
+      "id": "R14",
+      "severity": "HIGH",
+      "route": "repair",
+      "route_reason": "Blocks on every count. It makes ADR-013 Decision 4's load-bearing claim false, and it means the threshold amendment \u2014 the one thing this milestone exists to avoid \u2014 was avoidable. A PR whose thesis is 'measure before moving a goalpost' cannot ship a goalpost move whose justification is an unmeasured claim.",
+      "claim": "ADR-013 Decision 4's load-bearing claim \"the sweep above found no third [waste shape]\" is false: a 2.2s arbitrary fixture constant is still in the suite, and removing it puts `fast` at ~58s \u2014 so the acceptance criterion's FIRST branch (\"fast < 60s again\") was still available and the threshold amendment 60->70 was avoidable.",
+      "evidence": "evals/adversarial/readyz-tracks-the-run-slot.json:8 sets `\"hold_seconds\": 3.0`. src/browser/eval_adapter.py:862 `await _a.sleep(hold)` is what the case actually pays; :879 samples at `min(1.0, hold/3)` and :887 polls at 0.2s until the hold ends, so total case cost == hold + eps. The ADR (specs/decisions/ADR-013-fast-suite-wall-clock.md:189-190) argues \"the 3.0s hold IS the coverage \u2014 the slot has to be genuinely occupied to observe idle->busy->idle\", but the graded contract is the TRANSITION, not the duration: with hold=1.0 the case returns `{'states': ['idle','busy','idle'], 'during_latency_s': 0.001}` and passed=True, at 1.36s instead of 3.55s. Nothing in ADR-011 justifies 3.0 specifically. Measured full-suite effect: 5 runs of the shipping tree gave 59.95/60.05/59.97/59.91/59.91; with hold_seconds=1.0 and nothing else changed, two runs gave 97/97 = 1.000 at wall_s 58.08 and 57.99. 2.0-2.2s recovered, band moves clear of 60.",
+      "repro": "python -c \"import json,sys; sys.path.insert(0,'.'); import src.browser.eval_adapter as A; c=json.load(open('evals/adversarial/readyz-tracks-the-run-slot.json')); c['input']['hold_seconds']=1.0; print(A.run_case(c))\" -> passed=True, states idle/busy/idle, ~1.36s. Then set that field to 1.0 in the case file and run the fast suite twice -> 97/97 = 1.000, wall 58.08s / 57.99s.",
+      "acceptance": "Either (a) take branch 1: reduce the fixture hold (with a stated margin argument for the sample point, since hold=1.0 leaves only 0.33s of start-race margin vs 1.0s today) and leave ADR-002 D4 at 60s; or (b) keep 70s but delete the false claim and replace it with the measured third shape and an explicit, defended reason for not taking it. Either way `fast-wall-clock-budget`'s provenance must record that a third reducible shape was found."
+    },
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "A published number that is dishonest in exactly the way ADR-009 was corrected for once already. The rule's stated input is 'the slowest observed run'; it was not given the slowest observed run.",
+      "claim": "The published local band is a hand-picked 7-run subset of at least 13 runs recorded at the same SHA in the branch's own committed history.jsonl, and it omits the slowest \u2014 so \"the slowest observed run plus 15%\" was not fed the slowest observed run, which is the ADR-009 defect the ADR claims to be avoiding.",
+      "evidence": "ADR-013:172-176 publishes \"59.35 / 59.39 / 59.80 / 59.83 / 59.88 / 60.11 / 60.16s over seven runs\" and :198 \"It rests on seven runs on one machine\". `git show HEAD:evals/report/history.jsonl` records FOURTEEN 97-case `fast` runs at sha 2dcb8d6 (all dirty=true): 60.11, 59.96, 59.88, 6.09, 59.39, 59.35, 60.16, 59.83, 59.80, 60.03, 60.15, 59.82, 60.12, 60.35. The seven published are the contiguous block ts 163030-164015; the six omitted include the slowest local run on that tree, 60.35s. Sensitivity: 60.35 x 1.15 = 69.4 -> 70 (number survives); the next commit's runs (60.97, 61.13, 60.51, 60.20, 60.09) give 61.13 x 1.15 = 70.3 -> 75 under the same rounding rule (number does not).",
+      "repro": "git show HEAD:evals/report/history.jsonl | python -c \"import sys,json;[print(d['ts'],d['sha'],d['dirty'],d['wall_s']) for d in map(json.loads,sys.stdin) if d['suite']=='fast' and d.get('total',0)>50 and d['ts']>'20260821-16']\"",
+      "acceptance": "ADR-013 Decision 4 states the full set of runs at that SHA (or names the selection rule and why the others are excluded), and derives the ceiling from the actual slowest observed run. Cleanest fix is to re-derive from the dirty=false runs on the shipping tree and say so."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "The decision-first header \u2014 the part of an ADR a reader trusts without reading further \u2014 states the opposite of what the document decided. ADR-000's whole point is that the header is the ruling.",
+      "claim": "ADR-013's own decision-first header still says the amendment did not happen \u2014 \"Amends: ADR-002 Decision 4 (breach closed, ceiling unmoved, ...)\" \u2014 and three more places still publish 60 as the live local ruling, contradicting the Ruling line and ADR-002's reciprocal \"Amended by\" entry.",
+      "evidence": "ADR-013:12 `**Amends**: ADR-002 Decision 4 (breach closed, ceiling unmoved, enforcement added)` vs :8 `...70s locally, 80s on CI...` and vs ADR-002:6 which now reads `ADR-013 (... the local number re-measured from 60s to 70s in its Decision 4)`. Same file :56 `**Route: remove the waste, keep the ceiling.**`; :91 \"the boundary at 60.00/60.01\" (the case now uses 70.00/70.01); :126-129 \"`WALL_BUDGET_S = {\\\"fast\\\": 60}` is the local ruling ... falls back to the committed 60\" while evals/run.py:78 is `WALL_BUDGET_S = {\"fast\": 70}`. Also evals/run.py:75 \"past 60s it stops being run honestly\", and ADR-002:68 \"closed at M12 at 56.47s\" (a 95-case figure; the ADR publishes 60.51s over 97).",
+      "repro": "grep -n 'ceiling unmoved\\|keep the ceiling\\|60.00/60.01\\|committed 60' specs/decisions/ADR-013-fast-suite-wall-clock.md; grep -n 'past 60s' evals/run.py",
+      "acceptance": "The Amends line names the amendment; Decisions 2 and 3 either mark their 60s as superseded-by-Decision-4 or carry the current number; evals/run.py:75 and ADR-002's 56.47s match the shipping numbers. A reader of the header alone must not be told the ceiling was unmoved."
+    },
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "tasks/TODO.md is where the acceptance criterion lives. It records the wrong branch as taken, which misstates how the milestone was satisfied.",
+      "claim": "tasks/TODO.md still says M12 was \"Resolved by acceptance branch 1\", while ADR-013 Decision 4 says this is the acceptance criterion's second branch, and the suite it reports (60.51s) is over 60.",
+      "evidence": "tasks/TODO.md:39-44: \"Acceptance: fast < 60s again, or ADR-002 D4 amended ... / Resolved by acceptance branch 1 ... `fast` is 60.51s over 97 cases ... the local number moved 60 -> 70 (Decision 4)\". Branch 1 is \"fast < 60s again\"; 60.51 > 60. ADR-013:192 says the opposite. The diff 3f24a21..HEAD rewrote the paragraph body and left \"branch 1\" untouched.",
+      "repro": "git diff 3f24a21 HEAD -- tasks/TODO.md | grep -n 'acceptance branch'",
+      "acceptance": "tasks/TODO.md M12 names the branch actually used and agrees with ADR-013 Decision 4."
+    },
+    {
+      "id": "R18",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "Fabricated run records in a committed ledger. CLAUDE.md rule 4 is 'no mocked results'; 52 of 241 lines in the history ADR-012 exists to preserve are runs that never happened, including 26 claiming a 79.02s fast run.",
+      "claim": "A third merge seam was missed: `_main_exit_code` drives the real `evals.run.main()`, which unconditionally appends to `evals/report/history.jsonl` \u2014 so every `fast` run injects two FABRICATED run records (wall_s 59.88 and 79.02, score 1.000) into the committed time series ADR-012 exists to preserve. 52 of the 241 lines committed at HEAD are these probes.",
+      "evidence": "src/browser/eval_adapter.py:1994-2019 `_main_exit_code` stubs `load_cases`/`run_case` and passes `--no-report`, which suppresses the report file but NOT the history line: evals/run.py:231-247 writes the history line before `--no-report` applies. Observed at HEAD: `{\"ts\": \"20260821-171638\", \"suite\": \"fast\", \"sha\": \"57be711\", \"dirty\": false, \"passed\": 1, \"total\": 1, \"score\": 1.0, \"wall_s\": 79.02}` \u2014 a 79.02s \"fast run\" that never happened, in the exact series ADR-012 Decision 3 says is \"intact\". 52 such lines (26 x 59.88, 26 x 79.02) out of 241. 94f1a42's message lists two merge seams it fixed; this one, created by the same merge, is not among them.",
+      "repro": "git show HEAD:evals/report/history.jsonl | python -c \"import sys,json;print(sum(1 for d in map(json.loads,sys.stdin) if d.get('total')==1 and d['suite']=='fast'))\" -> 52. Then run the fast suite with --no-report and tail history.jsonl -> two fresh probe lines.",
+      "acceptance": "The probe does not write to the run ledger \u2014 e.g. `_main_exit_code` redirects `R.HISTORY` (and `R.REPORT_DIR`) to a temp path inside its existing try/finally, as it already does for sys.argv and the env. The 52 fabricated lines already committed are removed or marked. Ideally a case that goes red if a `fast` run adds more than one history line."
+    },
+    {
+      "id": "R19",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "Partially undoes a policy the branch itself merged in, and the existing guard is structurally incapable of noticing. Silent re-inflation of a directory someone just pruned is the same class of invisible regression this milestone was built to expose.",
+      "claim": "A fourth merge seam was missed: the merge re-added 41 uncited routine gate dumps (20 `fast`, 18 `invariant`, 3 `live`; 1.63 MB) that GW-008/ADR-012 had just pruned \u2014 partially undoing the prune the branch merged in \u2014 and no case can catch it because `report-citations-resolve` only checks citation->file, never file->citation.",
+      "evidence": "`git diff --stat 80870f0 HEAD -- evals/report/` adds 47 report files; classifying against src/browser/eval_adapter.py:998-999's REPORT_CITATION_SCOPE shows 41 cited by nothing. On main tip 80870f0 the directory is 34 files of which the 21 uncited are ALL `-live.json` (deliberately kept); the branch's 41 are 20 fast + 18 invariant \u2014 precisely the \"124 uncited routine gate dumps\" class ADR-012 Decision 3 pruned (158 -> 34 files, 4.85MB -> 0.63MB). Directory is now 81 files / 2.6MB. eval_adapter.py:1031 `missing = sorted(n for n in cited if not (...).exists())` is one-directional, so the case stays green.",
+      "repro": "Classify evals/report/*.json at HEAD against the citation scope, subtract the set present at 80870f0 -> 41 uncited additions.",
+      "acceptance": "The uncited routine fast/invariant dumps the branch re-added are pruned to match ADR-012's policy, OR ADR-012 is amended to say why they are kept. Ideally the guard gains the reverse direction so the next merge cannot silently re-inflate the directory."
+    },
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "A guard was narrowed by a behaviour change with no case added and no spec update, and the narrowing blinds it to this PR's own evidence pack. Same family as R1/R8: a guard that no longer guards what its note says it guards.",
+      "claim": "The `tasks/reviews/` path skip is broader than the problem it solves: it blinds `report-citations-resolve` to 8 genuine report citations that are this PR's own evidence pack, and the case's `expect.note` still claims `tasks/` is covered with no exception.",
+      "evidence": "src/browser/eval_adapter.py:1008 `REPORT_CITATION_SKIP = (\"tasks/reviews\",)` applied at :1028 to the whole path prefix. Citations under tasks/reviews/: 13 hits / 9 distinct names, of which only ONE (29991231-235959-fast.json, pr20-r1.json:55) is the synthetic create-this-file instruction; the other 8 are real evidence citations, all currently resolving, all now unguarded. Because REPORT_CITATION_SCOPE includes \"tasks\", a future prune using the same scope+skip would classify those files as uncited and delete them with the guard green. `git diff 80870f0 HEAD -- evals/adversarial/report-citations-resolve.json` is EMPTY.",
+      "repro": "Run report-citations-resolve, then `mv evals/report/20260821-121835-fast.json /tmp/` -> still passed=True, because its only citations are in tasks/reviews/.",
+      "acceptance": "Narrow the exclusion to the thing that is actually not a citation (e.g. skip future-dated timestamps, or that one literal), so the 8 real review citations stay guarded; update the case's expect.note to state whatever exclusion survives, with a row that goes red if the skip widens."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "route": "repair",
+      "route_reason": "Folded: two false counts inside the ADR that documents the measurement discipline. Same family as R3/R9/R10 \u2014 a published number that does not match the runs behind it, cheap to correct.",
+      "claim": "Two counts in ADR-013 Decision 3 do not match the recorded runs: \"straddled the old 60s on four of eight runs\" matches no reading of the data, and \"Four runs of one commit is what each number rests on\" is false for the CI band, which spans two commits.",
+      "evidence": "ADR-013:155-157. First CI band (59.77/60.84/64.61/64.67) is 3 of 4 over 60; all eight CI runs are 7 of 8 over; the local seven-run band is 3 of 7 over. None is 4/8. Run 32465066308 has head_sha 94f1a42; 32465584897 has three attempts all at 7a2869a \u2014 so the four-run band mixes two commits, and 7a2869a changed eval_adapter.py. The wall numbers themselves check out exactly against the logs, and 68.96 x 1.15 -> 80 is sound.",
+      "repro": "gh api repos/HaoweiChan/browser-agent/actions/runs/32465066308/attempts/1 --jq .head_sha; gh api .../32465584897/attempts/3 --jq .head_sha",
+      "acceptance": "Fix the straddle count to what the runs say, and state that the CI band is 1 run at 94f1a42 + 3 attempts at 7a2869a rather than \"four runs of one commit\"."
+    },
+    {
+      "id": "R21",
+      "severity": "LOW",
+      "route": "debt",
+      "route_reason": "LOW, reviewer routed debt, and the behaviour is verified working. Pinning it is a case-writing task with no demonstrated regression.",
+      "claim": "The over-budget-counts-as-red report-write change is correct but ungraded \u2014 no case goes red if the `or over_budget(...)` clause is deleted.",
+      "evidence": "evals/run.py:217-219 adds `or over_budget(args.suite, totals[\"wall_seconds\"])` to `red`. Verified working (stubbed 99.0s fast run: exit 1, report written, OVER BUDGET line), but `fast-wall-clock-budget`'s `applied_in_main` probes pass `--no-report`, so they can never observe the write policy, and no other case inspects it.",
+      "repro": "Stub main() with a 99.0s result and no --no-report; assert a report file appears.",
+      "acceptance": "One row driving main() without --no-report on an over-budget stub and asserting a report file appeared \u2014 or recorded as debt with the ADR saying it is unpinned."
+    },
+    {
+      "id": "R23",
+      "severity": "LOW",
+      "route": "debt",
+      "route_reason": "LOW and cosmetic: the classification (the thing that matters) is correct and was verified by hand; only a tally in a commit message is off by one.",
+      "claim": "The ADR-013 renumber sweep is correct, but its published tally is off by one: the commit message claims \"four `ADR-012` hits\"; there are three.",
+      "evidence": "Classified by hand: ADR-011 4 hits, all main's readiness ADR, correct. ADR-012 3 hits (header, INDEX.md:21, evals/run.py:216), all main's report-policy ADR, correct. ADR-010 all main's M9 ablation plus two deliberate 'written as ADR-010, shipped as ADR-013' notes. No stale ADR-013 reference in src/, evals/, docs/, README.md or .github/.",
+      "repro": "grep -rn 'ADR-012' --exclude-dir=.git --exclude-dir=report . -> 3 lines",
+      "acceptance": "The PR body / ledger tally reads 3, or drops the count in favour of the classification."
+    }
+  ]
+}

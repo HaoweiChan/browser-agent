@@ -1,0 +1,4 @@
+{"pr":21,"round":4,"result":"APPROVED","scope":"the R16 fix diff only (f350b38~1..HEAD)",
+ "gate":{"invariant":"31/31","fast":"95/95","cost_usd":0.0},
+ "counts":{"HIGH":0,"MEDIUM":0,"LOW":0},"findings":[],
+ "verification":"Reviewer confirmed: constant-False demo_ready now reddens the case; constant-True and an OR-for-AND inversion are also caught; unmutated green at 31/31 and 95/95. Algebraically-redundant simplifications pass, but they are true no-ops given the row partition (infra/completed/unmeasured disjoint and exhaustive), not blind spots. Both corrected claims match the assertions and neither overclaims. Orchestrator independently re-ran the gate and the constant-False ablation: control GREEN, mutation RED."}
