@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M30 — Interview demo execution UI            [status: in-progress]
+### M30 — Interview demo execution UI            [status: pr]
 Spec: Make the reviewer UI communicate real task progress at a glance and trim
 the audit-heavy landing-page copy for an interview audience. Reuse the existing
 SSE/trace stream; progress must never advance from a timer or invented event.
