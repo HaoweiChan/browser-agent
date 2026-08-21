@@ -13,7 +13,7 @@ import os
 import urllib.request
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "anthropic/claude-sonnet-4.5"
+DEFAULT_MODEL = "openai/gpt-5.6-luna"
 
 # --- M9 cost/model ablation (specs/decisions/ADR-010-m9-model-ablation.md) ----
 #
@@ -42,6 +42,11 @@ DEFAULT_MODEL = "anthropic/claude-sonnet-4.5"
 # .dockerignored, so a production import of it would break the image.)
 CEILING_MODEL = "deepseek/deepseek-v4-pro"
 
+# The default until 2026-08-21, replaced by the ablation's own pick. Named here
+# rather than deleted because ADR-010 Decision 6 excluded it on price, and an
+# exclusion whose subject has no name cannot be re-checked when prices move.
+SUPERSEDED_INCUMBENT = "anthropic/claude-sonnet-4.5"
+
 ABLATION_MODELS = [
     CEILING_MODEL,                        # the ceiling itself
     "openai/gpt-5.6-luna",
@@ -49,15 +54,27 @@ ABLATION_MODELS = [
     "deepseek/deepseek-v4-flash-0731",    # cheapest, and most-used model on OpenRouter
 ]
 
-# The default is NOT ablated: it lists above CEILING_MODEL on both prompt and
-# completion, so no cell measures it and it cannot stay the default on cost
-# grounds alone (ADR-010 Decision 6). No figures or multiples here — the comment
-# eight lines up says why, and the multiples quoted in an earlier draft were
-# themselves stale within a session (PR #15, R23). The snapshot carries the
-# numbers and gateway-model-reaches-planner derives the comparison from it, in
-# both directions. The default stays accepted so its path is reachable by
-# explicit name and the no-`model` behaviour is unchanged.
-ALLOWED_MODELS = [DEFAULT_MODEL, *ABLATION_MODELS]
+# The default is now one the ablation MEASURED, which is the whole point of M9
+# and reverses the arrangement this file shipped with. Until 2026-08-21 the
+# default was `anthropic/claude-sonnet-4.5`: over CEILING_MODEL on both prompt and
+# completion, therefore ablated by no cell, therefore unable to stay the default
+# on cost grounds alone whatever the numbers said (ADR-010 Decision 6). The
+# numbers are now in (ADR-010 Decision 16, `docs/analysis.md` §9) and the
+# pre-committed rule in Decision 5 picked the replacement: every candidate scored
+# the same correctness, so the tie fell to cost, and this is the cheapest cell.
+#
+# No figures here — the comment above says why, and the multiples an earlier draft
+# quoted went stale inside a session (PR #15, R23). The snapshot carries the
+# numbers; gateway-model-reaches-planner derives the comparison from it.
+#
+# The superseded incumbent stays in the frozen snapshot on purpose: it is the
+# evidence for Decision 6's exclusion, and dropping it would delete the reason
+# the default moved. It is NOT in the allowlist any more — a public endpoint
+# should not accept a model this system deliberately stopped paying for.
+#
+# dict.fromkeys, not a set: the default is also an ablated model now, so the two
+# lists overlap, and order is the display order §9 and the ADR both use.
+ALLOWED_MODELS = list(dict.fromkeys([DEFAULT_MODEL, *ABLATION_MODELS]))
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
 Each step: {"action": "navigate|click|fill|extract",

@@ -35,7 +35,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 95 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 97 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -49,19 +49,21 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260821-160938-fast.json`, with
-`…-160842-invariant.json` and `…-143930-live.json`:
+Latest offline baseline — `evals/report/20260821-164556-fast.json`, with
+`…-164432-invariant.json` and `…-164456-live.json`:
 
 ```
-fast  95/95    invariant  28/28    live  9/9    $0.0000    56.5s
+fast  97/97    invariant  30/30    live  9/9    $0.0000    60.2s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 14/14 · 4 replans
 ```
 
-That is this machine. The same suite on CI (`ubuntu-latest`) measures
-**59.77 / 60.84 / 64.61 / 64.67s** across four runs of the *same commit* — an 8%
-spread on byte-identical code, which is why the wall-clock ceiling is
-per-environment rather than one number pretending to be portable.
+That is this machine, where seven runs of the merged tree measured
+**59.35-60.16s**. The same suite on CI (ubuntu-latest) measured
+**59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
+on byte-identical code, which is why the wall-clock ceiling is per-environment
+rather than one number pretending to be portable. Each ceiling is the slowest
+observed run plus 15%: 70s local, 75s CI.
 
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
 measured where the time went instead of assuming: 42.2s is deliberate waiting
@@ -73,8 +75,8 @@ anyone would have guessed: M9's merge took the suite to 63.3s over a completion
 poll sleeping 2s between checks on runs that finish in under a second, and the
 branch's first CI run showed CI had been ~50% over the same ceiling for its whole
 existence with nothing checking — `main` runs `fast` in 89.62s. CI now carries its
-own measured ceiling (75s, from four runs at 59.8-64.7s) while local stays at 60s
-([ADR-011](specs/decisions/ADR-011-fast-suite-wall-clock.md)).
+own measured ceiling (75s, from four runs at 59.8-64.7s) alongside a local 70s
+([ADR-013](specs/decisions/ADR-013-fast-suite-wall-clock.md)).
 
 `live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one
@@ -243,7 +245,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 105 cases (95 of them in the offline gate), it
+The eval set is not weak; it is 107 cases (97 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

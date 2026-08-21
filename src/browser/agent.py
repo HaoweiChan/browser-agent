@@ -273,7 +273,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     Callers that leave it None — the gateway and the CLI, i.e. production — get a
     private browser per run, because two callers' tasks must not share a process.
     The eval harness passes one browser for the whole suite: per-run driver start
-    + launch + close measured 11.3s of the `fast` suite's 67.0s (ADR-011).
+    + launch + close measured 11.3s of the `fast` suite's 67.0s (ADR-013).
     `headless` is the borrowed browser's business, not ours.
     Isolation between runs does not depend on this: every run gets its own
     BrowserContext either way, so cookies and storage never cross."""

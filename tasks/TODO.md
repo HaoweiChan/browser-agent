@@ -13,27 +13,24 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 ## Queue
 
 ### M9 — Cost/model ablation            [status: pr]
-PR: #15 · evidence pack in the PR body · ADR-010
+PR: #15 (mechanism, merged) + stage two (this branch) · ADR-010 · evidence in the PR bodies
 Spec: ≥2-model OpenRouter ablation, cost/latency tradeoff table, ADR for the
 default-model choice. Reviewer evidence: analysis (E4), E5 tradeoffs.
-Acceptance: table built from committed report runs, not estimates.
-State: **the mechanism ships; the table ships empty and graded.** The key lives
-only in Zeabur and `POST /tasks` could not vary the model, so the numbers cannot
-exist until this merges and redeploys. `analysis-ablation-table-not-estimated`
-holds the gap shut: while §9 declares itself pending it must carry zero data
-rows, and once it names a committed report every cell must equal what the
-driver's formatter derives from that report.
-Ceiling: the **model** `deepseek/deepseek-v4-pro`, not a number — its list price
-moved $1.44/$2.88 → $1.60/$3.20 per M inside one working session (two reads, two
-hours apart), so `PRICE_CEILING` was deleted and the eval derives the ceiling
-from the snapshot entry. No cell measures the incumbent `claude-sonnet-4.5`
-($3/$15, priced out), so the question is now "which affordable model replaces
-the default", with the ceiling an owner input, not a measurement (D14).
-Loop: 5 review rounds, 24 findings (4H/12M/8L), none rejected, 0 gate failures,
-$0.00 spent. Gate at merge: invariant 27/27, fast 91/91.
-Stage two after merge+redeploy: `python3 -m evals.ablation` → commit the report
-→ paste the table under `<!-- ablation-table -->` → name the report in §9.
-
+Acceptance: table built from committed report runs, not estimates. **Met** —
+`evals/report/20260821-004617-ablation.json`, re-derived cell-by-cell into
+`docs/analysis.md` §9 by `analysis-ablation-table-not-estimated`.
+Result: every candidate tied on correctness across a ~17x price range, so
+Decision 5's pre-committed rule fell to its cost tie-breaker and **the default
+moved to `openai/gpt-5.6-luna`** from `anthropic/claude-sonnet-4.5` (ADR-010
+Decision 18). The tie is *no observed difference*, not equivalence — the failed
+sweeps flipped the same cells in both directions, so a second sweep would not
+reproduce it cell-for-cell.
+Two findings larger than the ranking: one task failed on **all four** models with
+one signature (a `near:` capability boundary, D17 — counted against no model),
+and the deployment could not sustain a 20-run sweep (five aborted, D18).
+Guard inverted with the decision: it used to require the incumbent to be over
+the ceiling, now requires the default to be a model the ablation measured.
+Watched red four ways.
 ### M12 — Fast-suite wall-clock over budget            [status: pr]
 Origin: PR #12, declared in support-matrix D8 (promoted from Debt 2026-08-20 —
 M10 cannot exit green while a declared gate-budget breach stands)
@@ -41,12 +38,14 @@ Spec: `fast` is 68.2s against ADR-002 D4's 60s budget — 10.6s is one
 deliberate click timeout, the rest a growth trend that crosses the budget
 regardless of any one milestone. Acceptance: fast < 60s again, or ADR-002 D4
 amended with the measured floor and why.
-Resolved by acceptance branch 1 (`specs/decisions/ADR-011-fast-suite-wall-clock.md`):
+Resolved by acceptance branch 1 (`specs/decisions/ADR-013-fast-suite-wall-clock.md`):
 per-call measurement put 11.3s of the 67.0s in per-case browser process
 lifecycle, which the harness no longer pays; 42.2s of deliberate waiting was
-left alone. `fast` is 56.47s over 95 cases and ADR-002 D4's 60s is unmoved as
-the local number; CI got its own measured 75s (ADR-011 Decision 3) after its
-first run showed main had been at 89.62s against the same 60s, unchecked.
+left alone. `fast` is 60.15s over 97 cases. ADR-002 D4's ceiling is now
+per-environment and both numbers are measured: CI got 75s (Decision 3) after its
+first run showed main had been at 89.62s against an unchecked 60s, and the local
+number moved 60 -> 70 (Decision 4) when the M9-stage-2 merge made the suite
+straddle 60 with the excess measured as evidence, not waste.
 Review round 1 (PR #20) falsified the first enforcement — a case reading the
 newest committed report cannot go red on a fresh CI clone — so the ceiling now
 lives in `evals/run.py` and gates the run it measured.
@@ -67,6 +66,34 @@ green → owner decides submission/public.
 Origin: M8's SHOULD item, left open at the M8 merge (PR #12)
 Spec: replay committed live-page snapshots so live-site drift is detected
 without network. Acceptance: a drifted snapshot turns a case red offline.
+
+### T-ADR-NUM — ADR numbers are allocated by "next free", and this branch has been renumbered three times            [status: todo]
+Origin: PR #20 (no finding id — discovered by doing it, three times)
+Spec: an ADR takes the next free number when it is *written*, and concurrent
+branches all see the same next free number, so whichever merges last renumbers.
+This branch's wall-clock ADR was written as ADR-010 and shipped as ADR-013:
+010 -> 011 when M9's ablation ADR merged first, 011 -> 012 when the readiness
+ADR (PR #19) merged, 012 -> 013 when the report-policy ADR (PR #22) merged —
+three forced renames in one PR, each while the branch was otherwise finished.
+Each rename rewrites the same string across ~12 files: the ADR itself, ADR-002
+(status header, Amended-by, Ruling, Enforced-by, Decision 4), ADR-009's closure
+note, `specs/decisions/INDEX.md`, `README.md`, `docs/analysis.md`,
+`docs/support-matrix.md`, `tasks/TODO.md`, two eval case files, and comments in
+`evals/run.py`, `src/browser/eval_adapter.py`, `src/browser/agent.py`.
+The part that makes this worth a block rather than a shrug: **once several
+renames have layered, a sweep is no longer verifiable by grep alone.** Every hit
+for the old number looks plausible because the text around it was written by an
+earlier sweep, and the tree now contains three live ADR numbers within two of
+each other (011 readiness, 012 report policy, 013 wall clock) whose references
+are told apart only by reading each line. Verifying the third sweep meant
+classifying every `ADR-01[123]` hit by hand against which ADR it means. A
+mechanical check would not have to.
+Acceptance: a number-allocation rule plus a gate-time guard, not one or the
+other — reserve-on-open (a branch claims its number when the PR opens) or
+date-based ids remove the collision, and an `adr-header-and-index` extension
+that refuses a duplicate number, a gap in the sequence, or an INDEX entry whose
+number does not match its file makes a botched sweep red instead of plausible.
+Do not design it in this PR.
 
 ### T-R13 — the module tail that turns `main()`'s return into an exit code is ungraded            [status: todo]
 Origin: PR #20 R13 (LOW, routed debt by the reviewer, which approved alongside it)
@@ -101,14 +128,14 @@ Spec: `evals/run.py:157-161` writes the baseline and `return 0` at line 161; the
 0 with only `[eval] baseline['fast'] = 1.000 (recorded)` on stdout and no
 `OVER BUDGET` line anywhere, even though the same run without the flag exits 1.
 So the one command CLAUDE.md sanctions for a deliberate baseline move records it
-on a tree that is over the ceiling and says nothing. ADR-011 Decision 2 describes
+on a tree that is over the ceiling and says nothing. ADR-013 Decision 2 describes
 the ceiling as "the same shape as the invariant-100% rule beside it" — which sits
 at line 162 and is bypassed by the same early return, so the shape does match, but
 the resulting silence is undocumented. Repro: the 0.25s-per-case injection used
 for R8, run with `--suite fast --update-baseline --baseline /tmp/b.json` → exit 0,
 no OVER BUDGET line; drop `--update-baseline` → `OVER BUDGET: suite 'fast' wall
 clock 79.02s > 60s`, exit 1. Acceptance: either the over-budget line is printed
-(as a warning) on the `--update-baseline` path too, or ADR-011 Decision 2 names
+(as a warning) on the `--update-baseline` path too, or ADR-013 Decision 2 names
 `--update-baseline` as a path where the ceiling is not reported.
 
 ### T-R5 — Borrowed-browser context leak on a failed new_page            [status: todo]
@@ -133,9 +160,9 @@ Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence. M12 resolved without amending
 ADR-002 D4 — it removed 11.3s of per-case browser launch and left the 42.2s of
 deliberate waiting (settle loops, bounded load/screenshot waits, one 10s click
-timeout) that only parallelism can hide. `fast` now sits at 56.47s with
-~3.4s of headroom after the M9 merge, so this is the next lever when the ceiling
-goes red rather than an urgent one today (ADR-011).
+timeout) that only parallelism can hide. `fast` now sits at 60.15s with
+~10s of headroom against the re-measured 70s local ceiling, so this is the next lever when the ceiling
+goes red rather than an urgent one today (ADR-013).
 
 ### M15 — Verifier-accuracy dashboard UI            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)

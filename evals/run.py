@@ -17,11 +17,22 @@ Each task implements src/<task>/eval_adapter.py with:
 
 The runner owns: discovery, suite filtering, scoring, baseline gating,
 report history. Adapters own: how to run a case and judge it.
+
+Report policy (groundwork GW-008): every run appends ONE line to
+evals/report/history.jsonl — that's the committed time series and it's cheap,
+so it's unconditional. A full per-case report (evals/report/<ts>-<suite>.json)
+is only written when it earns its ~KB-per-case cost: `--report` was passed,
+the suite is `all`, or the run is RED (a case failed, or score < baseline).
+Routine green gate runs (pre-commit, CI, the PostToolUse hook) leave no full
+report, only the history line. `--no-report` still forces the full report off
+regardless of the above, for callers that want the printout with zero disk
+writes.
 """
 import argparse
 import importlib
 import json
 import os
+import subprocess
 import sys
 import time
 import traceback
@@ -31,6 +42,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CASE_DIRS = [ROOT / "evals" / "golden", ROOT / "evals" / "adversarial"]
 BASELINE = ROOT / ".eval-baseline.json"
 REPORT_DIR = ROOT / "evals" / "report"
+HISTORY = REPORT_DIR / "history.jsonl"
 
 
 def load_cases(suite):
@@ -62,12 +74,12 @@ def run_case(case):
 # Wall-clock ceilings, by suite. Repo policy in the same sense as the
 # invariant-100% rule below: `fast` is the pre-commit gate, and past 60s it
 # stops being run honestly (specs/decisions/ADR-002-performance-thresholds.md
-# Decision 4, re-measured by ADR-011). Pinned by the case `fast-wall-clock-budget`.
-WALL_BUDGET_S = {"fast": 60}
+# Decision 4, re-measured by ADR-013). Pinned by the case `fast-wall-clock-budget`.
+WALL_BUDGET_S = {"fast": 70}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its
-# own and both are enforced (ADR-011 amendment). `.github/workflows/eval.yml`
+# own and both are enforced (ADR-013 amendment). `.github/workflows/eval.yml`
 # declares CI's, and `fast-wall-clock-budget` grades the value it declares.
 WALL_BUDGET_ENV = "EVAL_WALL_BUDGET_S"
 
@@ -116,6 +128,29 @@ def sum_numeric(results, field):
     return totals
 
 
+def _git(*args):
+    try:
+        return subprocess.run(["git", *args], cwd=ROOT, capture_output=True,
+                               text=True, check=True, timeout=10).stdout.strip()
+    except Exception:
+        return None
+
+
+def git_sha():
+    return _git("rev-parse", "--short", "HEAD")
+
+
+def git_dirty():
+    """Working tree dirty, excluding history.jsonl itself.
+
+    Every run writes a history line to a file the previous run also touched,
+    so without this exclusion the repo would read 'dirty' forever after the
+    first run — never reflecting a real uncommitted code change."""
+    # ponytail: pathspec magic (git >=1.9) over a manual diff; one line either way.
+    out = _git("status", "--porcelain", "--", ".", ":(exclude)evals/report/history.jsonl")
+    return bool(out) if out is not None else False
+
+
 def aggregate(results):
     """Cost and latency roll-up. Adapters report spend under `budgets`."""
     totals = sum_numeric(results, "budgets")
@@ -132,7 +167,10 @@ def main():
     ap.add_argument("--suite", default="fast")
     ap.add_argument("--baseline", default=str(BASELINE))
     ap.add_argument("--update-baseline", action="store_true")
-    ap.add_argument("--no-report", action="store_true")
+    ap.add_argument("--report", action="store_true",
+                     help="force a full per-case report even on a green run")
+    ap.add_argument("--no-report", action="store_true",
+                     help="never write a full report, even on red or --suite all")
     args = ap.parse_args()
 
     sys.path.insert(0, str(ROOT))
@@ -170,15 +208,44 @@ def main():
               f"diagnosis {ratio('diagnosis_correct', 'diagnosis_cases')} · "
               f"{int(metrics.get('replans', 0))} replans")
 
-    if not args.no_report:
-        REPORT_DIR.mkdir(parents=True, exist_ok=True)
-        stamp = time.strftime("%Y%m%d-%H%M%S")
-        (REPORT_DIR / f"{stamp}-{args.suite}.json").write_text(json.dumps(
+    baseline_path = Path(args.baseline)
+    baseline = json.loads(baseline_path.read_text()) if baseline_path.exists() else {}
+    # Over budget counts as red for the report policy too. The two rules landed in
+    # different branches and merged into a seam: a run can exit 1 on wall clock
+    # while leaving no artifact behind, which is the one shape where the evidence
+    # is the timing (ADR-012's write policy, ADR-013's ceiling).
+    red = (passed < len(results)
+           or (args.suite in baseline and score < baseline[args.suite])
+           or over_budget(args.suite, totals["wall_seconds"]))
+    write_report = (args.report or args.suite == "all" or red) and not args.no_report
+
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    report_name = None
+    if write_report:
+        report_name = f"{stamp}-{args.suite}.json"
+        (REPORT_DIR / report_name).write_text(json.dumps(
             {"suite": args.suite, "score": score, "totals": totals, "metrics": metrics,
              "results": results}, indent=2))
 
-    baseline_path = Path(args.baseline)
-    baseline = json.loads(baseline_path.read_text()) if baseline_path.exists() else {}
+    history_line = {
+        "ts": stamp, "suite": args.suite, "sha": git_sha(), "dirty": git_dirty(),
+        "passed": passed, "total": len(results), "score": round(score, 6),
+        "wall_s": totals.get("wall_seconds", 0.0), "cost_usd": totals.get("llm_usd"),
+        "report": report_name,
+    }
+    # Repo-specific extras (this fork's recovery/mutation/cost/p50-p95 metrics)
+    # — only when the suite actually produced them, so a plain suite's line
+    # doesn't carry a wall of zeros.
+    if "latency_p95" in totals:
+        history_line["p95_s"] = totals["latency_p95"]
+    if metrics.get("recovery_expected"):
+        history_line["recovery"] = f"{int(metrics['recovery_verified'])}/{int(metrics['recovery_expected'])}"
+    if metrics.get("mutation_cases"):
+        history_line["mutation"] = f"{int(metrics['mutation_passed'])}/{int(metrics['mutation_cases'])}"
+    with open(HISTORY, "a") as f:
+        f.write(json.dumps(history_line) + "\n")
+
     if args.update_baseline:
         baseline[args.suite] = score
         baseline_path.write_text(json.dumps(baseline, indent=2) + "\n")

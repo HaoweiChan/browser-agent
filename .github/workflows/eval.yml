@@ -18,7 +18,7 @@ jobs:
       # true here. Measured, not chosen: four runs of the same commit on
       # ubuntu-latest gave 59.77 / 60.84 / 64.61 / 64.67s — an 8% spread on
       # identical code — and 75s is the slowest of those plus one more
-      # spread-width for runner variance. Raising it is an ADR-011 amendment,
+      # spread-width for runner variance. Raising it is an ADR-013 amendment,
       # and `fast-wall-clock-budget` grades the value declared here.
       EVAL_WALL_BUDGET_S: "75"
     steps:

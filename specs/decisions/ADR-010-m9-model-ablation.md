@@ -928,3 +928,156 @@ field *alongside* a readable `choices` array was added to give it teeth.
   ablation table in `docs/analysis.md` from committed runs") is met only after
   stage two, and `tasks/TODO.md` should reflect that rather than reading M9 as
   done when the mechanism merges.
+
+---
+
+## Decision 18 — stage two: the numbers, and the default they chose
+
+Ran 2026-08-21 against the deployment. Raw report:
+`evals/report/20260821-004617-ablation.json`; table in `docs/analysis.md` §9,
+re-derived cell-by-cell from that file by `analysis-ablation-table-not-estimated`.
+
+**Every candidate scored the same correctness.** Four models spanning roughly
+seventeen to one in price answered the same number of tasks correctly. So the
+rule in Decision 5 fell through to its first tie-breaker, cost, and the cheapest
+cell won: **`openai/gpt-5.6-luna` is the default from 2026-08-21**, replacing
+`anthropic/claude-sonnet-4.5`. It also happened to win the latency tie-breaker,
+which Decision 5 says cannot decide anything on its own — recorded because it is
+true, not because it contributed.
+
+The rule was applied as written, and it is worth saying what that cost: nothing
+about this outcome was chosen after seeing the data. Decision 5 fixed
+"correctness first, ties to cost, then to the upper percentile" before a single
+run existed, and the tie is exactly the case it was written to survive.
+
+**What this does not license.** Decision 5 already refused "a tie read as
+equivalence", and this is that tie. Five tasks at one run per cell is evidence of
+*no observed difference*, not evidence of sameness — and the sweeps that failed
+before this one make that concrete rather than theoretical: the same
+(model, task) cells came out differently across attempts, in both directions.
+The table is one clean sweep, and a second clean sweep would not reproduce it
+cell-for-cell. Nothing in it supports "model X is better than model Y".
+
+**Two things the aggregate hides, both larger than the ranking.**
+
+1. The models tie on count while disagreeing on *which* tasks. The winner is the
+   only candidate that answered the live page correctly and the only one that
+   failed the sort-and-name task — and it failed that one at the **verifier**,
+   not the locator, which is this system's documented dangerous direction. The
+   other three failed and succeeded in the mirror pattern. A count column cannot
+   show that; the per-task grid in the report can.
+2. **One task failed for all four models, identically**, at the same resolver
+   error on the same anchor. Four independent planners producing one failure
+   signature on one page is not four weak models; it is a capability boundary in
+   the system they all drive. It is recorded in `docs/support-matrix.md` as a
+   finding the ablation surfaced, not as a mark against any model.
+
+**The endpoint stopped accepting the superseded incumbent.** Decision 6 kept it
+reachable by explicit name while it was still the default and merely priced out
+of the comparison. That justification expired with the decision: leaving it
+allowlisted would let a public, unauthenticated endpoint spend on the model this
+system had just decided to stop paying for. Its id stays in the frozen snapshot,
+because it is the evidence for Decision 6's exclusion, and
+`gateway-model-reaches-planner` now requires it to stay there *and* to stay above
+the ceiling — an exclusion nothing re-checks is a claim, not a guard.
+
+The guard that kept Decision 6 honest inverted with it. It used to assert the
+incumbent was still **over** the bar, so a price move would force a re-decision;
+it fired exactly as designed the moment the default was changed, and that firing
+is what retired it. The property is now stronger: **the default must be a model
+the ablation measured**, which puts it under the ceiling by construction and
+makes "the default was chosen by a rule written before the numbers" checkable
+rather than merely written down. Watched red four ways — a default the ablation
+never measured, the incumbent back on the allowlist, the incumbent deleted from
+the snapshot, and the snapshot repriced so the incumbent fits.
+
+## Decision 19 — five sweeps aborted, and the cause is still not known
+
+**Five sweeps aborted before one completed.** Every abort was the deployment's
+transport or wall clock, never a model: connection timeouts mid-poll, a refused
+connect on the next submit, and twice a run that outlived its completion budget.
+`/healthz` answered in a fifth of a second either side of every one of them.
+
+The per-run wall clock also climbed steadily across a twenty-run sweep — one
+model did an early task in seconds and a later one in minutes, against tens of
+seconds for the same task on every other model.
+
+**Dashboard evidence, added after the fact.** Over the window covering every
+sweep: peak memory about 175 MB against 8 GB, returning to a ~55 MB baseline
+between runs; peak CPU about 18-20% of 2 vCPU, usually under 10%; and no
+container restart, one deployment spanning all five sweeps. So the workload left
+large CPU and memory headroom, and resource exhaustion is not supported. One
+caveat on that negative: Zeabur samples coarsely, so a sub-minute peak could be
+missed — the shape (return to baseline, no upward drift) survives that, the
+absolute peak does not.
+
+**The cause is not established, and this section has now claimed two that the
+evidence did not support.**
+The first version of this decision explained the aborts as a submit landing in a
+browser-teardown window, on the reasoning that a run is marked done when its
+result is assembled rather than when Chromium is closed. **The code refutes
+that.** `agent.py` closes the browser in a `finally` inside the
+`async_playwright()` context, so teardown completes before `run_task` returns;
+`server.py` assigns the terminal record *inside* `async with SEM`. The semaphore
+is therefore still held at the moment a run goes terminal, and the window the
+explanation depended on does not exist.
+
+The second wrong claim was the heading this decision shipped with — *the
+deployment could not sustain the sweep* — which implies capacity, and the
+dashboard refutes it. The sweep ran with roughly 98% of memory and 80% of CPU
+idle. Both wrong claims are kept on the record rather than quietly edited,
+because being wrong twice in the same direction is itself the finding.
+
+**No third mechanism is offered.** The remaining candidate areas are unranked and
+untested: request-path or event-loop blocking inside the single worker, Zeabur
+ingress behaviour, and the ablation client's own connection and timeout handling.
+What is known is the configuration — one uvicorn worker, `asyncio.Semaphore(1)`, one Chromium launched
+and closed per run — and the symptom. What is missing is any server-side number:
+the deployment has **no resource telemetry whatsoever**, `/healthz` returns a
+literal `{"ok": True}`, and nothing records memory, CPU or restarts. So the
+aborts are measured and the reason for them is not.
+
+Two things make this worth stating at length rather than quietly deleting. No
+eval case could have caught the wrong claim, because nothing in the suite asserts
+anything about resources — the same shape as every guard in this ADR that was
+proved against constructed inputs rather than the artifact. And an invented
+mechanism is more dangerous than an admitted gap: it would have justified
+provisioning decisions, and the first thing anyone would have done with it is
+buy a bigger container to fix a problem nobody had located.
+
+Three driver constants moved, each from a measurement rather than a guess: the
+socket budget (observed server latency had reached the old ceiling), a settle gap
+between runs, and the per-run completion budget. A retry was added and
+deliberately narrowed to **connection-phase failures only** — `urllib` wraps a
+failure to establish the connection in `URLError`, and nothing that never reached
+the server was billed, so a resend cannot double-spend. A read timeout after the
+request landed raises a bare `TimeoutError` and is **not** retried: that run may
+already be executing, and resubmitting it would spend twice and record once.
+
+None of this softens Decision 13's rule. That rule is about never *scoring* a
+transport fault as a model's result, and it is untouched: an exhausted retry
+still aborts the sweep and still writes no report. Retrying a connection that was
+never made is not scoring anything.
+
+The spend from the five aborted sweeps is real and was recorded only on stderr,
+which is what CLAUDE.md rule 4 requires — a partial sweep is not a result, and
+the driver will not write one. It is named here so the cost of this milestone is
+not read off the committed report alone.
+
+## Decision 20 — what the §9 guard does not cover, stated rather than implied
+
+Two rules protect §9, and their scopes differ. **Inside §9** the structural rule
+is complete: the section contains exactly one table, so any other table row is a
+results row however its cells are spelled. **Outside §9** only an exact copy of
+the graded table is refused, document-wide.
+
+So a per-model table with a *different header*, placed in some other section of
+`docs/analysis.md`, is not caught by anything. Measured, not assumed: an exact
+copy pasted into section 8 or appended at the end of the file turns the case red;
+a differently-headed one does not.
+
+That is the same shape as Decision 17's residual and it is declared for the same
+reason — this guard has been widened four times across five review rounds, every
+widening prompted by a reviewer walking around the previous one, and the lesson
+recorded there was that an enumeration over natural language never closes. A
+declared boundary beats a claim the code cannot honour.

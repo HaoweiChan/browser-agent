@@ -1,0 +1,14 @@
+{
+  "id": "readyz-tracks-the-run-slot",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "readyz-transitions",
+    "task": "What is the main heading on this page?",
+    "hold_seconds": 3.0
+  },
+  "expect": {
+    "transitions": ["idle", "busy", "idle"]
+  },
+  "provenance": "PR #19, after five ablation sweeps aborted while /healthz answered in ~0.2s throughout (support-matrix D18). /healthz is liveness only — it proved the process existed and nothing about whether the agent could take work, which is the operational question that was actually missing. This case pins the readiness contract as a TRANSITION rather than a status code: idle before a submission, busy with the submitted run's id while it executes, idle again afterwards. Asserting the sequence is the point — a `ready` hardcoded true passes any before/after check that only looks at an idle service, and a hardcoded false passes any check taken mid-run. Both are killed by requiring all three states from one run, plus the identity of active_run_id in the middle one. The busy sample is taken while the run genuinely holds the semaphore (the planner is stubbed to hold it for a fixed interval), and its promptness matters as much as its content: /readyz is served by the same event loop as the agent, so a fast busy answer is positive evidence the loop is not blocked while a run executes — one of the named open candidates in D18. No browser, no LLM call, $0.00."
+}

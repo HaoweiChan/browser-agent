@@ -34,11 +34,11 @@
       "id": "R12",
       "status": "debt",
       "became": "T-R12 — `--update-baseline` records a baseline over the wall-clock ceiling, silently",
-      "note": "Logged under `## Debt` in tasks/TODO.md with the claim, evidence, repro and acceptance verbatim. Not pre-empted: ADR-011 Decision 2 now names it as an open question alongside T-R6 rather than choosing warn/block/document, and `fast-wall-clock-budget`'s `not_covered` states that the `--update-baseline` path is not exercised. Both are disclosure of an open question, not a decision about it."
+      "note": "Logged under `## Debt` in tasks/TODO.md with the claim, evidence, repro and acceptance verbatim. Not pre-empted: ADR-013 Decision 2 now names it as an open question alongside T-R6 rather than choosing warn/block/document, and `fast-wall-clock-budget`'s `not_covered` states that the `--update-baseline` path is not exercised. Both are disclosure of an open question, not a decision about it."
     }
   ],
   "docs_updated": [
-    "specs/decisions/ADR-011-fast-suite-wall-clock.md Decision 2 (call-site half named; R6 and R12 listed as the two questions left open)",
+    "specs/decisions/ADR-013-fast-suite-wall-clock.md Decision 2 (call-site half named; R6 and R12 listed as the two questions left open)",
     "evals/adversarial/fast-wall-clock-budget.json (rows, expect keys, provenance, triage)",
     "docs/analysis.md",
     "README.md",

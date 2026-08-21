@@ -36,17 +36,17 @@ all offline** (`fast` to 91/91, `invariant` to 27/27, the gate at 71.3-76.5s —
 `evals/report/20260820-162200-fast.json`, `…-162043-invariant.json`), and
 **M12 stopped launching a Chromium per case**, which took the gate back under
 ADR-002's ceiling. The merged tree is given here in full rather than left to be
-inferred — `evals/report/20260821-160938-fast.json`, `…-160842-invariant.json`, `…-143930-live.json`:
+inferred — `evals/report/20260821-164556-fast.json`, `…-164432-invariant.json`, `…-164456-live.json`:
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 95 | **95/95** | 56.47s | 0.12s | 4.07s | $0.0000 |
-| `invariant` (must-always-hold) | 28 | **28/28** | 4.59s | 0.0s | 1.83s | $0.0000 |
-| `live` (4 real sites) | 9 | **9/9** | 24.56s | 1.48s | 7.54s | $0.0000 |
+| `fast` (offline gate) | 97 | **97/97** | 60.15s | 0.12s | 4.09s | $0.0000 |
+| `invariant` (must-always-hold) | 30 | **30/30** | 8.06s | 0.0s | 2.24s | $0.0000 |
+| `live` (4 real sites) | 9 | **9/9** | 24.03s | 2.10s | 5.74s | $0.0000 |
 
 `fast`'s wall clock and p50 both fell against M9's numbers because M12 stopped
 launching a Chromium per case (§ "The `fast` gate" below,
-`specs/decisions/ADR-011-fast-suite-wall-clock.md`). The nine cases between the
+`specs/decisions/ADR-013-fast-suite-wall-clock.md`). The nine cases between the
 M8 table's 86 and this one's 95: five are M9's, three are M12's own —
 `fast-wall-clock-budget`, `agent-launches-its-own-browser`,
 `shared-browser-relaunches-when-dead`, the last two written in review — and
@@ -55,12 +55,12 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-105 distinct cases (20 golden + 85 adversarial).
+107 distinct cases (20 golden + 87 adversarial).
 170 browser actions in a `fast` run; **54 of the
-95** cases drive a real Chromium end to end — counted here as
+97** cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions: the six L5 refusal cases are
 end-to-end cases that deliberately stop before a browser opens. The remaining
-41 are those refusals plus pure-code probes of a single
+43 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
@@ -72,7 +72,7 @@ and the run there answers confidently and wrongly (§ the M8 rows in
 `docs/support-matrix.md`, D5–D11).
 
 **The `fast` gate cost 68s against the 60s ceiling ADR-002 set for two
-milestones, and is back inside it at 56.47s (95 cases).** It was declared
+milestones, and is inside a re-measured one at 60.15s (97 cases).** It was declared
 rather than fixed at M8 on the assumption that the 57s under the one deliberate
 10.6s click timeout was irreducible trend (13s at M2, 48.6s at M6, 55.4s at M7).
 M12 measured it per call instead: 42.2s is deliberate waiting at bounds the
@@ -83,7 +83,7 @@ the ceiling is now applied by `evals/run.py` to the run it just measured — a
 first attempt that graded the newest committed report instead could not go red
 in CI, and review said so (PR #20 R1) — rather than asserted in an ADR nothing
 read (`docs/support-matrix.md` D8,
-`specs/decisions/ADR-011-fast-suite-wall-clock.md`). It fired once already, on
+`specs/decisions/ADR-013-fast-suite-wall-clock.md`). It fired once already, on
 the M9 merge: the suite hit 63.3s and the gate exited 1, and the 8.03s that
 crossed the line was a completion poll in the ablation driver sleeping 2s between
 checks on loopback runs that finish in under a second — not browser work, and
@@ -92,8 +92,12 @@ first CI run, which is the more useful of the two: `main`'s own CI does `fast` i
 **89.62s** (run `32385032004`), so CI had been ~50% over the ceiling for its entire
 existence and nothing had ever checked there. This branch cuts that to 59.8-64.7s
 across four runs. CI now carries its own measured ceiling of 75s while local stays
-at 60s, both enforced. Headroom is ~3.4s locally, so the parallel eval runner stays
-the named next lever.
+at 60s, both enforced. The local number was then re-measured too: the
+M9-stage-2 merge added a readiness case that holds a run slot for 3.0s on
+purpose, the suite straddled 60s across seven runs (59.35-60.16s), and the excess
+measured out as evidence rather than waste — so ADR-002 Decision 4's local
+ceiling became **70s** and CI's stayed 75s, each the slowest observed run plus
+15% (ADR-013 Decision 4). The parallel eval runner stays the named next lever.
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -119,7 +123,8 @@ more than the first because the full trace was captured:
 | `cd7121fc` (M5) | books.toscrape, open a book and read its price | `failure:locate` | 3 | 1,438 | **$0.006474** | 6,528ms |
 
 So the defensible statement about cost is: **two observed tasks, $0.0029 and
-$0.0065**, with `anthropic/claude-sonnet-4.5` as the planner, one planning call
+$0.0065**, with `anthropic/claude-sonnet-4.5` as the planner (the default until
+2026-08-21 — see section 9), one planning call
 per task plus one per replan. Everything beyond that — cost per task class, cost
 under recovery, the price of a task that replans twice — is **not measured**. A
 cost-per-task table built on n=2 would be fabrication, so the two runs are given
@@ -166,7 +171,7 @@ than mocked. A successful step never waits it out.
 
 The per-case numbers in that table each still carried a cold Chromium launch,
 ~0.20s of the ~0.35s median. Since M12 the suite shares one browser and the
-median case is **0.12s** (p95 4.07s, `evals/report/20260821-160938-fast.json`);
+median case is **0.12s** (p95 4.09s, `evals/report/20260821-164556-fast.json`);
 the tall cases above are unchanged, because what they spend is the settle loop,
 not the launch.
 
@@ -181,7 +186,7 @@ Suite wall time grew 24s → 32s at the cold review (ADR-005), entirely from one
 extra `inner_text` per action to capture `page_changed`. That evidence is what
 separates a legitimate replan from one laundering an action that never landed,
 so it was bought deliberately. The `fast` gate remains inside the threshold set
-in ADR-002 — 60s locally, and since ADR-011 Decision 3 a measured 75s on CI.
+in ADR-002 — a measured 70s locally and 75s on CI since ADR-013 Decisions 3 and 4.
 
 ## 4. Scalability
 
@@ -690,19 +695,56 @@ the single most informative data point in this document: the two verified
 steps show the resolver working on a real DOM, and the third shows that
 **planning is the weakest link and the one thing no suite here measures.**
 
-## 9. Cost/model ablation — the mechanism, and an empty table on purpose
+## 9. Cost/model ablation — measured
 
-**PENDING — no ablation report exists yet.** No model comparison has been run,
-so there are no numbers, and this section publishes none. The table below is
-empty because an empty table is the honest artifact today; a plausible-looking
-row would not be.
+**Measured 2026-08-21 against the deployment. Raw report:
+`evals/report/20260821-004617-ablation.json`** — every cell in the table below is
+re-derived from that file by the guard described at the end of this section, so
+nothing here is typed by hand.
 
-Why it is empty is a sequencing fact, not an oversight. The paid runs happen on
-the deployment (`OPENROUTER_API_KEY` lives in Zeabur's service environment and
-deliberately nowhere else — CLAUDE.md rule 8), and until this PR the deployment
-had no way to be told which model to plan with. So the mechanism has to be
-merged and redeployed *before* the first ablation run can exist. This PR is that
-mechanism:
+**The headline is that correctness did not separate the models at all.** Every
+candidate answered the same number of tasks correctly, across a price range of
+roughly seventeen to one. The tie is not a finding that the models are
+equivalent — five tasks at one run per cell cannot support that, and the ADR said
+so before the run — but it does mean the decision rule fell through to its
+tie-breakers, cost and then latency, and those separated the field sharply.
+
+**Two things the aggregate hides, and both matter more than the ranking.**
+
+First, the models tie on *count* while disagreeing on *which* tasks. The
+tie-breaking winner is the only candidate that answered the live page correctly,
+and the only one that got the sort-and-name task wrong — and it got that one
+wrong at the verifier, not the locator, which is this system's documented
+dangerous direction. The other three failed and succeeded in exactly the mirror
+pattern. A single aggregate column cannot show that, which is why the per-task
+grid is in the report rather than summarised away.
+
+Second, **one task failed for all four models, identically**, at the same
+resolver error on the same anchor. Four independent planners producing the same
+failure on the same page is not four models being weak; it is a capability
+boundary in the system they all drive, surfaced by the ablation rather than by
+the model comparison it was run for. It is recorded as such in
+`docs/support-matrix.md`, not counted against any model.
+
+The runs also cost more attempts than the report shows. **Five sweeps aborted
+before this one completed**, every one on the deployment's transport rather than
+on a model, and the per-run wall clock climbed steadily over a twenty-run sweep.
+Why is not known. The deployment's own dashboard, read afterwards, rules out the
+obvious answer: over the window covering every sweep it shows peak memory of about
+175 MB against 8 GB, returning to baseline between runs, peak CPU under a fifth of
+two cores, and no restart. The workload left large headroom, so resource
+exhaustion is not supported — with the caveat that the sampling is coarse enough
+to miss a short peak, which weakens the absolute number but not the shape. Two
+causal explanations have been written here and withdrawn, one refuted by the code
+and one by that dashboard; ADR-010 Decision 19 and support-matrix D18 keep both on
+the record rather than dropping them quietly, and no third is offered. That spend is real and was recorded only on
+stderr, because a partial sweep is not a result (CLAUDE.md rule 4). What changed
+to get a clean sweep were three measured constants in the driver — socket budget,
+settle gap between runs, per-run completion budget — and a retry narrowed to
+connection failures that never delivered a request. The rule that a transport
+fault is never *scored* as a model's result did not move.
+
+The mechanism this section describes was merged first and is unchanged:
 
 - **`model` field on `POST /tasks`, gated on an allowlist** — `src/browser/server.py`,
   `src/browser/planner.py` (`ALLOWED_MODELS` = the default plus the four ablated)
@@ -744,7 +786,7 @@ to contain no numbers at all. The guard enforced exactly that against its own
 author, twice: first refusing this paragraph as a table, then refusing it as
 prose.
 
-**The model this system runs on today is not among them.**
+**The model this system ran on until 2026-08-21 is not among them.**
 `anthropic/claude-sonnet-4.5` lists above the ceiling on both prompt and
 completion (multiples, not margins — the figures are in ADR-010 Decision 2), so
 it is excluded by the owner's constraint before any measurement, and **no cell in
@@ -814,6 +856,10 @@ slowest of the five.
 <!-- ablation-table -->
 | Model | Correct | LLM cost | Cost/run | Tokens | p50 s | p95 s |
 |---|---|---|---|---|---|---|
+| `deepseek/deepseek-v4-pro` | 3/5 | $0.050466 | $0.010093 | 19450 | 22.82 | 169.13 |
+| `openai/gpt-5.6-luna` | 3/5 | $0.002946 | $0.000589 | 5887 | 6.30 | 11.29 |
+| `tencent/hy3` | 3/5 | $0.007013 | $0.001403 | 15300 | 34.59 | 54.77 |
+| `deepseek/deepseek-v4-flash-0731` | 3/5 | $0.006475 | $0.001295 | 28757 | 64.65 | 165.45 |
 
 The table is graded, not merely promised. `analysis-ablation-table-not-estimated`
 (tagged `invariant`) reads this section and fails while it declares itself
@@ -836,7 +882,10 @@ this guard will not catch it.** What the guard does close is every shape an
 estimate has actually been smuggled in as, plus every table. That is a declared
 hole rather than a claim the code cannot honour. A second copy of the
 ablation table is refused anywhere in this document — graded against the real
-file, which for one round it was not. Both directions
+file, which for one round it was not. That document-wide rule catches a *copy*
+and only a copy: a per-model table with a different header, sitting in some other
+section of this file, is caught by nothing, and that boundary is declared rather
+than implied (`docs/support-matrix.md` D19, ADR-010 Decision 20). Both directions
 are exercised — a fabricated row, a dropped pending declaration, a changed
 column, a second copy of the table parked elsewhere in the section, an
 "expected shape" table with a different header carrying per-model numbers, the
@@ -846,10 +895,21 @@ committed variant, so they keep being checked rather than having been checked
 once. The last two came from a cold review that found the guard reading exactly
 one table in a section with room for many.
 
-**The default model is unchanged by this PR** (`anthropic/claude-sonnet-4.5`),
-because the ceiling says it cannot stay but says nothing about which of the four
-replaces it — and that is what the run is for. The rule that picks the
-replacement is fixed in advance in ADR-010 Decision 5, written before the
-numbers, so it cannot be chosen to fit them. The endpoint still accepts the
-default by explicit name: it is priced out of the comparison, not out of the
-system.
+**The default model changed on 2026-08-21**, from `anthropic/claude-sonnet-4.5`
+to `openai/gpt-5.6-luna`. The ceiling had already settled that the incumbent
+could not stay; it said nothing about which of the four replaced it, and that is
+what the run was for. The rule that picked the replacement was fixed in advance
+in ADR-010 Decision 5, written before the numbers existed, so it could not be
+chosen to fit them — and it was applied as written: correctness first, ties to
+cost, then to the upper latency percentile. Every candidate tied on correctness,
+so the tie fell to cost and the cheapest cell won.
+
+The endpoint no longer accepts the superseded incumbent by name. That reverses
+what this paragraph said while the table was empty, and deliberately: keeping it
+reachable was justified while it was still the default and merely priced out of
+the comparison. Once a replacement was chosen, an allowlist that still accepted
+it would leave a public, unauthenticated endpoint able to spend on the model this
+system had just decided to stop paying for. The id stays in the frozen snapshot,
+because it is the evidence for the exclusion in ADR-010 Decision 6, and
+`gateway-model-reaches-planner` now requires it to stay there **and** to stay
+above the ceiling — an exclusion nothing re-checks is a claim, not a guard.

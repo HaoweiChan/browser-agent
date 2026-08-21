@@ -22,7 +22,7 @@
       "repro_after_fix": "The reviewer's own repro, replayed against the repaired tree (0.25s added per case inside the runner's timed region, no repo file edited, --no-report): `[eval] OVER BUDGET: suite 'fast' wall clock 78.42s > 60s (ADR-002 Decision 4)` and exit 1. Before the repair the same slowdown gave 89/89 = 1.000 and exit 0.",
       "note_for_reviewer": "One detail found while reproducing: totals[\"wall_seconds\"] is the SUM of per-case `seconds`, not true elapsed, so a slowdown injected outside run_case is invisible to it (measured: sum 55.49s for a run whose real elapsed was ~78s). The two agree to ~0.1% on a normal run because the runner does almost nothing between cases. Not changed here — it would move every historical number in the reports — and stated rather than papered over.",
       "docs_updated": [
-        "specs/decisions/ADR-011-fast-suite-wall-clock.md Decision 2 (rewritten; the falsified version is described, not deleted)",
+        "specs/decisions/ADR-013-fast-suite-wall-clock.md Decision 2 (rewritten; the falsified version is described, not deleted)",
         "docs/support-matrix.md D8",
         "docs/analysis.md",
         "README.md",
@@ -33,9 +33,9 @@
       "id": "R2",
       "status": "fixed",
       "covered_by": "shared-browser-relaunches-when-dead",
-      "what_changed": "src/browser/eval_adapter.py `_browser()` now re-launches when `_BROWSER is None or not _BROWSER.is_connected()`. ADR-011 Decision 1's isolation claim is narrowed in writing: STATE isolation (cookies, storage) is unchanged and was always the claim that held; PROCESS isolation was lost when per-case launches went away, and is what this repair restores. A browser that is alive but wedged is named as still shared, bounded only by the per-action Playwright timeouts.",
+      "what_changed": "src/browser/eval_adapter.py `_browser()` now re-launches when `_BROWSER is None or not _BROWSER.is_connected()`. ADR-013 Decision 1's isolation claim is narrowed in writing: STATE isolation (cookies, storage) is unchanged and was always the claim that held; PROCESS isolation was lost when per-case launches went away, and is what this repair restores. A browser that is alive but wedged is named as still shared, bounded only by the per-action Playwright timeouts.",
       "watched_red": "New case added before the fix. The red is the cascade the finding describes, not one case: 77/90 = 0.856 against baseline 1.000 — thirteen cases down, this one plus every case the runner reached after it, each ending `TargetClosedError: Browser.new_context: Target page, context or browser has been closed`. After the fix: 90/90 = 1.000, the case passing in 0.42s (one extra launch).",
-      "docs_updated": ["specs/decisions/ADR-011-fast-suite-wall-clock.md Decision 1", "specs/decisions/INDEX.md"]
+      "docs_updated": ["specs/decisions/ADR-013-fast-suite-wall-clock.md Decision 1", "specs/decisions/INDEX.md"]
     },
     {
       "id": "R3",
@@ -67,7 +67,7 @@
       "id": "R6",
       "status": "debt",
       "became": "T-R6 — No sanctioned escape when the wall-clock ceiling is unreachable",
-      "note": "Logged under `## Debt` with its evidence and acceptance, and named in ADR-011 Decision 2 and in fast-wall-clock-budget's `not_covered` as an open policy question. R1's repair changes the finding's shape and the debt block says so: the ceiling is now enforced in the runner, so deleting a report no longer unblocks a slow machine (that accidental escape is gone) but the failure is at least loud and named instead of surfacing as a mysterious 89/90. Choosing the sanctioned escape is a repo-owner call, not something to improvise inside this PR."
+      "note": "Logged under `## Debt` with its evidence and acceptance, and named in ADR-013 Decision 2 and in fast-wall-clock-budget's `not_covered` as an open policy question. R1's repair changes the finding's shape and the debt block says so: the ceiling is now enforced in the runner, so deleting a report no longer unblocks a slow machine (that accidental escape is gone) but the failure is at least loud and named instead of surfacing as a mysterious 89/90. Choosing the sanctioned escape is a repo-owner call, not something to improvise inside this PR."
     }
   ]
 }
