@@ -9,7 +9,7 @@ Status: accepted
 **Because**: 11.3s of the 67.0s breach was per-case browser process lifecycle — scaffolding, not evidence — and a budget nothing reads drifts from 13s to 68s without one run turning red.
 **Enforced by**: `evals/run.py` `over_budget()` (the ceiling itself), `fast-wall-clock-budget` (the ruling it applies), `agent-launches-its-own-browser` and `shared-browser-relaunches-when-dead` (what sharing a browser would otherwise leave ungraded).
 
-**Amends**: ADR-002 Decision 4 (breach closed, ceiling unmoved, enforcement added); ADR-009 Decision 6 and `docs/support-matrix.md` D8 (the declared breach they carry is resolved)
+**Amends**: ADR-002 Decision 4 (breach closed, ceiling re-measured 60s -> 70s locally, per-environment, enforcement added); ADR-009 Decision 6 and `docs/support-matrix.md` D8 (the declared breach they carry is resolved)
 
 ---
 
@@ -56,7 +56,11 @@ each") when it was 30 cases and did not matter.
 **Route: remove the waste, keep the ceiling.** Moving a threshold while 17% of
 the number is measured scaffolding is the goalpost-moving ADR-002 exists to
 prevent. Nothing about the deliberate 42.2s was touched — no production
-timeout, no case deleted, no case moved out of `fast`.
+timeout, no case deleted, no case moved out of `fast`. "Keep the ceiling" is
+the route, not a promise the digits never change again: the local number was
+still 60 through Decisions 1-3 and was re-measured to 70 in Decision 4 below
+when a later merge made the suite straddle it — that is amending the number
+from a fresh measurement, the thing this route was chosen over doing blind.
 
 1. **One Chromium for the whole suite.** `run_task` takes an optional
    `browser`; production (gateway, CLI) leaves it `None` and gets a private
@@ -84,11 +88,13 @@ timeout, no case deleted, no case moved out of `fast`.
    14/14, 4 replans, `fast` 1.000, `live` 9/9 against real sites.
 
 2. **The ceiling gates the run that measures it.** `evals/run.py` holds the
-   ruling (`WALL_BUDGET_S = {"fast": 60}` and the pure `over_budget()`), applies
+   ruling (`WALL_BUDGET_S = {"fast": 60}` at the time this decision was
+   written — re-measured to 70 in Decision 4 below, and that is the number
+   shipping today) and the pure `over_budget()`, applies
    it to `totals["wall_seconds"]` of the run it has just finished, and exits
    non-zero with a named line — the same shape as the invariant-100% rule beside
-   it. `fast-wall-clock-budget` grades both halves: the ruling (the boundary at
-   60.00/60.01, and `fast` as the only key in `WALL_BUDGET_S`, compared as a set
+   it. `fast-wall-clock-budget` grades both halves: the ruling (the boundary,
+   70.00/70.01 today, and `fast` as the only key in `WALL_BUDGET_S`, compared as a set
    so a new suite name cannot be added past it) and the call site, by driving
    `evals.run.main()` over a stub result of a chosen duration and checking the
    exit code. The second half was added in review round 2 (PR #20 R8): the first
@@ -123,10 +129,12 @@ timeout, no case deleted, no case moved out of `fast`.
    gates every rule in `main()` the same way.
 
 3. **The ceiling is per-environment, and both numbers are measured.**
-   `WALL_BUDGET_S = {"fast": 60}` is the local ruling. `EVAL_WALL_BUDGET_S`
+   `WALL_BUDGET_S = {"fast": 60}` is the local ruling at the time this
+   decision was written — re-measured to 70 in Decision 4 below, the number
+   enforced today. `EVAL_WALL_BUDGET_S`
    overrides it, `.github/workflows/eval.yml` sets it to **80**, and anything
    that is not a positive number — unset, empty, `banana`, `60s`, `0`, `-5` —
-   falls back to the committed 60. `fast-wall-clock-budget` grades all of that,
+   falls back to the committed local number (70 today). `fast-wall-clock-budget` grades all of that,
    including the value the workflow declares, because an override nothing reads
    is the R8 defect again and an override that silently disables the ceiling is
    the R1 defect again.
@@ -152,9 +160,13 @@ timeout, no case deleted, no case moved out of `fast`.
    rounded up to a multiple of five.** 68.96 × 1.15 = 79.3 → **80s** on CI;
    60.16 × 1.15 = 69.2 → **70s** locally (Decision 4). Unlike the first
    measurement, this band does **not** straddle its ceiling — 68.96s against 80s
-   — where 59.77-64.67s straddled the old 60s on four of eight runs. Four runs of
-   one commit is what each number rests on: a band, not a distribution, and
-   nothing about any runner class other than `ubuntu-latest`. ADR-009 Decision 6
+   — where the first CI band straddled the old 60s on three of its four runs
+   (59.77/60.84/64.61/64.67). What each number rests on is a band, not a
+   distribution, and the CI band is not even one commit's worth: run
+   `32465066308` (attempt 1) is `94f1a42`, `32465584897`'s three re-run
+   attempts are all `7a2869a` — one run at the pre-merge sha plus three at the
+   post-merge one, not four runs of one commit (PR #20 R22). Nothing about any
+   runner class other than `ubuntu-latest` either way. ADR-009 Decision 6
    published a single-run number and had to be corrected to a band, which is why
    the count is stated rather than implied.
 
@@ -183,19 +195,45 @@ timeout, no case deleted, no case moved out of `fast`.
    `time.sleep` was attributed to its call site: 3.46s is
    `readyz-tracks-the-run-slot` — 1.0s sampling `/readyz` *while* the slot is
    held, then 2.45s polling a 3.0s hold at 0.2s granularity — and 1.63s is the
-   ablation driver's backoff. Neither is the pathology this ADR removed twice: a
-   0.2s poll on a 3s hold and a 0.1s-first backoff on ~0.35s runs are
-   proportionate, where the ablation driver's old 2s poll on sub-second runs was
-   not. The 3.0s hold *is* the coverage — the slot has to be genuinely occupied
-   to observe idle→busy→idle — so removing it deletes what ADR-011 just added.
+   ablation driver's backoff. The ablation poll is proportionate (0.1s-first
+   backoff on ~0.35s runs, same shape this ADR already fixed once). The
+   `readyz` hold was not: **review found a third reducible shape here (PR #20
+   R14)**, and "the sweep above found no third" below was false when it was
+   written. The graded contract is idle→busy→idle, the *transition*, not how
+   long busy lasts — a hold long enough that `/readyz` reliably samples inside
+   it is coverage; extra seconds past that are the same per-case waste this
+   ADR removed twice already, just measured in a fixture constant instead of a
+   browser launch. It does not follow that any hold works: the sample is taken
+   `min(1.0, hold/3)` seconds after submission, and that gap has to clear the
+   real *start-race* — the time between the submission returning and the
+   stubbed planner actually acquiring the run slot, which 15 in-process trials
+   measured at 4.3-5.2ms typically with one 62ms outlier (cold interpreter
+   state, not a per-run cost once the suite has warmed up). `hold=1.0s` (the
+   value review measured passing) gives a 0.33s sample gap — already 5x the
+   worst outlier seen — but the margin was picked to clear a start-race, not
+   to hit a duration, so it is derived independently rather than copied:
+   `hold=2.0s` gives a 0.67s gap, ~10x the worst outlier, without re-adding
+   the browser-lifecycle-shaped waste a 3x-larger hold would. Recovered:
+   ~1.0s per suite run (case cost 3.55s → 2.51s, five in-process trials at
+   `hold=2.0` all landing `during_latency_s` under 0.01s).
 
-   Which is why this is the acceptance criterion's **second branch**, taken for
-   the first time: the ceiling moves because the measurement says the cost is
-   evidence, and it is only honest to say that because there is nothing left to
-   hide behind — the two waste shapes this ADR found (11.3s of per-case Chromium
-   starts, 8.03s of ablation poll) are both already gone, and the sweep above
-   found no third. Applying the same rule as Decision 3: 60.16 × 1.15 = 69.2 →
-   **70s**. It rests on seven runs on one machine.
+   Re-measured after the fix, seven runs: **58.69 / 58.79 / 59.05 / 59.27 /
+   59.96 / 60.44 / 60.59s** — still straddling 60s (two of seven over,
+   against three of seven before), because the readyz hold was 1.0s of a
+   57-60s total and removing two-thirds of it does not clear a line the suite
+   was already straddling on the rest. Branch 1 (`fast < 60s again`) is
+   therefore still not available: the honest band's ceiling, by the same
+   rule as Decision 3 — the *slowest observed run* plus 15%, rounded up to a
+   multiple of five — is 60.59 × 1.15 = 69.7 → **70s**, unchanged from the
+   pre-fix number and for the same reason (R15: the rule is fed the slowest
+   run, not a hand-picked subset — the seven runs above are reported in full,
+   none omitted).
+
+   Which is why this is the acceptance criterion's **second branch**: the
+   ceiling moves because, once the one shape that was reducible without
+   losing coverage is gone, what remains is 42.2s of deliberate bound-waiting
+   this route never touches plus per-call overhead that does not concentrate
+   in any one case the way the readyz hold did. **70s**.
 
    ADR-002 Decision 4's local number is amended from 60 to 70 accordingly. What
    is *not* claimed: that 70s is the suite's floor. 42.2s of it is deliberate

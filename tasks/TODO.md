@@ -38,7 +38,7 @@ Spec: `fast` is 68.2s against ADR-002 D4's 60s budget — 10.6s is one
 deliberate click timeout, the rest a growth trend that crosses the budget
 regardless of any one milestone. Acceptance: fast < 60s again, or ADR-002 D4
 amended with the measured floor and why.
-Resolved by acceptance branch 1 (`specs/decisions/ADR-013-fast-suite-wall-clock.md`):
+Resolved by acceptance branch 2 (`specs/decisions/ADR-013-fast-suite-wall-clock.md`):
 per-call measurement put 11.3s of the 67.0s in per-case browser process
 lifecycle, which the harness no longer pays; 42.2s of deliberate waiting was
 left alone. `fast` is 60.51s over 97 cases. ADR-002 D4's ceiling is now
@@ -150,6 +150,52 @@ from a committed case — a full `fast` run in reverse case order leaves
 raise on the shared path. Acceptance: `ctx` created inside the exit stack
 (`stack.push_async_callback(ctx.close)`) or inside the `try`, so both paths
 close it on any failure, with a case that leaks before the fix.
+
+### T-R19 — `report-citations-resolve` only checks citation->file, never file->citation            [status: todo]
+Origin: PR #20 R19 (MEDIUM, routed repair; the reverse-direction guard itself is
+logged here as debt rather than built, since it is more than a "prune to fix" fix)
+Spec: the merge at `94f1a42`/`7a2869a` re-added 41-46 uncited routine `fast`/
+`invariant` report dumps that GW-008/ADR-012 had just pruned, and no case caught
+it because `_run_report_citations_case` (`src/browser/eval_adapter.py:1014`)
+is one-directional: it resolves citation -> file, never enumerates
+`evals/report/*.json` and asks whether each file is cited by anything. The
+uncited dumps were deleted by hand in this round (38 files: 20 `fast`, 18
+`invariant`), not caught by a guard. Acceptance: `report-citations-resolve`
+(or a sibling case) additionally enumerates `evals/report/*.json`, excludes the
+policy-exempt kinds (`-live.json`, `-soak.json`, `-ablation*.json` — ADR-012
+Consequences: "non-prunable by policy regardless of citation"), and fails if any
+remaining file is cited by nothing in `REPORT_CITATION_SCOPE`. Watch it fail
+first by re-adding one of the 38 pruned files uncited.
+
+### T-R21 — the over-budget-counts-as-red report-write clause is ungraded            [status: todo]
+Origin: PR #20 R21 (LOW, routed debt — reviewer's own routing)
+Claim: the `or over_budget(args.suite, totals["wall_seconds"])` clause added to
+`red` in `evals/run.py:217-219` is correct but ungraded — no case goes red if
+that clause is deleted.
+Evidence: `evals/run.py:217-219` adds `or over_budget(args.suite,
+totals["wall_seconds"])` to `red`. Verified working (stubbed 99.0s fast run:
+exit 1, report written, OVER BUDGET line), but `fast-wall-clock-budget`'s
+`applied_in_main` probes pass `--no-report`, so they can never observe the
+write policy, and no other case inspects it.
+Repro: Stub main() with a 99.0s result and no --no-report; assert a report file
+appears.
+Acceptance: one row driving main() without --no-report on an over-budget stub
+and asserting a report file appeared — or recorded as debt with the ADR saying
+it is unpinned.
+
+### T-R23 — the ADR-013 renumber sweep's commit-message tally is off by one            [status: todo]
+Origin: PR #20 R23 (LOW, routed debt — classification (the thing that matters)
+is correct and was verified by hand, only the published tally is wrong)
+Claim: the ADR-013 renumber sweep is correct, but its published tally is off by
+one: the commit message claims "four `ADR-012` hits"; there are three.
+Evidence: Classified by hand: ADR-011 4 hits, all main's readiness ADR, correct.
+ADR-012 3 hits (header, INDEX.md:21, evals/run.py:216), all main's report-policy
+ADR, correct. ADR-010 all main's M9 ablation plus two deliberate "written as
+ADR-010, shipped as ADR-013" notes. No stale ADR-013 reference in src/, evals/,
+docs/, README.md or .github/.
+Repro: `grep -rn 'ADR-012' --exclude-dir=.git --exclude-dir=report .` -> 3 lines.
+Acceptance: the PR body / ledger tally reads 3, or drops the count in favour of
+the classification.
 
 ### M13 — Adaptive locator learning            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)

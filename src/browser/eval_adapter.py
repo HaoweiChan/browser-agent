@@ -998,14 +998,17 @@ def _run_matrix_case(case: dict) -> dict:
 REPORT_CITATION_SCOPE = ("docs", "specs", "tasks", "README.md", "src",
                           "evals/golden", "evals/adversarial", ".github", "prompts")
 REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
-# `tasks/reviews/` holds verbatim reviewer records, and a repro instruction names
-# files it tells you to CREATE — R4 of PR #20 says to write a report file dated
-# 29991231 into evals/report/ and then run the case. That is not a citation of
-# evidence, and the review text is the record, so it is not edited to dodge a
-# regex. Excluded by path instead, once, for every future round. (The prefix is
-# spelled out in prose here on purpose: writing the literal path in this comment
-# would make the comment itself a dangling citation.)
-REPORT_CITATION_SKIP = ("tasks/reviews",)
+# `tasks/reviews/` holds verbatim reviewer records, and one repro instruction
+# names a file it tells you to CREATE — R1 of PR #20 says to write a report
+# dated 29991231 into evals/report/ and then run the case. That is not a
+# citation of evidence, and the review text is the record, so it is not
+# edited to dodge a regex. The rest of tasks/reviews/ is real citations —
+# genuine evidence for round-1/2/4 findings — and skipping the whole
+# directory by path (R20 of PR #20) blinded this guard to all of them, so the
+# exclusion is the one literal name, not the directory. (Spelled out in prose
+# here on purpose: writing the literal path in a comment near the regex would
+# make the comment itself a dangling citation.)
+REPORT_CITATION_SKIP = ("29991231-235959-fast.json",)
 
 
 def _run_report_citations_case(case: dict) -> dict:
@@ -1019,18 +1022,32 @@ def _run_report_citations_case(case: dict) -> dict:
     used to decide what was prunable in the first place. Same boundary as
     support-matrix-cites-real-cases: it checks the citation RESOLVES, not that
     the number it's attached to is still an honest measurement.
+
+    `REPORT_CITATION_SKIP` grades its own width too: it was a `tasks/reviews`
+    path prefix once, which blinded this guard to 8 genuine review citations
+    (PR #20 R20) — narrowed to the one literal synthetic filename that isn't
+    real evidence, and `expect.skip_exactly` pins that it stays exactly that
+    literal rather than widening back into a path prefix.
     """
     root = Path(__file__).parents[2]
     cited: set[str] = set()
     for rel in REPORT_CITATION_SCOPE:
         p = root / rel
         for f in ([p] if p.is_file() else p.rglob("*") if p.is_dir() else []):
-            if not f.is_file() or str(f.relative_to(root)).startswith(REPORT_CITATION_SKIP):
+            if not f.is_file():
                 continue
             cited |= set(REPORT_CITATION.findall(f.read_text(encoding="utf-8", errors="ignore")))
+    cited -= set(REPORT_CITATION_SKIP)
     missing = sorted(n for n in cited if not (root / "evals" / "report" / n).exists())
-    return {"passed": not missing, "wrong": {"missing_reports": missing},
-            "got": {"citations": len(cited)}}
+    wrong: dict = {}
+    if missing:
+        wrong["missing_reports"] = missing
+    want_skip = sorted(case.get("expect", {}).get("skip_exactly", []))
+    got_skip = sorted(REPORT_CITATION_SKIP)
+    if want_skip and got_skip != want_skip:
+        wrong["skip"] = {"want": want_skip, "got": got_skip}
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"citations": len(cited), "skip": got_skip}}
 
 
 def _run_gateway_error_case(case: dict) -> dict:
@@ -1998,25 +2015,40 @@ def _main_exit_code(wall_seconds: float) -> int:
     nothing if `main()` never asks it, and deleting the five-line block that does
     left a 79.02s run reporting 90/90 = 1.000 at exit 0 (PR #20 R8). Stubs
     `load_cases`/`run_case` so no case actually runs and no report is written;
-    output is swallowed so a probe cannot be mistaken for the real run."""
+    output is swallowed so a probe cannot be mistaken for the real run.
+
+    `--no-report` only suppresses the full per-case dump — the history line in
+    `evals/run.py::main()` is written unconditionally, so without redirecting
+    `R.HISTORY`/`R.REPORT_DIR` this probe injected two fabricated rows (this
+    duration and 59.88) into the committed `evals/report/history.jsonl` on
+    every real `fast` run (PR #20 R18: 52 of 241 committed lines were exactly
+    that). Redirected to a throwaway temp dir for the call and restored after,
+    same as the sys.argv/module-function patch above."""
     import contextlib
     import io
     import sys
+    import tempfile
+    from pathlib import Path as _Path
 
     import evals.run as R
 
     stub = {"id": "wall-clock-probe", "_kind": "adversarial"}
     argv, load, run = sys.argv, R.load_cases, R.run_case
+    report_dir, history = R.REPORT_DIR, R.HISTORY
     try:
-        sys.argv = ["run", "--suite", "fast", "--no-report"]
-        R.load_cases = lambda suite: [stub]
-        R.run_case = lambda c: {"passed": True, "seconds": wall_seconds,
-                                "id": c["id"], "kind": c["_kind"]}
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            return R.main()
+        with tempfile.TemporaryDirectory() as tmp:
+            sys.argv = ["run", "--suite", "fast", "--no-report"]
+            R.load_cases = lambda suite: [stub]
+            R.run_case = lambda c: {"passed": True, "seconds": wall_seconds,
+                                    "id": c["id"], "kind": c["_kind"]}
+            R.REPORT_DIR = _Path(tmp)
+            R.HISTORY = _Path(tmp) / "history.jsonl"
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                return R.main()
     finally:
         sys.argv, R.load_cases, R.run_case = argv, load, run
+        R.REPORT_DIR, R.HISTORY = report_dir, history
 
 
 def _run_wall_clock_case(case: dict) -> dict:
@@ -2121,6 +2153,27 @@ def _run_browser_liveness_case(case: dict) -> dict:
                     "reason_after": after.get("reason")}}
 
 
+def _run_history_ledger_isolated_case(case: dict) -> dict:
+    """The wall-clock probe must never write to the real history ledger.
+
+    `--no-report` in `_main_exit_code` only suppresses the full per-case dump;
+    `evals.run.main()` writes its history line unconditionally, so before
+    `R.HISTORY`/`R.REPORT_DIR` were redirected, every real `fast` run drove
+    this probe twice and injected two fabricated rows (this call's duration,
+    then 59.88) into the committed `evals/report/history.jsonl` (PR #20 R18 —
+    52 of 241 committed lines were exactly that). Watched red pre-fix: two
+    calls added two lines to the real file; the redirect makes it zero."""
+    from evals.run import HISTORY
+
+    before = HISTORY.read_text().count("\n") if HISTORY.exists() else 0
+    _main_exit_code(1.23)
+    _main_exit_code(4.56)
+    after = HISTORY.read_text().count("\n") if HISTORY.exists() else 0
+    added = after - before
+    return {"passed": added == 0, "wrong": {"history_lines_added": added} if added else {},
+            "got": {"before": before, "after": after}}
+
+
 def _run_invariant_case(case: dict) -> dict:
     check = case["input"]["check"]
     if check not in INVARIANTS:
@@ -2140,6 +2193,7 @@ KINDS = {
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,
     "gateway-model": _run_gateway_model_case,
+    "history-ledger-isolated": _run_history_ledger_isolated_case,
     "invariant": _run_invariant_case,
     "matrix": _run_matrix_case,
     "matrix-drift": _run_matrix_drift_case,

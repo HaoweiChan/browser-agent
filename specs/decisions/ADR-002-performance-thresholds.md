@@ -65,7 +65,7 @@ file:
    **70s locally**, 80s on CI. At ~13s there is room for M3–M4 cases; past the
    ceiling the pre-commit gate stops being run honestly, which is what the number
    is for. (Breached M8-M12 at 66.6-68.3s and declared rather than reset; closed
-   at M12 at 56.47s and applied by `evals/run.py` to the run it measured;
+   at M12 at 60.51s over 97 cases and applied by `evals/run.py` to the run it measured;
    per-environment since ADR-013 Decision 3; and the local number **amended from
    60s to 70s in ADR-013 Decision 4** when the M9-stage-2 merge put the suite at
    59.4-60.2s across seven runs — straddling the old line, with the excess
