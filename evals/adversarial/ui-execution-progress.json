@@ -1,0 +1,26 @@
+{
+  "id": "ui-execution-progress-is-trace-derived",
+  "task": "browser",
+  "suites": ["invariant"],
+  "input": {
+    "kind": "ui-progress",
+    "fragments": [
+      "id=\"progress\"", "aria-label=\"Run progress\"", "aria-live=\"polite\"",
+      "data-phase=\"planning\"", "data-phase=\"browser\"", "data-phase=\"action\"",
+      "data-phase=\"verification\"", "data-phase=\"complete\"", "data-state=\"upcoming\"",
+      "[data-state=\"current\"]", "[data-state=\"complete\"]", "[data-state=\"failed\"]",
+      "SUPPORT_LABELS", "Read a page", "Search and read", "Navigate and read",
+      "Compare or sort", "Submit a form", "slice(0, 4)", "Full limitations and evidence",
+      "Guarded: public URLs only"
+    ],
+    "script_fragments": [
+      "function resetProgress()", "function phaseFor(s)", "function setPhase(name)",
+      "function setTerminal(status)", "resetProgress();", "setPhase(phaseFor(ev.step));",
+      "setTerminal(ev.result.status);"
+    ],
+    "step_phases": {"navigate": "browser", "extract": "verification"},
+    "forbid": ["setInterval(", "setTimeout("]
+  },
+  "expect": {},
+  "provenance": "M30 eval-first. Before the execution surface existed, this case failed with every required progress hook, accessible phase, reader-facing support label, concise four-item limitations summary, and compact guard copy missing. It rejects timer-based progression and pins the only permitted trace interpretation: navigate is browser/page work, extract moves into verification, and other executor actions remain action work. The existing stream-shows-every-step case continues to grade that the underlying trace itself is complete and honest."
+}
