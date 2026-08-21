@@ -1,0 +1,35 @@
+{
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "confidence": 0.97,
+      "claim": "A trace step containing a long unbroken target can make the document overflow the required 390px viewport.",
+      "evidence": "src/browser/server.py:376 and src/browser/server.py:389 provide no wrapping or minimum-width override for the flex-item <code>, while src/browser/server.py:523-526 renders up to 90 unbroken characters; for value=\"x\" repeated 90 times, its roughly 650px min-content width exceeds the narrow step container and overflows because .step has visible overflow.",
+      "repro": "At a 390px viewport, render stepEl({i:1,action:\"extract\",value:\"x\".repeat(90),ms:1,postcondition_ok:true}) into #steps and assert document.documentElement.scrollWidth <= window.innerWidth.",
+      "acceptance": "Long unbroken trace targets wrap or remain locally scrollable, document width stays within 390px, and a focused regression case covers this state.",
+      "route": "repair"
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "confidence": 0.96,
+      "claim": "The light-scheme input placeholders render below the required 4.5:1 text contrast floor.",
+      "evidence": "src/browser/server.py:319-321 declares --bg:#e9e6dc and --dim:#53606a, but src/browser/server.py:363 mixes --dim at only 82% with transparent; composited over --bg, the effective #6e787f placeholder color is approximately 3.61:1.",
+      "repro": "Compute WCAG contrast after alpha-compositing color-mix(in srgb,#53606a 82%,transparent) over #e9e6dc; the result is approximately 3.61:1.",
+      "acceptance": "Effective placeholder text contrast is at least 4.5:1 in both schemes and the contrast eval checks the rendered/derived placeholder pair.",
+      "route": "repair"
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "claim": "The focused UI invariant does not pin all DOM ids consumed by the inline JavaScript, contrary to the stable-hook acceptance criterion and ADR enforcement claim.",
+      "evidence": "evals/adversarial/ui-tinboker-style.json:33-35 omits budgets, runid, and status, although src/browser/server.py:493-558 queries those ids; removing any of those three elements therefore leaves ui-tinboker-style green while breaking trace/result rendering, despite specs/decisions/ADR-013-tinboker-reviewer-ui.md:34-35 saying all JavaScript-used ids are pinned.",
+      "repro": "Compare literal ids passed to $(...) in PAGE with input.ids, or delete id=\"status\" and run the ui-tinboker-style case; the case still passes.",
+      "acceptance": "The invariant derives or explicitly includes every literal DOM id consumed by the inline JavaScript, including budgets, runid, and status.",
+      "route": "repair"
+    }
+  ]
+}
