@@ -1,0 +1,7 @@
+{"pr":21,"round":3,"commit":"f350b38",
+ "gate_after":{"invariant":"31/31","fast":"95/95","cost_usd":0.0},
+ "resolutions":[
+  {"id":"R16","outcome":"fixed","case":"soak-counts-only-real-completions (retry-probe report)",
+   "red_watched":"bug reproduced first — demo_ready forced False, case still {\"passed\": true}; after the fix the same mutation gives {\"passed\": false, \"wrong\": {\"soak\": [{\"retry_probe\": \"a clean, fully measured, retried-through run must be demo_ready\"}]}}",
+   "note":"The retry probe's report is the only one in the case built from a genuinely successful row, so asserting demo_ready is not False there pins the True direction. Both false 'graded in both directions' claims corrected: the triage note now says two reports pin False and the retry probe pins True, and names results + the suite/base/task_set/sequences passthroughs as unasserted (R17/M26 debt) instead of calling transport_retries 'the remaining published field'; pr21-r2-resolution.json splits demo_ready into graded_one_direction_only for the rounds where that was true."},
+  {"id":"R17","outcome":"debt","debt_id":"M26"}]}
