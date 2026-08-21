@@ -1,0 +1,16 @@
+{
+  "id": "report-citations-resolve",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "report-citations"
+  },
+  "expect": {
+    "note": "every evals/report/<ts>-<suite>.json cited in docs/, specs/, tasks/, README.md, src/, evals/golden|adversarial/, .github/, or prompts/ must exist on disk"
+  },
+  "provenance": "groundwork GW-008 pruned 124 uncited routine gate dumps out of evals/report/ (159 files, 4.8MB -> 34 files), keeping on disk only the ones cited as evidence elsewhere in the repo. Nothing enforced that those citations stay resolvable once GW-008's own prune candidates were deleted, or once a future edit renames/deletes a currently-cited report -- the exact failure mode this repo already guards against for case ids (support-matrix-cites-real-cases) but never had for report files. Watched red by temporarily renaming a cited report on disk (evals/report/20260816-002725-fast.json, cited from specs/decisions/ADR-002-performance-thresholds.md) -> missing_reports: ['20260816-002725-fast.json']; renamed back -> green.",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "same shape as support-matrix-cites-real-cases and adr-header-and-index: this guards a bookkeeping contract (does the evidence a document points at still exist), not the product, so it stays pure code with no network and no browser. It does not grade whether a citation is still an honest measurement of the claim next to it -- that is a human judgment act, same boundary the matrix case draws."
+  }
+}
