@@ -1,9 +1,9 @@
-# ADR-010: the `fast` gate's wall clock — one browser for the suite, and a ceiling that gates the run
+# ADR-011: the `fast` gate's wall clock — one browser for the suite, and a ceiling that gates the run
 
 Date: 2026-08-21 (Decisions 1 and 2 amended the same day, PR #20 round 1)
 Status: accepted
 
-**Ruling**: ADR-002 Decision 4's 60s ceiling stands unchanged, and `evals/run.py` now applies it to the run it just measured and exits non-zero; the `fast` suite gets one shared Chromium, re-launched if it dies, with each run in its own BrowserContext, and measures 54.1-55.9s over 90 cases.
+**Ruling**: ADR-002 Decision 4's 60s ceiling stands unchanged, and `evals/run.py` now applies it to the run it just measured and exits non-zero; the `fast` suite gets one shared Chromium, re-launched if it dies, with each run in its own BrowserContext, and measures 56.6s over 95 cases after the M9 merge.
 **Because**: 11.3s of the 67.0s breach was per-case browser process lifecycle — scaffolding, not evidence — and a budget nothing reads drifts from 13s to 68s without one run turning red.
 **Enforced by**: `evals/run.py` `over_budget()` (the ceiling itself), `fast-wall-clock-budget` (the ruling it applies), `agent-launches-its-own-browser` and `shared-browser-relaunches-when-dead` (what sharing a browser would otherwise leave ungraded).
 
@@ -129,17 +129,30 @@ timeout, no case deleted, no case moved out of `fast`.
 
 ## Consequences
 
-`fast` measures **54.1-55.9s, 90 cases** (`evals/report/20260821-125950-fast.json`;
-up from 67.0-68.3s over 86-87 cases), and the suite got three cases larger while
-getting 13s faster — the third, `shared-browser-relaunches-when-dead`, came out
-of review. Headroom
-against the 60s ceiling is ~4-6s on this machine, which is real but not
-generous: the 42.2s of deliberate waiting is the floor this route cannot touch,
-and the growth trend ADR-009 Decision 6 described (13s → 48.6s → 55.4s → 67s)
-has not been repealed, only set back. The next milestone that adds a handful of
-browser cases will turn `fast-wall-clock-budget` red, and that is the point —
-the choice at that moment (parallel runner, or a ceiling amended from a fresh
-measurement) becomes a decision someone makes, instead of a drift nobody sees.
+`fast` measures **56.61s over 95 cases** (`evals/report/20260821-143744-fast.json`),
+against 67.0-68.3s over 86-87 before this ADR and 71.3-76.5s once M9's cases
+arrived. Headroom against the 60s ceiling is ~3.4s on this machine, which is real
+but not generous: the 42.2s of deliberate waiting is the floor this route cannot
+touch, and the growth trend ADR-009 Decision 6 described (13s → 48.6s → 55.4s →
+67s) has not been repealed, only set back. The next milestone that adds a handful
+of browser cases will turn the ceiling red, and that is the point — the choice at
+that moment (parallel runner, or a ceiling amended from a fresh measurement)
+becomes a decision someone makes, instead of a drift nobody sees.
+
+**The prediction above came true on the next merge, one day later, and the record
+of what happened is worth more than the prediction.** Merging M9 took the suite to
+63.3s and the gate exited 1 with `OVER BUDGET: suite 'fast' wall clock 63.3s >
+60s` — a legitimate merge, 95/95 passing, stopped on wall clock alone. What it
+caught was not the browser work anyone would have suspected: of M9's five new
+cases, four cost 0.03s between them and one cost 8.08s, of which **8.03s was four
+`time.sleep(2)` calls** in the ablation driver's completion poll
+(`evals/ablation.py`), waiting on loopback runs that had each finished in under a
+second. The same shape as this ADR's own 11.3s of per-case Chromium launches:
+time in which nothing is being measured. The poll was given a backoff (0.1s
+doubling to a 2s cap, bounded by the existing deadline, which leaves a real paid
+sweep unchanged), the case fell from 8.08s to 1.67s, and the ceiling held without
+being moved. Recorded because the ceiling's value is not that it was set
+correctly — it is that it fired on something nobody would have gone looking for.
 
 The parallel eval runner stays in the backlog on its own merits. It was named
 in ADR-009 Decision 6 as *the* fix; it is now the *next* fix, and it addresses

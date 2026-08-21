@@ -12,10 +12,27 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M9 — Cost/model ablation            [status: todo]
+### M9 — Cost/model ablation            [status: pr]
+PR: #15 · evidence pack in the PR body · ADR-010
 Spec: ≥2-model OpenRouter ablation, cost/latency tradeoff table, ADR for the
 default-model choice. Reviewer evidence: analysis (E4), E5 tradeoffs.
 Acceptance: table built from committed report runs, not estimates.
+State: **the mechanism ships; the table ships empty and graded.** The key lives
+only in Zeabur and `POST /tasks` could not vary the model, so the numbers cannot
+exist until this merges and redeploys. `analysis-ablation-table-not-estimated`
+holds the gap shut: while §9 declares itself pending it must carry zero data
+rows, and once it names a committed report every cell must equal what the
+driver's formatter derives from that report.
+Ceiling: the **model** `deepseek/deepseek-v4-pro`, not a number — its list price
+moved $1.44/$2.88 → $1.60/$3.20 per M inside one working session (two reads, two
+hours apart), so `PRICE_CEILING` was deleted and the eval derives the ceiling
+from the snapshot entry. No cell measures the incumbent `claude-sonnet-4.5`
+($3/$15, priced out), so the question is now "which affordable model replaces
+the default", with the ceiling an owner input, not a measurement (D14).
+Loop: 5 review rounds, 24 findings (4H/12M/8L), none rejected, 0 gate failures,
+$0.00 spent. Gate at merge: invariant 27/27, fast 91/91.
+Stage two after merge+redeploy: `python3 -m evals.ablation` → commit the report
+→ paste the table under `<!-- ablation-table -->` → name the report in §9.
 
 ### M12 — Fast-suite wall-clock over budget            [status: pr]
 Origin: PR #12, declared in support-matrix D8 (promoted from Debt 2026-08-20 —
@@ -24,10 +41,10 @@ Spec: `fast` is 68.2s against ADR-002 D4's 60s budget — 10.6s is one
 deliberate click timeout, the rest a growth trend that crosses the budget
 regardless of any one milestone. Acceptance: fast < 60s again, or ADR-002 D4
 amended with the measured floor and why.
-Resolved by acceptance branch 1 (`specs/decisions/ADR-010-fast-suite-wall-clock.md`):
+Resolved by acceptance branch 1 (`specs/decisions/ADR-011-fast-suite-wall-clock.md`):
 per-call measurement put 11.3s of the 67.0s in per-case browser process
 lifecycle, which the harness no longer pays; 42.2s of deliberate waiting was
-left alone. `fast` is 54.1-55.9s over 90 cases and ADR-002 D4's 60s is unmoved.
+left alone. `fast` is 56.61s over 95 cases and ADR-002 D4's 60s is unmoved.
 Review round 1 (PR #20) falsified the first enforcement — a case reading the
 newest committed report cannot go red on a fresh CI clone — so the ceiling now
 lives in `evals/run.py` and gates the run it measured.
@@ -82,14 +99,14 @@ Spec: `evals/run.py:157-161` writes the baseline and `return 0` at line 161; the
 0 with only `[eval] baseline['fast'] = 1.000 (recorded)` on stdout and no
 `OVER BUDGET` line anywhere, even though the same run without the flag exits 1.
 So the one command CLAUDE.md sanctions for a deliberate baseline move records it
-on a tree that is over the ceiling and says nothing. ADR-010 Decision 2 describes
+on a tree that is over the ceiling and says nothing. ADR-011 Decision 2 describes
 the ceiling as "the same shape as the invariant-100% rule beside it" — which sits
 at line 162 and is bypassed by the same early return, so the shape does match, but
 the resulting silence is undocumented. Repro: the 0.25s-per-case injection used
 for R8, run with `--suite fast --update-baseline --baseline /tmp/b.json` → exit 0,
 no OVER BUDGET line; drop `--update-baseline` → `OVER BUDGET: suite 'fast' wall
 clock 79.02s > 60s`, exit 1. Acceptance: either the over-budget line is printed
-(as a warning) on the `--update-baseline` path too, or ADR-010 Decision 2 names
+(as a warning) on the `--update-baseline` path too, or ADR-011 Decision 2 names
 `--update-baseline` as a path where the ceiling is not reported.
 
 ### T-R5 — Borrowed-browser context leak on a failed new_page            [status: todo]
@@ -107,7 +124,7 @@ close it on any failure, with a case that leaks before the fix.
 
 ### T-R6 — No sanctioned escape when the wall-clock ceiling is unreachable            [status: todo]
 Origin: PR #20 R6 (LOW, routed debt — a repo-owner policy call, not a fix to improvise)
-Spec: ADR-010 keeps the wall-clock ruling out of `invariant` because a wall
+Spec: ADR-011 keeps the wall-clock ruling out of `invariant` because a wall
 clock is machine-dependent, then hard-gates it anyway: since round 1 the repo
 `evals/run.py` exits non-zero on any `fast` run over 60s, and `.githooks/pre-commit`
 runs exactly that. ADR-009 Decision 6 records this same suite at 68.6s on a
@@ -117,7 +134,7 @@ hardware has no sanctioned move. (Round 1 removed the accidental escape the
 finding names: with the ceiling in the runner rather than in a report-reading
 case, deleting a report no longer unblocks anything, and the failure is at
 least loud — `OVER BUDGET: suite 'fast' wall clock …s > 60s` — instead of a
-mysterious 89/90.) Acceptance: ADR-010 names the escape (documented env-var
+mysterious 89/90.) Acceptance: ADR-011 names the escape (documented env-var
 override, per-machine calibration factor, or an explicit "run the gate on
 reference hardware" rule), or the ceiling is re-expressed as something
 machine-independent (summed deliberate-wait budget, per-case counts).
@@ -131,9 +148,9 @@ Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence. M12 resolved without amending
 ADR-002 D4 — it removed 11.3s of per-case browser launch and left the 42.2s of
 deliberate waiting (settle loops, bounded load/screenshot waits, one 10s click
-timeout) that only parallelism can hide. `fast` now sits at 54.1-55.9s with
-~4-6s of headroom, so this is the next lever when `fast-wall-clock-budget`
-goes red rather than an urgent one today (ADR-010).
+timeout) that only parallelism can hide. `fast` now sits at 56.61s with
+~3.4s of headroom after the M9 merge, so this is the next lever when the ceiling
+goes red rather than an urgent one today (ADR-011).
 
 ### M15 — Verifier-accuracy dashboard UI            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)

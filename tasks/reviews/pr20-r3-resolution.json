@@ -9,8 +9,8 @@
       "status": "split",
       "wording_half": {
         "status": "fixed",
-        "covered_by": "no case — `fast-wall-clock-budget` triage text and ADR-010 Decision 2 corrected",
-        "what_changed": "The claim that the case grades \"the exit code of the code path CI and `.githooks/pre-commit` actually take\" was one line short of true and is gone. `triage.note` now says it grades the value `main()` RETURNS, in-process, and names `evals/run.py`'s `if __name__ == \"__main__\": sys.exit(main())` tail as the line that turns that value into a process exit code — ungraded, and disabling it would take the invariant and regression rules down with this ceiling. `triage.not_covered` adds \"it does not drive evals/run.py as a process, so the module tail is ungraded\". ADR-010 Decision 2 carried the same overstatement (\"grades the place the decision is enforced\") and now states the same distinction, and lists T-R13 as the third thing the ADR leaves open beside T-R6 and T-R12.",
+        "covered_by": "no case — `fast-wall-clock-budget` triage text and ADR-011 Decision 2 corrected",
+        "what_changed": "The claim that the case grades \"the exit code of the code path CI and `.githooks/pre-commit` actually take\" was one line short of true and is gone. `triage.note` now says it grades the value `main()` RETURNS, in-process, and names `evals/run.py`'s `if __name__ == \"__main__\": sys.exit(main())` tail as the line that turns that value into a process exit code — ungraded, and disabling it would take the invariant and regression rules down with this ceiling. `triage.not_covered` adds \"it does not drive evals/run.py as a process, so the module tail is ungraded\". ADR-011 Decision 2 carried the same overstatement (\"grades the place the decision is enforced\") and now states the same distinction, and lists T-R13 as the third thing the ADR leaves open beside T-R6 and T-R12.",
         "why_not_deferred": "A triage note that overstates what it grades is the defect this PR exists to remove; deferring the sentence would have left the PR shipping the shape it spent three rounds closing."
       },
       "mechanism_half": {

@@ -15,6 +15,50 @@ import urllib.request
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "anthropic/claude-sonnet-4.5"
 
+# --- M9 cost/model ablation (specs/decisions/ADR-010-m9-model-ablation.md) ----
+#
+# Two lists, because they answer two different questions and conflating them cost
+# the default its own endpoint once already (owner spec change, 2026-08-20):
+#   ABLATION_MODELS — what the ablation RUNS. Owner-selected: popular on
+#     OpenRouter and within a price ceiling the owner set.
+#   ALLOWED_MODELS  — what `POST /tasks` ACCEPTS. The ablation set plus the
+#     incumbent default, which must stay reachable by explicit name even though
+#     it is priced out of the comparison.
+#
+# Selection is the owner's, on two stated criteria: entries from OpenRouter's
+# usage leaderboard (which measures adoption, not quality — the page says so, and
+# ADR-010 Decision 2 quotes it), capped at what `CEILING_MODEL` lists for.
+# Every id was read from https://openrouter.ai/api/v1/models (no key needed) and
+# frozen with its prices in evals/labels/openrouter-models-20260820.json; the
+# allowlist is pinned against that snapshot, and the ceiling is enforced from it,
+# by gateway-model-reaches-planner. A typo'd id is a run that fails at spend time.
+# The ceiling is the MODEL, not a number (owner ruling, 2026-08-20). No price
+# literal lives here, and that is a fix rather than a style choice: the previous
+# version hard-coded this model's list price and it drifted 11% inside one working
+# session, leaving code, an ADR, a support-matrix row and §9 all quoting a figure
+# the provider had stopped charging (PR #15, R16). The effective ceiling is
+# derived from the frozen snapshot's entry for this id — one source of truth, and
+# nothing to hand-raise. (The snapshot cannot be read from here: `evals/` is
+# .dockerignored, so a production import of it would break the image.)
+CEILING_MODEL = "deepseek/deepseek-v4-pro"
+
+ABLATION_MODELS = [
+    CEILING_MODEL,                        # the ceiling itself
+    "openai/gpt-5.6-luna",
+    "tencent/hy3",
+    "deepseek/deepseek-v4-flash-0731",    # cheapest, and most-used model on OpenRouter
+]
+
+# The default is NOT ablated: it lists above CEILING_MODEL on both prompt and
+# completion, so no cell measures it and it cannot stay the default on cost
+# grounds alone (ADR-010 Decision 6). No figures or multiples here — the comment
+# eight lines up says why, and the multiples quoted in an earlier draft were
+# themselves stale within a session (PR #15, R23). The snapshot carries the
+# numbers and gateway-model-reaches-planner derives the comparison from it, in
+# both directions. The default stays accepted so its path is reachable by
+# explicit name and the no-`model` behaviour is unchanged.
+ALLOWED_MODELS = [DEFAULT_MODEL, *ABLATION_MODELS]
+
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
 Each step: {"action": "navigate|click|fill|extract",
  "target": {"role": str|null, "name": str|null, "text": str|null, "near": str|null, "index": int|null} | null,
@@ -47,7 +91,20 @@ names present in the observation. Output the raw JSON array only — no markdown
 
 
 class PlanError(Exception):
-    pass
+    """The MODEL did not produce a plan — as distinct from the call failing.
+
+    This type is the only thing in the system that means "the response arrived
+    and was not a plan", so it is the discriminator every layer above uses
+    instead of pattern-matching an error message (PR #15, R9).
+
+    It carries `usage` because the provider bills a completion whether or not it
+    parses. A model that answers with prose is charged for the prose, and a cost
+    table that drops those calls under-reports exactly the runs it exists to
+    find (PR #15, R10)."""
+
+    def __init__(self, message, usage=None):
+        super().__init__(message)
+        self.usage = usage or {"llm_tokens": 0, "llm_usd": 0.0}
 
 
 def parse_plan(content: str) -> list:
@@ -121,13 +178,50 @@ def live_planner(model: str = DEFAULT_MODEL):
             "usage": {"include": True},
         }
         data = await asyncio.to_thread(_call, payload)
-        content = data["choices"][0]["message"]["content"]
-        steps = parse_plan(content)
+        # Usage first: this completion is billed whatever it contains, and
+        # building it after `parse_plan` meant a prose answer threw its own cost
+        # away (PR #15, R10).
         u = data.get("usage", {})
         usage = {
             "llm_tokens": u.get("total_tokens", 0),
             "llm_usd": float(u.get("cost", 0.0)),
         }
+        # Default-deny at the response boundary. Round 3 guarded the whole
+        # response handling with `except Exception -> PlanError`, which classified
+        # everything it did NOT recognise as the model's fault — the same
+        # catch-all shape as the defect before it, with the polarity flipped
+        # (PR #15, R18). Only a response positively recognised as "the model
+        # answered, and the answer is not a plan" is the model's; an envelope this
+        # code cannot read is the provider, and stays an ordinary exception so
+        # callers abort instead of scoring it.
+        #
+        # Any truthy `error` is a provider error, not a string-vs-dict question:
+        # an `isinstance(..., dict)` test missed `{"error": "rate limited"}`.
+        if data.get("error"):
+            raise RuntimeError(f"provider error: {data['error']}")
+        try:
+            choice = data["choices"][0]
+            message = choice["message"]
+            if not isinstance(message, dict):
+                raise TypeError(f"message is {type(message).__name__}, not an object")
+        except Exception as e:
+            raise RuntimeError(
+                f"unreadable planner response envelope: {type(e).__name__}: {e}") from e
+        # From here the model demonstrably answered, so everything is its own
+        # doing and carries the usage the provider billed for it.
+        content = message.get("content")
+        if not content:
+            # `content: null` is what a reasoning model returns on
+            # `finish_reason: length`, and the ceiling model defaults to high
+            # reasoning effort. It answered; the answer contains no plan.
+            raise PlanError(
+                "model returned no plan content "
+                f"(finish_reason={choice.get('finish_reason') or 'unknown'})", usage)
+        try:
+            steps = parse_plan(content)
+        except PlanError as e:
+            e.usage = usage
+            raise
         return steps, usage
 
     return plan

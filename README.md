@@ -35,7 +35,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 90 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 95 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -49,11 +49,11 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260821-125950-fast.json`, with
-`…-125850-invariant.json` and `…-121943-live.json`:
+Latest offline baseline — `evals/report/20260821-143744-fast.json`, with
+`…-143642-invariant.json` and `…-143930-live.json`:
 
 ```
-fast  90/90    invariant  23/23    live  9/9    $0.0000    55.2s
+fast  95/95    invariant  28/28    live  9/9    $0.0000    56.6s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 14/14 · 4 replans
 ```
@@ -63,7 +63,10 @@ measured where the time went instead of assuming: 42.2s is deliberate waiting
 at bounds the suite exists to exercise, 13.5s is real work, and 11.3s was 58
 cold Chromium launches, one per case. The ceiling is now applied by
 `evals/run.py` to the run it just measured, so a slow tree exits non-zero
-instead of reporting 1.000 ([ADR-010](specs/decisions/ADR-010-fast-suite-wall-clock.md)).
+instead of reporting 1.000. It fired on the very next merge: M9's arrival took
+the suite to 63.3s, and what it caught was a completion poll sleeping 2s between
+checks on runs that finish in under a second — not browser work
+([ADR-011](specs/decisions/ADR-011-fast-suite-wall-clock.md)).
 
 `live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one
@@ -232,7 +235,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 100 cases (90 of them in the offline gate), it
+The eval set is not weak; it is 105 cases (95 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

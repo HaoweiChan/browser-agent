@@ -19,6 +19,7 @@ import re
 import time
 from pathlib import Path
 
+from .planner import PlanError
 from .resolver import TARGET_KEYS, ResolveError, relocation_candidates, resolve
 from .verifier import verify
 
@@ -231,7 +232,7 @@ def evidence_window(body: str, value: str, anchor: str | None = None) -> str:
 
 
 def assemble_result(trace, answer, budgets, failure=None, reason=None, final_url=None,
-                    page_digest=None, extractions=None, verdict=None):
+                    page_digest=None, extractions=None, verdict=None, model=None):
     if failure:
         status = "unsupported" if failure == "unsupported" else f"failure:{failure}"
     else:
@@ -245,6 +246,13 @@ def assemble_result(trace, answer, budgets, failure=None, reason=None, final_url
         reason = reason or f"verifier {verdict['verdict']}: {verdict.get('reason')}"
     return {
         "status": status,
+        # Which planner model produced this run. `None` from callers that do not
+        # plan with a named model (the fast suite stubs the planner). It exists so
+        # a run record is self-attributing: the M9 ablation submits a model and
+        # writes the answer into a committed report, and without an echo every
+        # row's attribution is the driver's own assertion about a deployment that
+        # can be redeployed mid-sweep (PR #15, R4).
+        "model": model,
         "answer": answer if answer else None,
         "reason": reason,
         "verdict": verdict,
@@ -260,12 +268,12 @@ def assemble_result(trace, answer, budgets, failure=None, reason=None, final_url
 
 
 async def run_task(task: str, url: str | None, planner, run_dir: str | Path, headless: bool = True,
-                   url_guard=None, on_step=None, browser=None):
+                   url_guard=None, on_step=None, model=None, browser=None):
     """`browser`: an already-running Chromium to borrow instead of launching one.
     Callers that leave it None — the gateway and the CLI, i.e. production — get a
     private browser per run, because two callers' tasks must not share a process.
     The eval harness passes one browser for the whole suite: per-run driver start
-    + launch + close measured 11.3s of the `fast` suite's 67.0s (ADR-010).
+    + launch + close measured 11.3s of the `fast` suite's 67.0s (ADR-011).
     `headless` is the borrowed browser's business, not ours.
     Isolation between runs does not depend on this: every run gets its own
     BrowserContext either way, so cookies and storage never cross."""
@@ -290,7 +298,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     def done(answer=None, failure=None, reason=None, final_url=None, digest=None, verdict=None):
         budgets["ms"] = int((time.monotonic() - t0) * 1000)
         result = assemble_result(trace, answer, budgets, failure, reason, final_url,
-                                 digest, extractions, verdict)
+                                 digest, extractions, verdict, model)
         (run_dir / "trace.jsonl").write_text("\n".join(json.dumps(s) for s in trace) + "\n")
         (run_dir / "result.json").write_text(json.dumps(result, indent=2))
         return result
@@ -347,6 +355,17 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 steps, usage = await planner(task, url, obs)
                 budgets["llm_tokens"] += usage["llm_tokens"]
                 budgets["llm_usd"] += usage["llm_usd"]
+            except PlanError as e:
+                # The call worked and the MODEL did not produce a plan. Separated
+                # from every other exception here, where the type is known,
+                # because downstream (the M9 ablation) has to tell a model that
+                # cannot plan from a provider that is down — and a consumer
+                # pattern-matching one flat message string got it backwards for a
+                # round (PR #15, R9). Its billed usage is charged to the model
+                # that emitted the prose (R10).
+                budgets["llm_tokens"] += e.usage["llm_tokens"]
+                budgets["llm_usd"] += e.usage["llm_usd"]
+                return done(failure="env", reason=f"planner rejected: {e}")
             except Exception as e:
                 return done(failure="env", reason=f"planner failed: {e}")
 
@@ -517,6 +536,10 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                             new_steps, usage = await planner(
                                 task, page.url, fresh,
                                 note=f"step {rec['i']} ({step['action']}) failed: {rec['note']}")
+                        except PlanError as e:  # same split as the first plan
+                            budgets["llm_tokens"] += e.usage["llm_tokens"]
+                            budgets["llm_usd"] += e.usage["llm_usd"]
+                            return done(failure="env", reason=f"replanner rejected: {e}")
                         except Exception as e:
                             return done(failure="env", reason=f"replanner failed: {e}")
                         budgets["llm_tokens"] += usage["llm_tokens"]

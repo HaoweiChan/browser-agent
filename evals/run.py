@@ -61,7 +61,7 @@ def run_case(case):
 # Wall-clock ceilings, by suite. Repo policy in the same sense as the
 # invariant-100% rule below: `fast` is the pre-commit gate, and past 60s it
 # stops being run honestly (specs/decisions/ADR-002-performance-thresholds.md
-# Decision 4, re-measured by ADR-010). Pinned by the case `fast-wall-clock-budget`.
+# Decision 4, re-measured by ADR-011). Pinned by the case `fast-wall-clock-budget`.
 WALL_BUDGET_S = {"fast": 60}
 
 
