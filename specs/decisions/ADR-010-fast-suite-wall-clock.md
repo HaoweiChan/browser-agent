@@ -93,7 +93,12 @@ timeout, no case deleted, no case moved out of `fast`.
    version pinned the rule only, so deleting the five lines in `main()` that
    apply it left a 79.02s run — 32% over — reporting 90/90 = 1.000 at exit 0.
    The hole moved up a level each time it was closed, which is why the case now
-   grades the place the decision is enforced and not only the decision.
+   grades where the decision is applied and not only the decision. Precisely:
+   it grades what `main()` RETURNS, in-process. The module tail that turns that
+   into a process exit code — `if __name__ == "__main__": sys.exit(main())` — is
+   the one line CI and the pre-commit hook actually read, and it is ungraded:
+   changing it to a bare `main()` disables this ceiling, and the invariant and
+   regression rules with it, with the case still green (PR #20 R13, Debt T-R13).
 
    The first version of this decision had the case read the newest report in
    `evals/report/` instead, and review falsified it (PR #20 R1). A report is
@@ -107,12 +112,14 @@ timeout, no case deleted, no case moved out of `fast`.
 
    Deliberately not tagged `invariant`: invariants are absolute and
    machine-independent, and a wall clock is neither (ADR-009 Decision 6 records
-   66.6-68.3s here and 68.6s on a reviewer's machine). Two questions this ADR
-   does not settle, both open on purpose: what a contributor on slower hardware
+   66.6-68.3s here and 68.6s on a reviewer's machine). Three things this ADR
+   does not settle, all open on purpose: what a contributor on slower hardware
    should do when the ceiling is genuinely out of reach there (PR #20 R6, Debt
-   T-R6), and what `--update-baseline` should do on an over-budget tree, since
-   it returns before the ceiling is consulted and reports nothing (PR #20 R12,
-   Debt T-R12).
+   T-R6); what `--update-baseline` should do on an over-budget tree, since it
+   returns before the ceiling is consulted and reports nothing (PR #20 R12, Debt
+   T-R12); and the ungraded module tail above (PR #20 R13, Debt T-R13), which is
+   not this ceiling's problem alone — it gates every rule in `main()` the same
+   way.
 
 3. **The un-shared launch keeps a case.** Sharing the browser on every case
    left `browser is None` — the branch every real caller takes — graded by
@@ -122,7 +129,7 @@ timeout, no case deleted, no case moved out of `fast`.
 
 ## Consequences
 
-`fast` measures **54.1-55.9s, 90 cases** (`evals/report/20260821-124700-fast.json`;
+`fast` measures **54.1-55.9s, 90 cases** (`evals/report/20260821-125950-fast.json`;
 up from 67.0-68.3s over 86-87 cases), and the suite got three cases larger while
 getting 13s faster — the third, `shared-browser-relaunches-when-dead`, came out
 of review. Headroom

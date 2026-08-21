@@ -49,8 +49,8 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260821-124700-fast.json`, with
-`…-124605-invariant.json` and `…-121943-live.json`:
+Latest offline baseline — `evals/report/20260821-125950-fast.json`, with
+`…-125850-invariant.json` and `…-121943-live.json`:
 
 ```
 fast  90/90    invariant  23/23    live  9/9    $0.0000    55.2s

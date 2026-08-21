@@ -1,0 +1,29 @@
+{
+  "pr": 20,
+  "round": 3,
+  "task": "M12",
+  "verdict_received": "APPROVED",
+  "resolutions": [
+    {
+      "id": "R13",
+      "status": "split",
+      "wording_half": {
+        "status": "fixed",
+        "covered_by": "no case — `fast-wall-clock-budget` triage text and ADR-010 Decision 2 corrected",
+        "what_changed": "The claim that the case grades \"the exit code of the code path CI and `.githooks/pre-commit` actually take\" was one line short of true and is gone. `triage.note` now says it grades the value `main()` RETURNS, in-process, and names `evals/run.py`'s `if __name__ == \"__main__\": sys.exit(main())` tail as the line that turns that value into a process exit code — ungraded, and disabling it would take the invariant and regression rules down with this ceiling. `triage.not_covered` adds \"it does not drive evals/run.py as a process, so the module tail is ungraded\". ADR-010 Decision 2 carried the same overstatement (\"grades the place the decision is enforced\") and now states the same distinction, and lists T-R13 as the third thing the ADR leaves open beside T-R6 and T-R12.",
+        "why_not_deferred": "A triage note that overstates what it grades is the defect this PR exists to remove; deferring the sentence would have left the PR shipping the shape it spent three rounds closing."
+      },
+      "mechanism_half": {
+        "status": "debt",
+        "became": "T-R13 — the module tail that turns `main()`'s return into an exit code is ungraded",
+        "note": "Logged under `## Debt` in tasks/TODO.md with claim, evidence, repro and acceptance verbatim from tasks/reviews/pr20-r3.json. The block records that it is not specific to M12's ceiling — the same tail gates the pre-existing invariant and regression rules identically, and nothing in this PR's diff made it worse — and that the acceptance is a `subprocess.run([sys.executable, '-m', 'evals.run', ...])` probe reading `returncode` rather than an in-process `main()` call.",
+        "not_attempted_here": "No case added, no code changed. The reviewer routed this to debt itself and approved alongside it."
+      }
+    }
+  ],
+  "debt_created_by_this_task": ["T-R5", "T-R6", "T-R12", "T-R13"],
+  "gate": {
+    "invariant": "23/23 = 1.000",
+    "fast": "90/90 = 1.000"
+  }
+}

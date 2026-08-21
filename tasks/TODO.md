@@ -49,6 +49,32 @@ Origin: M8's SHOULD item, left open at the M8 merge (PR #12)
 Spec: replay committed live-page snapshots so live-site drift is detected
 without network. Acceptance: a drifted snapshot turns a case red offline.
 
+### T-R13 — the module tail that turns `main()`'s return into an exit code is ungraded            [status: todo]
+Origin: PR #20 R13 (LOW, routed debt by the reviewer, which approved alongside it)
+Not specific to M12's ceiling: the same tail gates the pre-existing invariant and
+regression rules identically, and nothing in PR #20's diff made it worse. The
+wording half of its acceptance was taken in PR #20; this is the mechanism half.
+Spec (claim): the R8 repair grades `main()`'s return value but not the module
+tail that turns it into a process exit code, so `evals/run.py:179` changing from
+`sys.exit(main())` to `main()` silently disables the wall-clock gate (and the
+invariant and regression gates with it) while `fast-wall-clock-budget` stays
+green. Evidence: `evals/run.py:178-179` is the only thing CI and
+`.githooks/pre-commit` (`python -m evals.run --suite fast`) actually read, and
+`src/browser/eval_adapter.py` `_main_exit_code` calls `R.main()` in-process,
+never the `__main__` guard. Measured in a scratch copy: with
+`WALL_BUDGET_S = {"fast": 60, "invariant": 0}` and the tail unmodified,
+`python -m evals.run --suite invariant --no-report` exits 1; with the tail
+changed to a bare `main()` the same over-budget run exits 0, and
+`run_case(fast-wall-clock-budget)` still returns
+`{'passed': True, 'main_exit': [{54.35, exit 0, got 0}, {79.02, exit 1, got 1}]}`.
+Repro: cp -a the worktree to a scratch dir; `sed -i '' 's/sys.exit(main())/main()/'
+evals/run.py`; `python -m evals.run --suite fast --no-report; echo $?` on an
+over-budget tree -> 0, and
+`python -c "import json,src.browser.eval_adapter as A; print(A.run_case(json.load(open('evals/adversarial/fast-wall-clock-budget.json')))['passed'])"`
+-> True. Acceptance: the case drives the process — one
+`subprocess.run([sys.executable, '-m', 'evals.run', ...])` over-budget probe
+reading `returncode` — rather than calling `main()` in-process.
+
 ### T-R12 — `--update-baseline` records a baseline over the wall-clock ceiling, silently            [status: todo]
 Origin: PR #20 R12 (LOW, routed debt — what should happen there is a repo-owner call)
 Spec: `evals/run.py:157-161` writes the baseline and `return 0` at line 161; the
