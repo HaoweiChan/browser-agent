@@ -44,5 +44,6 @@
       "debt_id": "T-R26",
       "note": "Logged rather than fixed by instruction. Same root cause as T-ADR-NUM's fourth instance (\"next free\" id allocation across concurrent branches); the block says to fix them together."
     }
-  ]
+  ],
+  "implementer_note": "Discovered while committing, logged as debt T-R27, not fixed here: in a git worktree `core.hooksPath` resolves to the MAIN checkout's `.githooks`, so the pre-commit gate that runs on a pr-loop branch is the main checkout's script, not the branch's. That checkout's copy still passes `--no-report`, which is why this round's one blocked commit (a 60.18s fast run, history ts 20260822-011326) left no per-case report despite evals/run.py putting `over_budget` into the red-report path. The wall clock straddles 60s on this machine: nine post-repair fast runs measured 58.96-60.18s, eight of them green."
 }

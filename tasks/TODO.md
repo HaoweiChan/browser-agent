@@ -355,6 +355,33 @@ Acceptance: pr21-r1-resolution.json's debt id reads M27 (or carries a
 is corrected. Same root cause as T-ADR-NUM's fourth instance — fix them together
 or the next renumber re-opens this.
 
+### T-R27 — in a git worktree the pre-commit gate runs the MAIN checkout's hook script            [status: todo]
+Origin: PR #23 R4 repair (discovered mid-task, no finding id)
+Spec (claim): `core.hooksPath` is repo-level and absolute
+(`/Users/willy/Documents/browser-agent/.githooks`), so a commit made in a
+pr-loop worktree executes the hook script as it exists in the MAIN checkout's
+working tree, not the one on the branch being committed. The hook then `cd`s to
+`git rev-parse --show-toplevel` — the worktree — so it grades the right tree
+with the wrong script.
+Evidence: this round's second commit attempt was blocked by the gate on a 60.18s
+fast run (`evals/report/history.jsonl` ts 20260822-011326, sha c947008,
+102/102 = 1.000, `"report": null`) and left no per-case report, even though
+`evals/run.py:219-222` puts `over_budget` into `red` precisely so an
+over-budget run writes one — verified directly:
+`over_budget('fast', 60.18)` is True, and a stubbed 99s run writes
+`<ts>-fast.json` and records it in the history line. The reason is that
+`/Users/willy/Documents/browser-agent/.githooks/pre-commit:14` (the main
+checkout, on an older `main`) still passes `--no-report`, while both
+`origin/main` and this branch carry the version that does not. Every commit made
+from any worktree therefore silently ran the older gate.
+Repro: git config core.hooksPath; diff /Users/willy/Documents/browser-agent/.githooks/pre-commit .githooks/pre-commit
+Acceptance: the enforcement layer stops depending on which checkout the hook
+file happens to live in — the hook execs the script from the tree being
+committed (`git show :.githooks/pre-commit` or `$(git rev-parse --show-toplevel)/.githooks/pre-commit`),
+or `pr-loop` sets `core.hooksPath` per worktree when it creates one. Same family
+as the venv gap already known for worktrees: enforcement that a branch changes
+is not the enforcement its own commits get.
+
 ## Notes
 
 ### Reopen — A-phase (2026-08-17)
