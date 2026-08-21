@@ -2048,6 +2048,14 @@ def _run_soak_accounting_case(case: dict) -> dict:
                                            "phases_seen", "completed")},
                           "note": "the retried connect failure left no trace in the artifact "
                                   "D20 cites for 'no transport error in any phase'"})
+        # The other direction of demo_ready: this row retried through and landed
+        # a clean, correct, measured completion, so a report that says the
+        # deployment is not demo-ready here is wrong too (R16 — the only two
+        # demo_ready checks elsewhere in this case both want False).
+        elif report.get("demo_ready") is not True:
+            wrong.append({"retry_probe": "a clean, fully measured, retried-through run "
+                                         "must be demo_ready",
+                          "demo_ready": report.get("demo_ready")})
     return {"passed": not wrong, "wrong": {"soak": wrong}}
 
 

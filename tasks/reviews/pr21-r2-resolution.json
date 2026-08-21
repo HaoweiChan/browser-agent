@@ -12,7 +12,8 @@
     {"id": "R15", "outcome": "debt", "debt_id": "M25", "note": "LOW — routed per the scope rule."}
   ],
   "summarize_surface_swept": {
-    "graded": ["infrastructure_failures", "completed", "attempted", "correct", "not_a_measurement", "phases_seen", "demo_ready"],
+    "graded": ["infrastructure_failures", "completed", "attempted", "correct", "not_a_measurement", "phases_seen"],
+    "graded_one_direction_only": {"demo_ready": "both reports this round pin False; the True direction was unpinned until PR #21 R16 added it to the retry-probe report"},
     "ungraded_deliberately": {"transport_retries": "asserted by substring only — that is R12, routed to debt",
                               "suite/base/task_set/sequences": "literal passthroughs of the arguments and a constant"}
   }
