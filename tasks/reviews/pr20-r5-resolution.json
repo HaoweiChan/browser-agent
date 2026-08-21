@@ -1,0 +1,17 @@
+{
+  "pr": 20,
+  "round": 5,
+  "task": "M12",
+  "findings": [
+    {
+      "id": "R24",
+      "status": "fixed",
+      "covering_case": "fast-wall-clock-budget",
+      "what_changed": "The published post-fix band (58.69/58.79/59.05/59.27/59.96/60.44/60.59s, 'still straddling 60 on two of seven') does not reproduce. Before rewriting anything, tested the load hypothesis directly rather than asserting it: 6 runs at ambient load average 2.3-4.9 gave 58.97-59.41s, and one run under artificial CPU load built specifically to test it -- 8 processes pinned at 100% CPU, load average driven to 8.4 on a 14-core machine, concurrent with the suite -- gave 58.96s, the low end of the range rather than the high end. Heavy CPU contention did not slow the suite, because its wall clock is dominated by fixed sleeps and Playwright timeout bounds, not CPU cycles. Combined with the reviewer's 8 runs (59.00-59.87) and the orchestrator's 6 runs at load average 3.19 (58.97-59.22) plus its committed gate run (59.15), ~22 runs across three independent measurers -- idle and deliberately loaded alike -- land at 58.96-59.87s, none over 60. The two outliers cannot be attributed to load (the one condition tested) or reproduced by anyone, so they are dropped as unsubstantiated rather than kept, averaged away, or explained by an untested guess. That reopens acceptance branch 1 ('fast < 60s again'): WALL_BUDGET_S reverted 70 -> 60 in evals/run.py (and its stale 'past 70s' comment), the fast-wall-clock-budget rows/expect/env_override moved to the 60 boundary, ADR-013 Decision 4 rewritten to record the tried-then-withdrawn 70s amendment with the reproduction attempt and its result rather than deleting the history, its header (Ruling/Amends/Route) and Decisions 2-3 brought back into agreement with 60, its Consequences section flagged the pre-fix 60.51s/97-case snapshot as superseded, ADR-002 Decision 4 and its status header reverted with the same withdrawal recorded, INDEX.md and .github/workflows/eval.yml's local-ceiling comment fixed, tasks/TODO.md's M12 branch line flipped back to 'branch 1' and M14's headroom note updated to ~0.13s, README/docs/analysis.md/docs/support-matrix.md swept for the same 70s references and the stale 60.51s/97-case baseline citations replaced with a fresh committed run (evals/report/20260821-224446-fast.json, 98/98, 59.35s). Headroom against the reverted 60s ceiling is ~0.13s against the max reproducible run (59.87s) -- stated plainly as the real cost of taking branch 1, not hidden. fast-wall-clock-budget provenance gets falsification (6) recording a published band a third party could not reproduce. R16's earlier fix (making the ADR consistently say 70) is not disturbed by reverting to 60 -- checked line by line rather than blind-reverted, since the whole point of that fix was internal consistency, which the round-5 rewrite preserves at the new value."
+    }
+  ],
+  "suites": {
+    "invariant": "31/31 = 1.000, wall 7.68s",
+    "fast": "98/98 = 1.000, wall 59.24s, exit 0 (ceiling 60s)"
+  }
+}

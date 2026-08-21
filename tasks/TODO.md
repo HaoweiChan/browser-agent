@@ -38,14 +38,19 @@ Spec: `fast` is 68.2s against ADR-002 D4's 60s budget — 10.6s is one
 deliberate click timeout, the rest a growth trend that crosses the budget
 regardless of any one milestone. Acceptance: fast < 60s again, or ADR-002 D4
 amended with the measured floor and why.
-Resolved by acceptance branch 2 (`specs/decisions/ADR-013-fast-suite-wall-clock.md`):
+Resolved by acceptance branch 1 (`specs/decisions/ADR-013-fast-suite-wall-clock.md`):
 per-call measurement put 11.3s of the 67.0s in per-case browser process
 lifecycle, which the harness no longer pays; 42.2s of deliberate waiting was
-left alone. `fast` is 60.51s over 97 cases. ADR-002 D4's ceiling is now
-per-environment and both numbers are measured: CI got its own (80s, Decision 3) after its
-first run showed main had been at 89.62s against an unchecked 60s, and the local
-number moved 60 -> 70 (Decision 4) when the M9-stage-2 merge made the suite
-straddle 60 with the excess measured as evidence, not waste.
+left alone. `fast` is 59.35s over 98 cases. ADR-002 D4's ceiling is now
+per-environment: CI got its own (80s, Decision 3) after its
+first run showed main had been at 89.62s against an unchecked 60s. The local
+number was tried at 60 -> 70 (Decision 4) when the M9-stage-2 merge made the suite
+straddle 60 with the excess measured as evidence, not waste — but the band that
+justified staying at 70 after a follow-up fix did not reproduce under round-5
+review (~22 runs across three independent measurers, idle and under
+deliberate CPU load, all 58.96-59.87s), so that amendment was withdrawn the
+same day and the local number is unchanged at 60, with headroom of only
+~0.13s against the slowest reproducible run.
 Review round 1 (PR #20) falsified the first enforcement — a case reading the
 newest committed report cannot go red on a fresh CI clone — so the ceiling now
 lives in `evals/run.py` and gates the run it measured.
@@ -206,9 +211,12 @@ Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence. M12 resolved without amending
 ADR-002 D4 — it removed 11.3s of per-case browser launch and left the 42.2s of
 deliberate waiting (settle loops, bounded load/screenshot waits, one 10s click
-timeout) that only parallelism can hide. `fast` now sits at 60.51s with
-~10s of headroom against the re-measured 70s local ceiling, so this is the next lever when the ceiling
-goes red rather than an urgent one today (ADR-013).
+timeout) that only parallelism can hide. `fast` now sits at 59.35s with
+only ~0.13s of headroom against the local 60s ceiling (a straddling band
+briefly pushed the ceiling to 70s, but round-5 review could not reproduce it
+and it was withdrawn — ADR-013 Decision 4), so this lever is close to urgent:
+the next case `fast` gains, even a cheap one, is likely to turn the ceiling
+red.
 
 ### M15 — Verifier-accuracy dashboard UI            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)

@@ -1,0 +1,20 @@
+{
+  "pr": 20,
+  "round": 5,
+  "task": "M12",
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff 57be711..d5849c8 plus standing round-4 findings",
+  "verdict": "R15, R16, R17, R18, R19, R20, R22 verified fixed; R21/R23 debt blocks faithful. One HIGH stands.",
+  "findings": [
+    {
+      "id": "R24",
+      "severity": "HIGH",
+      "route": "repair",
+      "route_reason": "The published band is the sole justification for not taking acceptance branch 1, and it does not reproduce. Orchestrator independently confirmed: 6 runs at 58.97-59.22, plus the reviewer's 8 at 59.00-59.87, plus the gate run at 59.15 \u2014 ~15 runs, none over 60. The number 70 may still be defensible, but the measurement published to justify it is not reproducible as stated, which is the exact defect R14 was raised to catch.",
+      "claim": "The R14 repair's central empirical claim \u2014 a fresh 7-run band 'still straddling 60s (two of seven over)', max 60.59s \u2014 does not reproduce: independent runs of the shipping tree all land cleanly under 60s.",
+      "evidence": "ADR-013:220-221 publishes '58.69 / 58.79 / 59.05 / 59.27 / 59.96 / 60.44 / 60.59s \u2014 still straddling 60s (two of seven over)'. Reviewer, same worktree at d5849c8: 59.87, 59.16, 59.42, 59.13, 59.00, 59.30, 59.48, 59.17 (8 runs, all 98/98). Orchestrator, independently, same tree: 59.22, 58.98, 59.17, 58.97, 59.07, 59.07 (6 runs) at load average 3.19. Plus the orchestrator's committed gate run, 59.15s. ~15 runs, max 59.87, none over 60 \u2014 against published outliers of 60.44 and 60.59 that nobody else reproduces. The published band's own math (60.59 x 1.15 -> 70) is the sole justification in the diff for not taking acceptance branch 1.",
+      "repro": "for i in $(seq 1 6); do .venv/bin/python -m evals.run --suite fast --no-report | grep wall; done -> 58.97-59.22, none over 60",
+      "acceptance": "The ADR states the band it can actually reproduce, with the conditions under which it was measured. The likely honest shape: the suite clears 60 on an idle machine (~15 runs, 59.0-59.9, three independent measurers) and exceeds it under concurrent load (the 60.4-60.6 runs, measured while the machine was busy) \u2014 in which case say that, and justify 70 as covering both, on the stated ground that a ceiling whose verdict depends on whether another process is running is not a gate. What is not acceptable is a published band presented as an unconditioned measurement that a third party cannot reproduce. If instead the loaded runs cannot be substantiated, drop them and re-derive."
+    }
+  ]
+}

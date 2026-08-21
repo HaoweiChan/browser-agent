@@ -49,11 +49,11 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260821-170854-fast.json`, with
+Latest offline baseline — `evals/report/20260821-224446-fast.json`, with
 `…-170753-invariant.json` and `…-164456-live.json`:
 
 ```
-fast  97/97    invariant  30/30    live  9/9    $0.0000    60.5s
+fast  98/98    invariant  30/30    live  9/9    $0.0000    59.4s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 14/14 · 4 replans
 ```
@@ -62,8 +62,13 @@ That is this machine, where seven runs of the merged tree measured
 **59.35-60.16s**. The same suite on CI (ubuntu-latest) measured
 **59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
 on byte-identical code, which is why the wall-clock ceiling is per-environment
-rather than one number pretending to be portable. Each ceiling is the slowest
-observed run plus 15%: 70s local, 80s CI.
+rather than one number pretending to be portable. CI's ceiling is the slowest
+observed run plus 15% (80s); the local ceiling stays the original **60s** —
+a straddling band briefly pushed it to 70, but round-5 review could not
+reproduce the two runs that justified that (~22 runs across three
+independent measurers, idle and under deliberate CPU load, all landed at
+58.96-59.87s), so the amendment was withdrawn and headroom against 60s is a
+thin ~0.13s.
 
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
 measured where the time went instead of assuming: 42.2s is deliberate waiting
@@ -75,7 +80,7 @@ anyone would have guessed: M9's merge took the suite to 63.3s over a completion
 poll sleeping 2s between checks on runs that finish in under a second, and the
 branch's first CI run showed CI had been ~50% over the same ceiling for its whole
 existence with nothing checking — `main` runs `fast` in 89.62s. CI now carries its
-own measured ceiling (80s, from four runs at 64.3-69.0s on the merged tree) alongside a local 70s
+own measured ceiling (80s, from four runs at 64.3-69.0s on the merged tree) alongside a local 60s
 ([ADR-013](specs/decisions/ADR-013-fast-suite-wall-clock.md)).
 
 `live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those

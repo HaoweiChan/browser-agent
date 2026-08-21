@@ -40,7 +40,7 @@ inferred — `evals/report/20260821-170854-fast.json`, `…-170753-invariant.jso
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 97 | **97/97** | 60.51s | 0.12s | 4.10s | $0.0000 |
+| `fast` (offline gate) | 98 | **98/98** | 59.35s | 0.11s | 4.09s | $0.0000 |
 | `invariant` (must-always-hold) | 30 | **30/30** | 8.18s | 0.0s | 2.29s | $0.0000 |
 | `live` (4 real sites) | 9 | **9/9** | 24.03s | 2.10s | 5.74s | $0.0000 |
 
@@ -72,7 +72,9 @@ and the run there answers confidently and wrongly (§ the M8 rows in
 `docs/support-matrix.md`, D5–D11).
 
 **The `fast` gate cost 68s against the 60s ceiling ADR-002 set for two
-milestones, and is inside a re-measured one at 60.51s (97 cases).** It was declared
+milestones, and is back inside that same 60s ceiling at 59.35s (98 cases) —
+a straddling band briefly pushed the ceiling to 70s, but that amendment did
+not survive round-5 review and was withdrawn (§ below).** It was declared
 rather than fixed at M8 on the assumption that the 57s under the one deliberate
 10.6s click timeout was irreducible trend (13s at M2, 48.6s at M6, 55.4s at M7).
 M12 measured it per call instead: 42.2s is deliberate waiting at bounds the
@@ -92,13 +94,19 @@ first CI run, which is the more useful of the two: `main`'s own CI does `fast` i
 **89.62s** (run `32385032004`), so CI had been ~50% over the ceiling for its entire
 existence and nothing had ever checked there. This branch cuts that to 59.8-64.7s
 across four runs. CI now carries its own measured ceiling (80s after re-measurement) while local stays
-at 60s, both enforced. The local number was then re-measured too: the
-M9-stage-2 merge added a readiness case that holds a run slot for 3.0s on
-purpose, the suite straddled 60s across seven runs (59.35-60.16s), and the excess
-measured out as evidence rather than waste — so ADR-002 Decision 4's local
-ceiling became **70s**, and CI's was re-measured to **80s** on the merged tree
-(64.29-68.96s over four runs) — each the slowest observed run plus 15%
-(ADR-013 Decisions 3 and 4). The parallel eval runner stays the named next lever.
+at 60s, both enforced. The local number was then re-measured, then that
+re-measurement was withdrawn: the M9-stage-2 merge added a readiness case
+that holds a run slot for 3.0s on purpose, the suite straddled 60s across
+seven runs (59.35-60.16s), a fix to the hold recovered ~1s/run but a
+post-fix seven-run band was published as still straddling 60s — so ADR-002
+Decision 4's local ceiling was moved to **70s** — but round-5 review could
+not reproduce that band (~22 runs across three independent measurers, idle
+and under deliberate CPU load, all landed at 58.96-59.87s), so the amendment
+was withdrawn the same day and the local ceiling ships at **60s**, with
+headroom of only ~0.13s against the slowest reproducible run. CI's ceiling
+was separately re-measured to **80s** on the merged tree (64.29-68.96s over
+four runs) — the slowest observed run plus 15% (ADR-013 Decisions 3 and 4),
+unaffected by the local correction. The parallel eval runner stays the named next lever.
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -187,7 +195,9 @@ Suite wall time grew 24s → 32s at the cold review (ADR-005), entirely from one
 extra `inner_text` per action to capture `page_changed`. That evidence is what
 separates a legitimate replan from one laundering an action that never landed,
 so it was bought deliberately. The `fast` gate remains inside the threshold set
-in ADR-002 — a measured 70s locally and 80s on CI since ADR-013 Decisions 3 and 4.
+in ADR-002 — a measured 60s locally and 80s on CI since ADR-013 Decisions 3 and 4
+(a local move to 70s was tried and withdrawn the same day when round-5 review
+could not reproduce the band behind it).
 
 ## 4. Scalability
 

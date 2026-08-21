@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # CI's own wall-clock ceiling. The local ruling is 70s; this runner is
+      # CI's own wall-clock ceiling. The local ruling is 60s; this runner is
       # slower, and one number cannot be tight on a laptop and true here.
       # Measured, not chosen: four runs of the merged tree on ubuntu-latest gave
       # 64.29 / 67.51 / 68.94 / 68.96s — a 7% spread on identical code — and the
