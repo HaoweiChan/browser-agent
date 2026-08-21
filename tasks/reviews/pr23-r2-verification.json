@@ -1,0 +1,32 @@
+{
+  "result": "OPEN",
+  "verifications": [
+    {
+      "id": "R1",
+      "status": "verified",
+      "evidence": "src/browser/server.py:390 gives the flex-item code min-width:0 and overflow-wrap:anywhere; ui-rendered-narrow renders the actual 90-character stepEl target at 390px in both schemes and the supplied green evidence records document_width == inner_width."
+    },
+    {
+      "id": "R2",
+      "status": "verified",
+      "evidence": "src/browser/server.py:363 now uses opaque var(--dim); independent WCAG calculations give 7.2648:1 dark and 5.1759:1 light, both above 4.5:1, and ui-rendered-narrow measures the computed placeholder/background pair."
+    },
+    {
+      "id": "R3",
+      "status": "verified",
+      "evidence": "src/browser/eval_adapter.py:1872-1877 derives every literal $() id and fails when its DOM hook is absent; ui-tinboker-style explicitly lists budgets, runid, and status at lines 33-35, and a focused direct run passed with no wrong fields."
+    }
+  ],
+  "new_findings": [
+    {
+      "id": "N1",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "tag": "repair-regression",
+      "claim": "The repair makes the invariant suite browser- and Playwright-dependent, violating its pure-code contract.",
+      "evidence": "evals/adversarial/ui-rendered-narrow.json:4 tags the new case invariant, while src/browser/eval_adapter.py:1888 and 1896-1902 import Playwright and launch Chromium; CLAUDE.md:50 defines invariant as pure code. In this worktree's base Python, directly running the case fails with ModuleNotFoundError: No module named 'playwright'.",
+      "repro": "PYTHONDONTWRITEBYTECODE=1 python3 -c 'import json; from src.browser.eval_adapter import run_case; print(run_case(json.load(open(\"evals/adversarial/ui-rendered-narrow.json\"))))'",
+      "acceptance": "Keep the rendered browser regression in fast (or another browser-capable suite) but remove it from invariant, or replace its invariant-path check with a genuinely pure-code check while retaining focused rendered coverage."
+    }
+  ]
+}

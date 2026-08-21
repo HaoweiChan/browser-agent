@@ -12,6 +12,18 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
+### M18 — TinBoker reviewer UI restyle            [status: pr]
+PR: #23 · ADR-014 · evidence in the PR body, trace in tasks/reviews/pr23-r*.json
+Spec: Restyle the existing single-page reviewer UI with the TinBoker terminal
+language while preserving task submission, SSE trace, screenshots, results,
+support matrix, limitations, stable DOM hooks, and the no-build/no-framework
+architecture.
+Acceptance: dark terminal and light paper-terminal palettes, amber commands,
+cyan interaction/recovery, compact squared surfaces, a no-overflow 390px layout,
+explicit focus and reduced-motion handling, no external dependency, declared
+contrast pairs at least 4.5:1, focused fail-before/mutation/pass-after evidence,
+and the repo gate green in order.
+
 ### M10 — A-Freeze            [status: todo]
 Depends: M9, M12
 Spec: analysis/README/support-matrix refresh, prompts curated, second
@@ -56,6 +68,13 @@ date-based ids remove the collision, and an `adr-header-and-index` extension
 that refuses a duplicate number, a gap in the sequence, or an INDEX entry whose
 number does not match its file makes a botched sweep red instead of plausible.
 Do not design it in this PR.
+Fourth instance, and the first outside ADR numbers: PR #23's tinboker ADR was
+written as ADR-013 and shipped as ADR-014 (PR #20's wall-clock ADR took 013
+first), and the *task id* collided the same way — PR #21 R1 logged a soak debt
+as M18 while PR #23's branch, PR title and review artifacts were already M18,
+so the debt block was renumbered to M27 on merge. "Next free" fails for every
+id sequence in this repo, not just `specs/decisions/`; whatever rule lands here
+should cover `tasks/TODO.md` ids too.
 
 ### T-R13 — the module tail that turns `main()`'s return into an exit code is ungraded            [status: todo]
 Origin: PR #20 R13 (LOW, routed debt by the reviewer, which approved alongside it)
@@ -257,8 +276,8 @@ Acceptance: a `want` dict asserts `len(report["results"]) == len(rows)`, or the
 inventory and the triage sentence name `results` and the passthrough group so
 the sweep claim is honest about what it does not cover.
 
-### M18 — The soak cannot separate a bad deployment from a bad third-party site            [status: todo]
-Origin: PR #21 R1
+### M27 — The soak cannot separate a bad deployment from a bad third-party site            [status: todo]
+Origin: PR #21 R1 (logged there as M18; renumbered on the PR #23 merge — both branches allocated M18 by "next free", the T-ADR-NUM failure mode applied to task ids)
 Spec: `summarize` now borrows `ablation.is_measurement` to decide what a
 completion is, so a live task ending `failure:nav` because the site itself was
 down drops `demo_ready` to false and reads as if the deployment failed. That is
@@ -271,6 +290,122 @@ deployment fault without ever letting it count as a clean completion.
 ### M17 — Per-IP rate limiting            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence.
+
+### T-R24 — nothing grades which browser an eval case is allowed to use            [status: todo]
+Origin: PR #23 R7 (LOW, routed debt by the reviewer)
+Spec (claim): the N1 repair is narrower than the premise it was accepted on, and
+the resolution artifact overstated it: the `invariant` suite still needs a real
+Chromium in six cases, so "invariant is pure code, no browser" is not restored —
+only the newest violation was retagged, and nothing grades the rule.
+Evidence: `tasks/reviews/pr23-r3-resolution.json` claimed the fix retains
+coverage "without an invariant Playwright import". With a broken browser path the
+invariant suite drops to 28/34: `ablation-env-failure-is-a-result`,
+`contract-trace-schema`, `observe-content-survives-chrome`,
+`readyz-tracks-the-run-slot`, `supersede-never-dangles` and
+`url-guard-holds-after-navigation` all fail. `_check_supersede_dangling`
+(`src/browser/eval_adapter.py`) calls `_run_agent` without `own_browser`, which
+routes to `_browser()`. These six are inherited from main, but they make the
+resolution's green sentence untrue of the suite, and no case reddens if
+`ui-rendered-narrow` is retagged back into `invariant`.
+Repro: PLAYWRIGHT_BROWSERS_PATH=/nonexistent-browsers python3 -m evals.run --suite invariant --no-report 2>&1 | grep -E "^\[FAIL\]|suite 'invariant'"
+(reproduced in PR #23 R4 repair: 28/34, exactly those six).
+Acceptance: a case grades the invariant suite's purity so the retag cannot
+silently reverse. The R3 resolution's `green` text was narrowed in the R4 repair,
+which is the honesty half; this block is the graded half.
+Same family, same gap, found in the same round: ADR-013 Decision 1 says the suite
+shares one Chromium, and `ui-rendered-narrow` owned its own for a whole review
+round with nothing red (PR #23 R5). `agent-launches-its-own-browser` did NOT miss
+it — that case grades `run_task(browser=None)`, the production launch branch, and
+`ui-rendered-narrow` never routes through `run_task`. Do not widen that case:
+what is missing is a check on the eval harness's own renderers, not on the agent.
+
+### T-R25 — INDEX.md's ADR-002 line still publishes the withdrawn 70s local ceiling            [status: todo]
+Origin: PR #23 R8 (LOW, routed debt by the reviewer)
+Spec (claim): `specs/decisions/INDEX.md`'s ADR-002 line still publishes the
+withdrawn 70s local ceiling, contradicting ADR-002 itself and INDEX's own ADR-013
+line.
+Evidence: `specs/decisions/INDEX.md:11` — "fast wall clock ≤ each environment's
+own measured ceiling (70s local, 80s CI — ADR-013 Decisions 3 and 4)" vs
+`INDEX.md:22` "60s locally (a straddling band briefly moved it to 70s, withdrawn
+the same day ...)", `specs/decisions/ADR-002-performance-thresholds.md:4` "60s
+locally, 80s on CI", and `evals/run.py:80` `WALL_BUDGET_S = {"fast": 60}`.
+Inherited: byte-identical to `git show fcdc6b0^2:specs/decisions/INDEX.md` line
+11, so the hand resolution did not introduce it — but INDEX.md was one of the
+three hand-resolved files in this diff and `adr-header-and-index` only checks
+numbers, never the prose.
+Repro: sed -n '11p;22p' specs/decisions/INDEX.md && sed -n '80p' evals/run.py
+Acceptance: INDEX.md:11 reads "60s local, 80s CI", matching ADR-002:4,
+INDEX.md:22 and `WALL_BUDGET_S`. Held out of PR #23 deliberately: the one-word
+edit is not the point, a guard that reads the ceiling out of `WALL_BUDGET_S`
+instead of out of prose is.
+
+### T-R26 — two review artifacts route to task ids that no longer resolve            [status: todo]
+Origin: PR #23 R9 (LOW, routed debt by the reviewer)
+Spec (claim): task-id bookkeeping around the M18/M27 renumber leaves two
+artifacts pointing at ids that no longer resolve.
+Evidence: `tasks/reviews/pr21-r1-resolution.json:32` still routes the soak
+finding to `{"id": "M18", "origin": "PR #21 R1"}` while that block is now
+`tasks/TODO.md` `### M27`; TODO.md documents the renumber but the artifact is not
+cross-linked, so a reader following pr21-r1-resolution lands on the TinBoker
+restyle. Separately, `tasks/reviews/pr21-r2-resolution.json:11` routes R14 to
+`debt_id: "M24"` and no `### M24` block exists in `tasks/TODO.md` on this branch
+or on `fcdc6b0^2` (inherited from main).
+Repro: grep -n '"M18"\|M24' tasks/reviews/pr21-r*.json && grep -nE '^### (M24|M27)' tasks/TODO.md
+Acceptance: pr21-r1-resolution.json's debt id reads M27 (or carries a
+`renumbered_to` field), and M24 either exists in TODO.md or the pr21-r2 routing
+is corrected. Same root cause as T-ADR-NUM's fourth instance — fix them together
+or the next renumber re-opens this.
+
+### T-R27 — in a git worktree the pre-commit gate runs the MAIN checkout's hook script            [status: todo]
+Origin: PR #23 R4 repair (discovered mid-task, no finding id)
+Spec (claim): `core.hooksPath` is repo-level and absolute
+(`/Users/willy/Documents/browser-agent/.githooks`), so a commit made in a
+pr-loop worktree executes the hook script as it exists in the MAIN checkout's
+working tree, not the one on the branch being committed. The hook then `cd`s to
+`git rev-parse --show-toplevel` — the worktree — so it grades the right tree
+with the wrong script.
+Evidence: this round's second commit attempt was blocked by the gate on a 60.18s
+fast run (`evals/report/history.jsonl` ts 20260822-011326, sha c947008,
+102/102 = 1.000, `"report": null`) and left no per-case report, even though
+`evals/run.py:219-222` puts `over_budget` into `red` precisely so an
+over-budget run writes one — verified directly:
+`over_budget('fast', 60.18)` is True, and a stubbed 99s run writes
+`<ts>-fast.json` and records it in the history line. The reason is that
+`/Users/willy/Documents/browser-agent/.githooks/pre-commit:14` (the main
+checkout, on an older `main`) still passes `--no-report`, while both
+`origin/main` and this branch carry the version that does not. Every commit made
+from any worktree therefore silently ran the older gate.
+Repro: git config core.hooksPath; diff /Users/willy/Documents/browser-agent/.githooks/pre-commit .githooks/pre-commit
+Acceptance: the enforcement layer stops depending on which checkout the hook
+file happens to live in — the hook execs the script from the tree being
+committed (`git show :.githooks/pre-commit` or `$(git rev-parse --show-toplevel)/.githooks/pre-commit`),
+or `pr-loop` sets `core.hooksPath` per worktree when it creates one. Same family
+as the venv gap already known for worktrees: enforcement that a branch changes
+is not the enforcement its own commits get.
+
+### T-R28 — `_run_ui_rendered_case` leaks a BrowserContext when the case errors            [status: todo]
+Origin: PR #23 round-5 verification (out-of-scope note, no finding id)
+Spec: the R5 repair moved the case onto the shared Chromium, but its `go()`
+closes the context only on the success path, so an exception inside
+`page.evaluate` leaks a BrowserContext onto the shared browser for the rest of
+the suite. Its sibling `_run_observe_case` (`src/browser/eval_adapter.py:466`)
+already uses the try/finally pattern this one needs.
+Evidence: reproduced by renaming `stepEl` in the PAGE source — the case raises
+and `len(_BROWSER.contexts) == 1` afterwards; on the clean pass path four
+consecutive warm invocations leave `len(_BROWSER.contexts) == 0`. Reachable
+only when the case is already erroring, which is why it did not block PR #23.
+Acceptance: `go()` wraps its context in try/finally, and a case asserts the
+shared browser holds no contexts after a deliberately-erroring render.
+
+### T-R29 — `docs-numbers-are-derived` asserts substring presence, so a contradicting line beside a correct one stays green            [status: todo]
+Origin: PR #23 round-5 verification (out-of-scope note, no finding id)
+Spec: the R4 repair made README's "Where it stands" block recompute from the
+report files it cites, but the assertion is `expected_string in readme`. A
+README that keeps the correct line and adds a contradicting one next to it is
+still green — the same class of drift R4 was filed for, one step removed.
+Acceptance: the check pins the block's content rather than the presence of
+strings within it — parse the fenced block and compare it whole, or assert that
+no other line in it parses as a competing figure for the same field.
 
 ## Notes
 

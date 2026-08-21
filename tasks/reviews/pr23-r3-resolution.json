@@ -1,0 +1,14 @@
+{
+  "review": "pr23-r2-verification",
+  "result": "FIXED",
+  "resolutions": [
+    {
+      "id": "N1",
+      "disposition": "fixed",
+      "case_id": "ui-rendered-narrow",
+      "red": "The invariant suite selected ui-rendered-narrow and failed at its Playwright import with ModuleNotFoundError: No module named 'playwright'.",
+      "green": "The pure suite-selection check passes: ui-rendered-narrow is absent from invariant's 31 selected cases and present in fast's 96 selected cases, so the case that broke the invariant suite no longer joins it.",
+      "narrowed_by": "PR #23 R7 — the original sentence said this retained coverage \"without an invariant Playwright import\", which reads as a claim about the whole suite and is untrue of it: six inherited cases still need a real Chromium (ablation-env-failure-is-a-result, contract-trace-schema, observe-content-survives-chrome, readyz-tracks-the-run-slot, supersede-never-dangles, url-guard-holds-after-navigation) — PLAYWRIGHT_BROWSERS_PATH=/nonexistent-browsers takes the invariant suite to 28/34, re-measured during the R4 repair. This resolution covers ui-rendered-narrow only; nothing grades the rule, tracked as T-R24."
+    }
+  ]
+}

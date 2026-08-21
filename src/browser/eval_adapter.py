@@ -14,6 +14,8 @@ Case kinds (`input.kind`):
 - `screening`    — pre-flight scope screen truth table
 - `parse-plan`   — planner output tolerance
 - `mutation`     — mutation catalog integrity (pure code, no browser)
+- `ui-style`     — reviewer-page TinBoker tokens, contrast and stable DOM hooks
+- `ui-rendered`  — narrow trace overflow and effective placeholder contrast
 - `gateway-model` — `POST /tasks`'s model allowlist, and that the model actually
   reaches the planner factory (the planner is swapped for a recorder: $0.00)
 - `ablation-table` — the M9 cost/model table in docs/analysis.md carries no
@@ -1900,6 +1902,156 @@ def _run_matrix_drift_case(case: dict) -> dict:
     return {"passed": not quiet, "wrong": {"parsed_quietly": quiet}}
 
 
+def _run_ui_style_case(case: dict) -> dict:
+    """The reviewer page keeps its TinBoker terminal language and UI hooks.
+
+    Pure source check: no browser, network or screenshot oracle. It pins the
+    small set of decisions that distinguish the style (dual palettes, grid,
+    keyline, focus/motion handling) while leaving layout values free to move.
+    """
+    inp = case["input"]
+    page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    page = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
+    dark = re.search(r":root\s*{([^}]*)}", page, re.S)
+    light = re.search(
+        r"@media\s*\(prefers-color-scheme:light\)\s*{\s*:root\s*{([^}]*)}",
+        page, re.S)
+
+    def declarations(match):
+        return dict(re.findall(r"(--[a-z0-9-]+)\s*:\s*([^;]+)",
+                               match.group(1))) if match else {}
+
+    def luminance(value):
+        if not re.fullmatch(r"#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?", value):
+            raise ValueError(f"contrast token is not a flat hex color: {value}")
+        raw = value[1:]
+        if len(raw) == 3:
+            raw = "".join(c * 2 for c in raw)
+        channels = [int(raw[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        linear = [c / 12.92 if c <= .04045 else ((c + .055) / 1.055) ** 2.4
+                  for c in channels]
+        return sum(a * b for a, b in zip((.2126, .7152, .0722), linear))
+
+    def contrast(a, b):
+        hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
+        return (hi + .05) / (lo + .05)
+
+    wrong = {}
+    for scheme, match in (("dark", dark), ("light", light)):
+        declared = declarations(match)
+        missing = sorted(set(inp["tokens"]) - set(declared))
+        if missing:
+            wrong[f"{scheme}_tokens"] = missing
+        low = []
+        for fg, bg, minimum in inp.get("contrast", []):
+            try:
+                got = contrast(declared[fg], declared[bg])
+            except (KeyError, ValueError) as e:
+                low.append({"pair": f"{fg}/{bg}", "error": str(e)})
+                continue
+            if got < minimum:
+                low.append({"pair": f"{fg}/{bg}", "got": round(got, 2),
+                            "minimum": minimum})
+        if low:
+            wrong[f"{scheme}_contrast"] = low
+
+    missing_fragments = [s for s in inp["fragments"] if s not in page]
+    if missing_fragments:
+        wrong["fragments"] = missing_fragments
+
+    missing_ids = [i for i in inp["ids"]
+                   if not re.search(rf'id=["\']{re.escape(i)}["\']', page)]
+    if missing_ids:
+        wrong["ids"] = missing_ids
+
+    script = page.split("<script>", 1)[1].split("</script>", 1)[0]
+    used_ids = sorted(set(re.findall(r'\$\(["\']([^"\']+)["\']\)', script)))
+    missing_hooks = [i for i in used_ids
+                     if not re.search(rf'id=["\']{re.escape(i)}["\']', page)]
+    if missing_hooks:
+        wrong["missing_hook_ids"] = missing_hooks
+
+    forbidden = [s for s in inp.get("forbid", []) if s in page]
+    if forbidden:
+        wrong["forbidden"] = forbidden
+
+    return {"passed": not wrong, "wrong": wrong}
+
+
+def _run_ui_rendered_case(case: dict) -> dict:
+    """Rendered narrow-screen overflow and effective placeholder contrast.
+
+    Renders on the suite's shared Chromium (ADR-013 Decision 1) with one
+    BrowserContext per colour scheme -- `viewport` and `color_scheme` are
+    context options, so owning a browser bought nothing and cost 0.29s per
+    invocation against 0.075s here, on a suite whose wall clock is the gate
+    (PR #23 R5).
+    """
+    inp = case["input"]
+    page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    page_html = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
+
+    async def go():
+        results = {}
+        browser = await _browser()
+        for scheme in inp["schemes"]:
+            context = await browser.new_context(
+                viewport={"width": inp["viewport_width"], "height": 844},
+                color_scheme=scheme)
+            page = await context.new_page()
+            await page.set_content(page_html)
+            results[scheme] = await page.evaluate("""(targetLength) => {
+              document.getElementById("live").hidden = false;
+              document.getElementById("steps").innerHTML = stepEl({
+                i:1, action:"extract", value:"x".repeat(targetLength),
+                ms:1, postcondition_ok:true
+              });
+              const rgba = (css) => {
+                const values = (css.match(/[0-9]*[.]?[0-9]+/g) || []).map(Number);
+                if (css.startsWith("color(srgb")) {
+                  return [values[0] * 255, values[1] * 255, values[2] * 255,
+                          values.length > 3 ? values[3] : 1];
+                }
+                return [values[0], values[1], values[2],
+                        values.length > 3 ? values[3] : 1];
+              };
+              const input = document.getElementById("task");
+              const foreground = rgba(getComputedStyle(input, "::placeholder").color);
+              const background = rgba(getComputedStyle(input).backgroundColor);
+              const effective = foreground.slice(0, 3).map(
+                (channel, i) => channel * foreground[3] + background[i] * (1 - foreground[3]));
+              const luminance = (rgb) => rgb.map(channel => channel / 255)
+                .map(channel => channel <= .04045 ? channel / 12.92
+                  : Math.pow((channel + .055) / 1.055, 2.4))
+                .reduce((sum, channel, i) => sum + channel * [.2126,.7152,.0722][i], 0);
+              const a = luminance(effective), b = luminance(background.slice(0, 3));
+              return {
+                inner_width: innerWidth,
+                document_width: document.documentElement.scrollWidth,
+                placeholder_contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05),
+                placeholder_color: getComputedStyle(input, "::placeholder").color,
+                input_background: getComputedStyle(input).backgroundColor
+              };
+            }""", inp["target_length"])
+            await context.close()
+        return results
+
+    got = _await(go())
+    wrong = {}
+    for scheme, rendered in got.items():
+        if rendered["document_width"] > rendered["inner_width"]:
+            wrong[f"{scheme}_overflow"] = {
+                "document_width": rendered["document_width"],
+                "inner_width": rendered["inner_width"]}
+        if rendered["placeholder_contrast"] < inp["placeholder_minimum"]:
+            wrong[f"{scheme}_placeholder_contrast"] = {
+                "got": round(rendered["placeholder_contrast"], 2),
+                "minimum": inp["placeholder_minimum"],
+                "foreground": rendered["placeholder_color"],
+                "background": rendered["input_background"]}
+    return {"passed": not wrong, "wrong": wrong, "got": got}
+
+
 def _check_supersede_dangling() -> dict:
     """No emitted trace may point superseded_by at a step that does not exist.
 
@@ -2192,6 +2344,14 @@ def _run_doc_counts_case(case: dict) -> dict:
     is counted by hand here: suite sizes come from the runner's own `load_cases`,
     and D8's range is recomputed from the reports D8 itself cites — so the next
     case added to the suite turns this red instead of quietly aging the prose.
+
+    README's "Where it stands" block is recomputed the same way, from the three
+    reports it names: it drifted the moment M18's merge landed, because only the
+    three count strings were graded and the baseline block beside them still
+    published the pre-merge run (PR #23 R4). Every number there — passed/total
+    per suite, cost, wall clock, and the recovery/mutation/diagnosis line — is
+    read out of those report files, so the block can only be stale by citing a
+    stale report, which the citation check makes visible.
     """
     from evals.run import ROOT as RUN_ROOT
     from evals.run import load_cases
@@ -2203,6 +2363,37 @@ def _run_doc_counts_case(case: dict) -> dict:
         want = quote.format(**counts)
         if want not in readme:
             wrong.append({"readme_does_not_say": want})
+
+    ws = inp.get("where_it_stands")
+    if ws:
+        reports = {}
+        for suite, rid in ws["reports"].items():
+            path = RUN_ROOT / "evals" / "report" / rid
+            if not path.is_file():
+                wrong.append({"cites_a_report_that_does_not_exist": rid})
+                continue
+            reports[suite] = json.loads(path.read_text())
+            if f"evals/report/{rid}" not in readme:
+                wrong.append({"readme_does_not_cite": rid})
+        for suite, rep in reports.items():
+            n = len(rep["results"])
+            want = f"{suite}  {sum(1 for r in rep['results'] if r['passed'])}/{n}"
+            if want not in readme:
+                wrong.append({"readme_does_not_say": want, "from": ws["reports"][suite]})
+        head = reports.get(ws["headline"])
+        if head:
+            t, m = head["totals"], head["metrics"]
+            for want in (f"${t['llm_usd']:.4f}", f"{t['wall_seconds']:.1f}s",
+                         f"recovery {m['recovery_verified']}/{m['recovery_expected']} verified"
+                         f" ({m['recovery_rungs']} rungs tried)",
+                         f"mutation {m['mutation_passed']}/{m['mutation_cases']} passed,"
+                         f" {m['mutation_recovered']} recovered"
+                         f" ({m['mutation_relocated']} by relocating)",
+                         f"diagnosis {m['diagnosis_correct']}/{m['diagnosis_cases']}"
+                         f" · {m['replans']} replans"):
+                if want not in readme:
+                    wrong.append({"readme_does_not_say": want,
+                                  "from": ws["reports"][ws["headline"]]})
 
     d8 = inp.get("d8")
     if d8:
@@ -2433,6 +2624,8 @@ KINDS = {
     "schema": _run_schema_case,
     "screening": _run_screening_case,
     "stream": _run_stream_case,
+    "ui-style": _run_ui_style_case,
+    "ui-rendered": _run_ui_rendered_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
     "verifier-labels": _run_verifier_labels_case,
