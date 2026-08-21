@@ -12,19 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M18 — TinBoker reviewer UI restyle            [status: pr]
-PR: #23 · ADR-014 · evidence in the PR body, trace in tasks/reviews/pr23-r*.json
-Spec: Restyle the existing single-page reviewer UI with the TinBoker terminal
-language while preserving task submission, SSE trace, screenshots, results,
-support matrix, limitations, stable DOM hooks, and the no-build/no-framework
-architecture.
-Acceptance: dark terminal and light paper-terminal palettes, amber commands,
-cyan interaction/recovery, compact squared surfaces, a no-overflow 390px layout,
-explicit focus and reduced-motion handling, no external dependency, declared
-contrast pairs at least 4.5:1, focused fail-before/mutation/pass-after evidence,
-and the repo gate green in order.
-
-### M10 — A-Freeze            [status: todo]
+### M10 — A-Freeze            [status: in-progress]
 Depends: M9, M12
 Spec: analysis/README/support-matrix refresh, prompts curated, second
 held-out probe vs the deployed URL (mandatory gate, raw results committed).
