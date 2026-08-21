@@ -2027,21 +2027,28 @@ def _run_ui_rendered_case(case: dict) -> dict:
               const a = luminance(effective), b = luminance(background.slice(0, 3));
               const progressStates = () => [...document.querySelectorAll("#progress li")]
                 .map(item => item.dataset.state);
+              const progressLabels = () => [...document.querySelectorAll("#progress li")]
+                .map(item => item.getAttribute("aria-label"));
               resetProgress();
-              const progress = {start: progressStates()};
+              const progress = {start: progressStates(), start_labels: progressLabels()};
               setPhase(phaseFor({action: "navigate"}));
               progress.browser = progressStates();
+              progress.browser_labels = progressLabels();
               setPhase(phaseFor({action: "click"}));
               progress.action = progressStates();
+              progress.action_labels = progressLabels();
               setPhase(phaseFor({action: "extract"}));
               progress.verification = progressStates();
+              progress.verification_labels = progressLabels();
               setTerminal("success");
               progress.success = progressStates();
+              progress.success_labels = progressLabels();
               progress.success_current = [...document.querySelectorAll("#progress li")]
                 .map(item => item.getAttribute("aria-current"));
               resetProgress();
               setTerminal("failure:env");
               progress.failure = progressStates();
+              progress.failure_labels = progressLabels();
               progress.failure_current = [...document.querySelectorAll("#progress li")]
                 .map(item => item.getAttribute("aria-current"));
               return {

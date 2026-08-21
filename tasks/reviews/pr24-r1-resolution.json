@@ -1,0 +1,13 @@
+{
+  "result": "RESOLVED",
+  "resolutions": [
+    {
+      "id": "R1",
+      "status": "fixed",
+      "case_id": "ui-rendered-narrow",
+      "change": "Every progress list item now receives an aria-label combining its visible phase label and data-derived state after each phase or terminal transition.",
+      "fail_before": "ui-rendered-narrow: dark_progress/light_progress showed every start/browser/action/verification/success/failure *_labels array as [null, null, null, null, null].",
+      "pass_after": "ui-rendered-narrow: dark and light both rendered Planning — complete/current/failed, the intervening phase states, and Complete/Failed terminal names with aria-current on the terminal step."
+    }
+  ]
+}

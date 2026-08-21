@@ -1,0 +1,288 @@
+{
+  "suite": "invariant",
+  "score": 0.6285714285714286,
+  "totals": {
+    "wall_seconds": 0.21,
+    "latency_p50": 0.0,
+    "latency_p95": 0.05,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 1280, in _run_ablation_run_one_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.04,
+      "id": "ablation-env-failure-is-a-result",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 1523, in _run_ablation_preflight_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "ablation-preflight-refuses-old-build",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "adr_files": 15,
+        "index_entries": 15
+      },
+      "seconds": 0.0,
+      "id": "adr-header-and-index",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.02,
+      "id": "analysis-ablation-table-not-estimated",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 378, in _run_schema_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "contract-trace-schema",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "docs": []
+      },
+      "got": {
+        "counts": {
+          "fast": 102,
+          "invariant": 35,
+          "live": 9,
+          "full": 10,
+          "all": 113
+        }
+      },
+      "seconds": 0.02,
+      "id": "docs-numbers-are-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "window_len": 2000,
+      "seconds": 0.0,
+      "id": "evidence-window-miss-is-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 1065, in _run_gateway_error_case\n    base = _base_url()\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "gateway-error-contract-shape",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 1118, in _run_gateway_model_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "gateway-model-not-allowlisted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 1118, in _run_gateway_model_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "gateway-model-reaches-planner",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv3-budget-exhaustion-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-login-contracted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 1888, in _run_matrix_drift_case\n    from .server import MATRIX_DOC, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "matrix-parse-fails-loudly",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "mutation-metrics-honesty",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 463, in _run_observe_case\n    url = f\"{_base_url()}/fixtures/{case['input']['fixture']}\"\n             ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "observe-content-survives-chrome",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "opt-in-expect-keys-declared",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 851, in _run_readyz_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "readyz-tracks-the-run-slot",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "citations": 28,
+        "skip": [
+          "29991231-235959-fast.json"
+        ]
+      },
+      "seconds": 0.02,
+      "id": "report-citations-resolve",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "soak": []
+      },
+      "seconds": 0.06,
+      "id": "soak-counts-only-real-completions",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2648, in _run_invariant_case\n    return INVARIANTS[check]()\n           ~~~~~~~~~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "supersede-never-dangles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 978, in _run_matrix_case\n    from .server import CASE_CITATION, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "support-matrix-cites-real-cases",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "ui-execution-progress-is-trace-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "ui-tinboker-style",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 527, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "url-guard-holds-after-navigation",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2690, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/groundwork-M30.xbb1Gp/worktree/src/browser/eval_adapter.py\", line 2181, in _run_url_guard_case\n    from .server import url_ok\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "win_plain_len": 2000,
+      "win_anchored_len": 3615,
+      "seconds": 0.0,
+      "id": "verifier-dump-ratio-anchor-flip",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-numeric-precision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-sign-currency-percent",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-superseded-not-a-loophole",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "before": 333,
+        "after": 333
+      },
+      "seconds": 0.05,
+      "id": "wall-clock-probe-history-isolated",
+      "kind": "adversarial"
+    }
+  ]
+}

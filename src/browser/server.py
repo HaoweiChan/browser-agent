@@ -522,12 +522,17 @@ const SUPPORT_LABELS = {
 };
 
 function progressItems() { return [...$("progress").children]; }
+function labelProgress() {
+  progressItems().forEach(item => item.setAttribute(
+    "aria-label", `${item.textContent} — ${item.dataset.state}`));
+}
 function setPhase(name) {
   const current = PHASES.indexOf(name);
   progressItems().forEach((item, index) => {
     item.dataset.state = index < current ? "complete" : index === current ? "current" : "upcoming";
     item.toggleAttribute("aria-current", index === current);
   });
+  labelProgress();
 }
 function resetProgress() {
   $("progress").removeAttribute("data-terminal");
@@ -552,6 +557,7 @@ function setTerminal(status) {
   terminal.textContent = failed ? "Failed" : "Complete";
   terminal.setAttribute("aria-current", "step");
   $("progress").dataset.terminal = failed ? "failure" : "success";
+  labelProgress();
 }
 
 function badge(text, cls) { return `<span class="badge ${cls||""}">${esc(text)}</span>`; }

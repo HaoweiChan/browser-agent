@@ -10,12 +10,18 @@
     "placeholder_minimum": 4.5,
     "progress_states": {
       "start": ["current", "upcoming", "upcoming", "upcoming", "upcoming"],
+      "start_labels": ["Planning — current", "Open page — upcoming", "Run actions — upcoming", "Verify answer — upcoming", "Complete — upcoming"],
       "browser": ["complete", "current", "upcoming", "upcoming", "upcoming"],
+      "browser_labels": ["Planning — complete", "Open page — current", "Run actions — upcoming", "Verify answer — upcoming", "Complete — upcoming"],
       "action": ["complete", "complete", "current", "upcoming", "upcoming"],
+      "action_labels": ["Planning — complete", "Open page — complete", "Run actions — current", "Verify answer — upcoming", "Complete — upcoming"],
       "verification": ["complete", "complete", "complete", "current", "upcoming"],
+      "verification_labels": ["Planning — complete", "Open page — complete", "Run actions — complete", "Verify answer — current", "Complete — upcoming"],
       "success": ["complete", "complete", "complete", "complete", "complete"],
+      "success_labels": ["Planning — complete", "Open page — complete", "Run actions — complete", "Verify answer — complete", "Complete — complete"],
       "success_current": [null, null, null, null, "step"],
       "failure": ["failed", "upcoming", "upcoming", "upcoming", "failed"],
+      "failure_labels": ["Planning — failed", "Open page — upcoming", "Run actions — upcoming", "Verify answer — upcoming", "Failed — failed"],
       "failure_current": [null, null, null, null, "step"]
     }
   },
