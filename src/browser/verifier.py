@@ -86,6 +86,29 @@ DUMP_RATIO = 0.35
 # many clean characters, `not_a_dump` does not apply at all.
 MIN_PAGE_CHARS = 100
 
+# M10 probe #2 (docs/analysis.md, second held-out probe): "which author has
+# the most quotes on this page?" against quotes.toscrape.com came back
+# `status: success, verdict: PASS` twice, with two different WRONG answers
+# ("Next →", a pager link; "Quotes to Scrape", the page <title>) —
+# reproduced a third time independently. Every L1 check above is satisfied by
+# construction here: whatever the planner grabs is real, grounded, non-empty
+# and not a dump, because the check that is missing is not "is this real" but
+# "does the plan vocabulary (navigate | click | fill | extract) even have a
+# way to answer this question" — and for "which X has the most/least Y" it
+# does not: there is no enumerate-and-count primitive, so any single-shot
+# extraction is a guess wearing a PASS. Ground truth (L2) would catch a wrong
+# guess; a live run has none, which is exactly probe #2's finding. Matches
+# ONLY the superlative-over-a-set shape, not "cheapest"/"most expensive"
+# (a price comparison, tracked separately — D14, `live-books-cheapest-travel`
+# — and deliberately different wording so this does not collide with it).
+# ponytail: a regex over English, same ceiling as SCOPE_BLOCK (agent.py) —
+# it can be walked around by rephrasing, same as `log ?into` was. Widen when
+# a probe finds the next phrasing, the way l5-refuse-login-contracted did.
+_AGGREGATE = re.compile(
+    r"\b(which|what|who)\b.{0,80}\b(most|least|fewest|highest|lowest|greatest)\b",
+    re.IGNORECASE,
+)
+
 
 def _clean(value) -> str:
     return re.sub(r"\s+", " ", str(value)).strip().casefold().strip(".,;:!")
@@ -163,7 +186,7 @@ def answers_match(got, want) -> bool:
     return normalize(got) == normalize(want)
 
 
-def verify(*, trace, extractions, answer, expect=None, state=None) -> dict:
+def verify(*, trace, extractions, answer, expect=None, state=None, task=None) -> dict:
     """Return {"verdict": PASS|FAIL|INCONCLUSIVE, "layer", "checks", "reason"}.
 
     `extractions` — [{"value", "page_text", "body_len"?}] captured at
@@ -172,6 +195,8 @@ def verify(*, trace, extractions, answer, expect=None, state=None) -> dict:
                     own length when present; absent on records captured before
                     it existed (evals/labels/verifier-sample.jsonl).
     `state`       — external ground truth fetched by the caller (or None).
+    `task`        — the task text, optional. Used ONLY by `aggregate_needs_comparison`
+                    below; every other check still reads raw evidence exclusively.
     """
     expect = expect or {}
     checks: dict[str, bool] = {}
@@ -259,6 +284,21 @@ def verify(*, trace, extractions, answer, expect=None, state=None) -> dict:
     evidence_text = " ".join(e.get("page_text", "") for e in extractions or [])
     missing = [a for a in anchors if a not in evidence_text]
     check("identity_anchors", not missing, f"identity anchor(s) absent from evidence: {missing}")
+
+    # Runtime-only (no ground truth to fall back on): a superlative-over-a-set
+    # question with no `expect.answer`/`expect.state` cannot be trusted from L1
+    # evidence alone, because L1 has nothing that could tell a right guess from
+    # a wrong one here — the plan vocabulary has no comparison primitive to
+    # have gotten it right WITH. Ground-truth (L2) callers are untouched: if a
+    # future case supplies `expect.answer` for this shape, answers_match still
+    # decides it on its own merits.
+    has_ground_truth = "answer" in expect or "state" in expect
+    if task and not has_ground_truth:
+        check("aggregate_needs_comparison", not _AGGREGATE.search(task),
+              "superlative/aggregate question over a set ('which X has the most/least Y') "
+              "has no enumerate-and-count step in the plan vocabulary; a layer-1-only "
+              "verdict cannot tell a right guess from a wrong one, so it fails loudly "
+              "rather than passing on unverifiable evidence")
 
     layer = 1
 

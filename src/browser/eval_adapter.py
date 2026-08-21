@@ -555,6 +555,7 @@ def _run_fixture_case(case: dict) -> dict:
         answer=result["answer"],
         expect=exp,
         state=state,
+        task=inp["task"],
     )
     checks = {}
     if "status" in exp:
@@ -2098,7 +2099,8 @@ def _run_verifier_labels_case(case: dict) -> dict:
     tp = fp = fn = tn = 0
     fp_ids, fn_ids = [], []
     for r in records:
-        v = verify(trace=r["trace"], extractions=r["extractions"], answer=r["answer"])
+        v = verify(trace=r["trace"], extractions=r["extractions"], answer=r["answer"],
+                   task=r.get("task"))
         predicted_pass, actually_correct = v["verdict"] == "PASS", r["label"] == "correct"
         if predicted_pass and actually_correct:
             tp += 1
@@ -2413,7 +2415,38 @@ def _run_doc_counts_case(case: dict) -> dict:
         if stated and stated not in row:
             wrong.append({"d8_range": {"the_cited_reports_show": stated,
                                        "row": row[:300]}})
-    return {"passed": not wrong, "wrong": {"docs": wrong}, "got": {"counts": counts}}
+
+    cov = inp.get("analysis_coverage")
+    domains: dict[str, int] = {}
+    if cov:
+        golden = len(list((RUN_ROOT / "evals" / "golden").glob("*.json")))
+        adversarial = len(list((RUN_ROOT / "evals" / "adversarial").glob("*.json")))
+        for d in ("golden", "adversarial"):
+            for p in (RUN_ROOT / "evals" / d).glob("*.json"):
+                dom = json.loads(p.read_text()).get("domain")
+                if dom:
+                    domains[dom] = domains.get(dom, 0) + 1
+        doc_path = RUN_ROOT / cov["doc"]
+        text = doc_path.read_text(encoding="utf-8")
+        want_split = cov["split_quote"].format(golden=golden, adversarial=adversarial,
+                                                total=golden + adversarial)
+        if want_split not in text:
+            wrong.append({"analysis_does_not_say": want_split})
+        try:
+            start = text.index(cov["section_start"])
+            end = text.index(cov["section_end"], start)
+        except ValueError:
+            wrong.append({"coverage_section_not_found": cov})
+        else:
+            section = text[start:end]
+            # A domain with a live case must have its own row in the section —
+            # this is the exact shape M8 broke: quotes.toscrape.com shipped
+            # three cases and never got a row (docs/analysis.md §6, M10 audit).
+            missing = sorted(d for d in domains if d not in section)
+            if missing:
+                wrong.append({"coverage_missing_domains": missing})
+    return {"passed": not wrong, "wrong": {"docs": wrong},
+            "got": {"counts": counts, "domains": domains}}
 
 
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,

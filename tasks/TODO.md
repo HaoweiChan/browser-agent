@@ -19,10 +19,28 @@ held-out probe vs the deployed URL (mandatory gate, raw results committed).
 Depends on M12 because the A-exit walk checks the gate against ADR-002, and
 the declared D4 wall-clock breach must be fixed or amended before the walk
 can be honestly green.
-Acceptance: A-exit criteria in `docs/plans/active/task1-a-level-plan.md` all
+Acceptance: A-exit criteria in `docs/plans/completed/task1-a-level-plan.md` all
 green → owner decides submission/public.
 
 ## Debt
+
+### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: todo]
+Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
+Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
+class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
+Open Library's first publication year for a search result), the correct
+value was present verbatim inside the page text the agent itself captured —
+`star-rating Three`, the infobox population figure, "First published in
+1965" — but the run returned `failure:semantic` with a multi-hundred/
+multi-thousand-character raw page dump as the `answer` field instead of
+either isolating the value or failing with `answer: null`. This is graded a
+failure, not a wrong success, so it does not implicate the inviolable
+property (`not_a_dump` never sees it: the check only fires on `success`), and
+it is out of the two-defect scope M10's repair was bounded to.
+Acceptance: a case pins the "data was captured but answer is a page-text
+dump on failure" shape red first, then either the extraction step tries a
+narrower isolation before giving up, or `failure:semantic`'s `answer` field
+is null'd rather than carrying the dump — reviewer's call which is correct.
 
 ### M11 — Live-drift snapshot replay            [status: todo]
 Origin: M8's SHOULD item, left open at the M8 merge (PR #12)
@@ -405,7 +423,7 @@ its own +12h hour guard. M6–M10 are the A-phase roadmap, ranked by
 reviewer-value ÷ effort against the two gaps the freeze measured (live
 breadth, verifier accuracy).
 
-Plans: `docs/plans/active/task1-a-level-plan.md` ·
+Plans: `docs/plans/completed/task1-a-level-plan.md` ·
 `docs/plans/completed/task1-b-level-plan.md` ·
 Methodology: `docs/evals/evaluation-methodology.md` ·
 Architecture: `docs/architecture/task1-overview.md`
