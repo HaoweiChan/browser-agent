@@ -104,17 +104,6 @@ Acceptance: only attempts followed by a success are recorded, or the entry
 carries `retried_through: bool` and the banner reflects it; a case pins that a
 fully-failed connect produces an empty ledger.
 
-### M24 — support-matrix D8 is stale again, one commit after R5 fixed it            [status: todo]
-Origin: PR #21 R14
-Spec: D8 publishes 79.0-79.8s at 93 cases; the branch's own 95-case fast reports
-measure 78.34-79.10s, below the published minimum. `docs-numbers-are-derived`
-cannot see it — its cited-report list is frozen to the four 93-case reports, so
-the derivation is only as fresh as the ids someone last typed. The 3.45s
-`run_seconds` figure is 3.46s in two of the four.
-Acceptance: D8 cites the newest reports at the current case count, or states its
-range explicitly as "at 93 cases"; ideally the case derives the cited set from
-the newest N fast reports so it reddens on the next drift.
-
 ### M25 — RETRY_SLEEPS sits under a comment describing the socket timeout            [status: todo]
 Origin: PR #21 R15
 Spec: `evals/ablation.py` — the "30s was too tight ... raised to ~4x the worst

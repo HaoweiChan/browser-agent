@@ -28,7 +28,7 @@
      "acceptance": "A fast/invariant case drives soak.run_one/main against a stubbed transport and pins the exception->phase map and the demo_ready polarity; watched red against today's code."},
     {"id": "R5", "severity": "MEDIUM", "route": "repair",
      "claim": "This PR rewrote support-matrix D8 to publish \"71.3-76.5s at M9 with five more cases\", and the branch's own committed fast reports measure 79.0-79.8s with six more cases — a declared budget-breach number that its artifacts contradict, understating the breach by ~3.4s.",
-     "evidence": "docs/support-matrix.md:78 (added in this diff) vs evals/report/20260821-020310-fast.json wall_seconds 79.75, ...-021142 79.45, ...-145831 79.01, ...-162416 79.36 (all committed in this PR). The gap is the new case itself: readyz-tracks-the-run-slot costs 3.45s per its own got.run_seconds in every committed report, and the last pre-readyz run (20260820-220640-fast.json) was 75.83s. D8 is the row M12 in tasks/TODO.md is keyed to.",
+     "evidence": "docs/support-matrix.md:78 (added in this diff) vs ...-020310-fast.json wall_seconds 79.75, ...-021142 79.45, ...-145831 79.01, ...-162416 79.36 (all committed in this PR). The gap is the new case itself: readyz-tracks-the-run-slot costs 3.45s per its own got.run_seconds in every committed report, and the last pre-readyz run (20260820-220640-fast.json) was 75.83s. D8 is the row M12 in tasks/TODO.md is keyed to.",
      "repro": "print wall_seconds from the committed fast reports -> [79.75, 79.36]; local re-run measured 79.55s.",
      "acceptance": "D8 quotes the range its committed reports show (and the case count that produced it), or cites the report ids it was measured from."},
     {"id": "R6", "severity": "MEDIUM", "route": "repair",

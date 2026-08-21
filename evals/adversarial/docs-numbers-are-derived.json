@@ -11,8 +11,7 @@
     ],
     "d8": {
       "row": "D8",
-      "reports": ["20260821-020310-fast.json", "20260821-021142-fast.json",
-                  "20260821-145831-fast.json", "20260821-162416-fast.json"]
+      "reports": ["20260821-215759-fast.json", "20260821-215923-fast.json"]
     }
   },
   "expect": {
