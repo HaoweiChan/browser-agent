@@ -12,7 +12,8 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M18 — TinBoker reviewer UI restyle            [status: in-progress]
+### M18 — TinBoker reviewer UI restyle            [status: pr]
+PR: #23 · ADR-014 · evidence in the PR body, trace in tasks/reviews/pr23-r*.json
 Spec: Restyle the existing single-page reviewer UI with the TinBoker terminal
 language while preserving task submission, SSE trace, screenshots, results,
 support matrix, limitations, stable DOM hooks, and the no-build/no-framework
@@ -381,6 +382,30 @@ committed (`git show :.githooks/pre-commit` or `$(git rev-parse --show-toplevel)
 or `pr-loop` sets `core.hooksPath` per worktree when it creates one. Same family
 as the venv gap already known for worktrees: enforcement that a branch changes
 is not the enforcement its own commits get.
+
+### T-R28 — `_run_ui_rendered_case` leaks a BrowserContext when the case errors            [status: todo]
+Origin: PR #23 round-5 verification (out-of-scope note, no finding id)
+Spec: the R5 repair moved the case onto the shared Chromium, but its `go()`
+closes the context only on the success path, so an exception inside
+`page.evaluate` leaks a BrowserContext onto the shared browser for the rest of
+the suite. Its sibling `_run_observe_case` (`src/browser/eval_adapter.py:466`)
+already uses the try/finally pattern this one needs.
+Evidence: reproduced by renaming `stepEl` in the PAGE source — the case raises
+and `len(_BROWSER.contexts) == 1` afterwards; on the clean pass path four
+consecutive warm invocations leave `len(_BROWSER.contexts) == 0`. Reachable
+only when the case is already erroring, which is why it did not block PR #23.
+Acceptance: `go()` wraps its context in try/finally, and a case asserts the
+shared browser holds no contexts after a deliberately-erroring render.
+
+### T-R29 — `docs-numbers-are-derived` asserts substring presence, so a contradicting line beside a correct one stays green            [status: todo]
+Origin: PR #23 round-5 verification (out-of-scope note, no finding id)
+Spec: the R4 repair made README's "Where it stands" block recompute from the
+report files it cites, but the assertion is `expected_string in readme`. A
+README that keeps the correct line and adds a contradicting one next to it is
+still green — the same class of drift R4 was filed for, one step removed.
+Acceptance: the check pins the block's content rather than the presence of
+strings within it — parse the fenced block and compare it whole, or assert that
+no other line in it parses as a competing figure for the same field.
 
 ## Notes
 

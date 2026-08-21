@@ -1,0 +1,52 @@
+{
+  "round": 5,
+  "reviewed": "4ed4b08..ff57346 \u2014 the round-4 repairs (R4, R5), the orchestrator's PR-body rewrite (R6), and the debt routing. Bounded verification round: the circuit breaker was at its limit, so no fresh sweep.",
+  "result": "APPROVED",
+  "gate": "invariant 34/34 = 1.000 (7.17s, exit 0) \u00b7 fast 102/102 = 1.000 four times (60.64s exit 1 on the ceiling, then 59.61 / 59.67 / 59.67s exit 0) \u00b7 $0.0000 \u2014 run by the reviewer, not taken on report",
+  "verifications": [
+    {
+      "id": "R4",
+      "status": "verified",
+      "evidence": "Guard reddens on drift, verified by five independent mutations of README's block, README restored between each and `git diff README.md` empty at the end: 59.6s->59.4s => readme_does_not_say '59.6s'; citation swapped to a stale report => readme_does_not_cite '20260822-010408-fast.json'; 'invariant  34/34'->'30/30' => readme_does_not_say; 'mutation 9/11'->'10/11' => readme_does_not_say; '$0.0000'->'$0.0012' => readme_does_not_say. Numbers match the cited artifacts: 20260822-010408-fast.json len(results)=102 passed=102 llm_usd=0.0 wall_seconds=59.56 (-> '59.6s'), recovery 7/7 rungs 13, mutation 9/11 passed 6 recovered 5 relocated, diagnosis 14/14, replans 4; 20260822-010308-invariant.json 34/34; 20260821-164456-live.json 9/9 \u2014 all three committed in the tree at ff57346. src/browser/eval_adapter.py:2367-2395 reads each report with json.loads(path.read_text()) and derives every string; no count is re-typed. Fail-closed on a missing file (`cites_a_report_that_does_not_exist`)."
+    },
+    {
+      "id": "R5",
+      "status": "verified",
+      "evidence": "Shared browser and shared loop confirmed: src/browser/eval_adapter.py:1996-2038 calls `await _browser()` and `_await(go())`; no `async_playwright()` import remains in the function. Pass path leaks nothing \u2014 after 4 consecutive warm invocations `len(_BROWSER.contexts) == 0`. Both mutation reds re-fired at ff57346: emptying `.hd > code { min-width:0; overflow-wrap:anywhere }` (server.py:390) => passed=False, dark_overflow and light_overflow both {document_width: 665, inner_width: 390}; placeholder -> `color-mix(in srgb, var(--dim) 60%, transparent)` (server.py:363) => passed=False, dark 3.2833 / light 2.4177 against minimum 4.5. server.py restored after each. Timing better than claimed: 0.121 / 0.082 / 0.081 / 0.082s warm standalone and 0.08s inside the full fast run, against 0.293s cold-launch. Context-leak-on-error caveat routed to debt (T-R28), not a regression in behaviour."
+    },
+    {
+      "id": "R6",
+      "status": "verified",
+      "evidence": "PR body checked line by line against the tree. True: base main@a467458 == `git merge-base task/M18 origin/main`; ADR-014 exists and INDEX carries ADR-000..014 with no gap or duplicate; M18->M27 renumber present at tasks/TODO.md with its explanation; history.jsonl union-merged and ts-sorted; round tally matches pr23-r4.json and pr23-r4-resolution.json; debt list T-R24..T-R27 all present; CI eval-gate pass; PR MERGEABLE/CLEAN. Two imprecisions, neither material: the gate line attributes the fast run to ff57346 while history records it at 23945a3 (code-identical \u2014 `git diff --stat 23945a3..ff57346` is history.jsonl only); and the post-R5 band was published as a bound when it is a sample \u2014 the reviewer measured 60.64s on the same head. Nothing in the body is false, and the straddle and its non-zero exit are disclosed rather than omitted."
+    },
+    {
+      "id": "debt-routing",
+      "status": "verified",
+      "evidence": "Four blocks under `## Debt`: T-R24 (Origin: PR #23 R7) naming the six invariant cases that still need a real Chromium and the 28/34 measurement, corroborated in history.jsonl ts 20260822-010643; T-R25 (R8) citing INDEX.md:11 vs :22, ADR-002:4 and evals/run.py:80; T-R26 (R9) with a runnable grep repro; T-R27 citing the blocked commit at history ts 20260822-011326. The pr23-r3-resolution.json `green` narrowing is real: it now claims only that the case which broke the invariant suite no longer joins it, with a `narrowed_by` field naming the six inherited cases and pointing at T-R24."
+    },
+    {
+      "id": "gate",
+      "status": "verified",
+      "evidence": "invariant 34/34 = 1.000, wall 7.17s, $0.0000, exit 0. fast run four times, all 102/102 = 1.000 against baseline 1.0, $0.0000, 170 actions, recovery 7/7 (13 rungs), mutation 9/11 passed 6 recovered 5 relocated, diagnosis 14/14, 4 replans. Wall clocks 60.64s (exit 1 on the 60s local ceiling), then 59.61 / 59.67 / 59.67s (exit 0). One in four over is the ADR-013 straddle the PR body discloses, not something this diff introduced \u2014 the diff removes ~0.2s per run and no case failed in any run. Worktree restored clean."
+    }
+  ],
+  "findings": [],
+  "routed_to_debt": [
+    {
+      "note": "_run_ui_rendered_case's go() has no try/finally: an exception inside page.evaluate leaks a BrowserContext onto the shared browser (reproduced: contexts == 1 after a forced error). The sibling _run_observe_case at eval_adapter.py:466 already uses try/finally.",
+      "id": "T-R28"
+    },
+    {
+      "note": "docs-numbers-are-derived asserts substring presence only, so a README that keeps the correct line and adds a contradicting one beside it stays green \u2014 the same class of drift R4 was filed for.",
+      "id": "T-R29"
+    },
+    {
+      "note": "PR body's post-R5 wall-clock band was a sample floor, not a bound \u2014 a reviewer run measured 60.64s with exit 1 on the same head.",
+      "id": "fixed in this round \u2014 README's band restated across all 15 post-R5 runs from three measurers, and labelled a sample rather than a bound"
+    },
+    {
+      "note": "PR body attributed the gate's fast run to ff57346 while history.jsonl records it at 23945a3 (code-identical; only history.jsonl differs).",
+      "id": "fixed in this round \u2014 PR body now names the measured sha"
+    }
+  ]
+}

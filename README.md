@@ -66,8 +66,14 @@ which is how it went stale last time (PR #23 R4).
 That is this machine, where seven runs of the merged tree measured
 **59.62 / 59.69 / 59.70 / 59.79 / 59.83 / 59.85 / 60.28s** — one of the seven
 over the 60s ceiling, and that run exited non-zero for exactly that reason. The
-two runs since (`ui-rendered` moved back onto the shared Chromium, PR #23 R5)
-measured **59.56 / 59.60s**. The same suite on CI (ubuntu-latest) measured
+runs since (`ui-rendered` moved back onto the shared Chromium, PR #23 R5)
+are **58.96 / 59.20 / 59.27 / 59.31 / 59.32 / 59.33 / 59.54 / 59.56 / 59.60 /
+59.61 / 59.67 / 59.67 / 59.88 / 60.18 / 60.64s** across three independent
+measurers — 13 of 15 under, two over, the slowest 0.64s past the ceiling. The
+first version of this paragraph published the first two of those runs as
+"59.56 / 59.60s" and was falsified inside the same review round by a run at
+60.64s; this is a sample, not a bound, and the honest statement is that this
+suite straddles its ceiling rather than clears it. The same suite on CI (ubuntu-latest) measured
 **59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
 on byte-identical code, which is why the wall-clock ceiling is per-environment
 rather than one number pretending to be portable. CI's ceiling is the slowest
