@@ -1,0 +1,109 @@
+{
+  "pr": 21,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "gate": {
+    "invariant": "29/29",
+    "fast": "93/93",
+    "cost_usd": 0.0
+  },
+  "counts": {
+    "HIGH": 1,
+    "MEDIUM": 6,
+    "LOW": 3
+  },
+  "routing_rule": "repair = HIGH/MEDIUM that violates acceptance, reddens the gate, or makes a published number/claim dishonest; everything else -> debt regardless of severity",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "`demo_ready` / `infrastructure_failures` / the printed \"N/N completed without an infrastructure failure\" count a run that never got off the ground (`failure:env`) as a clean completion, so a soak against a deployment whose planner cannot start publishes a green demo-readiness verdict.",
+      "evidence": "evals/soak.py:171-178 — `completed = [r for r in rows if not r.get(\"transport_error\")]` and `demo_ready = not infra and len(completed) == len(rows)`; `transport_error` is only ever set on the four client-side phases, so a terminal record {\"status\": \"failure:env\", \"reason\": \"planner failed: RuntimeError: OPENROUTER_API_KEY not set\"} is a \"completion\". soak.py:140 already computes `measured=is_measurement(...)` which is False for exactly these rows, and nothing aggregates it. D20 (docs/support-matrix.md:65) and ADR-011 Decisions 6/7 publish this number as \"10/10 completed with zero infrastructure failures\".",
+      "repro": "Offline, no network, no spend: stub urlopen so every GET /tasks/<id> returns failure:env. Output: `[soak] 5/5 completed without an infrastructure failure`, report {'infrastructure_failures': 0, 'completed': 5, 'demo_ready': True, 'phases_seen': []}, row0 status=failure:env measured=False transport_error=None.",
+      "acceptance": "A run whose terminal record is not a real measurement (or at minimum `failure:env`) cannot count toward `completed` / `demo_ready`; the same case run through the eval set turns red before the fix and green after."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The phase taxonomy — the stated reason soak.py exists — mis-tags a read timeout that occurred *after* the POST landed, and a 200 with an unreadable body, as `1-client-could-not-connect`, the one distinction this repo has already established matters.",
+      "evidence": "evals/soak.py:102-108: only `urllib.error.HTTPError` maps to `2-server-rejected-or-not-ready`; every other exception falls to PHASE_CONNECT. `urllib` raises bare `TimeoutError` for a read timeout (request delivered, run may be executing) and `URLError` for a connect failure (nothing delivered) — evals/ablation.py:184-206 and docs/support-matrix.md:64 (D18) both depend on exactly that distinction. A JSON body the client cannot parse (ValueError) and a 200 without run_id (KeyError) also land in phase 1.",
+      "repro": "Three injected submit failures (TimeoutError / URLError / ValueError) all return phase='1-client-could-not-connect'.",
+      "acceptance": "`TimeoutError` (and any post-delivery failure) maps to a distinct phase from `URLError`; a case pins the exception->phase table so a future collapse turns red."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "soak.py submits and polls through `ablation._http`, which silently retries connect-phase failures up to 3 times, so a transport failure that succeeded on retry leaves no trace in the report — \"zero infrastructure failures, no transport error in any phase\" is not readable off the artifact it cites.",
+      "evidence": "evals/soak.py:47 imports `_http`; evals/ablation.py:195-206 loops `for attempt in range(3)` over URLError with 5s/10s sleeps and neither prints nor returns the swallowed attempts. Connect-phase failures are precisely the D18 family the soak was written to observe. The committed reports contain no retry field, so their `infrastructure_failures: 0` cannot distinguish \"no connect failure\" from \"connect failures that retried through\".",
+      "repro": "One URLError injected on the first POST /tasks; report still {'infrastructure_failures': 0, 'demo_ready': True, 'phases_seen': []}, and 'URLError' in report_text is False.",
+      "acceptance": "Retried attempts are recorded per row (count + phase), and the published D20/ADR-011 sentence either reports them or the soak uses a non-retrying transport."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "evals/soak.py — 206 new lines that produce every number in support-matrix D20 and ADR-011 Decisions 6 and 7 — has no eval case of any kind, while its sibling evals/ablation.py has three.",
+      "evidence": "grep -rl soak evals/golden evals/adversarial -> no matches. Compare ablation-preflight-refuses-old-build, ablation-env-failure-is-a-result, analysis-ablation-table-not-estimated. Consequence measured: R1, R2 and R3 are all live in the merged tree and the gate is 29/29 invariant + 93/93 fast, both green.",
+      "repro": "grep -rl soak evals/golden evals/adversarial; then .venv/bin/python -m evals.run --suite fast --no-report -> 93/93 with R1-R3 present.",
+      "acceptance": "A fast/invariant case drives soak.run_one/main against a stubbed transport and pins the exception->phase map and the demo_ready polarity; watched red against today's code."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "This PR rewrote support-matrix D8 to publish \"71.3-76.5s at M9 with five more cases\", and the branch's own committed fast reports measure 79.0-79.8s with six more cases — a declared budget-breach number that its artifacts contradict, understating the breach by ~3.4s.",
+      "evidence": "docs/support-matrix.md:78 (added in this diff) vs ...-020310-fast.json wall_seconds 79.75, ...-021142 79.45, ...-145831 79.01, ...-162416 79.36 (all committed in this PR). The gap is the new case itself: readyz-tracks-the-run-slot costs 3.45s per its own got.run_seconds in every committed report, and the last pre-readyz run (20260820-220640-fast.json) was 75.83s. D8 is the row M12 in tasks/TODO.md is keyed to.",
+      "repro": "print wall_seconds from the committed fast reports -> [79.75, 79.36]; local re-run measured 79.55s.",
+      "acceptance": "D8 quotes the range its committed reports show (and the case count that produced it), or cites the report ids it was measured from."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "README's case counts, edited in this PR, disagree with the runner and with the fast report committed in the same PR: it says 91 fast / 101 total, the runner says 93 fast / 103 files.",
+      "evidence": "README.md:38 (\"offline gate: 91 cases\") and README.md:228 (\"it is 101 cases (91 of them in the offline gate)\") vs [eval] suite 'fast': 93/93 and evals/report/20260821-162416-fast.json. Six new fast+invariant cases were added on this branch (main: 97 files / 87 fast, README on main said 96/86), so the edit added +5 and carried a pre-existing -1 forward.",
+      "repro": ".venv/bin/python -m evals.run --suite fast --no-report | tail -3 -> 93/93; ls evals/golden/*.json evals/adversarial/*.json | wc -l -> 103.",
+      "acceptance": "README numbers equal the runner's, and ideally are derived from a committed report rather than hand-counted."
+    },
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The soak's `correct` column is not the repo's correctness metric: it uses raw string == instead of the production `verifier.answers_match` and drops the `status == \"success\"` requirement, yet its 8/10 -> 7/10 is published next to, and compared against, the ablation's answers_match-based cells.",
+      "evidence": "evals/soak.py:139 correct=bool(spec[\"answer\"]) and str(answer).strip() == str(spec[\"answer\"]).strip() vs evals/ablation.py:344 bool(rec.get(\"status\") == \"success\" and answers_match(answer, spec[\"answer\"])); docs/evals/evaluation-methodology.md defines correctness as \"compared with the production verifier.answers_match\". Two of the five soak tasks are currency answers where the rules diverge: answers_match('$39.00','39.00') is True, '$39.00'=='39.00' is False. ADR-011 Decision 7 point 1 cross-compares the two metrics directly.",
+      "repro": "from src.browser.verifier import answers_match; answers_match('$39.00','39.00') -> True; '$39.00'=='39.00' -> False.",
+      "acceptance": "soak uses answers_match and requires a successful terminal status, or D20/ADR-011 state explicitly that the soak's correctness rule is stricter and not comparable to the ablation's cells."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ADR-011 Decision 4's \"Measured in the case: 5 ms, mid-run\" is a number no committed report supports.",
+      "evidence": "specs/decisions/ADR-011-readiness-endpoint.md:75. The eight committed reports containing readyz-tracks-the-run-slot record during_latency_s of 0.001, 0.002, 0.002, 0.002, 0.003, 0.006, 0.007 — never 0.005 (local re-run: 0.006). The substance holds (all <=7 ms); the figure is unsourced.",
+      "repro": "grep -l readyz-tracks-the-run-slot evals/report/*.json and print got.during_latency_s.",
+      "acceptance": "The ADR quotes a value that appears in a named committed report, or states it as a range."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ADR-011 Decision 3's \"Invariants, all graded\" overstates: invariant 5 is not graded at all, and the graded ones only cover a single-submission happy path, so an implementation that sets ACTIVE_RUN before the semaphore is acquired stays green.",
+      "evidence": "specs/decisions/ADR-011-readiness-endpoint.md:58-67 vs src/browser/eval_adapter.py:823-851 — nothing asserts invariant 5, and no sample is taken with two submissions in flight. Ablation A8 (moving ACTIVE_RUN = run_id from inside `async with SEM` to submit_task-time) leaves the case PASSING. The author's seven-ablation claim DOES reproduce: all seven turn the case red.",
+      "repro": "Nine mutations applied to src/browser/server.py: A1-A7 RED, A8 PASS, A9 ERROR.",
+      "acceptance": "Either the ADR narrows \"all graded\" to the invariants the case actually asserts, or the case adds a second in-flight submission sample so active_run_id-when-not-busy is detectable."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "\"The event-loop candidate is now the weakest of the three ... measured ten times\" rests on ten single instants, all taken ~2s after submission in runs lasting 4.7-13.7s, and all at a point where the run is provably inside an await.",
+      "evidence": "evals/soak.py:111-115 — mid is captured once, on the first poll iteration after a single time.sleep(2), and never resampled; run durations in evals/report/20260821-145535-soak.json are 4.71-13.73s. src/browser/agent.py:300-342 shows the first ~2s is async_playwright launch + navigate + observe + the awaited planner call. Both documents hedge (\"narrowed, not eliminated\"), which is why this is LOW.",
+      "repro": "Read evals/report/20260821-145535-soak.json: exactly one during.readyz sample per row, ten rows; compare with client_seconds.",
+      "acceptance": "Either the mid-run probe samples repeatedly across the run (and the report carries the series), or D20/ADR-011 D7 say \"one probe per run, taken ~2s in\" where they currently say \"measured ten times\"."
+    }
+  ],
+  "citation_note_2026_08_21": "R5's evidence originally cited four fast reports by full path. ADR-012 (merged to main as PR #22, after this round) made a report of record exactly one that something outside evals/report/ cites, and pruned the rest — including those four. The paths here are shortened to '...-020310-fast.json' form so they read as the historical shorthand they now are rather than as live citations `report-citations-resolve` would try to resolve. The measurements they carried (79.75 / 79.45 / 79.01 / 79.36) are preserved inline above, so the finding remains checkable against the history line in evals/report/history.jsonl. Nothing about the finding's substance was altered — this is a path-form change made to avoid asserting a citation that a later policy deleted, and it is recorded rather than done silently."
+}

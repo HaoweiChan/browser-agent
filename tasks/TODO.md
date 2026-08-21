@@ -12,51 +12,6 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M9 — Cost/model ablation            [status: pr]
-PR: #15 (mechanism, merged) + stage two (this branch) · ADR-010 · evidence in the PR bodies
-Spec: ≥2-model OpenRouter ablation, cost/latency tradeoff table, ADR for the
-default-model choice. Reviewer evidence: analysis (E4), E5 tradeoffs.
-Acceptance: table built from committed report runs, not estimates. **Met** —
-`evals/report/20260821-004617-ablation.json`, re-derived cell-by-cell into
-`docs/analysis.md` §9 by `analysis-ablation-table-not-estimated`.
-Result: every candidate tied on correctness across a ~17x price range, so
-Decision 5's pre-committed rule fell to its cost tie-breaker and **the default
-moved to `openai/gpt-5.6-luna`** from `anthropic/claude-sonnet-4.5` (ADR-010
-Decision 18). The tie is *no observed difference*, not equivalence — the failed
-sweeps flipped the same cells in both directions, so a second sweep would not
-reproduce it cell-for-cell.
-Two findings larger than the ranking: one task failed on **all four** models with
-one signature (a `near:` capability boundary, D17 — counted against no model),
-and the deployment could not sustain a 20-run sweep (five aborted, D18).
-Guard inverted with the decision: it used to require the incumbent to be over
-the ceiling, now requires the default to be a model the ablation measured.
-Watched red four ways.
-### M12 — Fast-suite wall-clock over budget            [status: pr]
-Origin: PR #12, declared in support-matrix D8 (promoted from Debt 2026-08-20 —
-M10 cannot exit green while a declared gate-budget breach stands)
-Spec: `fast` is 68.2s against ADR-002 D4's 60s budget — 10.6s is one
-deliberate click timeout, the rest a growth trend that crosses the budget
-regardless of any one milestone. Acceptance: fast < 60s again, or ADR-002 D4
-amended with the measured floor and why.
-Resolved by acceptance branch 1 (`specs/decisions/ADR-013-fast-suite-wall-clock.md`):
-per-call measurement put 11.3s of the 67.0s in per-case browser process
-lifecycle, which the harness no longer pays; 42.2s of deliberate waiting was
-left alone. `fast` is 59.35s over 98 cases. ADR-002 D4's ceiling is now
-per-environment: CI got its own (80s, Decision 3) after its
-first run showed main had been at 89.62s against an unchecked 60s. The local
-number was tried at 60 -> 70 (Decision 4) when the M9-stage-2 merge made the suite
-straddle 60 with the excess measured as evidence, not waste — but the band that
-justified staying at 70 after a follow-up fix did not reproduce under round-5
-review (~22 runs across three independent measurers, idle and under
-deliberate CPU load, all 58.96-59.87s), so that amendment was withdrawn the
-same day and the local number is unchanged at 60 — post-commit verification
-then found the honest band is 58.83-60.26s (1 of 21 further runs over the
-line by a few tenths, cause unexplained), so headroom is real but thin, not
-a clean margin (ADR-013 Decision 4).
-Review round 1 (PR #20) falsified the first enforcement — a case reading the
-newest committed report cannot go red on a fresh CI clone — so the ceiling now
-lives in `evals/run.py` and gates the run it measured.
-
 ### M10 — A-Freeze            [status: todo]
 Depends: M9, M12
 Spec: analysis/README/support-matrix refresh, prompts curated, second
@@ -229,6 +184,89 @@ Spec: promote only with its own eval evidence.
 ### M16 — Visual fallback            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence.
+
+### M19 — ADR-011 quotes a readiness latency no report supports            [status: todo]
+Origin: PR #21 R8
+Spec: ADR-011 Decision 4 says "Measured in the case: 5 ms, mid-run". The eight
+committed reports carrying `readyz-tracks-the-run-slot` record `during_latency_s`
+of 0.001-0.007 and never 0.005. The substance holds (all <=7ms); the figure is
+unsourced.
+Acceptance: the ADR quotes a value that appears in a named committed report, or
+states it as a range.
+
+### M20 — ADR-011's "invariants, all graded" overstates what the case asserts            [status: todo]
+Origin: PR #21 R9
+Spec: Decision 3 lists five invariants as graded. Invariant 5 (starts nothing,
+spends nothing) is asserted nowhere, and every sample comes from a single
+submission — so moving `ACTIVE_RUN = run_id` out of `async with SEM` to
+submit-time leaves `readyz-tracks-the-run-slot` PASSING, i.e. `active_run_id`
+non-null while `busy` is false is undetectable. The reviewer confirmed the
+seven-ablation claim in Decision 5 does reproduce; this is the eighth mutation.
+Acceptance: either the ADR narrows "all graded" to what the case asserts, or the
+case adds a second in-flight submission so the state is detectable — watched red.
+
+### M21 — the soak's mid-run readiness probe is one instant, not a series            [status: todo]
+Origin: PR #21 R10
+Spec: `soak.py` captures `mid` once, ~2s after submission, in runs lasting
+4.7-13.7s — and at ~2s the run is provably inside an await (playwright launch,
+navigate, observe, the awaited planner call). D20 and ADR-011 D7 say "measured
+ten times", which is ten single instants, not ten runs observed throughout. Both
+documents already hedge ("narrowed, not eliminated"), which is why this is LOW.
+Acceptance: the probe samples repeatedly across the run and the report carries
+the series, or both documents say "one probe per run, taken ~2s in".
+
+### M22 — ADR-011 D8 overclaims that the retry ledger is pinned            [status: todo]
+Origin: PR #21 R12
+Spec: the retry probe asserts `"URLError" not in json.dumps(report)`, a substring
+search the per-row `retries` list already satisfies — so `summarize` can drop
+`transport_retries` entirely and the case stays green. R3's acceptance is met at
+the row level; the count and phase live only in the unasserted ledger field.
+Acceptance: the probe asserts `transport_retries` content (count + phase at
+least) so emptying the ledger reddens, or ADR-011 D8 narrows its wording.
+
+### M23 — a retry-exhausted attempt is published as "retried through"            [status: todo]
+Origin: PR #21 R13
+Spec: `_http` appends the final attempt to the out-list before re-raising, with
+no success marker, so a connect failure that never succeeded appears in
+`transport_retries` with `count: 3` and prints under the banner "connect-phase
+failures that retried through". The same event is reported twice, once with the
+wrong label — on the exact distinction the ledger was added to make.
+Acceptance: only attempts followed by a success are recorded, or the entry
+carries `retried_through: bool` and the banner reflects it; a case pins that a
+fully-failed connect produces an empty ledger.
+
+### M25 — RETRY_SLEEPS sits under a comment describing the socket timeout            [status: todo]
+Origin: PR #21 R15
+Spec: `evals/ablation.py` — the "30s was too tight ... raised to ~4x the worst
+observed stall" block documents `timeout: int = 120`, and `RETRY_SLEEPS = (5, 10)`
+was inserted between the comment and the `def`, so the comment now reads as
+describing the backoff tuple.
+Acceptance: the constant sits above its own one-line comment, or the existing
+block names the timeout it describes.
+
+### M26 — the soak's swept-surface inventory omits `results`            [status: todo]
+Origin: PR #21 R17
+Spec: `summarize` returns 13 keys; the round-2 inventory accounts for 12 and
+omits `results` — the per-row evidence body every committed soak report and
+D20's row-level recomputation rest on. Blanking it leaves the case green, and
+the retry probe's substring check still passes because `transport_retries`
+carries the string, so nothing reddens when the artifact loses all its evidence
+rows. The case's triage note also calls `transport_retries` "the remaining
+published field" when five are unasserted.
+Acceptance: a `want` dict asserts `len(report["results"]) == len(rows)`, or the
+inventory and the triage sentence name `results` and the passthrough group so
+the sweep claim is honest about what it does not cover.
+
+### M18 — The soak cannot separate a bad deployment from a bad third-party site            [status: todo]
+Origin: PR #21 R1
+Spec: `summarize` now borrows `ablation.is_measurement` to decide what a
+completion is, so a live task ending `failure:nav` because the site itself was
+down drops `demo_ready` to false and reads as if the deployment failed. That is
+the safe direction to be wrong in and it is why it shipped, but it is still a
+conflation: "we could not measure this run" and "this deployment could not
+complete it" are different verdicts. Acceptance: a case injects a terminal
+`failure:nav` on the live task and pins that the report distinguishes it from a
+deployment fault without ever letting it count as a clean completion.
 
 ### M17 — Per-IP rate limiting            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)

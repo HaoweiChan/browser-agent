@@ -159,7 +159,11 @@ def _fatal(msg: str, rows: list) -> None:
 # budget moves and the rule does not: a transport error still aborts the sweep
 # unrecorded (PR #15, R9). ponytail: one constant, raised to ~4x the worst
 # observed stall; if it trips again the deployment is the thing to fix, not this.
-def _http(url: str, payload: dict | None = None, timeout: int = 120) -> dict:
+RETRY_SLEEPS = (5, 10)   # backoff between connect-phase retries; a constant so a case can zero it
+
+
+def _http(url: str, payload: dict | None = None, timeout: int = 120,
+          retries: list | None = None) -> dict:
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode() if payload is not None else None,
@@ -193,7 +197,7 @@ def _http(url: str, payload: dict | None = None, timeout: int = 120) -> dict:
     # that was never made is not scoring anything, and if the retries are
     # exhausted the sweep still aborts unrecorded.
     last = None
-    for attempt in range(3):
+    for attempt in range(len(RETRY_SLEEPS) + 1):
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return json.load(r)
@@ -201,8 +205,10 @@ def _http(url: str, payload: dict | None = None, timeout: int = 120) -> dict:
             raise                     # a real answer from the server — never retried
         except urllib.error.URLError as e:
             last = e                  # connect phase: nothing delivered, nothing billed
-            if attempt < 2:
-                time.sleep(5 * (attempt + 1))
+            if retries is not None:
+                retries.append({"url": url, "error": f"{type(e).__name__}: {e}"})
+            if attempt < len(RETRY_SLEEPS):
+                time.sleep(RETRY_SLEEPS[attempt])
     raise last
 
 

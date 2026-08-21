@@ -1,0 +1,20 @@
+{
+  "pr": 21, "round": 2, "commit": "7965056",
+  "gate_after": {"invariant": "31/31", "fast": "95/95", "cost_usd": 0.0},
+  "orchestrator_verification": "Gate run by the orchestrator. Independently ablated the fix rather than taking the report: control unmutated GREEN; the reviewer's exact repro RED; infrastructure_failures pinned 0 RED; phases_seen pinned [] RED; infrastructure_failures=99 on a clean set RED. Both directions covered — erasing a failure and inventing one.",
+  "resolutions": [
+    {"id": "R11", "outcome": "fixed", "case": "soak-counts-only-real-completions",
+     "red_watched": "reviewer's repro reproduced first (mutation survives: True), then six mutations all fatal after the fix",
+     "note": "The five transport-failed rows the phase half already built now go through the real SK.summarize, asserting infrastructure_failures, phases_seen, completed, attempted, correct and demo_ready on a report made entirely of transport failures. phases_seen is derived from the case's own declared phase table, so a phase rename has one place to change. The terminal half additionally pins the clean direction (infrastructure_failures: 0 / phases_seen: []) and pins not_a_measurement by content rather than by its effect on demo_ready. Change is entirely in the case and its adapter; no production code touched this round."},
+    {"id": "R12", "outcome": "debt", "debt_id": "M22", "note": "LOW — routed per the scope rule; left untouched deliberately."},
+    {"id": "R13", "outcome": "debt", "debt_id": "M23", "note": "LOW — routed per the scope rule."},
+    {"id": "R14", "outcome": "debt", "debt_id": "M24", "note": "LOW — routed per the scope rule."},
+    {"id": "R15", "outcome": "debt", "debt_id": "M25", "note": "LOW — routed per the scope rule."}
+  ],
+  "summarize_surface_swept": {
+    "graded": ["infrastructure_failures", "completed", "attempted", "correct", "not_a_measurement", "phases_seen"],
+    "graded_one_direction_only": {"demo_ready": "both reports this round pin False; the True direction was unpinned until PR #21 R16 added it to the retry-probe report"},
+    "ungraded_deliberately": {"transport_retries": "asserted by substring only — that is R12, routed to debt",
+                              "suite/base/task_set/sequences": "literal passthroughs of the arguments and a constant"}
+  }
+}
