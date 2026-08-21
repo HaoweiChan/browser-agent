@@ -13,6 +13,7 @@ Two recovery ladders, both chosen from the observed failure distribution
 Every other class stays a loud classified stop. Output: specs/001-browser-contract.md.
 """
 
+import contextlib
 import json
 import re
 import time
@@ -259,7 +260,15 @@ def assemble_result(trace, answer, budgets, failure=None, reason=None, final_url
 
 
 async def run_task(task: str, url: str | None, planner, run_dir: str | Path, headless: bool = True,
-                   url_guard=None, on_step=None):
+                   url_guard=None, on_step=None, browser=None):
+    """`browser`: an already-running Chromium to borrow instead of launching one.
+    Callers that leave it None — the gateway and the CLI, i.e. production — get a
+    private browser per run, because two callers' tasks must not share a process.
+    The eval harness passes one browser for the whole suite: per-run driver start
+    + launch + close measured 11.3s of the `fast` suite's 67.0s (ADR-010).
+    `headless` is the borrowed browser's business, not ours.
+    Isolation between runs does not depend on this: every run gets its own
+    BrowserContext either way, so cookies and storage never cross."""
     t0 = time.monotonic()
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -294,9 +303,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     from .observe import observe
 
     answers: list = []
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=headless, args=["--no-sandbox"])
-        page = await browser.new_page()
+    async with contextlib.AsyncExitStack() as stack:
+        if browser is None:
+            pw = await stack.enter_async_context(async_playwright())
+            browser = await pw.chromium.launch(headless=headless, args=["--no-sandbox"])
+            stack.push_async_callback(browser.close)
+        ctx = await browser.new_context()
+        page = await ctx.new_page()
         try:
             # Pre-plan navigation + observation: the planner never plans blind
             # (live failures dee8ad5d / 2e70785a — guessed roles, invented
@@ -552,7 +565,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
             digest = (await page.inner_text("body"))[:500]
             final_url = page.url
         finally:
-            await browser.close()
+            await ctx.close()  # the run's own context; the browser may be shared
 
     # One extract -> scalar answer; several -> list (contract: answer string|list).
     answer = answers[0] if len(answers) == 1 else (answers or None)

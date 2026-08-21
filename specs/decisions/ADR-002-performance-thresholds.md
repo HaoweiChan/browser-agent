@@ -1,13 +1,13 @@
 # ADR-002: Performance thresholds set from the M2 baseline
 
 Date: 2026-08-16
-Status: accepted; **Decision 4 (fast wall clock ≤ 60s) is knowingly breached since M8** — the gate measures 66.6-68.3s, 10.6s of it one case spending a deliberate Playwright click timeout. Declared rather than silently re-set: `specs/decisions/ADR-009-m8-mutation-hostility.md` Decision 6 and `docs/support-matrix.md` D8 carry the measurement, the reasoning, and the named fix (the parallel eval runner, still backlog). Decisions 1-3, 5 and 6 stand as written.
+Status: accepted; all six decisions stand as written. **Decision 4 (fast wall clock ≤ 60s) was knowingly breached from M8 to M12** — the gate measured 66.6-68.3s — and the breach is **closed at M12 without moving the ceiling**: `specs/decisions/ADR-010-fast-suite-wall-clock.md` measured 11.3s of the 67.0s as per-case browser process lifecycle, removed it, and left the deliberate 42.2s of timeouts untouched. The suite now measures 54.1-55.9s over 89 cases, and the ceiling is enforced by `fast-wall-clock-budget` rather than asserted in this file.
 
-**Amended by**: ADR-009 (Decision 4's 60s wall-clock ceiling, declared breached rather than reset)
+**Amended by**: ADR-009 (Decision 4's 60s wall-clock ceiling, declared breached rather than reset); ADR-010 (that breach closed, ceiling unmoved, enforcement added)
 
-**Ruling**: Sets the pre-commit gate: `fast` suite ≥ the committed baseline (1.000), `invariant` suite = 100% unconditional, trap-catch ≥ 90% as a floor never a verifier-accuracy claim, `fast` suite cost = $0.00 exactly, and `fast` suite wall clock ≤ 60s (later knowingly breached, see Amended by).
+**Ruling**: Sets the pre-commit gate: `fast` suite ≥ the committed baseline (1.000), `invariant` suite = 100% unconditional, trap-catch ≥ 90% as a floor never a verifier-accuracy claim, `fast` suite cost = $0.00 exactly, and `fast` suite wall clock ≤ 60s (breached M8-M12, restored — see Amended by).
 **Because**: Naming performance targets before a baseline exists invites goalpost-moving in a history reviewers read.
-**Enforced by**: `.eval-baseline.json` + `.githooks/pre-commit` (fast-suite gate); `invariant` suite = 100% enforced unconditionally in `evals/run.py`.
+**Enforced by**: `.eval-baseline.json` + `.githooks/pre-commit` (fast-suite gate); `invariant` suite = 100% enforced unconditionally in `evals/run.py`; wall clock by `fast-wall-clock-budget` (ADR-010).
 
 ---
 
@@ -62,7 +62,9 @@ file:
    the point sharper than any prose could: it produced three wrong-answer
    inputs the trap set did not contain.
 4. **`fast` suite wall clock ≤ 60s.** At ~13s there is room for M3–M4 cases;
-   past 60s the pre-commit gate stops being run honestly.
+   past 60s the pre-commit gate stops being run honestly. (Breached M8-M12 at
+   66.6-68.3s and declared rather than reset; closed at M12 at 54.1-55.9s and
+   now checked by `fast-wall-clock-budget` — ADR-010.)
 5. **`fast` suite cost = $0.00 exactly.** Not a budget — a boundary. Any
    non-zero figure means an LLM call escaped the stub and is a defect.
 6. **Live cost ≤ $0.01 per task** at the current model, alarm rather than a

@@ -83,12 +83,50 @@ def _subst(obj, url: str):
     return json.loads(json.dumps(obj).replace("$FIXTURE_URL", url))
 
 
-def _run_agent(task: str, url: str | None, planner, **kw) -> dict:
+_LOOP: asyncio.AbstractEventLoop | None = None
+_BROWSER = None
+
+
+def _await(coro):
+    """One event loop for every case in the process. `asyncio.run` per case would
+    be fine on its own, but a Playwright browser belongs to the loop that created
+    it, so a shared browser needs a shared loop."""
+    global _LOOP
+    if _LOOP is None:
+        _LOOP = asyncio.new_event_loop()
+    return _LOOP.run_until_complete(coro)
+
+
+async def _browser():
+    """One Chromium for the whole suite. Each case still gets its own
+    BrowserContext (run_task, _run_observe_case), so nothing crosses between
+    cases; what is shared is the process. Measured on the `fast` suite: 58 driver
+    starts + launches + closes cost 11.3s of 67.0s, which is scaffolding, not
+    evidence (ADR-010). The driver and browser are left running until the process
+    exits — there is nothing after the last case to close them for, and an atexit
+    hook on an already-closed event loop is its own bug."""
+    global _BROWSER
+    if _BROWSER is None:
+        from playwright.async_api import async_playwright
+        _BROWSER = await (await async_playwright().start()).chromium.launch(args=["--no-sandbox"])
+    return _BROWSER
+
+
+def _run_agent(task: str, url: str | None, planner, own_browser: bool = False, **kw) -> dict:
     """One agent run in a throwaway run dir — what every E2E-shaped case needs.
     The dir is temporary because the eval grades the returned result and the
-    trace inside it; the on-disk artifacts are for a human debugging a real run."""
+    trace inside it; the on-disk artifacts are for a human debugging a real run.
+
+    `own_browser` gives this run the production path — `run_task` launching its
+    own Chromium — instead of the suite's shared one. Exactly one case asks for
+    it (`agent-launches-its-own-browser`), because a shared browser everywhere
+    would leave the branch every real caller takes graded by nothing."""
+    async def go(run_dir):
+        browser = None if own_browser else await _browser()
+        return await run_task(task, url, planner, run_dir, browser=browser, **kw)
+
     with tempfile.TemporaryDirectory() as run_dir:
-        return asyncio.run(run_task(task, url, planner, run_dir, **kw))
+        return _await(go(run_dir))
 
 
 # --- pure-code invariant checks --------------------------------------------
@@ -379,16 +417,14 @@ def _run_verifier_case(case: dict) -> dict:
 
 
 def _run_observe_case(case: dict) -> dict:
-    from playwright.async_api import async_playwright
-
     from .observe import observe
 
     url = f"{_base_url()}/fixtures/{case['input']['fixture']}"
 
     async def go():
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch(args=["--no-sandbox"])
-            page = await browser.new_page()
+        ctx = await (await _browser()).new_context()
+        try:
+            page = await ctx.new_page()
             # Deliberately NOT agent.navigate(): production asks "is this page
             # usable enough to act on?", observe ground truth asks "what does a
             # fully settled page expose?". Forcing one navigation semantics onto
@@ -410,11 +446,11 @@ def _run_observe_case(case: dict) -> dict:
             # contract. Same lesson as the screenshot bound one level up —
             # try/except bounds error propagation, never latency.
             await page.goto(url)
-            obs = await observe(page)
-            await browser.close()
-            return obs
+            return await observe(page)
+        finally:
+            await ctx.close()
 
-    obs = asyncio.run(go())
+    obs = _await(go())
     exp = case["expect"]
     missing = [
         want for want in exp.get("contains", [])
@@ -466,7 +502,8 @@ def _run_fixture_case(case: dict) -> dict:
     # the case fails loudly; stubbing it would grade a capability nobody ran
     # (CLAUDE.md rule 4).
     planner = live_planner() if inp.get("planner") == "live" else stub_planner(plans)
-    result = _run_agent(inp["task"], inp.get("url", fixture_url), planner, url_guard=guard)
+    result = _run_agent(inp["task"], inp.get("url", fixture_url), planner, url_guard=guard,
+                        own_browser=inp.get("own_browser", False))
 
     # Re-verify with ground truth the runtime cannot have: hand labels, identity
     # anchors, and the fixture's own record of what it received.
@@ -999,6 +1036,23 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 
 
+def _run_wall_clock_case(case: dict) -> dict:
+    """ADR-002 Decision 4's wall-clock ceiling, enforced rather than asserted.
+
+    Grades the newest committed `fast` report, i.e. the run before this one — a
+    suite cannot measure itself from inside. One run of lag is the entire cost,
+    against the six milestones of lag the prose ceiling actually had."""
+    reports = sorted((Path(__file__).parents[2] / "evals" / "report").glob("*-fast.json"))
+    if not reports:
+        # Loud: no report is "unmeasured", never "within budget" (CLAUDE.md rule 4).
+        return {"passed": False, "error": "no committed fast report to measure"}
+    got = json.loads(reports[-1].read_text())
+    wall, budget = got["totals"]["wall_seconds"], case["expect"]["max_wall_seconds"]
+    return {"passed": wall <= budget,
+            "got": {"report": reports[-1].name, "wall_seconds": wall, "budget": budget,
+                    "cases": len(got["results"])}}
+
+
 def _run_invariant_case(case: dict) -> dict:
     check = case["input"]["check"]
     if check not in INVARIANTS:
@@ -1026,6 +1080,7 @@ KINDS = {
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
     "verifier-labels": _run_verifier_labels_case,
+    "wall-clock": _run_wall_clock_case,
 }
 
 

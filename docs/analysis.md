@@ -30,6 +30,11 @@ numbers and says so. A full refresh is M10's job
 | `invariant` (must-always-hold) | 22 | **22/22** | 3.68s | 0.0s | 0.54s | $0.0000 |
 | `live` (4 real sites) | 9 | **9/9** | 58.13s | 1.68s | 23.64s | $0.0000 |
 
+Those are the M8 report's numbers, kept as cited. Two of them have since moved
+and are not restated across this document: M12 put `fast` at 89/89 in 54.7s
+(`evals/report/20260821-024150-fast.json`) and `invariant` at 23/23 — see § "The
+`fast` gate" below and `specs/decisions/ADR-010-fast-suite-wall-clock.md`.
+
 96 distinct cases (20 golden + 76 adversarial).
 168 browser actions in a `fast` run; **53 of the
 86** cases drive a real Chromium end to end — counted here as
@@ -44,12 +49,18 @@ four real sites, the fourth added at M8 to be hostile rather than to be passed:
 and the run there answers confidently and wrongly (§ the M8 rows in
 `docs/support-matrix.md`, D5–D11).
 
-**The `fast` gate now costs 68s against the 60s ceiling ADR-002 set** (66.6–68.3s
-across runs on this branch). 10.6s of that is one case spending a deliberate
-Playwright click timeout to discover that a resolved element cannot be clicked;
-the rest is the pre-existing trend (13s at M2, 48.6s at M6, 55.4s at M7).
-Declared rather than fixed, with the parallel eval runner named as the honest
-fix (`docs/support-matrix.md` D8).
+**The `fast` gate cost 68s against the 60s ceiling ADR-002 set for two
+milestones, and is back inside it at 54.1–55.9s (89 cases).** It was declared
+rather than fixed at M8 on the assumption that the 57s under the one deliberate
+10.6s click timeout was irreducible trend (13s at M2, 48.6s at M6, 55.4s at M7).
+M12 measured it per call instead: 42.2s is deliberate waiting at bounds the
+suite exists to exercise, 13.5s is real work, and 11.3s was 58 cold Chromium
+launches — one per case. The suite now shares one browser and gives each run its
+own BrowserContext; no production timeout moved and no case left the suite, and
+the ceiling is now enforced by the case `fast-wall-clock-budget` rather than
+asserted in an ADR nothing read (`docs/support-matrix.md` D8,
+`specs/decisions/ADR-010-fast-suite-wall-clock.md`). Headroom is ~4–6s, so the
+parallel eval runner stays the named next lever.
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -119,6 +130,12 @@ Nearly all latency above the median is `SETTLE_TRIES × SETTLE_MS` = 10 × 200ms
 the postcondition settle loop, paid on exactly the cases whose subject is a
 postcondition that fails. That is the mechanism under test, so it is paid rather
 than mocked. A successful step never waits it out.
+
+The per-case numbers in that table each still carried a cold Chromium launch,
+~0.20s of the ~0.35s median. Since M12 the suite shares one browser and the
+median case is **0.12s** (p95 4.10s, `evals/report/20260821-024150-fast.json`);
+the tall cases above are unchanged, because what they spend is the settle loop,
+not the launch.
 
 The live case runs in 2.41s for 3 actions against a real site over the public
 internet — the only latency figure here that includes real network.

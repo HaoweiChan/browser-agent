@@ -17,13 +17,18 @@ Spec: ≥2-model OpenRouter ablation, cost/latency tradeoff table, ADR for the
 default-model choice. Reviewer evidence: analysis (E4), E5 tradeoffs.
 Acceptance: table built from committed report runs, not estimates.
 
-### M12 — Fast-suite wall-clock over budget            [status: todo]
+### M12 — Fast-suite wall-clock over budget            [status: in-progress]
 Origin: PR #12, declared in support-matrix D8 (promoted from Debt 2026-08-20 —
 M10 cannot exit green while a declared gate-budget breach stands)
 Spec: `fast` is 68.2s against ADR-002 D4's 60s budget — 10.6s is one
 deliberate click timeout, the rest a growth trend that crosses the budget
 regardless of any one milestone. Acceptance: fast < 60s again, or ADR-002 D4
 amended with the measured floor and why.
+Resolved by acceptance branch 1 (`specs/decisions/ADR-010-fast-suite-wall-clock.md`):
+per-call measurement put 11.3s of the 67.0s in per-case browser process
+lifecycle, which the harness no longer pays; 42.2s of deliberate waiting was
+left alone. `fast` is 54.1-55.9s over 89 cases, ADR-002 D4's 60s is unmoved,
+and it is now enforced by `fast-wall-clock-budget` instead of asserted.
 
 ### M10 — A-Freeze            [status: todo]
 Depends: M9, M12
@@ -48,8 +53,12 @@ Spec: promote only with its own eval evidence.
 
 ### M14 — Parallel eval runner            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)
-Spec: promote only with its own eval evidence; M12 (now in Queue) is the
-motivating symptom — if M12 resolves by amending ADR-002 D4, M14 loses urgency.
+Spec: promote only with its own eval evidence. M12 resolved without amending
+ADR-002 D4 — it removed 11.3s of per-case browser launch and left the 42.2s of
+deliberate waiting (settle loops, bounded load/screenshot waits, one 10s click
+timeout) that only parallelism can hide. `fast` now sits at 54.1-55.9s with
+~4-6s of headroom, so this is the next lever when `fast-wall-clock-budget`
+goes red rather than an urgent one today (ADR-010).
 
 ### M15 — Verifier-accuracy dashboard UI            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)

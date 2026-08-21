@@ -35,7 +35,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 86 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 89 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -49,14 +49,19 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260820-020212-fast.json`, with
-`…-020104-invariant.json` and `…-020100-live.json`:
+Latest offline baseline — `evals/report/20260821-024150-fast.json`, with
+`…-024051-invariant.json` and `…-023823-live.json`:
 
 ```
-fast  86/86    invariant  22/22    live  9/9    $0.0000    68.1s
+fast  89/89    invariant  23/23    live  9/9    $0.0000    54.7s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 14/14 · 4 replans
 ```
+
+The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
+measured where the time went instead of assuming: 42.2s is deliberate waiting
+at bounds the suite exists to exercise, 13.5s is real work, and 11.3s was 58
+cold Chromium launches, one per case ([ADR-010](specs/decisions/ADR-010-fast-suite-wall-clock.md)).
 
 `live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one

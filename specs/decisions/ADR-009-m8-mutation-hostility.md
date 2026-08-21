@@ -4,7 +4,11 @@ Date: 2026-08-19
 Status: accepted; Decisions 5 and 6 were amended in the same PR (#12) by
 Decisions 7, 8 and 9, after three review rounds: two found the same metric
 block wrong twice, the third found the documents describing it stale. The original text is left as written; Decisions 7 and 8 say what moved
-and — in round 2 — where round 1's own repair fell short.
+and — in round 2 — where round 1's own repair fell short. **Decision 6 (the
+`fast` gate over ADR-002's 60s budget) is closed at M12** by
+`specs/decisions/ADR-010-fast-suite-wall-clock.md`: the 10.6s click timeout it
+defends is unchanged, but 11.3s of the run was measured to be per-case browser
+process lifecycle and removed, putting the suite back inside the ceiling.
 
 **Ruling**: The mutation catalogue admits five mutations, each of which breaks a capability a plan actually stands on rather than a locator tier (`classes-scrambled` is dropped as decoration, not deferred); two of the five have no rescuing ladder and are committed with the losing or wrong-answer outcome pinned honestly (`expect.answer_is_known_wrong` / no `mutation_survived`), never smoothed into a fake pass; the survival/recovery/relocation counters are pure functions gated on both expectation and status, never on "matched its expectation" alone; and quotes.toscrape.com/js is published `unsupported` (TC1) because the planner is structurally blind to content the verifier can read in full.
 **Because**: A metric whose label drifts from what it counts, or a mutation admitted because it was already on a list, is exactly the decoration the milestone's own risk statement warned against.
@@ -208,6 +212,18 @@ would have held here, but only by luck of this case's shape; the case
 documents the trap rather than relying on it.
 
 ## Decision 6 — the `fast` gate now costs 66.6-68.3s, over ADR-002's 60s, and the case stays
+
+> **Closed at M12** (`specs/decisions/ADR-010-fast-suite-wall-clock.md`). Everything
+> below about `l4-shop-overlay-modal` still holds and the case still spends its
+> 10.6s. What was wrong was the assumption about the *other* 57s: measured
+> per-call, 11.3s of it was per-case Playwright driver start + `chromium.launch`
+> + `browser.close`, i.e. harness scaffolding rather than evidence. The suite now
+> shares one browser (each run in its own BrowserContext) and measures
+> 54.1-55.9s over 89 cases, inside ADR-002's unmoved 60s, with the ceiling
+> enforced by `fast-wall-clock-budget` instead of asserted in prose. The parallel
+> runner is still backlog and still the fix for the 42.2s of deliberate waiting
+> this ADR correctly refused to touch.
+
 
 `l4-shop-overlay-modal` spends 10.6s of that on one Playwright click timeout.
 The decision was taken on a single 67.6s run; the heading carries the band the
