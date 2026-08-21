@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M10 — A-Freeze            [status: in-progress]
+### M10 — A-Freeze            [status: pr]
 Depends: M9, M12
 Spec: analysis/README/support-matrix refresh, prompts curated, second
 held-out probe vs the deployed URL (mandatory gate, raw results committed).
@@ -23,6 +23,20 @@ Acceptance: A-exit criteria in `docs/plans/completed/task1-a-level-plan.md` all
 green → owner decides submission/public.
 
 ## Debt
+
+### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
+Origin: PR #25 R5
+Spec: `support-matrix-cites-real-cases` resolves backticked case-id tokens
+against `evals/`, but not bare `D21`/`D22`-style numeric references against the
+`docs/support-matrix.md` table. `src/browser/agent.py:64`, `docs/analysis.md`
+§8a-2 and `src/browser/verifier.py` now all cite D-numbers, so a future
+renumbering or row deletion leaves those citations dangling with nothing red.
+This is PR #25 R1's defect in its general form — R1 was one uncited claim; this
+is the mechanism that lets the next one through.
+Repro: renumber or delete the D21 row in `docs/support-matrix.md` and run
+`--suite invariant` — nothing goes red despite `agent.py` citing a dead D21.
+Acceptance: a case resolves bare D-number citations against the support-matrix
+table and is watched red against a deliberately broken D-number first.
 
 ### T-R30 — the widened SCOPE_BLOCK determiner regex over-refuses informational/hypothetical delete questions            [status: todo]
 Origin: PR #25 R3 (LOW, routed debt)
