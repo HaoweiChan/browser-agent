@@ -13,6 +13,7 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 - M6 — Live breadth & depth (2026-08-17) — ADR-006; post-M6 nav fix: ADR-007
 - M7 — Verifier accuracy (2026-08-18) — ADR-008, PR #10, support-matrix D1–D4
 - M8 — Mutation & hostility hardening (2026-08-19) — ADR-009, PR #12, support-matrix D5–D11
+- M9 — Cost/model ablation (2026-08-21) — ADR-010, PR #15 (mechanism) + PR #19 (numbers), support-matrix D12–D19; default moved to `openai/gpt-5.6-luna`
 
 ## B-floor exit criteria — final status
 All 6 met: criterion 2 (coverage/live breadth) was partial at the M5 freeze

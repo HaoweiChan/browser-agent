@@ -12,25 +12,6 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M9 — Cost/model ablation            [status: pr]
-PR: #15 (mechanism, merged) + stage two (this branch) · ADR-010 · evidence in the PR bodies
-Spec: ≥2-model OpenRouter ablation, cost/latency tradeoff table, ADR for the
-default-model choice. Reviewer evidence: analysis (E4), E5 tradeoffs.
-Acceptance: table built from committed report runs, not estimates. **Met** —
-`evals/report/20260821-004617-ablation.json`, re-derived cell-by-cell into
-`docs/analysis.md` §9 by `analysis-ablation-table-not-estimated`.
-Result: every candidate tied on correctness across a ~17x price range, so
-Decision 5's pre-committed rule fell to its cost tie-breaker and **the default
-moved to `openai/gpt-5.6-luna`** from `anthropic/claude-sonnet-4.5` (ADR-010
-Decision 18). The tie is *no observed difference*, not equivalence — the failed
-sweeps flipped the same cells in both directions, so a second sweep would not
-reproduce it cell-for-cell.
-Two findings larger than the ranking: one task failed on **all four** models with
-one signature (a `near:` capability boundary, D17 — counted against no model),
-and the deployment could not sustain a 20-run sweep (five aborted, D18).
-Guard inverted with the decision: it used to require the incumbent to be over
-the ceiling, now requires the default to be a model the ablation measured.
-Watched red four ways.
 ### M12 — Fast-suite wall-clock over budget            [status: todo]
 Origin: PR #12, declared in support-matrix D8 (promoted from Debt 2026-08-20 —
 M10 cannot exit green while a declared gate-budget breach stands)
