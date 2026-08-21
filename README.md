@@ -49,8 +49,8 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260821-121835-fast.json`, with
-`…-121905-invariant.json` and `…-121943-live.json`:
+Latest offline baseline — `evals/report/20260821-124700-fast.json`, with
+`…-124605-invariant.json` and `…-121943-live.json`:
 
 ```
 fast  90/90    invariant  23/23    live  9/9    $0.0000    55.2s
@@ -232,7 +232,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 96 cases (86 of them in the offline gate), it
+The eval set is not weak; it is 100 cases (90 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

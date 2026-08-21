@@ -32,20 +32,23 @@ numbers and says so. A full refresh is M10's job
 
 That table is the M8 run, kept at the numbers of the report it cites. **M12
 moved every row of it**, so the current triple is given here in full rather than
-left to be inferred — `evals/report/20260821-121835-fast.json`,
-`…-121905-invariant.json`, `…-121943-live.json`:
+left to be inferred — `evals/report/20260821-124700-fast.json`,
+`…-124605-invariant.json`, `…-121943-live.json`:
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 90 | **90/90** | 55.17s | 0.12s | 4.10s | $0.0000 |
-| `invariant` (must-always-hold) | 23 | **23/23** | 2.96s | 0.0s | 0.41s | $0.0000 |
+| `fast` (offline gate) | 90 | **90/90** | 55.24s | 0.12s | 4.08s | $0.0000 |
+| `invariant` (must-always-hold) | 23 | **23/23** | 2.98s | 0.0s | 0.46s | $0.0000 |
 | `live` (4 real sites) | 9 | **9/9** | 38.10s | 1.46s | 17.82s | $0.0000 |
 
 `fast`'s wall clock and p50 both fell because M12 stopped launching a Chromium
-per case (§ "The `fast` gate" below, `specs/decisions/ADR-010-fast-suite-wall-clock.md`);
-the case count rose because that change brought three cases of its own. Every
-count in the rest of this section is the current one; where an M8 figure is
-still quoted elsewhere in this document it is with its own report beside it.
+per case (§ "The `fast` gate" below, `specs/decisions/ADR-010-fast-suite-wall-clock.md`).
+The four cases between the two tables: three are M12's own — `fast-wall-clock-budget`,
+`agent-launches-its-own-browser`, `shared-browser-relaunches-when-dead`, the last
+two of them written in review — and the fourth, `adr-header-and-index`, came from
+the decision-first ADR retrofit that landed between M8 and M12. Every count in the
+rest of this section is the current one; where an M8 figure is still quoted
+elsewhere in this document it is with its own report beside it.
 
 100 distinct cases (20 golden + 80 adversarial).
 170 browser actions in a `fast` run; **54 of the
@@ -148,7 +151,7 @@ than mocked. A successful step never waits it out.
 
 The per-case numbers in that table each still carried a cold Chromium launch,
 ~0.20s of the ~0.35s median. Since M12 the suite shares one browser and the
-median case is **0.12s** (p95 4.10s, `evals/report/20260821-121835-fast.json`);
+median case is **0.12s** (p95 4.08s, `evals/report/20260821-124700-fast.json`);
 the tall cases above are unchanged, because what they spend is the settle loop,
 not the launch.
 

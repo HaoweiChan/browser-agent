@@ -85,8 +85,15 @@ timeout, no case deleted, no case moved out of `fast`.
    ruling (`WALL_BUDGET_S = {"fast": 60}` and the pure `over_budget()`), applies
    it to `totals["wall_seconds"]` of the run it has just finished, and exits
    non-zero with a named line — the same shape as the invariant-100% rule beside
-   it. `fast-wall-clock-budget` grades the ruling: the boundary at 60.00/60.01,
-   and that `fast` is the only suite carrying a ceiling.
+   it. `fast-wall-clock-budget` grades both halves: the ruling (the boundary at
+   60.00/60.01, and `fast` as the only key in `WALL_BUDGET_S`, compared as a set
+   so a new suite name cannot be added past it) and the call site, by driving
+   `evals.run.main()` over a stub result of a chosen duration and checking the
+   exit code. The second half was added in review round 2 (PR #20 R8): the first
+   version pinned the rule only, so deleting the five lines in `main()` that
+   apply it left a 79.02s run — 32% over — reporting 90/90 = 1.000 at exit 0.
+   The hole moved up a level each time it was closed, which is why the case now
+   grades the place the decision is enforced and not only the decision.
 
    The first version of this decision had the case read the newest report in
    `evals/report/` instead, and review falsified it (PR #20 R1). A report is
@@ -100,9 +107,12 @@ timeout, no case deleted, no case moved out of `fast`.
 
    Deliberately not tagged `invariant`: invariants are absolute and
    machine-independent, and a wall clock is neither (ADR-009 Decision 6 records
-   66.6-68.3s here and 68.6s on a reviewer's machine). What a contributor on
-   slower hardware is supposed to do when the ceiling is genuinely out of reach
-   there is a policy question this ADR does not settle (PR #20 R6, Debt T-R6).
+   66.6-68.3s here and 68.6s on a reviewer's machine). Two questions this ADR
+   does not settle, both open on purpose: what a contributor on slower hardware
+   should do when the ceiling is genuinely out of reach there (PR #20 R6, Debt
+   T-R6), and what `--update-baseline` should do on an over-budget tree, since
+   it returns before the ceiling is consulted and reports nothing (PR #20 R12,
+   Debt T-R12).
 
 3. **The un-shared launch keeps a case.** Sharing the browser on every case
    left `browser is None` — the branch every real caller takes — graded by
@@ -112,7 +122,7 @@ timeout, no case deleted, no case moved out of `fast`.
 
 ## Consequences
 
-`fast` measures **54.1-55.9s, 90 cases** (`evals/report/20260821-121835-fast.json`;
+`fast` measures **54.1-55.9s, 90 cases** (`evals/report/20260821-124700-fast.json`;
 up from 67.0-68.3s over 86-87 cases), and the suite got three cases larger while
 getting 13s faster — the third, `shared-browser-relaunches-when-dead`, came out
 of review. Headroom

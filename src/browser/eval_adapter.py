@@ -1041,27 +1041,67 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 
 
-def _run_wall_clock_case(case: dict) -> dict:
-    """ADR-002 Decision 4's wall-clock ceiling: grades the RULING, not a report.
+def _main_exit_code(wall_seconds: float) -> int:
+    """`evals.run.main()` over one stub case whose only property is its duration.
 
-    The ceiling is applied by `evals/run.py` to `totals["wall_seconds"]` of the
-    run it just measured, and exits non-zero. This case pins the rule it applies:
-    the boundary, and that `fast` is the only suite carrying one.
+    Grades the CALL SITE, not the rule: `over_budget()` being correct buys
+    nothing if `main()` never asks it, and deleting the five-line block that does
+    left a 79.02s run reporting 90/90 = 1.000 at exit 0 (PR #20 R8). Stubs
+    `load_cases`/`run_case` so no case actually runs and no report is written;
+    output is swallowed so a probe cannot be mistaken for the real run."""
+    import contextlib
+    import io
+    import sys
+
+    import evals.run as R
+
+    stub = {"id": "wall-clock-probe", "_kind": "adversarial"}
+    argv, load, run = sys.argv, R.load_cases, R.run_case
+    try:
+        sys.argv = ["run", "--suite", "fast", "--no-report"]
+        R.load_cases = lambda suite: [stub]
+        R.run_case = lambda c: {"passed": True, "seconds": wall_seconds,
+                                "id": c["id"], "kind": c["_kind"]}
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            return R.main()
+    finally:
+        sys.argv, R.load_cases, R.run_case = argv, load, run
+
+
+def _run_wall_clock_case(case: dict) -> dict:
+    """ADR-002 Decision 4's wall-clock ceiling: grades the RULING and the CALL SITE.
+
+    Both halves, because each has been the hole once. The ruling
+    (`evals.run.over_budget`) is graded on its boundary and on carrying exactly
+    one suite; the call site is graded by driving `evals.run.main()` and reading
+    the exit code, since a ruling nothing consults is the same comment the prose
+    ceiling was.
 
     The first version read the newest report in `evals/report/` instead, which is
     written after the run and thrown away with a CI workspace — so on a fresh
     clone it always graded the report the branch had committed and could not go
-    red however slow the tree was (PR #20 R1)."""
+    red however slow the tree was (PR #20 R1). The second graded the ruling only,
+    and the block in `main()` that applies it could be deleted with the whole
+    suite still green (PR #20 R8)."""
     from evals.run import WALL_BUDGET_S, over_budget
 
+    exp = case["expect"]
     wrong = [r for r in case["input"]["rows"]
              if over_budget(r["suite"], r["wall_seconds"]) is not r["over"]]
-    budget = WALL_BUDGET_S.get("fast")
-    if budget != case["expect"]["max_wall_seconds"]:
-        wrong.append({"ruling": "fast", "budget": budget,
-                      "declared": case["expect"]["max_wall_seconds"]})
+    if WALL_BUDGET_S.get("fast") != exp["max_wall_seconds"]:
+        wrong.append({"ruling": "fast", "budget": WALL_BUDGET_S.get("fast"),
+                      "declared": exp["max_wall_seconds"]})
+    # Every suite name the repo uses, not only the ones the rows happen to list:
+    # `full` was missing and WALL_BUDGET_S["full"] = 1 slipped in green (R11).
+    if sorted(WALL_BUDGET_S) != sorted(exp["suites_with_a_ceiling"]):
+        wrong.append({"ruling": "suites", "budgets": sorted(WALL_BUDGET_S),
+                      "declared": sorted(exp["suites_with_a_ceiling"])})
+    applied = [dict(r, got=_main_exit_code(r["wall_seconds"]))
+               for r in case["input"]["applied_in_main"]]
+    wrong += [r for r in applied if r["got"] != r["exit"]]
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"budgets": WALL_BUDGET_S}}
+            "got": {"budgets": WALL_BUDGET_S, "main_exit": applied}}
 
 
 def _run_browser_liveness_case(case: dict) -> dict:
