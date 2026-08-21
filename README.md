@@ -67,8 +67,10 @@ observed run plus 15% (80s); the local ceiling stays the original **60s** —
 a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
-58.96-59.87s), so the amendment was withdrawn and headroom against 60s is a
-thin ~0.13s.
+58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
+further post-commit runs found the honest band is 58.83-60.26s, one run
+over the line by a few tenths and unexplained by load. Margin against 60s
+is real but thin, not a guarantee (§ ADR-013 Decision 4).
 
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
 measured where the time went instead of assuming: 42.2s is deliberate waiting

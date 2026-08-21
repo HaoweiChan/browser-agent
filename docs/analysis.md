@@ -102,8 +102,10 @@ post-fix seven-run band was published as still straddling 60s — so ADR-002
 Decision 4's local ceiling was moved to **70s** — but round-5 review could
 not reproduce that band (~22 runs across three independent measurers, idle
 and under deliberate CPU load, all landed at 58.96-59.87s), so the amendment
-was withdrawn the same day and the local ceiling ships at **60s**, with
-headroom of only ~0.13s against the slowest reproducible run. CI's ceiling
+was withdrawn the same day and the local ceiling ships at **60s** — with a
+thin, not clean, margin: 21 further post-commit runs found the band is
+really 58.83-60.26s, one run over the line by a few tenths against 20 that
+were not. CI's ceiling
 was separately re-measured to **80s** on the merged tree (64.29-68.96s over
 four runs) — the slowest observed run plus 15% (ADR-013 Decisions 3 and 4),
 unaffected by the local correction. The parallel eval runner stays the named next lever.

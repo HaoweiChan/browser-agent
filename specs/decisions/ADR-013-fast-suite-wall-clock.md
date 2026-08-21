@@ -261,23 +261,49 @@ not asserted blind either time.
 
    That reopens the acceptance criterion's **first branch**
    (`fast < 60s again`), not the second: **`WALL_BUDGET_S` reverts to 60**,
-   unchanged from Decision 1. The cost of taking it is stated plainly rather
-   than buried — headroom against the max reproducible run (59.87s) is
-   **~0.13s**, nothing like the ~10s of margin the pre-breach suite had. A
-   suite this close to its own ceiling will very likely turn red on the next
-   case `fast` gains, cheap or not; that is the coin-flip-gate problem this
-   Decision already named once, arrived at again from the opposite direction.
-   The alternative — keeping 70 on the argument that the suite "clears 60
-   idle, exceeds it under load" — was considered and rejected here on the
-   evidence actually measured: the loaded run did not exceed 60, or come
-   close to it, so there is no reproducible loaded condition to build that
-   argument on. If one is found later, that is a fresh amendment with its own
-   runs behind it, not a reason to keep 70 on this record.
+   unchanged from Decision 1. The alternative — keeping 70 on the argument
+   that the suite "clears 60 idle, exceeds it under load" — was considered
+   and rejected here on the evidence actually measured: the loaded run did
+   not exceed 60, or come close to it, so there is no reproducible loaded
+   condition to build that argument on. If one is found later, that is a
+   fresh amendment with its own runs behind it, not a reason to keep 70 on
+   this record.
+
+   **This claim was checked against itself before it shipped, and it did not
+   fully hold.** Verification after the commit that reverted the ceiling ran
+   21 further real (non-stubbed) `fast` runs on the exact committed tree: 20
+   landed at 58.83-59.81s, and one — the very first post-commit run, at
+   ordinary load (~2.2), no concurrent CPU stress — measured **60.26s**,
+   over the ceiling just reverted to. "Headroom against the max reproducible
+   run is ~0.13s" was therefore already false by the time it was written; a
+   run 0.39s past that supposed max showed up in the next batch. Stated
+   plainly rather than quietly folded into a bigger number: across every run
+   this ADR has behind it — the original disputed band, both independent
+   reviewers, and 43 further runs from this repair (22 before the revert, 21
+   after) — **3 of 50 total runs landed over 60s** (the two original outliers
+   plus this one), all by a small margin (0.26-0.59s), none tied to CPU load
+   by the one direct test run against it. That is a real, low (roughly
+   2-6% depending how the original disputed 7 are weighted), unexplained tail
+   — not the ~29% ("two of seven") the withdrawn band claimed, and not zero
+   either. The suite is not reliably under 60s in the way "revert to 60"
+   can sound like it means; it is *usually* under 60s, with an occasional
+   small overshoot from a cause CPU load does not explain and this repair did
+   not chase further (candidates: OS scheduler jitter, Playwright driver
+   startup variance, filesystem cache state — none isolated). `WALL_BUDGET_S`
+   stays 60 on the weight of the evidence (94-98% of runs, honestly counted,
+   clear it), but a red `fast` gate at a wall clock in the 60.0-60.6s range
+   should prompt a re-run before being read as a regression, not be treated
+   as proof the ceiling was wrong again. A suite this close to its own
+   ceiling will very likely turn red on the next case `fast` gains regardless
+   of this residual noise; that is the coin-flip-gate problem this Decision
+   already named once, arrived at again from the opposite direction.
 
    ADR-002 Decision 4's local number, amended from 60 to 70 earlier the same
    day, is amended back to 60 here. What is *not* claimed: that 60s is
-   generous. It is the slowest reproducible run plus 0.13s, and the parallel
-   eval runner (M14) remains the only lever that would put real headroom back.
+   generous, or that every run will clear it. It is the pre-breach number,
+   restored on evidence that overwhelmingly — not unanimously — supports it,
+   and the parallel eval runner (M14) remains the only lever that would put
+   real headroom back.
 
 5. **The un-shared launch keeps a case.** Sharing the browser on every case
    left `browser is None` — the branch every real caller takes — graded by
@@ -292,15 +318,17 @@ at the point this section was first written, against 67.0-68.3s over 86-87
 before this ADR and 71.3-76.5s once M9's cases arrived — wall clock falling as
 scaffolding left the suite, not growing with it. That snapshot predates both
 the readyz-hold fix and the round-5 correction above; the reproducible band
-today is **58.96-59.87s** (Decision 4). Headroom against the **60s** local
-ceiling — reverted, not re-measured, in Decision 4's round-5 correction — is
-the number to read now: **~0.13s** against the slowest reproducible run, a
-fraction of the ~10s this section could once claim while 70s was the shipping
-ceiling. The 42.2s of deliberate waiting is the floor this route cannot
+today is **58.83-60.26s** (Decision 4, including the one post-commit
+verification run that landed over 60s and the 21 that did not). Against the
+**60s** local ceiling — reverted, not re-measured, in Decision 4's round-5
+correction — that is not a clean margin the way "~10s" once was: most runs
+clear it by roughly a second, one in the fifty measured for this ADR did not,
+by a few tenths. The 42.2s of deliberate waiting is the floor this route cannot
 touch, and the growth trend ADR-009 Decision 6 described (13s → 48.6s → 55.4s →
 67s) has not been repealed, only set back further than a straddling ceiling
 suggested. The next case added to `fast` — even a cheap one — is now likely to
-turn the ceiling red, and that is sharper than it was: the choice at that
+turn the ceiling red on top of the residual noise Decision 4 documents, and
+that is sharper than it was: the choice at that
 moment (parallel runner, or a ceiling amended from a fresh measurement)
 becomes a decision someone makes, instead of a drift nobody sees.
 

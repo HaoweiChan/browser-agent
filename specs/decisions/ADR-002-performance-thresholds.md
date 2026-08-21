@@ -73,8 +73,11 @@ file:
    justified going to 70s did not reproduce under round-5 review (~22 runs
    across three independent measurers, idle and deliberately CPU-loaded
    alike, landed at 58.96-59.87s), so the amendment was withdrawn the same
-   day and the local number ships at **60s**, with headroom of only ~0.13s
-   against the slowest reproducible run. CI's ceiling comes from the same
+   day and the local number ships at **60s** — not with a clean margin,
+   though: post-commit verification found the reproducible band is really
+   58.83-60.26s, one further run over the line by a few tenths against 42
+   that were not, an unexplained low-single-digit-percent tail CPU load did
+   not account for (ADR-013 Decision 4, in full). CI's ceiling comes from the same
    stated rule — the slowest observed run plus 15%, rounded up to a multiple
    of five — unaffected by this correction.)
 5. **`fast` suite cost = $0.00 exactly.** Not a budget — a boundary. Any
