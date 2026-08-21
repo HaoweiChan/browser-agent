@@ -1,0 +1,47 @@
+{
+  "pr": 20,
+  "round": 2,
+  "task": "M12",
+  "resolutions": [
+    {
+      "id": "R8",
+      "status": "fixed",
+      "covered_by": "fast-wall-clock-budget (extended, not a new case)",
+      "what_changed": "The case now grades the call site as well as the ruling. `_main_exit_code(wall_seconds)` drives the real `evals.run.main()` with `load_cases` and `run_case` stubbed to a single result of a chosen duration — no case runs, no report is written, stdout and stderr are swallowed — and the case asserts the exit code: 0 for 54.35s, 1 for 79.02s. That is the code path `.github/workflows/eval.yml` and `.githooks/pre-commit` actually take, so the five-line block in `main()` can no longer be deleted with the suite green.",
+      "watched_red": "The `if over_budget(args.suite, totals[\"wall_seconds\"]):` block deleted from evals/run.py (lines 166-170) and nothing else touched, with the extended case in the suite: `[FAIL] fast-wall-clock-budget`, 89/90 = 0.989 against baseline 1.000. `wrong: [{\"wall_seconds\": 79.02, \"exit\": 1, \"got\": 0}]` — the under-budget row still returned 0, so the case fails on the run that should have been stopped and not on the one that should not. Block restored: 90/90 = 1.000.",
+      "bounded": "No framework: one 20-line helper and two rows in the case file. No source-text inspection — the exit code is the thing that matters and the thing CI reads."
+    },
+    {
+      "id": "R9",
+      "status": "fixed",
+      "covered_by": "no case — README figure restated",
+      "what_changed": "README.md's `it is 96 cases (86 of them in the offline gate)` reads `100 cases (90 of them in the offline gate)`. Ground truth: `ls evals/golden/*.json evals/adversarial/*.json` is 100 (20 + 80), and the committed fast report has 90 results."
+    },
+    {
+      "id": "R10",
+      "status": "fixed",
+      "covered_by": "no case — docs/analysis.md prose corrected",
+      "what_changed": "The sentence no longer attributes the 86 -> 90 move to three cases. It now names all four: `fast-wall-clock-budget`, `agent-launches-its-own-browser` and `shared-browser-relaunches-when-dead` from M12 (the last two written in review), plus `adr-header-and-index` from the decision-first ADR retrofit that landed between M8 and M12. The fourth was identified rather than guessed: the ids in `evals/report/20260820-020212-fast.json` differenced against the `fast`-tagged cases at `main` give exactly `adr-header-and-index`."
+    },
+    {
+      "id": "R11",
+      "status": "fixed",
+      "covered_by": "fast-wall-clock-budget (extended)",
+      "what_changed": "Two changes, because the row table could only ever cover suite names someone thought to list. A `{\"suite\": \"full\", \"wall_seconds\": 999.0, \"over\": false}` row was added, AND the case now asserts `sorted(WALL_BUDGET_S) == expect.suites_with_a_ceiling` — a set comparison, so any future suite name added to the ruling turns it red whether or not a row exists for it.",
+      "watched_red": "The reviewer's exact mutation, in process: with `evals.run.WALL_BUDGET_S['full'] = 1`, `run_case(case)['passed']` was `True` before and is now `False`, failing twice over — `{'suite': 'full', 'wall_seconds': 999.0, 'over': False}` from the row and `{'ruling': 'suites', 'budgets': ['fast', 'full'], 'declared': ['fast']}` from the set check."
+    },
+    {
+      "id": "R12",
+      "status": "debt",
+      "became": "T-R12 — `--update-baseline` records a baseline over the wall-clock ceiling, silently",
+      "note": "Logged under `## Debt` in tasks/TODO.md with the claim, evidence, repro and acceptance verbatim. Not pre-empted: ADR-013 Decision 2 now names it as an open question alongside T-R6 rather than choosing warn/block/document, and `fast-wall-clock-budget`'s `not_covered` states that the `--update-baseline` path is not exercised. Both are disclosure of an open question, not a decision about it."
+    }
+  ],
+  "docs_updated": [
+    "specs/decisions/ADR-013-fast-suite-wall-clock.md Decision 2 (call-site half named; R6 and R12 listed as the two questions left open)",
+    "evals/adversarial/fast-wall-clock-budget.json (rows, expect keys, provenance, triage)",
+    "docs/analysis.md",
+    "README.md",
+    "tasks/TODO.md"
+  ]
+}

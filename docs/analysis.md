@@ -30,37 +30,85 @@ numbers and says so. A full refresh is M10's job
 | `invariant` (must-always-hold) | 22 | **22/22** | 3.68s | 0.0s | 0.54s | $0.0000 |
 | `live` (4 real sites) | 9 | **9/9** | 58.13s | 1.68s | 23.64s | $0.0000 |
 
-**M9 correction to this table:** the three rows above are the M8 report they name
-and are left as read; M9 added five cases, all offline, taking `fast` to 91/91 and `invariant` to
-27/27; the `fast` gate measures 71.3-76.5s. Committed
-M9 runs: `evals/report/20260820-162200-fast.json` (91/91, 76.34s, $0.0000) and
-`evals/report/20260820-162043-invariant.json` (27/27) — the runs after PR #15
-review round 4, which is the state §9 describes. The
-counts below are updated to the current tree; the timings and per-case numbers
-elsewhere in this document are not, and their refresh is M10's.
+That table is the M8 run, kept at the numbers of the report it cites. Two
+milestones have moved it since, in opposite directions: **M9 added five cases,
+all offline** (`fast` to 91/91, `invariant` to 27/27, the gate at 71.3-76.5s —
+`evals/report/20260820-162200-fast.json`, `…-162043-invariant.json`), and
+**M12 stopped launching a Chromium per case**, which took the gate back under
+ADR-002's ceiling. The merged tree is given here in full rather than left to be
+inferred — `evals/report/20260821-170854-fast.json`, `…-170753-invariant.json`, `…-164456-live.json`:
 
-101 distinct cases (20 golden + 81 adversarial).
-168 browser actions in a `fast` run; **53 of the
-86** cases drive a real Chromium end to end — counted here as
+| Suite | Cases | Score | Wall | p50 | p95 | Cost |
+|---|---|---|---|---|---|---|
+| `fast` (offline gate) | 98 | **98/98** | 59.35s | 0.11s | 4.09s | $0.0000 |
+| `invariant` (must-always-hold) | 30 | **30/30** | 8.18s | 0.0s | 2.29s | $0.0000 |
+| `live` (4 real sites) | 9 | **9/9** | 24.03s | 2.10s | 5.74s | $0.0000 |
+
+`fast`'s wall clock and p50 both fell against M9's numbers because M12 stopped
+launching a Chromium per case (§ "The `fast` gate" below,
+`specs/decisions/ADR-013-fast-suite-wall-clock.md`). The nine cases between the
+M8 table's 86 and this one's 95: five are M9's, three are M12's own —
+`fast-wall-clock-budget`, `agent-launches-its-own-browser`,
+`shared-browser-relaunches-when-dead`, the last two written in review — and
+`adr-header-and-index` came from the decision-first ADR retrofit that landed
+between M8 and M9. Every count in the rest of this section is the current one;
+where an M8 or M9 figure is still quoted elsewhere in this document it is with
+its own report beside it.
+
+107 distinct cases (20 golden + 87 adversarial).
+170 browser actions in a `fast` run; **54 of the
+97** cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions: the six L5 refusal cases are
 end-to-end cases that deliberately stop before a browser opens. The remaining
-33 are those refusals plus pure-code probes of a single
+43 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
-matrix parser, the evidence-window bound on a missing value, and — added in
-M8 — the mutation counters and the opt-in `expect` keys; and in M9 — the model
-allowlist, the ablation driver's preflight and its `failure:env` classifier, and
-the ablation table's honesty guard). `live` is 9/9 across
+matrix parser, the evidence-window bound on a missing value; added in M8, the
+mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
+ablation driver's preflight and its `failure:env` classifier and the ablation
+table's honesty guard; and in M12, the wall-clock ruling). `live` is 9/9 across
 four real sites, the fourth added at M8 to be hostile rather than to be passed:
 `quotes.toscrape.com` renders its content invisibly to the accessibility tree,
 and the run there answers confidently and wrongly (§ the M8 rows in
 `docs/support-matrix.md`, D5–D11).
 
-**The `fast` gate now costs 68s against the 60s ceiling ADR-002 set** (66.6–68.3s
-across runs on this branch). 10.6s of that is one case spending a deliberate
-Playwright click timeout to discover that a resolved element cannot be clicked;
-the rest is the pre-existing trend (13s at M2, 48.6s at M6, 55.4s at M7).
-Declared rather than fixed, with the parallel eval runner named as the honest
-fix (`docs/support-matrix.md` D8).
+**The `fast` gate cost 68s against the 60s ceiling ADR-002 set for two
+milestones, and is back inside that same 60s ceiling at 59.35s (98 cases) —
+a straddling band briefly pushed the ceiling to 70s, but that amendment did
+not survive round-5 review and was withdrawn (§ below).** It was declared
+rather than fixed at M8 on the assumption that the 57s under the one deliberate
+10.6s click timeout was irreducible trend (13s at M2, 48.6s at M6, 55.4s at M7).
+M12 measured it per call instead: 42.2s is deliberate waiting at bounds the
+suite exists to exercise, 13.5s is real work, and 11.3s was 58 cold Chromium
+launches — one per case. The suite now shares one browser and gives each run its
+own BrowserContext; no production timeout moved and no case left the suite, and
+the ceiling is now applied by `evals/run.py` to the run it just measured — a
+first attempt that graded the newest committed report instead could not go red
+in CI, and review said so (PR #20 R1) — rather than asserted in an ADR nothing
+read (`docs/support-matrix.md` D8,
+`specs/decisions/ADR-013-fast-suite-wall-clock.md`). It fired once already, on
+the M9 merge: the suite hit 63.3s and the gate exited 1, and the 8.03s that
+crossed the line was a completion poll in the ablation driver sleeping 2s between
+checks on loopback runs that finish in under a second — not browser work, and
+removed rather than absorbed into the ceiling. Then it fired again on the branch's
+first CI run, which is the more useful of the two: `main`'s own CI does `fast` in
+**89.62s** (run `32385032004`), so CI had been ~50% over the ceiling for its entire
+existence and nothing had ever checked there. This branch cuts that to 59.8-64.7s
+across four runs. CI now carries its own measured ceiling (80s after re-measurement) while local stays
+at 60s, both enforced. The local number was then re-measured, then that
+re-measurement was withdrawn: the M9-stage-2 merge added a readiness case
+that holds a run slot for 3.0s on purpose, the suite straddled 60s across
+seven runs (59.35-60.16s), a fix to the hold recovered ~1s/run but a
+post-fix seven-run band was published as still straddling 60s — so ADR-002
+Decision 4's local ceiling was moved to **70s** — but round-5 review could
+not reproduce that band (~22 runs across three independent measurers, idle
+and under deliberate CPU load, all landed at 58.96-59.87s), so the amendment
+was withdrawn the same day and the local ceiling ships at **60s** — with a
+thin, not clean, margin: 21 further post-commit runs found the band is
+really 58.83-60.26s, one run over the line by a few tenths against 20 that
+were not. CI's ceiling
+was separately re-measured to **80s** on the merged tree (64.29-68.96s over
+four runs) — the slowest observed run plus 15% (ADR-013 Decisions 3 and 4),
+unaffected by the local correction. The parallel eval runner stays the named next lever.
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -132,6 +180,12 @@ the postcondition settle loop, paid on exactly the cases whose subject is a
 postcondition that fails. That is the mechanism under test, so it is paid rather
 than mocked. A successful step never waits it out.
 
+The per-case numbers in that table each still carried a cold Chromium launch,
+~0.20s of the ~0.35s median. Since M12 the suite shares one browser and the
+median case is **0.12s** (p95 4.10s, `evals/report/20260821-170854-fast.json`);
+the tall cases above are unchanged, because what they spend is the settle loop,
+not the launch.
+
 The live case runs in 2.41s for 3 actions against a real site over the public
 internet — the only latency figure here that includes real network.
 
@@ -142,8 +196,10 @@ observation and its wall time was not recorded per-phase.
 Suite wall time grew 24s → 32s at the cold review (ADR-005), entirely from one
 extra `inner_text` per action to capture `page_changed`. That evidence is what
 separates a legitimate replan from one laundering an action that never landed,
-so it was bought deliberately. The `fast` gate remains well inside the 60s
-threshold set in ADR-002.
+so it was bought deliberately. The `fast` gate remains inside the threshold set
+in ADR-002 — a measured 60s locally and 80s on CI since ADR-013 Decisions 3 and 4
+(a local move to 70s was tried and withdrawn the same day when round-5 review
+could not reproduce the band behind it).
 
 ## 4. Scalability
 

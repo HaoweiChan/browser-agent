@@ -35,7 +35,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 91 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 97 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -49,14 +49,41 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260820-020212-fast.json`, with
-`…-020104-invariant.json` and `…-020100-live.json`:
+Latest offline baseline — `evals/report/20260821-224446-fast.json`, with
+`…-170753-invariant.json` and `…-164456-live.json`:
 
 ```
-fast  86/86    invariant  22/22    live  9/9    $0.0000    68.1s
+fast  98/98    invariant  30/30    live  9/9    $0.0000    59.4s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 14/14 · 4 replans
 ```
+
+That is this machine, where seven runs of the merged tree measured
+**59.35-60.16s**. The same suite on CI (ubuntu-latest) measured
+**59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
+on byte-identical code, which is why the wall-clock ceiling is per-environment
+rather than one number pretending to be portable. CI's ceiling is the slowest
+observed run plus 15% (80s); the local ceiling stays the original **60s** —
+a straddling band briefly pushed it to 70, but round-5 review could not
+reproduce the two runs that justified that (~22 runs across three
+independent measurers, idle and under deliberate CPU load, all landed at
+58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
+further post-commit runs found the honest band is 58.83-60.26s, one run
+over the line by a few tenths and unexplained by load. Margin against 60s
+is real but thin, not a guarantee (§ ADR-013 Decision 4).
+
+The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
+measured where the time went instead of assuming: 42.2s is deliberate waiting
+at bounds the suite exists to exercise, 13.5s is real work, and 11.3s was 58
+cold Chromium launches, one per case. The ceiling is now applied by
+`evals/run.py` to the run it just measured, so a slow tree exits non-zero
+instead of reporting 1.000. It fired twice in a day, and neither time on what
+anyone would have guessed: M9's merge took the suite to 63.3s over a completion
+poll sleeping 2s between checks on runs that finish in under a second, and the
+branch's first CI run showed CI had been ~50% over the same ceiling for its whole
+existence with nothing checking — `main` runs `fast` in 89.62s. CI now carries its
+own measured ceiling (80s, from four runs at 64.3-69.0s on the merged tree) alongside a local 60s
+([ADR-013](specs/decisions/ADR-013-fast-suite-wall-clock.md)).
 
 `live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one
@@ -225,7 +252,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 101 cases (91 of them in the offline gate), it
+The eval set is not weak; it is 107 cases (97 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

@@ -301,7 +301,14 @@ def run_one(base: str, model: str, spec: dict, timeout: int, rows: list) -> dict
     except urllib.error.URLError as e:
         _fatal(f"{model} / {spec['id']}: POST /tasks unreachable: {e}", rows)
 
-    deadline = time.monotonic() + timeout
+    # Backoff, not a flat 2s: a completion poll that sleeps longer than the runs it
+    # waits on measures the poll instead of the run. Flat 2s cost the `fast` gate
+    # 8.03s on one case whose four loopback runs each finish in well under a
+    # second, which is what pushed the merged suite over ADR-002's ceiling
+    # (PR #20). A real sweep is unaffected: its runs take tens of seconds, so the
+    # interval reaches the 2s cap within the first few polls. `deadline` is still
+    # the only thing that ends a run that never finishes.
+    deadline, poll = time.monotonic() + timeout, 0.1
     while True:
         try:
             rec = _http(f"{base}/tasks/{run_id}")
@@ -313,7 +320,8 @@ def run_one(base: str, model: str, spec: dict, timeout: int, rows: list) -> dict
             # A run still in flight is not a slow result, it is no result. Recording
             # it with the numbers spent so far would be the fabrication rule 4 bans.
             _fatal(f"{model} / {spec['id']}: run {run_id} still 'running' after {timeout}s", rows)
-        time.sleep(2)
+        time.sleep(poll)
+        poll = min(poll * 2, 2.0)
 
     # Publish only what measures the model. Everything else — a site that would
     # not load, our own URL guard, a provider outage, a class nobody has
