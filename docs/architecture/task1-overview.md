@@ -82,7 +82,8 @@ POST /tasks ─► Gateway (FastAPI) ─► run queue (semaphore, 1–2 browser 
   the task never runs inside the request handler — runs are persisted so a
   reload/reconnect recovers the trace. Serves the frontend and the fixture
   sites (`/fixtures/shop`, `/fixtures/forms`, with `?mut=` middleware).
-- **Planner** [MUST]: LLM via OpenRouter (default `anthropic/claude-sonnet-4.5`,
+- **Planner** [MUST]: LLM via OpenRouter (default `openai/gpt-5.6-luna` since
+  2026-08-21, chosen by the M9 ablation — ADR-010 Decision 16,
   planning/replanning only). Receives task + condensed a11y observation;
   emits typed steps.
 - **Resolver** [MUST]: SemanticTarget → ranked concrete locators from the

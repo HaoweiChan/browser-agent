@@ -12,17 +12,17 @@
       {
         "model": null,
         "http": 200,
-        "planner_model": "anthropic/claude-sonnet-4.5"
+        "planner_model": "openai/gpt-5.6-luna"
       },
       {
         "model": "__EXPLICIT_NULL__",
         "http": 200,
-        "planner_model": "anthropic/claude-sonnet-4.5"
+        "planner_model": "openai/gpt-5.6-luna"
       },
       {
         "model": "anthropic/claude-sonnet-4.5",
-        "http": 200,
-        "planner_model": "anthropic/claude-sonnet-4.5"
+        "http": 422,
+        "planner_model": null
       },
       {
         "model": "deepseek/deepseek-v4-pro",
@@ -55,5 +55,6 @@
   "triage": {
     "class": "silent-drop",
     "note": "tagged invariant for the same reason as the refusal half: this is what makes the ablation's independent variable actually independent, and it is unobservable from the HTTP response. Row 1 pins the no-model default so M9 cannot change the default model as a side effect (ADR-010 Decision 6 — the default is unchanged in this PR because no data exists yet). `verified_ids_file` pins `planner.ALLOWED_MODELS` — order included — against the frozen snapshot of the OpenRouter response it was verified from, so editing either list without re-verifying is a red case rather than a stale ADR sentence. `price_ceiling` grades the owner's constraint itself: every ablated model must be at or under `deepseek/deepseek-v4-pro`'s list price on BOTH prompt and completion, and the incumbent default must be OVER it — the second half is what makes ADR-010's 'no cell measures the incumbent' a graded fact rather than a sentence that can go stale when prices move."
-  }
+  },
+  "provenance_2026_08_21": "Three rows moved when the ablation's data arrived (ADR-010 Decision 16). The two default rows (absent `model`, explicit null) now expect `openai/gpt-5.6-luna`: every candidate tied on correctness, so Decision 5's pre-committed rule fell to its cost tie-breaker and this is the cheapest cell. The third row is the interesting one — it used to assert that `anthropic/claude-sonnet-4.5` stayed reachable by explicit name while being priced out of the comparison, and it now asserts the opposite, a 422. Once the ablation picked a replacement, an allowlist that still accepted the superseded incumbent would leave a public endpoint able to spend on the model this system deliberately stopped paying for. The id is kept in the frozen snapshot, and the adapter now requires it to stay there and to stay over the ceiling: Decision 6 excluded it on price, and an exclusion nothing re-checks is a claim, not a guard."
 }

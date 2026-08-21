@@ -33,6 +33,9 @@ RUN_ROOT = Path("/tmp/runs")
 RUNS: dict[str, dict] = {}
 STREAMS: dict[str, asyncio.Queue] = {}
 SEM = asyncio.Semaphore(1)
+# The run currently holding SEM, for /readyz. One variable rather than a registry:
+# concurrency is 1 by design, so "which run" has exactly one answer or none.
+ACTIVE_RUN: str | None = None
 
 
 # --- Support matrix --------------------------------------------------------
@@ -190,9 +193,11 @@ def _env_failure(reason: str, model: str | None = None) -> dict:
 
 
 async def _execute(run_id: str, task: str, url: str | None, model: str):
+    global ACTIVE_RUN
     q = STREAMS[run_id]
     result = None
     async with SEM:
+        ACTIVE_RUN = run_id
         try:
             result = await run_task(
                 task, url, live_planner(model), RUN_ROOT / run_id, url_guard=url_ok,
@@ -219,6 +224,7 @@ async def _execute(run_id: str, task: str, url: str | None, model: str):
             if result is None:
                 result = _env_failure("run ended without producing a result", model)
             RUNS[run_id] = result
+            ACTIVE_RUN = None
             q.put_nowait({"event": "done", "result": result})
 
 
@@ -552,6 +558,45 @@ fetch("/support-matrix").then(r => r.json()).then(m => {
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return PAGE
+
+
+@app.get("/readyz")
+async def readyz():
+    """Can this service BEGIN a new task right now?
+
+    Distinct from /healthz, which stays liveness only and answers `{"ok": true}`
+    whether or not the agent can do anything. Through all five aborted ablation
+    sweeps /healthz answered in ~0.2s while submissions were failing, so a fast
+    /healthz is evidence the process exists and nothing more (support-matrix D18).
+
+    Semantics. `ready` means the run slot is free, so a task submitted now starts
+    immediately instead of queueing. It does NOT mean `POST /tasks` would be
+    rejected otherwise: submission always succeeds and queues behind `SEM`, so
+    readiness is about capacity to *begin*, not permission to *submit*.
+
+    Always HTTP 200, deliberately, including when not ready. The k8s convention
+    of 503-when-not-ready is wrong here: "busy with a run" is the normal, healthy
+    state of a concurrency-1 demo service, and a 503 invites the platform to
+    restart a container that is working exactly as designed.
+
+    What it proves: the event loop is serving requests, and the slot state as the
+    app understands it. Crucially, it is served by the SAME event loop that runs
+    the agent, so a /readyz that answers promptly with `busy: true` while a run
+    executes is positive evidence the loop is NOT blocked — which is one of the
+    named open candidates in D18. A slow or absent /readyz is the opposite signal.
+
+    What it does not prove: that a browser can launch, that the network path out
+    is healthy, or that a submitted run will succeed. It reads state; it starts
+    nothing and spends nothing.
+    """
+    busy = SEM.locked()
+    return {
+        "ready": not busy,
+        "busy": busy,
+        "active_run_id": ACTIVE_RUN,
+        "running": sum(1 for r in RUNS.values() if r.get("status") == "running"),
+        "reason": f"a run is executing ({ACTIVE_RUN})" if busy else None,
+    }
 
 
 @app.get("/healthz")

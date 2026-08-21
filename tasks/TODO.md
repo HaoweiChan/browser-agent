@@ -13,27 +13,24 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 ## Queue
 
 ### M9 — Cost/model ablation            [status: pr]
-PR: #15 · evidence pack in the PR body · ADR-010
+PR: #15 (mechanism, merged) + stage two (this branch) · ADR-010 · evidence in the PR bodies
 Spec: ≥2-model OpenRouter ablation, cost/latency tradeoff table, ADR for the
 default-model choice. Reviewer evidence: analysis (E4), E5 tradeoffs.
-Acceptance: table built from committed report runs, not estimates.
-State: **the mechanism ships; the table ships empty and graded.** The key lives
-only in Zeabur and `POST /tasks` could not vary the model, so the numbers cannot
-exist until this merges and redeploys. `analysis-ablation-table-not-estimated`
-holds the gap shut: while §9 declares itself pending it must carry zero data
-rows, and once it names a committed report every cell must equal what the
-driver's formatter derives from that report.
-Ceiling: the **model** `deepseek/deepseek-v4-pro`, not a number — its list price
-moved $1.44/$2.88 → $1.60/$3.20 per M inside one working session (two reads, two
-hours apart), so `PRICE_CEILING` was deleted and the eval derives the ceiling
-from the snapshot entry. No cell measures the incumbent `claude-sonnet-4.5`
-($3/$15, priced out), so the question is now "which affordable model replaces
-the default", with the ceiling an owner input, not a measurement (D14).
-Loop: 5 review rounds, 24 findings (4H/12M/8L), none rejected, 0 gate failures,
-$0.00 spent. Gate at merge: invariant 27/27, fast 91/91.
-Stage two after merge+redeploy: `python3 -m evals.ablation` → commit the report
-→ paste the table under `<!-- ablation-table -->` → name the report in §9.
-
+Acceptance: table built from committed report runs, not estimates. **Met** —
+`evals/report/20260821-004617-ablation.json`, re-derived cell-by-cell into
+`docs/analysis.md` §9 by `analysis-ablation-table-not-estimated`.
+Result: every candidate tied on correctness across a ~17x price range, so
+Decision 5's pre-committed rule fell to its cost tie-breaker and **the default
+moved to `openai/gpt-5.6-luna`** from `anthropic/claude-sonnet-4.5` (ADR-010
+Decision 18). The tie is *no observed difference*, not equivalence — the failed
+sweeps flipped the same cells in both directions, so a second sweep would not
+reproduce it cell-for-cell.
+Two findings larger than the ranking: one task failed on **all four** models with
+one signature (a `near:` capability boundary, D17 — counted against no model),
+and the deployment could not sustain a 20-run sweep (five aborted, D18).
+Guard inverted with the decision: it used to require the incumbent to be over
+the ceiling, now requires the default to be a model the ablation measured.
+Watched red four ways.
 ### M12 — Fast-suite wall-clock over budget            [status: todo]
 Origin: PR #12, declared in support-matrix D8 (promoted from Debt 2026-08-20 —
 M10 cannot exit green while a declared gate-budget breach stands)

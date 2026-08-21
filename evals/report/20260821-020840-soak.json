@@ -1,0 +1,560 @@
+{
+  "suite": "soak",
+  "base": "https://whaleforce-browser-agent.zeabur.app",
+  "task_set": [
+    "tc1-shop-price",
+    "tc2-shop-search",
+    "tc5-forms-submit",
+    "tc4-shop-sort-cheapest",
+    "live-books-travel-price"
+  ],
+  "sequences": 2,
+  "infrastructure_failures": 0,
+  "completed": 10,
+  "attempted": 10,
+  "correct": 8,
+  "demo_ready": true,
+  "phases_seen": [],
+  "results": [
+    {
+      "task_id": "tc1-shop-price",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop-lamp-std.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.198,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "99ca838c",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.219,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.206,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "$39.00",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "$39.00",
+      "ground_truth": "evals/golden/tc1-shop-price.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 899,
+        "llm_usd": 0.003861,
+        "replans": 0,
+        "ms": 3324
+      },
+      "client_seconds": 5.02,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.208,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "tc2-shop-search",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.214,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "adb194ca",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.216,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.214,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "Meridian Wall Clock",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "Meridian Wall Clock",
+      "ground_truth": "evals/golden/tc2-shop-search.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1052,
+        "llm_usd": 0.005328,
+        "replans": 0,
+        "ms": 5543
+      },
+      "client_seconds": 7.14,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.141,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "tc5-forms-submit",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/forms.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.14,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "d857d957",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.193,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.13,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "REF-6B5159",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "REF-6B5159",
+      "ground_truth": "evals/golden/tc5-forms-submit.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 6,
+        "llm_tokens": 1960,
+        "llm_usd": 0.010368,
+        "replans": 1,
+        "ms": 11267
+      },
+      "client_seconds": 13.53,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.137,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "tc4-shop-sort-cheapest",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.138,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "0784d8c7",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.132,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.135,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "Cobalt Floor Rug",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "Cobalt Floor Rug",
+      "ground_truth": "evals/golden/tc4-shop-sort-cheapest.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 1013,
+        "llm_usd": 0.004743,
+        "replans": 0,
+        "ms": 3739
+      },
+      "client_seconds": 4.68,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.143,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "live-books-travel-price",
+      "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.209,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "b9ef3ae6",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.218,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.205,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 4 (extract): ResolveError: no tier resolved {'role': 'text', 'name': None, 'text': None, 'near': 'price'}",
+      "verdict": null,
+      "expect_answer": "£45.17",
+      "ground_truth": "evals/golden/live-books-travel-price.json",
+      "correct": false,
+      "measured": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1543,
+        "llm_usd": 0.006825,
+        "replans": 0,
+        "ms": 6908
+      },
+      "client_seconds": 7.18,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.21,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "tc1-shop-price",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop-lamp-std.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.205,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "08c843c3",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.206,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.214,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "$39.00",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "$39.00",
+      "ground_truth": "evals/golden/tc1-shop-price.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 899,
+        "llm_usd": 0.003861,
+        "replans": 0,
+        "ms": 3104
+      },
+      "client_seconds": 5.06,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.209,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 2
+    },
+    {
+      "task_id": "tc2-shop-search",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.134,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "50b49960",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.136,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.133,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "Meridian Wall Clock",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "Meridian Wall Clock",
+      "ground_truth": "evals/golden/tc2-shop-search.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1052,
+        "llm_usd": 0.005328,
+        "replans": 0,
+        "ms": 4841
+      },
+      "client_seconds": 6.82,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.136,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 2
+    },
+    {
+      "task_id": "tc5-forms-submit",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/forms.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.136,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "02cd5f64",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.135,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.136,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "REF-6B5159",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "REF-6B5159",
+      "ground_truth": "evals/golden/tc5-forms-submit.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 6,
+        "llm_tokens": 1954,
+        "llm_usd": 0.010278,
+        "replans": 1,
+        "ms": 10111
+      },
+      "client_seconds": 11.27,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.207,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 2
+    },
+    {
+      "task_id": "tc4-shop-sort-cheapest",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.214,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "75e8fa90",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.205,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.135,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "Cobalt Floor Rug",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "Cobalt Floor Rug",
+      "ground_truth": "evals/golden/tc4-shop-sort-cheapest.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 1013,
+        "llm_usd": 0.004743,
+        "replans": 0,
+        "ms": 5028
+      },
+      "client_seconds": 7.14,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.212,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 2
+    },
+    {
+      "task_id": "live-books-travel-price",
+      "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+      "readyz_before": {
+        "ok": false,
+        "seconds": 0.213,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "run_id": "564b2000",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": false,
+          "seconds": 0.214,
+          "http": 404,
+          "body": null,
+          "note": "endpoint not on this build"
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.213,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 4 (extract): ResolveError: no tier resolved {'role': 'text', 'name': None, 'text': None, 'near': 'price'}",
+      "verdict": null,
+      "expect_answer": "£45.17",
+      "ground_truth": "evals/golden/live-books-travel-price.json",
+      "correct": false,
+      "measured": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1543,
+        "llm_usd": 0.006825,
+        "replans": 0,
+        "ms": 6420
+      },
+      "client_seconds": 7.15,
+      "readyz_after": {
+        "ok": false,
+        "seconds": 0.21,
+        "http": 404,
+        "body": null,
+        "note": "endpoint not on this build"
+      },
+      "sequence": 2
+    }
+  ]
+}

@@ -760,6 +760,99 @@ def _run_adr_header_index_case(case: dict) -> dict:
             "got": {"adr_files": len(adr_files), "index_entries": len(index_nums)}}
 
 
+def _run_readyz_case(case: dict) -> dict:
+    """/readyz must track the run slot: idle -> busy(with this run) -> idle.
+
+    A status-code assertion would prove nothing here — /readyz answers 200 in
+    every state by design (a concurrency-1 demo that 503s while working invites
+    the platform to restart it). So the contract graded is the TRANSITION, and
+    all three samples come from one submission: a hardcoded `ready: true` dies on
+    the middle sample, a hardcoded `false` dies on the outer two, and a field that
+    is merely present but static dies on both.
+
+    The busy window is made deterministic by stubbing the planner to hold for a
+    fixed interval — the planner is awaited inside `async with SEM`, so the slot
+    is genuinely held, with no browser and no spend.
+    """
+    import asyncio as _a
+
+    from . import server as S
+
+    inp = case["input"]
+    hold = float(inp.get("hold_seconds", 3.0))
+    base, prev = _base_url(), S.live_planner
+    # The guard refuses loopback in every spelling, which is exactly right for a
+    # public endpoint and exactly wrong for an in-process fixture run. Patched
+    # eval-side for the duration and restored in the `finally`, never softened in
+    # `server.py` — the same trade `_run_gateway_model_case` documents.
+    prev_guard = S.url_ok
+
+    def holding_planner(model=None):
+        async def plan(task, url, observation=None, note=None):
+            await _a.sleep(hold)
+            return [{"action": "extract", "target": {"role": "heading"}, "anchor": None,
+                     "value": None, "expected_state": None}], {"llm_tokens": 0, "llm_usd": 0.0}
+        return plan
+
+    S.live_planner, S.url_ok = holding_planner, lambda u: True
+    try:
+        before = _get_json("/readyz")
+        t0 = time.monotonic()
+        req = urllib.request.Request(
+            f"{base}/tasks",
+            data=json.dumps({"task": inp["task"],
+                             "url": f"{base}/fixtures/hello.html"}).encode(),
+            headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=10) as r:
+            run_id = json.load(r)["run_id"]
+        # Sample while the stubbed planner is still holding the semaphore.
+        time.sleep(min(1.0, hold / 3))
+        during_t = time.monotonic()
+        during = _get_json("/readyz")
+        during_latency = round(time.monotonic() - during_t, 3)
+        deadline = time.monotonic() + hold + 30
+        while time.monotonic() < deadline:
+            if S.RUNS.get(run_id, {}).get("status") != "running":
+                break
+            time.sleep(0.2)
+        after = _get_json("/readyz")
+        elapsed = round(time.monotonic() - t0, 2)
+    finally:
+        S.live_planner, S.url_ok = prev, prev_guard
+
+    def state(r):
+        return "idle" if (r.get("ready") and not r.get("busy")) else (
+            "busy" if (r.get("busy") and not r.get("ready")) else "incoherent")
+
+    got = [state(before), state(during), state(after)]
+    wrong = {}
+    if got != case["expect"]["transitions"]:
+        wrong["transitions"] = {"want": case["expect"]["transitions"], "got": got,
+                                "samples": [before, during, after]}
+    # Identity, not just a boolean: `busy` alone cannot tell you WHICH run holds
+    # the slot, and that is the field an operator needs when a submission hangs.
+    if during.get("active_run_id") != run_id:
+        wrong["active_run_id_during"] = {"want": run_id, "got": during.get("active_run_id")}
+    if before.get("active_run_id") is not None or after.get("active_run_id") is not None:
+        wrong["active_run_id_when_idle"] = {"before": before.get("active_run_id"),
+                                            "after": after.get("active_run_id")}
+    if during.get("running", 0) < 1:
+        wrong["running_count_during"] = during.get("running")
+    # `reason` is the operator-facing half of the contract: present exactly when
+    # not ready, absent exactly when ready.
+    if before.get("reason") is not None or after.get("reason") is not None or not during.get("reason"):
+        wrong["reason_polarity"] = {"before": before.get("reason"), "during": during.get("reason"),
+                                    "after": after.get("reason")}
+    # /readyz shares the agent's event loop. A prompt `busy` answer WHILE a run
+    # holds the slot is positive evidence the loop is not blocked — the point of
+    # the endpoint, and one of D18's open candidates. Loose bound: this is a
+    # liveness property, not a benchmark.
+    if during_latency > 2.0:
+        wrong["readyz_slow_while_busy"] = during_latency
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"states": got, "during_latency_s": during_latency, "run_seconds": elapsed}}
+
+
 def _run_stream_case(case: dict) -> dict:
     """The progress stream must show the run that happened, not a tidier one.
 
@@ -910,13 +1003,27 @@ def _run_gateway_model_case(case: dict) -> dict:
     # <date>" is a claim about a list that can be edited independently of the
     # snapshot it was verified from (spec-drift audit, M9).
     if verified := case["input"].get("verified_ids_file"):
-        from .planner import ABLATION_MODELS, ALLOWED_MODELS, CEILING_MODEL, DEFAULT_MODEL
+        from .planner import (ABLATION_MODELS, ALLOWED_MODELS, CEILING_MODEL,
+                              DEFAULT_MODEL, SUPERSEDED_INCUMBENT)
 
         snap = json.loads((Path(__file__).parents[2] / verified).read_text(encoding="utf-8"))
         snap_ids = [m["id"] for m in snap["models"]]
-        if snap_ids != list(ALLOWED_MODELS):
-            wrong.append({"allowlist": list(ALLOWED_MODELS), "verified_snapshot": snap_ids,
-                          "read_on": snap.get("_read_on")})
+        # Every allowlisted id must be frozen evidence. Containment, not equality:
+        # since 2026-08-21 the snapshot is deliberately a superset, because it
+        # still carries the SUPERSEDED incumbent (`anthropic/claude-sonnet-4.5`),
+        # which is the evidence for Decision 6's exclusion and is no longer
+        # accepted by the endpoint. Equality would force a choice between deleting
+        # that evidence and re-accepting a model the system stopped paying for.
+        if unfrozen := [m for m in ALLOWED_MODELS if m not in snap_ids]:
+            wrong.append({"allowlisted_but_not_in_the_verified_snapshot": unfrozen,
+                          "verified_snapshot": snap_ids, "read_on": snap.get("_read_on")})
+        if SUPERSEDED_INCUMBENT in ALLOWED_MODELS:
+            wrong.append({"superseded_incumbent_still_accepted": SUPERSEDED_INCUMBENT})
+        if SUPERSEDED_INCUMBENT not in snap_ids:
+            wrong.append({"superseded_incumbent_dropped_from_the_snapshot":
+                          SUPERSEDED_INCUMBENT,
+                          "note": "it is the evidence for ADR-010 Decision 6; without it "
+                                  "the reason the default moved is unfalsifiable"})
         # The owner's ceiling, DERIVED from the snapshot rather than compared
         # against a second copy of the same numbers. The old version held a
         # literal in planner.py and checked the snapshot against it, so it could
@@ -938,13 +1045,38 @@ def _run_gateway_model_case(case: dict) -> dict:
                            "ceiling": cap}
                           for mid in ABLATION_MODELS for k, cap in ceiling.items()
                           if mid in price and float(price[mid][k]) > cap]
-                # The other direction, and the one that keeps ADR-010 Decision 6
-                # honest: the incumbent must still be OVER the bar. If a price
-                # move ever brought it under, the exclusion needs re-deciding,
-                # not re-asserting.
-                if all(float(price[DEFAULT_MODEL][k]) <= cap for k, cap in ceiling.items()):
-                    wrong.append({"default_now_fits_the_ceiling": DEFAULT_MODEL,
+                # The other direction. Until 2026-08-21 this asserted that the
+                # INCUMBENT was still over the bar, so that a price move would
+                # force the exclusion to be re-decided rather than re-asserted.
+                # It fired exactly as designed when the default was changed, which
+                # is the signal that retired it: the default is no longer an
+                # unmeasured model held outside the comparison, it is the model
+                # the comparison PICKED (Decision 5's rule, Decision 16's data).
+                #
+                # So the property inverts, and gets stronger. The default must be
+                # a model the ablation actually measured — which makes it at or
+                # under the ceiling by construction, and makes "the default was
+                # chosen by a rule written before the numbers" checkable rather
+                # than merely written down.
+                if DEFAULT_MODEL not in ABLATION_MODELS:
+                    wrong.append({"default_not_measured_by_the_ablation": DEFAULT_MODEL,
+                                  "ablated": list(ABLATION_MODELS),
+                                  "note": "since ADR-010 Decision 16 the default is the "
+                                          "ablation's own pick; a default no cell measured "
+                                          "is the arrangement M9 existed to end"})
+                elif any(float(price[DEFAULT_MODEL][k]) > cap for k, cap in ceiling.items()):
+                    wrong.append({"default_over_the_owner_ceiling": DEFAULT_MODEL,
                                   "pricing": price[DEFAULT_MODEL], "ceiling": ceiling})
+                # And the superseded incumbent must still be over it — that is
+                # what Decision 6 claims, and it is now claimed about a model the
+                # allowlist no longer contains, so nothing else would check it.
+                if SUPERSEDED_INCUMBENT in price and all(
+                        float(price[SUPERSEDED_INCUMBENT][k]) <= cap for k, cap in ceiling.items()):
+                    wrong.append({"superseded_incumbent_now_fits_the_ceiling":
+                                  SUPERSEDED_INCUMBENT,
+                                  "pricing": price[SUPERSEDED_INCUMBENT], "ceiling": ceiling,
+                                  "note": "Decision 6 excluded it on price; if that stopped "
+                                          "being true the exclusion needs re-deciding"})
     # The swap goes INSIDE the try whose finally restores it. It used to sit above
     # the snapshot block, so a renamed or malformed snapshot file raised with the
     # recorder still installed, breaking every later case in the same process and
@@ -1765,6 +1897,7 @@ KINDS = {
     "ablation-run-one": _run_ablation_run_one_case,
     "ablation-table": _run_ablation_table_case,
     "adr-header-index": _run_adr_header_index_case,
+    "readyz-transitions": _run_readyz_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,
