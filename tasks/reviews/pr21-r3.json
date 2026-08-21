@@ -1,0 +1,19 @@
+{
+  "pr": 21, "round": 3, "result": "REQUEST_CHANGES",
+  "scope": "round-2 repair diff (7965056~1..HEAD) plus the one standing finding",
+  "gate": {"invariant": "31/31", "fast": "95/95", "cost_usd": 0.0},
+  "counts": {"HIGH": 0, "MEDIUM": 1, "LOW": 1},
+  "circuit_breaker": "tripped — 3 review rounds without approval; escalated to the human rather than opening round 4",
+  "findings": [
+    {"id": "R16", "severity": "MEDIUM", "route": "repair-if-human-approves-round-4",
+     "claim": "R11's shape survives one step further in `demo_ready`: both `summarize` reports the case grades pin `demo_ready: False`, so a `summarize` that returns the constant `False` is still green — while the case's own triage note (an artifact of record) claims `demo_ready` is now 'graded in both directions'.",
+     "evidence": "src/browser/eval_adapter.py:1980 and :2008 are the only two assertions of the field anywhere; no case pins it True. Replacing evals/soak.py:203 with `\"demo_ready\": False,` leaves the case passing. The claim it falsifies is at evals/adversarial/soak-counts-only-real-completions.json:99 and tasks/reviews/pr21-r2-resolution.json:15. Harm direction is conservative (a false-negative go/no-go verdict on a soak that costs real money to re-run), which is why MEDIUM not HIGH.",
+     "repro": "Load soak.py with demo_ready forced False and run the case -> passed=True. Control (infrastructure_failures forced 0) -> passed=False.",
+     "acceptance": "One report in the case is clean-and-measured and asserts demo_ready: True, so the constant-False mutation reddens, watched. The retry probe at eval_adapter.py:2039-2044 already builds exactly such a row and already calls SK.summarize([row], BASE, 1), which returns demo_ready: True — so this is one added key on an existing report. Either that, or the triage note and the resolution artifact stop claiming both directions."},
+    {"id": "R17", "severity": "LOW", "route": "debt",
+     "claim": "The swept-surface inventory is incomplete: `results` — the per-row evidence body every committed soak report and D20's row-level recomputation rest on — is neither graded nor listed as a deliberate passthrough, and the triage note calls transport_retries 'the remaining published field' when five are unasserted.",
+     "evidence": "evals/soak.py:206 `\"results\": rows` is one of 13 keys summarize returns; tasks/reviews/pr21-r2-resolution.json:14-18 accounts for 12 and omits results. Mutating summarize to return {**report, 'results': []} leaves the case passing, and the retry probe's substring check still passes because transport_retries[*].attempts carries the string — so nothing reddens when the artifact loses all its evidence rows.",
+     "repro": "Wrap summarize and blank results -> passed=True. Control: blanking not_a_measurement -> passed=False.",
+     "acceptance": "Either a want dict asserts len(report['results']) == len(rows), or the inventory and the triage sentence name results and the passthrough group so the sweep claim is honest about what it does not cover."}
+  ]
+}
