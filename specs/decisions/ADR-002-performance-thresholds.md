@@ -1,13 +1,13 @@
 # ADR-002: Performance thresholds set from the M2 baseline
 
 Date: 2026-08-16
-Status: accepted; **Decision 4 (fast wall clock ≤ 60s) is knowingly breached since M8** — the gate measures 66.6-68.3s, 10.6s of it one case spending a deliberate Playwright click timeout. Declared rather than silently re-set: `specs/decisions/ADR-009-m8-mutation-hostility.md` Decision 6 and `docs/support-matrix.md` D8 carry the measurement, the reasoning, and the named fix (the parallel eval runner, still backlog). Decisions 1-3, 5 and 6 stand as written.
+Status: accepted; all six decisions stand as written. **Decision 4 (fast wall clock ≤ 60s) was knowingly breached from M8 to M12** — the gate measured 66.6-68.3s — and the breach is **closed at M12 without moving the ceiling**: `specs/decisions/ADR-013-fast-suite-wall-clock.md` measured 11.3s of the 67.0s as per-case browser process lifecycle, removed it, and left the deliberate 42.2s of timeouts untouched. **Decision 4 is also amended in scope**: the ceiling is per-environment since ADR-013 Decision 3 — **60s locally, 80s on CI** via `EVAL_WALL_BUDGET_S`, both measured and both enforced — because CI had been running `fast` in 89.62s against this same 60s for its entire existence with nothing checking. ADR-013 Decision 4 tried re-measuring the local number to 70s on the M9-stage-2 merge, then withdrew that the same day on round-5 review when the band behind it did not reproduce; the local number ships unchanged at 60s. Enforced by `evals/run.py` and graded by `fast-wall-clock-budget` rather than asserted in this file.
 
-**Amended by**: ADR-009 (Decision 4's 60s wall-clock ceiling, declared breached rather than reset)
+**Amended by**: ADR-009 (Decision 4's 60s wall-clock ceiling, declared breached rather than reset); ADR-013 (that breach closed, enforcement added, the ceiling made per-environment in its Decision 3; its Decision 4 tried and withdrew a 60s -> 70s local re-measurement the same day)
 
-**Ruling**: Sets the pre-commit gate: `fast` suite ≥ the committed baseline (1.000), `invariant` suite = 100% unconditional, trap-catch ≥ 90% as a floor never a verifier-accuracy claim, `fast` suite cost = $0.00 exactly, and `fast` suite wall clock ≤ 60s (later knowingly breached, see Amended by).
+**Ruling**: Sets the pre-commit gate: `fast` suite ≥ the committed baseline (1.000), `invariant` suite = 100% unconditional, trap-catch ≥ 90% as a floor never a verifier-accuracy claim, `fast` suite cost = $0.00 exactly, and `fast` suite wall clock ≤ the environment's own measured ceiling — 60s local, 80s CI (breached M8-M12, restored, made per-environment, a local re-measurement to 70s tried and withdrawn — see Amended by).
 **Because**: Naming performance targets before a baseline exists invites goalpost-moving in a history reviewers read.
-**Enforced by**: `.eval-baseline.json` + `.githooks/pre-commit` (fast-suite gate); `invariant` suite = 100% enforced unconditionally in `evals/run.py`.
+**Enforced by**: `.eval-baseline.json` + `.githooks/pre-commit` (fast-suite gate); `invariant` suite = 100% enforced unconditionally in `evals/run.py`; wall clock by `fast-wall-clock-budget` (ADR-013).
 
 ---
 
@@ -61,8 +61,25 @@ file:
    sample of imaginable wrongness and is stated as such. The cold review makes
    the point sharper than any prose could: it produced three wrong-answer
    inputs the trap set did not contain.
-4. **`fast` suite wall clock ≤ 60s.** At ~13s there is room for M3–M4 cases;
-   past 60s the pre-commit gate stops being run honestly.
+4. **`fast` suite wall clock ≤ the environment's measured ceiling** —
+   **60s locally**, 80s on CI. At ~13s there is room for M3–M4 cases; past the
+   ceiling the pre-commit gate stops being run honestly, which is what the number
+   is for. (Breached M8-M12 at 66.6-68.3s and declared rather than reset; closed
+   at M12 and applied by `evals/run.py` to the run it measured;
+   per-environment since ADR-013 Decision 3. The local number was **tried at
+   70s in ADR-013 Decision 4** when the M9-stage-2 merge put the suite at
+   59.4-60.2s across seven runs — straddling the old line, with the excess
+   measured to be evidence rather than waste — but the seven-run band that
+   justified going to 70s did not reproduce under round-5 review (~22 runs
+   across three independent measurers, idle and deliberately CPU-loaded
+   alike, landed at 58.96-59.87s), so the amendment was withdrawn the same
+   day and the local number ships at **60s** — not with a clean margin,
+   though: post-commit verification found the reproducible band is really
+   58.83-60.26s, one further run over the line by a few tenths against 42
+   that were not, an unexplained low-single-digit-percent tail CPU load did
+   not account for (ADR-013 Decision 4, in full). CI's ceiling comes from the same
+   stated rule — the slowest observed run plus 15%, rounded up to a multiple
+   of five — unaffected by this correction.)
 5. **`fast` suite cost = $0.00 exactly.** Not a budget — a boundary. Any
    non-zero figure means an LLM call escaped the stub and is a defect.
 6. **Live cost ≤ $0.01 per task** at the current model, alarm rather than a

@@ -1,0 +1,67 @@
+{
+  "pr": 20,
+  "round": 4,
+  "task": "M12",
+  "findings": [
+    {
+      "id": "R14",
+      "status": "fixed",
+      "covering_case": "readyz-tracks-the-run-slot",
+      "what_changed": "hold_seconds reduced 3.0 -> 2.0, derived from the start-race margin rather than copied from the reviewer's measured-passing value: the /readyz sample lands min(1.0, hold/3)s after submission and that gap must clear the real submission-to-busy latency, measured at 4.3-5.2ms typically over 15 in-process trials (one 62ms cold-interpreter outlier). hold=2.0 gives a 0.667s sample gap, ~10x the worst outlier, vs hold=1.0's 0.33s (5x the outlier) -- more margin than the value review happened to see pass, for a stated reason rather than none. Recovers ~1.0s/suite run (case cost 3.55s -> 2.51s). Re-measured the fast suite 7x post-fix: 58.69/58.79/59.05/59.27/59.96/60.44/60.59s -- still straddles 60 (2/7 over), so acceptance branch 1 (revert to 60) is not available even after the fix; branch 2 taken, WALL_BUDGET_S stays 70 (60.59 x 1.15 = 69.7 -> 70). ADR-013 Decision 4 rewritten: the false 'sweep above found no third [shape]' claim replaced with the real third shape found, what was recovered, why the rest (42.2s of deliberate bound-waiting) is irreducible by this route. fast-wall-clock-budget provenance gets falsification (5) recording the same."
+    },
+    {
+      "id": "R15",
+      "status": "fixed",
+      "covering_case": "readyz-tracks-the-run-slot (ADR-013 Decision 4 text)",
+      "what_changed": "The published local band is now the full post-fix 7-run set (58.69-60.59s), none omitted, and the ceiling rule is fed the slowest of those (60.59s), not a hand-picked subset. 60.59 x 1.15 = 69.7 -> 70, same number as before but now honestly derived. The pre-fix 7-run band in the same Decision 4 paragraph is left as the historical record of what was measured before this round (59.35-60.16, already the full set at the time -- R15's defect was that a later round-4 repro grabbed a cherry-picked subset of a *different*, larger history.jsonl slice than what Decision 4 actually published; Decision 4's own seven numbers were already the complete set for that measurement session)."
+    },
+    {
+      "id": "R16",
+      "status": "fixed",
+      "covering_case": "n/a (doc-only; ADR-013 + evals/run.py + ADR-002)",
+      "what_changed": "ADR-013 Amends line now reads 'ceiling re-measured 60s -> 70s locally' instead of 'ceiling unmoved'. The Decision-1 tagline ('Route: remove the waste, keep the ceiling') gets a clause explaining 'keep' means keep-enforced-and-measured, not keep-the-digits, since Decision 4 later re-measures it. Decision 2's '60.00/60.01' boundary text and Decision 3's 'falls back to the committed 60' text both now say the number was 60 when written and is 70 today (Decision 4). evals/run.py:75 comment fixed 'past 60s' -> 'past 70s'. ADR-002:68 '56.47s' (a stale 95-case figure) fixed to '60.51s over 97 cases', matching ADR-013's own Consequences number."
+    },
+    {
+      "id": "R17",
+      "status": "fixed",
+      "covering_case": "n/a (doc-only; tasks/TODO.md)",
+      "what_changed": "tasks/TODO.md M12 block: 'Resolved by acceptance branch 1' -> 'acceptance branch 2', matching ADR-013 Decision 4's own text ('this is the acceptance criterion's second branch') and the fact that 60.51s (and the post-R14 60.51-60.59s band) is over the original 60s line."
+    },
+    {
+      "id": "R18",
+      "status": "fixed",
+      "covering_case": "wall-clock-probe-history-isolated",
+      "what_changed": "_main_exit_code (src/browser/eval_adapter.py) now redirects R.HISTORY and R.REPORT_DIR to a tempfile.TemporaryDirectory() for the duration of the R.main() call, inside the existing try/finally that already restores sys.argv/load_cases/run_case. Deleted the 87 fabricated total==1 lines (wall_s 59.88/79.02, a shape no real run produces) from the working-tree evals/report/history.jsonl -- 55 already committed at HEAD plus 32 added by repro/dirty-tree runs this session. New case wall-clock-probe-history-isolated watched red pre-fix (two calls to _main_exit_code added two lines to the real history.jsonl) and green post-fix (zero lines added); it is tagged both fast and invariant. Verified with a live fast/invariant suite run afterward: exactly one real history line per run, zero fabricated."
+    },
+    {
+      "id": "R19",
+      "status": "fixed",
+      "covering_case": "report-citations-resolve (prune verified against it post-deletion)",
+      "what_changed": "Deleted the 38 uncited routine dumps the merge had re-added (20 fast, 18 invariant; live/soak/ablation files left alone per ADR-012 Consequences' non-prunable-by-policy exemption). report-citations-resolve still passes (19 citations, all resolve) after the prune. The reverse-direction guard (file -> citation, so a future merge cannot silently re-inflate the directory) was judged more than a few lines to build correctly (has to classify by kind, apply the live/soak/ablation exemption, and avoid false positives on files added the same run) -- logged as debt T-R19 in tasks/TODO.md rather than built in this round, per the round's own guidance to prune-and-defer when the guard isn't cheap."
+    },
+    {
+      "id": "R20",
+      "status": "fixed",
+      "covering_case": "report-citations-resolve",
+      "what_changed": "REPORT_CITATION_SKIP narrowed from the ('tasks/reviews',) path prefix to the one literal ('29991231-235959-fast.json',) that is genuinely not a citation (R1's synthetic create-this-file repro instruction). _run_report_citations_case now scans every file in scope (no path skip) and subtracts the literal from the resulting citation set, so the 8 real review citations under tasks/reviews/ (pr20-r1-resolution.json, pr20-r2.json, pr20-r2-resolution.json, pr20-r4.json) are guarded again. Added expect.skip_exactly=['29991231-235959-fast.json'] and a check in the adapter that fails if REPORT_CITATION_SKIP doesn't match exactly -- watched red by simulating the old path-prefix skip (fails on both the missing-report check moving evals/report/20260821-121835-fast.json aside, and now also on the skip_exactly mismatch), green with the current narrow skip."
+    },
+    {
+      "id": "R21",
+      "status": "debt",
+      "debt_id": "T-R21",
+      "reason": "Routed debt by the reviewer; LOW severity; behaviour verified working by hand, only ungraded. Logged in tasks/TODO.md ## Debt with Origin: PR #20 R21 and evidence verbatim, not fixed per instruction."
+    },
+    {
+      "id": "R22",
+      "status": "fixed",
+      "covering_case": "n/a (doc-only; ADR-013 Decision 3)",
+      "what_changed": "'straddled the old 60s on four of eight runs' replaced with the correct reading: the first CI band (59.77/60.84/64.61/64.67) straddles 3 of its 4 runs, not 4 of 8 under any grouping (all eight runs is 7/8 over, not 4/8 either). 'Four runs of one commit' corrected: verified via gh api that run 32465066308 attempt 1 is 94f1a42 and 32465584897's three re-run attempts are all 7a2869a -- the CI band is one run at the pre-merge sha plus three at the post-merge sha, not four runs of one commit."
+    },
+    {
+      "id": "R23",
+      "status": "debt",
+      "debt_id": "T-R23",
+      "reason": "Routed debt by the reviewer; LOW and cosmetic -- the classification (what matters) is correct and was verified by hand; only a tally in a commit message (already merged, not editable) is off by one. Logged in tasks/TODO.md ## Debt with Origin: PR #20 R23 and evidence verbatim, not fixed per instruction."
+    }
+  ]
+}

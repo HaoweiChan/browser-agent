@@ -1,0 +1,61 @@
+{
+  "pr": 20,
+  "round": 2,
+  "task": "M12",
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff b8215fd..06ddbd3 plus the standing round-1 findings — not a fresh full-diff sweep",
+  "round1_verdict": "R1, R2, R3, R7 verified fixed and not re-raised. R5, R6 debt blocks verified present and faithful. R4's deviation (recorded fixed rather than debt) verified: no report-reading path remains that R4 could describe.",
+  "scope_note": "R8 blocks on its own merits. R9, R10 and R11 are LOW and would normally route debt; they are folded into this repair round because each is a sub-one-line correction to text this PR already rewrote, and all three are the same family as R3 — a published number or a case's own self-description that is not true. Merging a PR whose thesis is honest measurement while it knowingly publishes a wrong unqualified case count is the contradiction the task exists to remove. R12 is left as debt: it is a real behavioural gap on a CLAUDE.md-sanctioned command path and deserves its own decision, not a fold.",
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "The same defect R1 named, one level up: ADR-013 Decision 2 publishes that the runner 'applies it ... and exits non-zero with a named line', and nothing in the eval set grades that half. Reviewer measured a 79.02s run reporting 90/90 = 1.000 at exit 0 with the call site deleted. The acceptance is bounded (grade the call site directly), so this terminates rather than regressing forever.",
+      "claim": "R1's repair moved the ceiling into `evals/run.py`, but nothing in the eval set grades the call site — deleting the five-line `if over_budget(...)` block in `main()` leaves a 79.02s `fast` run reporting 90/90 = 1.000 with `fast-wall-clock-budget` PASSing and exit 0, which is the exact defect R1 named, one level up.",
+      "evidence": "evals/run.py:166-170 is the only thing that turns the ruling into an exit code. src/browser/eval_adapter.py:1055-1063 imports only `WALL_BUDGET_S` and `over_budget` and never inspects `main()`, and its own triage note concedes \"two halves that have to stay in sync\" while pinning one. ADR-013 Decision 2 publishes the unpinned half verbatim: \"applies it to `totals[\"wall_seconds\"]` of the run it has just finished, and exits non-zero with a named line\". Measured: with lines 166-170 removed from a copy of the tree and 0.25s injected per case inside `run_case`'s timed region, output was `[PASS] fast-wall-clock-budget` / `suite 'fast': 90/90 = 1.000` / `wall 79.02s` / process exit 0 — 19s (32%) over the ceiling, whole suite green.",
+      "repro": "cp -a the worktree to a scratch dir, delete the `if over_budget(args.suite, totals[\"wall_seconds\"]):` block (evals/run.py:166-170), then run the fast suite with `time.sleep(0.25)` wrapped around `src.browser.eval_adapter.run_case` and `--no-report`. Observed: 90/90 = 1.000, wall 79.02s, exit 0, no stderr. Unmodified tree, same injection: `OVER BUDGET: suite 'fast' wall clock 79.02s > 60s`, exit 1.",
+      "acceptance": "A case goes red when the enforcement call site is absent — e.g. `fast-wall-clock-budget` also asserts the ruling is applied in `evals.run.main` (one `inspect.getsource(evals.run.main)` check, or an in-process `main()` invocation over a stub result set that must return 1 for an over-budget total). Watch it red with lines 166-170 deleted before it is added."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "repair",
+      "route_reason": "Folded: same family as R3 (blocking), a one-line correction in a file this repair already rewrote in two other places, and the only stale count in the repo carrying no qualifier.",
+      "claim": "The R3/R7 repair updated README's case counts in two places but left a third stating the wrong ones — README still publishes \"96 cases (86 of them in the offline gate)\" in present tense with no report or milestone cited, against the actual 100 cases / 90 in the gate this PR establishes.",
+      "evidence": "README.md:235 — \"The eval set is not weak; it is 96 cases (86 of them in the offline gate)\". The same commit changed README.md:38 from \"89 cases\" to \"90 cases\" and README.md:52-56 to the newest triple. Ground truth: `ls evals/golden/*.json evals/adversarial/*.json | wc -l` = 100 (20 + 80); `evals/report/20260821-121835-fast.json` has `len(results) == 90`. Unlike docs/analysis.md:29 (M8 table, explicitly cited), docs/support-matrix.md:25 (\"rest on the M8 runs\") and docs/analysis.md:419 (\"76 cases (M6)\"), line 235 carries no qualifier. It was already stale by one on `main` (97/87) and this PR widened the gap to four.",
+      "repro": "`grep -n '96 cases' README.md` → line 235; compare with `ls evals/golden/*.json evals/adversarial/*.json | wc -l` → 100 and `python3 -c \"import json;print(len(json.load(open('evals/report/20260821-121835-fast.json'))['results']))\"` → 90.",
+      "acceptance": "README.md:235 reads 100 cases / 90 in the offline gate, or names the report it is quoting the way the other stale-but-honest figures do."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "repair",
+      "route_reason": "Folded: prose this repair added, in a document whose preamble promises every number is read out of a committed report. A causal sentence that does not reconcile is the same defect as a stale number.",
+      "claim": "The new prose in docs/analysis.md explaining the case-count move does not reconcile: it attributes a rise from 86 (M8 table, directly above) to 90 (new table) to \"three cases of its own\", which is one short.",
+      "evidence": "docs/analysis.md:44-45 — \"the case count rose because that change brought three cases of its own\", printed between a table row reading `fast … 86` (line 29) and one reading `fast … 90` (line 40). `git diff --name-status main...06ddbd3 -- evals/golden evals/adversarial` shows exactly three added files (`agent-launches-its-own-browser`, `fast-wall-clock-budget`, `shared-browser-relaunches-when-dead`); `main` already carried 87 `fast`-tagged cases, so the fourth case came from between M8 and M12 and is unaccounted for.",
+      "repro": "Count `fast`-tagged cases on main: 87. On 06ddbd3: 90. 90 - 87 = 3 added by this PR; 90 - 86 = 4 since the M8 table the sentence is explaining.",
+      "acceptance": "The sentence accounts for all four cases between the two tables (three from M12, one from the milestone in between), or drops the causal attribution."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "repair",
+      "route_reason": "Folded: one table row. The case's own note claims it pins something it does not pin, which is the R8 shape in miniature and cheap to make true.",
+      "claim": "`fast-wall-clock-budget`'s expect note claims it pins that `fast` is the only suite carrying a ceiling, but its row table omits the `full` suite, so `WALL_BUDGET_S[\"full\"] = 1` is added without the case going red.",
+      "evidence": "evals/adversarial/fast-wall-clock-budget.json:7-17 lists rows for `fast`, `invariant`, `live` and `all` only; `expect.note` says \"only `fast` carries a ceiling\" and `triage.note` says \"a later edit cannot quietly … move it onto another suite\". `full` is a first-class suite tag in CLAUDE.md's command list. Measured in-process: after `evals.run.WALL_BUDGET_S['full'] = 1`, `eval_adapter.run_case(case)['passed']` is `True`; the same mutation on `live` correctly returns `False`.",
+      "repro": "`python -c` in the worktree: import `evals.run` and `src.browser.eval_adapter`, set `evals.run.WALL_BUDGET_S['full']=1`, run the case → `passed: True`.",
+      "acceptance": "A `{\"suite\": \"full\", \"wall_seconds\": 999.0, \"over\": false}` row (or an assertion that `set(WALL_BUDGET_S) == {\"fast\"}`) so the note is true of every suite name the repo uses."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "debt",
+      "route_reason": "Not folded. This is a behavioural gap on a command CLAUDE.md explicitly sanctions for deliberate baseline moves, and what SHOULD happen there — warn, block, or document the silence — is a decision for the repo owner rather than something to settle inside a PR about wall clock.",
+      "claim": "`--update-baseline` returns before the new over-budget check, so the one command CLAUDE.md sanctions for a deliberate baseline move records a baseline on a tree that is over the wall-clock ceiling and prints nothing about it.",
+      "evidence": "evals/run.py:157-161 writes the baseline and `return 0` at line 161; the `over_budget` check is at line 166. A `fast` run measuring 79.02s therefore exits 0 with only `[eval] baseline['fast'] = 1.000 (recorded)` on stdout and no `OVER BUDGET` line anywhere, even though the same run without the flag exits 1. ADR-013 Decision 2 describes the ceiling as \"the same shape as the invariant-100% rule beside it\" — which sits at line 162 and is bypassed by the same early return, so the shape matches, but the resulting silence is undocumented.",
+      "repro": "Same 0.25s-per-case injection as R8, run with `--suite fast --update-baseline --baseline /tmp/b.json`: exit 0, no OVER BUDGET line. Drop `--update-baseline`: `OVER BUDGET: suite 'fast' wall clock 79.02s > 60s`, exit 1.",
+      "acceptance": "Either the over-budget line is printed (as a warning) on the `--update-baseline` path too, or ADR-013 Decision 2 names `--update-baseline` as a path where the ceiling is not reported."
+    }
+  ]
+}
