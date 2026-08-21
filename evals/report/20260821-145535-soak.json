@@ -1,0 +1,680 @@
+{
+  "suite": "soak",
+  "base": "https://whaleforce-browser-agent.zeabur.app",
+  "task_set": [
+    "tc1-shop-price",
+    "tc2-shop-search",
+    "tc5-forms-submit",
+    "tc4-shop-sort-cheapest",
+    "live-books-travel-price"
+  ],
+  "sequences": 2,
+  "infrastructure_failures": 0,
+  "completed": 10,
+  "attempted": 10,
+  "correct": 7,
+  "demo_ready": true,
+  "phases_seen": [],
+  "results": [
+    {
+      "task_id": "tc1-shop-price",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop-lamp-std.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.142,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "fbf15479",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.145,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "fbf15479",
+            "running": 1,
+            "reason": "a run is executing (fbf15479)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.141,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "$39.00",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "$39.00",
+      "ground_truth": "evals/golden/tc1-shop-price.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 758,
+        "llm_usd": 0.0001996,
+        "replans": 0,
+        "ms": 2606
+      },
+      "client_seconds": 4.71,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.217,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "tc2-shop-search",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.21,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "f6f8dd6d",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.208,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "f6f8dd6d",
+            "running": 1,
+            "reason": "a run is executing (f6f8dd6d)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.128,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "Meridian Wall Clock",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "Meridian Wall Clock",
+      "ground_truth": "evals/golden/tc2-shop-search.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1095,
+        "llm_usd": 0.00055,
+        "replans": 0,
+        "ms": 5463
+      },
+      "client_seconds": 7.1,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.204,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "tc5-forms-submit",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/forms.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.204,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "eb435ac8",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.129,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "eb435ac8",
+            "running": 1,
+            "reason": "a run is executing (eb435ac8)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.21,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 7 (extract): ResolveError: no tier resolved {'role': 'WebArea', 'name': None, 'text': None, 'near': None, 'index': None}",
+      "verdict": null,
+      "expect_answer": "REF-6B5159",
+      "ground_truth": "evals/golden/tc5-forms-submit.json",
+      "correct": false,
+      "measured": true,
+      "budgets": {
+        "actions": 7,
+        "llm_tokens": 1347,
+        "llm_usd": 0.0009164,
+        "replans": 0,
+        "ms": 8833
+      },
+      "client_seconds": 9.17,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.131,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "tc4-shop-sort-cheapest",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.13,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "068049ed",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.134,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "068049ed",
+            "running": 1,
+            "reason": "a run is executing (068049ed)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.13,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "Cobalt Floor Rug",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "Cobalt Floor Rug",
+      "ground_truth": "evals/golden/tc4-shop-sort-cheapest.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 1304,
+        "llm_usd": 0.0007998,
+        "replans": 0,
+        "ms": 8123
+      },
+      "client_seconds": 9.03,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.203,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "live-books-travel-price",
+      "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.209,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "fe24cd58",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.218,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "fe24cd58",
+            "running": 1,
+            "reason": "a run is executing (fe24cd58)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.207,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 4 (extract): ResolveError: proximity to \"It's Only the Himalayas\" does not identify one element for {'role': 'paragraph', 'name': None, 'text': None, 'near': \"It's Only the Himalayas\", 'index': None}",
+      "verdict": null,
+      "expect_answer": "£45.17",
+      "ground_truth": "evals/golden/live-books-travel-price.json",
+      "correct": false,
+      "measured": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1514,
+        "llm_usd": 0.00069945,
+        "replans": 0,
+        "ms": 7566
+      },
+      "client_seconds": 9.34,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.204,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 1
+    },
+    {
+      "task_id": "tc1-shop-price",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop-lamp-std.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.205,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "d65675c2",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.201,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "d65675c2",
+            "running": 1,
+            "reason": "a run is executing (d65675c2)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.215,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "$39.00",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "$39.00",
+      "ground_truth": "evals/golden/tc1-shop-price.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 758,
+        "llm_usd": 0.0001996,
+        "replans": 0,
+        "ms": 4773
+      },
+      "client_seconds": 4.97,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.131,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 2
+    },
+    {
+      "task_id": "tc2-shop-search",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.133,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "2957cc95",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.215,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "2957cc95",
+            "running": 1,
+            "reason": "a run is executing (2957cc95)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.209,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "Meridian Wall Clock",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "Meridian Wall Clock",
+      "ground_truth": "evals/golden/tc2-shop-search.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1025,
+        "llm_usd": 0.000466,
+        "replans": 0,
+        "ms": 4779
+      },
+      "client_seconds": 4.98,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.211,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 2
+    },
+    {
+      "task_id": "tc5-forms-submit",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/forms.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.217,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "9f292d03",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.14,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "9f292d03",
+            "running": 1,
+            "reason": "a run is executing (9f292d03)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.216,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "REF-6B5159",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "REF-6B5159",
+      "ground_truth": "evals/golden/tc5-forms-submit.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 6,
+        "llm_tokens": 2124,
+        "llm_usd": 0.0011358,
+        "replans": 1,
+        "ms": 12315
+      },
+      "client_seconds": 13.63,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.132,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 2
+    },
+    {
+      "task_id": "tc4-shop-sort-cheapest",
+      "url": "https://whaleforce-browser-agent.zeabur.app/fixtures/shop.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.131,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "a9168417",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.128,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "a9168417",
+            "running": 1,
+            "reason": "a run is executing (a9168417)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.129,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "success",
+      "answer": "Cobalt Floor Rug",
+      "reason": null,
+      "verdict": null,
+      "expect_answer": "Cobalt Floor Rug",
+      "ground_truth": "evals/golden/tc4-shop-sort-cheapest.json",
+      "correct": true,
+      "measured": true,
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 1139,
+        "llm_usd": 0.0006018,
+        "replans": 0,
+        "ms": 6508
+      },
+      "client_seconds": 6.96,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.215,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 2
+    },
+    {
+      "task_id": "live-books-travel-price",
+      "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+      "readyz_before": {
+        "ok": true,
+        "seconds": 0.141,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "run_id": "73026701",
+      "phase": null,
+      "transport_error": null,
+      "during": {
+        "readyz": {
+          "ok": true,
+          "seconds": 0.218,
+          "body": {
+            "ready": false,
+            "busy": true,
+            "active_run_id": "73026701",
+            "running": 1,
+            "reason": "a run is executing (73026701)"
+          }
+        },
+        "healthz": {
+          "ok": true,
+          "seconds": 0.137,
+          "body": {
+            "ok": true
+          }
+        }
+      },
+      "status": "failure:locate",
+      "answer": null,
+      "reason": "step 4 (extract): ResolveError: proximity to \"It's Only the Himalayas\" does not identify one element for {'role': 'paragraph', 'name': None, 'text': None, 'near': \"It's Only the Himalayas\", 'index': None}",
+      "verdict": null,
+      "expect_answer": "£45.17",
+      "ground_truth": "evals/golden/live-books-travel-price.json",
+      "correct": false,
+      "measured": true,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 1799,
+        "llm_usd": 0.00077166,
+        "replans": 0,
+        "ms": 11919
+      },
+      "client_seconds": 13.73,
+      "readyz_after": {
+        "ok": true,
+        "seconds": 0.214,
+        "body": {
+          "ready": true,
+          "busy": false,
+          "active_run_id": null,
+          "running": 0,
+          "reason": null
+        }
+      },
+      "sequence": 2
+    }
+  ]
+}

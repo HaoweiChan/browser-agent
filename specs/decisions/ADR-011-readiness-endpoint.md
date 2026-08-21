@@ -142,3 +142,51 @@ constant or add a retry as the first move. The existing side-effect rule stands
 either way: a connection-phase failure that provably never reached the server may
 be retried; an ambiguous read timeout must not be, because execution may already
 have started.
+
+## Decision 7 — the soak re-run, with `/readyz` deployed
+
+Decision 6 left one step open: `/readyz` existed but was not on the deployment,
+so all thirty probes in the first soak returned 404. PR #19 merged, Zeabur
+flipped, and the same command was re-run — not a new experiment, the same one
+with its missing column.
+
+**Result: 10/10 again, zero infrastructure failures**
+(`evals/report/20260821-145535-soak.json`), now serving the new default
+`openai/gpt-5.6-luna`. Client wall clock 4.71-13.73s, spend $0.0063.
+
+The readiness evidence, which is what the re-run was for:
+
+- **30/30 probes answered 200 with the contract intact** — ready before every
+  submission, busy during every run, ready after.
+- **`active_run_id` matched the submitted run id 10/10.** The endpoint does not
+  merely report *a* busy state, it reports the right run.
+- Probe latency 0.128-0.218s overall, and the **while-busy** probes are the same
+  0.128-0.218s (mean 0.174s).
+
+That last figure is the one worth keeping. `/readyz` is served by the same event
+loop that runs the agent, so ten prompt answers taken *while a run held the
+semaphore* are positive evidence the loop is not blocked during a run. **Of
+D18's three named candidates, event-loop blocking is now the weakest.** It is
+narrowed, not eliminated — this measures an idle-ish loop under one run, not the
+loop under whatever conditions produced the aborts — and the other two
+candidates, Zeabur ingress and the client's own connection handling, are
+untouched by it.
+
+The soak still does not retro-diagnose D18, and the contrast between ten clean
+runs and five aborted sweeps on the same container still says **workload shape**
+rather than capacity. No mechanism is inferred from it here either.
+
+**Two observations that arrived with the model change**, recorded because they
+cut against a comfortable reading rather than for it:
+
+1. Correctness moved 8/10 to 7/10. Correctness is context in this exercise, not
+   the criterion, and the set was chosen to include a known limitation.
+   `live-books-travel-price` failed both sequences on a `near:` proximity
+   ambiguity — D17's family, and notably a task this same model answered
+   correctly during the ablation.
+2. **`tc5-forms-submit` failed once and passed once — same model, same page,
+   same build, minutes apart.** That is first-hand nondeterminism inside a single
+   soak, and it is direct support for ADR-010 Decision 18's refusal to read the
+   ablation's four-way correctness tie as equivalence. A cell that flips between
+   two runs of one sequence is a cell that cannot carry a between-model
+   comparison at n=1.
