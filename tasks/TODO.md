@@ -17,7 +17,7 @@ Spec: ≥2-model OpenRouter ablation, cost/latency tradeoff table, ADR for the
 default-model choice. Reviewer evidence: analysis (E4), E5 tradeoffs.
 Acceptance: table built from committed report runs, not estimates.
 
-### M12 — Fast-suite wall-clock over budget            [status: in-progress]
+### M12 — Fast-suite wall-clock over budget            [status: pr]
 Origin: PR #12, declared in support-matrix D8 (promoted from Debt 2026-08-20 —
 M10 cannot exit green while a declared gate-budget breach stands)
 Spec: `fast` is 68.2s against ADR-002 D4's 60s budget — 10.6s is one
