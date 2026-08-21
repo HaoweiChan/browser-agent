@@ -1876,6 +1876,192 @@ def _run_parse_plan_case(case: dict) -> dict:
     }
 
 
+def _run_soak_accounting_case(case: dict) -> dict:
+    """The soak's own arithmetic, graded against a stubbed transport.
+
+    `evals/soak.py` produces every number in support-matrix D20 and ADR-011
+    Decisions 6 and 7, and shipped with no case of any kind (PR #21, R4) — which
+    is why R1, R2 and R3 were all live in a tree the gate called green. Four
+    halves, one per way the driver can publish a number that is not true:
+
+      - `submit_failures`: the exception -> phase table, driven through the real
+        `run_one` rather than asserted against a lookup. Phase 1 is a claim —
+        *nothing was delivered* — and a read timeout after the POST landed, a
+        200 whose body will not parse, and a 200 with no `run_id` are all NOT
+        that: the run may be executing and billing right now (R2).
+      - `terminal_records`: a terminal record that is not a measurement is not a
+        completion. A deployment whose planner cannot start answers every poll
+        with `failure:env`, and that must not publish `demo_ready: true` (R1).
+      - `retry_probe`: `ablation._http` retries connect-phase failures silently,
+        so the one failure family the soak exists to observe could be swallowed
+        whole. "No transport error in any phase" has to be readable off the
+        artifact that sentence cites (R3).
+      - correctness is the production `verifier.answers_match` plus a successful
+        terminal status — the ablation's rule — because D20 compares the two
+        directly and `'$39.00' == '39.00'` is False while the repo's own
+        correctness metric says those are the same answer (R7).
+
+    No network, no browser, no spend: every response is a stub.
+    """
+    import io
+
+    import evals.ablation as AB
+    import evals.soak as SK
+
+    inp, wrong = case["input"], []
+    BASE = "http://stub.invalid"
+
+    def make_exc(name):
+        if name == "HTTPError":
+            return urllib.error.HTTPError(f"{BASE}/tasks", 503, "Service Unavailable",
+                                          {}, io.BytesIO(b"upstream not ready"))
+        if name == "URLError":
+            return urllib.error.URLError("[Errno 61] Connection refused")
+        if name == "TimeoutError":
+            # What urllib raises for a read timeout: the request was delivered.
+            return TimeoutError("timed out")
+        raise AssertionError(f"case names an exception the adapter cannot build: {name}")
+
+    def responder(script):
+        """`script(url, method) -> dict | bytes | Exception` as the whole server."""
+        def fake(req, *a, **k):
+            url = getattr(req, "full_url", req)
+            method = req.get_method() if hasattr(req, "get_method") else "GET"
+            out = script(url, method)
+            if isinstance(out, BaseException):
+                raise out
+            return io.BytesIO(out if isinstance(out, bytes) else json.dumps(out).encode())
+        return fake
+
+    def with_stub(script, fn):
+        # `soak.probe` and `ablation._http` both reach through the `urllib.request`
+        # module object, so one patch covers both. The two driver constants are
+        # zeroed so a retry probe costs milliseconds instead of 15 seconds.
+        prev = (urllib.request.urlopen, SK.POLL_SECONDS, AB.RETRY_SLEEPS)
+        urllib.request.urlopen = responder(script)
+        SK.POLL_SECONDS, AB.RETRY_SLEEPS = 0.01, (0.0, 0.0)
+        try:
+            return fn()
+        finally:
+            urllib.request.urlopen, SK.POLL_SECONDS, AB.RETRY_SLEEPS = prev
+
+    def spec_for(answer=None):
+        return {"id": "stub-case", "task": "What is the price?", "fixture": "shop.html",
+                "url": None, "answer": answer, "ground_truth": "evals/golden/stub.json"}
+
+    # --- the exception -> phase table, through the real submit path -----------
+    for probe in inp.get("submit_failures", []):
+        outcome = make_exc(probe["raise"]) if probe.get("raise") else probe["body"]
+
+        def script(url, method, _o=outcome):
+            if method == "POST":
+                return _o.encode() if isinstance(_o, str) else _o
+            return {"ready": True}
+
+        row = with_stub(script, lambda: SK.run_one(BASE, spec_for("x"), 5))
+        if row.get("phase") != probe["phase"]:
+            wrong.append({"submit": probe["note"], "want_phase": probe["phase"],
+                          "got_phase": row.get("phase"),
+                          "transport_error": row.get("transport_error")})
+
+    # --- what counts as a completion -----------------------------------------
+    rows = []
+    for probe in inp.get("terminal_records", []):
+        def script(url, method, _r=probe["record"]):
+            if method == "POST":
+                return {"run_id": "stub-run"}
+            if "/tasks/" in url:
+                return _r
+            return {"ready": True}
+
+        row = with_stub(script,
+                        lambda _p=probe: SK.run_one(BASE, spec_for(_p.get("spec_answer")), 5))
+        rows.append(row)
+        got = {"measured": row.get("measured"), "correct": row.get("correct")}
+        if got != probe["expect"]:
+            wrong.append({"terminal": probe["note"], "want": probe["expect"], "got": got,
+                          "status": row.get("status"), "answer": row.get("answer"),
+                          "expect_answer": row.get("expect_answer")})
+    if rows:
+        report = SK.summarize(rows, BASE, 1)
+        want = {"completed": sum(1 for p in inp["terminal_records"] if p["expect"]["measured"]),
+                "correct": sum(1 for p in inp["terminal_records"] if p["expect"]["correct"]),
+                "attempted": len(rows), "demo_ready": False}
+        got = {k: report.get(k) for k in want}
+        if got != want:
+            wrong.append({"summary": "a terminal record that is not a measurement was counted "
+                                     "as a clean completion", "want": want, "got": got})
+
+    # --- a swallowed retry must still be readable off the report --------------
+    rp = inp.get("retry_probe")
+    if rp:
+        seen = {"post": 0}
+
+        def script(url, method, _n=rp["connect_failures"]):
+            if method == "POST":
+                seen["post"] += 1
+                return (urllib.error.URLError("[Errno 61] Connection refused")
+                        if seen["post"] <= _n else {"run_id": "stub-run"})
+            if "/tasks/" in url:
+                return {"status": "success", "answer": "$39.00"}
+            return {"ready": True}
+
+        row = with_stub(script, lambda: SK.run_one(BASE, spec_for("$39.00"), 5))
+        report = SK.summarize([row], BASE, 1)
+        if seen["post"] != rp["connect_failures"] + 1:
+            wrong.append({"retry_probe": "the transport did not retry the connect failure",
+                          "post_attempts": seen["post"]})
+        elif "URLError" not in json.dumps(report):
+            wrong.append({"retry_probe": rp["note"], "swallowed": rp["connect_failures"],
+                          "report_says": {k: report[k] for k in
+                                          ("infrastructure_failures", "demo_ready",
+                                           "phases_seen", "completed")},
+                          "note": "the retried connect failure left no trace in the artifact "
+                                  "D20 cites for 'no transport error in any phase'"})
+    return {"passed": not wrong, "wrong": {"soak": wrong}}
+
+
+def _run_doc_counts_case(case: dict) -> dict:
+    """Numbers in the documents of record, derived rather than re-typed.
+
+    README's case counts and support-matrix D8's fast-suite wall clock were both
+    contradicted by artifacts committed in the same PR (#21, R6 and R5). Nothing
+    is counted by hand here: suite sizes come from the runner's own `load_cases`,
+    and D8's range is recomputed from the reports D8 itself cites — so the next
+    case added to the suite turns this red instead of quietly aging the prose.
+    """
+    from evals.run import ROOT as RUN_ROOT
+    from evals.run import load_cases
+
+    inp, wrong = case["input"], []
+    counts = {s: len(load_cases(s)) for s in ("fast", "invariant", "live", "full", "all")}
+    readme = (RUN_ROOT / "README.md").read_text(encoding="utf-8")
+    for quote in inp.get("readme_quotes", []):
+        want = quote.format(**counts)
+        if want not in readme:
+            wrong.append({"readme_does_not_say": want})
+
+    d8 = inp.get("d8")
+    if d8:
+        matrix = (RUN_ROOT / "docs" / "support-matrix.md").read_text(encoding="utf-8")
+        row = next((ln for ln in matrix.splitlines()
+                    if ln.startswith(f"| **{d8['row']}**")), "")
+        walls = []
+        for rid in d8["reports"]:
+            path = RUN_ROOT / "evals" / "report" / rid
+            if not path.is_file():
+                wrong.append({"cites_a_report_that_does_not_exist": rid})
+                continue
+            walls.append(json.loads(path.read_text())["totals"]["wall_seconds"])
+            if rid not in row:
+                wrong.append({"row_does_not_cite": rid})
+        stated = f"{min(walls):.1f}-{max(walls):.1f}s" if walls else None
+        if stated and stated not in row:
+            wrong.append({"d8_range": {"the_cited_reports_show": stated,
+                                       "row": row[:300]}})
+    return {"passed": not wrong, "wrong": {"docs": wrong}, "got": {"counts": counts}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
@@ -1898,6 +2084,8 @@ KINDS = {
     "ablation-table": _run_ablation_table_case,
     "adr-header-index": _run_adr_header_index_case,
     "readyz-transitions": _run_readyz_case,
+    "soak-accounting": _run_soak_accounting_case,
+    "doc-counts": _run_doc_counts_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,

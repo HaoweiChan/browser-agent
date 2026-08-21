@@ -1,0 +1,26 @@
+{
+  "id": "docs-numbers-are-derived",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "doc-counts",
+    "readme_quotes": [
+      "offline gate: {fast} cases, zero paid calls",
+      "--suite live        # {live} cases",
+      "it is {all} cases ({fast} of them in the offline gate)"
+    ],
+    "d8": {
+      "row": "D8",
+      "reports": ["20260821-020310-fast.json", "20260821-021142-fast.json",
+                  "20260821-145831-fast.json", "20260821-162416-fast.json"]
+    }
+  },
+  "expect": {
+    "note": "every count in README equals what the runner loads; D8's range equals what the reports D8 cites measured"
+  },
+  "provenance": "PR #21 review, R6 (MEDIUM) and R5 (MEDIUM) — the same class twice: a number in a document of record that this branch's own committed artifacts contradict. README said 91 fast / 101 total while the runner said 93 fast / 103 files (the edit added +5 for the new cases and carried a pre-existing -1 forward). D8 said `71.3-76.5s at M9 with five more cases` while the four fast reports committed in the same PR measure 79.01-79.75s with six more cases — understating a declared budget breach by ~3.4s, on the row M12 is keyed to. Neither number is re-typed here: the suite sizes come from `evals.run.load_cases`, the runner's own discovery, and the D8 range is recomputed from the `wall_seconds` of the reports the row cites. Watched red against the pre-fix documents: `readme_does_not_say: 'offline gate: 95 cases, zero paid calls'` and `d8_range: {the_cited_reports_show: '79.0-79.8s'}`.",
+  "triage": {
+    "class": "doc-drift",
+    "note": "tagged invariant — a hand-maintained count is wrong again by the next milestone, and this repo has already burned a review round on three documents carrying three different totals for the same thing (PR #15, R19). The failure mode this closes is not the wrong number, it is the number that nothing recomputes. Adding a case to the suite now turns this red until README is updated, which is the intended cost. D8's cited reports are immutable artifacts, so its assertion is stable; moving the range means citing the runs it was measured from."
+  }
+}

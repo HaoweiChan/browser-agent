@@ -190,3 +190,57 @@ cut against a comfortable reading rather than for it:
    ablation's four-way correctness tie as equivalence. A cell that flips between
    two runs of one sequence is a cell that cannot carry a between-model
    comparison at n=1.
+
+## Decision 8 — the soak driver was ungraded, and it was wrong in four places
+
+Decisions 6 and 7 publish every number `evals/soak.py` produced. A PR #21 review
+asked the question nobody had: **what grades the thing that produced them?**
+Nothing did — 206 lines with no eval case of any kind, next to a sibling
+(`evals/ablation.py`) with three. The measured consequence is that four defects
+were live in a tree the gate scored 29/29 invariant and 93/93 fast:
+
+1. **A run that never got off the ground counted as a clean completion.**
+   `completed` was every row without a *client-side* transport error, and a
+   terminal record of `failure:env` — the answer a deployment gives when its
+   planner cannot start at all — carries none. A soak against such a deployment
+   would have printed `5/5 completed without an infrastructure failure` and
+   published `demo_ready: true`. The driver already computed
+   `measured=is_measurement(...)`, False for exactly those rows, and aggregated
+   it nowhere. A completion is now a row `is_measurement` accepts; everything
+   else is listed under `not_a_measurement` and blocks `demo_ready`.
+2. **The phase taxonomy — the stated reason the soak exists — mis-tagged the one
+   distinction this repo has already established matters.** Only `HTTPError`
+   mapped to "server rejected"; every other exception fell to
+   `1-client-could-not-connect`, which is a claim that *nothing was delivered*.
+   A read timeout raises a bare `TimeoutError` and happens only **after** the
+   POST landed; an unparseable body and a 200 with no `run_id` are the same
+   family. Those now report `2b-delivered-but-outcome-unknown`, because a run
+   may be executing and billing while the client calls it a connect failure.
+3. **A retried transport failure left no trace.** `_http` retries connect-phase
+   failures up to three times — precisely the D18 family the soak was written to
+   observe — and neither printed nor returned the swallowed attempts, so
+   "zero infrastructure failures, no transport error in any phase" was not
+   readable off the artifact it cites. Retries are now collected per row.
+4. **Correctness was not this repo's correctness metric.** Raw `str ==` rather
+   than `verifier.answers_match`, and without requiring `status == "success"`,
+   while Decision 7 point 1 cross-compares the figure against the ablation's
+   `answers_match` cells. Two of the five tasks are currency answers where the
+   rules can diverge (`answers_match('$39.00', '39.00')` is True).
+
+**What this does and does not change about Decisions 6 and 7.** Every committed
+soak row is `measured: true`, and recomputing correctness under the ablation's
+rule returns **the same 8/10 and 7/10** — so the published figures stand, and
+they are now the same metric the ablation's cells are. The one claim that is
+genuinely narrowed is "zero infrastructure failures": for the three committed
+reports it means *no connect failure that survived up to three retries*, and
+those artifacts cannot say more. That bound is recorded in D20 rather than
+retro-fixed, because the soak spends real money and a re-run to improve the
+wording of a past result is not a reason to spend it.
+
+**Because** the general lesson is the one this repo keeps relearning: a number's
+credibility comes from the case behind the code that produced it, not from the
+document that prints it. `soak-counts-only-real-completions` drives the real
+`run_one` against a stubbed transport and pins the exception→phase table, the
+completion rule, the retry ledger and the correctness rule; `docs-numbers-are-derived`
+stops README's case counts and D8's wall-clock range being hand-maintained at all.
+Both watched red against the pre-fix tree. No network, no browser, $0.00.

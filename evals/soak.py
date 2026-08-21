@@ -44,7 +44,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .ablation import ROOT, _http, is_measurement
+# `answers_match` and `is_measurement` come through the ablation deliberately:
+# D20 and ADR-011 Decision 7 compare the two drivers' cells directly, so they
+# have to be the same two rules, not two spellings of them (PR #21, R7).
+from .ablation import ROOT, _http, answers_match, is_measurement
 
 SOAK_CASES = ["tc1-shop-price", "tc2-shop-search", "tc5-forms-submit",
               "tc4-shop-sort-cheapest", "live-books-travel-price"]
@@ -57,6 +60,28 @@ PHASE_REJECTED = "2-server-rejected-or-not-ready"
 PHASE_STALLED = "3-accepted-but-execution-stalled"
 PHASE_POLL = "4-poll-read-path-failed"
 PHASE_LOST = "5-completed-but-result-lost"
+# Between 2 and 3: the POST was delivered and its outcome is unreadable. Not the
+# same event as "could not connect" — a run may be executing and billing right
+# now — and not the same as "the server refused", which is an answer (PR #21, R2).
+PHASE_SUBMIT_UNKNOWN = "2b-delivered-but-outcome-unknown"
+
+POLL_SECONDS = 2   # gap between /tasks/<id> reads; a constant so a case can shrink it
+
+
+def submit_phase(exc: BaseException) -> str:
+    """Where a failed submission failed. The connect / post-delivery split is the
+    one this repo already turns on (D18, `ablation._http`): urllib wraps a failure
+    to establish the connection in `URLError` — nothing delivered, nothing billed —
+    and raises a bare `TimeoutError` for a read timeout, which happens only after
+    the request landed. A body that will not parse and a 200 with no `run_id` are
+    post-delivery for the same reason. HTTPError is tested first: it subclasses
+    URLError, and it is the one case where the server actually answered.
+    """
+    if isinstance(exc, urllib.error.HTTPError):
+        return PHASE_REJECTED
+    if isinstance(exc, urllib.error.URLError):
+        return PHASE_CONNECT
+    return PHASE_SUBMIT_UNKNOWN
 
 
 def probe(base: str, path: str) -> dict:
@@ -94,27 +119,29 @@ def load_tasks() -> list[dict]:
 
 def run_one(base: str, spec: dict, timeout: int) -> dict:
     url = spec["url"] or f"{base}/fixtures/{spec['fixture']}"
-    row = {"task_id": spec["id"], "url": url,
+    # `_http` retries connect-phase failures, which is exactly the family this
+    # soak exists to observe — so they are collected, not swallowed (PR #21, R3).
+    retries: list[str] = []
+    row = {"task_id": spec["id"], "url": url, "retries": retries,
            "readyz_before": probe(base, "/readyz")}
     t0 = time.monotonic()
     try:
-        run_id = _http(f"{base}/tasks", {"task": spec["task"], "url": url})["run_id"]
-    except urllib.error.HTTPError as e:
-        row.update(phase=PHASE_REJECTED, transport_error=f"HTTP {e.code}",
-                   detail=e.read().decode()[:300])
-        return row
+        run_id = _http(f"{base}/tasks", {"task": spec["task"], "url": url},
+                       retries=retries)["run_id"]
     except Exception as e:
-        row.update(phase=PHASE_CONNECT, transport_error=f"{type(e).__name__}: {e}")
+        row.update(phase=submit_phase(e), transport_error=f"{type(e).__name__}: {e}")
+        if isinstance(e, urllib.error.HTTPError):
+            row["detail"] = e.read().decode()[:300]
         return row
     row["run_id"] = run_id
 
     mid, deadline = None, time.monotonic() + timeout
     while time.monotonic() < deadline:
-        time.sleep(2)
+        time.sleep(POLL_SECONDS)
         if mid is None:  # one mid-run sample, taken while it is genuinely running
             mid = {"readyz": probe(base, "/readyz"), "healthz": probe(base, "/healthz")}
         try:
-            rec = _http(f"{base}/tasks/{run_id}")
+            rec = _http(f"{base}/tasks/{run_id}", retries=retries)
         except Exception as e:
             row.update(phase=PHASE_POLL, transport_error=f"{type(e).__name__}: {e}",
                        during=mid)
@@ -136,12 +163,46 @@ def run_one(base: str, spec: dict, timeout: int) -> dict:
         status=rec.get("status"), answer=answer, reason=rec.get("reason"),
         verdict=(rec.get("verification") or {}).get("verdict"),
         expect_answer=spec["answer"], ground_truth=spec["ground_truth"],
-        correct=bool(spec["answer"]) and str(answer).strip() == str(spec["answer"]).strip(),
+        correct=bool(spec["answer"]) and rec.get("status") == "success"
+                and answers_match(answer, spec["answer"]),
         measured=is_measurement(rec.get("status"), rec.get("reason") or ""),
         budgets=rec.get("budgets_spent") or {},
         client_seconds=round(time.monotonic() - t0, 2),
         readyz_after=probe(base, "/readyz"))
     return row
+
+
+def summarize(rows: list[dict], base: str, sequences: int) -> dict:
+    """The soak's whole arithmetic, in one place so a case can grade it."""
+    infra = [r for r in rows if r.get("transport_error")]
+    # A completion is a run that produced a real outcome. A terminal record that
+    # `is_measurement` rejects — `failure:env` from a planner that could not
+    # start, `failure:nav` from a page that never loaded — carries no transport
+    # error and is still not a run this deployment completed. Counting it green
+    # publishes demo-readiness for a deployment that never got off the ground
+    # (PR #21, R1). Borrowing the ablation's allowlist means a live site's
+    # `failure:nav` also stops counting: that direction understates readiness and
+    # never overstates it, which is the only safe way to be wrong here.
+    completed = [r for r in rows if r.get("measured")]
+    unmeasured = [{"task_id": r["task_id"], "status": r.get("status"),
+                   "reason": r.get("reason")}
+                  for r in rows if not r.get("transport_error") and not r.get("measured")]
+    return {
+        "suite": "soak", "base": base, "task_set": SOAK_CASES, "sequences": sequences,
+        "infrastructure_failures": len(infra),
+        "completed": len(completed), "attempted": len(rows),
+        "not_a_measurement": unmeasured,
+        # Every retried attempt is connect-phase by construction: `_http` retries
+        # `URLError` and nothing else. Each attempt carries the URL it failed on,
+        # so the ledger says whether it was the submission or a poll.
+        "transport_retries": [{"task_id": r["task_id"], "count": len(r["retries"]),
+                               "phase": PHASE_CONNECT, "attempts": r["retries"]}
+                              for r in rows if r.get("retries")],
+        "correct": sum(1 for r in completed if r.get("correct")),
+        "demo_ready": not infra and not unmeasured and len(completed) == len(rows),
+        "phases_seen": sorted({r["phase"] for r in infra if r.get("phase")}),
+        "results": rows,
+    }
 
 
 def main() -> int:
@@ -168,23 +229,20 @@ def main() -> int:
                   f"during={_r((row.get('during') or {}).get('readyz'))} "
                   f"after={_r(row.get('readyz_after'))}")
 
+    report = summarize(rows, base, args.repeat)
     infra = [r for r in rows if r.get("transport_error")]
-    completed = [r for r in rows if not r.get("transport_error")]
-    report = {
-        "suite": "soak", "base": base, "task_set": SOAK_CASES, "sequences": args.repeat,
-        "infrastructure_failures": len(infra),
-        "completed": len(completed), "attempted": len(rows),
-        "correct": sum(1 for r in completed if r.get("correct")),
-        "demo_ready": not infra and len(completed) == len(rows),
-        "phases_seen": sorted({r["phase"] for r in infra if r.get("phase")}),
-        "results": rows,
-    }
     stamp = time.strftime("%Y%m%d-%H%M%S")
     out = ROOT / "evals" / "report" / f"{stamp}-soak.json"
     out.write_text(json.dumps(report, indent=2, ensure_ascii=False))
     print(f"\n[soak] {report['completed']}/{report['attempted']} completed without an "
           f"infrastructure failure · {report['correct']} correct "
           f"(correctness is context, not the criterion)")
+    if report["not_a_measurement"]:
+        print(f"[soak] NOT A MEASUREMENT (not counted as completed): "
+              f"{report['not_a_measurement']}")
+    if report["transport_retries"]:
+        print(f"[soak] connect-phase failures that retried through: "
+              f"{report['transport_retries']}")
     if infra:
         print(f"[soak] INFRASTRUCTURE FAILURES in phases: {report['phases_seen']}")
     print(f"[soak] report {out}")

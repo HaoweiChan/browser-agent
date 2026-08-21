@@ -54,6 +54,17 @@ Spec: promote only with its own eval evidence.
 Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence.
 
+### M18 — The soak cannot separate a bad deployment from a bad third-party site            [status: todo]
+Origin: PR #21 R1
+Spec: `summarize` now borrows `ablation.is_measurement` to decide what a
+completion is, so a live task ending `failure:nav` because the site itself was
+down drops `demo_ready` to false and reads as if the deployment failed. That is
+the safe direction to be wrong in and it is why it shipped, but it is still a
+conflation: "we could not measure this run" and "this deployment could not
+complete it" are different verdicts. Acceptance: a case injects a terminal
+`failure:nav` on the live task and pins that the report distinguishes it from a
+deployment fault without ever letting it count as a clean completion.
+
 ### M17 — Per-IP rate limiting            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence.
