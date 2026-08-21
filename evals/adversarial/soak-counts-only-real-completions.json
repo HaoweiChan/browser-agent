@@ -1,44 +1,101 @@
 {
   "id": "soak-counts-only-real-completions",
   "task": "browser",
-  "suites": ["fast", "invariant"],
+  "suites": [
+    "fast",
+    "invariant"
+  ],
   "input": {
     "kind": "soak-accounting",
     "submit_failures": [
-      {"raise": "HTTPError", "phase": "2-server-rejected-or-not-ready",
-       "note": "503 from the deployment — the server answered, with a refusal"},
-      {"raise": "URLError", "phase": "1-client-could-not-connect",
-       "note": "connection refused — nothing was delivered, nothing was billed"},
-      {"raise": "TimeoutError", "phase": "2b-delivered-but-outcome-unknown",
-       "note": "read timeout: urllib raises a bare TimeoutError only AFTER the request landed, so the run may be executing and billing right now"},
-      {"body": "<html>502 Bad Gateway</html>", "phase": "2b-delivered-but-outcome-unknown",
-       "note": "a response arrived and the body will not parse — delivered, outcome unknown"},
-      {"body": {"ok": true}, "phase": "2b-delivered-but-outcome-unknown",
-       "note": "200 with no run_id — the submission may have been accepted and the handle lost"}
+      {
+        "raise": "HTTPError",
+        "phase": "2-server-rejected-or-not-ready",
+        "note": "503 from the deployment — the server answered, with a refusal"
+      },
+      {
+        "raise": "URLError",
+        "phase": "1-client-could-not-connect",
+        "note": "connection refused — nothing was delivered, nothing was billed"
+      },
+      {
+        "raise": "TimeoutError",
+        "phase": "2b-delivered-but-outcome-unknown",
+        "note": "read timeout: urllib raises a bare TimeoutError only AFTER the request landed, so the run may be executing and billing right now"
+      },
+      {
+        "body": "<html>502 Bad Gateway</html>",
+        "phase": "2b-delivered-but-outcome-unknown",
+        "note": "a response arrived and the body will not parse — delivered, outcome unknown"
+      },
+      {
+        "body": {
+          "ok": true
+        },
+        "phase": "2b-delivered-but-outcome-unknown",
+        "note": "200 with no run_id — the submission may have been accepted and the handle lost"
+      }
     ],
     "terminal_records": [
-      {"record": {"status": "failure:env", "reason": "planner failed: RuntimeError: OPENROUTER_API_KEY not set"},
-       "expect": {"measured": false, "correct": false},
-       "note": "a deployment whose planner cannot start answers every poll with this"},
-      {"record": {"status": "failure:nav", "reason": "pre-plan navigation failed: Page.goto: net::ERR_NAME_NOT_RESOLVED"},
-       "expect": {"measured": false, "correct": false},
-       "note": "the run never got off the ground; whose fault it is, is not established"},
-      {"record": {"status": "success", "answer": "$39.00"}, "spec_answer": "39.00",
-       "expect": {"measured": true, "correct": true},
-       "note": "the repo's own correctness metric says these are the same answer; raw == says they are not"},
-      {"record": {"status": "failure:semantic", "answer": "$39.00", "reason": "verifier FAIL: identity_anchors"},
-       "spec_answer": "$39.00", "expect": {"measured": true, "correct": false},
-       "note": "the string matches and the verifier refused it — correctness requires a successful terminal status"}
+      {
+        "record": {
+          "status": "failure:env",
+          "reason": "planner failed: RuntimeError: OPENROUTER_API_KEY not set"
+        },
+        "expect": {
+          "measured": false,
+          "correct": false
+        },
+        "note": "a deployment whose planner cannot start answers every poll with this"
+      },
+      {
+        "record": {
+          "status": "failure:nav",
+          "reason": "pre-plan navigation failed: Page.goto: net::ERR_NAME_NOT_RESOLVED"
+        },
+        "expect": {
+          "measured": false,
+          "correct": false
+        },
+        "note": "the run never got off the ground; whose fault it is, is not established"
+      },
+      {
+        "record": {
+          "status": "success",
+          "answer": "$39.00"
+        },
+        "spec_answer": "39.00",
+        "expect": {
+          "measured": true,
+          "correct": true
+        },
+        "note": "the repo's own correctness metric says these are the same answer; raw == says they are not"
+      },
+      {
+        "record": {
+          "status": "failure:semantic",
+          "answer": "$39.00",
+          "reason": "verifier FAIL: identity_anchors"
+        },
+        "spec_answer": "$39.00",
+        "expect": {
+          "measured": true,
+          "correct": false
+        },
+        "note": "the string matches and the verifier refused it — correctness requires a successful terminal status"
+      }
     ],
-    "retry_probe": {"connect_failures": 1,
-                    "note": "one connect-phase failure that retried through, and the report cannot say so"}
+    "retry_probe": {
+      "connect_failures": 1,
+      "note": "one connect-phase failure that retried through, and the report cannot say so"
+    }
   },
   "expect": {
     "note": "only a real measurement is a completion; the phase says where the failure happened; a retried transport failure is still evidence"
   },
-  "provenance": "PR #21 review, R1 (HIGH) / R2 / R3 / R4. evals/soak.py — 206 lines producing every number in support-matrix D20 and ADR-011 Decisions 6 and 7 — had no eval case of any kind, while its sibling evals/ablation.py has three; the measured consequence is that R1, R2 and R3 were all live in a merged tree the gate scored 29/29 invariant and 93/93 fast. R1: `completed` was `[r for r in rows if not r.get('transport_error')]` and `transport_error` is only ever set on the four client-side phases, so a terminal record of `{'status': 'failure:env', 'reason': 'planner failed: ... OPENROUTER_API_KEY not set'}` — a deployment whose planner cannot start — counted as a clean completion and published `demo_ready: true`. The driver already computed `measured=is_measurement(...)`, which is False for exactly those rows, and aggregated nothing. R2: only `HTTPError` mapped to phase 2 and every other exception fell to phase 1, so a read timeout AFTER the POST landed, an unparseable body, and a 200 with no `run_id` were all reported as `1-client-could-not-connect` — the one distinction D18 and `ablation._http` are both built on (urllib wraps a failed connect in `URLError`; a read timeout raises a bare `TimeoutError`, and that run may already be executing). R3: submit and poll go through `ablation._http`, which retries connect-phase failures up to three times and neither prints nor returns the swallowed attempts, so the exact failure family the soak exists to observe could vanish and leave `infrastructure_failures: 0`. Watched red on all four halves against the pre-fix driver: phases 3/3 collapsed to `1-client-could-not-connect`, `failure:env` came back `measured=False` yet `completed 4/4 demo_ready True`, `'$39.00'` vs `'39.00'` graded incorrect, and one injected URLError left `'URLError' in report` False.",
+  "provenance": "PR #21 review, R1 (HIGH) / R2 / R3 / R4. evals/soak.py — 206 lines producing every number in support-matrix D20 and ADR-011 Decisions 6 and 7 — had no eval case of any kind, while its sibling evals/ablation.py has three; the measured consequence is that R1, R2 and R3 were all live in a merged tree the gate scored 29/29 invariant and 93/93 fast. R1: `completed` was `[r for r in rows if not r.get('transport_error')]` and `transport_error` is only ever set on the four client-side phases, so a terminal record of `{'status': 'failure:env', 'reason': 'planner failed: ... OPENROUTER_API_KEY not set'}` — a deployment whose planner cannot start — counted as a clean completion and published `demo_ready: true`. The driver already computed `measured=is_measurement(...)`, which is False for exactly those rows, and aggregated nothing. R2: only `HTTPError` mapped to phase 2 and every other exception fell to phase 1, so a read timeout AFTER the POST landed, an unparseable body, and a 200 with no `run_id` were all reported as `1-client-could-not-connect` — the one distinction D18 and `ablation._http` are both built on (urllib wraps a failed connect in `URLError`; a read timeout raises a bare `TimeoutError`, and that run may already be executing). R3: submit and poll go through `ablation._http`, which retries connect-phase failures up to three times and neither prints nor returns the swallowed attempts, so the exact failure family the soak exists to observe could vanish and leave `infrastructure_failures: 0`. Watched red on all four halves against the pre-fix driver: phases 3/3 collapsed to `1-client-could-not-connect`, `failure:env` came back `measured=False` yet `completed 4/4 demo_ready True`, `'$39.00'` vs `'39.00'` graded incorrect, and one injected URLError left `'URLError' in report` False. Review round 2 (R11) found the repair had left R1's own shape one level up: the phase half called `run_one` and asserted only `row['phase']`, and the completion half was the only path into `summarize` — every row it built had a terminal record, so no transport-failed row ever reached the aggregator. That left `infrastructure_failures` and `phases_seen`, the two figures D20 actually headlines (\"zero infrastructure failures — no transport error in any phase\"), with nothing recomputing them: a `summarize` returning 0 and [] regardless of its rows kept this case green. Watched red by exactly that mutation, and by four narrower ones — each field alone, and both directions (inventing an infrastructure failure on a clean set dies as well as erasing one on a dirty set). The five rows the phase half already builds now go through the real `summarize`, and the ledger of what was excluded (`not_a_measurement`) is pinned by content rather than by its effect on `demo_ready`.",
   "triage": {
     "class": "measurement-refused",
-    "note": "tagged invariant — 'do not publish a green demo-readiness verdict for a deployment that never ran anything' is not a property that may regress to a baseline, and neither is 'do not name a phase the evidence does not support'. The completion rule reuses `ablation.is_measurement` rather than inventing a second one, so `failure:nav` on the live task also stops counting: that is the conservative direction (it can understate readiness, never overstate it) and it is asserted here rather than left implicit. Correctness reuses `verifier.answers_match` plus a successful status — the ablation's exact rule — because D20 and ADR-011 Decision 7 cross-compare the two figures. Every response is a stub: no network, no browser, $0.00."
+    "note": "tagged invariant — 'do not publish a green demo-readiness verdict for a deployment that never ran anything' is not a property that may regress to a baseline, and neither is 'do not name a phase the evidence does not support'. The completion rule reuses `ablation.is_measurement` rather than inventing a second one, so `failure:nav` on the live task also stops counting: that is the conservative direction (it can understate readiness, never overstate it) and it is asserted here rather than left implicit. Correctness reuses `verifier.answers_match` plus a successful status — the ablation's exact rule — because D20 and ADR-011 Decision 7 cross-compare the two figures. Every response is a stub: no network, no browser, $0.00. After R11 every field `summarize` derives is graded in both directions — `infrastructure_failures`, `completed`, `attempted`, `correct`, `not_a_measurement`, `phases_seen`, `demo_ready` — across two reports, one made only of transport failures and one made only of terminal records. The remaining published field, `transport_retries`, is still asserted by substring rather than by content; that is PR #21 R12 and is logged as debt, not closed here."
   }
 }

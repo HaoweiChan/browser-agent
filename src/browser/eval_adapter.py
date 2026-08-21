@@ -1950,6 +1950,7 @@ def _run_soak_accounting_case(case: dict) -> dict:
                 "url": None, "answer": answer, "ground_truth": "evals/golden/stub.json"}
 
     # --- the exception -> phase table, through the real submit path -----------
+    infra_rows = []
     for probe in inp.get("submit_failures", []):
         outcome = make_exc(probe["raise"]) if probe.get("raise") else probe["body"]
 
@@ -1959,10 +1960,28 @@ def _run_soak_accounting_case(case: dict) -> dict:
             return {"ready": True}
 
         row = with_stub(script, lambda: SK.run_one(BASE, spec_for("x"), 5))
+        infra_rows.append(row)
         if row.get("phase") != probe["phase"]:
             wrong.append({"submit": probe["note"], "want_phase": probe["phase"],
                           "got_phase": row.get("phase"),
                           "transport_error": row.get("transport_error")})
+    # The phase on the row is half the claim; the other half is what `summarize`
+    # does with it. `infrastructure_failures` and `phases_seen` are the two
+    # figures D20 headlines ("zero infrastructure failures — no transport error
+    # in any phase") and nothing recomputed them, which is R1's shape one level
+    # up: a summarize that published 0 and [] regardless of its rows stayed
+    # green (PR #21 round 2, R11). So the rows this half already builds are fed
+    # through the real summarize and every field it publishes about them pinned.
+    if infra_rows:
+        report = SK.summarize(infra_rows, BASE, 1)
+        want = {"infrastructure_failures": len(infra_rows), "attempted": len(infra_rows),
+                "completed": 0, "correct": 0, "not_a_measurement": [],
+                "phases_seen": sorted({p["phase"] for p in inp["submit_failures"]}),
+                "demo_ready": False}
+        got = {k: report.get(k) for k in want}
+        if got != want:
+            wrong.append({"summary": "a report made only of transport failures",
+                          "want": want, "got": got})
 
     # --- what counts as a completion -----------------------------------------
     rows = []
@@ -1986,7 +2005,18 @@ def _run_soak_accounting_case(case: dict) -> dict:
         report = SK.summarize(rows, BASE, 1)
         want = {"completed": sum(1 for p in inp["terminal_records"] if p["expect"]["measured"]),
                 "correct": sum(1 for p in inp["terminal_records"] if p["expect"]["correct"]),
-                "attempted": len(rows), "demo_ready": False}
+                "attempted": len(rows), "demo_ready": False,
+                # The other direction of the same two fields: no row here failed
+                # in transport, so a summarize that invents either is red too.
+                "infrastructure_failures": 0, "phases_seen": [],
+                # The ledger that has to name what was excluded and why — a
+                # completion count that drops rows silently is the R1 defect
+                # wearing a different number.
+                "not_a_measurement": [{"task_id": "stub-case",
+                                       "status": p["record"]["status"],
+                                       "reason": p["record"].get("reason")}
+                                      for p in inp["terminal_records"]
+                                      if not p["expect"]["measured"]]}
         got = {k: report.get(k) for k in want}
         if got != want:
             wrong.append({"summary": "a terminal record that is not a measurement was counted "

@@ -84,6 +84,46 @@ documents already hedge ("narrowed, not eliminated"), which is why this is LOW.
 Acceptance: the probe samples repeatedly across the run and the report carries
 the series, or both documents say "one probe per run, taken ~2s in".
 
+### M22 — ADR-011 D8 overclaims that the retry ledger is pinned            [status: todo]
+Origin: PR #21 R12
+Spec: the retry probe asserts `"URLError" not in json.dumps(report)`, a substring
+search the per-row `retries` list already satisfies — so `summarize` can drop
+`transport_retries` entirely and the case stays green. R3's acceptance is met at
+the row level; the count and phase live only in the unasserted ledger field.
+Acceptance: the probe asserts `transport_retries` content (count + phase at
+least) so emptying the ledger reddens, or ADR-011 D8 narrows its wording.
+
+### M23 — a retry-exhausted attempt is published as "retried through"            [status: todo]
+Origin: PR #21 R13
+Spec: `_http` appends the final attempt to the out-list before re-raising, with
+no success marker, so a connect failure that never succeeded appears in
+`transport_retries` with `count: 3` and prints under the banner "connect-phase
+failures that retried through". The same event is reported twice, once with the
+wrong label — on the exact distinction the ledger was added to make.
+Acceptance: only attempts followed by a success are recorded, or the entry
+carries `retried_through: bool` and the banner reflects it; a case pins that a
+fully-failed connect produces an empty ledger.
+
+### M24 — support-matrix D8 is stale again, one commit after R5 fixed it            [status: todo]
+Origin: PR #21 R14
+Spec: D8 publishes 79.0-79.8s at 93 cases; the branch's own 95-case fast reports
+measure 78.34-79.10s, below the published minimum. `docs-numbers-are-derived`
+cannot see it — its cited-report list is frozen to the four 93-case reports, so
+the derivation is only as fresh as the ids someone last typed. The 3.45s
+`run_seconds` figure is 3.46s in two of the four.
+Acceptance: D8 cites the newest reports at the current case count, or states its
+range explicitly as "at 93 cases"; ideally the case derives the cited set from
+the newest N fast reports so it reddens on the next drift.
+
+### M25 — RETRY_SLEEPS sits under a comment describing the socket timeout            [status: todo]
+Origin: PR #21 R15
+Spec: `evals/ablation.py` — the "30s was too tight ... raised to ~4x the worst
+observed stall" block documents `timeout: int = 120`, and `RETRY_SLEEPS = (5, 10)`
+was inserted between the comment and the `def`, so the comment now reads as
+describing the backoff tuple.
+Acceptance: the constant sits above its own one-line comment, or the existing
+block names the timeout it describes.
+
 ### M18 — The soak cannot separate a bad deployment from a bad third-party site            [status: todo]
 Origin: PR #21 R1
 Spec: `summarize` now borrows `ablation.is_measurement` to decide what a
