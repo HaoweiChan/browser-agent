@@ -1,9 +1,10 @@
 # ADR-011: the `fast` gate's wall clock — one browser for the suite, and a ceiling that gates the run
 
-Date: 2026-08-21 (Decisions 1 and 2 amended the same day, PR #20 round 1)
+Date: 2026-08-21 (Decisions 1 and 2 amended the same day, PR #20 round 1;
+Decision 4 added the same day, on first contact with CI)
 Status: accepted
 
-**Ruling**: ADR-002 Decision 4's 60s ceiling stands unchanged, and `evals/run.py` now applies it to the run it just measured and exits non-zero; the `fast` suite gets one shared Chromium, re-launched if it dies, with each run in its own BrowserContext, and measures 56.6s over 95 cases after the M9 merge.
+**Ruling**: ADR-002 Decision 4's 60s ceiling stands unchanged for local runs and `evals/run.py` applies it to the run it just measured, exiting non-zero; CI carries its own measured ceiling of 75s via `EVAL_WALL_BUDGET_S`; the `fast` suite gets one shared Chromium, re-launched if it dies, with each run in its own BrowserContext, and measures 56.6s locally / 59.8-64.7s on CI over 95 cases.
 **Because**: 11.3s of the 67.0s breach was per-case browser process lifecycle — scaffolding, not evidence — and a budget nothing reads drifts from 13s to 68s without one run turning red.
 **Enforced by**: `evals/run.py` `over_budget()` (the ceiling itself), `fast-wall-clock-budget` (the ruling it applies), `agent-launches-its-own-browser` and `shared-browser-relaunches-when-dead` (what sharing a browser would otherwise leave ungraded).
 
@@ -112,16 +113,51 @@ timeout, no case deleted, no case moved out of `fast`.
 
    Deliberately not tagged `invariant`: invariants are absolute and
    machine-independent, and a wall clock is neither (ADR-009 Decision 6 records
-   66.6-68.3s here and 68.6s on a reviewer's machine). Three things this ADR
-   does not settle, all open on purpose: what a contributor on slower hardware
-   should do when the ceiling is genuinely out of reach there (PR #20 R6, Debt
-   T-R6); what `--update-baseline` should do on an over-budget tree, since it
-   returns before the ceiling is consulted and reports nothing (PR #20 R12, Debt
-   T-R12); and the ungraded module tail above (PR #20 R13, Debt T-R13), which is
-   not this ceiling's problem alone — it gates every rule in `main()` the same
-   way.
+   66.6-68.3s here and 68.6s on a reviewer's machine). Decision 3 below is the
+   machine-dependence answered rather than declared. Two things this ADR still
+   does not settle, both open on purpose: what `--update-baseline` should do on
+   an over-budget tree, since it returns before the ceiling is consulted and
+   reports nothing (PR #20 R12, Debt T-R12); and the ungraded module tail above
+   (PR #20 R13, Debt T-R13), which is not this ceiling's problem alone — it
+   gates every rule in `main()` the same way.
 
-3. **The un-shared launch keeps a case.** Sharing the browser on every case
+3. **The ceiling is per-environment, and both numbers are measured.**
+   `WALL_BUDGET_S = {"fast": 60}` is the local ruling. `EVAL_WALL_BUDGET_S`
+   overrides it, `.github/workflows/eval.yml` sets it to **75**, and anything
+   that is not a positive number — unset, empty, `banana`, `60s`, `0`, `-5` —
+   falls back to the committed 60. `fast-wall-clock-budget` grades all of that,
+   including the value the workflow declares, because an override nothing reads
+   is the R8 defect again and an override that silently disables the ceiling is
+   the R1 defect again.
+
+   **Why two numbers.** CI ran on this branch for the first time on 2026-08-21
+   (the PR had been CONFLICTING, and GitHub silently runs nothing on those) and
+   came back red at 64.61s. The useful part is the run beside it: `main`'s own CI
+   run `32385032004` does `fast` in **89.62s over 92 cases** — CI had been ~50%
+   over the 60s ceiling for its entire existence, invisibly, because nothing
+   checked. This branch did not make CI slow; it made CI measurable, and cut
+   89.62s to 59.8-64.7s while adding three cases. That is finding D6/R6 arriving
+   with a trigger hours after being filed as debt without one.
+
+   **The CI number, and what it rests on.** Four runs of the same commit
+   (`09b9740`, 95 cases, `ubuntu-latest`, run `32455716866` and three re-runs):
+   **59.77 / 60.84 / 64.61 / 64.67s** — a 4.90s spread, 8% of the fastest, on
+   byte-identical code. 75s is the slowest of those plus one more spread-width
+   for runner variance. Four runs of one commit is what this rests on: it is a
+   band, not a distribution, and it says nothing about a runner class other than
+   `ubuntu-latest`. ADR-009 Decision 6 published a single-run number and had to be
+   corrected to a band, which is why the count is stated rather than implied.
+
+   **What was rejected, so the alternatives are visible.** One ceiling raised
+   until CI fits would put ~18s of drift room in front of the local gate, which
+   is the only place the number is currently tight — the exact drift this ADR
+   exists to stop. Making the check advisory in CI would retire it precisely
+   where the hardware is slowest and the drift shows first. `--no-verify` and
+   moving cases out of `fast` are not on the table at all: both are ways of not
+   measuring. A threshold that varies by environment is a decision, and this
+   repo records decisions rather than quietly widening one.
+
+4. **The un-shared launch keeps a case.** Sharing the browser on every case
    left `browser is None` — the branch every real caller takes — graded by
    nothing: it could be deleted and the suite stayed 1.000. That was watched,
    then closed by `agent-launches-its-own-browser`, one ~0.3s run that refuses
@@ -129,7 +165,7 @@ timeout, no case deleted, no case moved out of `fast`.
 
 ## Consequences
 
-`fast` measures **56.61s over 95 cases** (`evals/report/20260821-143744-fast.json`),
+`fast` measures **56.47s over 95 cases** (`evals/report/20260821-160938-fast.json`),
 against 67.0-68.3s over 86-87 before this ADR and 71.3-76.5s once M9's cases
 arrived. Headroom against the 60s ceiling is ~3.4s on this machine, which is real
 but not generous: the 42.2s of deliberate waiting is the floor this route cannot
@@ -153,6 +189,19 @@ doubling to a 2s cap, bounded by the existing deadline, which leaves a real paid
 sweep unchanged), the case fell from 8.08s to 1.67s, and the ceiling held without
 being moved. Recorded because the ceiling's value is not that it was set
 correctly — it is that it fired on something nobody would have gone looking for.
+
+**And then it fired again the same day, on the first CI run this branch ever
+got.** Both firings found something real and neither was the thing predicted: the
+first a completion poll, the second an environment where the ceiling had never
+run at all. `T-R6` — "no sanctioned escape when the ceiling is unreachable",
+filed as debt on the grounds that it had no demonstrated trigger — had one within
+hours, and is closed here by the per-environment ceiling rather than left open.
+The escape it asked for is now named and measured instead of improvised:
+`EVAL_WALL_BUDGET_S`, set from observations, graded by a case. What it does not
+answer is a contributor whose own machine cannot make 60s; that person now has a
+documented mechanism, but pointing it at a number nobody measured would be the
+drift this ADR is about, so the honest move there is still an amendment with its
+own runs behind it.
 
 The parallel eval runner stays in the backlog on its own merits. It was named
 in ADR-009 Decision 6 as *the* fix; it is now the *next* fix, and it addresses

@@ -21,9 +21,17 @@
       }
     }
   ],
-  "debt_created_by_this_task": ["T-R5", "T-R6", "T-R12", "T-R13"],
+  "debt_created_by_this_task": [
+    "T-R5",
+    "T-R6",
+    "T-R12",
+    "T-R13"
+  ],
   "gate": {
     "invariant": "23/23 = 1.000",
     "fast": "90/90 = 1.000"
+  },
+  "debt_closed_since": {
+    "T-R6": "closed in the CI round of PR #20, hours after being filed. It was routed to debt for having no demonstrated trigger; the branch's first CI run supplied one (64.61s against a 60s ceiling nothing had ever checked on that hardware, beside main's own 89.62s). Closed by ADR-011 Decision 3 — a per-environment ceiling, both numbers measured and enforced — not by leaving it open."
   }
 }

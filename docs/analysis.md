@@ -36,12 +36,12 @@ all offline** (`fast` to 91/91, `invariant` to 27/27, the gate at 71.3-76.5s —
 `evals/report/20260820-162200-fast.json`, `…-162043-invariant.json`), and
 **M12 stopped launching a Chromium per case**, which took the gate back under
 ADR-002's ceiling. The merged tree is given here in full rather than left to be
-inferred — `evals/report/20260821-143744-fast.json`, `…-143642-invariant.json`, `…-143930-live.json`:
+inferred — `evals/report/20260821-160938-fast.json`, `…-160842-invariant.json`, `…-143930-live.json`:
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
-| `fast` (offline gate) | 95 | **95/95** | 56.61s | 0.12s | 4.08s | $0.0000 |
-| `invariant` (must-always-hold) | 28 | **28/28** | 5.15s | 0.0s | 2.27s | $0.0000 |
+| `fast` (offline gate) | 95 | **95/95** | 56.47s | 0.12s | 4.07s | $0.0000 |
+| `invariant` (must-always-hold) | 28 | **28/28** | 4.59s | 0.0s | 1.83s | $0.0000 |
 | `live` (4 real sites) | 9 | **9/9** | 24.56s | 1.48s | 7.54s | $0.0000 |
 
 `fast`'s wall clock and p50 both fell against M9's numbers because M12 stopped
@@ -72,7 +72,7 @@ and the run there answers confidently and wrongly (§ the M8 rows in
 `docs/support-matrix.md`, D5–D11).
 
 **The `fast` gate cost 68s against the 60s ceiling ADR-002 set for two
-milestones, and is back inside it at 56.61s (95 cases).** It was declared
+milestones, and is back inside it at 56.47s (95 cases).** It was declared
 rather than fixed at M8 on the assumption that the 57s under the one deliberate
 10.6s click timeout was irreducible trend (13s at M2, 48.6s at M6, 55.4s at M7).
 M12 measured it per call instead: 42.2s is deliberate waiting at bounds the
@@ -87,8 +87,13 @@ read (`docs/support-matrix.md` D8,
 the M9 merge: the suite hit 63.3s and the gate exited 1, and the 8.03s that
 crossed the line was a completion poll in the ablation driver sleeping 2s between
 checks on loopback runs that finish in under a second — not browser work, and
-removed rather than absorbed into the ceiling. Headroom is now ~3.4s, so the
-parallel eval runner stays the named next lever.
+removed rather than absorbed into the ceiling. Then it fired again on the branch's
+first CI run, which is the more useful of the two: `main`'s own CI does `fast` in
+**89.62s** (run `32385032004`), so CI had been ~50% over the ceiling for its entire
+existence and nothing had ever checked there. This branch cuts that to 59.8-64.7s
+across four runs. CI now carries its own measured ceiling of 75s while local stays
+at 60s, both enforced. Headroom is ~3.4s locally, so the parallel eval runner stays
+the named next lever.
 
 **The single most important caveat in this document:** every one of those runs
 stubs the planner at the module boundary. That is deliberate (cost-discipline:
@@ -161,7 +166,7 @@ than mocked. A successful step never waits it out.
 
 The per-case numbers in that table each still carried a cold Chromium launch,
 ~0.20s of the ~0.35s median. Since M12 the suite shares one browser and the
-median case is **0.12s** (p95 4.08s, `evals/report/20260821-143744-fast.json`);
+median case is **0.12s** (p95 4.07s, `evals/report/20260821-160938-fast.json`);
 the tall cases above are unchanged, because what they spend is the settle loop,
 not the launch.
 
@@ -175,8 +180,8 @@ observation and its wall time was not recorded per-phase.
 Suite wall time grew 24s → 32s at the cold review (ADR-005), entirely from one
 extra `inner_text` per action to capture `page_changed`. That evidence is what
 separates a legitimate replan from one laundering an action that never landed,
-so it was bought deliberately. The `fast` gate remains well inside the 60s
-threshold set in ADR-002.
+so it was bought deliberately. The `fast` gate remains inside the threshold set
+in ADR-002 — 60s locally, and since ADR-011 Decision 3 a measured 75s on CI.
 
 ## 4. Scalability
 

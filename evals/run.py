@@ -21,6 +21,7 @@ report history. Adapters own: how to run a case and judge it.
 import argparse
 import importlib
 import json
+import os
 import sys
 import time
 import traceback
@@ -63,13 +64,37 @@ def run_case(case):
 # stops being run honestly (specs/decisions/ADR-002-performance-thresholds.md
 # Decision 4, re-measured by ADR-011). Pinned by the case `fast-wall-clock-budget`.
 WALL_BUDGET_S = {"fast": 60}
+# The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
+# against a 60s ceiling nothing had ever checked there; one number cannot be both
+# tight locally and true on a runner ~1.6x slower, so the environment sets its
+# own and both are enforced (ADR-011 amendment). `.github/workflows/eval.yml`
+# declares CI's, and `fast-wall-clock-budget` grades the value it declares.
+WALL_BUDGET_ENV = "EVAL_WALL_BUDGET_S"
+
+
+def wall_budget(suite):
+    """The ceiling in force for `suite`, or None if it has none.
+
+    Anything that is not a positive number — unset, empty, `banana`, `60s`, `0`,
+    a negative — falls back to the committed ruling. An override that silently
+    disabled the gate would be this PR's own defect for the fourth time, and the
+    quiet direction is the one that has bitten every time."""
+    base = WALL_BUDGET_S.get(suite)
+    if base is None:
+        return None
+    try:
+        override = float(os.environ.get(WALL_BUDGET_ENV, ""))
+    except ValueError:
+        return base
+    return override if override > 0 else base
 
 
 def over_budget(suite, wall_seconds):
     """The whole ruling, pure so a case can grade it. Applied to the run being
     measured — a report is written after the run and does not survive a CI
     workspace, so it can never gate the tree that produced it (PR #20 R1)."""
-    return wall_seconds > WALL_BUDGET_S.get(suite, float("inf"))
+    ceiling = wall_budget(suite)
+    return ceiling is not None and wall_seconds > ceiling
 
 
 def pctl(values, p):
@@ -164,9 +189,11 @@ def main():
               file=sys.stderr)
         return 1
     if over_budget(args.suite, totals["wall_seconds"]):
+        ceiling = wall_budget(args.suite)
+        source = (f"{WALL_BUDGET_ENV}={os.environ[WALL_BUDGET_ENV]}"
+                  if ceiling != WALL_BUDGET_S[args.suite] else "ADR-002 Decision 4")
         print(f"[eval] OVER BUDGET: suite '{args.suite}' wall clock "
-              f"{totals['wall_seconds']}s > {WALL_BUDGET_S[args.suite]}s "
-              "(ADR-002 Decision 4)", file=sys.stderr)
+              f"{totals['wall_seconds']}s > {ceiling}s ({source})", file=sys.stderr)
         return 1
     if args.suite in baseline and score < baseline[args.suite]:
         print(f"[eval] REGRESSION: {score:.3f} < baseline {baseline[args.suite]:.3f}",

@@ -219,7 +219,8 @@ documents the trap rather than relying on it.
 > per-call, 11.3s of it was per-case Playwright driver start + `chromium.launch`
 > + `browser.close`, i.e. harness scaffolding rather than evidence. The suite now
 > shares one browser (each run in its own BrowserContext) and measures
-> 56.61s over 95 cases after the M9 merge, inside ADR-002's unmoved 60s, with the ceiling
+> 56.47s over 95 cases after the M9 merge, inside ADR-002's unmoved 60s local
+> ceiling (CI carries its own measured 75s, ADR-011 Decision 3), with the ceiling
 > enforced by `fast-wall-clock-budget` instead of asserted in prose. The parallel
 > runner is still backlog and still the fix for the 42.2s of deliberate waiting
 > this ADR correctly refused to touch.

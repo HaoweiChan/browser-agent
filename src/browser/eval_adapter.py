@@ -27,6 +27,7 @@ per process) so eval and production exercise the same serving path.
 """
 
 import asyncio
+import atexit
 import json
 import re
 import socket
@@ -90,7 +91,7 @@ def _subst(obj, url: str):
 
 
 _LOOP: asyncio.AbstractEventLoop | None = None
-_BROWSER = None
+_BROWSER = _PW = None
 
 
 def _await(coro):
@@ -108,19 +109,46 @@ async def _browser():
     BrowserContext (run_task, _run_observe_case), so nothing crosses between
     cases; what is shared is the process. Measured on the `fast` suite: 58 driver
     starts + launches + closes cost 11.3s of 67.0s, which is scaffolding, not
-    evidence (ADR-011). The driver and browser are left running until the process
-    exits — there is nothing after the last case to close them for, and an atexit
-    hook on an already-closed event loop is its own bug.
+    evidence (ADR-011). Both live until `_shutdown` below closes them.
 
     Re-launched when it is gone: a dead browser is not None, and handing it out
     turns one crash into every later case failing with `TargetClosedError`
     attributed to itself — the containment per-case launches gave for free
-    (PR #20 R2, case `shared-browser-relaunches-when-dead`)."""
-    global _BROWSER
-    if _BROWSER is None or not _BROWSER.is_connected():
+    (PR #20 R2, case `shared-browser-relaunches-when-dead`). The driver is NOT
+    restarted with it: one node process serves every browser this run opens."""
+    global _BROWSER, _PW
+    if _PW is None:
         from playwright.async_api import async_playwright
-        _BROWSER = await (await async_playwright().start()).chromium.launch(args=["--no-sandbox"])
+        _PW = await async_playwright().start()
+    if _BROWSER is None or not _BROWSER.is_connected():
+        _BROWSER = await _PW.chromium.launch(args=["--no-sandbox"])
     return _BROWSER
+
+
+@atexit.register
+def _shutdown():
+    """Close the shared browser, driver and loop before the interpreter goes.
+
+    Not correctness — noise. Left open, Playwright's connection tasks are still
+    pending when CPython tears the loop down, and the run ends in
+    `RuntimeError: Event loop is closed` and two `Task was destroyed but it is
+    pending!` tracebacks after the suite's last line (CI run 32455716866). The
+    exit code was never wrong; a green run that ends in tracebacks just reads as
+    a broken one, and this repo is read.
+
+    Guarded on state, not assumed: a suite that opened no browser leaves every
+    global None, and a loop somebody else already closed is left alone — the
+    objection to doing this at all was an atexit hook running against a closed
+    loop, and that is the branch above."""
+    global _BROWSER, _PW
+    if _LOOP is None or _LOOP.is_closed():
+        return
+    if _BROWSER is not None and _BROWSER.is_connected():
+        _LOOP.run_until_complete(_BROWSER.close())
+    if _PW is not None:
+        _LOOP.run_until_complete(_PW.stop())
+    _BROWSER = _PW = None
+    _LOOP.close()
 
 
 def _run_agent(task: str, url: str | None, planner, own_browser: bool = False, **kw) -> dict:
@@ -1836,11 +1864,40 @@ def _run_wall_clock_case(case: dict) -> dict:
     red however slow the tree was (PR #20 R1). The second graded the ruling only,
     and the block in `main()` that applies it could be deleted with the whole
     suite still green (PR #20 R8)."""
-    from evals.run import WALL_BUDGET_S, over_budget
+    import os
+    import re
+
+    from evals.run import WALL_BUDGET_ENV, WALL_BUDGET_S, over_budget, wall_budget
 
     exp = case["expect"]
     wrong = [r for r in case["input"]["rows"]
              if over_budget(r["suite"], r["wall_seconds"]) is not r["over"]]
+    # The per-environment override (ADR-011 amendment). A positive number moves
+    # the ceiling; everything else must fall back to the committed 60 rather than
+    # switch the gate off, which is the quiet direction this PR keeps finding.
+    prev = os.environ.get(WALL_BUDGET_ENV)
+    try:
+        for r in case["input"]["env_override"]:
+            os.environ.pop(WALL_BUDGET_ENV, None)
+            if r["value"] is not None:
+                os.environ[WALL_BUDGET_ENV] = r["value"]
+            got = wall_budget("fast")
+            if got != r["budget"]:
+                wrong.append({"env": r["value"], "expected_ceiling": r["budget"], "got": got,
+                              "note": r["note"]})
+    finally:
+        os.environ.pop(WALL_BUDGET_ENV, None)
+        if prev is not None:
+            os.environ[WALL_BUDGET_ENV] = prev
+    # CI's ceiling is a committed number, not a YAML string nobody reads: the
+    # workflow is the only place it takes effect, so the value it declares is
+    # part of the ruling (the R8 lesson — a mechanism nothing consults).
+    wf = (Path(__file__).parents[2] / ".github" / "workflows" / "eval.yml").read_text()
+    declared = re.search(rf"{WALL_BUDGET_ENV}:\s*\"?([0-9.]+)\"?", wf)
+    if not declared or float(declared.group(1)) != exp["ci_wall_seconds"]:
+        wrong.append({"workflow": WALL_BUDGET_ENV,
+                      "declared": declared.group(1) if declared else None,
+                      "expected": exp["ci_wall_seconds"]})
     if WALL_BUDGET_S.get("fast") != exp["max_wall_seconds"]:
         wrong.append({"ruling": "fast", "budget": WALL_BUDGET_S.get("fast"),
                       "declared": exp["max_wall_seconds"]})
@@ -1853,7 +1910,8 @@ def _run_wall_clock_case(case: dict) -> dict:
                for r in case["input"]["applied_in_main"]]
     wrong += [r for r in applied if r["got"] != r["exit"]]
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"budgets": WALL_BUDGET_S, "main_exit": applied}}
+            "got": {"budgets": WALL_BUDGET_S, "ci_ceiling": exp["ci_wall_seconds"],
+                    "main_exit": applied}}
 
 
 def _run_browser_liveness_case(case: dict) -> dict:

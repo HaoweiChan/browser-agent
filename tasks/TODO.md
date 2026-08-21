@@ -44,7 +44,9 @@ amended with the measured floor and why.
 Resolved by acceptance branch 1 (`specs/decisions/ADR-011-fast-suite-wall-clock.md`):
 per-call measurement put 11.3s of the 67.0s in per-case browser process
 lifecycle, which the harness no longer pays; 42.2s of deliberate waiting was
-left alone. `fast` is 56.61s over 95 cases and ADR-002 D4's 60s is unmoved.
+left alone. `fast` is 56.47s over 95 cases and ADR-002 D4's 60s is unmoved as
+the local number; CI got its own measured 75s (ADR-011 Decision 3) after its
+first run showed main had been at 89.62s against the same 60s, unchecked.
 Review round 1 (PR #20) falsified the first enforcement — a case reading the
 newest committed report cannot go red on a fresh CI clone — so the ceiling now
 lives in `evals/run.py` and gates the run it measured.
@@ -122,23 +124,6 @@ raise on the shared path. Acceptance: `ctx` created inside the exit stack
 (`stack.push_async_callback(ctx.close)`) or inside the `try`, so both paths
 close it on any failure, with a case that leaks before the fix.
 
-### T-R6 — No sanctioned escape when the wall-clock ceiling is unreachable            [status: todo]
-Origin: PR #20 R6 (LOW, routed debt — a repo-owner policy call, not a fix to improvise)
-Spec: ADR-011 keeps the wall-clock ruling out of `invariant` because a wall
-clock is machine-dependent, then hard-gates it anyway: since round 1 the repo
-`evals/run.py` exits non-zero on any `fast` run over 60s, and `.githooks/pre-commit`
-runs exactly that. ADR-009 Decision 6 records this same suite at 68.6s on a
-reviewer's machine, CLAUDE.md rule 1 forbids `--update-baseline` to clear a
-gate, and rule 5 makes `--no-verify` an emergency — so a contributor on slower
-hardware has no sanctioned move. (Round 1 removed the accidental escape the
-finding names: with the ceiling in the runner rather than in a report-reading
-case, deleting a report no longer unblocks anything, and the failure is at
-least loud — `OVER BUDGET: suite 'fast' wall clock …s > 60s` — instead of a
-mysterious 89/90.) Acceptance: ADR-011 names the escape (documented env-var
-override, per-machine calibration factor, or an explicit "run the gate on
-reference hardware" rule), or the ceiling is re-expressed as something
-machine-independent (summed deliberate-wait budget, per-case counts).
-
 ### M13 — Adaptive locator learning            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence.
@@ -148,7 +133,7 @@ Origin: backlog (pre-pr-loop, never promoted)
 Spec: promote only with its own eval evidence. M12 resolved without amending
 ADR-002 D4 — it removed 11.3s of per-case browser launch and left the 42.2s of
 deliberate waiting (settle loops, bounded load/screenshot waits, one 10s click
-timeout) that only parallelism can hide. `fast` now sits at 56.61s with
+timeout) that only parallelism can hide. `fast` now sits at 56.47s with
 ~3.4s of headroom after the M9 merge, so this is the next lever when the ceiling
 goes red rather than an urgent one today (ADR-011).
 

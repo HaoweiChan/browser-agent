@@ -49,23 +49,31 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260821-143744-fast.json`, with
-`…-143642-invariant.json` and `…-143930-live.json`:
+Latest offline baseline — `evals/report/20260821-160938-fast.json`, with
+`…-160842-invariant.json` and `…-143930-live.json`:
 
 ```
-fast  95/95    invariant  28/28    live  9/9    $0.0000    56.6s
+fast  95/95    invariant  28/28    live  9/9    $0.0000    56.5s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 14/14 · 4 replans
 ```
+
+That is this machine. The same suite on CI (`ubuntu-latest`) measures
+**59.77 / 60.84 / 64.61 / 64.67s** across four runs of the *same commit* — an 8%
+spread on byte-identical code, which is why the wall-clock ceiling is
+per-environment rather than one number pretending to be portable.
 
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
 measured where the time went instead of assuming: 42.2s is deliberate waiting
 at bounds the suite exists to exercise, 13.5s is real work, and 11.3s was 58
 cold Chromium launches, one per case. The ceiling is now applied by
 `evals/run.py` to the run it just measured, so a slow tree exits non-zero
-instead of reporting 1.000. It fired on the very next merge: M9's arrival took
-the suite to 63.3s, and what it caught was a completion poll sleeping 2s between
-checks on runs that finish in under a second — not browser work
+instead of reporting 1.000. It fired twice in a day, and neither time on what
+anyone would have guessed: M9's merge took the suite to 63.3s over a completion
+poll sleeping 2s between checks on runs that finish in under a second, and the
+branch's first CI run showed CI had been ~50% over the same ceiling for its whole
+existence with nothing checking — `main` runs `fast` in 89.62s. CI now carries its
+own measured ceiling (75s, from four runs at 59.8-64.7s) while local stays at 60s
 ([ADR-011](specs/decisions/ADR-011-fast-suite-wall-clock.md)).
 
 `live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those
