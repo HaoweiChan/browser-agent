@@ -2,20 +2,20 @@
   "suite": "fast",
   "score": 1.0,
   "totals": {
-    "actions": 193,
+    "actions": 202,
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 5,
-    "ms": 57082,
-    "wall_seconds": 65.24,
-    "latency_p50": 0.11,
-    "latency_p95": 2.56,
-    "cases_with_budgets": 70
+    "ms": 57527,
+    "wall_seconds": 65.52,
+    "latency_p50": 0.12,
+    "latency_p95": 2.3,
+    "cases_with_budgets": 73
   },
   "metrics": {
     "recovery_rungs": 13,
-    "diagnosis_cases": 20,
-    "diagnosis_correct": 20,
+    "diagnosis_cases": 21,
+    "diagnosis_correct": 21,
     "replans": 5,
     "mutation_cases": 11,
     "mutation_passed": 9,
@@ -34,7 +34,7 @@
       "advertised_unresolvable": [],
       "starved_by_chrome": [],
       "n_elements": 5,
-      "seconds": 0.43,
+      "seconds": 0.41,
       "id": "observe-hello-elements",
       "kind": "golden"
     },
@@ -56,6 +56,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -75,9 +76,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 102
+        "ms": 116
       },
-      "seconds": 0.1,
+      "seconds": 0.12,
       "id": "tc1-hello-heading",
       "kind": "golden"
     },
@@ -99,6 +100,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -143,6 +145,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -186,6 +189,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -229,6 +233,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -248,7 +253,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 97
+        "ms": 98
       },
       "seconds": 0.1,
       "id": "tc1-shop-price",
@@ -272,6 +277,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -294,9 +300,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 364
+        "ms": 347
       },
-      "seconds": 0.37,
+      "seconds": 0.35,
       "id": "tc2-shop-search-zh",
       "kind": "golden"
     },
@@ -318,6 +324,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -339,7 +346,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 282
+        "ms": 283
       },
       "seconds": 0.28,
       "id": "tc2-shop-search",
@@ -363,6 +370,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -383,9 +391,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 179
+        "ms": 198
       },
-      "seconds": 0.18,
+      "seconds": 0.2,
       "id": "tc3-shop-detail-nav-zh",
       "kind": "golden"
     },
@@ -407,6 +415,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -427,9 +436,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 199
+        "ms": 215
       },
-      "seconds": 0.2,
+      "seconds": 0.22,
       "id": "tc3-shop-detail-nav",
       "kind": "golden"
     },
@@ -451,6 +460,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -495,6 +505,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -515,7 +526,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 199
+        "ms": 198
       },
       "seconds": 0.2,
       "id": "tc4-shop-sort-zh",
@@ -539,6 +550,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true,
           "ground_truth_state": true
@@ -563,9 +575,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 397
+        "ms": 431
       },
-      "seconds": 0.4,
+      "seconds": 0.43,
       "id": "tc5-forms-submit-zh",
       "kind": "golden"
     },
@@ -587,6 +599,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true,
           "ground_truth_state": true
@@ -611,16 +624,16 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 398
+        "ms": 430
       },
-      "seconds": 0.4,
+      "seconds": 0.43,
       "id": "tc5-forms-submit",
       "kind": "golden"
     },
     {
       "passed": true,
       "wrong": [],
-      "seconds": 1.69,
+      "seconds": 1.67,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
@@ -635,7 +648,7 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "adr_files": 18,
+        "adr_files": 19,
         "index_entries": 18
       },
       "seconds": 0.0,
@@ -660,6 +673,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -679,9 +693,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 379
+        "ms": 372
       },
-      "seconds": 0.38,
+      "seconds": 0.37,
       "id": "agent-launches-its-own-browser",
       "kind": "adversarial"
     },
@@ -709,6 +723,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -735,9 +750,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 2,
-        "ms": 6638
+        "ms": 6544
       },
-      "seconds": 6.65,
+      "seconds": 6.55,
       "id": "budget-replans-exhausted",
       "kind": "adversarial"
     },
@@ -812,11 +827,11 @@
       },
       "got": {
         "counts": {
-          "fast": 119,
+          "fast": 122,
           "invariant": 51,
           "live": 9,
           "full": 10,
-          "all": 130
+          "all": 133
         },
         "domains": {
           "books.toscrape.com": 3,
@@ -847,6 +862,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -866,9 +882,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 109
+        "ms": 113
       },
-      "seconds": 0.11,
+      "seconds": 0.12,
       "id": "evidence-window-keeps-the-anchor",
       "kind": "adversarial"
     },
@@ -898,6 +914,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -917,9 +934,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 111
+        "ms": 126
       },
-      "seconds": 0.11,
+      "seconds": 0.13,
       "id": "extract-all-cheapest-wording-still-reduces",
       "kind": "adversarial"
     },
@@ -941,6 +958,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -984,6 +1002,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1004,9 +1023,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 197
+        "ms": 216
       },
-      "seconds": 0.2,
+      "seconds": 0.22,
       "id": "extract-all-declared-rank-obeys-the-plan",
       "kind": "adversarial"
     },
@@ -1028,6 +1047,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1053,9 +1073,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 197
+        "ms": 213
       },
-      "seconds": 0.2,
+      "seconds": 0.21,
       "id": "extract-all-list-task-keeps-every-row",
       "kind": "adversarial"
     },
@@ -1076,6 +1096,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -1120,6 +1141,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -1140,9 +1162,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 110
+        "ms": 93
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "extract-all-undeclared-intent-fails-loud",
       "kind": "adversarial"
     },
@@ -1257,6 +1279,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true,
           "ground_truth_state": true
@@ -1314,6 +1337,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1342,9 +1366,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 246
+        "ms": 262
       },
-      "seconds": 0.25,
+      "seconds": 0.26,
       "id": "l4-recover-name-to-text",
       "kind": "adversarial"
     },
@@ -1367,6 +1391,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1396,9 +1421,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 315
+        "ms": 350
       },
-      "seconds": 0.32,
+      "seconds": 0.35,
       "id": "l4-shop-a11y-stripped",
       "kind": "adversarial"
     },
@@ -1421,6 +1446,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1449,7 +1475,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 231
+        "ms": 230
       },
       "seconds": 0.23,
       "id": "l4-shop-button-text-renamed",
@@ -1474,6 +1500,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1503,9 +1530,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 349
+        "ms": 332
       },
-      "seconds": 0.35,
+      "seconds": 0.33,
       "id": "l4-shop-duplicate-labels",
       "kind": "adversarial"
     },
@@ -1527,6 +1554,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1551,7 +1579,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114
+        "ms": 113
       },
       "seconds": 0.12,
       "id": "l4-shop-element-reordered-near",
@@ -1575,6 +1603,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1599,7 +1628,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 115
+        "ms": 116
       },
       "known_wrong_ground_truth": "expect.answer pins the WRONG answer this build produces; a PASS here means 'the agent reproduced the known-wrong answer', never 'the answer is correct'",
       "seconds": 0.12,
@@ -1624,6 +1653,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1649,7 +1679,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 215
+        "ms": 213
       },
       "seconds": 0.22,
       "id": "l4-shop-ids-renamed",
@@ -1675,6 +1705,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1706,9 +1737,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 10366
+        "ms": 10331
       },
-      "seconds": 10.37,
+      "seconds": 10.33,
       "id": "l4-shop-overlay-modal",
       "kind": "adversarial"
     },
@@ -1729,6 +1760,7 @@
           "actions_verified": false,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -1754,9 +1786,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 139
+        "ms": 157
       },
-      "seconds": 0.15,
+      "seconds": 0.16,
       "id": "l4-shop-render-delayed",
       "kind": "adversarial"
     },
@@ -1778,6 +1810,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -1827,6 +1860,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -1874,6 +1908,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -1914,6 +1949,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -1961,6 +1997,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2001,6 +2038,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2051,6 +2089,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -2075,9 +2114,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 226
+        "ms": 244
       },
-      "seconds": 0.23,
+      "seconds": 0.25,
       "id": "multi-extract-list",
       "kind": "adversarial"
     },
@@ -2113,6 +2152,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -2132,9 +2172,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 8134
+        "ms": 8124
       },
-      "seconds": 8.14,
+      "seconds": 8.13,
       "id": "nav-action-load-event-never-fires",
       "kind": "adversarial"
     },
@@ -2156,6 +2196,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -2175,7 +2216,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4091
+        "ms": 4083
       },
       "seconds": 4.09,
       "id": "nav-load-event-never-fires",
@@ -2199,6 +2240,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -2218,7 +2260,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 117
+        "ms": 118
       },
       "seconds": 0.12,
       "id": "near-anchor-substring",
@@ -2241,6 +2283,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2285,6 +2328,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -2304,7 +2348,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 118
+        "ms": 117
       },
       "seconds": 0.12,
       "id": "near-excludes-its-own-anchor",
@@ -2328,6 +2372,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -2347,9 +2392,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 109
+        "ms": 117
       },
-      "seconds": 0.11,
+      "seconds": 0.13,
       "id": "near-prefers-the-container",
       "kind": "adversarial"
     },
@@ -2406,6 +2451,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2429,9 +2475,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2293
+        "ms": 2277
       },
-      "seconds": 2.3,
+      "seconds": 2.29,
       "id": "plan-lint-holds-across-a-midrun-replan",
       "kind": "adversarial"
     },
@@ -2454,6 +2500,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": false
         },
@@ -2474,7 +2521,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 51
+        "ms": 53
       },
       "seconds": 0.06,
       "id": "plan-lint-refuses-a-declared-non-comparison",
@@ -2514,6 +2561,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2536,9 +2584,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2207
+        "ms": 2209
       },
-      "seconds": 2.21,
+      "seconds": 2.22,
       "id": "postcondition-compound-keys",
       "kind": "adversarial"
     },
@@ -2559,6 +2607,7 @@
           "actions_verified": false,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2582,9 +2631,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 206
+        "ms": 199
       },
-      "seconds": 0.21,
+      "seconds": 0.2,
       "id": "postcondition-unverified-click",
       "kind": "adversarial"
     },
@@ -2611,6 +2660,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -2632,9 +2682,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 96
+        "ms": 116
       },
-      "seconds": 0.1,
+      "seconds": 0.12,
       "id": "probe3-quotes-most-quoted-author",
       "kind": "adversarial"
     },
@@ -2661,10 +2711,10 @@
           "busy",
           "idle"
         ],
-        "during_latency_s": 0.002,
-        "run_seconds": 2.56
+        "during_latency_s": 0.001,
+        "run_seconds": 2.5
       },
-      "seconds": 2.56,
+      "seconds": 2.5,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -2688,6 +2738,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2710,9 +2761,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2279
+        "ms": 2203
       },
-      "seconds": 2.29,
+      "seconds": 2.21,
       "id": "recovery-label-requires-strategy-change",
       "kind": "adversarial"
     },
@@ -2737,6 +2788,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -2762,9 +2814,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 2310
+        "ms": 2293
       },
-      "seconds": 2.31,
+      "seconds": 2.3,
       "id": "recovery-replan-postcondition",
       "kind": "adversarial"
     },
@@ -2785,6 +2837,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2839,6 +2892,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2884,6 +2938,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2906,9 +2961,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2235
+        "ms": 2224
       },
-      "seconds": 2.24,
+      "seconds": 2.23,
       "id": "replan-cannot-launder-noop-action-extract-all",
       "kind": "adversarial"
     },
@@ -2930,6 +2985,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -2952,9 +3008,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2240
+        "ms": 2192
       },
-      "seconds": 2.25,
+      "seconds": 2.2,
       "id": "replan-cannot-launder-noop-action",
       "kind": "adversarial"
     },
@@ -2988,6 +3044,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -3009,9 +3066,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 154
+        "ms": 147
       },
-      "seconds": 0.16,
+      "seconds": 0.15,
       "id": "resolver-substring-name",
       "kind": "adversarial"
     },
@@ -3032,6 +3089,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -3052,9 +3110,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 111
+        "ms": 93
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "resolver-unknown-target-key",
       "kind": "adversarial"
     },
@@ -3077,7 +3135,7 @@
         "after": "success",
         "reason_after": null
       },
-      "seconds": 0.35,
+      "seconds": 0.34,
       "id": "shared-browser-relaunches-when-dead",
       "kind": "adversarial"
     },
@@ -3086,7 +3144,7 @@
       "wrong": {
         "soak": []
       },
-      "seconds": 0.07,
+      "seconds": 0.06,
       "id": "soak-counts-only-real-completions",
       "kind": "adversarial"
     },
@@ -3120,9 +3178,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 243
+        "ms": 248
       },
-      "seconds": 0.24,
+      "seconds": 0.25,
       "id": "stream-shows-every-step",
       "kind": "adversarial"
     },
@@ -3135,7 +3193,7 @@
         "status": "failure:env",
         "steps": 2
       },
-      "seconds": 2.26,
+      "seconds": 2.21,
       "id": "supersede-never-dangles",
       "kind": "adversarial"
     },
@@ -3147,8 +3205,8 @@
       },
       "got": {
         "rows": 9,
-        "limitations": 62,
-        "citations": 58
+        "limitations": 63,
+        "citations": 62
       },
       "seconds": 0.0,
       "id": "support-matrix-cites-real-cases",
@@ -3171,6 +3229,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -3195,7 +3254,7 @@
         "replans": 0,
         "ms": 98
       },
-      "seconds": 0.1,
+      "seconds": 0.11,
       "id": "trap-empty-extraction",
       "kind": "adversarial"
     },
@@ -3217,6 +3276,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "ground_truth_state": false
         },
@@ -3239,9 +3299,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 336
+        "ms": 275
       },
-      "seconds": 0.34,
+      "seconds": 0.28,
       "id": "trap-form-not-submitted",
       "kind": "adversarial"
     },
@@ -3263,6 +3323,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": false,
           "answer_matches": false
         },
@@ -3283,7 +3344,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 196
+        "ms": 198
       },
       "seconds": 0.2,
       "id": "trap-near-miss-entity",
@@ -3307,6 +3368,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": false
         },
@@ -3327,9 +3389,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 182
+        "ms": 197
       },
-      "seconds": 0.18,
+      "seconds": 0.2,
       "id": "trap-search-not-executed",
       "kind": "adversarial"
     },
@@ -3351,6 +3413,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": false
         },
@@ -3370,7 +3433,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114
+        "ms": 113
       },
       "seconds": 0.12,
       "id": "trap-unsorted-cheapest",
@@ -3394,6 +3457,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": false
         },
@@ -3638,7 +3702,7 @@
           }
         }
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "ui-rendered-narrow",
       "kind": "adversarial"
     },
@@ -3667,6 +3731,7 @@
           "actions_verified": false,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -3682,14 +3747,14 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:61939/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:50696/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 141
+        "ms": 145
       },
       "seconds": 0.15,
       "id": "url-guard-holds-after-navigation",
@@ -3728,6 +3793,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": false
         },
@@ -3748,7 +3814,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 49
+        "ms": 50
       },
       "seconds": 0.06,
       "id": "verifier-aggregate-superlative-fails-loud",
@@ -3779,6 +3845,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": false,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "aggregate_needs_comparison": true
         },
@@ -3802,10 +3869,55 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 211
+        "ms": 210
       },
       "seconds": 0.21,
       "id": "verifier-catches-listing-dump",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "$9.99",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 197
+      },
+      "seconds": 0.2,
+      "id": "verifier-context-anchors-real-occurrence",
       "kind": "adversarial"
     },
     {
@@ -3835,6 +3947,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -3867,6 +3980,51 @@
       },
       "seconds": 0.35,
       "id": "verifier-list-rows-not-a-dump",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "Aurora Desk Lamp",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 198
+      },
+      "seconds": 0.2,
+      "id": "verifier-listing-detail-title-not-furniture",
       "kind": "adversarial"
     },
     {
@@ -3917,6 +4075,54 @@
     },
     {
       "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": false,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "value's surrounding text also appears verbatim on a different page this run visited, which is page chrome, not a page-specific answer: ['Travel']"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "failure:semantic",
+        "answer": "Travel",
+        "reason": "verifier FAIL: value's surrounding text also appears verbatim on a different page this run visited, which is page chrome, not a page-specific answer: ['Travel']"
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 213
+      },
+      "seconds": 0.22,
+      "id": "verifier-responsive-not-page-furniture",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
       "wrong": [],
       "seconds": 0.0,
       "id": "verifier-sign-currency-percent",
@@ -3940,6 +4146,7 @@
           "actions_verified": true,
           "grounded": true,
           "not_a_dump": true,
+          "not_page_furniture": true,
           "identity_anchors": true,
           "answer_matches": true
         },
@@ -3959,9 +4166,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4079
+        "ms": 4071
       },
-      "seconds": 4.08,
+      "seconds": 4.07,
       "id": "verifier-sparse-page-not-a-dump",
       "kind": "adversarial"
     },
@@ -3976,10 +4183,10 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 597,
-        "after": 597
+        "before": 650,
+        "after": 650
       },
-      "seconds": 0.06,
+      "seconds": 0.05,
       "id": "wall-clock-probe-history-isolated",
       "kind": "adversarial"
     }

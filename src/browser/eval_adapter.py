@@ -367,12 +367,18 @@ def _check_published_band() -> dict:
       1. the doc's case count is the suite's current case count — so growing a
          suite forces the band to be re-measured, the same contract
          `docs-numbers-are-derived` has for README's totals;
-      2. the published slowest run is >= the slowest run the ledger records at
-         that case count (every run at that count, green or not — a wall clock
-         is a wall clock, and the max is the conservative direction) — the doc
-         may not understate what happened;
+      2. the published number derives the SAME ceiling as the ledger's slowest
+         run does — `rule(published) == rule(ledger max)`, not
+         `published >= ledger max`. The harmful failure R21 found is a band
+         that justifies a lower ceiling than the truth (12.96s published where
+         13.57s was recorded: 15 where the rule said 20). Requiring exact
+         >= instead would redden on ordinary run-to-run variance — the tree
+         moved 0.2-0.5s between consecutive runs while this was being
+         written — and a doc that must be re-edited after every slightly slow
+         run is the rot this check exists to prevent, one level up;
       3. the committed ceiling is >= ADR-013's rule applied to that ledger
-         maximum (slowest x 1.15, rounded up to a multiple of five).
+         maximum (slowest x 1.15, rounded up to a multiple of five). This is
+         the one that actually gates, and it does not move with noise.
 
     A run slower than the published band reddens the NEXT gate run, which is the
     intended cost: the band is a claim about this tree, and a tree that got
@@ -409,10 +415,12 @@ def _check_published_band() -> dict:
             wrong.append({"suite": suite, "no_recorded_run_at": now})
             continue
         slowest = max(recorded)
-        if said < slowest:
+        rule = lambda x: ((int(x * 1.15) // 5) + 1) * 5
+        if rule(said) != rule(slowest):
             wrong.append({"suite": suite, "published_slowest": said,
-                          "ledger_slowest": slowest, "runs": len(recorded)})
-        required = ((int(slowest * 1.15) // 5) + 1) * 5
+                          "derives_ceiling": rule(said), "ledger_slowest": slowest,
+                          "ledger_derives": rule(slowest), "runs": len(recorded)})
+        required = rule(slowest)
         if WALL_BUDGET_S[suite] < required:
             wrong.append({"suite": suite, "ceiling": WALL_BUDGET_S[suite],
                           "required_by_adr013_rule": required, "ledger_slowest": slowest})

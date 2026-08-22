@@ -29,6 +29,20 @@ whether the answer answers the question, only whether it looks like the
 question was dodged by dumping the page. Only ground-truth L2 catches a wrong
 but focused answer, and a live run has no ground truth.
 
+`not_page_furniture` (M34, docs/support-matrix.md D24) is narrower than that
+sentence makes it sound: it catches one specific way an answer can fail to be
+responsive — the value's local neighbourhood on the page it was read from is
+ALSO verbatim on a different page the same run visited, recognisable because
+site chrome (nav, banner, footer) is one repeated template fragment and
+carries its surrounding text with it wherever it recurs — not "does this
+answer the question" in general. A short, plausible, WRONG answer that is
+unique to the page it was read from (the near-miss trap above) still sails
+through this check exactly as it sails through `not_a_dump`; only ground-truth
+L2 catches that shape. PR #30 R1 found the first cut too broad — it compared
+the bare value, not its neighbourhood, and flagged a correct title/name that
+legitimately repeats between a catalogue row and that item's own detail page;
+docs/support-matrix.md D24 names what survives the narrowing.
+
 `identity_anchors` here reads `expect["anchors"]`, and agent.py's runtime call
 (`run_task`'s closing `verify(...)`) passes NO `expect` — so at runtime **this check is vacuous**;
 it only does anything when a caller (the eval adapter) supplies
@@ -67,6 +81,59 @@ _CURRENCY = "$€£¥₩₹"
 # (probe5-books-travel-dump) and 0.52 (probe5-shop-listing-dump). 0.35 sits in
 # the empty gap between them.
 DUMP_RATIO = 0.35
+
+# M34 (docs/analysis.md §8a-3, support-matrix D23): a THIRD demonstration that
+# semantic responsiveness is not pattern-matchable over the task string, this
+# time on a plain single-hop extraction with no aggregate/superlative shape
+# for `aggregate_needs_comparison` to catch. The deployed build answered
+# "tell me the price of the first book in the Travel category" with
+# "Warning!" (books.toscrape.com's own demo-site disclaimer banner, present
+# on every page) and, separately, "Travel" (the sidebar category link, also
+# present on every page) -- both real, grounded, non-empty, not a dump, and
+# answering nothing. Rejected as the fix: a fourth regex over the task
+# string, same shape and ceiling as SCOPE_BLOCK and _AGGREGATE below (T-R31/
+# T-R32) -- a keyword screen answers "does the TASK look like X", never
+# "does THIS ANSWER respond to it", and a rephrasing walks around it exactly
+# as the first three did. What actually distinguished both wrong answers from
+# a real one, in the evidence the runtime already has: neither is specific to
+# the page it was read from -- the same string sits verbatim on a DIFFERENT
+# page this run also visited (the site's own home page, in both cases,
+# confirmed live by curl against books.toscrape.com). A string identical
+# across two distinct pages is a hallmark of site furniture (nav, banner,
+# footer) -- something a page-specific question essentially never answers
+# with, task text unread. `PAGE_INVARIANT_MIN_CHARS` guards the one cheap
+# false-positive this invites: a short, generic value ("1", "OK", "Q4")
+# recurring elsewhere by pure coincidence is unremarkable and carries no
+# signal either way, so it is exempted rather than flagged.
+PAGE_INVARIANT_MIN_CHARS = 4
+
+# PR #30 R1 (HIGH): the bare-value compare above this comment (M34's first
+# cut) flagged a CORRECT title/name as furniture whenever it legitimately
+# repeats between a catalogue row and that item's own detail page -- exactly
+# the listing->detail shape tc2-shop-search-zh and trap-near-miss-entity
+# already exercise for prices, now shown for a title too
+# (verify(extractions=[{"value": "The Great Gatsby",
+# "page_text": "The Great Gatsby Price: £45.17",
+# "other_page_text": "Category: Travel The Great Gatsby £45.17"}]) failed a
+# correct answer). A numeric-only exemption papered over the price half and
+# left the title half open, so it is gone: the real discriminator was never
+# "is this a number", it was "does the SURROUNDING TEXT repeat too, not just
+# the bare value". Site chrome (a nav item, a banner) is one repeated
+# template fragment, so a window around it matches verbatim wherever it
+# recurs; a title's neighbours differ by construction -- a listing row reads
+# "Aurora Desk Lamp $39.00" (title immediately beside its row's price) while
+# the h1 on that product's own detail page reads "Aurora Desk Lamp $39.00
+# LAMP-STD Anodised aluminium..." (title beside its OWN page's SKU/Material,
+# not the row it came from). `_context` below pulls `PAGE_CONTEXT_WINDOW`
+# characters either side of the value from `page_text` (never `other_page_
+# text`, which is a big multi-item page and would let the window wander onto
+# a NEIGHBOURING row's furniture) and only the check's ORIGINAL bare-value
+# compare that the window's substring-search subsumes moves to `_context`.
+# Swept across every extraction this repo's evidence actually produces
+# (the four shapes above plus the original "Warning!"/"Travel" furniture,
+# docs/analysis.md §8a-3) at window widths 10-60: all four agree throughout
+# that range, and 20 sits in the middle of it, not at either edge.
+PAGE_CONTEXT_WINDOW = 20
 
 # Restored at M7.2, this time with a case behind it. Phase 2 had a guard here
 # (`MIN_EVIDENCE = 20`) and removed it (ADR-008 Decision 3) because nothing in
@@ -234,6 +301,31 @@ def _clean(value) -> str:
     return re.sub(r"\s+", " ", str(value)).strip().casefold().strip(".,;:!")
 
 
+def _context(page_text: str, value: str, offset: int | None = None,
+            window: int = PAGE_CONTEXT_WINDOW) -> str:
+    """`value` plus up to `window` raw characters either side of it, taken from
+    where it actually sits in `page_text` -- the local neighbourhood
+    `not_page_furniture` compares against a different page, on the theory that
+    a repeated WIDGET (nav item, banner) carries its neighbours with it and a
+    coincidentally-repeated fact (a title, a price) does not.
+
+    `offset` (M34 R2-1): agent.py's own record of where `value` really sits
+    in `page_text`, when `value` is not unique on the page -- a decoy blurb
+    beside the real answer (case verifier-context-anchors-real-occurrence)
+    means `page_text.find(value)` alone can anchor on the WRONG occurrence,
+    flagging a correct answer as furniture because the decoy's neighbourhood,
+    not the real one, happens to repeat elsewhere. Validated against
+    `page_text` before use (`offset` from a stale or hand-built record that
+    does not actually match `value` there is worth exactly nothing) and
+    falls back to `find()` otherwise -- the pre-R2-1 behaviour, still correct
+    whenever `value` occurs only once, which is most extractions."""
+    i = offset if (offset is not None and 0 <= offset
+                   and page_text[offset:offset + len(value)] == value) else page_text.find(value)
+    if i < 0:
+        return value
+    return page_text[max(0, i - window): i + len(value) + window]
+
+
 def _num_parts(s: str):
     """`(Decimal, currency|None, unit|None)`, or None when s is not a number.
 
@@ -396,6 +488,29 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
              and pt_len >= MIN_PAGE_CHARS
              and len(_clean(e["value"])) / pt_len >= DUMP_RATIO]
     check("not_a_dump", not dumps, f"value reproduces most of its own evidence window: {dumps}")
+
+    # M34: a value whose local NEIGHBOURHOOD on the page it was read from is
+    # ALSO verbatim on a different page this run visited is very likely site
+    # furniture (nav, banner, footer) -- the general shape behind "Warning!"
+    # and "Travel" both passing every other L1 check on the deployed build
+    # (docs/analysis.md §8a-3, support-matrix D23). `other_page_text` is
+    # agent.py's running record of every OTHER distinct URL's body text at
+    # extraction time -- "" (no signal, no flag) when this run never visited
+    # a second page, or on the frozen labels/replay records that predate
+    # this field, the same optional-field precedent `body_len` already set
+    # above. `_context` (see PAGE_CONTEXT_WINDOW above) is what keeps this
+    # from re-flagging a correct listing->detail title or price the way the
+    # bare-value version did (PR #30 R1): a repeated WIDGET carries its
+    # neighbours with it everywhere it repeats, a coincidentally-repeated
+    # fact does not.
+    furniture = [e["value"] for e in extractions or []
+                 if len(_clean(e["value"])) >= PAGE_INVARIANT_MIN_CHARS
+                 and _clean(_context(e.get("page_text", ""), e["value"], e.get("value_offset")))
+                     in _clean(e.get("other_page_text", ""))]
+    check("not_page_furniture", not furniture,
+          f"value's surrounding text also appears verbatim on a different "
+          f"page this run visited, which is page chrome, not a "
+          f"page-specific answer: {furniture}")
 
     # Page evidence ONLY. Including the answer would let an anchor equal to the
     # expected answer certify itself, which is a green check that cannot go red

@@ -1,0 +1,26 @@
+{
+  "id": "verifier-responsive-not-page-furniture",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L3",
+  "tc": "TC1",
+  "trap": "extraction lands on a string that is grounded, non-empty, not a dump and answers nothing -- a plain single-hop shape, no aggregate/superlative involved",
+  "input": {
+    "fixture": "nav-heavy-home.html",
+    "task": "Go to the Travel category and tell me the price of the first book listed.",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "link", "name": "Travel" },
+        "expected_state": { "url_contains": "nav-heavy.html" } },
+      { "action": "extract", "target": { "role": "link", "name": "Travel" }, "anchor": null }
+    ]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "verdict": "FAIL"
+  },
+  "provenance": "M34, reproducing docs/analysis.md §8a-3 / docs/support-matrix.md D23 offline: the deployed build answered 'tell me the price of the first book in the Travel category' (books.toscrape.com) with 'Warning!' (3/4 runs) or 'Travel' (1/4), never the true £45.17, status success/verdict PASS every time -- grounded, not_a_dump and identity_anchors all pass because the string really is on the page, just not an answer to the question. This is the 'Travel' shape specifically: nav-heavy.html's sidebar carries a plain <a>Travel</a> link with no landmark role (matching books.toscrape.com's own sidebar, which has no <nav>/role=navigation either -- confirmed by curl), and nav-heavy-home.html is the page the run navigates FROM, sharing that exact string. A stub_plan that clicks into the category and then extracts the sidebar link instead of the price ('£45.17', in the <main> article beside it) reproduces the wrong-success shape deterministically, offline, with no LLM call.",
+  "triage": {
+    "class": "inviolable-property",
+    "watched_red": "before the fix: status success, answer 'Travel', verdict.verdict PASS, checks {trace_nonempty: true, supersedes_resolve: true, no_failed_postcondition: true, answer_nonempty: true, actions_verified: true, grounded: true, not_a_dump: true, identity_anchors: true, aggregate_needs_comparison: true} -- identical shape to docs/analysis.md §8a-3's run_id 5c574a44. aggregate_needs_comparison does not fire: this is a plain single-hop extraction, not a superlative/aggregate question, the exact gap M10's fix does not cover."
+  }
+}

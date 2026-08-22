@@ -55,8 +55,8 @@ decision that amends it.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Slowest recorded `fast` run at 119 cases: **66.5s** — 7 runs:
-  64.59 / 64.61 / 64.83 / 65.15 / 65.41 / 65.53 / 66.5s.
+- Slowest recorded `fast` run at 122 cases: **66.23s** — 8 runs:
+  65.25 / 65.29 / 65.41 / 65.52 / 65.62 / 65.84 / 66.03 / 66.23s.
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
 five — gives 65.53 × 1.15 = 75.4 → **80**. The band published for the earlier
@@ -72,8 +72,8 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Slowest recorded `invariant` run at 51 cases: **14.12s** — 9 runs:
-  12.72 / 12.74 / 12.75 / 12.79 / 12.98 / 13.01 / 13.25 / 13.45 / 14.12s.
+- Slowest recorded `invariant` run at 51 cases: **14.12s** — 17 runs:
+  11.17 / 12.72 / 12.74 / 12.75 / 12.79 / 12.79 / 12.87 / 12.87 / 12.93 / 12.98 / 12.99 / 13.0 / 13.01 / 13.05 / 13.25 / 13.45 / 14.12s.
 
 The same rule gives 14.12 × 1.15 = 16.2 → **20**.
 

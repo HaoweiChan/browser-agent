@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 119 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 122 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,14 +50,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260822-170551-fast.json`, with
-`evals/report/20260822-170446-invariant.json` and
+Latest offline baseline — `evals/report/20260822-172256-fast.json`, with
+`evals/report/20260822-172309-invariant.json` and
 `evals/report/20260822-111204-live.json`:
 
 ```
-fast  119/119    invariant  51/51    live  9/9    $0.0000    65.2s
+fast  122/122    invariant  51/51    live  9/9    $0.0000    65.5s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 20/20 · 5 replans
+diagnosis 21/21 · 5 replans
 ```
 
 Every number in that block is recomputed from those three report files by
@@ -110,8 +110,8 @@ At the case count this branch ships:
 
 | suite | cases | recorded runs | slowest | × 1.15 | ceiling |
 |---|---|---|---|---|---|
-| `fast` | 119 | 64.59 / 64.61 / 64.83 / 65.15 / 65.41 / 65.53 / 66.5s | 66.5s | 76.5 | **80s** |
-| `invariant` | 51 | 12.72 / 12.74 / 12.75 / 12.79 / 12.98 / 13.01 / 13.25 / 13.45 / 14.12s | 14.12s | 16.2 | **20s** |
+| `fast` | 122 | 65.25 / 65.29 / 65.41 / 65.52 / 65.62 / 65.84 / 66.03 / 66.23s | 66.23s | 76.2 | **80s** |
+| `invariant` | 51 | 11.17 / 12.72 / 12.74 / 12.75 / 12.79 / 12.79 / 12.87 / 12.87 / 12.93 / 12.98 / 12.99 / 13.0 / 13.01 / 13.05 / 13.25 / 13.45 / 14.12s | 14.12s | 16.2 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of the shipped tree gave `invariant` 14.80-16.47s and `fast`
@@ -338,7 +338,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 130 cases (119 of them in the offline gate), it
+The eval set is not weak; it is 133 cases (122 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
