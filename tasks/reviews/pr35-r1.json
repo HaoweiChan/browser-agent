@@ -1,0 +1,92 @@
+{
+  "pr": 35,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The commit's own thesis — README stops being a hand-kept copy, the slack published as a number `_band_step_s` reads off the rule rather than a sentence someone can quietly soften — is half-implemented: two of the three copies of 4.35s are ungraded hand-kept prose that drift silently when the rule changes.",
+      "evidence": "`_BAND_SLACK_LINE` (src/browser/eval_adapter.py:371) is searched only against `_ADR019`, matching ADR-019:150. The same number appears ungraded at README.md:122 (\"by at most one ceiling step (**4.35s**)\") and ADR-019:176 (\"It is within 4.35s of it\"). Amend ADR-013's rounding step 5->10, repair ONLY the graded sentence — the red output names no other file — and the suite goes green while two documents still publish 4.35 against a real bound of 8.7.",
+      "repro": "monkeypatch `_band_rule` to a step of 10, rewrite only the graded sentence to 8.7s, call `_check_published_band_slack()` -> no `adr_declared_slack` entry, while README.md:122 and ADR-019:176 still say 4.35.",
+      "acceptance": "Either the slack number is written once and every other occurrence is a link, or `published-band-slack-is-declared` greps README (and the ADR's §6 restatement) for the same scalar the way `published-band-matches-the-ledger` now greps README's band row — watched red by editing README's 4.35 alone."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The silent-shadowing defect the commit fixed on the ADR side (`adr_publishes_two_band_lines`) is left unguarded on the README side the same commit introduced: README can publish two contradictory band rows per suite and stay green.",
+      "evidence": "src/browser/eval_adapter.py:505-514 adds a duplicate-line guard for `_BAND_LINE` matches in ADR-019, but the README parse two lines later (`table = {m.group(1): (...) for m in _README_BAND_ROW.finditer(readme)}`) is the same last-wins dict comprehension with no duplicate guard. Inserting the superseded rows for `fast` 132/66.33 and `invariant` 51/14.12 ABOVE the live rows leaves `published-band-matches-the-ledger` green with README publishing two mutually contradictory bands per suite — the exact shape the commit message calls \"a superseded line shadowed the live one in silence\".",
+      "repro": "insert the stale rows above the live ones in README's band table, call `_check_published_band()` -> {\"passed\": true, \"wrong\": []}",
+      "acceptance": "One band row per suite in README, enforced the same way as the ADR line, with the stale-row-above-live-row mutation watched red before the guard lands."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §6's headline reason for refusing the strict form — that it reddens the NEXT commit, \"the failure ADR-013 Decision 4 was withdrawn over\" — is not a discriminator: the shipped weak property has the identical one-run lag, and the repo's own text calls that lag acceptable.",
+      "evidence": "evals/run.py:283-284 appends the history line after `results` are graded, so the ledger a case reads never contains the current run — true for BOTH forms. Under the shipped weak form a 69.60s `fast` run (rule 85 vs published 66.38 -> 80) is recorded and the NEXT run reddens on properties 2 and 3, same innocent author. src/browser/eval_adapter.py:484-485 calls exactly this \"the intended cost\", and published-band-matches-the-ledger's `watched_red` records it happening for real. ADR-019:158-162 presents the same mechanism as disqualifying.",
+      "repro": "read ADR-019:155-165 against src/browser/eval_adapter.py:484-486 and evals/run.py:268-284. The only real difference is frequency, which §6 also states.",
+      "acceptance": "§6's \"Why not the strict form\" drops or qualifies the next-commit argument (\"the lag is shared with the weak form; what differs is how often it fires: every new maximum vs once per 4.35s band crossing\"), so the decision rests on the leg that actually distinguishes the two."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §6 asserts \"no ceiling is ever justified by a maximum smaller than the truth\", but the ledger filter is `total == current case count`, so adding one case discards all prior evidence and a 1-2 run sample can publish a derivation that contradicts the committed ceiling — with nothing grading the ADR's `-> **20**` against `WALL_BUDGET_S`.",
+      "evidence": "src/browser/eval_adapter.py:439-441 filters `r[\"total\"] == now`; property 3 is `ceilings[suite] < required` (>=, never ==). Simulated: `_band_wrong({'invariant':(53,12.80)},{'invariant':53},{'invariant':20.0},[..12.78,12.80..])` returns [] — green — while `_band_rule(12.80)==15`, so §3 would read \"12.80 x 1.15 = 14.7 -> **15**\" under a heading saying 20s and a WALL_BUDGET_S of 20. Nothing parses ADR-019's ceiling. The shipped invariant band escapes by one run: the ten runs at 52 cases are [12.58 .. 12.88, 13.22]; drop 13.22 and `_band_rule(12.88) == 15` against the committed 20. This is T-R39, which the implementer routed to debt — the reviewer judges it a live falsification of a sentence this PR ships as declared truth.",
+      "repro": "`_band_rule(12.80)` -> 15 and `_band_wrong({'invariant':(53,12.80)}, {'invariant':53}, {'invariant':20.0}, [53-case rows 12.78/12.80])` -> []",
+      "acceptance": "Either §6 stops claiming the maximum can never be smaller than the truth, or the case-count filter tolerates a widened window (nearest counts, or a floor at the previously published maximum), plus a case pinning that the ADR's published ceiling equals `WALL_BUDGET_S[suite]`. Watched red with the 53-case/12.80s sample."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The published `invariant` band 13.22s (and `fast` 66.38s) is carried entirely by a run committed as RED on a dirty tree; every committed report at the shipped case counts is red, and the branch ships no green artefact at its own case count.",
+      "evidence": "`git show HEAD:evals/report/history.jsonl` at (invariant, 52): 13.22s comes from ts 20260823-023204, `passed: 50, total: 52, dirty: true`; the other nine runs max at 12.88. At (fast, 133): 66.38s comes from ts 20260823-023406, `passed: 132, total: 133, dirty: true`. Every committed report at 133 cases scores 0.977/0.992/0.992 and every one at 52 scores 0.942-0.981; the green runs all carry `\"report\": null`. Every row at both counts is `dirty: true`.",
+      "repro": "git show HEAD:evals/report/history.jsonl filtered to (invariant,52) and (fast,133) — inspect ts, passed/total, dirty",
+      "acceptance": "One `--report` run of the shipped tree at 133/52, green and clean, committed; the bands republished from it (or the ledger filter narrowed to green rows with the deadlock the comment at eval_adapter.py:434-438 describes handled explicitly). T-R42 should carry this evidence, not a general note."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "README's headline \"Where it stands\" block still publishes `fast 132/132 invariant 51/51` while the same commit changes the line 20 rows above to 133 cases; `docs-numbers-are-derived` passes only because the case JSON still names the 132-/51-case reports.",
+      "evidence": "README.md:52-58 cites evals/report/20260823-000232-fast.json (132 results) and 20260823-000031-invariant.json (51 results) and prints `fast 132/132 invariant 51/51`; README.md:39 in the same commit reads \"offline gate: 133 cases\". docs-numbers-are-derived.json `input.where_it_stands.reports` hard-codes those filenames, so the check grades the block against whatever report the case names — it cannot notice the suite grew. Same shape in docs/analysis.md:61-62, still \"**71 of the 132** `fast` cases\" inside a section promising at :57 \"Every count in the rest of this section is the current one\".",
+      "repro": "grep -n '132' README.md docs/analysis.md; len(json.load(open('evals/report/20260823-000232-fast.json'))['results']) -> 132",
+      "acceptance": "The status block and analysis.md's browser-action ratio are repointed to a committed green 133-case report (see R5), and `docs-numbers-are-derived` derives the report filenames (newest committed report per suite) instead of taking them from the case JSON — watched red by growing a suite without touching the docs."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The T-R40 scoping paragraph was spliced into the middle of an existing sentence in both documents, leaving broken prose in the two files this PR is about.",
+      "evidence": "README.md:105-113 — \"...logged as debt (T-R40), not graded — the doc's case count must be the suite's current case count, the published maximum must derive...\" (the em-dash clause belongs to \"grades that on every run\", four lines and one inserted paragraph earlier). ADR-019:46-52 — \"...hand-read off the workflow log, ungraded, and logged as debt (T-R40). It has to, because three bands in this PR did not match...\" — \"It has to\" now has no antecedent.",
+      "repro": "sed -n '104,114p' README.md; sed -n '45,53p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "The inserted CI/T-R40 paragraph stands as its own paragraph after the complete sentence it interrupted."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`_band_step_s` measures the ceiling step at a single anchor (x=60) and publishes it as a bound for every band; the check would silently publish a bound valid only near 60s if ADR-013's rule ever became non-linear in x.",
+      "evidence": "src/browser/eval_adapter.py:394-397 — `c0, x = _band_rule(60.0), 60.0` then bisects the two boundaries around 60. The docstring justifies it with \"`_band_rule` is monotonic\", but monotonic is not constant-step; the property that makes 4.35 a bound for the 13.22s invariant band is linearity, not monotonicity.",
+      "repro": "read src/browser/eval_adapter.py:386-400. A percentage-step rule is monotonic and would make the bound measured at 60s wrong at 13s while the case stays green.",
+      "acceptance": "Either the docstring names linearity as the assumption, or the step is measured at each published band rather than once at 60s."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The duplicate-band-line guard `break`s after the first offending suite, so a file with both suites duplicated reports only one.",
+      "evidence": "src/browser/eval_adapter.py:509-513 — `for suite, _ in lines: if [...].count(suite) > 1: wrong.append(...); break`. Still red, so the gate holds; the output under-reports the repair needed.",
+      "repro": "duplicate both band lines in ADR-019 and observe a single `adr_publishes_two_band_lines` entry",
+      "acceptance": "Report every duplicated suite, or state that one is enough."
+    }
+  ],
+  "gate": {
+    "invariant": "52/52 = 1.000",
+    "fast": "133/133 = 1.000"
+  }
+}
