@@ -1,0 +1,42 @@
+{
+  "id": "observe-drilldown-past-max-elems",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the serial number of the Nimbus Field Notebook?",
+    "fixture": "deep-spec.html",
+    "stub_plans": [
+      [
+        {
+          "action": "observe",
+          "target": { "role": "region", "name": "Product Information" }
+        }
+      ],
+      [
+        {
+          "action": "extract",
+          "target": { "role": "cell", "name": "SN-88231" },
+          "anchor": "Nimbus Field Notebook"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "SN-88231",
+    "anchors": ["Nimbus Field Notebook"],
+    "replans": 1,
+    "recovery": false,
+    "planner_saw": [
+      { "has": ["region — 'Product Information'"], "lacks": ["SN-88231"] },
+      { "has": ["SN-88231", "cell — 'SN-88231'"] }
+    ]
+  },
+  "provenance": "M32, the executable half of prompts/015's 'progressive disclosure of the PAGE, not the tool set'. `deep-spec.html` is the offline twin of M10 probe #4/#5/#7 (docs/analysis.md §8a-2), where the answer was verbatim in the page text the agent captured and absent from the a11y elements the planner was shown. Measured, not assumed: the page-level observation is exactly 60 elements ending mid-table at element 60 (`row ''`), with the answer cell `cell — 'SN-88231'` at element 77 of 77 in document order; the drill target `region — 'Product Information'` is element 51, nine inside the cap, and the 300-character page-level `text_head` stops at 'Yarrow' — the serial number is in neither half of what the planner is given. Watched RED first, twice over, on the unmodified build: this exact case returned `failure:task` / `step 2 (observe): StepError: unknown action 'observe'` — the closed-world executor refusing a verb it did not have (prompts/015: 'the planner cannot believe it can do something the executor cannot') — and the plan a planner CAN write from that capped observation returns the page dump pinned by `observe-blind-plan-dumps-the-container`. Green after: `success`, `SN-88231`, one replan, all ten verdict checks true. Not chrome starvation and not rescuable by `observe.MAX_CHROME`: everything ahead of the answer here is legitimate content (a related-titles list), which is why `nav-heavy.html` could not carry this case.",
+  "triage": {
+    "class": "capability-gap",
+    "note": "`planner_saw` is what makes this case honest. Every plan in this repo is hand-written, so a stub plan naming `SN-88231` proves nothing on its own — the case would grade a string the case author knew and the planner could not. It grades the DISCLOSURE instead: call 1's observation must lack `SN-88231` and call 2's must contain it, rendered exactly as `live_planner` renders an observation into its prompt. `recovery: false` is deliberate — a drill-down is not a recovery ladder (nothing failed), so the step it plans must not wear the `recovery` label or it inflates the published 'rungs tried' figure with an attempt that recovered nothing. It does spend the `MAX_REPLANS` budget, which is why `replans: 1` is asserted rather than left implicit: the disclosure is bounded by the budget that already exists, not by a new one."
+  }
+}

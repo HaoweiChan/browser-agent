@@ -1,0 +1,29 @@
+{
+  "id": "observe-refused-drilldown-stops-the-run",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "input": {
+    "task": "What is the serial number of the Nimbus Field Notebook?",
+    "fixture": "deep-spec.html",
+    "stub_plans": [
+      [{ "action": "observe", "target": { "role": "region", "name": "Product Information" } }],
+      [{ "action": "observe", "target": { "role": "table" } }],
+      [
+        { "action": "observe", "target": { "role": "heading", "name": "Also bought" } },
+        { "action": "extract", "target": { "role": "heading", "name": "Nimbus Field Notebook" },
+          "anchor": "Nimbus Field Notebook" }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:env",
+    "replans": 2,
+    "recovery": false
+  },
+  "provenance": "M32 cold review, finding 1 — the quiet-success hole in the first cut of the drill-down, watched RED first. A refused drill-down (budget exhausted, or a replan that returns nothing usable) left `cls` at None, so the loop fell through to `si += 1` and executed whatever the plan had put AFTER the `observe` step. Measured on the pre-fix build with the plan above: `status: success`, `answer: \"Nimbus Field Notebook\"`, `verdict: PASS`, every check green — the run spent its whole planning budget asking for a closer look, never got one, and then answered from the very observation the drill-down existed to replace, with the only trace of the problem being the string `drill-down budget exhausted (2)` in one note. `observe-drilldown-budget-is-bounded` did not catch it because its refused plan has nothing after the `observe`, so INV-0 caught the empty answer instead; one trailing step is the whole difference. The refusal now ends the run as `failure:env` — a resource ran out, which is what `budget_stop` already calls `env` — and says so in the reason.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "the flattering direction, which is the one that must never be quiet (CLAUDE.md rule 4). The fix is not 'skip the trailing steps' but 'stop': a plan whose information request was refused is a plan the executor cannot honour as written, and continuing is the same quiet reinterpretation `resolver-unknown-target-key` was filed against."
+  }
+}

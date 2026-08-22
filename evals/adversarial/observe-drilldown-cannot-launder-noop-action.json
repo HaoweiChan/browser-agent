@@ -1,0 +1,78 @@
+{
+  "id": "observe-drilldown-cannot-launder-noop-action",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        {
+          "action": "click",
+          "target": {
+            "role": "heading",
+            "name": "Nimbus Shop"
+          },
+          "expected_state": {
+            "text_visible": "Sorted by price (low to high)"
+          }
+        },
+        {
+          "action": "extract",
+          "target": {
+            "role": "link",
+            "index": 0
+          }
+        }
+      ],
+      [
+        {
+          "action": "observe",
+          "target": {
+            "role": "list",
+            "name": "Catalogue"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Sort by price (low to high)"
+          },
+          "expected_state": {
+            "text_visible": "Sorted by price (low to high)"
+          }
+        },
+        {
+          "action": "extract",
+          "target": {
+            "role": "link",
+            "index": 0
+          }
+        }
+      ],
+      [
+        {
+          "action": "extract",
+          "target": {
+            "role": "link",
+            "index": 0
+          }
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "recovery_labelled_actions": []
+  },
+  "provenance": "PR #34 R1 and R2, the same defect one code path over, and the reason the fix is not a patch on family 2's guard alone. The replan here is NOT laundering — it looks, then acts, then reads — so it is legitimately accepted; the `observe` runs, and the drill-down's OWN replan (a second planner call, on the same MAX_REPLANS budget) comes back with a bare `extract`. That path had no page_changed evidence rule at all, so the failed click that changed nothing is still outstanding and the run answers from before it. Watched red first on this branch: `status: success`, `answer: \"Aurora Desk Lamp\"` (true cheapest Cobalt Floor Rug $18.00), `verdict: PASS`. The same run also demonstrates R2: the `observe` attempt carried `retry_or_recovery: \"recovery\"` and the case result carried `metrics.recovery_rungs: 1` — a read-only step inside the published 'rungs tried' figure, which `specs/001-browser-contract.md` and ADR-019 both say cannot happen.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "two rules, one evidence source. An `observe` attempt neither consumes `pending_supersede` nor takes the `recovery` label — it replaces nothing and recovers nothing, so the label waits for the first attempt that actually acts — and both replan paths now refuse a plan that would read without acting while a failed no-op action is outstanding. `recovery_labelled_actions` is asserted rather than `recovery: false` because this run DOES contain a legitimate recovery label: the click that follows the observe is a real strategy change and must keep it. The key names the whole set, so a label appearing anywhere in this run fails it — and here the set is empty on purpose: the drill-down is refused before the click it planned ever runs, so nothing in this trace recovered anything."
+  }
+}

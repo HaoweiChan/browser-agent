@@ -1,0 +1,36 @@
+{
+  "id": "observe-drilldown-cannot-launder-unchecked-action",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        { "action": "fill", "target": { "role": "searchbox", "name": "Search products" },
+          "value": "a query far longer than this box will hold" },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ],
+      [
+        { "action": "observe", "target": { "role": "list", "name": "Catalogue" } },
+        { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+          "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ],
+      [
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "recovery_labelled_actions": []
+  },
+  "provenance": "PR #34 R8 — the same laundering hole one `page_changed` value over, and the fifth occurrence of this class in the repo. The drill-down guard tested `page_changed is False` while family 2 tested falsy, so the two guards disagreed on the same predicate inside one commit. `page_changed` is only assigned after `execute()` RETURNS, so every act failure raised inside it — a click timeout, a fill readback mismatch — leaves it `null`, and `null` slipped past `is False`. Watched red first: `status: success`, `answer: \"Aurora Desk Lamp\"`, `verdict: PASS`, against a true cheapest of Cobalt Floor Rug $18.00, with the trace showing `{i:2, action:fill, failure_class:'act', page_changed:None, superseded_by:4}`. Both guards now ask one shared predicate, `agent.changed_nothing`, for which `null` and `False` mean the same thing: nothing moved. The failure shape is a fill longer than the search box's `maxlength`, which is also the cheapest act failure in this repo — it raises inside `execute` and never reaches the postcondition settle, so this case costs ~0.15s where the two postcondition-shaped laundering cases cost 2.3s each.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "three cases now pin this rule and each pins a distinct shape, which is why none of them is redundant: `observe-cannot-launder-noop-action` is family 2's guard with `page_changed: false`; `observe-drilldown-cannot-launder-noop-action` is the drill-down guard with `page_changed: false`, reached through a replan that legitimately acts; this one is the drill-down guard with `page_changed: null`, the shape neither of the others can produce because both of theirs fail a postcondition rather than raising inside `execute`. The empty `recovery_labelled_actions` is asserted for the same reason as its sibling: the run is refused before the click it planned ever runs, so nothing here recovered anything."
+  }
+}

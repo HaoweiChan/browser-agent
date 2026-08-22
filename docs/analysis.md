@@ -57,12 +57,10 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-129 distinct cases (20 golden + 109 adversarial).
-170 browser actions in a `fast` run; **54 of the
-97** cases drive a real Chromium end to end — counted here as
-cases that actually recorded browser actions: the six L5 refusal cases are
-end-to-end cases that deliberately stop before a browser opens. The remaining
-43 are those refusals plus pure-code probes of a single
+142 distinct cases (20 golden + 122 adversarial).
+216 browser actions in a `fast` run; **76 of the 131** cases drive a real Chromium end to end — counted here as
+cases that actually recorded browser actions: the eight L5 refusal cases are
+end-to-end cases that deliberately stop before a browser opens. The remaining 55 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
@@ -454,7 +452,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-129 distinct cases (M10, refreshed from the case files' own `tc`/`level`/`domain`
+142 distinct cases (M32, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -462,19 +460,20 @@ Empty cells are shown, not hidden.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 30 | | L1 | 31 |
-| TC2 search-then-extract | 8 | | L2 | 22 |
-| TC3 navigate-then-extract | 11 | | **L3** | **5 — 4 live (one of them unrun) + 1 fixture (the probe-2 aggregate-superlative twin, M10)** |
-| TC4 interact-then-extract | 18 | | L4 (mutation/recovery) | 15 |
+| TC1 extract-on-page | 37 | | L1 | 45 |
+| TC2 search-then-extract | 8 | | L2 | 28 |
+| TC3 navigate-then-extract | 13 | | **L3** | **8 — 4 live (one of them unrun) + 2 fixture (the probe-2 aggregate-superlative twin, M10; the probe-3 page-furniture twin, M34)** |
+| TC4 interact-then-extract | 22 | | L4 (mutation/recovery) | 15 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
-| mechanism/unit probes | 42 | | untagged (unit probes) | 34 |
+| mechanism/unit probes | 56 | | untagged (unit probes) | 38 |
 
 | Domain | Kind | Cases |
 |---|---|---|
 | shop fixture | self-authored | TC1–TC4 + all 3 mutations |
 | forms fixture | self-authored, POST ground truth | TC5 |
 | hello fixture | self-authored | TC1 |
-| nav-heavy fixture | self-authored | observation budget |
+| nav-heavy fixture | self-authored | observation budget (chrome) |
+| deep-spec fixture | self-authored | observation budget (content) + the M32 drill-down |
 | offsite fixture | self-authored | URL-guard enforcement |
 | lamp-spec fixture | self-authored | spec table + the only page past the evidence window |
 | **books.toscrape.com** | **live** | **3 cases: TC3 ×2, TC4 ×1 (the TC4 case is the live-planner one, unrun)** |
@@ -748,7 +747,9 @@ folded into (M10, `specs/decisions/ADR-015-a-freeze.md`), watched red first:
   `expect.answer`/`expect.state` — exactly the runtime shape, since a live
   run has no ground truth) on a "which X has the most/least/highest/lowest/
   fewest/greatest Y" pattern: the plan vocabulary
-  (`navigate | click | fill | extract`) has no enumerate-and-count
+  (`navigate | click | fill | extract` — as it stood at M10; M32 later added
+  `observe`, which discloses more of the page and still does not count,
+  ADR-019) has no enumerate-and-count
   primitive, so a single-shot extraction against that phrasing cannot be
   trusted regardless of what it returns. `assemble_result`'s existing INV-2
   branch (a non-PASS verdict can never be reported as `success`) does the

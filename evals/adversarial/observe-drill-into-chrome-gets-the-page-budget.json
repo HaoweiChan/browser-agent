@@ -1,0 +1,40 @@
+{
+  "id": "observe-drill-into-chrome-gets-the-page-budget",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "observe",
+    "fixture": "nav-heavy.html",
+    "drill": {
+      "role": "complementary"
+    }
+  },
+  "expect": {
+    "contains": [
+      {
+        "role": "link",
+        "name": "Travel"
+      },
+      {
+        "role": "link",
+        "name": "Fantasy"
+      },
+      {
+        "role": "link",
+        "name": "New Adult"
+      }
+    ],
+    "text_head_contains": [
+      "Young Adult"
+    ],
+    "note": "a drill into a landmark is an explicit request for that landmark, so the chrome sub-budget must not apply to it"
+  },
+  "provenance": "M32 cold review, finding 2 — watched RED first. `observe()`'s chrome sub-budget (MAX_CHROME=20) exists to stop a site's navigation from eating the PAGE budget before any content is reached (`observe-content-survives-chrome`). Scoped to a subtree it computed `in_chrome` from the ROOT node, so drilling into a landmark — `complementary`, `navigation`, `contentinfo`, `banner`, `search` — capped the whole scoped walk at 20 elements instead of MAX_ELEMS=60, silently, while the executor's note told the planner the observation was that subtree entire. Measured on the pre-fix build against `nav-heavy.html`'s 35-item sidebar: 20 elements, 9 categories, `Travel` through `Fiction`, with `Fantasy` and everything after it dropped and no truncation marker anywhere. That is the single commonest shape a real drill-down has — a mega-nav, a footer, a faceted-search panel, a category sidebar — and the ADR's own ruling ('the whole MAX_ELEMS budget spent inside it') was false for all five of them. Post-fix the same drill returns 29 categories through `New Adult`, and `Young Adult` — past even the 60-element cap — is reachable in the subtree's text head. That last assertion is about the elements/text split only and is NOT evidence for the width of `DRILL_TEXT_HEAD`: this subtree's whole text is 364 characters and `Young Adult` sits at index 209, inside the unwidened 300, so it passes at either width. `observe-drill-text-head-reaches-past-300` is the case that holds the width.",
+  "triage": {
+    "class": "capability-gap",
+    "note": "tagged `invariant`: it is the executable form of ADR-019's ruling, not a run-dependent outcome. The sub-budget is unchanged for a page-level observation — `observe-content-survives-chrome` still holds it at 20 there — because the question it answers ('did the planner ask for this navigation?') has opposite answers in the two calls."
+  }
+}

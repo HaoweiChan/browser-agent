@@ -37,7 +37,7 @@ a fixture twin of probe #3 (most-quoted author) and `live-books-cheapest-travel`
 go green against ground truth; D22 is re-measured and restated, not deleted;
 replan rate published per D7.
 
-### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
+### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
 but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
 page text the agent captured and absent from the a11y elements the planner
@@ -103,6 +103,127 @@ Out of scope: extraction quality (M28), planner-side lint (M31). Do not remove
 M34's deterministic checks — they are cheaper and they run first.
 
 ## Debt
+
+### T-M32-3 — act-failure coverage costs 4.6s of a suite that already straddles its ceiling            [status: todo]
+Origin: PR #34 R1 (the fix, not the finding); cost model corrected per PR #34 R11.
+Spec: an act failure is only expensive when it is a POSTCONDITION failure. Those
+run `check_state`'s whole settle loop (10 x 200ms) before returning False, so
+they cost a full `SETTLE_BUDGET_MS` each: `observe-cannot-launder-noop-action`
+2.29s, `observe-drilldown-cannot-launder-noop-action` 2.35s, and the three that
+predate this PR (`recovery-replan-postcondition` 2.33s,
+`recovery-label-requires-strategy-change` 2.32s,
+`replan-cannot-launder-noop-action` 2.29s). An act failure raised INSIDE
+`execute` never reaches `check_state` at all and is free — a fill readback
+mismatch is instant, a click timeout is 10s for a different reason. The first
+version of this block claimed the settle loop was the price of every act
+failure; that was wrong, and `observe-drilldown-cannot-launder-unchecked-action`
+now uses the cheap shape (~0.15s, a fill past the search box's `maxlength`).
+The two 2.3s cases keep the postcondition shape because it is the only one that
+produces `page_changed: false` — the cheap shape produces `null`, and PR #34 R8
+is precisely what happens when those two values are not both pinned.
+Repro: `evals/report/20260822-185625-fast.json`, sort `results` by `seconds`.
+Acceptance: either a cheaper way for a case to declare "this postcondition will
+not hold" (a per-case settle bound is the obvious one, and it must not weaken
+the production budget), or an explicit ruling that act-failure coverage is worth
+its share of the ceiling — recorded wherever the open wall-clock decision lands
+(PR #29 R21). Do NOT fix it by shortening SETTLE_TRIES: that is a production
+budget with `nav-load-event-never-fires` behind it.
+
+### T-M32-1 — the reviewer UI has no phase for an `observe` step            [status: todo]
+Origin: M32 (ADR-019), found while adding the drill-down.
+Spec: `phaseFor(s)` in `src/browser/server.py` maps `navigate` -> "browser" and
+`extract` -> "verification" and everything else to "action". An `observe` step
+reads the page and changes nothing, so showing it as "action" tells a watcher
+the agent is acting when it is looking. One line, but that file is M35's
+(the visitor-facing console) and this PR must not collide with it.
+Repro: run a task whose plan starts with an `observe` step and watch the SSE
+progress bar — the "action" phase lights up before anything is done.
+Acceptance: `observe` maps to a reading phase, and `ui-execution-progress`
+covers the mapping.
+
+### T-M32-2 — the post-edit invariant hook runs in the wrong worktree            [status: todo]
+Origin: M32, found while implementing.
+Spec: `.claude/hooks/post-edit-invariant.sh` cds to `$CLAUDE_PROJECT_DIR` and
+prefers `.venv/bin/python` there. When the session is working inside a
+`.claude/worktrees/` sibling, that variable still points at the ORIGINATING
+worktree, so the hook grades a different checkout than the one being edited,
+and with a bare `python3` if that checkout has no `.venv` — which reports
+`ModuleNotFoundError: No module named 'fastapi'` for 14 of 38 invariant cases
+on every single edit under `src/`. Loud, so nothing was silently wrong, but the
+feedback it gives is about neither the edit nor the tree.
+Repro: edit any file under `src/` from a worktree whose parent checkout has no
+`.venv` and read the hook's output.
+Acceptance: the hook resolves the tree from the edited file's path (or from
+`git rev-parse --show-toplevel` on it) rather than from `$CLAUDE_PROJECT_DIR`.
+
+### T-M32-4 — the `analysis_section1` grader asserts presence, not absence of contradiction            [status: todo]
+Origin: PR #34 R10
+Spec: `docs-numbers-are-derived`'s new `analysis_section1` block reads the whole
+of `docs/analysis.md` and asserts each derived string is `in text`, with no
+section scoping (unlike `analysis_coverage`, which slices `## 6. Coverage`..`## 7.`)
+and no uniqueness check — so a contradicting sentence beside the correct one
+stays green. Verified: inserting "Actually only 170 browser actions run, and 12
+of the 119 cases open a browser." above the correct "202 browser actions in a
+`fast` run" leaves the case PASSING. Strictly a narrower instance of `T-R29`,
+which already owns this weakness for the same case's other halves — fix it once,
+for every half, there.
+Repro: insert the contradicting line into `docs/analysis.md` §1 and run
+`_run_doc_counts_case(json.load(open('evals/adversarial/docs-numbers-are-derived.json')))`
+-> `passed: True, wrong: []`.
+Acceptance: the §1 block scans only §1, and/or asserts no other
+`\d+ browser actions` / `\*\*\d+ of the \d+\*\* cases` string appears in the
+section; the contradicting-line probe above reddens.
+
+### T-M32-5 — README publishes 28 wall clocks no committed report backs            [status: todo]
+Origin: PR #34 R12
+Spec: `README.md:68`, `:71-73`, `:78`, `:85`, `:90`, `:96` and `:99` publish
+wall-clock numbers that `docs-numbers-are-derived` does not recompute — its
+`readme_quotes` are only the three case-count strings, and `where_it_stands`
+only recomputes the fenced baseline block. All of these predate PR #34 (the M32
+band that round-1 finding R4 named IS deleted), so they are not M32's to fix,
+but they are the same class of published-number drift R4 and R5 were about and
+the repo has now hit that class three times in one PR.
+Repro: `grep -n '59.62\|58.96\|59.77\|68.1s\|89.62s\|63.3s' README.md` and
+try to resolve any of them to a report in `evals/report/`.
+Acceptance: each remaining README wall clock names the report it came from and
+is recomputed by `docs-numbers-are-derived`, or is deleted.
+
+### T-M32-6 — the recovery-label clause credits the drill-down path with a label it never sets            [status: todo]
+Origin: PR #34 R14
+Spec: `specs/001-browser-contract.md:130-135` says the `recovery` label and the
+`superseded_by` pointer "skip past an `observe` and land on the next attempt of
+any other kind, which is usually the `extract` the drill-down was asked for",
+and cites `recovery-replan-postcondition` as the shape where that extract is
+the only step. Both halves conflate two paths: `pending_recovery` is assigned
+at `src/browser/agent.py:833` only, inside family 2's act->replan branch — the
+drill-down branch (`agent.py:743-791`) sets only the note — and
+`recovery-replan-postcondition`'s stub plans contain no `observe` at all, so
+nothing skips past anything there. ADR-019 §2 carries the same conflation.
+The code is correct and graded; only the prose is imprecise.
+Repro: `grep -n 'pending_recovery' src/browser/agent.py` -> 682, 694, 697, 833;
+only 833 assigns `"recovery"`, and it is unreachable from the drill-down branch.
+Acceptance: the clause separates the two statements — the label defers past an
+`observe` and lands on the next non-`observe` attempt, which in
+`recovery-replan-postcondition` is a bare `extract` with no drill-down involved
+and in `recovery-label-lands-on-the-extract` is the `extract` the drill-down's
+replan returned while a family-2 recovery is in flight.
+
+### T-M32-7 — the contract's laundering clause omits the `page_changed: null` half            [status: todo]
+Origin: PR #34 R15
+Spec: `docs/support-matrix.md` D25 and `specs/decisions/ADR-019` were both
+rewritten to say that "changed nothing" covers an attempt that ran and moved
+nothing AND one that never got far enough to be compared, citing all three
+laundering cases. `specs/001-browser-contract.md:145-150` was left at the
+earlier wording: no null half, and no
+`observe-drilldown-cannot-launder-unchecked-action`. Three documents state the
+same rule and one of them is now behind. Nothing grades the contract's case
+citations — `support-matrix-cites-real-cases` covers the matrix, not
+`specs/001` — so they can drift silently, which is how this happened.
+Repro: `git diff 5a88b9c..HEAD -- specs/001-browser-contract.md docs/support-matrix.md`.
+Acceptance: `specs/001-browser-contract.md:145-150` states the null half and
+cites the third case, matching D25 and ADR-019 word for word on the predicate;
+ideally a grader covers the contract's case citations the way
+`support-matrix-cites-real-cases` covers the matrix's.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5

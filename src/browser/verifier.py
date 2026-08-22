@@ -160,9 +160,11 @@ MIN_PAGE_CHARS = 100
 # reproduced a third time independently. Every L1 check above is satisfied by
 # construction here: whatever the planner grabs is real, grounded, non-empty
 # and not a dump, because the check that is missing is not "is this real" but
-# "does the plan vocabulary (navigate | click | fill | extract) even have a
-# way to answer this question" — and for "which X has the most/least Y" it
-# does not: there is no enumerate-and-count primitive, so any single-shot
+# "does the plan vocabulary (navigate | click | fill | extract | observe)
+# even have a way to answer this question" — and for "which X has the
+# most/least Y" it does not: there is no enumerate-and-count primitive, and
+# M32's `observe` is not one (it discloses more of the page; it does not
+# count), so any single-shot
 # extraction is a guess wearing a PASS. Ground truth (L2) would catch a wrong
 # guess; a live run has none, which is exactly probe #2's finding. Matches
 # ONLY the superlative-over-a-set shape, not "cheapest"/"most expensive"

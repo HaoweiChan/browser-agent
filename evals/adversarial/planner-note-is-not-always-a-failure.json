@@ -1,0 +1,36 @@
+{
+  "id": "planner-note-is-not-always-a-failure",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "kind": "planner-prompt",
+    "prompts": [
+      {
+        "task": "What is the serial number of the Nimbus Field Notebook?",
+        "url": "http://localhost/fixtures/deep-spec.html",
+        "note": "replan #1 after the drill-down at step 2: 1 step(s) planned from the subtree observation",
+        "has": ["drill-down", "Plan only the steps still needed"],
+        "lacks": ["A previous attempt failed"]
+      },
+      {
+        "task": "What is the serial number of the Nimbus Field Notebook?",
+        "url": "http://localhost/fixtures/deep-spec.html",
+        "note": "A previous attempt failed: step 3 (click) failed: expected_state not reached",
+        "has": ["A previous attempt failed", "Plan only the steps still needed"]
+      },
+      {
+        "task": "What is the price of the Aurora Desk Lamp on this page?",
+        "url": "http://localhost/fixtures/shop-lamp-std.html",
+        "lacks": ["A previous attempt failed", "Plan only the steps still needed"]
+      }
+    ]
+  },
+  "expect": {
+    "note": "the note is rendered verbatim; only a caller that knows something failed says so"
+  },
+  "provenance": "M32 cold review, finding 3 — watched RED first. `live_planner` wrapped ANY non-empty note in 'A previous attempt failed: …'. That was true of the only caller when it was written and false the moment M32 added a second one: a drill-down is a SUCCESSFUL request for a closer look, and the live model was being told the step that asked for it had failed — steering it away from the exact container the answer is inside. Invisible to every existing case by construction: the `fast` suite stubs the planner one level above this, `stub_planner` discards `note`, and `expect.planner_saw` grades only the rendered observation. The prompt assembly is now `build_user_message`, module-level and pure, so this grades the real string with no key and no spend. Three rows: the drill-down note must NOT claim a failure, an act-failure note must still say one happened (the framing moved to `agent.py`, it was not deleted), and a first plan with no note must carry neither.",
+  "triage": {
+    "class": "contract-drift",
+    "note": "tagged `invariant`: this is the one part of the live planner that is deterministic string assembly, so there is no excuse for it to be ungraded, and 'planning quality is unmeasured' does not cover it. The refactor is the point — a closure the fast suite can never reach is a place defects go to live."
+  }
+}

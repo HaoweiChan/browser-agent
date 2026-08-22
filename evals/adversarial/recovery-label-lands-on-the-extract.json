@@ -1,0 +1,36 @@
+{
+  "id": "recovery-label-lands-on-the-extract",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+          "expected_state": { "text_visible": "Sorted by price (high to low)" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ],
+      [
+        { "action": "observe", "target": { "role": "list", "name": "Catalogue" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ],
+      [
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Cobalt Floor Rug",
+    "recovery": true,
+    "recovery_labelled_actions": ["extract"]
+  },
+  "provenance": "PR #34 R9 — the contract clause, made executable, and it failed. `specs/001-browser-contract.md` and ADR-019 §2 said an `observe` 'never wears `retry_or_recovery: \"recovery\"` and never consumes a pending `superseded_by` pointer ... Both wait for the first attempt that acts.' The second sentence was false: the deferral tests the literal action `observe`, and the very next step is an `extract`, which is equally read-only, so the label and the pointer land there. Watched red by asserting what the contract claimed — `recovery_labelled_actions: []`, i.e. no read-only step carries it — against this run, which returns the labels `['extract']`. The clause is corrected rather than the code: an `extract` that follows a state-changing action IS the attempt that completes the recovery, and forbidding it the label would empty `recovery_verified` for the replan ladder's commonest shape and turn `recovery-replan-postcondition` red. What `observe` cannot do stands unchanged, and for a reason the metric cares about: it produces no answer, so labelling it counts a rung that recovered nothing.",
+  "triage": {
+    "class": "contract-drift",
+    "note": "the run itself is CORRECT and stays correct — the click really did sort the page (`page_changed: true`), only its authored postcondition was wrong, so the replan is a legitimate recovery and the answer is the true cheapest product. That is deliberate: this case grades where the label lands on a run nobody disputes, so it cannot be confused with the laundering cases, where the whole point is that the run must not finish at all."
+  }
+}
