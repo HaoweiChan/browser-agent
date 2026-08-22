@@ -2524,20 +2524,50 @@ def _run_doc_counts_case(case: dict) -> dict:
 
     c5 = inp.get("criterion5")
     if c5:
-        # Strip struck spans before scanning: ADR-015's own amendment convention
-        # keeps a falsified claim's original wording ~~struck~~ rather than
-        # deleted (the criterion-7 precedent it cites), so only prose asserting
-        # green OUTSIDE a strikethrough is a live claim worth failing on.
-        for docrel in c5["docs"]:
-            text = (RUN_ROOT / docrel).read_text(encoding="utf-8")
-            live_text = re.sub(r"~~.*?~~", "", text, flags=re.DOTALL)
+        # Every tracked-looking markdown file, not a hardcoded allowlist
+        # (PR #28 R2): a new document, or one the original list simply
+        # forgot, is covered without anyone remembering to add it. Excludes
+        # dot-directories (.claude/ agents+skills, .git, .github) — the rest
+        # is every doc a reviewer could mistake for the record. rglob does
+        # not follow the .venv symlink, so that never enters the walk.
+        def _norm(s: str) -> str:
+            return re.sub(r"\s+", " ", s)
+
+        # prompts/ is append-only (prompts/README.md): a dated record is
+        # correct to keep its original wording forever, so it is out of
+        # scope for a LIVE "does any document assert green" guard — PR #28
+        # R3 named exactly this file (prompts/014-a-freeze.md) as the case.
+        # tasks/ describes and quotes bugs and acceptance criteria (this very
+        # milestone's own TODO.md block quotes "A-freeze is achieved" as the
+        # thing that must NOT be true) rather than asserting current state,
+        # so a literal-substring guard reads it backwards — found live while
+        # watching this fix red, not by inspection.
+        SKIP_TOP = {"prompts", "tasks"}
+        md_files = sorted(
+            p for p in RUN_ROOT.rglob("*.md")
+            if not any(part.startswith(".") for part in p.relative_to(RUN_ROOT).parts)
+            and p.relative_to(RUN_ROOT).parts[0] not in SKIP_TOP
+        )
+        required_in = c5.get("required_in", {})
+        for path in md_files:
+            docrel = path.relative_to(RUN_ROOT).as_posix()
+            text = path.read_text(encoding="utf-8")
+            # Struck spans are ADR-015's own preserved-history convention
+            # (the criterion-7 precedent it cites) — stripped before
+            # scanning, so only a claim asserted OUTSIDE a strikethrough
+            # trips this. Whitespace-normalized before matching too (PR #28
+            # R2): markdown hard-wraps prose, so a multi-word forbidden
+            # phrase straddling a line break is the common case, not an
+            # exotic one, and a raw substring search missed it. required_in
+            # reads the SAME normalized, struck-stripped text, so a struck
+            # "RED on the deployed build" can no longer satisfy the
+            # requirement it exists to enforce.
+            live_text = _norm(re.sub(r"~~.*?~~", "", text, flags=re.DOTALL))
             for bad in c5.get("forbidden", []):
-                if bad in live_text:
+                if _norm(bad) in live_text:
                     wrong.append({"asserts_criterion5_green": bad, "doc": docrel})
-        for docrel, needed in c5.get("required_in", {}).items():
-            text = (RUN_ROOT / docrel).read_text(encoding="utf-8")
-            for good in needed:
-                if good not in text:
+            for good in required_in.get(docrel, []):
+                if _norm(good) not in live_text:
                     wrong.append({"missing_red_evidence": good, "doc": docrel})
     return {"passed": not wrong, "wrong": {"docs": wrong},
             "got": {"counts": counts, "domains": domains}}
