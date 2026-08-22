@@ -35,8 +35,8 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 109 cases, zero paid calls
-python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
+python3 -m evals.run --suite fast        # offline gate: 114 cases, zero paid calls
+python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
 
@@ -49,14 +49,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260822-120931-fast.json`, with
-`evals/report/20260822-120943-invariant.json` and
+Latest offline baseline — `evals/report/20260822-124846-fast.json`, with
+`evals/report/20260822-124859-invariant.json` and
 `evals/report/20260822-111204-live.json`:
 
 ```
-fast  109/109    invariant  44/44    live  9/9    $0.0000    59.7s
+fast  114/114    invariant  46/46    live  9/9    $0.0000    64.7s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 16/16 · 5 replans
+diagnosis 18/18 · 5 replans
 ```
 
 Every number in that block is recomputed from those three report files by
@@ -77,28 +77,35 @@ suite straddles its ceiling rather than clears it. The same suite on CI (ubuntu-
 **59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
 on byte-identical code, which is why the wall-clock ceiling is per-environment
 rather than one number pretending to be portable. CI's ceiling is the slowest
-observed run plus 15% (80s); the local ceiling stays the original **60s** —
-a straddling band briefly pushed it to 70, but round-5 review could not
+observed run plus 15% (80s); the local ceiling was the original **60s** through
+M30 — a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
 58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
 further post-commit runs found the honest band is 58.83-60.26s, one run
-over the line by a few tenths and unexplained by load. Margin against 60s
-is real but thin, not a guarantee (§ ADR-013 Decision 4). Ten runs of the M31
-tree on this machine measured **59.05 / 59.19 / 59.56 / 59.57 / 59.64 / 59.69 /
-59.69 / 59.84 / 59.93 / 60.05s** — nine under, one over, and the one over
-exited non-zero exactly as the gate is meant to.
+over the line by a few tenths and unexplained by load.
 
-Because the margin is this thin, **where a new case runs is now an explicit
-choice, not an accident.** M31's cheap cases are in `fast`; its three
-settle-bound ones — each spends the full 2s postcondition budget on a
-postcondition that deliberately never arrives — are tagged `invariant` instead.
-Both suites are this repo's gate (see Gate, above) and CI runs both; `invariant`
-gates at 100% regardless of baseline, which is the stricter of the two. What is
-given up is the local pre-commit hook, which runs `fast` alone. The trigger was
-measured, not assumed: with all of them in `fast` the suite ran **60.13s** and
-the gate refused it. The alternative — raising the ceiling — is an ADR-013
-amendment, and a repair round is the wrong place to make one.
+**M31 grew the suite and the 60s ceiling stopped being tenable.** It refused a
+commit that changed nothing but JSON, at 60.24s, with 109/109 passing. The
+first repair moved three browser cases to `invariant`-only tags, which took
+~4.9s out of the measured number and left the gate a coin flip while the
+published `fast` figure stayed at 59.7s — the wrong instrument, and the version
+of this paragraph that justified it published a figure (60.13s) no reader could
+reproduce and called all three cases settle-bound when one of them costs 0.20s
+(PR #29 R10). The cases are back in `fast`, and the ceiling is re-measured
+instead: **75s locally** (ADR-017), by ADR-013's own rule — slowest observed run
++15%, rounded up to a multiple of five. `invariant` now has a measured ceiling
+of its own (**15s** against a measured 12.2s), so that a tag can never again be
+an unbounded relief valve for the `fast` gate, and `EVAL_WALL_BUDGET_S` is
+scoped to `fast`, the one suite its value was measured for.
+
+The band behind that number, all with every M31 case in `fast`: **64.48 /
+64.58 / 64.59 / 64.63 / 64.66 / 64.68 / 64.75 / 64.81 / 64.98s** across two
+measurers — 64.81 is the reviewer's, the rest are this machine's, and the
+spread across nine runs is 0.50s. 64.98 × 1.15 = 74.7 → 75. That is
+~10s of margin where there used to be ~0.2s, which is the point: a ceiling
+whose job is to catch drift cannot also be the thing that fails on drift-free
+commits. It is a real loosening and ADR-017 says so in those words.
 
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
 measured where the time went instead of assuming: 42.2s is deliberate waiting
@@ -291,7 +298,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 123 cases (109 of them in the offline gate), it
+The eval set is not weak; it is 125 cases (114 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

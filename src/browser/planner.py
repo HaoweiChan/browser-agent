@@ -172,6 +172,36 @@ def stub_planner(plans: list):
     return plan
 
 
+def build_user(task: str, url: str | None, observation: dict | None = None,
+               note: str | None = None) -> str:
+    """The user message a real planner is sent. Module-level and pure so it can
+    be graded without a key, a network call or a token.
+
+    The CALLER owns a replan's framing. The two callers are in different
+    situations — an `act` failure mid-run (plan the REMAINING work; the executed
+    prefix is not re-issued) and a plan the lint rejected before anything ran
+    (plan the WHOLE task; nothing has executed and the page is untouched) — and
+    one shared sentence here told a real model "A previous attempt failed" when
+    nothing had, then asked it to plan only what was still needed of a task none
+    of which had been done (PR #29 R5). So this function adds no framing of its
+    own: the note goes in verbatim.
+
+    That was the half of R5 nothing graded, because every offline case uses
+    `stub_planner` and never reaches this line (PR #29 R11). It is now a pure
+    function with a case over it (`planner-prompt-carries-the-note`); the
+    `expect.planner_note_contains` key grades the other half, what the call
+    sites pass.
+    """
+    user = f"Task: {task}\nStart URL: {url or 'none — choose one via navigate'}"
+    if observation:
+        from .observe import render
+
+        user += "\n\nCurrent page observation:\n" + render(observation)
+    if note:
+        user += "\n\n" + note
+    return user
+
+
 def live_planner(model: str = DEFAULT_MODEL):
     key = os.environ.get("OPENROUTER_API_KEY")
     if not key:
@@ -187,23 +217,7 @@ def live_planner(model: str = DEFAULT_MODEL):
             return json.load(resp)
 
     async def plan(task: str, url: str | None, observation: dict | None = None, note: str | None = None):
-        user = f"Task: {task}\nStart URL: {url or 'none — choose one via navigate'}"
-        if observation:
-            from .observe import render
-
-            user += "\n\nCurrent page observation:\n" + render(observation)
-        if note:
-            # The CALLER owns the framing, because the two callers are in
-            # different situations: an `act` failure mid-run (plan the REMAINING
-            # work; the executed prefix is not re-issued) and a plan the lint
-            # rejected before anything ran (plan the WHOLE task; nothing has
-            # executed and the page is untouched). One shared sentence here told
-            # a real model "A previous attempt failed" when nothing had — and
-            # then asked it to plan only what was still needed, of a task none of
-            # which had been done (PR #29 R5). Graded through
-            # `expect.planner_note_contains` on probe3-quotes-most-quoted-author
-            # (lint path) and recovery-replan-postcondition (act path).
-            user += "\n\n" + note
+        user = build_user(task, url, observation, note)
         payload = {
             "model": model,
             "messages": [

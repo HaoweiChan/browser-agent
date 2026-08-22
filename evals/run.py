@@ -77,7 +77,12 @@ def run_case(case):
 # Decision 4; the round-5 review of ADR-013 Decision 4's amendment to 70 could
 # not reproduce the straddling band that justified it, so it was withdrawn).
 # Pinned by the case `fast-wall-clock-budget`.
-WALL_BUDGET_S = {"fast": 60}
+# Two suites, two numbers, both measured (ADR-017 amends ADR-013 Decision 4).
+# `invariant` gets one because it stopped being free: M31 put fixture runs in it,
+# and without a ceiling of its own the tag choice was an unbounded relief valve
+# for the `fast` gate — which is exactly how it got used, and how the `fast`
+# number stayed at 59.7s while ~4.9s of real cost moved sideways (PR #29 R13).
+WALL_BUDGET_S = {"fast": 75, "invariant": 15}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its
@@ -96,6 +101,12 @@ def wall_budget(suite):
     base = WALL_BUDGET_S.get(suite)
     if base is None:
         return None
+    # The override is the `fast` gate's, and only the `fast` gate's. One env var
+    # cannot carry two suites' numbers, and letting it raise `invariant`'s
+    # ceiling too would reopen the relief valve ADR-017 closed: on CI the
+    # override is 80, which is five times what `invariant` costs.
+    if suite != "fast":
+        return base
     try:
         override = float(os.environ.get(WALL_BUDGET_ENV, ""))
     except ValueError:

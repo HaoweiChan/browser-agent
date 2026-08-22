@@ -141,6 +141,27 @@ _RANK = re.compile(
 )
 _RANK_MAX = {"most expensive", "most", "greatest", "highest"}
 
+# Does the task ask for the ENUMERATION, or for one item out of it? This is the
+# only question that separates "list every product ... cheapest first" (all four
+# rows) from "find the cheapest product" (one row) — both contain a `_RANK`
+# word, both are answered by the same `extract_all`, and nothing about the plan
+# or the page tells them apart. Gating the reduction on `is_aggregate` instead
+# was tried and over-corrected: it dropped the reduction for every cheapest
+# wording and published the raw enumeration as a successful answer (PR #29 R9,
+# case extract-all-cheapest-wording-still-reduces).
+#
+# ponytail: three words, all of them wording this repo has actually shipped in a
+# task ("List every product in the catalogue with its price, cheapest first").
+# `\blist\b` deliberately does not match "listed", which is how probe #3's own
+# question ("which author has the most quotes listed on this page") stays a
+# single-answer ranking. "all" is NOT here: "of all the products, which is
+# cheapest" is a comparison frame, not a request for all of them, and including
+# it would put that shape back on the wrong side. The ceiling is the ceiling of
+# a regex over English, same as SCOPE_BLOCK's: an unseen enumerate phrasing
+# ("show me the prices, cheapest first") reduces to one value instead of
+# listing. Widen when a probe demonstrates one — T-CHEAPEST-WORDING.
+_ENUMERATE_REQUEST = re.compile(r"\b(list|every|each)\b", re.IGNORECASE)
+
 
 def rank(task: str, values: list):
     """Reduce an `extract_all` enumeration to the one item the task asked for.
@@ -156,9 +177,10 @@ def rank(task: str, values: list):
       most quotes" is a question about how often a name appears;
     - some but not all -> refuse (see the comment on that branch).
 
-    A task with no ranking word gets its list back untouched: a multi-row list
-    is a legitimate answer shape (contract: answer string|list, case
-    `verifier-list-rows-not-a-dump`).
+    A task with no ranking word — or one that asks for the enumeration itself
+    (`_ENUMERATE_REQUEST`) — gets its list back untouched: a multi-row list is a
+    legitimate answer shape (contract: answer string|list, cases
+    `verifier-list-rows-not-a-dump`, `extract-all-list-task-keeps-every-row`).
 
     A tie RAISES rather than picking one. The same ruling the resolver already
     makes for proximity (`near-equidistant-is-ambiguous`): two winners mean the
@@ -172,6 +194,8 @@ def rank(task: str, values: list):
     `extract_all` reads one column of one page. Upgrade path and repro:
     tasks/TODO.md T-RANK-UNITS.
     """
+    if _ENUMERATE_REQUEST.search(task or ""):
+        return values  # the task asked for the enumeration, not for one of it
     m = _RANK.search(task or "")
     if not m or not values:
         return values

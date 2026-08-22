@@ -1,7 +1,7 @@
 {
   "id": "plan-lint-holds-across-a-midrun-replan",
   "task": "browser",
-  "suites": ["invariant"],
+  "suites": ["fast", "invariant"],
   "level": "L3",
   "tc": "TC4",
   "trap": "the second enumeration arrives from an act-ladder replan, after the lint has already run",
@@ -24,6 +24,6 @@
   "triage": {
     "class": "silent-failure",
     "watched_red": "before the fix: status success, verdict PASS, all checks green including aggregate_needs_comparison: true, budgets_spent.replans 1, answer [['Aurora Desk Lamp', 'Aurora Desk Lamp Pro', 'Meridian Wall Clock', 'Cobalt Floor Rug'], ['Cobalt Floor Rug $18.00', 'Meridian Wall Clock $24.50', 'Aurora Desk Lamp $39.00', 'Aurora Desk Lamp Pro $59.00']] — an unranked list of lists offered as the answer to 'which product', which is exactly the shape ADR-016 Decision 3 names as the defect the lint exists to stop.",
-    "note": "tagged `invariant` rather than `fast` for the same reason as replan-cannot-launder-noop-action-extract-all: a postcondition that never arrives costs the full 2s settle budget and the `fast` suite sits at its declared wall-clock ceiling. Both suites are the gate (CLAUDE.md) and CI runs both; `invariant` additionally gates at 100%."
+    "note": "tagged `fast` and `invariant`, like every other browser case in the invariant suite. It was briefly `invariant`-only, on the argument that the `fast` suite was at its wall-clock ceiling; that moved ~4.9s of real cost sideways, left the gate a coin flip and the published `fast` number stale, and cost the local pre-commit hook a regression guard it should run. The ceiling was re-measured instead (ADR-017: `fast` 60 -> 75, `invariant` 15). This case is settle-bound: 2.36s, almost all of it the postcondition that never arrives."
   }
 }

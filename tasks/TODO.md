@@ -48,9 +48,12 @@ nor the code-side reduction, so M31's central mechanism provably cannot fire on
 it. What IS proven offline: the reduction gets that exact case right on its own
 ground truth (`rank-reduces-enumeration-in-code` row 1, the eleven hand-verified
 Travel prices reducing to £23.21), and the enumerate-then-rank path end to end
-on a superlative task (`probe3-quotes-most-quoted-author`). The residual —
-single-answer rankings phrased without a which/what/who frame get neither the
-lint nor the reduction — is T-CHEAPEST-WORDING below.
+on a superlative task (`probe3-quotes-most-quoted-author`), and — since PR #29
+R9 — the reduction itself on that exact wording end to end
+(`extract-all-cheapest-wording-still-reduces`). The residual is narrower than
+the first version of this amendment said: such a task IS reduced when the plan
+enumerates; what is missing is the lint that would make it enumerate, because
+`_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`. That is T-CHEAPEST-WORDING below.
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
@@ -94,30 +97,31 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
-### T-CHEAPEST-WORDING — a single-answer ranking phrased without which/what/who gets neither the plan lint nor the reduction            [status: todo]
-Origin: PR #29 R4
-Spec (claim): M31 gates both halves of its mechanism on `verifier.is_aggregate`
-— the plan lint (`agent.plan_gap`) and the code-side reduction at answer
-assembly — and that predicate is `_AGGREGATE`, which requires a
-`(which|what|who) … (most|least|fewest|highest|lowest|greatest)` frame. A task
-that asks for one item without that frame is linted by nothing and reduced by
-nothing, so the planner may still answer it with a single `extract` and the run
-still reports whatever that read.
-Evidence: `live-books-cheapest-travel`'s task, "In the Travel category, find the
-cheapest book and tell me its exact price", is the repo's own committed example
-and returns `plan_gap(...) is None`. `verifier.rank` would get it right — the
-unit row `rank-reduces-enumeration-in-code` #1 reduces that case's eleven
-hand-verified Travel prices to £23.21 — and the agent never calls it for that
-wording.
+### T-CHEAPEST-WORDING — the plan lint does not fire on price-worded rankings, so nothing sends such a plan back            [status: todo]
+Origin: PR #29 R4, restated at PR #29 R9 and R12
+Spec (claim): the plan lint (`agent.plan_gap`) is gated on `verifier.is_aggregate`.
+`_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`.
+So a ranking task worded with `cheapest` is never linted: the planner may answer
+it with a single `extract` and the run reports whatever that one element said.
+The code-side REDUCTION is not affected — PR #29 R9 moved its gate off
+`is_aggregate` and onto `_RANK` plus an enumerate-request test, so an
+enumeration for such a task is reduced correctly (`rank-reduces-enumeration-in-code`
+row 1, `extract-all-cheapest-wording-still-reduces`). What is missing is only
+the push: nothing makes the planner enumerate in the first place.
+Evidence: `is_aggregate("Which product is the cheapest, and what is its price?")`
+-> False, on a task committed in this repo since M7. Same for
+`live-books-cheapest-travel`'s "In the Travel category, find the cheapest book
+and tell me its exact price."
 Repro: `plan_gap("In the Travel category, find the cheapest book and tell me its
 exact price.", [{"action": "extract"}])` -> None.
-Acceptance: either widen the shared shape with a watched-red case for the price
-wording — and prove it does not drag the fifteen shop-fixture cases whose task
-says "name the cheapest product" into the lint, which is why M31 did not widen
-it — or run `live-books-cheapest-travel` with a key and record the result.
-Note: this is the same regex ceiling T-R31 already names for the verifier guard;
-M31 gave that ceiling two more consumers, which is what makes it worth its own
-block rather than a line in T-R31.
+Acceptance: either widen `_AGGREGATE`'s second half to the price vocabulary with
+a watched-red case — and prove it does not drag the fifteen shop-fixture cases
+whose task says "name the cheapest product" into a lint they have no reason to
+meet, which is why M31 did not widen it — or run `live-books-cheapest-travel`
+with a key and record what the planner does now that the verb exists.
+Note: the same regex ceiling T-R31 names for the verifier guard, with one more
+consumer. `_RANK` (the reduction) and `_AGGREGATE` (the lint and the verifier
+guard) are deliberately separate vocabularies; this block is about the second.
 
 ### T-EXTRACT-ALL-VOLUME — `extract_all` has no cap on matches and stores one full evidence window per match            [status: todo]
 Origin: PR #29 R7

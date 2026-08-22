@@ -57,15 +57,15 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-123 distinct cases (20 golden + 103 adversarial).
-175 browser actions in a `fast` run; **57 of the
-109** `fast` cases drive a real Chromium end to end — counted here as
+125 distinct cases (20 golden + 105 adversarial).
+185 browser actions in a `fast` run; **61 of the
+114** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260822-120931-fast.json` rather than tallied by hand (the
+`evals/report/20260822-124846-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 52 are those refusals plus pure-code probes of a single
+remaining 53 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
@@ -457,7 +457,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-123 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
+125 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -465,12 +465,12 @@ Empty cells are shown, not hidden.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 30 | | L1 | 33 |
+| TC1 extract-on-page | 30 | | L1 | 34 |
 | TC2 search-then-extract | 8 | | L2 | 23 |
-| TC3 navigate-then-extract | 11 | | **L3** | **8 — 4 live (one of them unrun) + 4 fixture (the M10 aggregate-superlative twin, now caught by M31's plan lint; its M31 green twin `probe3-quotes-most-quoted-author`; `extract-all-refuses-a-selector`; and `plan-lint-holds-across-a-midrun-replan`)** |
-| TC4 interact-then-extract | 23 | | L4 (mutation/recovery) | 16 |
+| TC3 navigate-then-extract | 11 | | **L3** | **9 — 4 live (one of them unrun) + 5 fixture (the M10 aggregate-superlative twin, now caught by M31's plan lint; its M31 green twin `probe3-quotes-most-quoted-author`; `extract-all-refuses-a-selector`; `plan-lint-holds-across-a-midrun-replan`; and `extract-all-cheapest-wording-still-reduces`)** |
+| TC4 interact-then-extract | 24 | | L4 (mutation/recovery) | 16 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
-| mechanism/unit probes | 45 | | untagged (unit probes) | 35 |
+| mechanism/unit probes | 46 | | untagged (unit probes) | 35 |
 
 | Domain | Kind | Cases |
 |---|---|---|

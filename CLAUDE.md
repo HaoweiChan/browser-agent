@@ -40,14 +40,14 @@ The objective pass/fail for this repo. pr-loop, the hooks, and any reviewer
 run exactly these, in order:
 
 ```bash
-python3 -m evals.run --suite invariant   # pass: 100%
-python3 -m evals.run --suite fast        # pass: score >= .eval-baseline.json
+python3 -m evals.run --suite invariant   # pass: 100%, wall clock <= 15s
+python3 -m evals.run --suite fast        # pass: score >= .eval-baseline.json, wall clock <= 75s
 ```
 
 ## Commands
 
 ```bash
-python3 -m evals.run --suite invariant         # must-always-hold, pure code, no LLM/network
+python3 -m evals.run --suite invariant         # must-always-hold: pure-code probes plus the fixture runs that pin them (loopback only, no LLM, no live site) — 100%, ceiling 15s
 python3 -m evals.run --suite fast              # offline gate: fixtures + LLM stubs, zero paid calls
 python3 -m evals.run --suite live              # real sites, hand-written plans — network, still $0.00
 python3 -m evals.run --suite full              # live sites + real LLM — manual/scheduled only

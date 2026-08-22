@@ -1,7 +1,7 @@
 {
   "id": "replan-cannot-launder-noop-action-extract-all",
   "task": "browser",
-  "suites": ["invariant"],
+  "suites": ["fast", "invariant"],
   "level": "L4",
   "tc": "TC4",
   "input": {
@@ -23,6 +23,6 @@
   "triage": {
     "class": "silent-failure",
     "watched_red": "before the fix: status success, verdict PASS, checks {status: false, recovery: false}, budgets_spent.replans 1, answer ['Aurora Desk Lamp', 'Aurora Desk Lamp Pro', 'Meridian Wall Clock', 'Cobalt Floor Rug'] — the catalogue in its ORIGINAL order, published as the answer to a task that asked for it sorted. Its `extract` twin correctly ended failure:act on the same fixture, same click, same plan shape.",
-    "note": "tagged `invariant` rather than `fast`: this is a settle-bound case (a postcondition that never arrives costs the full 2s budget) and the `fast` suite is at its declared wall-clock ceiling — see README's wall-clock paragraph. Both suites are the repo's gate (CLAUDE.md) and CI runs both; only the local pre-commit hook runs `fast` alone. Invariant also gates at 100% regardless of baseline, which is the stricter of the two."
+    "note": "tagged `fast` and `invariant`, like every other browser case in the invariant suite. It was briefly `invariant`-only, on the argument that the `fast` suite was at its wall-clock ceiling; that moved ~4.9s of real cost sideways, left the gate a coin flip and the published `fast` number stale, and cost the local pre-commit hook a regression guard it should run. The ceiling was re-measured instead (ADR-017: `fast` 60 -> 75, `invariant` 15). This case is settle-bound: 2.29s, almost all of it the postcondition that never arrives."
   }
 }

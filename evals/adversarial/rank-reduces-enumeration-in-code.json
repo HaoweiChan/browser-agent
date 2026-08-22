@@ -10,7 +10,7 @@
     "kind": "verifier",
     "rank": [
       {
-        "note": "the live-books-cheapest-travel shape, offline: the eleven Travel-category prices enumerated by extract_all, reduced to the cheapest in code. Prices are that case's own hand-verified ground truth (minimum £23.21, 'The Road to Little Dribbling'). This is the reduction that has to exist for that case to be answerable at all — the deployed run 734d3d1f planned 'read article 0' and returned the FIRST price instead. PR #29 R2 gated the answer-assembly call on `verifier.is_aggregate`, and this wording does not match it — so the agent never calls `rank` for this task. The row stays because it is the evidence for T-CHEAPEST-WORDING: the reduction gets this case right and nothing routes it there. Row 2 is the reachable twin, phrased with a which-frame.",
+        "note": "the live-books-cheapest-travel shape, offline: the eleven Travel-category prices enumerated by extract_all, reduced to the cheapest in code. Prices are that case's own hand-verified ground truth (minimum £23.21, 'The Road to Little Dribbling'). This is the reduction that has to exist for that case to be answerable at all — the deployed run 734d3d1f planned 'read article 0' and returned the FIRST price instead. PR #29 R2 briefly gated the agent's call on `is_aggregate`, which this wording misses, so the raw list was published instead; R9 moved the gate into `rank` and this shape is reachable again (extract-all-cheapest-wording-still-reduces is its end-to-end twin).",
         "task": "In the Travel category, find the cheapest book and tell me its exact price.",
         "values": [
           "£45.17",
@@ -114,6 +114,39 @@
           "Out of stock"
         ],
         "answer": null
+      },
+      {
+        "note": "PR #29 R9's other side: the task asks for the enumeration itself, so the ranking word in it is describing an ORDER, not selecting one row. Same values, same `_RANK` word, opposite answer — which is why the rule is a property of the task's request, not of the answer's shape.",
+        "task": "List every product in the catalogue with its price, cheapest first.",
+        "values": [
+          "Cobalt Floor Rug $18.00",
+          "Meridian Wall Clock $24.50",
+          "Aurora Desk Lamp $39.00"
+        ],
+        "answer": [
+          "Cobalt Floor Rug $18.00",
+          "Meridian Wall Clock $24.50",
+          "Aurora Desk Lamp $39.00"
+        ]
+      },
+      {
+        "note": "`\\blist\\b` must not match 'listed' — probe #3's own question contains it and is a single-answer ranking. This row is the boundary that keeps probe3-quotes-most-quoted-author green.",
+        "task": "Which author has the most quotes listed on this page?",
+        "values": [
+          "Albert Einstein",
+          "Jane Austen",
+          "Albert Einstein"
+        ],
+        "answer": "Albert Einstein"
+      },
+      {
+        "note": "'all' is deliberately NOT an enumerate-request word: 'of all the products' is a comparison frame, not a request for all of them, and treating it as one would publish the raw list for a single-answer question — the exact R9 defect.",
+        "task": "Of all the products here, which one is the cheapest?",
+        "values": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ],
+        "answer": "Cobalt Floor Rug $18.00"
       }
     ]
   },
@@ -123,6 +156,6 @@
   "provenance": "M31. `extract_all` returns a list; the question asked for one item. The reduction is the half of the M31 spec that says rank/compare/count stays in code and never in the LLM, and it is what makes probe3-quotes-most-quoted-author and live-books-cheapest-travel answerable. Unit-shaped rather than end-to-end because the interesting failures are in the reduction rules (numbers vs counts, direction, ties, no-op), and a browser run per row would buy nothing and cost wall clock the fast suite does not have.",
   "triage": {
     "class": "coverage-gap",
-    "note": "tagged invariant: the ranking is the only place in this system where code, not the model, decides which of several real values is THE answer. Watched red first, before `verifier.rank` existed: `ImportError: cannot import name 'rank' from 'src.browser.verifier'` — the same shape the `aggregate` probe key was watched red as, since _run_verifier_case had no `rank` key either until its milestone. Rows 8 and 9 came from the M31 cold review and were watched red against the implementation as first written (`if all(nums)` falling through to the counting branch): row 8 returned '$19.99' and row 9 returned 'Out of stock', both as answers rather than refusals."
+    "note": "tagged invariant: the ranking is the only place in this system where code, not the model, decides which of several real values is THE answer. Watched red first, before `verifier.rank` existed: `ImportError: cannot import name 'rank' from 'src.browser.verifier'` — the same shape the `aggregate` probe key was watched red as, since _run_verifier_case had no `rank` key either until its milestone. Rows 8 and 9 came from the M31 cold review and were watched red against the implementation as first written (`if all(nums)` falling through to the counting branch): row 8 returned '$19.99' and row 9 returned 'Out of stock', both as answers rather than refusals. PR #29 R9 added rows 10-12 for the enumerate-request rule that decides whether `rank` reduces at all. Row 10 is the one that goes red at THIS level — with the `_ENUMERATE_REQUEST` gate removed it returns 'Cobalt Floor Rug $18.00' where the task asked for every product. Rows 11 and 12 are boundary rows that pass either way; they exist so a later widening of that regex (adding 'listed', or 'all') turns red here instead of in production. The R2-gate defect rows 1 and 12 describe was never visible at this level at all — that gate lived at the agent's call site, so its red is end-to-end and belongs to extract-all-cheapest-wording-still-reduces."
   }
 }

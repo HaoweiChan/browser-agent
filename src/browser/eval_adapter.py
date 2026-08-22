@@ -305,6 +305,43 @@ def _check_plan_gap() -> dict:
     return {"passed": not wrong, "wrong": wrong}
 
 
+def _check_planner_prompt() -> dict:
+    """The message `live_planner` actually assembles — the half of PR #29 R5 that
+    `expect.planner_note_contains` does NOT reach.
+
+    That key reads `stub_planner.notes`, i.e. what the CALL SITE passed. Every
+    offline case uses the stub, so the line R5 changed in `live_planner` is
+    executed only by `full`-tagged cases, and reverting it left the whole suite
+    green (PR #29 R11). `build_user` is pure, so this costs no key, no network
+    and no token: the note must arrive verbatim and the planner must add no
+    framing of its own — in particular not the act ladder's sentence, which is
+    false in all three of its clauses on the lint's replan.
+    """
+    from .planner import build_user
+
+    ACT = ("A previous attempt failed: step 2 (click) failed: boom\n"
+           "Plan only the steps still needed from the page above.")
+    LINT = ("Your previous plan was rejected before anything ran: no enumeration\n"
+            "Nothing has executed and the page is unchanged; plan the whole task "
+            "from the page above.")
+    wrong = []
+    plain = build_user("T", "http://u")
+    if "A previous attempt" in plain or plain.rstrip().endswith("above."):
+        wrong.append({"no_note": "the planner invented replan framing", "user": plain})
+    for name, note in (("act", ACT), ("lint", LINT)):
+        user = build_user("T", "http://u", None, note)
+        if not user.endswith("\n\n" + note):
+            wrong.append({"note_not_verbatim": name, "user": user[-200:]})
+        # The framing must be exactly what the caller sent, no more: the lint's
+        # message must not acquire the act ladder's sentence on the way out.
+        if user.count("A previous attempt failed") != note.count("A previous attempt failed"):
+            wrong.append({"planner_added_framing": name, "user": user[-200:]})
+        if user.count("Plan only the steps still needed") != note.count(
+                "Plan only the steps still needed"):
+            wrong.append({"planner_added_framing": name, "user": user[-200:]})
+    return {"passed": not wrong, "wrong": wrong}
+
+
 def _check_inv3() -> dict:
     """INV-3: budget exhaustion is a loud classified failure, never a quiet stop.
 
@@ -2598,6 +2635,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
               "mutation-metrics": _check_mutation_metrics,
               "plan-gap": _check_plan_gap,
+              "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 
 
@@ -2690,6 +2728,19 @@ def _run_wall_clock_case(case: dict) -> dict:
             if got != r["budget"]:
                 wrong.append({"env": r["value"], "expected_ceiling": r["budget"], "got": got,
                               "note": r["note"]})
+        # The override is the FAST gate's alone (ADR-017). If it raised every
+        # suite's ceiling, CI's 80 would apply to `invariant` too — five times
+        # what that suite costs — and the tag valve ADR-017 closed locally would
+        # still be open there.
+        for r in case["input"].get("invariant_override", []):
+            os.environ.pop(WALL_BUDGET_ENV, None)
+            if r["value"] is not None:
+                os.environ[WALL_BUDGET_ENV] = r["value"]
+            got = wall_budget("invariant")
+            if got != r["budget"]:
+                wrong.append({"env": r["value"], "suite": "invariant",
+                              "expected_ceiling": r["budget"], "got": got,
+                              "note": r["note"]})
         os.environ.pop(WALL_BUDGET_ENV, None)
         applied = [dict(r, got=_main_exit_code(r["wall_seconds"]))
                    for r in case["input"]["applied_in_main"]]
@@ -2710,6 +2761,9 @@ def _run_wall_clock_case(case: dict) -> dict:
     if WALL_BUDGET_S.get("fast") != exp["max_wall_seconds"]:
         wrong.append({"ruling": "fast", "budget": WALL_BUDGET_S.get("fast"),
                       "declared": exp["max_wall_seconds"]})
+    if "invariant_wall_seconds" in exp and WALL_BUDGET_S.get("invariant") != exp["invariant_wall_seconds"]:
+        wrong.append({"ruling": "invariant", "budget": WALL_BUDGET_S.get("invariant"),
+                      "declared": exp["invariant_wall_seconds"]})
     # Every suite name the repo uses, not only the ones the rows happen to list:
     # `full` was missing and WALL_BUDGET_S["full"] = 1 slipped in green (R11).
     if sorted(WALL_BUDGET_S) != sorted(exp["suites_with_a_ceiling"]):

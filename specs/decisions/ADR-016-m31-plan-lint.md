@@ -5,7 +5,7 @@ Status: accepted
 
 **Ruling**: a superlative task whose plan does not read the page exactly once with `extract_all` is rejected at every point the executor adopts a plan — before the browser moves, and again on an `act`-ladder replan — and replanned once through the existing replan budget; `extract_all` is the primitive that lets the replan land, and the ranking over what it enumerates is done in code (`verifier.rank`), never by the model, both halves gated on the one `is_aggregate` shape. The lint is deterministic and site-agnostic — an LLM debater was considered and rejected.
 **Because**: PR #25 closed this hole at the verifier, which is correct and one layer too late — the run still had to move the browser and produce a wrong answer for the guard to reject, and the guard's own comment said why it could not do better ("the plan vocabulary has no comparison primitive to have gotten it right WITH"). Adding the verb is what lets the guard relax; rejecting the plan is what stops paying for the verdict in actions.
-**Enforced by**: `verifier-aggregate-superlative-fails-loud`, `probe3-quotes-most-quoted-author`, `rank-reduces-enumeration-in-code`, `plan-gap-truth-table`, `extract-all-refuses-a-selector`, `extract-all-list-task-keeps-every-row`, `plan-lint-holds-across-a-midrun-replan`, `replan-cannot-launder-noop-action-extract-all`, `recovery-replan-postcondition`, `verifier-aggregate-ground-truth-untouched`, `ui-execution-progress-is-trace-derived`
+**Enforced by**: `verifier-aggregate-superlative-fails-loud`, `probe3-quotes-most-quoted-author`, `rank-reduces-enumeration-in-code`, `plan-gap-truth-table`, `extract-all-refuses-a-selector`, `extract-all-list-task-keeps-every-row`, `extract-all-cheapest-wording-still-reduces`, `plan-lint-holds-across-a-midrun-replan`, `replan-cannot-launder-noop-action-extract-all`, `recovery-replan-postcondition`, `planner-prompt-carries-the-note`, `verifier-aggregate-ground-truth-untouched`, `ui-execution-progress-is-trace-derived`
 
 ---
 
@@ -56,14 +56,22 @@ which is the thing this ADR exists to keep out of the model).
 ### 2. The ranking is arithmetic, in code
 
 `verifier.rank(task, values)` reduces an enumeration to the item the task's
-superlative asks for. It is called **only when `is_aggregate(task)`** — the same
-predicate that decides the lint, so exactly one shape of task is both linted and
-reduced. Gating on the answer's shape alone (a single list) truncated a
-list-shaped task whose wording merely contains a ranking word, "list every
-product … cheapest first", from four rows to one and reported success (PR #29
-R2, `extract-all-list-task-keeps-every-row`). The cost of that gate is that a
-single-answer ranking phrased without a which/what/who frame is neither linted
-nor reduced — declared as T-CHEAPEST-WORDING, not fixed here.
+superlative asks for. **Whether to reduce at all is its own decision, from the
+task text**: a task that asks for the enumeration (`list`, `every`, `each`)
+keeps its list; anything else with a `_RANK` word gets one item. Two wrong gates
+were tried here and both are cased. Gating on the answer's shape alone (a single
+list) truncated "list every product … cheapest first" from four rows to one and
+reported success (PR #29 R2, `extract-all-list-task-keeps-every-row`). Gating on
+`is_aggregate` instead over-corrected: it dropped the reduction for every
+`cheapest` wording — the milestone's own headline shape — and published the raw
+enumeration as a successful answer to a single-answer question (PR #29 R9,
+`extract-all-cheapest-wording-still-reduces`). The two cases are a pair: one
+rule has to keep both green, and either alone is satisfied by deleting the
+other's behaviour.
+
+The reduction and the lint therefore run on **different** vocabularies, on
+purpose. `_RANK` includes the price wording; `_AGGREGATE` does not, and `_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`. So a price-worded ranking is reduced but not linted — declared
+as T-CHEAPEST-WORDING, not fixed here.
 
 Three rules, chosen by what the values *are*: EVERY value
 parses as a number → compare the numbers; NONE of them does → count
@@ -165,10 +173,18 @@ attempt failed … plan only the steps still needed from the page above" — whi
 is true of the `act` ladder and false in all three clauses of the lint's replan,
 where nothing has executed, nothing has failed, and the whole task is still to
 be planned. The planner now appends the note verbatim and each call site writes
-what actually happened. `stub_planner` records every note it is handed, so the
-message a real planner would receive is graded offline at $0: the lint path by
-`probe3-quotes-most-quoted-author`, the act path by
-`recovery-replan-postcondition` (PR #29 R5).
+what actually happened.
+
+Graded in two halves, because one of them alone was mistaken for both.
+`expect.planner_note_contains` reads `stub_planner.notes` and grades **what the
+call site passes** — the lint path by `probe3-quotes-most-quoted-author`, the
+act path by `recovery-replan-postcondition`. It does not reach `live_planner`
+at all: every offline case uses the stub, so the line this decision changed was
+executed only by `full`-tagged cases and reverting it left the whole suite green
+(PR #29 R11). The message build is now the pure function `planner.build_user`,
+graded directly by `planner-prompt-carries-the-note` — the note arrives verbatim
+and the planner adds no framing of its own — at no key, no network and no
+token.
 
 The ceiling is stated rather than hidden: `is_aggregate` is a regex over
 English, so a rephrased superlative walks around the lint exactly as `log into`
@@ -209,7 +225,8 @@ directly, in both directions, by the rows of
   call, so it stays `full`-tagged and unrun in this milestone, the same
   declared state it has had since M6. Neither the lint nor the reduction fires
   on it — "find the cheapest book" is not an `_AGGREGATE` match — so what M31
-  gives it is the vocabulary and the prompt line, not a guarantee. PR #29 R4
-  called that out as an unmet acceptance line; the line is amended in
-  `tasks/TODO.md` with the reason, and the residual is declared as
-  T-CHEAPEST-WORDING.
+  gives it is the vocabulary, the prompt line and — since PR #29 R9 — a
+  reduction that fires on its wording once a plan enumerates. What it does not
+  give it is the lint that would make a plan enumerate: `_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`.
+  PR #29 R4 called the acceptance line out as unmet; it is amended in
+  `tasks/TODO.md` with the reason, and the residual is T-CHEAPEST-WORDING.

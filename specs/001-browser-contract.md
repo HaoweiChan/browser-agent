@@ -152,10 +152,17 @@ appears, in order — no post-hoc reconstruction).
   questions rank over (M10 probe #3, `live-books-cheapest-travel`). Two rules
   follow from where the comparison happens:
   - **the ranking is done in code, never by the model** (`verifier.rank`,
-    called at answer assembly when the task `verifier.is_aggregate` matches and
-    the enumeration IS the whole answer): the plan extracts the values to
-    compare, and code picks the one the task's superlative asks for — numbers compare as
-    numbers, anything else compares by how often it occurs. A tie is
+    called at answer assembly whenever the enumeration IS the whole answer):
+    the plan extracts the values to compare, and code picks the one the task's
+    superlative asks for — numbers compare as
+    numbers, anything else compares by how often it occurs. **Whether to reduce
+    at all is `rank`'s own decision, from the task text**: a task that asks for
+    the enumeration (`list`, `every`, `each`) keeps its list, anything else with
+    a ranking word gets one item. That is deliberately NOT the plan lint's
+    `is_aggregate` shape — the lint's vocabulary excludes price wording and the
+    reduction's does not, so a "cheapest" task is reduced but not linted
+    (`extract-all-cheapest-wording-still-reduces`,
+    `extract-all-list-task-keeps-every-row`, T-CHEAPEST-WORDING). A tie is
     `failure:semantic`, not a coin flip, the same ruling `near` already makes
     (`near-equidistant-is-ambiguous`). A task with no ranking word keeps its
     list, which is a legitimate answer shape.

@@ -747,19 +747,21 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     answer = answers[0] if len(answers) == 1 else (answers or None)
     # An `extract_all` enumeration is reduced HERE, in code: the plan gathered
     # every candidate and `rank` picks the one the task's superlative asks for.
-    # Gated on `is_aggregate` — the SAME predicate the plan lint uses, so exactly
-    # one shape of task is both linted and reduced. Gating on the answer's shape
-    # alone silently truncated a list-shaped task whose wording merely contains a
-    # ranking word ("list every product ... cheapest first") from four rows to
-    # one and reported success (PR #29 R2, case
-    # extract-all-list-task-keeps-every-row). The `len(answers) == 1` half still
-    # matters: a plan that also extracts something else is composing a list, not
-    # ranking one (multi-extract-list). More than one enumeration never reaches
-    # here for an aggregate task, because `plan_gap` runs at BOTH points where
-    # the executor adopts a plan — the first plan and an act-ladder replan
-    # (PR #29 R3). A tie is refused rather than guessed, and a refusal is
-    # `semantic`: the page was read correctly and does not decide.
-    if is_aggregate(task) and len(answers) == 1 and isinstance(answer, list):
+    # Whether to reduce at all is `rank`'s own decision, from the task text: a
+    # task that asks for the enumeration keeps its list, a task that asks for one
+    # item out of it gets one. Both mistakes have been made here and both are
+    # cased — reducing a list-shaped task to one row (PR #29 R2,
+    # extract-all-list-task-keeps-every-row) and publishing the raw enumeration
+    # as the answer to a single-answer ranking (PR #29 R9,
+    # extract-all-cheapest-wording-still-reduces). The `len(answers) == 1` half
+    # stays here because it is about the PLAN, not the task: a plan that also
+    # extracts something else is composing a list, not ranking one
+    # (multi-extract-list). More than one enumeration never reaches here for an
+    # aggregate task, because `plan_gap` runs at BOTH points where the executor
+    # adopts a plan — the first plan and an act-ladder replan (PR #29 R3). A tie
+    # is refused rather than guessed, and a refusal is `semantic`: the page was
+    # read correctly and does not decide.
+    if len(answers) == 1 and isinstance(answer, list):
         try:
             answer = rank(task, answer)
         except ValueError as e:
