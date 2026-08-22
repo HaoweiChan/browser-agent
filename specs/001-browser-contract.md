@@ -125,9 +125,14 @@ appears, in order — no post-hoc reconstruction).
   second observation format. It reads the page and changes nothing, so like
   `extract` it carries no `expected_state`, records `page_changed: null`, and
   never wears `retry_or_recovery: "recovery"` and never consumes a pending
-  `superseded_by` pointer — it replaces nothing and recovers nothing, and a
-  read-only step counted as a recovery rung inflates a published metric. Both
-  wait for the first attempt that acts. An
+  `superseded_by` pointer — it replaces nothing and recovers nothing, and it
+  produces no answer either, so counting it as a rung inflates a published
+  metric with an attempt that could not have saved anything. Both skip PAST an
+  `observe` and land on the next attempt of any other kind, which is usually
+  the `extract` the drill-down was asked for: an `extract` is read-only too,
+  but it is the attempt that completes a recovery, and `recovery-replan-
+  postcondition` is the shape where it is the ONLY step the new plan has
+  (`recovery-label-lands-on-the-extract` pins where the label lands). An
   `expected_state` on an `observe` step is refused as `failure:task`: there is
   nothing for it to assert (`observe-step-cannot-carry-expected-state`). It
   spends one call from the existing `MAX_REPLANS` budget and adds no budget of

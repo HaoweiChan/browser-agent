@@ -665,14 +665,16 @@ def _run_fixture_case(case: dict) -> dict:
             all(w in text for w in want.get("has", []))
             and not any(w in text for w in want.get("lacks", []))
             for want, text in zip(exp["planner_saw"], seen))
-    # `observe` reads and changes nothing, so it replaces no failed attempt and
-    # recovers nothing — `specs/001-browser-contract.md` and ADR-019 both say so,
-    # and nothing checked it: the label rode in on `pending_recovery` and the
-    # step landed inside the published `recovery_rungs` figure (PR #34 R2).
-    if exp.get("no_recovery_label_on_observe"):
-        checks["no_recovery_label_on_observe"] = not [
-            s for s in trace
-            if s.get("action") == "observe" and s.get("retry_or_recovery") == "recovery"]
+    # WHICH actions wear `retry_or_recovery: "recovery"` in this run, as a
+    # sorted set. Asserted rather than described, because `recovery_rungs`
+    # publishes a count of these steps and the contract makes a claim about
+    # what may be inside it (PR #34 R2, then R9: the first version of this key
+    # only forbade `observe`, so it structurally could not see the `extract`
+    # the deferral actually lands on).
+    if "recovery_labelled_actions" in exp:
+        checks["recovery_labelled_actions"] = sorted(
+            {s["action"] for s in trace if s.get("retry_or_recovery") == "recovery"}
+        ) == sorted(exp["recovery_labelled_actions"])
     # A "recovery" label claims a strategy CHANGED. An attempt identical to the
     # one it replaced is a retry, and specs/001 keeps retries out of the
     # recovery metric by construction, not by intention.

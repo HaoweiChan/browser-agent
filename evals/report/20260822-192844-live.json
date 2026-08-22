@@ -6,10 +6,10 @@
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 22431,
-    "wall_seconds": 22.65,
-    "latency_p50": 1.64,
-    "latency_p95": 8.22,
+    "ms": 16117,
+    "wall_seconds": 16.32,
+    "latency_p50": 1.52,
+    "latency_p95": 3.29,
     "cases_with_budgets": 9
   },
   "metrics": {
@@ -57,9 +57,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2268
+        "ms": 2239
       },
-      "seconds": 2.47,
+      "seconds": 2.43,
       "id": "live-books-detail-upc",
       "kind": "golden"
     },
@@ -102,9 +102,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2200
+        "ms": 2249
       },
-      "seconds": 2.2,
+      "seconds": 2.25,
       "id": "live-books-travel-price",
       "kind": "golden"
     },
@@ -146,9 +146,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 980
+        "ms": 963
       },
-      "seconds": 0.98,
+      "seconds": 0.96,
       "id": "live-hn-item1-submitter",
       "kind": "golden"
     },
@@ -234,9 +234,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 3057
+        "ms": 3288
       },
-      "seconds": 3.06,
+      "seconds": 3.29,
       "id": "live-ol-edition-title",
       "kind": "golden"
     },
@@ -281,9 +281,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 8219
+        "ms": 2118
       },
-      "seconds": 8.22,
+      "seconds": 2.12,
       "id": "live-ol-search-a11y-invisible",
       "kind": "adversarial"
     },
@@ -325,9 +325,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1632
+        "ms": 1467
       },
-      "seconds": 1.64,
+      "seconds": 1.47,
       "id": "live-quotes-js-delayed-empty",
       "kind": "adversarial"
     },
@@ -369,10 +369,10 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1495
+        "ms": 1516
       },
       "known_wrong_ground_truth": "expect.answer pins the WRONG answer this build produces; a PASS here means 'the agent reproduced the known-wrong answer', never 'the answer is correct'",
-      "seconds": 1.5,
+      "seconds": 1.52,
       "id": "live-quotes-js-role-tier-blind",
       "kind": "adversarial"
     },
@@ -414,9 +414,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1631
+        "ms": 1328
       },
-      "seconds": 1.63,
+      "seconds": 1.33,
       "id": "live-quotes-js-text-tier-reaches",
       "kind": "adversarial"
     }

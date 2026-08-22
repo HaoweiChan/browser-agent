@@ -57,8 +57,8 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-130 distinct cases (20 golden + 110 adversarial).
-202 browser actions in a `fast` run; **71 of the 119** cases drive a real Chromium end to end — counted here as
+132 distinct cases (20 golden + 112 adversarial).
+209 browser actions in a `fast` run; **73 of the 121** cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions: the eight L5 refusal cases are
 end-to-end cases that deliberately stop before a browser opens. The remaining 48 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
@@ -452,7 +452,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-130 distinct cases (M32, refreshed from the case files' own `tc`/`level`/`domain`
+132 distinct cases (M32, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -461,9 +461,9 @@ Empty cells are shown, not hidden.
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
 | TC1 extract-on-page | 34 | | L1 | 37 |
-| TC2 search-then-extract | 8 | | L2 | 26 |
+| TC2 search-then-extract | 8 | | L2 | 28 |
 | TC3 navigate-then-extract | 13 | | **L3** | **6 — 4 live (one of them unrun) + 2 fixture (the probe-2 aggregate-superlative twin, M10; the probe-3 page-furniture twin, M34)** |
-| TC4 interact-then-extract | 20 | | L4 (mutation/recovery) | 15 |
+| TC4 interact-then-extract | 22 | | L4 (mutation/recovery) | 15 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
 | mechanism/unit probes | 49 | | untagged (unit probes) | 38 |
 

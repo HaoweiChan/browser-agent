@@ -151,6 +151,21 @@ def classify(action: str, exc: BaseException) -> str:
     return "nav" if action == "navigate" else "act"
 
 
+def changed_nothing(rec: dict) -> bool:
+    """Did this attempt leave the page as it found it?
+
+    The only evidence a laundering guard has, and the two guards that read it
+    disagreed for one commit (PR #34 R8). `page_changed` is `False` when the
+    attempt ran and moved nothing, and `null` when it never got far enough to
+    be compared — every act failure raised INSIDE `execute` (a click timeout, a
+    fill readback mismatch) leaves it null, because the before/after comparison
+    is on the line after `execute` returns. Neither value is evidence that
+    anything moved, so both mean the same thing here, and asking it in one
+    place is what stops the next guard from picking a different half.
+    """
+    return not rec.get("page_changed")
+
+
 def reads_without_acting(steps) -> bool:
     """Does this plan reach an `extract` with nothing that changes the page
     before it?
@@ -753,7 +768,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         # it actually died of: that action.
                         outstanding = pending_supersede[-1] if pending_supersede else None
                         if (outstanding is not None
-                                and outstanding.get("page_changed") is False
+                                and changed_nothing(outstanding)
                                 and reads_without_acting(new_steps)):
                             return done(failure="act", reason=(
                                 f"step {outstanding['i']} ({outstanding['action']}) failed and "
@@ -809,7 +824,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                             # that just failed is a retry, and specs/001 keeps
                             # retries out of the recovery metric by construction.
                             rec["note"] += "; replan re-issued the step that just failed"
-                        elif drops_action and not rec.get("page_changed"):
+                        elif drops_action and changed_nothing(rec):
                             rec["note"] += ("; replan would skip a failed action that changed "
                                             "nothing on the page")
                         else:

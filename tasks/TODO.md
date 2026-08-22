@@ -126,18 +126,23 @@ ADR-015 criterion 5 stays RED until it does.
 
 ## Debt
 
-### T-M32-3 — the two laundering cases cost 4.6s of a suite that already straddles its ceiling            [status: todo]
-Origin: PR #34 R1 (the fix, not the finding).
-Spec: `observe-cannot-launder-noop-action` (2.29s) and
-`observe-drilldown-cannot-launder-noop-action` (2.35s) both need an act failure
-to exist at all, and an act failure in this repo costs a full `SETTLE_BUDGET_MS`
-(10 x 200ms) because `check_state` runs its whole settle loop before returning
-False. That is the same price the three existing act-failure cases pay
-(`recovery-replan-postcondition` 2.33s, `recovery-label-requires-strategy-change`
-2.32s, `replan-cannot-launder-noop-action` 2.29s), so it is a house price rather
-than a defect in these two — but five cases now spend 11.6s of a 60s ceiling on
-one mechanism, and this PR added two of them. Measured: `fast` wall clock
-61.16s -> 65.68s across this repair.
+### T-M32-3 — act-failure coverage costs 4.6s of a suite that already straddles its ceiling            [status: todo]
+Origin: PR #34 R1 (the fix, not the finding); cost model corrected per PR #34 R11.
+Spec: an act failure is only expensive when it is a POSTCONDITION failure. Those
+run `check_state`'s whole settle loop (10 x 200ms) before returning False, so
+they cost a full `SETTLE_BUDGET_MS` each: `observe-cannot-launder-noop-action`
+2.29s, `observe-drilldown-cannot-launder-noop-action` 2.35s, and the three that
+predate this PR (`recovery-replan-postcondition` 2.33s,
+`recovery-label-requires-strategy-change` 2.32s,
+`replan-cannot-launder-noop-action` 2.29s). An act failure raised INSIDE
+`execute` never reaches `check_state` at all and is free — a fill readback
+mismatch is instant, a click timeout is 10s for a different reason. The first
+version of this block claimed the settle loop was the price of every act
+failure; that was wrong, and `observe-drilldown-cannot-launder-unchecked-action`
+now uses the cheap shape (~0.15s, a fill past the search box's `maxlength`).
+The two 2.3s cases keep the postcondition shape because it is the only one that
+produces `page_changed: false` — the cheap shape produces `null`, and PR #34 R8
+is precisely what happens when those two values are not both pinned.
 Repro: `evals/report/20260822-185625-fast.json`, sort `results` by `seconds`.
 Acceptance: either a cheaper way for a case to declare "this postcondition will
 not hold" (a per-case settle bound is the obvious one, and it must not weaken
