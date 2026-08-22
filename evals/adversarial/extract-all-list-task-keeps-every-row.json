@@ -1,0 +1,32 @@
+{
+  "id": "extract-all-list-task-keeps-every-row",
+  "task": "browser",
+  "suites": ["invariant"],
+  "level": "L2",
+  "tc": "TC4",
+  "trap": "a list-shaped task whose wording contains a ranking word — the reduction must not fire",
+  "input": {
+    "task": "List every product in the catalogue with its price, cheapest first.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+        "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+      { "action": "extract_all", "target": { "role": "listitem" } }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": [
+      "Cobalt Floor Rug $18.00",
+      "Meridian Wall Clock $24.50",
+      "Aurora Desk Lamp $39.00",
+      "Aurora Desk Lamp Pro $59.00"
+    ]
+  },
+  "provenance": "PR #29 R2. `verifier-list-rows-not-a-dump` runs this exact task, but with a plan hand-pinned as four pre-M31 `extract` steps — so it was safe from the M31 reduction by accident of its own age, not by any rule. This case plans the same task the way M31's own system prompt now asks a model to plan it ('use `extract_all` whenever the task compares, ranks or counts'), which is one enumeration, and the answer-assembly reduction fired on it because it was gated on the ANSWER's shape (a single list) and on the task merely containing a ranking word — never on whether the task asks for one item. Four rows became one, reported `success`, and at runtime there is no `expect.answer` for `verify()` to notice with. The reduction is now gated on `verifier.is_aggregate`, the same predicate the plan lint uses, so exactly one shape of task is both linted and reduced.",
+  "triage": {
+    "class": "silent-failure",
+    "watched_red": "before the fix: status success, checks {status: true, verdict: false}, answer 'Cobalt Floor Rug $18.00' — a single string where the task asked for every product, and the three other rows silently dropped after being extracted and stored as evidence.",
+    "note": "tagged `invariant` rather than `fast` because the `fast` suite is at its declared wall-clock ceiling and this case tipped it over (60.13s against 60s); both suites are the repo's gate (CLAUDE.md) and CI runs both, and `invariant` gates at 100% regardless of baseline. The surviving ceiling of the fix is stated rather than hidden: `is_aggregate` requires a which/what/who frame, so a single-answer ranking phrased without one ('find the cheapest book and tell me its exact price') is neither linted nor reduced. That is T-AGGREGATE-WORDING in tasks/TODO.md, and it is the same regex ceiling T-R31 already names."
+  }
+}

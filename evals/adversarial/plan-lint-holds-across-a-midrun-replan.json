@@ -1,0 +1,29 @@
+{
+  "id": "plan-lint-holds-across-a-midrun-replan",
+  "task": "browser",
+  "suites": ["invariant"],
+  "level": "L3",
+  "tc": "TC4",
+  "trap": "the second enumeration arrives from an act-ladder replan, after the lint has already run",
+  "input": {
+    "task": "Which product on this page has the most customer reviews?",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        { "action": "extract_all", "target": { "role": "link" } },
+        { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+          "expected_state": { "text_visible": "THIS TEXT NEVER APPEARS" } }
+      ],
+      [
+        { "action": "extract_all", "target": { "role": "listitem" } }
+      ]
+    ]
+  },
+  "expect": { "status": "failure:act", "recovery": false, "replans": 0 },
+  "provenance": "PR #29 R3. `plan_gap` ran exactly once, between the first plan and the first action, and `agent.py`'s answer-assembly comment then asserted that more than one enumeration 'never reaches here'. False: the act ladder adopts a second plan mid-run (`steps = steps[:si] + new_steps`) and nothing linted it. The first plan enumerates and then clicks something whose postcondition never arrives; the replan enumerates again; both survive into the graded trace; the answer is a list of lists and the relaxed `aggregate_needs_comparison` check passes it because it asked whether SOME step enumerated, not whether exactly one did. The click really does sort the list, so `page_changed` is true and the no-progress guard has no objection to the replan; only the lint does. Independent of R1 — the click genuinely re-sorts the catalogue, so `page_changed` is true and widening `drops_action` does not touch this. The fix lints the plan of record at the second adoption point too: `plan_gap(task, steps[:si] + new_steps)`, so the replan is refused and the run ends as the `act` failure it already was.",
+  "triage": {
+    "class": "silent-failure",
+    "watched_red": "before the fix: status success, verdict PASS, all checks green including aggregate_needs_comparison: true, budgets_spent.replans 1, answer [['Aurora Desk Lamp', 'Aurora Desk Lamp Pro', 'Meridian Wall Clock', 'Cobalt Floor Rug'], ['Cobalt Floor Rug $18.00', 'Meridian Wall Clock $24.50', 'Aurora Desk Lamp $39.00', 'Aurora Desk Lamp Pro $59.00']] — an unranked list of lists offered as the answer to 'which product', which is exactly the shape ADR-016 Decision 3 names as the defect the lint exists to stop.",
+    "note": "tagged `invariant` rather than `fast` for the same reason as replan-cannot-launder-noop-action-extract-all: a postcondition that never arrives costs the full 2s settle budget and the `fast` suite sits at its declared wall-clock ceiling. Both suites are the gate (CLAUDE.md) and CI runs both; `invariant` additionally gates at 100%."
+  }
+}

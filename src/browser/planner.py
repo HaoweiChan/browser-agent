@@ -159,10 +159,16 @@ def stub_planner(plans: list):
     calls = [0]
 
     async def plan(task: str, url: str | None, observation: dict | None = None, note: str | None = None):
+        plan.notes.append(note)
         steps = plans[min(calls[0], len(plans) - 1)]
         calls[0] += 1
         return steps, {"llm_tokens": 0, "llm_usd": 0.0}
 
+    # Every note this planner was handed, in call order (None for the first
+    # plan). The stub discards the note when choosing what to return — that is
+    # what makes it deterministic — so without this record nothing could grade
+    # the message a real planner would have been sent (PR #29 R5).
+    plan.notes = []
     return plan
 
 
@@ -187,11 +193,17 @@ def live_planner(model: str = DEFAULT_MODEL):
 
             user += "\n\nCurrent page observation:\n" + render(observation)
         if note:
-            # Replan: the previous attempt and why it failed, plus the page as
-            # it actually is now. Plan the REMAINING work from here — the steps
-            # already executed are not re-issued.
-            user += (f"\n\nA previous attempt failed: {note}\n"
-                     "Plan only the steps still needed from the page above.")
+            # The CALLER owns the framing, because the two callers are in
+            # different situations: an `act` failure mid-run (plan the REMAINING
+            # work; the executed prefix is not re-issued) and a plan the lint
+            # rejected before anything ran (plan the WHOLE task; nothing has
+            # executed and the page is untouched). One shared sentence here told
+            # a real model "A previous attempt failed" when nothing had — and
+            # then asked it to plan only what was still needed, of a task none of
+            # which had been done (PR #29 R5). Graded through
+            # `expect.planner_note_contains` on probe3-quotes-most-quoted-author
+            # (lint path) and recovery-replan-postcondition (act path).
+            user += "\n\n" + note
         payload = {
             "model": model,
             "messages": [

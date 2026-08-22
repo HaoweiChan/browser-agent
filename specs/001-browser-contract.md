@@ -152,16 +152,17 @@ appears, in order — no post-hoc reconstruction).
   questions rank over (M10 probe #3, `live-books-cheapest-travel`). Two rules
   follow from where the comparison happens:
   - **the ranking is done in code, never by the model** (`verifier.rank`,
-    called at answer assembly when the enumeration IS the whole answer, which
-    for an aggregate task the lint below guarantees): the plan extracts the
-    values to compare, and code picks the one the task's superlative asks for — numbers compare as
+    called at answer assembly when the task `verifier.is_aggregate` matches and
+    the enumeration IS the whole answer): the plan extracts the values to
+    compare, and code picks the one the task's superlative asks for — numbers compare as
     numbers, anything else compares by how often it occurs. A tie is
     `failure:semantic`, not a coin flip, the same ruling `near` already makes
     (`near-equidistant-is-ambiguous`). A task with no ranking word keeps its
     list, which is a legitimate answer shape.
   - **a plan that should have enumerated and did not is rejected before the
     first action.** `agent.plan_gap` is a deterministic, site-agnostic lint
-    between the plan and the browser: an aggregate-shaped task (shared with
+    that runs at every point the executor adopts a plan — the first plan, and
+    again on the plan of record when the `act` ladder replans mid-run: an aggregate-shaped task (shared with
     the verifier's own guard through `verifier.is_aggregate` — one regex, two
     callers) whose extraction steps are not exactly one `extract_all` and
     nothing else is replanned once with a note naming the gap and stopped by

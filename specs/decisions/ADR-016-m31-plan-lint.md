@@ -3,9 +3,9 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: a superlative task whose plan carries no enumerating step is rejected before the browser moves and replanned once through the existing replan budget; `extract_all` is the primitive that lets the replan land, and the ranking over what it enumerates is done in code (`verifier.rank`), never by the model. The lint is deterministic and site-agnostic — an LLM debater was considered and rejected.
+**Ruling**: a superlative task whose plan does not read the page exactly once with `extract_all` is rejected at every point the executor adopts a plan — before the browser moves, and again on an `act`-ladder replan — and replanned once through the existing replan budget; `extract_all` is the primitive that lets the replan land, and the ranking over what it enumerates is done in code (`verifier.rank`), never by the model, both halves gated on the one `is_aggregate` shape. The lint is deterministic and site-agnostic — an LLM debater was considered and rejected.
 **Because**: PR #25 closed this hole at the verifier, which is correct and one layer too late — the run still had to move the browser and produce a wrong answer for the guard to reject, and the guard's own comment said why it could not do better ("the plan vocabulary has no comparison primitive to have gotten it right WITH"). Adding the verb is what lets the guard relax; rejecting the plan is what stops paying for the verdict in actions.
-**Enforced by**: `verifier-aggregate-superlative-fails-loud`, `probe3-quotes-most-quoted-author`, `rank-reduces-enumeration-in-code`, `plan-gap-truth-table`, `extract-all-refuses-a-selector`, `verifier-aggregate-ground-truth-untouched`, `ui-execution-progress-is-trace-derived`
+**Enforced by**: `verifier-aggregate-superlative-fails-loud`, `probe3-quotes-most-quoted-author`, `rank-reduces-enumeration-in-code`, `plan-gap-truth-table`, `extract-all-refuses-a-selector`, `extract-all-list-task-keeps-every-row`, `plan-lint-holds-across-a-midrun-replan`, `replan-cannot-launder-noop-action-extract-all`, `recovery-replan-postcondition`, `verifier-aggregate-ground-truth-untouched`, `ui-execution-progress-is-trace-derived`
 
 ---
 
@@ -56,7 +56,16 @@ which is the thing this ADR exists to keep out of the model).
 ### 2. The ranking is arithmetic, in code
 
 `verifier.rank(task, values)` reduces an enumeration to the item the task's
-superlative asks for. Three rules, chosen by what the values *are*: EVERY value
+superlative asks for. It is called **only when `is_aggregate(task)`** — the same
+predicate that decides the lint, so exactly one shape of task is both linted and
+reduced. Gating on the answer's shape alone (a single list) truncated a
+list-shaped task whose wording merely contains a ranking word, "list every
+product … cheapest first", from four rows to one and reported success (PR #29
+R2, `extract-all-list-task-keeps-every-row`). The cost of that gate is that a
+single-answer ranking phrased without a which/what/who frame is neither linted
+nor reduced — declared as T-CHEAPEST-WORDING, not fixed here.
+
+Three rules, chosen by what the values *are*: EVERY value
 parses as a number → compare the numbers; NONE of them does → count
 occurrences, which is what "which author has the most quotes" is actually
 asking; some but not all → refuse. No ranking word in the task → the list is
@@ -85,8 +94,15 @@ fifteen existing shop-fixture cases through a lint they have no reason to meet.
 
 ### 3. The lint is structural, and it is not an LLM critic
 
-`agent.plan_gap(task, steps)` runs between the plan and the first action: task
-matches `verifier.is_aggregate` and the plan's extraction steps are not
+`agent.plan_gap(task, steps)` runs at **every point the executor adopts a
+plan** — the first plan, before any action, and again on `steps[:si] +
+new_steps` when the `act` ladder replans mid-run. Running it only on the first
+plan left the second adoption point unlinted, and a mid-run replan produced
+exactly the unranked list of lists this decision names as the defect, scored
+`success`/`PASS` (PR #29 R3, `plan-lint-holds-across-a-midrun-replan`). A future
+adoption point (M32's `observe` replan) has to lint too; that is the invariant,
+not the two call sites. The rule: task matches `verifier.is_aggregate` and the
+plan's extraction steps are not
 **exactly one `extract_all` and nothing else** → do not execute. Every other
 shape leaves the comparison with no single set of values to rank over, and all
 of them are quiet rather than loud: zero enumerations guesses the winner; two
@@ -138,7 +154,21 @@ The note reaches the trace as well as the planner: it is written onto the first
 step of the replanned plan, so a reader of `trace.jsonl` or the SSE stream sees
 why the plan changed. It is deliberately not labelled `recovery` — nothing
 failed and no ladder ran, and ADR-003 keeps that flag for a classified failure
-that switched strategy, which is what keeps the recovery metric honest.
+that switched strategy, which is what keeps the recovery metric honest. Both
+claims are cased rather than asserted: `probe3-quotes-most-quoted-author` pins
+`recovery: false` and `trace_note_contains`, each watched red against the
+variant that breaks it (PR #29 R6).
+
+**The framing of a replan prompt belongs to the caller, not to the planner.**
+`live_planner` used to prepend one shared sentence to every note — "A previous
+attempt failed … plan only the steps still needed from the page above" — which
+is true of the `act` ladder and false in all three clauses of the lint's replan,
+where nothing has executed, nothing has failed, and the whole task is still to
+be planned. The planner now appends the note verbatim and each call site writes
+what actually happened. `stub_planner` records every note it is handed, so the
+message a real planner would receive is graded offline at $0: the lint path by
+`probe3-quotes-most-quoted-author`, the act path by
+`recovery-replan-postcondition` (PR #29 R5).
 
 The ceiling is stated rather than hidden: `is_aggregate` is a regex over
 English, so a rephrased superlative walks around the lint exactly as `log into`
@@ -177,6 +207,9 @@ directly, in both directions, by the rows of
   (`rank-reduces-enumeration-in-code` row 1 is that case's own eleven Travel
   prices). The case itself still needs `OPENROUTER_API_KEY` and a real planner
   call, so it stays `full`-tagged and unrun in this milestone, the same
-  declared state it has had since M6. Its lint does not fire — "cheapest" is
-  not an `_AGGREGATE` match — so what M31 gives it is the vocabulary and the
-  prompt line, not a guarantee.
+  declared state it has had since M6. Neither the lint nor the reduction fires
+  on it — "find the cheapest book" is not an `_AGGREGATE` match — so what M31
+  gives it is the vocabulary and the prompt line, not a guarantee. PR #29 R4
+  called that out as an unmet acceptance line; the line is amended in
+  `tasks/TODO.md` with the reason, and the residual is declared as
+  T-CHEAPEST-WORDING.

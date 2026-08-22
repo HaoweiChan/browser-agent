@@ -10,7 +10,7 @@
     "kind": "verifier",
     "rank": [
       {
-        "note": "the live-books-cheapest-travel shape, offline: the eleven Travel-category prices enumerated by extract_all, reduced to the cheapest in code. Prices are that case's own hand-verified ground truth (minimum £23.21, 'The Road to Little Dribbling'). This is the reduction that has to exist for that case to be answerable at all — the deployed run 734d3d1f planned 'read article 0' and returned the FIRST price instead.",
+        "note": "the live-books-cheapest-travel shape, offline: the eleven Travel-category prices enumerated by extract_all, reduced to the cheapest in code. Prices are that case's own hand-verified ground truth (minimum £23.21, 'The Road to Little Dribbling'). This is the reduction that has to exist for that case to be answerable at all — the deployed run 734d3d1f planned 'read article 0' and returned the FIRST price instead. PR #29 R2 gated the answer-assembly call on `verifier.is_aggregate`, and this wording does not match it — so the agent never calls `rank` for this task. The row stays because it is the evidence for T-CHEAPEST-WORDING: the reduction gets this case right and nothing routes it there. Row 2 is the reachable twin, phrased with a which-frame.",
         "task": "In the Travel category, find the cheapest book and tell me its exact price.",
         "values": [
           "£45.17",

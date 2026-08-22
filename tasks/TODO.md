@@ -33,9 +33,24 @@ structural not behavioral, fast suite stays $0 — the ADR says why a
 debater was considered and rejected.
 Acceptance: a case where the first plan lacks an enumerating step is watched
 red first (rejected before any action — `actions` spent = pre-plan nav only);
-a fixture twin of probe #3 (most-quoted author) and `live-books-cheapest-travel`
-go green against ground truth; D22 is re-measured and restated, not deleted;
-replan rate published per D7.
+a fixture twin of probe #3 (most-quoted author) goes green against ground
+truth; D22 is re-measured and restated, not deleted; replan rate published
+per D7.
+Acceptance AMENDED at PR #29 R4 (reviewer finding, amend route chosen by the
+orchestrator): the original line also required `live-books-cheapest-travel` to
+go green. It does not, and the amendment records why rather than hiding it.
+That case is `full`-tagged — a real planner call against a real site — so
+running it spends money, and stubbing it is forbidden (hard rule 4); it has
+been declared unrun since M6 and still is. Worse for the milestone's own
+thesis, its wording ("In the Travel category, find the cheapest book and tell
+me its exact price") matches neither `_AGGREGATE` nor therefore the plan lint
+nor the code-side reduction, so M31's central mechanism provably cannot fire on
+it. What IS proven offline: the reduction gets that exact case right on its own
+ground truth (`rank-reduces-enumeration-in-code` row 1, the eleven hand-verified
+Travel prices reducing to £23.21), and the enumerate-then-rank path end to end
+on a superlative task (`probe3-quotes-most-quoted-author`). The residual —
+single-answer rankings phrased without a which/what/who frame get neither the
+lint nor the reduction — is T-CHEAPEST-WORDING below.
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
@@ -78,6 +93,52 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-CHEAPEST-WORDING — a single-answer ranking phrased without which/what/who gets neither the plan lint nor the reduction            [status: todo]
+Origin: PR #29 R4
+Spec (claim): M31 gates both halves of its mechanism on `verifier.is_aggregate`
+— the plan lint (`agent.plan_gap`) and the code-side reduction at answer
+assembly — and that predicate is `_AGGREGATE`, which requires a
+`(which|what|who) … (most|least|fewest|highest|lowest|greatest)` frame. A task
+that asks for one item without that frame is linted by nothing and reduced by
+nothing, so the planner may still answer it with a single `extract` and the run
+still reports whatever that read.
+Evidence: `live-books-cheapest-travel`'s task, "In the Travel category, find the
+cheapest book and tell me its exact price", is the repo's own committed example
+and returns `plan_gap(...) is None`. `verifier.rank` would get it right — the
+unit row `rank-reduces-enumeration-in-code` #1 reduces that case's eleven
+hand-verified Travel prices to £23.21 — and the agent never calls it for that
+wording.
+Repro: `plan_gap("In the Travel category, find the cheapest book and tell me its
+exact price.", [{"action": "extract"}])` -> None.
+Acceptance: either widen the shared shape with a watched-red case for the price
+wording — and prove it does not drag the fifteen shop-fixture cases whose task
+says "name the cheapest product" into the lint, which is why M31 did not widen
+it — or run `live-books-cheapest-travel` with a key and record the result.
+Note: this is the same regex ceiling T-R31 already names for the verifier guard;
+M31 gave that ceiling two more consumers, which is what makes it worth its own
+block rather than a line in T-R31.
+
+### T-EXTRACT-ALL-VOLUME — `extract_all` has no cap on matches and stores one full evidence window per match            [status: todo]
+Origin: PR #29 R7
+Spec (claim, reviewer's evidence carried verbatim): `extract_all` has no cap on
+match count, and each match stores its own up-to-2000-char evidence window, so
+one enumeration multiplies the page text by the number of matches in
+`result.json` and in the API/SSE payload.
+Evidence (verbatim): src/browser/agent.py extract branch:
+`extractions.extend({"value": v, "page_text": evidence_window(body, v, anchor), ...} for v in vals)`
+with `PAGE_TEXT_KEEP = 2000` (agent.py:41) and no bound on `len(vals)`.
+`RUN_BUDGETS` caps actions/tokens/ms, not extraction volume. Measured:
+`extract_all {role: link}` on `quotes.html` yields 13 records each carrying its
+own window of the same body.
+Acceptance (verbatim): Either a declared cap on enumerated matches (loud when
+exceeded, like every other budget here) or one shared evidence window per
+`extract_all` step, with a case pinning the record count for a large
+enumeration.
+Note: the per-value window is not incidental — `grounded` and `not_a_dump` are
+judged per extraction, so collapsing to one shared window changes what those
+checks mean and needs its own red-first case, which is why this is not a
+one-line fix folded into PR #29.
 
 ### T-CASE-CITES — case ids cited from `src/` and from case files resolve against nothing            [status: todo]
 Origin: M31 cold review (secondary finding), the general form of T-R32.

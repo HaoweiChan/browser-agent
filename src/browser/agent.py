@@ -447,8 +447,15 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
             # that flag for a classified failure that switched strategy.
             lint_note = None
             if gap := plan_gap(task, steps):
+                # What actually happened, in the planner's own terms: a plan was
+                # rejected, nothing ran, the page is as it was. The act ladder's
+                # "a previous attempt failed / plan only the steps still needed"
+                # is false on every clause here (PR #29 R5).
+                gap_note = ("Your previous plan was rejected before anything ran: " + gap
+                            + "\nNothing has executed and the page is unchanged; plan the "
+                              "whole task from the page above.")
                 try:
-                    new_steps, usage = await planner(task, url, obs, note=gap)
+                    new_steps, usage = await planner(task, url, obs, note=gap_note)
                 except PlanError as e:  # same split as the first plan
                     budgets["llm_tokens"] += e.usage["llm_tokens"]
                     budgets["llm_usd"] += e.usage["llm_usd"]
@@ -661,7 +668,9 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         try:
                             new_steps, usage = await planner(
                                 task, page.url, fresh,
-                                note=f"step {rec['i']} ({step['action']}) failed: {rec['note']}")
+                                note=(f"A previous attempt failed: step {rec['i']} "
+                                      f"({step['action']}) failed: {rec['note']}\n"
+                                      "Plan only the steps still needed from the page above."))
                         except PlanError as e:  # same split as the first plan
                             budgets["llm_tokens"] += e.usage["llm_tokens"]
                             budgets["llm_usd"] += e.usage["llm_usd"]
@@ -677,7 +686,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         # (recovery-replan-postcondition) clicks a control that
                         # really did re-sort the list, so page_changed tells them
                         # apart where nothing about the PLAN can.
-                        drops_action = new_steps and new_steps[0].get("action") == "extract"
+                        # Every extraction verb, not the literal string: M31 added
+                        # `extract_all` and this test kept naming only `extract`,
+                        # so the same laundering in the new verb walked straight
+                        # through (PR #29 R1, case
+                        # replan-cannot-launder-noop-action-extract-all).
+                        drops_action = bool(new_steps) and str(
+                            new_steps[0].get("action") or "").startswith("extract")
                         if not new_steps or new_steps == steps[si:]:
                             rec["note"] += "; replan made no progress (identical or empty plan)"
                         elif new_steps[0] == steps[si]:
@@ -689,6 +704,17 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         elif drops_action and not rec.get("page_changed"):
                             rec["note"] += ("; replan would skip a failed action that changed "
                                             "nothing on the page")
+                        # The lint runs at EVERY point the executor adopts a plan,
+                        # not only the first one. `steps[:si] + new_steps` is the
+                        # plan of record after this replan, executed prefix
+                        # included, so a replan that adds a second enumeration is
+                        # refused here exactly as the first plan would have been —
+                        # the run then ends as the `act` failure it already was.
+                        # Linting only the first plan let a mid-run replan produce
+                        # the unranked list of lists ADR-016 names as the defect
+                        # (PR #29 R3, case plan-lint-holds-across-a-midrun-replan).
+                        elif lint := plan_gap(task, steps[:si] + new_steps):
+                            rec["note"] += f"; replan rejected by the plan lint: {lint}"
                         else:
                             budgets["replans"] += 1
                             pending_supersede.append(rec)
@@ -721,14 +747,19 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     answer = answers[0] if len(answers) == 1 else (answers or None)
     # An `extract_all` enumeration is reduced HERE, in code: the plan gathered
     # every candidate and `rank` picks the one the task's superlative asks for.
-    # Only an enumeration is offered to `rank`, and only when it is the whole
-    # answer: a plan that also extracts something else is composing a list, not
-    # ranking one (multi-extract-list, verifier-list-rows-not-a-dump — whose
-    # task says "cheapest first" and must keep all four rows). More than one
-    # enumeration in one plan never reaches here; the plan lint requires exactly
-    # one for an aggregate task. A tie is refused rather than guessed, and a
-    # refusal is `semantic`: the page was read correctly and does not decide.
-    if len(answers) == 1 and isinstance(answer, list):
+    # Gated on `is_aggregate` — the SAME predicate the plan lint uses, so exactly
+    # one shape of task is both linted and reduced. Gating on the answer's shape
+    # alone silently truncated a list-shaped task whose wording merely contains a
+    # ranking word ("list every product ... cheapest first") from four rows to
+    # one and reported success (PR #29 R2, case
+    # extract-all-list-task-keeps-every-row). The `len(answers) == 1` half still
+    # matters: a plan that also extracts something else is composing a list, not
+    # ranking one (multi-extract-list). More than one enumeration never reaches
+    # here for an aggregate task, because `plan_gap` runs at BOTH points where
+    # the executor adopts a plan — the first plan and an act-ladder replan
+    # (PR #29 R3). A tie is refused rather than guessed, and a refusal is
+    # `semantic`: the page was read correctly and does not decide.
+    if is_aggregate(task) and len(answers) == 1 and isinstance(answer, list):
         try:
             answer = rank(task, answer)
         except ValueError as e:

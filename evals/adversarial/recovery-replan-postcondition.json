@@ -47,9 +47,10 @@
       "Cobalt Floor Rug"
     ],
     "recovery": true,
-    "replans": 1
+    "replans": 1,
+    "planner_note_contains": "A previous attempt failed"
   },
-  "provenance": "family 2 of the scope checkpoint, injected in the shape live run 2e70785a actually produced: the action lands but the planner asserted a postcondition it had no way to know ('Sorted cheapest first' is never rendered; the fixture says 'Sorted by price (low to high)'). The click really did sort the list, so the correct recovery is not to redo it — the replanner observes the already-sorted page and emits only the remaining extraction. That is the evolving plan prefix in docs/architecture/task1-overview.md doing something rather than describing something.",
+  "provenance": "family 2 of the scope checkpoint, injected in the shape live run 2e70785a actually produced: the action lands but the planner asserted a postcondition it had no way to know ('Sorted cheapest first' is never rendered; the fixture says 'Sorted by price (low to high)'). The click really did sort the list, so the correct recovery is not to redo it — the replanner observes the already-sorted page and emits only the remaining extraction. That is the evolving plan prefix in docs/architecture/task1-overview.md doing something rather than describing something. PR #29 R5 added `planner_note_contains`: this is the ACT path's half of the pair, and its note must still say a previous attempt failed and ask for only the remaining steps — the framing moved out of planner.py into the two call sites, so this case is what stops the act path's own prompt regressing while the lint path's is fixed. Watched red with the framing back in planner.py and the bare note passed from agent.py: checks {planner_note_contains: false}.",
   "triage": {
     "class": "capability-gap",
     "note": "M3 family 2. Watched red before the ladder existed: failure:act on step 1."

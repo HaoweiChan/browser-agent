@@ -647,6 +647,18 @@ def _run_fixture_case(case: dict) -> dict:
     # pre-plan navigation and nothing else (verifier-aggregate-superlative-fails-loud).
     if "actions" in exp:
         checks["actions"] = result["budgets_spent"]["actions"] == exp["actions"]
+    # What the PLANNER was told, and what the TRACE was told. Two replan paths
+    # reach the planner — the act ladder and the plan lint — and the stub
+    # discards the note, so without these keys nothing grades the message a real
+    # planner would receive, nor the trace record that says why the plan changed
+    # (PR #29 R5 and R6). `planner.notes` is the stub's own record.
+    if "planner_note_contains" in exp:
+        checks["planner_note_contains"] = any(
+            exp["planner_note_contains"] in (n or "") for n in getattr(planner, "notes", []))
+    if "trace_note_contains" in exp:
+        checks["trace_note_contains"] = any(
+            exp["trace_note_contains"] in (s.get("note") or "")
+            for s in trace if not s.get("superseded_by"))
     # A "recovery" label claims a strategy CHANGED. An attempt identical to the
     # one it replaced is a retry, and specs/001 keeps retries out of the
     # recovery metric by construction, not by intention.

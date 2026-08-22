@@ -57,11 +57,11 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-120 distinct cases (20 golden + 100 adversarial).
+123 distinct cases (20 golden + 103 adversarial).
 175 browser actions in a `fast` run; **57 of the
 109** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260822-112857-fast.json` rather than tallied by hand (the
+`evals/report/20260822-120931-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
@@ -457,7 +457,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-120 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
+123 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -466,9 +466,9 @@ Empty cells are shown, not hidden.
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
 | TC1 extract-on-page | 30 | | L1 | 33 |
-| TC2 search-then-extract | 8 | | L2 | 22 |
-| TC3 navigate-then-extract | 11 | | **L3** | **7 — 4 live (one of them unrun) + 3 fixture (the M10 aggregate-superlative twin, now caught by M31's plan lint; its M31 green twin `probe3-quotes-most-quoted-author`; and `extract-all-refuses-a-selector`)** |
-| TC4 interact-then-extract | 20 | | L4 (mutation/recovery) | 15 |
+| TC2 search-then-extract | 8 | | L2 | 23 |
+| TC3 navigate-then-extract | 11 | | **L3** | **8 — 4 live (one of them unrun) + 4 fixture (the M10 aggregate-superlative twin, now caught by M31's plan lint; its M31 green twin `probe3-quotes-most-quoted-author`; `extract-all-refuses-a-selector`; and `plan-lint-holds-across-a-midrun-replan`)** |
+| TC4 interact-then-extract | 23 | | L4 (mutation/recovery) | 16 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
 | mechanism/unit probes | 45 | | untagged (unit probes) | 35 |
 
@@ -802,9 +802,11 @@ rather than something that requires enumerating and counting" — named a missin
 verb, and M10 could only answer it at the verifier. M31 added the verb
 (`extract_all`, every match of a target) and the reduction over what it
 enumerates (`verifier.rank`, arithmetic in code, never a judgement asked of the
-model), and put a deterministic lint between the plan and the first action: an
-aggregate-shaped task whose plan has no enumerating step is replanned once with
-a note naming the gap, and stopped rather than executed if the gap survives.
+model), and put a deterministic lint at every point the executor adopts a plan
+— before the first action, and again when the `act` ladder replans mid-run: an
+aggregate-shaped task whose plan does not read the page exactly once, with
+`extract_all`, is replanned once with a note naming the gap, and stopped rather
+than executed if the gap survives.
 The probe's own question is now answered correctly offline against ground truth
 (`probe3-quotes-most-quoted-author`, a fixture twin of this page's author
 distribution), and the M10 case that pinned the wrong-success shape

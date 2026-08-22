@@ -2,32 +2,32 @@
   "suite": "invariant",
   "score": 1.0,
   "totals": {
-    "actions": 5,
+    "actions": 13,
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 292,
-    "wall_seconds": 7.26,
+    "ms": 5138,
+    "wall_seconds": 12.2,
     "latency_p50": 0.0,
-    "latency_p95": 1.84,
-    "cases_with_budgets": 3
+    "latency_p95": 2.3,
+    "cases_with_budgets": 6
   },
   "metrics": {
-    "diagnosis_cases": 3,
-    "diagnosis_correct": 3
+    "diagnosis_cases": 5,
+    "diagnosis_correct": 5
   },
   "results": [
     {
       "passed": true,
       "wrong": [],
-      "seconds": 1.84,
+      "seconds": 1.83,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
     {
       "passed": true,
       "wrong": [],
-      "seconds": 0.0,
+      "seconds": 0.01,
       "id": "ablation-preflight-refuses-old-build",
       "kind": "adversarial"
     },
@@ -45,7 +45,7 @@
     {
       "passed": true,
       "wrong": {},
-      "seconds": 0.01,
+      "seconds": 0.02,
       "id": "analysis-ablation-table-not-estimated",
       "kind": "adversarial"
     },
@@ -101,7 +101,7 @@
           "value"
         ]
       },
-      "seconds": 0.32,
+      "seconds": 0.31,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -120,10 +120,10 @@
       "got": {
         "counts": {
           "fast": 109,
-          "invariant": 41,
+          "invariant": 44,
           "live": 9,
           "full": 10,
-          "all": 120
+          "all": 123
         },
         "domains": {
           "books.toscrape.com": 3,
@@ -142,6 +142,55 @@
       "window_len": 2000,
       "seconds": 0.0,
       "id": "evidence-window-miss-is-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": [
+          "Cobalt Floor Rug $18.00",
+          "Meridian Wall Clock $24.50",
+          "Aurora Desk Lamp $39.00",
+          "Aurora Desk Lamp Pro $59.00"
+        ],
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 201
+      },
+      "seconds": 0.2,
+      "id": "extract-all-list-task-keeps-every-row",
       "kind": "adversarial"
     },
     {
@@ -181,7 +230,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 110
+        "ms": 109
       },
       "seconds": 0.12,
       "id": "extract-all-refuses-a-selector",
@@ -309,6 +358,54 @@
     },
     {
       "passed": true,
+      "checks": {
+        "status": true,
+        "recovery": true,
+        "replans": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": false,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "a step's postcondition was not reached; answer is empty"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "failure:act",
+        "answer": null,
+        "reason": "step 3 (click): StepError: expected_state not reached: {'text_visible': 'THIS TEXT NEVER APPEARS'}; replan rejected by the plan lint: the task asks which item of a set ranks highest or lowest, so the plan must read the page exactly once, with `extract_all`; this one reads it as ['extract_all', 'extract_all']. A single `extract` guesses the winner; a second read makes the answer a composite with nothing to rank. Enumerate the candidates once \u2014 the comparison is done in code, so extract the values to compare, not the answer"
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2349
+      },
+      "seconds": 2.36,
+      "id": "plan-lint-holds-across-a-midrun-replan",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
       "wrong": [],
       "seconds": 0.0,
       "id": "rank-reduces-enumeration-in-code",
@@ -323,10 +420,10 @@
           "busy",
           "idle"
         ],
-        "during_latency_s": 0.001,
-        "run_seconds": 2.36
+        "during_latency_s": 0.004,
+        "run_seconds": 2.33
       },
-      "seconds": 2.36,
+      "seconds": 2.33,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -335,6 +432,52 @@
       "wrong": [],
       "seconds": 0.0,
       "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "recovery": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": false,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "a step's postcondition was not reached; answer is empty"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "failure:act",
+        "answer": null,
+        "reason": "step 2 (click): StepError: expected_state not reached: {'text_visible': 'Sorted by price (low to high)'}; replan would skip a failed action that changed nothing on the page"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2281
+      },
+      "seconds": 2.29,
+      "id": "replan-cannot-launder-noop-action-extract-all",
       "kind": "adversarial"
     },
     {
@@ -368,7 +511,7 @@
         "status": "failure:env",
         "steps": 2
       },
-      "seconds": 2.2,
+      "seconds": 2.3,
       "id": "supersede-never-dangles",
       "kind": "adversarial"
     },
@@ -381,7 +524,7 @@
       "got": {
         "rows": 9,
         "limitations": 61,
-        "citations": 57
+        "citations": 58
       },
       "seconds": 0.0,
       "id": "support-matrix-cites-real-cases",
@@ -434,16 +577,16 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:57028/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:60812/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 135
+        "ms": 151
       },
-      "seconds": 0.14,
+      "seconds": 0.16,
       "id": "url-guard-holds-after-navigation",
       "kind": "adversarial"
     },
@@ -540,8 +683,8 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 455,
-        "after": 455
+        "before": 479,
+        "after": 479
       },
       "seconds": 0.04,
       "id": "wall-clock-probe-history-isolated",

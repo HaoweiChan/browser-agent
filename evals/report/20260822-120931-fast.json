@@ -6,9 +6,9 @@
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 5,
-    "ms": 51614,
-    "wall_seconds": 59.24,
-    "latency_p50": 0.1,
+    "ms": 51849,
+    "wall_seconds": 59.68,
+    "latency_p50": 0.11,
     "latency_p95": 2.34,
     "cases_with_budgets": 62
   },
@@ -34,7 +34,7 @@
       "advertised_unresolvable": [],
       "starved_by_chrome": [],
       "n_elements": 5,
-      "seconds": 0.38,
+      "seconds": 0.43,
       "id": "observe-hello-elements",
       "kind": "golden"
     },
@@ -75,9 +75,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 100
+        "ms": 106
       },
-      "seconds": 0.1,
+      "seconds": 0.11,
       "id": "tc1-hello-heading",
       "kind": "golden"
     },
@@ -119,9 +119,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 178
+        "ms": 196
       },
-      "seconds": 0.18,
+      "seconds": 0.2,
       "id": "tc1-hello-reveal",
       "kind": "golden"
     },
@@ -162,9 +162,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 116
+        "ms": 113
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "tc1-shop-price-near",
       "kind": "golden"
     },
@@ -205,7 +205,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 97
+        "ms": 98
       },
       "seconds": 0.1,
       "id": "tc1-shop-price-zh",
@@ -248,7 +248,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 98
+        "ms": 97
       },
       "seconds": 0.1,
       "id": "tc1-shop-price",
@@ -294,9 +294,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 368
+        "ms": 350
       },
-      "seconds": 0.37,
+      "seconds": 0.35,
       "id": "tc2-shop-search-zh",
       "kind": "golden"
     },
@@ -339,9 +339,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 263
+        "ms": 266
       },
-      "seconds": 0.26,
+      "seconds": 0.27,
       "id": "tc2-shop-search",
       "kind": "golden"
     },
@@ -383,9 +383,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 198
+        "ms": 179
       },
-      "seconds": 0.2,
+      "seconds": 0.18,
       "id": "tc3-shop-detail-nav-zh",
       "kind": "golden"
     },
@@ -427,7 +427,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 198
+        "ms": 200
       },
       "seconds": 0.2,
       "id": "tc3-shop-detail-nav",
@@ -471,7 +471,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 198
+        "ms": 199
       },
       "seconds": 0.2,
       "id": "tc4-shop-sort-cheapest",
@@ -563,9 +563,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 396
+        "ms": 379
       },
-      "seconds": 0.4,
+      "seconds": 0.38,
       "id": "tc5-forms-submit-zh",
       "kind": "golden"
     },
@@ -611,16 +611,16 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 383
+        "ms": 382
       },
-      "seconds": 0.39,
+      "seconds": 0.38,
       "id": "tc5-forms-submit",
       "kind": "golden"
     },
     {
       "passed": true,
       "wrong": [],
-      "seconds": 1.69,
+      "seconds": 1.7,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
@@ -679,9 +679,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 327
+        "ms": 339
       },
-      "seconds": 0.33,
+      "seconds": 0.34,
       "id": "agent-launches-its-own-browser",
       "kind": "adversarial"
     },
@@ -735,9 +735,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 2,
-        "ms": 6750
+        "ms": 6733
       },
-      "seconds": 6.76,
+      "seconds": 6.74,
       "id": "budget-replans-exhausted",
       "kind": "adversarial"
     },
@@ -812,10 +812,10 @@
       "got": {
         "counts": {
           "fast": 109,
-          "invariant": 41,
+          "invariant": 44,
           "live": 9,
           "full": 10,
-          "all": 120
+          "all": 123
         },
         "domains": {
           "books.toscrape.com": 3,
@@ -865,7 +865,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 109
+        "ms": 106
       },
       "seconds": 0.11,
       "id": "evidence-window-keeps-the-anchor",
@@ -916,7 +916,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 87
+        "ms": 88
       },
       "seconds": 0.09,
       "id": "extract-all-refuses-a-selector",
@@ -1064,9 +1064,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 415
+        "ms": 435
       },
-      "seconds": 0.42,
+      "seconds": 0.44,
       "id": "l4-forms-a11y-stripped",
       "kind": "adversarial"
     },
@@ -1117,7 +1117,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 266
+        "ms": 264
       },
       "seconds": 0.27,
       "id": "l4-recover-name-to-text",
@@ -1224,9 +1224,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 248
+        "ms": 266
       },
-      "seconds": 0.25,
+      "seconds": 0.27,
       "id": "l4-shop-button-text-renamed",
       "kind": "adversarial"
     },
@@ -1278,9 +1278,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 331
+        "ms": 314
       },
-      "seconds": 0.33,
+      "seconds": 0.32,
       "id": "l4-shop-duplicate-labels",
       "kind": "adversarial"
     },
@@ -1326,7 +1326,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114
+        "ms": 113
       },
       "seconds": 0.12,
       "id": "l4-shop-element-reordered-near",
@@ -1481,7 +1481,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 10364
+        "ms": 10366
       },
       "seconds": 10.37,
       "id": "l4-shop-overlay-modal",
@@ -1529,9 +1529,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 158
+        "ms": 139
       },
-      "seconds": 0.16,
+      "seconds": 0.15,
       "id": "l4-shop-render-delayed",
       "kind": "adversarial"
     },
@@ -1579,9 +1579,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 283
+        "ms": 297
       },
-      "seconds": 0.29,
+      "seconds": 0.3,
       "id": "l4-shop-wrapper-nesting",
       "kind": "adversarial"
     },
@@ -1850,7 +1850,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 244
+        "ms": 247
       },
       "seconds": 0.25,
       "id": "multi-extract-list",
@@ -1907,9 +1907,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 8140
+        "ms": 8126
       },
-      "seconds": 8.14,
+      "seconds": 8.13,
       "id": "nav-action-load-event-never-fires",
       "kind": "adversarial"
     },
@@ -1950,7 +1950,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4101
+        "ms": 4097
       },
       "seconds": 4.1,
       "id": "nav-load-event-never-fires",
@@ -1993,7 +1993,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 116
+        "ms": 114
       },
       "seconds": 0.12,
       "id": "near-anchor-substring",
@@ -2036,7 +2036,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 93
+        "ms": 96
       },
       "seconds": 0.1,
       "id": "near-equidistant-is-ambiguous",
@@ -2079,7 +2079,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 102
+        "ms": 100
       },
       "seconds": 0.1,
       "id": "near-excludes-its-own-anchor",
@@ -2122,7 +2122,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 110
+        "ms": 111
       },
       "seconds": 0.11,
       "id": "near-prefers-the-container",
@@ -2211,7 +2211,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2265
+        "ms": 2263
       },
       "seconds": 2.27,
       "id": "postcondition-compound-keys",
@@ -2257,9 +2257,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 212
+        "ms": 197
       },
-      "seconds": 0.21,
+      "seconds": 0.2,
       "id": "postcondition-unverified-click",
       "kind": "adversarial"
     },
@@ -2268,8 +2268,11 @@
       "checks": {
         "status": true,
         "verdict": true,
+        "recovery": true,
         "replans": true,
-        "actions": true
+        "actions": true,
+        "planner_note_contains": true,
+        "trace_note_contains": true
       },
       "audit": {
         "verdict": "PASS",
@@ -2375,9 +2378,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2226
+        "ms": 2295
       },
-      "seconds": 2.23,
+      "seconds": 2.3,
       "id": "recovery-label-requires-strategy-change",
       "kind": "adversarial"
     },
@@ -2387,7 +2390,8 @@
         "status": true,
         "verdict": true,
         "recovery": true,
-        "replans": true
+        "replans": true,
+        "planner_note_contains": true
       },
       "audit": {
         "verdict": "PASS",
@@ -2426,9 +2430,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 2227
+        "ms": 2342
       },
-      "seconds": 2.23,
+      "seconds": 2.34,
       "id": "recovery-replan-postcondition",
       "kind": "adversarial"
     },
@@ -2473,9 +2477,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 158
+        "ms": 174
       },
-      "seconds": 0.16,
+      "seconds": 0.18,
       "id": "relocate-fill-non-editable",
       "kind": "adversarial"
     },
@@ -2524,7 +2528,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 162
+        "ms": 159
       },
       "seconds": 0.17,
       "id": "relocation-preserves-near",
@@ -2570,9 +2574,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2184
+        "ms": 2286
       },
-      "seconds": 2.19,
+      "seconds": 2.29,
       "id": "replan-cannot-launder-noop-action",
       "kind": "adversarial"
     },
@@ -2627,9 +2631,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 128
+        "ms": 139
       },
-      "seconds": 0.13,
+      "seconds": 0.15,
       "id": "resolver-substring-name",
       "kind": "adversarial"
     },
@@ -2670,7 +2674,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 110
+        "ms": 111
       },
       "seconds": 0.12,
       "id": "resolver-unknown-target-key",
@@ -2738,7 +2742,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 238
+        "ms": 237
       },
       "seconds": 0.24,
       "id": "stream-shows-every-step",
@@ -2753,7 +2757,7 @@
         "status": "failure:env",
         "steps": 2
       },
-      "seconds": 2.19,
+      "seconds": 2.29,
       "id": "supersede-never-dangles",
       "kind": "adversarial"
     },
@@ -2766,7 +2770,7 @@
       "got": {
         "rows": 9,
         "limitations": 61,
-        "citations": 57
+        "citations": 58
       },
       "seconds": 0.0,
       "id": "support-matrix-cites-real-cases",
@@ -2811,9 +2815,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 101
+        "ms": 97
       },
-      "seconds": 0.11,
+      "seconds": 0.1,
       "id": "trap-empty-extraction",
       "kind": "adversarial"
     },
@@ -2857,9 +2861,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 299
+        "ms": 283
       },
-      "seconds": 0.3,
+      "seconds": 0.29,
       "id": "trap-form-not-submitted",
       "kind": "adversarial"
     },
@@ -2901,9 +2905,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 214
+        "ms": 198
       },
-      "seconds": 0.22,
+      "seconds": 0.2,
       "id": "trap-near-miss-entity",
       "kind": "adversarial"
     },
@@ -2945,9 +2949,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 198
+        "ms": 182
       },
-      "seconds": 0.2,
+      "seconds": 0.18,
       "id": "trap-search-not-executed",
       "kind": "adversarial"
     },
@@ -2988,7 +2992,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 115
+        "ms": 114
       },
       "seconds": 0.12,
       "id": "trap-unsorted-cheapest",
@@ -3256,7 +3260,7 @@
           }
         }
       },
-      "seconds": 0.08,
+      "seconds": 0.11,
       "id": "ui-rendered-narrow",
       "kind": "adversarial"
     },
@@ -3300,16 +3304,16 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:56840/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:60629/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 141
+        "ms": 135
       },
-      "seconds": 0.15,
+      "seconds": 0.14,
       "id": "url-guard-holds-after-navigation",
       "kind": "adversarial"
     },
@@ -3481,7 +3485,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 348
+        "ms": 349
       },
       "seconds": 0.35,
       "id": "verifier-list-rows-not-a-dump",
@@ -3529,7 +3533,7 @@
           "unverified-click-correct-answer"
         ]
       },
-      "seconds": 0.01,
+      "seconds": 0.0,
       "id": "verifier-precision-recall",
       "kind": "adversarial"
     },
@@ -3577,9 +3581,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4058
+        "ms": 4093
       },
-      "seconds": 4.06,
+      "seconds": 4.1,
       "id": "verifier-sparse-page-not-a-dump",
       "kind": "adversarial"
     },
@@ -3594,10 +3598,10 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 454,
-        "after": 454
+        "before": 478,
+        "after": 478
       },
-      "seconds": 0.04,
+      "seconds": 0.05,
       "id": "wall-clock-probe-history-isolated",
       "kind": "adversarial"
     }
