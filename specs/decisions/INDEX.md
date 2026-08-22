@@ -4,7 +4,7 @@ This is the current-rules digest: one line per ADR, the ruling only, not the
 incident narrative behind it. Every ADR carries a matching `**Ruling**` /
 `**Because**` / `**Enforced by**` header directly under its title — read the
 full file when you need the "why" or the evidence, read this index when you
-just need "what is now true" (groundwork GW-006).
+just need "what is now true".
 
 - ADR-000 — specs/ holds only invariants, output contracts and ADRs; enforcement lives in hooks, never in prose — enforced by `.githooks/pre-commit`, `.claude/hooks/post-edit-invariant.sh` · amended by ADR-001
 - ADR-001 — a bounded docs/ planning layer and a milestone-level tasks/TODO.md are allowed; specs/'s three-kind charter is unchanged — enforced by advisory (cold-reviewer subagent, CLAUDE.md rule 3)

@@ -1,8 +1,8 @@
 # Task 1 milestones — pr-loop queue
 
-Working set only (groundwork GW-004): Queue + Debt here, merged work is a
-one-liner in `tasks/DONE.md`. Block format and protocol: the groundwork
-plugin's `pr-loop` skill; list unblocked tasks with
+Working set only: Queue + Debt here, merged work is a
+one-liner in `tasks/DONE.md`. Block format and protocol: the `pr-loop`
+plugin skill; list unblocked tasks with
 `python3 "$CLAUDE_PLUGIN_ROOT"/skills/pr-loop/scripts/ready.py` (repo root).
 Milestone-level only (ADR-001) — micro-tasks stay in the session. Reviewer
 evidence tags reference `docs/product/assignment-requirements.md` §E1–E5.
@@ -277,7 +277,7 @@ close it on any failure, with a case that leaks before the fix.
 Origin: PR #20 R19 (MEDIUM, routed repair; the reverse-direction guard itself is
 logged here as debt rather than built, since it is more than a "prune to fix" fix)
 Spec: the merge at `94f1a42`/`7a2869a` re-added 41-46 uncited routine `fast`/
-`invariant` report dumps that GW-008/ADR-012 had just pruned, and no case caught
+`invariant` report dumps that ADR-012 had just pruned, and no case caught
 it because `_run_report_citations_case` (`src/browser/eval_adapter.py:1014`)
 is one-directional: it resolves citation -> file, never enumerates
 `evals/report/*.json` and asks whether each file is cited by anything. The

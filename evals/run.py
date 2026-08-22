@@ -18,7 +18,7 @@ Each task implements src/<task>/eval_adapter.py with:
 The runner owns: discovery, suite filtering, scoring, baseline gating,
 report history. Adapters own: how to run a case and judge it.
 
-Report policy (groundwork GW-008): every run appends ONE line to
+Report policy (ADR-012): every run appends ONE line to
 evals/report/history.jsonl — that's the committed time series and it's cheap,
 so it's unconditional. A full per-case report (evals/report/<ts>-<suite>.json)
 is only written when it earns its ~KB-per-case cost: `--report` was passed,
