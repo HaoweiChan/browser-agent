@@ -12,29 +12,78 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M18 — TinBoker reviewer UI restyle            [status: pr]
-PR: #23 · ADR-014 · evidence in the PR body, trace in tasks/reviews/pr23-r*.json
-Spec: Restyle the existing single-page reviewer UI with the TinBoker terminal
-language while preserving task submission, SSE trace, screenshots, results,
-support matrix, limitations, stable DOM hooks, and the no-build/no-framework
-architecture.
-Acceptance: dark terminal and light paper-terminal palettes, amber commands,
-cyan interaction/recovery, compact squared surfaces, a no-overflow 390px layout,
-explicit focus and reduced-motion handling, no external dependency, declared
-contrast pairs at least 4.5:1, focused fail-before/mutation/pass-after evidence,
-and the repo gate green in order.
-
-### M10 — A-Freeze            [status: todo]
+### M10 — A-Freeze            [status: pr]
 Depends: M9, M12
 Spec: analysis/README/support-matrix refresh, prompts curated, second
 held-out probe vs the deployed URL (mandatory gate, raw results committed).
 Depends on M12 because the A-exit walk checks the gate against ADR-002, and
 the declared D4 wall-clock breach must be fixed or amended before the walk
 can be honestly green.
-Acceptance: A-exit criteria in `docs/plans/active/task1-a-level-plan.md` all
+Acceptance: A-exit criteria in `docs/plans/completed/task1-a-level-plan.md` all
 green → owner decides submission/public.
 
 ## Debt
+
+### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
+Origin: PR #25 R5
+Spec: `support-matrix-cites-real-cases` resolves backticked case-id tokens
+against `evals/`, but not bare `D21`/`D22`-style numeric references against the
+`docs/support-matrix.md` table. `src/browser/agent.py:64`, `docs/analysis.md`
+§8a-2 and `src/browser/verifier.py` now all cite D-numbers, so a future
+renumbering or row deletion leaves those citations dangling with nothing red.
+This is PR #25 R1's defect in its general form — R1 was one uncited claim; this
+is the mechanism that lets the next one through.
+Repro: renumber or delete the D21 row in `docs/support-matrix.md` and run
+`--suite invariant` — nothing goes red despite `agent.py` citing a dead D21.
+Acceptance: a case resolves bare D-number citations against the support-matrix
+table and is watched red against a deliberately broken D-number first.
+
+### T-R30 — the widened SCOPE_BLOCK determiner regex over-refuses informational/hypothetical delete questions            [status: todo]
+Origin: PR #25 R3 (LOW, routed debt)
+Spec (claim): the widened determiner regex over-refuses informational/hypothetical
+questions about deletion that use the same verb+determiner adjacency as a real
+command.
+Evidence: SCOPE_BLOCK matches 'Can you explain how to delete our test entry?' and
+'What happens when I delete all the drafts?' — both informational. The pinned
+case l5-refuse-delete-determiners tests three informational rows, none combining
+an interrogative frame with an adjacent determiner.
+Repro: `SCOPE_BLOCK.search('What happens when I delete all the drafts?')` -> match.
+Acceptance: either accept as consistent with the already-declared over-refusal
+tradeoff and note it for the delete clause, or add a case.
+Orchestrator note: LOW, and in the safe direction — same shape as the
+already-declared login over-refusal. Debt.
+
+### T-R31 — the aggregate-superlative regex misses phrasings outside the which/what/who + keyword shape            [status: todo]
+Origin: PR #25 R4 (LOW, routed debt)
+Spec (claim): the aggregate-superlative regex misses phrasings that don't use
+which/what/who alongside the exact keyword list, so the same defect class can
+recur one step removed from the probe's wording.
+Evidence: `_AGGREGATE` requires `\b(which|what|who)\b.{0,80}\b(most|least|fewest|highest|lowest|greatest)\b`;
+'Rank the books by price and give me the top one.' does not match.
+Repro: `_AGGREGATE.search('Rank the books by price and give me the top one.')` -> no match.
+Acceptance: already disclosed by the ponytail comment in verifier.py; logged for
+completeness, not blocking.
+Orchestrator note: LOW and already acknowledged in-code. Debt — and the honest
+name for the ceiling this PR ships.
+
+
+### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: todo]
+Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
+Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
+class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
+Open Library's first publication year for a search result), the correct
+value was present verbatim inside the page text the agent itself captured —
+`star-rating Three`, the infobox population figure, "First published in
+1965" — but the run returned `failure:semantic` with a multi-hundred/
+multi-thousand-character raw page dump as the `answer` field instead of
+either isolating the value or failing with `answer: null`. This is graded a
+failure, not a wrong success, so it does not implicate the inviolable
+property (`not_a_dump` never sees it: the check only fires on `success`), and
+it is out of the two-defect scope M10's repair was bounded to.
+Acceptance: a case pins the "data was captured but answer is a page-text
+dump on failure" shape red first, then either the extraction step tries a
+narrower isolation before giving up, or `failure:semantic`'s `answer` field
+is null'd rather than carrying the dump — reviewer's call which is correct.
 
 ### M11 — Live-drift snapshot replay            [status: todo]
 Origin: M8's SHOULD item, left open at the M8 merge (PR #12)
@@ -417,7 +466,7 @@ its own +12h hour guard. M6–M10 are the A-phase roadmap, ranked by
 reviewer-value ÷ effort against the two gaps the freeze measured (live
 breadth, verifier accuracy).
 
-Plans: `docs/plans/active/task1-a-level-plan.md` ·
+Plans: `docs/plans/completed/task1-a-level-plan.md` ·
 `docs/plans/completed/task1-b-level-plan.md` ·
 Methodology: `docs/evals/evaluation-methodology.md` ·
 Architecture: `docs/architecture/task1-overview.md`

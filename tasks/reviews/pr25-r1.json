@@ -1,0 +1,48 @@
+{
+  "pr": 25,
+  "round": 1,
+  "task": "M10",
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Both the agent.py comment and docs/analysis.md §8a-2 assert the remove/erase/wipe/clear delete-synonym gap is 'declared open in docs/support-matrix.md', but no such row exists in that file.",
+      "evidence": "src/browser/agent.py:64 ('declared open in docs/support-matrix.md'); docs/analysis.md:775 ('declared gap in docs/support-matrix.md rather than a guessed-at fix'). grep -n 'remove|erase|wipe|clear|synonym' docs/support-matrix.md returns nothing relevant — the only delete-related row (line 126) is about the verifier, not SCOPE_BLOCK. support-matrix-cites-real-cases only validates that cited case IDs resolve, not that a claimed prose declaration corresponds to a real row, so this is unguarded by any eval.",
+      "repro": "grep -n 'remove\\|erase\\|wipe\\|clear' docs/support-matrix.md — no hits pertaining to SCOPE_BLOCK's undeleted synonyms.",
+      "acceptance": "docs/support-matrix.md contains an actual row (or the existing text is corrected) declaring the remove/erase/wipe/clear gap, so the claim in agent.py and analysis.md points to real evidence.",
+      "orchestrator_note": "Confirmed independently. Two documents of record cite a declaration that does not exist. Dishonest published claim -> blocks."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The superlative/aggregate guard in verifier.py converts a legitimately answerable question into a false FAIL when the page already shows the superlative directly, with no eval case testing this false-positive direction — unlike the delete-determiner fix, which pins both directions.",
+      "evidence": "src/browser/verifier.py:297 fires aggregate_needs_comparison on any 'which/what/who ... most/least/...' phrasing when there is no expect.answer/state, regardless of whether the answer was directly and correctly extracted from an element that already states the superlative. evals/adversarial/verifier-aggregate-superlative-fails-loud.json contains exactly one row (the failing shape) with no counterpart exercising an answerable superlative.",
+      "repro": "verify(extractions=[{'value':'Best Seller Badge Product','page_text':'...is our most popular item...'}], answer='Best Seller Badge Product', task='Which product is labeled as the most popular item on this page?') returns FAIL.",
+      "acceptance": "Either document this as a stated ceiling (false-refusal cost) the way the delete fix documents its determiner scope, or add a case proving the guard does not fire when ground truth makes the answer verifiable — and reconcile with the repo's stated honesty-points cost for false refusals.",
+      "orchestrator_note": "Confirmed independently. Fail-closed reasoning is sound; the undeclared false-refusal cost is not. Repo precedent D3 and this PR's own subject both say a declared-but-unguarded gap gets falsified -> blocks on the honesty branch."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The widened SCOPE_BLOCK determiner regex over-refuses informational/hypothetical questions about deletion that use the same verb+determiner adjacency as a real command.",
+      "evidence": "src/browser/agent.py SCOPE_BLOCK matches 'Can you explain how to delete our test entry?' and 'What happens when I delete all the drafts?' — both informational. The pinned case l5-refuse-delete-determiners tests three informational rows, none combining an interrogative frame with an adjacent determiner.",
+      "repro": "SCOPE_BLOCK.search('What happens when I delete all the drafts?') -> match.",
+      "acceptance": "Either accept as consistent with the already-declared over-refusal tradeoff and note it for the delete clause, or add a case.",
+      "orchestrator_note": "LOW, and in the safe direction — same shape as the already-declared login over-refusal. Debt."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The aggregate-superlative regex misses phrasings that don't use which/what/who alongside the exact keyword list, so the same defect class can recur one step removed from the probe's wording.",
+      "evidence": "_AGGREGATE requires \\b(which|what|who)\\b.{0,80}\\b(most|least|fewest|highest|lowest|greatest)\\b; 'Rank the books by price and give me the top one.' does not match.",
+      "repro": "_AGGREGATE.search('Rank the books by price and give me the top one.') -> no match.",
+      "acceptance": "Already disclosed by the ponytail comment in verifier.py; logged for completeness, not blocking.",
+      "orchestrator_note": "LOW and already acknowledged in-code. Debt — and the honest name for the ceiling this PR ships."
+    }
+  ]
+}

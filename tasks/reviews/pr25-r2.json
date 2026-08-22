@@ -1,0 +1,26 @@
+{
+  "pr": 25,
+  "round": 2,
+  "task": "M10",
+  "result": "APPROVED",
+  "scope": "repair diff f18d3a3..0bfce5c plus standing findings from pr25-r1.json",
+  "standing_findings_verified_closed": ["R1", "R2"],
+  "findings": [
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The D21/D22 citation mechanism in prose (agent.py comment, docs/analysis.md, verifier.py comments) is not validated by support-matrix-cites-real-cases — that eval resolves backticked case-id tokens against evals/, not bare 'D21'/'D22' numeric references against the support-matrix table, so a future renumbering or deletion of a D-row would leave the code/doc citations dangling with nothing turning red.",
+      "evidence": "evals/adversarial/support-matrix-cites-real-cases.json:6 expect.note is a case-id resolver, not a D-number resolver. src/browser/agent.py:64, docs/analysis.md:775-780 and src/browser/verifier.py:104-116/301-308 all cite D21/D22 by number with no eval checking those numbers still resolve to a row in docs/support-matrix.md.",
+      "repro": "Renumber or delete the D21 row in docs/support-matrix.md and rerun --suite invariant — nothing goes red despite agent.py citing a non-existent D21.",
+      "acceptance": "Either extend support-matrix-cites-real-cases (or a new case) to resolve bare D-number citations against the table, or document it as an accepted gap the way D19/D3 document their own guard ceilings.",
+      "orchestrator_note": "LOW -> debt by the scope rule. Worth naming plainly: this is R1's defect in its general form — an uncited claim, one level up. This repair added new D-number citations in production comments, so it is not purely pre-existing. Logged as T-R32."
+    }
+  ],
+  "reviewer_verification": {
+    "gate_run_by_reviewer": {"invariant": "37/37", "fast": "105/105"},
+    "no_existing_case_weakened": "git diff f18d3a3..0bfce5c -- evals/ shows one new case added plus report-citation/count updates only",
+    "l2_path_untouched": "has_ground_truth short-circuit at src/browser/verifier.py:308 is structural, so the guard cannot leak into an L2 verdict regardless of task phrasing",
+    "red_first_disclosure": "honest in substance — the resolution states plainly that the pre-fix red was a harness-level 'unknown verifier probe' rejection, and does not misrepresent it as detecting the original defect"
+  }
+}
