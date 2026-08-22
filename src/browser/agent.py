@@ -19,6 +19,7 @@ import re
 import time
 from pathlib import Path
 
+from .judge import RUN_JUDGE_BUDGET
 from .planner import PlanError
 from .resolver import TARGET_KEYS, ResolveError, relocation_candidates, resolve
 from .verifier import verify
@@ -372,9 +373,51 @@ def assemble_result(trace, answer, budgets, failure=None, reason=None, final_url
     }
 
 
-async def run_task(task: str, url: str | None, planner, run_dir: str | Path, headless: bool = True,
-                   url_guard=None, on_step=None, model=None, browser=None):
-    """`browser`: an already-running Chromium to borrow instead of launching one.
+async def _apply_judge(judge, task, answer, extractions, verdict, budgets) -> dict:
+    """M36's terminal-verdict boundary. Called exactly once, and only when
+    `verdict` already carries a layer-1 PASS (agent.py never has ground truth,
+    so this IS the runtime path verify()'s L2 never touches) -- the judge is
+    the last rung of the escalation ladder, not a replacement for the free
+    checks above it (cost-discipline rule 1).
+
+    FAIL CLOSED is the entire point of this function. Three ways in and every
+    one of them ends the same way -- the verdict becomes FAIL, never "keep
+    the prior PASS and move on":
+      1. the per-run budget is already spent (RUN_JUDGE_BUDGET, one call/run);
+      2. `judge(...)` raises ANYTHING -- JudgeError (missing key, malformed
+         response, provider/network failure) or any other exception;
+      3. `judge(...)` returns cleanly and rejects.
+    A judge that certifies is the only path that leaves PASS standing, and
+    even then the check is recorded (`judge_responsive: true`) so the
+    per-stage hit-rate is honest about how many runs needed it.
+    """
+    checks = dict(verdict["checks"])
+    if budgets["judge_calls"] >= RUN_JUDGE_BUDGET:
+        checks["judge_available"] = False
+        return {**verdict, "verdict": "FAIL", "checks": checks,
+                "reason": f"judge budget exhausted ({RUN_JUDGE_BUDGET}/run), failing closed"}
+    budgets["judge_calls"] += 1
+    evidence = " ".join(e.get("page_text", "") for e in extractions or [])
+    try:
+        certify, reason, usage = await judge(task, answer, evidence)
+    except Exception as e:
+        checks["judge_available"] = False
+        return {**verdict, "verdict": "FAIL", "checks": checks,
+                "reason": f"judge unavailable, failing closed: {type(e).__name__}: {e}"}
+    budgets["judge_tokens"] += usage.get("llm_tokens", 0)
+    budgets["judge_usd"] += usage.get("llm_usd", 0.0)
+    checks["judge_responsive"] = certify
+    if not certify:
+        return {**verdict, "verdict": "FAIL", "checks": checks, "reason": f"judge rejected: {reason}"}
+    return {**verdict, "checks": checks}
+
+
+async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, judge,
+                   headless: bool = True, url_guard=None, on_step=None, model=None, browser=None):
+    """`judge`: required, no default -- same injection-boundary shape as
+    `planner` (planner.py's docstring). Every caller names `stub_judge(...)`
+    or `live_judge()` explicitly; nothing here can default to spending money.
+    `browser`: an already-running Chromium to borrow instead of launching one.
     Callers that leave it None — the gateway and the CLI, i.e. production — get a
     private browser per run, because two callers' tasks must not share a process.
     The eval harness passes one browser for the whole suite: per-run driver start
@@ -385,7 +428,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     t0 = time.monotonic()
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
-    budgets = {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0}
+    budgets = {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0,
+               "judge_calls": 0, "judge_tokens": 0, "judge_usd": 0.0}
     trace: list[dict] = []
     # Holds at most one record awaiting the index of the attempt that replaces
     # it; resolved when that attempt is created, so a run that dies before it
@@ -859,4 +903,10 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     answer = answers[0] if len(answers) == 1 else (answers or None)
     # The run is graded by the verifier, not by having reached this line.
     verdict = verify(trace=trace, extractions=extractions, answer=answer, task=task)
+    # M36: the judge is the LAST rung of the escalation ladder -- a run that
+    # failed L1 needs no judge call, the free deterministic checks above
+    # already caught it (cost-discipline rule 1). Only a run that survived
+    # every one of them reaches the terminal-verdict boundary.
+    if verdict["verdict"] == "PASS":
+        verdict = await _apply_judge(judge, task, answer, extractions, verdict, budgets)
     return done(answer=answer, final_url=final_url, digest=digest, verdict=verdict)

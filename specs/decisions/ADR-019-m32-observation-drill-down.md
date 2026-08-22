@@ -193,8 +193,8 @@ like every other planning behaviour here.
 
 The "after" row is arithmetic over committed measurements, not a measured
 after-run: measuring it directly means a `full`-suite run against a paid
-model, which this milestone did not spend. The gate that WAS run is `evals/report/20260822-192828-fast.json` — 121/121, score 1.000, cost $0.0000 — together with
-`evals/report/20260822-192917-invariant.json` (41/41).
+model, which this milestone did not spend. The gate that WAS run is `evals/report/20260822-235208-fast.json` — 131/131, score 1.000, cost $0.0000 — together with
+`evals/report/20260822-235232-invariant.json` (41/41).
 
 ## Rejected
 
@@ -224,7 +224,7 @@ debating critic.
 
 ## Consequences
 
-**Declared, not guessed at** — `docs/support-matrix.md` D25:
+**Declared, not guessed at** — `docs/support-matrix.md` D27:
 
 1. A drill-down only helps when the planner can *name* a container that the
    capped observation actually shows. Where a page exposes no content roles
@@ -240,7 +240,7 @@ debating critic.
    `live-quotes-js-role-tier-blind` keeps its honest marker: it still reports
    `success` with `"Next →"`, `answer_is_known_wrong: true`, and still passes
    (`live` suite 9/9 after this change,
-   `evals/report/20260822-192844-live.json`). One earlier `live` run on this
+   `evals/report/20260822-234757-live.json`). One earlier `live` run on this
    branch went 8/9 and is not this change: `openlibrary.org` did not answer
    inside the 20s navigation budget, so `live-ol-search-a11y-invisible` ended
    `failure:nav` before a locator was ever resolved. The same suite, unchanged,

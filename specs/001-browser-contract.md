@@ -26,7 +26,10 @@ contract-drift (spec-drift audits field-by-field).
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 0
+    "ms": 0,
+    "judge_calls": 0,
+    "judge_tokens": 0,
+    "judge_usd": 0.0
   }
 }
 ```
@@ -51,6 +54,16 @@ contract-drift (spec-drift audits field-by-field).
   `ground_truth` is false for a runtime verdict (layer 1 predicates only) and
   true when the caller supplied external ground truth — the eval adapter does,
   a live run cannot. `layer` names the deepest layer that ran.
+- `verdict.checks.judge_responsive` / `judge_available` (M36) — present only
+  when a run reached the terminal-verdict boundary (every L1 check already
+  PASS). `judge_responsive` is the judge's own certify/reject; `judge_available:
+  false` instead means the judge itself could not be reached (missing key,
+  timeout, malformed response, budget exhausted) and the run failed CLOSED —
+  `src/browser/agent.py`'s `_apply_judge`. `budgets_spent.judge_calls` is 0 or
+  1 (`RUN_JUDGE_BUDGET`, `src/browser/judge.py`): at most one judge call per
+  run, at this boundary, never per extraction. `judge_tokens`/`judge_usd` are
+  0 for every stub (fast/live suites) and for a cache hit; only a live,
+  uncached call spends either.
 - `evidence.extractions` — what was read and what the page said where it was
   read, captured at extraction time. This is the verifier's input; it exists so
   verification consumes raw evidence rather than the executor's conclusion.

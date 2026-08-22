@@ -15,9 +15,9 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260822-192828-fast.json",
-        "invariant": "20260822-192917-invariant.json",
-        "live": "20260822-192844-live.json"
+        "fast": "20260822-235208-fast.json",
+        "invariant": "20260822-235232-invariant.json",
+        "live": "20260822-234757-live.json"
       }
     },
     "analysis_section1": {
@@ -51,7 +51,8 @@
           "RED on the deployed build"
         ]
       }
-    }
+    },
+    "headline_red_excludes_this_case_2026_08_22": "The headline-report-is-red check (PR #34 R4) ignores THIS case's own row in the report it inspects. Not a loophole: a superseded report showing this case red says only that the block was stale when it was taken, which is what fixing the block cures — and without the exclusion the guard has no fixed point, because once it goes red every subsequent report contains it failing and no green report can ever be produced to cite. Found by merging origin/main (M36) into task/M32, where every number had to move at once. Any OTHER failing case still disqualifies the report, which is the whole of what R4 asked for."
   },
   "expect": {
     "note": "every count in README equals what the runner loads, README's \"Where it stands\" block equals the reports it cites, and no tracked markdown file (prompts/ included, tasks/ excluded and why is in provenance) asserts criterion 5 green — outside a struck-through span or across bold/italic/link markdown, whitespace-normalized — while docs/analysis.md §8a-3's post-merge evidence says red"

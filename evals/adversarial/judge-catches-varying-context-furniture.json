@@ -1,0 +1,27 @@
+{
+  "id": "judge-catches-varying-context-furniture",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L3",
+  "tc": "TC1",
+  "trap": "chrome that is byte-identical across two pages but PRECEDED by page-varying text -- the exact root cause docs/support-matrix.md D24 declared as an undemonstrated ceiling of the M34 fix, now demonstrated",
+  "input": {
+    "fixture": "nav-heavy-notice-home.html",
+    "task": "Go to the Travel category and tell me the price of the first book listed.",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "link", "name": "Travel" },
+        "expected_state": { "url_contains": "nav-heavy-notice.html" } },
+      { "action": "extract", "target": { "role": "status", "name": "Site notice" }, "anchor": null }
+    ],
+    "judge_verdicts": [[false, "The notice is a site disclaimer, not the price of a book -- it does not answer the question."]]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "verdict": "FAIL"
+  },
+  "provenance": "M36 (tasks/TODO.md), reproducing the real-site shape docs/support-matrix.md D24 declared as an UNDEMONSTRATED gap in M34's `not_page_furniture`: 'furniture whose immediate neighbours genuinely vary page-to-page ... could false-negative -- no case here demonstrates that failure.' nav-heavy-notice-home.html and nav-heavy-notice.html share one byte-identical site-notice div (real chrome, present on both pages) -- but the home page's notice is preceded by 'Pick a category from the sidebar.' while the target page's is preceded by 'Travel / 11 results.'. PAGE_CONTEXT_WINDOW=20 raw characters either side means the two windows genuinely differ, so `_context()`'s substring compare never matches and `not_page_furniture` stays true (no furniture flagged) even though the value demonstrably IS furniture. WATCHED RED FIRST: run through this exact fixture/plan with the judge stubbed to always certify (`stub_judge([True])`, standing in for the pre-M36 state where nothing sits after L1) reproduces `status: success`, `answer: 'Demo content only, prices are not real.'`, `verdict.verdict: PASS`, every L1 check green including `not_page_furniture: true` -- the identical shape to D23's 'Warning!'/'Travel' defect, on a page M34's own fix cannot catch. GREEN after M36: the same run through the real pipeline, with the judge (stubbed here per cost-discipline rule 4; a live judge would need to independently conclude the notice does not answer 'what is the price') rejecting, yields `status: failure:semantic`, `budgets_spent.judge_calls: 1`, `checks.judge_responsive: false`, and L1's own `not_page_furniture` stays true throughout -- the judge is what closes this gap, not a fifth structural heuristic.",
+  "triage": {
+    "class": "inviolable-property",
+    "note": "watched red output (judge stubbed to always-certify, simulating pre-M36): status success, answer 'Demo content only, prices are not real.', verdict.verdict PASS, checks {..., not_page_furniture: true, judge_responsive: true}. This is D24's declared ceiling, made real."
+  }
+}

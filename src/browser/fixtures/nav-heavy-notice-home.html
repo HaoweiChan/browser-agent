@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nav-heavy Notice Fixture — Home</title>
+<!-- Landing page for nav-heavy-notice.html (M36's motivating case,
+     judge-catches-varying-context-furniture): reproduces the EXACT root
+     cause named in tasks/TODO.md M36 -- a site-notice banner is
+     byte-identical on both pages (real chrome), but the 20 characters
+     PRECEDING it (PAGE_CONTEXT_WINDOW) differ page to page, so
+     not_page_furniture's window compare misses it even though the string
+     really is furniture. Here the banner is preceded by this page's own
+     h1/tagline text, not the "N results" text nav-heavy-notice.html carries
+     before the same banner -- deliberately NOT the same shape as
+     nav-heavy-home.html/nav-heavy.html (M34's own case), whose shared
+     35-item sidebar keeps the immediate neighbours identical on both pages
+     and IS caught by the M34 fix. This fixture exists to prove the fix's own
+     declared ceiling (docs/support-matrix.md D24, bullet 2: "furniture whose
+     immediate neighbours genuinely vary page-to-page ... could
+     false-negative") is real, not hypothetical.
+
+     The sidebar below is padding, not signal: it exists only to push the
+     page past MIN_PAGE_CHARS so the extraction is not ALSO caught by
+     not_a_dump for the unrelated reason of being short (this fixture tests
+     one check's ceiling, not another's), reusing nav-heavy.html's own list
+     rather than inventing a second one. -->
+<header><a href="#top">Nav-heavy Shop</a></header>
+<aside>
+  <ul>
+    <li><a href="#1">Mystery</a></li>
+    <li><a href="#2">Historical Fiction</a></li>
+    <li><a href="#3">Sequential Art</a></li>
+    <li><a href="#4">Classics</a></li>
+    <li><a href="#5">Philosophy</a></li>
+    <li><a href="#6">Romance</a></li>
+    <li><a href="#7">Womens Fiction</a></li>
+    <li><a href="#8">Fiction</a></li>
+    <li><a href="#9">Childrens</a></li>
+    <li><a href="#10">Religion</a></li>
+  </ul>
+</aside>
+<main>
+  <h1>Nav-heavy Shop</h1>
+  <p>Pick a category from the sidebar.</p>
+  <div role="status" aria-label="Site notice">Demo content only, prices are not real.</div>
+  <a href="nav-heavy-notice.html">Travel</a>
+</main>

@@ -1,0 +1,21 @@
+{
+  "pr": 33,
+  "round": 2,
+  "task": "M36",
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff 9819794..d2173ca plus standing findings R1, R2",
+  "standing_findings_verified_closed": ["R1", "R2"],
+  "note_on_ids": "The reviewer returned this finding as 'R1'; renumbered to R3 here to avoid collision with round 1's R1.",
+  "findings": [
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The strict `parsed[\"certify\"] is True` correctly closes the over-certify direction but silently introduces the opposite ceiling: a provider response of {\"certify\": \"true\"} — a routine string-boolean slip in the CERTIFYING direction — now fails closed, and nothing in any document of record declares it.",
+      "evidence": "src/browser/judge.py:249. The consequence is named only in an inline code comment (judge.py:239-248). Orchestrator confirmed by grep: no mention in docs/support-matrix.md (D25 covers only 'live grading quality unsupported'), ADR-017 (unmodified by the repair diff), README.md, docs/analysis.md, or tasks/TODO.md's M36 entry. judge-parse-response-strict-boolean's 9 scenarios test only reject-direction strings ('false', 'no', '0') — orchestrator confirmed no scenario supplies the string 'true', so the boundary the fix creates is uncharacterised.",
+      "repro": "grep -rn 'false-refusal|string-typed|formatting slip' across the documents of record returns no hit for the certify risk; 'true' is True -> False",
+      "acceptance": "Either (a) a support-matrix D-row names the false-refusal ceiling this strict check introduces, the way D22 names the aggregate guard's, or (b) a scenario pins the string-'true' reject behaviour so the boundary is characterised, or (c) the parser normalises a small explicit set of true-spellings. Absence of all three is the gap.",
+      "orchestrator_note": "Reproduced independently. Blocks: D22 in this same file is the exact precedent — it declares a false-refusal cost even with no fixture to demonstrate it, and its own text says a 'no case demonstrates this' limitation is a claim about eval coverage, not proof the shape cannot occur. An undeclared over-refusal ceiling has been a blocking finding on this repo three times (PR #25 R2, PR #30 R1, and this). The failure mode here is not subtle: if the chosen model emits string booleans, the agent stops certifying anything at all, and no one can observe what it emits because there is no API key in this environment."
+    }
+  ]
+}

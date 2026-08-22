@@ -1,0 +1,76 @@
+{
+  "id": "judge-parse-response-strict-boolean",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "judge",
+    "parse_responses": [
+      {
+        "note": "well-formed true certifies",
+        "content": "{\"certify\": true, \"reason\": \"fits\"}",
+        "expect": "certify"
+      },
+      {
+        "note": "string-typed 'true' -- the CERTIFYING-direction formatting slip -- must not certify (PR #33 R3): the strict is-True check closes over-certify but this is the declared cost, pinned here per docs/support-matrix.md D26",
+        "content": "{\"certify\": \"true\", \"reason\": \"looks correct\"}",
+        "expect": "reject"
+      },
+      {
+        "note": "well-formed false rejects",
+        "content": "{\"certify\": false, \"reason\": \"does not fit\"}",
+        "expect": "reject"
+      },
+      {
+        "note": "string-typed reject ('false') must not certify",
+        "content": "{\"certify\": \"false\", \"reason\": \"not responsive\"}",
+        "expect": "reject"
+      },
+      {
+        "note": "string-typed 'no' must not certify",
+        "content": "{\"certify\": \"no\", \"reason\": \"not responsive\"}",
+        "expect": "reject"
+      },
+      {
+        "note": "numeric 0 must not certify",
+        "content": "{\"certify\": 0, \"reason\": \"not responsive\"}",
+        "expect": "reject"
+      },
+      {
+        "note": "string-typed '0' must not certify (reviewer's own repro: bool('0') is True)",
+        "content": "{\"certify\": \"0\", \"reason\": \"not responsive\"}",
+        "expect": "reject"
+      },
+      {
+        "note": "null certify must not certify",
+        "content": "{\"certify\": null, \"reason\": \"n/a\"}",
+        "expect": "reject"
+      },
+      {
+        "note": "missing certify key fails closed (JudgeError)",
+        "content": "{\"reason\": \"no certify field at all\"}",
+        "expect": "error"
+      },
+      {
+        "note": "non-JSON body fails closed (JudgeError)",
+        "content": "I think this answer looks fine to me, certify: true.",
+        "expect": "error"
+      },
+      {
+        "note": "fenced code-block body still parses (real fence-strip path)",
+        "content": "```json\n{\"certify\": true, \"reason\": \"fits, fenced\"}\n```",
+        "expect": "certify"
+      }
+    ]
+  },
+  "expect": {
+    "note": "live_judge()'s REAL response parser (transport mocked, no network, no key spend) treats only the literal JSON boolean true as certify; every other JSON-valid-but-wrongly-typed certify value rejects rather than certifying, and a missing key or non-JSON body fails closed"
+  },
+  "provenance": "PR #33 R1 (HIGH): `certify = bool(parsed[\"certify\"])` treated ANY truthy JSON value -- including the strings \"false\"/\"no\", present in a completion actually shaped like a formatting slip a real model can make -- as certify=True, inverting the fail-closed guarantee that is this milestone's entire purpose. None of the 8 cases committed in the first round exercised `live_judge()`'s real parsing path at all -- all eight used `stub_judge`, which bypasses `json.loads`/fence-stripping/the certify extraction entirely, so the code that actually runs in production was completely ungraded (the reviewer's structural note, not just the line-level bug). WATCHED RED FIRST against the pre-fix `bool()` coercion: the string-typed/numeric/null scenarios above all reported `got: certify` (the exact inversion) instead of `reject`. This probe mocks ONLY `urllib.request.urlopen` -- judge.py's actual `json.loads`, fence-stripping and extraction code runs unmodified -- with a fake (non-functional) API key so the call proceeds past the missing-key guard, and a uuid4 nonce per scenario so a stale cache entry from an earlier suite run can never substitute for actually exercising the parser. Fixed by replacing the coercion with strict identity (`parsed[\"certify\"] is True`), the form the reviewer named as preferred over trying to parse truthiness: every value other than the literal JSON `true` is a reject, not an exception (a genuinely absent `certify` key still raises via `KeyError`, caught the same as any other malformed response). PR #33 R2/R3 (MEDIUM, repair round 2): the strict is-True check closes the over-certify direction (R1) but silently introduces the opposite ceiling -- a provider response of {\"certify\": \"true\"} (a formatting slip in the CERTIFYING direction) now fails closed too, and no scenario here pinned it and no document declared it. This scenario was NOT watched red: the strict check already rejects it correctly (parsed['certify'] is True -> False for the string 'true'), so there was no code defect to fix in this direction -- only a coverage/documentation gap, closed here (the scenario) and in docs/support-matrix.md D26 (the declared cost, same spirit as D22's aggregate-guard false-refusal row: a real, priced cost with no fixture demonstrating it in the wild, because nobody here can observe what the live model actually emits).",
+  "triage": {
+    "class": "inviolable-property",
+    "note": "closes the class the reviewer named, not just the line: live_judge's real response-parsing code (fence-strip, json.loads, certify/reason extraction) is now exercised by a case for the first time, with the transport mocked rather than the whole function stubbed."
+  }
+}

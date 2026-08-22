@@ -1,0 +1,24 @@
+{
+  "pr": 33,
+  "round": 3,
+  "task": "M36",
+  "result": "APPROVED",
+  "scope": "repair diff d2173ca..06a1996 plus standing finding R3",
+  "standing_findings_verified_closed": ["R3"],
+  "findings": [],
+  "reviewer_verification": {
+    "judge_py_untouched": "(c) genuinely declined — git diff d2173ca..06a1996 -- src/ shows judge.py unchanged",
+    "no_case_weakened": "confirmed across evals/",
+    "d26": "honest, complete, contradicts neither D25 nor ADR-017, carries no round narrative or superseded numbers",
+    "not_watched_red_claim": "verifiably true — the round-1 strict check already rejects the string 'true', so no honest red existed for the added scenario",
+    "t_r33": "well-formed Debt block with Origin, no id collision (the earlier T-R33 was removed in PR #28)",
+    "criterion_5": "RED everywhere",
+    "gate_run_by_reviewer": {"invariant": "38/38", "fast": "118/118"}
+  },
+  "orchestrator_verification": {
+    "gate": {"invariant": "38/38", "fast": "118/118", "cost": "$0.0000", "judge": "$0.0000 / 0 tok / 45 stubbed calls"},
+    "strict_boolean": "certify 'true'/'false'/'no'/'0'/0/None all reject; only literal true certifies",
+    "fence_defang": "forged-marker payload yields exactly 1 START / 1 END (was 2/2)",
+    "wall_clock": "fast measured 60.58-60.9s against the 60s local ceiling at score 1.000 — the ADR-013 straddling band under concurrent-session load, independently reproduced by another session on unmodified main"
+  }
+}
