@@ -12,48 +12,28 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M31 — Plan lint: a superlative task with no enumerating step is sent back before the browser moves            [status: pr]
-Depends: M10
-Origin: PR #25 finding 3 — correct-answer rate 2/8 (25%) at M5 → 1/7 (14%)
-at the M10 probe — and the discussion it triggered (`prompts/015`). PR #25
-closed the aggregate hole on the *verifier* side: `aggregate_needs_comparison`
-fails closed on every superlative question without ground truth, and its own
-comment says why — "the plan vocabulary has no comparison primitive to have
-gotten it right WITH" — with the false-refusal cost declared as D22. This
-block is the planner-side half: stop emitting the plan that guard exists to
-catch, and give the planner the primitive so the guard can relax.
-Spec: (1) one new step `extract_all` — every match of a target, answer is a
-list; rank/compare/count stays in code (answer assembly + verifier), never in
-the LLM. (2) A deterministic, site-agnostic (rule 6) plan lint between plan
-and first action: task matches the aggregate shape (reuse `_AGGREGATE` —
-one regex, two callers, same ceiling as T-R31) and the plan has no
-enumerating step → do not execute; replan once with a note naming the gap,
-through the existing replan budget and no-progress guard. Not an LLM critic:
-structural not behavioral, fast suite stays $0 — the ADR says why a
-debater was considered and rejected.
-Acceptance: a case where the first plan lacks an enumerating step is watched
-red first (rejected before any action — `actions` spent = pre-plan nav only);
-a fixture twin of probe #3 (most-quoted author) goes green against ground
-truth; D22 is re-measured and restated, not deleted; replan rate published
-per D7.
-Acceptance AMENDED at PR #29 R4 (reviewer finding, amend route chosen by the
-orchestrator): the original line also required `live-books-cheapest-travel` to
-go green. It does not, and the amendment records why rather than hiding it.
-That case is `full`-tagged — a real planner call against a real site — so
-running it spends money, and stubbing it is forbidden (hard rule 4); it has
-been declared unrun since M6 and still is. Worse for the milestone's own
-thesis, its wording ("In the Travel category, find the cheapest book and tell
-me its exact price") matches neither `_AGGREGATE` nor therefore the plan lint
-nor the code-side reduction, so M31's central mechanism provably cannot fire on
-it. What IS proven offline: the reduction gets that exact case right on its own
-ground truth (`rank-reduces-enumeration-in-code` row 1, the eleven hand-verified
-Travel prices reducing to £23.21), and the enumerate-then-rank path end to end
-on a superlative task (`probe3-quotes-most-quoted-author`), and — since PR #29
-R9 — the reduction itself on that exact wording end to end
-(`extract-all-cheapest-wording-still-reduces`). The residual is narrower than
-the first version of this amendment said: such a task IS reduced when the plan
-enumerates; what is missing is the lint that would make it enumerate, because
-`_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`. That is T-CHEAPEST-WORDING below.
+### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: in-progress]
+Origin: PR #29 R24
+Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README
+no longer publishes a property the grader does not implement — it now states
+what `_check_published_band` actually checks (case count matches, published
+maximum derives the SAME ceiling as the ledger maximum, committed ceiling >=
+the rule applied to that maximum) — and both README's band table and ADR-019's
+band lines are now regenerated from `evals/report/history.jsonl` by script, so
+the published run lists are the ledger's own and the derivation sentences
+multiply the ledger maximum at the shipped case count.
+What remains is the judgement call R24 raised: property 2 is
+`rule(published) == rule(ledger max)` rather than `published >= ledger max`.
+The weaker form was chosen deliberately (the strict form reddens on ordinary
+0.2-0.5s run-to-run variance, which is rot-by-construction one level up), and
+it does catch the harmful direction — a band justifying a LOWER ceiling than
+the truth. It does not catch a published maximum that is up to ~1.0s below the
+ledger's at these magnitudes while still landing in the same band.
+Acceptance: either the tighter property is adopted with a regeneration step
+that keeps the doc honest without hand-editing (the script that now produces
+these lists is the obvious hook), or the trade-off is stated in ADR-019 as a
+declared ceiling with the ~1.0s slack named, and a case pins the miss so it is
+a decision rather than an artefact of what was convenient to grade.
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
@@ -95,56 +75,7 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M36 — responsiveness is judged by an LLM, because four structural mechanisms have failed            [status: pr]
-Origin: PR #30 post-merge confirmation (2026-08-22, deployed build `2e94bed`); owner's call on the mechanism
-Spec: M34's `not_page_furniture` compares a 20-char context window on the
-assumption that site chrome carries its neighbours wherever it recurs. On
-books.toscrape.com the banner is preceded by page-specific text (a result
-count), so the windows differ and furniture passes. 6 wrong-answer-as-success
-in 9 deployed runs (`8ffc6fdc`, `4649a0c5`, `2f89cec2`, `81fe507f`, `8896c5ec`,
-`f2c00566`), zero clean correct answers on the defect task. That is the fourth
-mechanism falsified by real input and the third falsified at a shape its authors
-had declared acceptable (`log into`, `delete all`, `which...most`, now the
-context window). The owner's decision is to stop betting on structure and judge
-responsiveness with an LLM: does this answer actually answer this question.
-The deterministic checks stay and run first — the judge is the last rung of the
-escalation ladder, not a replacement for it.
-Acceptance: the real-site shape (chrome preceded by page-varying text) is an
-adversarial case watched red first; no terminal non-failure status can carry an
-answer the judge rejects; the judge fails CLOSED on error, timeout or missing
-key, and a case proves it; the `fast` suite still makes zero paid calls with the
-judge stubbed at its own injection boundary, and a case proves the boundary
-holds; a prompt-injection case proves page text cannot talk the judge into
-certifying a wrong answer; per-run judge cost and per-stage hit-rate land in the
-`evals/report/` entry; repeated runs on the deployed build show zero
-wrong-answer-as-success before criterion 5 moves.
-Out of scope: extraction quality (M28), planner-side lint (M31). Do not remove
-M34's deterministic checks — they are cheaper and they run first.
-
 ## Debt
-
-### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: todo]
-Origin: PR #29 R24
-Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README
-no longer publishes a property the grader does not implement — it now states
-what `_check_published_band` actually checks (case count matches, published
-maximum derives the SAME ceiling as the ledger maximum, committed ceiling >=
-the rule applied to that maximum) — and both README's band table and ADR-019's
-band lines are now regenerated from `evals/report/history.jsonl` by script, so
-the published run lists are the ledger's own and the derivation sentences
-multiply the ledger maximum at the shipped case count.
-What remains is the judgement call R24 raised: property 2 is
-`rule(published) == rule(ledger max)` rather than `published >= ledger max`.
-The weaker form was chosen deliberately (the strict form reddens on ordinary
-0.2-0.5s run-to-run variance, which is rot-by-construction one level up), and
-it does catch the harmful direction — a band justifying a LOWER ceiling than
-the truth. It does not catch a published maximum that is up to ~1.0s below the
-ledger's at these magnitudes while still landing in the same band.
-Acceptance: either the tighter property is adopted with a regeneration step
-that keeps the doc honest without hand-editing (the script that now produces
-these lists is the obvious hook), or the trade-off is stated in ADR-019 as a
-declared ceiling with the ~1.0s slack named, and a case pins the miss so it is
-a decision rather than an artefact of what was convenient to grade.
 
 ### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: todo]
 Origin: PR #29 R25
