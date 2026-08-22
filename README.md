@@ -7,9 +7,10 @@ what the page actually shows, executes it in a real headless Chromium, and then
 **Live:** https://whaleforce-browser-agent.zeabur.app/ — submit a task, watch the
 trace stream, open a failed step and its screenshot.
 
-Built on [groundwork](https://github.com/HaoweiChan/groundwork), an eval-first
-scaffold. Reliability here has no public ground truth, so correctness is encoded
-as executable invariants and golden/adversarial cases instead of prose.
+![The reviewer UI after a real run on the deployment: phase progress, the per-step trace with postconditions, and the verifier's verdict](docs/ui.png)
+
+Eval-first: reliability here has no public ground truth, so correctness is
+encoded as executable invariants and golden/adversarial cases instead of prose.
 
 ---
 
@@ -125,18 +126,31 @@ artifact cannot be read as "verified correct" either
 content *is* reachable by the text tier — it is not unreadable, it is
 unplannable.
 
-And the number that matters more, from 10 blind tasks a separate agent wrote
-and ran against the **deployed** URL ([raw table](docs/analysis.md)):
+And the numbers that matter more, from two held-out probes — 10 blind tasks
+each, written by a separate agent and run against the **deployed** URL
+([raw tables](docs/analysis.md), §8a and §8a-2):
 
 ```
-2 correct answers of 8 answer-seeking tasks · 1 of 2 refusals · $0.0681
-no run reported success with a wrong answer — 10/10 in that probe
+M5  probe: 2 correct of 8 answer-seeking tasks · 1 of 2 refusals · $0.0681
+M10 probe: 1 correct of 7 answer-seeking tasks · 2 of 3 refusals · $0.0115
 ```
 
-**That last line is bounded by a counterexample, and the boundary is the honest
-part.** On 2026-08-18 a single deployed run (`734d3d1f`) asked for the cheapest
-book in a category and got back the *first* one — £45.17 instead of £23.21 —
-reported as `success` with a `PASS` verdict:
+The correct-answer rate went *down*, against a stated goal of ≥2×, and is
+published that way. The second probe also did what the first could not: it
+broke the property this repo calls inviolable. "Which author has the most
+quotes?" came back `success` / `PASS` with the page `<title>` as the answer —
+three times, two different garbage strings. Every verdict check was green,
+because every check asks "is this string on the page" and none asks "does it
+answer the question". The fix is a verifier guard that fails closed on
+superlative questions without ground truth (`aggregate_needs_comparison`),
+pinned by `verifier-aggregate-superlative-fails-loud`; its cost — it now
+refuses some questions a single extraction would have answered correctly — is
+declared as D22 rather than hidden
+([ADR-015](specs/decisions/ADR-015-a-freeze.md)).
+
+The first probe's counterexample (run `734d3d1f`, 2026-08-18) was the same
+defect one hop earlier: asked for the cheapest book in a category, it returned
+the *first* one — £45.17 instead of £23.21 — as `success` / `PASS`:
 
 ```
 plan   : navigate → extract {"role": "article", "index": 0}, anchor "Travel"
@@ -145,17 +159,18 @@ answer : "It's Only the Himalayas … £45.17 …"     truth: £23.21
 
 Nothing was broken. There is no compare/rank/filter step in the plan
 vocabulary, so "cheapest" was planned as "read the first product tile"; the
-identity anchor was the *category*, which every product on a listing satisfies;
-and every runtime predicate was legitimately green, because the value really
-was on the page it was read from. Only ground truth separates those two prices,
-and a live run has none — the eval case for this exact task
-(`live-books-cheapest-travel`) grades it FAIL at layer 2 and predicted this
-outcome in writing before it was ever run.
+identity anchor was the *category*, which every product on a listing
+satisfies; and every runtime predicate was legitimately green. The eval case
+for this exact task (`live-books-cheapest-travel`) grades it FAIL at layer 2
+and predicted the outcome in writing before it was ever run. Giving the
+planner the missing primitive — and refusing a superlative plan that lacks it
+before the browser moves — is queued as M31 (`tasks/TODO.md`,
+[prompts/015](prompts/015-agent-control-after-the-probe-regression.md)).
 
-So the property that holds is narrower than the probe line suggests: **no run
-has reported success with an answer the *verifier could tell* was wrong.** With
-external ground truth, that gap is caught. Without it, on an aggregate page, it
-is not. Measuring the size of that gap is the next milestone's whole job.
+So the property that holds is the narrower one, reaffirmed the hard way:
+**no run reports success with an answer the verifier can tell is wrong — and
+when a probe found a shape the verifier could not tell, that shape became a
+guard before the milestone closed.**
 
 **Read those with their denominators**, which is why they are printed as `x/y`:
 
@@ -216,31 +231,36 @@ ever parses to zero declared limitations. The pre-commit eval gate runs it.
 
 The biggest ones, stated plainly:
 
-- **Capability is about one hop deep.** The held-out probe answered 2 of 8.
-  Second hops, aggregates ("which is cheapest"), and values living only in an
-  HTML attribute all fail — loudly, but they fail.
-- **Planning quality is unmeasured by the suite.** Every case stubs the planner,
-  so the probe is the only measurement of it, and it is the weakest link.
-- **Live planning is still unmeasured on every live domain.** M6 took live
-  coverage to three domains and three task classes (TC1/TC2/TC3), but every
-  green live case runs a *hand-written* plan, and the one live-planner case
-  (`live-books-cheapest-travel`) is unrun. The live TC2 cell is a correctly
-  diagnosed unreachable control, not a working search. Fixtures remain
-  self-authored and therefore friendly.
-- **No check asks whether an answer is *responsive*.** One probe run returned a
-  whole-page dump and was caught on a whitespace technicality, not on relevance.
+- **Capability is about one hop deep.** The two held-out probes answered 2 of 8,
+  then 1 of 7. Second hops, aggregates ("which is cheapest"), and values living
+  only in an HTML attribute all fail — loudly, but they fail.
+- **Planning quality is barely measured.** Every suite case stubs the planner;
+  the only measurements of it are the two probes and the M9 ablation — five
+  tasks per model on the deployment ([ADR-010](specs/decisions/ADR-010-m9-model-ablation.md)),
+  which is what moved the default to `openai/gpt-5.6-luna`.
+- **Live planning is unmeasured on every live domain.** Four live domains,
+  three task classes (TC1/TC2/TC3), and every green live case runs a
+  *hand-written* plan. The live TC2 cell is a correctly diagnosed unreachable
+  control, not a working search. Fixtures remain self-authored and therefore
+  friendly.
+- **Responsiveness is checked by shape, not by meaning.** `not_a_dump` catches
+  a page dump returned as the answer (M7); `aggregate_needs_comparison` refuses
+  a superlative question the vocabulary cannot answer (M10). A short, focused,
+  *wrong* answer still passes layer 1 — 10 surviving false positives in the
+  labeled sample ([support matrix](docs/support-matrix.md)).
 - **Identity anchors are satisfiable on aggregate pages** — on a listing, every
   candidate entity appears in the page text, so the anchor certifies a wrong
   answer too. Caught only by ground truth, which a live run does not have.
-- **No hand-labeled verifier sample**, so trap detection is reported as a floor
-  (6/6 traps caught) and never as verifier accuracy.
+- **Verifier accuracy is a floor, not a rate**: 25 hand-labeled runs, precision
+  0.476 / recall 0.909 on a deliberately adversarial sample
+  ([ADR-008](specs/decisions/ADR-008-m7-verifier-accuracy.md)).
 - Seven further mechanism-level gaps carried deliberately, each written down in
   [ADR-005](specs/decisions/ADR-005-cold-review-corrections.md).
 
 ## Where AI helped, and where it was wrong
 
-The full record is [`prompts/`](prompts/) — curated correction chains, each
-ending in *assumed → eval said → corrected*, plus the raw session dumps.
+The full record is [`prompts/`](prompts/) — 15 curated records in reading
+order, each ending in *assumed → eval said → corrected*.
 
 The honest headline is a measurement of this method's weak spot: **26 defects
 across seven milestones were found by cold review, by a reviewer's note, or by
@@ -279,119 +299,16 @@ a first attempt at the number-comparison fix that broke `$39.00 == 39` and was
 caught by the suite; and a case provenance narrowed after the red proof showed
 something weaker than what had been claimed.
 
----
-
-## The template underneath
-
-**An eval-first project scaffold for the agent era.**
-
-Most of the code in a groundwork project will be written, reviewed, and
-maintained by AI agents. What survives agent handoffs is not tribal knowledge
-or session memory — it is architecture, executable checks, and enforcement.
-groundwork is the ground those agents stand on: for problems with no public
-ground truth (extraction, agents, pipelines, anything where "correct" is a
-judgment call), you lay your own ground — the eval set.
-
-## The idea
-
-Prose specs like "the output must be correct" are unfalsifiable, and an agent
-told "please be careful" will drift. groundwork replaces both:
-
-- **The eval set IS the spec.** Correctness lives in executable invariants and
-  golden/adversarial cases, not in requirement documents. If a property isn't
-  backed by a case that can go red, it doesn't exist.
-- **Advice doesn't bind agents; enforcement does.** CLAUDE.md is advice. Hooks
-  are law. Anything that must never happen is enforced by a hook that blocks,
-  not a sentence that asks.
-
-## Architecture — four layers, no overlap
-
-Each layer answers one question. Nothing appears in two layers.
-
-| Layer | Lives in | Answers | Binding? |
-|---|---|---|---|
-| **Facts** | `CLAUDE.md` | What is invariantly true here? (structure, commands, hard rules) | advisory |
-| **Knowledge** | `.claude/skills/` | How do we do X well? (loaded on demand, zero resident context) | advisory |
-| **Execution** | `.claude/agents/` | Who checks the work? (fresh-context subagents, no author bias) | advisory |
-| **Enforcement** | `.claude/hooks/` + `.githooks/` | What can never happen? | **blocking** |
-
-The common failure mode this prevents: writing enforcement-layer intent
-("never commit a regression") into the facts layer, where it is a polite
-suggestion an agent can talk itself past.
-
-### The enforcement loop in practice
-
-- Every `src/` edit → PostToolUse hook runs the **invariant suite** (absolute,
-  100% required). A failure is fed straight back to the editing agent as an
-  error it must fix — no human in the loop.
-- Every commit → pre-commit hook runs the **fast suite** against
-  `.eval-baseline.json`. A score below baseline blocks the commit. The
-  baseline moves only by explicit decision, recorded in an ADR.
-
-### The execution layer in practice
-
-Three standing subagents, all evidence-only (they may not fix anything):
-
-- `cold-reviewer` — cold-reads new code without the author's reasoning; its
-  deliverable is the three most likely *silent* failure inputs.
-- `eval-adversary` — attacks the gaps in the eval set with real-world inputs;
-  its findings become adversarial cases verbatim.
-- `spec-drift` — audits gaps between what the repo says (invariants, contracts,
-  ADRs, docs) and what the code does; flags decorative invariants first.
-
 ## Repo map
 
 ```
-CLAUDE.md            facts layer — working rules, < 150 lines (AGENTS.md symlinks here)
-.claude/settings.json  hooks registration + plugin wiring (ponytail auto-installs)
-.claude/skills/      eval-protocol · failure-triage · cost-discipline · graphify (vendored)
-.claude/agents/      cold-reviewer · eval-adversary · spec-drift
-.claude/hooks/       post-edit invariant runner
-.githooks/           pre-commit eval gate
-specs/               ONLY three kinds: invariants · output contracts · ADRs (why, not what)
-evals/run.py         stdlib-only runner — defines the case + adapter contract
-evals/golden/        hand-verified cases (provenance recorded per case)
-evals/adversarial/   inputs that broke, or are designed to break, the pipeline
-evals/report/        every run's scored output, committed — the progress narrative
-prompts/             AI-collaboration record: curated correction chains
-graphify-out/        knowledge graph of this repo — open graph.html, or read GRAPH_REPORT.md
-src/<task>/          implementations — each exposes eval_adapter.py to the runner
+src/browser/        agent loop · planner · resolver · verifier · gateway + fixtures
+evals/              run.py (stdlib runner) · golden/ · adversarial/ · labels/ · report/
+specs/              000-invariants · 001-browser-contract · decisions/ADR-* + INDEX
+docs/               analysis · support-matrix · methodology · architecture · plans (docs/README.md is the index)
+prompts/            AI-collaboration record, 001–015
+tasks/              TODO.md (milestone queue + debt) · DONE.md · pr-loop-ledger.jsonl · reviews/
+.github/workflows/  eval-gate (offline, $0) · deploy-smoke (the deployed URL, daily + on push)
 ```
 
-## Using this template
-
-```bash
-git clone <this-repo> my-project && cd my-project
-git config core.hooksPath .githooks   # enable the pre-commit eval gate
-python3 -m evals.run --suite fast     # sanity: runner works (no cases yet)
-```
-
-Opening the repo in Claude Code auto-prompts to install the **ponytail** plugin
-(lazy-first coding discipline); **graphify** (codebase knowledge graphs) is
-vendored as a project skill. The harness itself is Python-stdlib-only; tasks
-declare their own dependencies under `src/<task>/`.
-
-To add a task: `src/<task>/eval_adapter.py` exposing
-`run_case(case) -> {"passed": bool, ...}`, a domain skill, a contract spec,
-and cases tagged `"task": "<task>"`. Details in `CLAUDE.md`.
-
-Projects that outgrow the eval harness can delete `evals/` — every hook
-degrades gracefully to a no-op.
-
-## If you are an agent entering this repo
-
-1. Read `CLAUDE.md` in full — it is short on purpose.
-2. Run `python3 -m evals.run --suite fast` to see the current ground state.
-3. Before changing behavior: write the failing case first, watch it fail.
-4. Before claiming done: fast suite ≥ baseline, invariant suite at 100%.
-5. When you hit a judgment call about what "correct" means — that is an ADR,
-   not a code comment. Write it down in `specs/decisions/`.
-
-## Per-feature loop
-
-```
-failing eval case → implement (invariant hook watching) → cold review
-→ findings become adversarial cases → eval gate green → commit
-```
-
-Design rationale for the whole approach: [ADR-000](specs/decisions/ADR-000-eval-first-scaffold.md).
+Working rules, commands and the hard rules agents are held to: [`CLAUDE.md`](CLAUDE.md).

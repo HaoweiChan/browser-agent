@@ -808,7 +808,7 @@ def _run_declared_keys_case(case: dict) -> dict:
 
 
 def _run_adr_header_index_case(case: dict) -> dict:
-    """The decision-first ADR retrofit (groundwork GW-006) must not rot.
+    """The decision-first ADR convention (specs/decisions/INDEX.md) must not rot.
 
     Pure code, no network: every specs/decisions/ADR-*.md must carry a
     `**Ruling**:` block of at most 3 lines before its first `---`, and
@@ -1034,11 +1034,11 @@ REPORT_CITATION_SKIP = ("29991231-235959-fast.json",)
 def _run_report_citations_case(case: dict) -> dict:
     """Every full-report citation outside evals/report/ must resolve to a real file.
 
-    Pure code, no network. groundwork GW-008 prunes routine gate dumps out of
+    Pure code, no network. ADR-012 prunes routine gate dumps out of
     evals/report/, keeping on disk only the ones something outside that
     directory cites as evidence — ADRs, docs, tasks, eval cases. Nothing
     enforced that a citation stays live once the report it names is later
-    pruned or renamed; this is that guard, scanning the exact scope GW-008
+    pruned or renamed; this is that guard, scanning the exact scope ADR-012
     used to decide what was prunable in the first place. Same boundary as
     support-matrix-cites-real-cases: it checks the citation RESOLVES, not that
     the number it's attached to is still an honest measurement.

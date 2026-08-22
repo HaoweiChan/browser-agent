@@ -36,7 +36,7 @@ jobs:
           done
           echo "deployment never answered"; exit 1
       - name: frontend serves the app shell
-        run: curl -fsS -m 15 "$BASE/" | grep -q "browser-agent"
+        run: curl -fsS -m 15 "$BASE/" | grep -q 'id="task"'
       - name: support matrix serves, with limitations declared
         run: |
           curl -fsS -m 15 "$BASE/support-matrix" \

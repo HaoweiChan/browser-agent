@@ -6,7 +6,7 @@ two skills, agent charter amendments.
 
 ## Context
 
-Fresh groundwork scaffold; both assignment files read (EN/ZH — verified
+Fresh eval-first scaffold; both assignment files read (EN/ZH — verified
 identical in substance). Goal of the session: turn Task 1 into a testable
 engineering project with explicit scope, eval methodology, failure taxonomy,
 architecture decision, and a freeze line — before writing any product code.
