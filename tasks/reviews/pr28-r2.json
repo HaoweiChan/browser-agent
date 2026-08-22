@@ -1,0 +1,30 @@
+{
+  "pr": 28,
+  "round": 2,
+  "task": "M29",
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff ecd21be..9d4b3d9 plus standing findings from pr28-r1.json",
+  "standing_findings_verified_closed": ["R1", "R2 (partially — see R4/R5)"],
+  "findings": [
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The widened+normalized criterion5 guard still misses the forbidden phrase when it is split by markdown emphasis or a link — the identical literal words with ** or []() inserted — which the declared 'literal substring, not semantic' ceiling does not cover.",
+      "evidence": "src/browser/eval_adapter.py _norm only collapses whitespace; it does not strip markdown inline syntax. Live repro: docs/_scratch_review_check.md containing 'the deploy note says criterion 5 **green** offline now' returns passed: True. The same shape exists in committed prose at prompts/014-a-freeze.md:88 ('criterion 5 is green **offline** with live').",
+      "repro": "write that one line to a scratch .md under docs/ and call _run_doc_counts_case on the case — passed: True",
+      "acceptance": "Either strip markdown inline emphasis/link syntax before matching (a few lines, still literal), or correct the declared ceiling to name this concrete demonstrated gap instead of only 'paraphrase'.",
+      "orchestrator_note": "Confirmed by direct reproduction. Blocks because the case provenance publishes a ceiling that is narrower than the truth — a reviewer is told a paraphrase evades it, when in fact the same literal phrase in bold evades it."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The prompts/ exclusion puts the exact file used as the flagship proof for R2 permanently out of scan scope, so for that directory 'widened to every tracked markdown file' is no different in effect from the old allowlist — the file that demonstrated the hole is still unguarded, relocated rather than closed.",
+      "evidence": "SKIP_TOP = {'prompts','tasks'} excludes the directories wholesale. Verified: the rglob file list does not include prompts/014 (33 files scanned, prompts/014 absent), and prompts/014-a-freeze.md:9-10 still reads the unstruck 'criterion 5 green offline, live re-confirmation pending'.",
+      "repro": "grep -n 'criterion 5' prompts/014-a-freeze.md; recompute the md_files list with SKIP_TOP applied — prompts/014 is absent",
+      "acceptance": "Apply the strikethrough convention (already implemented in this same function) to the falsified span in prompts/014-a-freeze.md, or narrow the exclusion so prompts/ is scanned with struck spans exempt — rather than a blanket skip that also shields any future unstruck claim.",
+      "orchestrator_note": "Confirmed. Blocks on the task's own acceptance: M29 requires that no surviving claim implies A-freeze achieved, and prompts/014 carries one, live and unstruck."
+    }
+  ]
+}

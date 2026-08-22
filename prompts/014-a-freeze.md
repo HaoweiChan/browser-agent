@@ -6,8 +6,11 @@ second held-out probe (criterion 5, the mandatory gate) came back RED —
 three times — plus a destructive-task scope-screen bypass. Both fixed and
 eval-pinned in this same PR, each watched red first. A-exit criteria 1, 3, 4,
 6 green; criterion 2 partial exactly as
-`docs/plans/completed/task1-a-level-plan.md` already recorded it; criterion 5
-green offline, live re-confirmation pending the post-merge redeploy.
+`docs/plans/completed/task1-a-level-plan.md` already recorded it;
+~~criterion 5 green offline, live re-confirmation pending the post-merge
+redeploy~~ — **amended 2026-08-22 (M29): criterion 5 is RED on the
+deployed build** (`specs/decisions/ADR-015-a-freeze.md`'s M29 amendment,
+`docs/analysis.md` §8a-3).
 `docs/analysis.md` §6 and §8a-2, `specs/decisions/ADR-015-a-freeze.md`.
 
 ## Context
@@ -85,10 +88,13 @@ Then the probe came back, and the milestone became a different one.
   in this PR explains why, because nothing this PR touches overlaps the
   tasks that regressed.
   Corrected: `ADR-015`'s Ruling states plainly that the probe ran RED, what
-  was found, and that criterion 5 is green **offline** with live
-  re-confirmation pending the post-merge redeploy — not claimed as already
-  done. The regression is reported in the same section as the fix, not
-  omitted or reframed as a separate, quieter finding.
+  was found, and that ~~criterion 5 is green **offline** with live
+  re-confirmation pending the post-merge redeploy~~ — not claimed as already
+  done. **Amended 2026-08-22 (M29)**: the post-merge confirmation ran and
+  criterion 5 is red on the deployed build (`specs/decisions/ADR-015-a-freeze.md`'s
+  M29 amendment, `docs/analysis.md` §8a-3). The regression is reported in
+  the same section as the fix, not omitted or reframed as a separate,
+  quieter finding.
 
 - Assumed: `docs/analysis.md` was current, because `docs-numbers-are-derived`
   is tagged `invariant` and the gate was green.

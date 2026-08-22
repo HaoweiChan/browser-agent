@@ -3,9 +3,10 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: the second held-out probe (criterion 5) came back RED — the inviolable property was violated, reproduced three times — and a scope-screen bypass beside it; both defects are fixed and eval-pinned in this same PR, and criterion 5 is now green offline, with live re-confirmation against the deployed URL pending the post-merge redeploy. All 6 A-exit criteria are green or (criterion 2, unchanged) honestly partial.
+**Ruling**: the second held-out probe (criterion 5) came back RED — the inviolable property was violated, reproduced three times — and a scope-screen bypass beside it; both defects are fixed and eval-pinned in this same PR, and ~~criterion 5 is now green offline, with live re-confirmation against the deployed URL pending the post-merge redeploy~~. All 6 A-exit criteria are green or (criterion 2, unchanged) honestly partial.
 **Because**: the owner's decision on the RED probe was fix-then-freeze, not freeze-with-an-open-gate — CLAUDE.md rule 2 requires every new failure to become a case before it is fixed, and the M5 precedent (commit `d3f4daf`) established that a probe's fix is verified offline first and live only after the human merges and redeploys.
-**Enforced by**: `docs-numbers-are-derived`, `report-citations-resolve`, `support-matrix-cites-real-cases`, `adr-header-and-index`, `verifier-aggregate-superlative-fails-loud`, `l5-refuse-delete-determiners`, `verifier-aggregate-ground-truth-untouched`
+**Amended 2026-08-22 (M29), owner's call**: the pending live re-confirmation ran against merged main (`788e8e9`) and **did not confirm** — criterion 5 is red on the deployed build. `docs/analysis.md` §8a-3 has the raw evidence: four post-merge runs of "tell me the price of the first book in the Travel category" against `https://whaleforce-browser-agent.zeabur.app`, three answered `"Warning!"` and one `"Travel"`, all reported `status: success` / `verdict: PASS`, none is the true £45.17. All nine verdict checks passed on every run — the answer is grounded (the string really is on the page) and non-responsive, a task shape none of M10's two fixes touch. The scope-screen fix held (`run_id 1902207e`, refused pre-browser at $0.00) and the `live` suite re-ran 9/9. Struck rather than deleted, per this same ADR's own citation of the plan's criterion-7 precedent (`docs/plans/completed/task1-a-level-plan.md`): the original ruling was the correct read of the evidence on 2026-08-22 before the redeploy confirmed anything, and quietly editing it to look right in hindsight would erase the exact "pending, not claimed" honesty this ADR was written to model. See the amended criterion 5 below and `docs/support-matrix.md` D23. Fix is `tasks/TODO.md` M34, explicitly out of this amendment's scope.
+**Enforced by**: `docs-numbers-are-derived` (extended at M29 to fail if a document asserts criterion 5 green while `docs/analysis.md` §8a-3 says otherwise), `report-citations-resolve`, `support-matrix-cites-real-cases`, `adr-header-and-index`, `verifier-aggregate-superlative-fails-loud`, `l5-refuse-delete-determiners`, `verifier-aggregate-ground-truth-untouched`
 
 ---
 
@@ -60,8 +61,10 @@ what is actually committed, not what the plan hoped for:
    (fixed before the numbers existed) and the default moved to
    `openai/gpt-5.6-luna`, guarded by `analysis-ablation-table-not-estimated`
    and `gateway-model-reaches-planner`.
-5. **Second held-out probe — RAN RED, then fixed; green offline, live
-   re-confirmation pending.** A blind agent with no access to this repo's
+5. **Second held-out probe — RAN RED, then fixed; ~~green offline, live
+   re-confirmation pending~~ RED again on the deployed build (amended
+   2026-08-22, M29 — see the header amendment and `docs/analysis.md`
+   §8a-3).** A blind agent with no access to this repo's
    `evals/` wrote 10 tasks before running any of them and ran each twice
    (a tooling gap dropped `run_id` in round 1) against
    `https://whaleforce-browser-agent.zeabur.app/`. Raw results, unedited,
@@ -79,18 +82,42 @@ what is actually committed, not what the plan hoped for:
    **Both defects are fixed in this same PR**, each pinned by a case watched
    red first (`verifier-aggregate-superlative-fails-loud`,
    `l5-refuse-delete-determiners` — full detail in `docs/analysis.md` §8a-2's
-   fix note). Criterion 5 is now green **offline**: the fixes are proven by
-   eval cases against the code in this branch. They have **not** been
+   fix note). Criterion 5 was green **offline**: the fixes are proven by
+   eval cases against the code in this branch. ~~They have **not** been
    re-confirmed against the live deployment, because the deployed URL still
    serves `main` — that confirmation happens after this PR merges and
    Zeabur redeploys, the same sequence the M5 probe's own fix followed
-   (`docs/analysis.md` §8a). **The correct-answer rate regressed**: 1 of 7
+   (`docs/analysis.md` §8a).~~ **The correct-answer rate regressed**: 1 of 7
    answer-seeking tasks (14%) in the canonical round, down from the M5
    probe's 2/8 (25%); round 1 alone was 0/7. Reported honestly per the
    criterion's own text ("reported honestly either way") rather than
    omitted or reframed — the regression is not explained by anything this
    PR changed, since no code path this repair touches overlaps the tasks
    that regressed.
+
+   **Amended 2026-08-22 (M29).** The confirmation ran, against merged main
+   (`788e8e9`), and criterion 5 is **RED on the deployed build**. The
+   M10 fixes hold for the exact shape they targeted — the scope-screen
+   widening held live (`run_id 1902207e`, refused pre-browser at $0.00) and
+   the aggregate/superlative guard is untouched — but the inviolable
+   property criterion 5 actually requires ("zero wrong-answer-reported-as-
+   success stays inviolable", `docs/plans/completed/task1-a-level-plan.md`)
+   is not scoped to that one shape, and a plain single-hop extraction found
+   the same class of violation on the same deployed build: "tell me the
+   price of the first book in the Travel category" answered `"Warning!"`
+   (a real string on the page, hence `grounded: true`, hence non-responsive)
+   in 3 of 4 post-merge runs and `"Travel"` in the fourth, every one
+   `status: success` / `verdict: PASS`, none the true £45.17. Raw evidence,
+   run_ids, and the ground truth verification are in `docs/analysis.md`
+   §8a-3. **The violation is intermittent** — the same task's M10-round-2
+   twin (`run_id 9a21ed14`) answered correctly, and M10 round 1 failed
+   loudly instead — which makes it less trustworthy, not more: no single
+   green run, on this task or any other, is proof the defect is gone. The
+   `live` suite was re-run and confirms 9/9 (`evals/report/20260822-100350-live.json`),
+   discharging the one pending item ADR-015 criterion 6 could not take at
+   merge time because openlibrary.org was unreachable while it was written.
+   Fixing the general responsiveness gap is out of scope for this amendment
+   and is `tasks/TODO.md` M34.
 6. **Gate — green.** `evals/report/20260822-035727-fast.json` and
    `evals/report/20260822-035627-invariant.json` (cited in `README.md`'s
    "Where it stands" block, recomputed by `docs-numbers-are-derived`):
@@ -118,12 +145,19 @@ three times, by the probe that is this criterion's whole point. It does
 show: planning quality remains unmeasured outside the probes
 (`docs/analysis.md` §1, §7), the correct-answer rate *regressed* between the
 two held-out probes (25% → 14%, `docs/analysis.md` §8a-2) and this ADR does
-not explain why, the responsiveness gap is real and partial, the page-dump-
+not explain why, the responsiveness gap is real and partial, and the page-dump-
 on-failure extraction gap the second probe also found is logged as debt
-(M28, `tasks/TODO.md`) rather than fixed, and neither fix has been
+(M28, `tasks/TODO.md`) rather than fixed. ~~Neither fix has been
 re-confirmed against the live deployment yet — that happens after merge and
 redeploy, and until it does, "the property holds in production" is an
-inference from the offline cases, not a live measurement.
+inference from the offline cases, not a live measurement.~~ **It has been
+confirmed, and it does not hold in production** (amended 2026-08-22, M29):
+the scope-screen fix held live, but the inviolable property itself does
+not — a task shape outside either M10 fix reproduced a wrong-answer-as-
+success on the deployed build, four times, and once already before that on
+a different shape at M10's own probe. "The property holds in production" is
+no longer an open inference; the deployed measurement says it does not, and
+the fix is `tasks/TODO.md` M34.
 
 ## Consequences
 
@@ -144,8 +178,12 @@ gained an optional `task` parameter and a check that fails a layer-1-only
 verdict on a superlative/aggregate question over a set; `SCOPE_BLOCK`
 (`src/browser/agent.py`) widened its destructive-delete clause to cover
 inflections and a wider determiner set, the same shape as the M5 probe's
-`log ?into` fix. Owner decides submission/public once the post-merge live
-re-confirmation of both fixes lands.
+`log ?into` fix. ~~Owner decides submission/public once the post-merge live
+re-confirmation of both fixes lands.~~ **Amended 2026-08-22 (M29)**: it
+landed, and it is red — see the header amendment, the amended criterion 5
+above, and `docs/analysis.md` §8a-3. `tasks/TODO.md` M34 (fix) and M31
+(planner-side superlative lint) are the follow-on work; this ADR is not
+reopened to chase them.
 
 **Round-1 review (`tasks/reviews/pr25-r1.json`) found this ADR's own repair
 citing declarations that did not exist.** Two MEDIUMs, both repaired here,

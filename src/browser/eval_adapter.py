@@ -2521,6 +2521,68 @@ def _run_doc_counts_case(case: dict) -> dict:
             missing = sorted(d for d in domains if d not in section)
             if missing:
                 wrong.append({"coverage_missing_domains": missing})
+
+    c5 = inp.get("criterion5")
+    if c5:
+        # Every tracked-looking markdown file, not a hardcoded allowlist
+        # (PR #28 R2): a new document, or one the original list simply
+        # forgot, is covered without anyone remembering to add it. Excludes
+        # dot-directories (.claude/ agents+skills, .git, .github) — the rest
+        # is every doc a reviewer could mistake for the record. rglob does
+        # not follow the .venv symlink, so that never enters the walk.
+        def _live(s: str) -> str:
+            # Struck spans are ADR-015's own preserved-history convention
+            # (the criterion-7 precedent it cites) — removed entirely, so
+            # only a claim asserted OUTSIDE a strikethrough trips this.
+            s = re.sub(r"~~.*?~~", "", s, flags=re.DOTALL)
+            # Inline markdown that splits a literal phrase without changing
+            # its words (PR #28 R4): a link keeps its visible text, bold/
+            # italic markers are unwrapped. Deliberately NOT stripping
+            # underscore emphasis (_word_, __word__) — this repo's own prose
+            # is full of snake_case identifiers inside backtick spans
+            # (`_run_doc_counts_case`, `RUN_ROOT`), and an underscore-strip
+            # would mangle those; a real underscore-emphasis evasion is the
+            # named residual ceiling, not a silent gap.
+            s = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", s)
+            s = re.sub(r"\*\*(.+?)\*\*", r"\1", s)
+            s = re.sub(r"(?<!\*)\*([^*\n]+?)\*(?!\*)", r"\1", s)
+            return re.sub(r"\s+", " ", s)
+
+        # tasks/ describes and quotes bugs and acceptance criteria in plain
+        # prose (this very milestone's own TODO.md block reads "...carry no
+        # surviving claim that A-freeze is achieved" — the forbidden phrase,
+        # unquoted, as the thing that must NOT be true) rather than asserting
+        # current state, so a literal-substring guard reads it backwards.
+        # Tried narrowing to a backtick/quote strip instead of a directory
+        # exclusion (PR #28 R5's suggested shape): does not help here, since
+        # this false positive is unquoted prose, not a code span — the
+        # phrase itself IS the acceptance criterion's own wording. tasks/
+        # stays excluded; residual risk: a real live claim written into
+        # tasks/*.md would not be caught by this guard. Bounded, not closed:
+        # tasks/ is a milestone tracker (CLAUDE.md), not one of the M29
+        # spec's named documents of record (README/analysis/support-matrix/
+        # specs/decisions), and both files are short enough for a reviewer
+        # to read directly each milestone. prompts/ is NOT excluded (PR #28
+        # R5): it is append-only in the sense entries are never deleted or
+        # reworded, but a falsified claim still gets struck with a dated
+        # pointer, same as ADR-015 — prompts/014-a-freeze.md's two spans are
+        # struck below rather than the whole directory being shielded.
+        SKIP_TOP = {"tasks"}
+        md_files = sorted(
+            p for p in RUN_ROOT.rglob("*.md")
+            if not any(part.startswith(".") for part in p.relative_to(RUN_ROOT).parts)
+            and p.relative_to(RUN_ROOT).parts[0] not in SKIP_TOP
+        )
+        required_in = c5.get("required_in", {})
+        for path in md_files:
+            docrel = path.relative_to(RUN_ROOT).as_posix()
+            live_text = _live(path.read_text(encoding="utf-8"))
+            for bad in c5.get("forbidden", []):
+                if _live(bad) in live_text:
+                    wrong.append({"asserts_criterion5_green": bad, "doc": docrel})
+            for good in required_in.get(docrel, []):
+                if _live(good) not in live_text:
+                    wrong.append({"missing_red_evidence": good, "doc": docrel})
     return {"passed": not wrong, "wrong": {"docs": wrong},
             "got": {"counts": counts, "domains": domains}}
 

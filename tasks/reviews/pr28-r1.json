@@ -1,0 +1,38 @@
+{
+  "pr": 28,
+  "round": 1,
+  "task": "M29",
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Two documents of record still cite the fix task as 'M30' after the merge renumbered it to M34, so the citation points to an unrelated, already-merged task.",
+      "evidence": "specs/decisions/INDEX.md:24 ends '...fix tracked as M30...'; docs/support-matrix.md:61 (D23 row) says 'this is the M30 defect (tasks/TODO.md)' and '...is M30's whole job'. tasks/TODO.md has no M30 block; M30 is tasks/DONE.md:20, 'Interview demo execution UI (2026-08-22) — PR #24'. The merge commit ecd21be's message claims refs were repointed, but git diff ad4e47a ecd21be -- specs/decisions/INDEX.md docs/support-matrix.md is empty.",
+      "repro": "grep -rn '\\bM30\\b' specs/decisions/INDEX.md docs/support-matrix.md tasks/TODO.md tasks/DONE.md",
+      "acceptance": "Both citations read M34 (or a citation format that survives future renumbering), and following either lands on the actual responsiveness-fix task.",
+      "orchestrator_note": "Confirmed. This is the orchestrator's own miss during the merge renumber, and the commit message overclaimed the sweep. Exactly the defect class this PR exists to fix — a citation pointing at the wrong thing -> blocks."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The docs-numbers-are-derived criterion5 extension is a one-time hardcoded allowlist (5 named files, 4 exact-string phrases) rather than a durable guard, so it would not catch a new document, or a paraphrase, asserting criterion 5/A-freeze is achieved.",
+      "evidence": "evals/adversarial/docs-numbers-are-derived.json input.criterion5.docs lists exactly 5 paths; forbidden lists exactly 4 literal strings. src/browser/eval_adapter.py:2525-2541 reads only those paths and substring-matches those phrases.",
+      "repro": "Add a markdown file outside the docs list containing 'A-freeze is achieved' and run --suite invariant — stays green.",
+      "acceptance": "Either document explicitly in the case's provenance that this is a one-time, milestone-scoped patch with a named ceiling, or widen the check to scan all tracked markdown / match semantically rather than literally.",
+      "orchestrator_note": "Confirmed, and weaker than reported. Two further holes found by the orchestrator: (1) the match is a raw substring over unnormalized text, so the SAME claim wrapped across a line is invisible — demonstrated live: prompts/014-a-freeze.md contains 'criterion 5\\ngreen offline', and `'criterion 5 green offline' in live_text` is False while `'criterion 5\\ngreen offline' in live_text` is True. Markdown wraps prose, so this is the common case, not an exotic evasion. (2) required_in scans raw `text`, not `live_text`, so a STRUCK 'RED on the deployed build' would satisfy the requirement it exists to enforce."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "prompts/014-a-freeze.md's outcome summary still reads as an unamended present-tense claim that criterion 5 was green-pending, with no pointer to the M29 correction.",
+      "evidence": "prompts/014-a-freeze.md:9-10 'criterion 5 green offline, live re-confirmation pending the post-merge redeploy.' No strikethrough, no Amended note, and no new prompts file recording the M29 finding — unlike the convention of a new prompt file for a reopened milestone (prompts/008 after prompts/007).",
+      "repro": "sed -n '1,14p' prompts/014-a-freeze.md",
+      "acceptance": "Either state the prompts/ append-only convention somewhere so this is not a surviving live claim by design, or add a cross-reference from 014 to the M29 correction.",
+      "orchestrator_note": "LOW -> debt by the scope rule. Note it is the same sentence that demonstrates R2's line-wrap hole, so naming the prompts/ convention while documenting R2's ceiling closes both cheaply."
+    }
+  ]
+}

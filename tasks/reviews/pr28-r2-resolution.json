@@ -1,0 +1,23 @@
+{
+  "pr": 28,
+  "round": 2,
+  "task": "M29",
+  "result": "REPAIRED",
+  "resolutions": [
+    {
+      "id": "R4",
+      "disposition": "fixed",
+      "case_id": "docs-numbers-are-derived (criterion5 block extended, same case id)",
+      "note": "src/browser/eval_adapter.py's criterion5 check now unwraps [text](url) -> text and **bold**/*italic* -> their text before whitespace-normalizing and matching, so a forbidden phrase split by ordinary inline markdown is caught. Deliberately NOT stripping underscore emphasis (_word_, __word__): this repo's prose is full of backtick-spanned snake_case identifiers (_run_doc_counts_case, RUN_ROOT) an underscore-strip would mangle. Declared as the named residual ceiling in the case's provenance rather than left implied by a vague 'paraphrase' note, since the reviewer's own point was that the stated ceiling undersold the real one.",
+      "red_watched": "OLD (whitespace-only normalize) code against docs/_scratch_review_check.md containing 'the deploy note says criterion 5 **green** offline now' -> passed: True, wrong: {'docs': []} (wrongly green). NEW code, same file -> passed: False, wrong: {'docs': [{'asserts_criterion5_green': 'criterion 5 green offline', 'doc': 'docs/_scratch_review_check.md'}]}. Scratch file deleted afterward; real tree green."
+    },
+    {
+      "id": "R5",
+      "disposition": "fixed",
+      "case_id": "docs-numbers-are-derived (criterion5 block extended, same case id)",
+      "note": "Removed 'prompts' from SKIP_TOP so prompts/ is scanned like any other tracked markdown (struck spans still exempt via the existing ~~...~~ strip). Struck both falsified spans in prompts/014-a-freeze.md in place (the header outcome line and the correction-chain entry) with a dated 2026-08-22 (M29) pointer to ADR-015's amendment and docs/analysis.md §8a-3 — the same struck-not-deleted convention ADR-015 itself uses, now stated as the general prompts/ rule in prompts/README.md's rewritten 'Append-only' section (nothing deleted; a falsified claim is struck with a dated pointer, not silently reworded or shielded by directory exclusion). T-R33 (tasks/TODO.md) removed rather than left open: its acceptance criterion (a cross-reference from 014 to the M29 amendment) is exactly what the strikethrough edit added. tasks/ stays excluded — tried the reviewer's suggested backtick/quote-strip narrowing first, but it does not close the real false positive (tasks/TODO.md's own M29 spec block quotes 'A-freeze is achieved' as the thing that must NOT be true, in unquoted prose, not inside backticks); the exclusion and its residual risk (a real live claim written into tasks/*.md would not be caught) are now named explicitly in the code comment and case provenance rather than left as a bare skip list.",
+      "red_watched": "With prompts/ back in scope and the new markdown/whitespace normalization, but BEFORE striking prompts/014-a-freeze.md -> passed: False, wrong: {'docs': [{'asserts_criterion5_green': 'criterion 5 green offline', 'doc': 'prompts/014-a-freeze.md'}]}. After striking both spans -> passed: True, wrong: {'docs': []}."
+    }
+  ],
+  "gate_after": {"invariant": "38/38", "fast": "105/105"}
+}

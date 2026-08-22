@@ -1,0 +1,17 @@
+{
+  "pr": 28,
+  "round": 3,
+  "task": "M29",
+  "result": "APPROVED",
+  "scope": "repair diff 9d4b3d9..a1f6ba6 plus standing findings R4, R5",
+  "standing_findings_verified_closed": ["R4", "R5"],
+  "findings": [],
+  "reviewer_verification": {
+    "gate_run_by_reviewer": {"invariant": "38/38", "fast": "105/105"},
+    "r4": "bold-split, link-split and cross-linebreak splits all caught; underscore emphasis confirmed NOT caught and honestly declared as the ceiling in both the code comment and the case provenance",
+    "r5": "SKIP_TOP is now {'tasks'} only; prompts/014-a-freeze.md is in scope, both falsified spans struck in place with original wording intact and a dated amendment pointer, matching ADR-015's own convention",
+    "tasks_exclusion": "verified as a reasoned declared tradeoff, not a dodge — tasks/TODO.md:91 carries 'A-freeze is achieved' as unquoted, unbackticked prose inside the M29 acceptance criterion, so the quote-strip narrowing genuinely would not have closed it",
+    "t_r33_removal": "legitimate — its stated acceptance was a cross-reference from 014's outcome summary to ADR-015's M29 amendment, which is exactly what the strike added; confirmed by diff",
+    "no_existing_case_weakened": "git diff 9d4b3d9..a1f6ba6 -- evals/ src/ touches only the case's expect.note/provenance prose (not input) and the adapter function"
+  }
+}
