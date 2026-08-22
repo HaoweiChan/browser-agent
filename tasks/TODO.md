@@ -76,6 +76,40 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
+### M35 — Visitor-facing console: verified example prompts, plain-language capabilities and limits, no-URL guard            [status: in-progress]
+Spec: The page speaks to the reviewer, not to the person typing a task: a
+TC1..TC5 matrix of fixture names, four "headline" limits cut from D-row
+titles, and an optional start URL that invites the one task shape the planner
+cannot plan — blind, with no page observation, run `2ce3e5c8` died at extract
+after a single navigate to a Google search. Assignment T7/T8 want capabilities
+and limits listed clearly, and the rubric reads them from the frontend. Make
+the page usable by a visitor without changing what it claims: example prompts
+that were actually run against the deployment and answered correctly; per-site
+capability cards in plain words rendered from the same `/support-matrix`
+payload (`docs/support-matrix.md` stays the single source, replacing the TC
+table outright); five plain-language limits linking to the full declared list
+with its count; a result panel that explains the status in one sentence and
+shows the answer first; and a form that refuses to spend a run on a URL-less
+task, lifting a site name out of the task text when there is one.
+Acceptance: gate green (invariant 100%, fast >= baseline) with no change to
+`POST /tasks`, agent, planner, verifier, or `docs/support-matrix.md`
+semantics. A NEW rendered case in the fast suite (no network), watched red
+first: a task with no URL and no site name does not POST and shows the
+guidance; a task naming a site fills the URL field from it; each example chip
+fills task + URL. `ui-execution-progress` re-pinned to the new page (example
+chips, EXAMPLES/LIMITS/EXPLAIN, what-works cards, known-limits link carrying
+the declared count); `ui-tinboker-style` ids and tokens unchanged. Every
+example prompt shipped on the page has a deployment `run_id` that answered
+correctly, cited in the code and the PR evidence — an example that cannot be
+reproduced is removed, not kept. `docs/ui.png` regenerated from a real
+deployment run through the current page; `docs/README.md` row updated.
+Out of scope: planner quality on multi-hop / table lookup (M28, M34);
+API-side refusal of `url=null` (gateway cases pin it); rewriting
+`docs/product/assignment-requirements.md`.
+Reference: branch `claude/ui-discussion-improvements-0d36e5` (`ba244e7`,
+PR #31) holds a first cut made outside the loop; it is re-delivered through
+this task and PR #31 is closed in favour of this task's PR.
+
 ### M36 — responsiveness is judged by an LLM, because four structural mechanisms have failed            [status: pr]
 Origin: PR #30 post-merge confirmation (2026-08-22, deployed build `2e94bed`); owner's call on the mechanism
 Spec: M34's `not_page_furniture` compares a 20-char context window on the
