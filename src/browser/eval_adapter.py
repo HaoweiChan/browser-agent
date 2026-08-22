@@ -2486,6 +2486,56 @@ def _run_ui_style_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong}
 
 
+# Inert /support-matrix payload for the rendered UI cases: one fixture row that
+# must NOT render as a card, real-site rows that must, two declared limitations
+# for the count link. A module constant, like _TRACE above, so every rendered
+# case sees the same page whichever runs first.
+_UI_MATRIX = {
+    "rows": [
+        {"domain": "shop fixture", "cells": {"TC1": "supported", "TC2": "supported"}},
+        {"domain": "books.toscrape.com (live)", "cells": {"TC1": "—", "TC3": "unreliable"}},
+        {"domain": "openlibrary.org (live)", "cells": {"TC1": "unreliable", "TC2": "unsupported"}},
+        {"domain": "wikipedia.org", "cells": {"TC1": "—"}}],
+    "limitations": [
+        {"limitation": "**D1** — one", "evidence": "a", "status": "unsupported"},
+        {"limitation": "**D2** — two", "evidence": "b", "status": "unsupported"}]}
+_UI_ORIGIN = "http://console.test"
+_UI_PAGES: dict[tuple[int, str], object] = {}
+
+
+async def _ui_page(width: int, scheme: str):
+    """The PAGE rendered once per (viewport width, colour scheme) on the suite's
+    shared Chromium and kept open for every rendered UI case -- the fast suite's
+    wall clock is the gate, so the two UI cases share one render instead of
+    each paying a context (M35; M30 folded its assertions the same way).
+    Served by route interception on a fake origin (relative fixture URLs need
+    an origin, which `set_content` does not give); /support-matrix is fulfilled
+    from _UI_MATRIX; everything else is aborted. No server, no network."""
+    page = _UI_PAGES.get((width, scheme))
+    if page is not None and not page.is_closed():
+        return page
+    page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    page_html = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
+    context = await (await _browser()).new_context(
+        viewport={"width": width, "height": 844}, color_scheme=scheme)
+    page = await context.new_page()
+
+    async def serve(route, request):
+        if request.url == _UI_ORIGIN + "/":
+            await route.fulfill(body=page_html, content_type="text/html")
+        elif request.url == _UI_ORIGIN + "/support-matrix":
+            await route.fulfill(json=_UI_MATRIX)
+        else:
+            await route.abort()
+    await page.route("**/*", serve)
+    await page.goto(_UI_ORIGIN + "/")
+    await page.wait_for_function(  # matrix fetch landed, whatever it drew
+        "!document.getElementById('matrix').textContent.startsWith('loading')",
+        timeout=5000)
+    _UI_PAGES[(width, scheme)] = page
+    return page
+
+
 def _run_ui_rendered_case(case: dict) -> dict:
     """Rendered narrow-screen overflow and effective placeholder contrast.
 
@@ -2493,21 +2543,15 @@ def _run_ui_rendered_case(case: dict) -> dict:
     BrowserContext per colour scheme -- `viewport` and `color_scheme` are
     context options, so owning a browser bought nothing and cost 0.29s per
     invocation against 0.075s here, on a suite whose wall clock is the gate
-    (PR #23 R5).
+    (PR #23 R5). The contexts are the `_ui_page` cache, shared with the form
+    case (M35).
     """
     inp = case["input"]
-    page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
-    page_html = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
 
     async def go():
         results = {}
-        browser = await _browser()
         for scheme in inp["schemes"]:
-            context = await browser.new_context(
-                viewport={"width": inp["viewport_width"], "height": 844},
-                color_scheme=scheme)
-            page = await context.new_page()
-            await page.set_content(page_html)
+            page = await _ui_page(inp["viewport_width"], scheme)
             results[scheme] = await page.evaluate("""(targetLength) => {
               document.getElementById("live").hidden = false;
               document.getElementById("steps").innerHTML = stepEl({
@@ -2568,7 +2612,6 @@ def _run_ui_rendered_case(case: dict) -> dict:
                 progress
               };
             }""", inp["target_length"])
-            await context.close()
         return results
 
     got = _await(go())
@@ -2587,6 +2630,90 @@ def _run_ui_rendered_case(case: dict) -> dict:
         if inp.get("progress_states") and rendered["progress"] != inp["progress_states"]:
             wrong[f"{scheme}_progress"] = {"want": inp["progress_states"],
                                                "got": rendered["progress"]}
+    return {"passed": not wrong, "wrong": wrong, "got": got}
+
+
+def _run_ui_form_case(case: dict) -> dict:
+    """The form refuses a URL-less task, lifts a site name out of the task text,
+    and every example chip fills task + URL from its EXAMPLES entry (M35).
+
+    Drives the real PAGE on the `_ui_page` render it shares with the narrow
+    case (no extra context); `window.fetch` is stubbed to record and reject --
+    no server, no network, no run is spent. The rows it grades against are
+    _UI_MATRIX.
+    """
+    inp, expect = case["input"], case["expect"]
+
+    async def go():
+        page = await _ui_page(inp["viewport_width"], inp["scheme"])
+        got = await page.evaluate("""async (inp) => {
+          const calls = [];
+          window.fetch = (u, o) => {
+            calls.push({url: String(u), body: o && o.body ? JSON.parse(o.body) : null});
+            return Promise.reject(new Error("stubbed: no run"));
+          };
+          const tick = () => new Promise(r => setTimeout(r, 0));  // let submitTask's catch land
+          const out = {origin: location.origin,
+                       examples: typeof EXAMPLES === "object" ? EXAMPLES : {},
+                       limits_text: $("limits").textContent,
+                       stray: document.querySelectorAll("#examples, .eyebrow, .kind").length};
+          $("task").value = inp.no_url_task; $("url").value = "";
+          $("go").click(); await tick();
+          out.no_url = {err_hidden: $("err").hidden, err_text: $("err").textContent,
+                        go_disabled: $("go").disabled, url: $("url").value, calls: calls.slice()};
+          calls.length = 0;
+          $("task").value = inp.site_task; $("url").value = "";
+          $("go").click(); await tick();
+          out.site = {url: $("url").value, go_disabled: $("go").disabled, calls: calls.slice()};
+          out.chips = [];
+          for (const chip of document.querySelectorAll("[data-example]")) {
+            calls.length = 0;
+            $("task").value = ""; $("url").value = "";
+            chip.click(); await tick();
+            out.chips.push({key: chip.dataset.example, task: $("task").value,
+                            url: $("url").value, calls: calls.slice(),
+                            in_card: !!chip.closest("#matrix .card")});
+          }
+          out.card_list = [...document.querySelectorAll("#matrix .card")].map(card => ({
+            text: card.textContent, buttons: card.querySelectorAll("[data-example]").length,
+            key: (card.querySelector("[data-example]") || {dataset: {}}).dataset.example}));
+          return out;
+        }""", inp)
+        return got
+
+    got = _await(go())
+    wrong = {}
+    nu = got["no_url"]
+    if nu["calls"] or nu["err_hidden"] or nu["go_disabled"] or nu["url"] \
+            or expect["guidance_contains"] not in nu["err_text"]:
+        wrong["no_url"] = nu
+    site = got["site"]
+    posted = [c["body"] for c in site["calls"] if c["url"] == "/tasks"]
+    if site["url"] != expect["site_url"] or site["go_disabled"] \
+            or posted != [{"task": inp["site_task"], "url": expect["site_url"]}]:
+        wrong["site"] = site
+    examples = got["examples"]
+    # Cards are the only example surface: one card per real-site row, no fixture
+    # rows, exactly one Try button per card, and a note where the example has one.
+    cards = got["card_list"]
+    want_cards = [r["domain"] for r in _UI_MATRIX["rows"] if not r["domain"].endswith(" fixture")]
+    if [c["key"] for c in cards] != want_cards or any(c["buttons"] != 1 for c in cards):
+        wrong["cards"] = cards
+    for c in cards:
+        note = (examples.get(c["key"]) or {}).get("note")
+        if note and note not in c["text"]:
+            wrong.setdefault("notes_missing", []).append(c["key"])
+    for chip in got["chips"]:
+        e = examples.get(chip["key"])
+        want_url = e and (e["url"] if "://" in e["url"] else got["origin"] + e["url"])
+        posted = [c["body"] for c in chip["calls"] if c["url"] == "/tasks"]
+        if not e or not chip["in_card"] or chip["task"] != e["task"] or chip["url"] != want_url \
+                or posted != [{"task": e["task"], "url": want_url}]:
+            wrong.setdefault("chips", []).append(chip)
+    if got["stray"]:  # owner amendment: no chip row, no eyebrow, no built-in/real-site tag
+        wrong["stray_elements"] = got["stray"]
+    if expect["limits_contains"] not in got["limits_text"]:
+        wrong["limits_text"] = got["limits_text"]
     return {"passed": not wrong, "wrong": wrong, "got": got}
 
 
@@ -3321,6 +3448,7 @@ KINDS = {
     "stream": _run_stream_case,
     "ui-style": _run_ui_style_case,
     "ui-rendered": _run_ui_rendered_case,
+    "ui-form": _run_ui_form_case,
     "ui-progress": _run_ui_progress_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,

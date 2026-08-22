@@ -18,7 +18,7 @@ date, not the tense.
 | [`evals/scope-checkpoint.md`](evals/scope-checkpoint.md) | record | The 12 observed failures that chose the two recovery families before M3 | M2→M3 |
 | [`plans/completed/task1-b-level-plan.md`](plans/completed/task1-b-level-plan.md) | record | B-phase plan and exit criteria, final status | M5 |
 | [`plans/completed/task1-a-level-plan.md`](plans/completed/task1-a-level-plan.md) | record | A-phase plan and the six exit criteria the freeze walked | M10 |
-| [`ui.png`](ui.png) | asset | README screenshot — a real run on the deployment (`b3773c6e`, 2026-08-22, dark scheme) | — |
+| [`ui.png`](ui.png) | asset | README screenshot — a real run on the deployment (`8b588f84`, 2026-08-22, dark scheme) rendered through the current page | — |
 
 Where the rest lives: decisions are `specs/decisions/ADR-*.md` (digest in
 `INDEX.md`); the working contract is `CLAUDE.md`; the milestone queue is
