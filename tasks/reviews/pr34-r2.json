@@ -1,0 +1,97 @@
+{
+  "pr": 34,
+  "round": 2,
+  "task": "M32",
+  "result": "REQUEST_CHANGES",
+  "scope": "Repair review: git diff 6c6cce5..HEAD plus the round-1 standing findings. Not a fresh full-diff sweep.",
+  "standing_findings": {
+    "R1": {
+      "verdict": "NOT CLOSED",
+      "successor": "R8",
+      "evidence": "The choke point reads_without_acting is a real improvement and both committed cases genuinely go red against 6c6cce5's agent.py (verified: status success / answer 'Aurora Desk Lamp'). But the new drill-down guard at agent.py:756 asks `page_changed is False` where family 2 asks `not page_changed` (agent.py:812). Every act failure raised inside execute leaves page_changed null and walks through. Fifth occurrence of the class. Other shapes probed and clean: chained leading observes are caught; [observe, click, extract] after a successful action is not refused (correct answer returned, no false positive); empty and single-observe plans return False from reads_without_acting and fall to the no-progress branch; the two call sites are the only callers."
+    },
+    "R2": {
+      "verdict": "CLOSED as literally specified, with residue",
+      "successor": "R9",
+      "evidence": "An observe attempt takes neither label nor pointer (verified in both probes: step 3 retry_or_recovery None, superseded_by untouched). supersede-never-dangles green in the committed 119/119 report. The deferred label is never lost \u2014 pending_recovery is only cleared by a non-observe attempt. It is however applied to the next extract, which is read-only, so the metric-integrity rationale the contract states is still violated and nothing grades it."
+    },
+    "R3": {
+      "verdict": "CLOSED",
+      "evidence": "Mutation re-run independently: DRILL_TEXT_HEAD = 300 in a scratch copy gives fast 118/119 = 0.992, sole failure observe-drill-text-head-reaches-past-300 on planner_saw false, with status/verdict/replans still green \u2014 exactly as claimed. No other case moved. observe-drill-into-chrome-gets-the-page-budget's provenance now says outright that 'Young Adult' at index 209 of a 364-char subtree is not evidence for the width."
+    },
+    "R4": {
+      "verdict": "CLOSED",
+      "residue": "R12",
+      "evidence": "The band is deleted. The new guard fires: pointing where_it_stands.headline at 20260817-024235-live.json yields {'headline_report_is_red': ..., 'failed': ['live-hn-item1-submitter', 'live-ol-search-a11y-invisible']} and the case goes red. Baseline block re-derives exactly from 20260822-185625-fast.json (119/119, $0.0000, 65.68s, recovery 7/7 / 13 rungs, mutation 9/11 / 6 / 5, diagnosis 22/22, 9 replans)."
+    },
+    "R5": {
+      "verdict": "CLOSED",
+      "residue": "R10",
+      "evidence": "All four section-1 numbers re-derive from the cited report: actions 202, cases_with_budgets 71, len(results) 119, 119 - 71 = 48. Case counts check out (20 golden + 110 adversarial = 130). The new block does catch drift in the direction R5 was about (202 -> 170 reddens)."
+    }
+  },
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The new drill-down laundering guard tests `page_changed is False` where family 2 tests falsy, so a failed action whose `page_changed` is `null` (every act failure raised inside `execute` \u2014 a click timeout, a fill readback mismatch) is still launderable: the run reports `status: success` / `verdict: PASS` with the pre-action wrong answer.",
+      "evidence": "src/browser/agent.py:756 `and outstanding.get(\"page_changed\") is False` vs. agent.py:812 `elif drops_action and not rec.get(\"page_changed\")`. `page_changed` is only assigned after `execute()` returns (agent.py:620-623), so any exception raised inside `execute` leaves it `None` while `classify()` still returns `act` (agent.py:140-150). Measured on `shop.html` with plan A = `[click {role:status,name:'Result summary'} (times out -> failure_class 'act', page_changed None), extract link#0]`, plan B = `[observe {role:list,name:Catalogue}, click 'Sort by price (low to high)' + expected_state, extract link#0]` (accepted, correctly \u2014 it acts), plan C = `[extract link#0]`: trace `{i:2, action:click, failure_class:'act', page_changed:None, superseded_by:4}`, `{i:3, action:observe}`, `{i:4, action:extract, retry_or_recovery:'recovery'}` -> `status: success`, `answer: \"Aurora Desk Lamp\"`, `verdict: PASS`. True cheapest is Cobalt Floor Rug $18.00. The identical A/B pair without the drill-down (family 2 only) correctly ends `failure:act / answer None`, so the two guards disagree on the same predicate inside one commit. `observe-drilldown-cannot-launder-noop-action` cannot see this: its plan-A click succeeds and fails only its postcondition, which is the one act-failure shape that sets `page_changed` to a real `False`.",
+      "repro": "`.venv/bin/python` running `_run_agent(task, shop.html, stub_planner([A,B,C]))` with the three plans above (reviewer's script: scratchpad/probe.py). Prints `status: success / answer: Aurora Desk Lamp / verdict: PASS`.",
+      "acceptance": "The drill-down guard uses the same evidence test family 2 uses (`not outstanding.get(\"page_changed\")`, i.e. `None` counts as \"nothing moved\"), with a committed adversarial case whose outstanding failure has `page_changed: null` \u2014 watched red as `success`/`\"Aurora Desk Lamp\"` and green as `failure:act`/`answer: null`. `observe-drilldown-cannot-launder-noop-action` and `recovery-replan-postcondition` stay green."
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The repair only defers the `recovery` label and the `superseded_by` pointer past `observe`; both land on the next `extract`, which is equally read-only, so the repaired contract clause \"Both wait for the first attempt that acts\" is false and a read-only step is still inside the published `recovery_rungs` figure.",
+      "evidence": "src/browser/agent.py:677 `read_only = step[\"action\"] == \"observe\"` and agent.py:604 `if pending_supersede and step[\"action\"] != \"observe\"` \u2014 both name `observe` specifically, while `reads_without_acting` (agent.py:154-172) in the same diff classifies `extract` as read-only too. specs/001-browser-contract.md:127-130 now asserts \"never wears `retry_or_recovery: \\\"recovery\\\"` and never consumes a pending `superseded_by` pointer ... a read-only step counted as a recovery rung inflates a published metric. Both wait for the first attempt that acts.\" `recovery_rungs` counts every labelled step regardless of action: src/browser/eval_adapter.py:648, :697. Measured on a fully CORRECT run (shop.html, plan A = click 'Sort by price (low to high)' with a wrong expected_state -> page_changed True, plan B = [observe Catalogue, extract link#0], plan C = [extract link#0]): status success, answer \"Cobalt Floor Rug\" (right), trace `{i:2, click, page_changed:True, superseded_by:4}`, `{i:3, observe, retry_or_recovery:None}`, `{i:4, action:'extract', retry_or_recovery:'recovery'}`. The new assertion `no_recovery_label_on_observe` (eval_adapter.py:672-674) filters on `action == \"observe\"`, so it structurally cannot see this.",
+      "repro": "Reviewer's script scratchpad/probe2.py under the worktree's `.venv/bin/python`; step 4 prints `'action': 'extract', 'retry_or_recovery': 'recovery'` and step 2 prints `'superseded_by': 4`.",
+      "acceptance": "Either the deferral tests read-only-ness rather than the literal string `observe` (one predicate shared with `reads_without_acting`), or specs/001-browser-contract.md:127-130 and ADR-019 \u00a72 are corrected to say the label waits only past `observe` and an `extract` may wear it. Backed by a case that reddens if a read-only step carries `retry_or_recovery: \"recovery\"` \u2014 i.e. the assertion widened from `no_recovery_label_on_observe` to cover `extract`."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "repair",
+      "route_note": "LOW, but routed repair rather than debt under the scope rule's third clause: T-M32-3 is a committed artifact whose stated premise is false, and a reader would take it as verified-correct. The correction is a wording change to one debt block, and the reviewer notes the cheap case design it points at is the same shape R8 requires \u2014 closing R8 closes this.",
+      "claim": "T-M32-3's premise \u2014 that an act failure in this repo costs a full `SETTLE_BUDGET_MS` \"because `check_state` runs its whole settle loop before returning False\" \u2014 is false for act failures raised inside `execute`, which never reach `check_state`; a ~0s case design existed and it is precisely the `page_changed: null` shape R8 shows the guard misses.",
+      "evidence": "tasks/TODO.md:129-134. `check_state` (src/browser/agent.py:199-230) is only reached at agent.py:625 after `execute()` returns; a fill readback mismatch (agent.py:527-529) and a click timeout (agent.py:517) both classify `act` (agent.py:150) and skip the settle loop entirely \u2014 measured in R8's probe, whose act failure cost the click timeout, not 10x200ms of settling. Attribution itself is honest: 20260822-181440-fast.json wall 61.20s -> 20260822-185625-fast.json wall 65.68s (+4.48s); the three added cases sum to 4.77s (2.29 + 2.35 + 0.13) and the 116 common cases net -0.29s.",
+      "repro": "`.venv/bin/python -c \"import json;a=json.load(open('evals/report/20260822-181440-fast.json'));b=json.load(open('evals/report/20260822-185625-fast.json'));o={r['id']:r['seconds'] for r in a['results']};print(a['totals']['wall_seconds'],b['totals']['wall_seconds'],[(r['id'],r['seconds']) for r in b['results'] if r['id'] not in o])\"`, plus reading agent.py:620-630 for the `execute`-raises path.",
+      "acceptance": "T-M32-3 states the true cost model (only a postcondition failure pays `SETTLE_BUDGET_MS`; an act failure raised inside `execute` is free) and either takes the cheap design or records why the postcondition shape is required. Since the cheap design is the `page_changed: null` shape, closing R8 with such a case would close both."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M32-4",
+      "claim": "The new `analysis_section1` grader block asserts substring presence over the whole of docs/analysis.md, so a contradicting sentence sitting beside the correct one stays green \u2014 the same defect the repo already carries as standing finding T-R29 for this case's other halves.",
+      "evidence": "src/browser/eval_adapter.py:2584-2593: `text = (RUN_ROOT / s1[\"doc\"]).read_text(...)` then `if (want := q.format(**vals)) not in text`. No section scoping (unlike `analysis_coverage`, which slices \"## 6. Coverage\"..\"## 7.\") and no uniqueness/negation check. Verified: inserting the line \"Actually only 170 browser actions run, and 12 of the 119 cases open a browser.\" immediately above the correct \"202 browser actions in a `fast` run\" leaves `docs-numbers-are-derived` PASSING. The stale-doc direction IS caught: rewriting 202 -> 170 reddens.",
+      "repro": "In a scratch copy: insert the contradicting line into docs/analysis.md section 1 and run `_run_doc_counts_case(json.load(open('evals/adversarial/docs-numbers-are-derived.json')))` -> `passed: True, wrong: []`.",
+      "acceptance": "The section-1 block scans only section 1 (as `analysis_coverage` already does for section 6) and/or asserts that no other `\\d+ browser actions` / `\\*\\*\\d+ of the \\d+\\*\\* cases` string appears in the section; the contradicting-line probe above reddens.",
+      "route_note": "LOW, outside M32's acceptance criteria, and a strictly narrower instance of standing finding T-R29 which already owns this weakness for the same case's other halves. Logged rather than repaired so it is fixed once, for every half, in T-R29's own task."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The resolution's claim that \"README now states no wall clock outside the 'Where it stands' block\" is false \u2014 README still publishes 28 wall-clock numbers that no committed report backs and that `docs-numbers-are-derived` does not recompute.",
+      "evidence": "README.md:68, :71-73, :78, :85, :90, :96, :99. `docs-numbers-are-derived`'s `readme_quotes` are only the three case-count strings; `where_it_stands` only recomputes the fenced baseline block. The claim is in tasks/reviews/pr34-r1-resolution.json (R4 `fix`), not in a document of record, and the M32 band R4 named IS deleted \u2014 so R4 itself is closed; this is the overclaim beside it.",
+      "repro": "`grep -n '59.62\\|58.96\\|59.77\\|68.1s\\|89.62s\\|63.3s' README.md`",
+      "acceptance": "Either the resolution's wording is narrowed to \"the M32 band is deleted\", or the remaining README wall clocks each name the report they came from.",
+      "route_note": "LOW and the defect is in a pr-loop audit artifact, not the branch. Corrected by the orchestrator: the R4 `fix` wording in tasks/reviews/pr34-r1-resolution.json is narrowed to what was actually done. The 28 pre-existing README wall clocks predate this PR and are not M32's to fix \u2014 logged as T-M32-5."
+    }
+  ],
+  "verified_clean": [
+    ".eval-baseline.json, evals/run.py and specs/decisions/ADR-013* byte-identical to main; EVAL_WALL_BUDGET_S untouched",
+    "no site-specific selector or navigation recipe entered src/browser/ \u2014 production changes are reads_without_acting, two guard predicates and a comment in observe.py; the DOM knowledge is in src/browser/fixtures/deep-spec.html (CLAUDE.md rule 6)",
+    "the new `return done(failure='act', ...)` sits inside the same try as its neighbours, so `finally: await ctx.close()` still runs \u2014 no BrowserContext leak",
+    "no repair-round narrative leaked into README / ADR-019 / docs/analysis.md / docs/support-matrix.md ('PR #34' appears only in code comments and case provenance, the repo's existing convention)",
+    "wall-clock attribution honest: +4.48s measured, 4.64s of it the two laundering cases, common cases net -0.29s",
+    "false-positive direction checked and clean: [observe, click, extract] after a successful action is not refused by the new guard, correct answer returned"
+  ],
+  "gate": {
+    "invariant": "41/41 = 1.000, 8.2s, $0.0000",
+    "fast": "119/119 = 1.000 >= baseline 1.000, 65.89s, $0.0000 \u2014 non-zero exit on wall clock alone",
+    "note": "Orchestrator-verified after the repair commit. 4.9s of the overrun is now this PR's, disclosed and attributed. The pre-existing band (main at 61.72s / 60.02s, 108/108) remains an open human decision, PR #29 R21."
+  }
+}

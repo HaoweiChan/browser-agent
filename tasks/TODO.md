@@ -173,6 +173,38 @@ Repro: edit any file under `src/` from a worktree whose parent checkout has no
 Acceptance: the hook resolves the tree from the edited file's path (or from
 `git rev-parse --show-toplevel` on it) rather than from `$CLAUDE_PROJECT_DIR`.
 
+### T-M32-4 — the `analysis_section1` grader asserts presence, not absence of contradiction            [status: todo]
+Origin: PR #34 R10
+Spec: `docs-numbers-are-derived`'s new `analysis_section1` block reads the whole
+of `docs/analysis.md` and asserts each derived string is `in text`, with no
+section scoping (unlike `analysis_coverage`, which slices `## 6. Coverage`..`## 7.`)
+and no uniqueness check — so a contradicting sentence beside the correct one
+stays green. Verified: inserting "Actually only 170 browser actions run, and 12
+of the 119 cases open a browser." above the correct "202 browser actions in a
+`fast` run" leaves the case PASSING. Strictly a narrower instance of `T-R29`,
+which already owns this weakness for the same case's other halves — fix it once,
+for every half, there.
+Repro: insert the contradicting line into `docs/analysis.md` §1 and run
+`_run_doc_counts_case(json.load(open('evals/adversarial/docs-numbers-are-derived.json')))`
+-> `passed: True, wrong: []`.
+Acceptance: the §1 block scans only §1, and/or asserts no other
+`\d+ browser actions` / `\*\*\d+ of the \d+\*\* cases` string appears in the
+section; the contradicting-line probe above reddens.
+
+### T-M32-5 — README publishes 28 wall clocks no committed report backs            [status: todo]
+Origin: PR #34 R12
+Spec: `README.md:68`, `:71-73`, `:78`, `:85`, `:90`, `:96` and `:99` publish
+wall-clock numbers that `docs-numbers-are-derived` does not recompute — its
+`readme_quotes` are only the three case-count strings, and `where_it_stands`
+only recomputes the fenced baseline block. All of these predate PR #34 (the M32
+band that round-1 finding R4 named IS deleted), so they are not M32's to fix,
+but they are the same class of published-number drift R4 and R5 were about and
+the repo has now hit that class three times in one PR.
+Repro: `grep -n '59.62\|58.96\|59.77\|68.1s\|89.62s\|63.3s' README.md` and
+try to resolve any of them to a report in `evals/report/`.
+Acceptance: each remaining README wall clock names the report it came from and
+is recomputed by `docs-numbers-are-derived`, or is deleted.
+
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5
 Spec: `support-matrix-cites-real-cases` resolves backticked case-id tokens
