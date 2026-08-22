@@ -1,7 +1,7 @@
 # Project working rules
 
-Eval-first repo, built on **groundwork**. Tasks live under `src/<task>/`.
-**The eval set IS the spec.** groundwork targets problems where requirements
+Eval-first repo. Tasks live under `src/<task>/`.
+**The eval set IS the spec.** This repo targets problems where requirements
 are clear but correctness is hard to define up front — so correctness is encoded
 as executable invariants and metrics, not prose. Architecture rationale lives in
 README.md; this file is the working contract.
@@ -22,7 +22,7 @@ README.md; this file is the working contract.
 .claude/hooks/     enforcement — the only layer that can actually block
 .githooks/         pre-commit eval gate (installed via core.hooksPath)
 specs/             ONLY: 000-invariants.md, per-task contracts, decisions/ADR-*.md
-docs/              planning package: product/ specs/ architecture/ evals/ plans/ + support-matrix.md, analysis.md (ADR-001)
+docs/              planning package: product/ architecture/ evals/ plans/ + support-matrix.md, analysis.md (ADR-001)
 tasks/TODO.md      milestone-level tracker only — micro-tasks stay in-session (ADR-001)
 evals/golden/      hand-labeled cases (JSON, one per case)
 evals/adversarial/ cases known or designed to break the pipeline
@@ -101,7 +101,7 @@ For a full tasks/TODO.md task that should end in a PR, run the loop through
 implement → gate → review → repair with subagents (implementer in a worktree,
 pr-reviewer with fresh context); the human only writes the spec and merges.
 The PR carries role-tagged structured findings and an evidence pack — never
-agent chatter. Protocol: the groundwork plugin's `pr-loop` skill (see `.groundwork-version` for the pinned upstream).
+agent chatter. Protocol: the `pr-loop` plugin skill.
 
 ## Adding a task
 

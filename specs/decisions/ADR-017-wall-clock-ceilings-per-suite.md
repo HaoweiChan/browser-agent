@@ -43,12 +43,26 @@ is worth less than the 4.9s it costs.
 
 ### 2. The local `fast` ceiling is 75s, measured
 
-Nine runs of the tree with everything in `fast`, eight here and one by the
-reviewer: **64.48 / 64.58 / 64.59 / 64.63 / 64.66 / 64.68 / 64.75 / 64.81 /
-64.98s** — a 0.50s spread. ADR-013 Decision 3's rule — slowest observed +15%,
-rounded up to a multiple of five — gives 64.98 × 1.15 = 74.7 → **75**. The same
-rule that set CI's 80, applied to a local band, not a number chosen to clear
-the runs.
+The band is every `fast` run `evals/report/history.jsonl` records for the
+tree, not a selection from it. The first version of this decision published
+nine of the fifteen runs at 114 cases and called the spread 0.50s when the
+committed history showed 64.25-64.98 — the same selective presentation ADR-013
+Decision 4 was withdrawn over, in the decision that amends it (PR #29 R18).
+
+- **114 cases, 11 green runs**: 64.25 / 64.32 / 64.58 / 64.59 / 64.63 / 64.64 /
+  64.64 / 64.68 / 64.75 / 64.95 / 64.98s. Four further runs scored 113/114
+  (64.48 / 64.59 / 64.61 / 64.66s) — intermediate tree states while cases were
+  being fixed, labelled rather than dropped.
+- **116 cases, the tree this branch ships, 9 green runs**: 64.17 / 64.34 /
+  64.53 / 64.54 / 64.55 / 64.56 / 64.63 / 64.68 / 64.71s, plus three
+  partial-score intermediate runs (64.39 at 114/116, 64.43 at 113/116, 64.79 at
+  115/116).
+
+ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
+five — gives 64.71 × 1.15 = 74.4 → **75** on the shipped tree (and 64.98 × 1.15
+= 74.7 → 75 on the wider 114-case set, so the number does not depend on which
+band is used). The same rule that set CI's 80, applied to a local band, not a
+number chosen to clear the runs.
 
 This is a real loosening and it is not disguised as anything else. The margin
 against the observed band is ~10s where it used to be ~0.2s, and that is the
@@ -62,8 +76,9 @@ baseline, and `--update-baseline` was not run.
 
 ### 3. `invariant` gets a ceiling: 15s
 
-Measured at **12.21 / 12.27s** with the cases back in both suites; the same
-+15% round-up rule gives 12.27 × 1.15 = 14.1 → **15**. Two suites now have numbers, and
+Measured over five runs of the shipped 48-case tree: **12.44 / 12.48 / 12.50 /
+12.58 / 12.96s**; the same +15% round-up rule gives 12.96 × 1.15 = 14.9 →
+**15**. Two suites now have numbers, and
 `fast-wall-clock-budget` grades the SET, so a third suite acquiring cost
 without a ceiling turns it red.
 

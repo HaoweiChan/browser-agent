@@ -7,7 +7,7 @@ Moves to `docs/plans/completed/` at freeze (ADR-001).
 
 ## Scope registry
 
-- **MUST** (B-floor): everything tagged MUST in `docs/specs/001-task1-problem-definition.md`,
+- **MUST** (B-floor): everything tagged MUST in `docs/product/problem-definition.md`,
   `docs/evals/evaluation-methodology.md`, `docs/evals/failure-taxonomy.md`,
   `docs/architecture/task1-overview.md`. Every MUST names its rubric cell; a
   feature that can't name one gets cut.

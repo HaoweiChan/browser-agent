@@ -1,0 +1,29 @@
+{
+  "pr": 28,
+  "round": 1,
+  "task": "M29",
+  "result": "REPAIRED",
+  "resolutions": [
+    {
+      "id": "R1",
+      "disposition": "fixed",
+      "case_id": "docs-numbers-are-derived (already covers this shape; no new case needed)",
+      "note": "specs/decisions/INDEX.md:24 'fix tracked as M30' -> 'fix tracked as M34'; docs/support-matrix.md:61 (D23) 'this is the M30 defect' -> 'M34 defect' and 'is M30's whole job' -> 'is M34's whole job'. specs/decisions/ADR-015-a-freeze.md and docs/analysis.md already said M34 (the merge commit ecd21be did repoint those two, just not INDEX.md/support-matrix.md) — confirmed via grep before editing.",
+      "red": "grep -rn '\\bM30\\b' specs/decisions/INDEX.md docs/support-matrix.md tasks/TODO.md tasks/DONE.md matched INDEX.md:24 and support-matrix.md:61 (tasks/DONE.md:20's M30 hit is the real, unrelated, already-merged PR #24 task and is correct as-is)."
+    },
+    {
+      "id": "R2",
+      "disposition": "fixed",
+      "case_id": "docs-numbers-are-derived (criterion5 block extended, same case id)",
+      "note": "src/browser/eval_adapter.py's criterion5 check now scans every tracked-looking markdown file (RUN_ROOT.rglob('*.md'), dot-directories excluded — rglob does not follow the .venv symlink) instead of a 5-file allowlist, and whitespace-normalizes both the document text and the forbidden/required phrases before matching, so a phrase wrapped across a markdown line break is no longer invisible. required_in now reads the same normalized, struck-stripped text as forbidden, closing the second hole (a struck 'RED on the deployed build' could otherwise satisfy the requirement meant to force it live). prompts/ and tasks/ are excluded from the scan by design: prompts/ is append-only (prompts/README.md's new 'Append-only' section states this explicitly, closing R3 by declared scope rather than by omission) and tasks/TODO.md legitimately quotes the forbidden phrasing while describing the bug/acceptance-criteria (discovered live: widening the scan without this exclusion produced a false positive on tasks/TODO.md's own M29 spec block, 'A-freeze is achieved', which is text ABOUT the defect, not an assertion of it). The remaining ceiling is declared in the case's provenance rather than left implicit: this is still literal (normalized) substring matching, not semantic, so a paraphrase evades it, the same enumeration-over-natural-language ceiling D12/D19 already name for this repo's other literal-phrase guards.",
+      "red_watched": "Two isolated demonstrations against the pre-fix (5-file, raw-substring) logic, run directly against _run_doc_counts_case with the ORIGINAL 5-file docs list (not the tracked JSON, so the real case file was never left in a broken state): (1) allowlist blindness — a scratch file docs/_scratch_r2_check.md containing the forbidden phrase, not in the 5-file list -> passed: True, wrong: {'docs': []} (wrongly green). (2) wrap invisibility — same scratch file ADDED to the docs list (so it IS scanned) with the phrase deliberately wrapped across a line break -> still passed: True, wrong: {'docs': []} (wrongly green; the raw substring search does not see 'criterion 5 green offline' split across a newline). Then swapped in the real widened+normalized code and reran the actual case with the scratch file present -> passed: False, wrong: {'docs': [{'asserts_criterion5_green': 'criterion 5 green offline', 'doc': 'docs/_scratch_r2_check.md'}]}. Scratch file deleted afterward; case is green again on the real tree (also confirming prompts/014-a-freeze.md's own unstruck 'green offline' wording, and tasks/TODO.md's quoted 'A-freeze is achieved', are both correctly excluded and do not trip it)."
+    },
+    {
+      "id": "R3",
+      "disposition": "debt",
+      "debt_id": "T-R33",
+      "note": "Also addressed the acceptance criterion's first option directly rather than only logging debt: prompts/README.md gained an 'Append-only' section stating the convention explicitly (a dated record is never rewritten; a correction gets a new numbered file or a cross-link from specs/decisions/, not an edit), which is also the justification the R2 fix uses to exclude prompts/ from the criterion5 scan. T-R33 (tasks/TODO.md Debt) still tracks the second option — a one-line cross-reference from prompts/014-a-freeze.md itself to ADR-015's M29 amendment — since the review routed this LOW to debt rather than repair."
+    }
+  ],
+  "gate_after": {"invariant": "38/38", "fast": "105/105"}
+}

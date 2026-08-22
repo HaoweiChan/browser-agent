@@ -1,8 +1,8 @@
 # Task 1 milestones — pr-loop queue
 
-Working set only (groundwork GW-004): Queue + Debt here, merged work is a
-one-liner in `tasks/DONE.md`. Block format and protocol: the groundwork
-plugin's `pr-loop` skill; list unblocked tasks with
+Working set only: Queue + Debt here, merged work is a
+one-liner in `tasks/DONE.md`. Block format and protocol: the `pr-loop`
+plugin skill; list unblocked tasks with
 `python3 "$CLAUDE_PLUGIN_ROOT"/skills/pr-loop/scripts/ready.py` (repo root).
 Milestone-level only (ADR-001) — micro-tasks stay in the session. Reviewer
 evidence tags reference `docs/product/assignment-requirements.md` §E1–E5.
@@ -94,6 +94,44 @@ success, $/task, tokens, ms, planner calls) built from a committed report and
 guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
+
+### M29 — A-exit criterion 5 is red on the deployed build, so ADR-015's A-freeze declaration is falsified            [status: pr]
+Spec: ADR-015 records criterion 5 as green offline with live confirmation
+pending. That confirmation ran on merged main (`788e8e9`) and did not confirm:
+`d00d2be0`, `470a4ebe`, `2343e0b4` returned `status: success` / `verdict: PASS`
+with `answer: "Warning!"`, and `5c574a44` with `answer: "Travel"`, for
+"the price of the first book in the Travel category" (truth: £45.17). All nine
+checks green. Every document of record that currently implies A-freeze is
+achieved is making a claim the evidence contradicts. Correct the record; do not
+wait for M34 to land first.
+Acceptance: the raw post-merge verification is committed (run_ids, verdict
+blocks, ground truth) and cited; ADR-015 amended so criterion 5 reads red with
+the deployed evidence, not green-pending; `docs/support-matrix.md` carries the
+row; README/analysis carry no surviving claim that A-freeze is achieved; a
+graded check fails if a document asserts criterion 5 green while the committed
+verification says otherwise. Vault copy of the evidence:
+`projects/career/2026-08-22-whaleforce-m10-post-merge-live-verification.md`.
+
+### M34 — an answer is still never checked for being responsive            [status: todo]
+Spec: M7 declared this gap, M10's probe demonstrated it, and M10's fix closed
+only the "which X has the most Y" sentence shape. The general defect is live on
+merged main and reproduces on a plain single-hop extraction: a string that IS on
+the page ("Warning!") passes `grounded`, `not_a_dump`, `identity_anchors` and
+`answer_nonempty` while answering nothing. Third demonstration that
+responsiveness is not pattern-matchable — a fourth regex over the task string is
+very likely the wrong answer, and `T-R31`/`T-R32` already name the ceiling of
+the last one. The intermittency matters: probe #2 answered this same task
+correctly once, so the violation is nondeterministic and a single green run
+proves nothing.
+Depends: M29
+Acceptance: an adversarial case reproduces the grounded-but-unresponsive
+wrong-success and is watched red first; no terminal non-failure status can carry
+an answer that fails a responsiveness check; the fix is demonstrated on the
+deployed build across repeated runs of the same task, not one lucky roll; the
+answer-shape ceiling that remains is named in `docs/support-matrix.md` rather
+than left implied.
+Out of scope: the extraction-quality gap (M28) — this task is about never
+reporting success for an unresponsive answer, not about extracting better.
 
 ## Debt
 
@@ -342,7 +380,7 @@ close it on any failure, with a case that leaks before the fix.
 Origin: PR #20 R19 (MEDIUM, routed repair; the reverse-direction guard itself is
 logged here as debt rather than built, since it is more than a "prune to fix" fix)
 Spec: the merge at `94f1a42`/`7a2869a` re-added 41-46 uncited routine `fast`/
-`invariant` report dumps that GW-008/ADR-012 had just pruned, and no case caught
+`invariant` report dumps that ADR-012 had just pruned, and no case caught
 it because `_run_report_citations_case` (`src/browser/eval_adapter.py:1014`)
 is one-directional: it resolves citation -> file, never enumerates
 `evals/report/*.json` and asks whether each file is cited by anything. The
