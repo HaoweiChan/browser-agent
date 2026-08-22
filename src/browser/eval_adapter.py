@@ -2308,6 +2308,7 @@ _UI_MATRIX = {
         {"domain": "shop fixture", "cells": {"TC1": "supported", "TC2": "supported"}},
         {"domain": "books.toscrape.com (live)", "cells": {"TC1": "—", "TC3": "unreliable"}},
         {"domain": "openlibrary.org (live)", "cells": {"TC1": "unreliable", "TC2": "unsupported"}},
+        {"domain": "quotes.toscrape.com (live)", "cells": {"TC1": "unsupported"}},
         {"domain": "wikipedia.org", "cells": {"TC1": "—"}}],
     "limitations": [
         {"limitation": "**D1** — one", "evidence": "a", "status": "unsupported"},
