@@ -1,0 +1,40 @@
+{
+  "pr": 30,
+  "round": 2,
+  "task": "M34",
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff c0ad848..a5b6bf7 plus standing finding R1",
+  "standing_findings_verified_closed": ["R1"],
+  "findings": [
+    {
+      "id": "R2-1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "_context() resolves only the FIRST occurrence of value in page_text via find(), with no way to identify which occurrence the extraction actually came from; when the same value legitimately appears more than once on the page it was read from, the window can be built around an unrelated earlier occurrence and wrongly flag a correct page-specific answer as furniture — a third failure mode not named alongside D24's two declared ceilings.",
+      "evidence": "src/browser/verifier.py _context() and its caller in verify(). Reproduced by the orchestrator: window anchored on 'Zero-Item $9.99 SKU-000 exactly mat' — the first occurrence — while the genuine extraction site was the second occurrence, giving not_page_furniture=False / FAIL for a correct answer.",
+      "repro": "see tasks/reviews/pr30-r2 relay; _context(page_text,'$9.99') anchors on the first occurrence -> False FAIL",
+      "acceptance": "Either D24/ADR-016 name this third shape explicitly as an undemonstrated ceiling alongside the other two, or _context/verify() is given the extraction's actual character offset (already knowable at the agent.py call site) so the window is anchored to the real extraction site.",
+      "orchestrator_note": "Reproduced independently. Blocks on M34's acceptance that the remaining answer-shape ceiling be named rather than left implied. Note the offset appears to be available at the call site, which would make anchoring smaller than a declared ceiling."
+    },
+    {
+      "id": "R2-2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The repair's justification for widening the nav-heavy fixtures — 'confirmed by curl: the SAME 50-category sidebar, same order, on every page' — is factually false: the fixture implements 35 of the real site's 50 categories, and the order breaks within those 35.",
+      "evidence": "ADR-016:163 and docs/support-matrix.md D24 both assert curl-confirmed parity. Orchestrator verified: real site has 52 <li> (50 categories + 2 chrome); both fixtures have 35. Real category index 32 is 'Christian Fiction' and index 41 is 'Christian'; the fixture's entry at that position is 'Christian'.",
+      "repro": "curl -s https://books.toscrape.com/ | grep -c '<li>' -> 52; grep -c '<li>' src/browser/fixtures/nav-heavy-home.html -> 35",
+      "acceptance": "Either drop the specific count/order assertion and state honestly that the fixture uses a representative subset, or bring the fixture to real parity before making the claim.",
+      "orchestrator_note": "Reproduced independently. Blocks: a document of record makes a verifiable claim about the real world that is false, and it is the claim that justifies the fixture the fix is validated against."
+    },
+    {
+      "id": "R2-3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The D24 support-matrix row carries per-round repair history and a superseded number into a document of record — the pr-loop scope rule names this class as blocking regardless of severity.",
+      "evidence": "docs/support-matrix.md D24 narrates the round structure ('narrowed once (PR #30 R1)', 'PR #30 round 1 (R1, HIGH) found it flagged...', 'Repaired, not declared') and publishes a superseded gate number ('Full fast suite re-run after the narrowing... 106/107 (the one non-passing case is the pre-existing, expected docs-numbers-are-derived doc-count drift)'). The current gate is 107/107, so the published number is both stale and an artifact of a mid-repair moment.",
+      "repro": "grep -n '106/107' docs/support-matrix.md; compare against .venv/bin/python -m evals.run --suite fast -> 107/107",
+      "acceptance": "D24 states the current behaviour, its ceilings and the evidence for them. The round-by-round narrative and any superseded numbers live only in tasks/reviews/pr30-r*.json, which is the audit trail. The same sweep applies to ADR-016 if it carries the same history.",
+      "orchestrator_note": "Found by the orchestrator, not the reviewer. Blocks by the protocol's own scope boundary: repair-round history and superseded numbers bled into a document of record."
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "verifier-listing-detail-title-not-furniture",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC3",
+  "trap": "correct title/name repeats verbatim between a listing row and its own detail page -- not_page_furniture must not treat that as chrome",
+  "input": {
+    "task": "From the catalogue, open the Aurora Desk Lamp and report its title.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "link", "name": "Aurora Desk Lamp" },
+        "expected_state": { "url_contains": "shop-lamp-std" } },
+      { "action": "extract", "target": { "role": "heading" }, "anchor": null }
+    ]
+  },
+  "expect": { "status": "success", "verdict": "PASS", "answer": "Aurora Desk Lamp" },
+  "provenance": "PR #30 R1 (HIGH): not_page_furniture (M34, ADR-016) flagged a correct non-numeric answer as page furniture whenever it legitimately repeats between a listing row and that item's own detail page -- the exact listing->detail pattern tc2-shop-search-zh and trap-near-miss-entity already exercise for prices, now reproduced for a title. shop.html's catalogue row reads 'Aurora Desk Lamp $39.00'; the detail page's own <h1> repeats the title verbatim, so the pre-narrowing check flagged the h1 extraction as furniture (page also visited: shop.html, containing the same string) and downgraded a correct run to failure:semantic. Watched red before the narrowing (see R1's own repro and this case's own first run): status failure:semantic, verdict FAIL, checks.not_page_furniture false, reason naming 'Aurora Desk Lamp' as chrome. Green after: the check now requires the value's own LOCAL CONTEXT on the page it was read from (not the bare value alone) to also appear on the other page -- true site chrome (nav links, banners) is the same repeated template fragment everywhere, so its surrounding text matches too; a title's surrounding text differs between a listing row ('Aurora Desk Lamp $39.00') and its own h1 ('Aurora Desk Lamp' alone, followed by the Price/SKU/Material groups), so the context does not match and the check does not fire.",
+  "triage": {
+    "class": "false-positive-repair",
+    "note": "PR #30 round 1, R1 (HIGH, repair). Companion to tc2-shop-search-zh and trap-near-miss-entity, which cover the numeric half of this same shape; this pins the non-numeric half so the narrowing cannot regress silently."
+  }
+}

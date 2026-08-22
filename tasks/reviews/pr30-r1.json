@@ -1,0 +1,18 @@
+{
+  "pr": 30,
+  "round": 1,
+  "task": "M34",
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "not_page_furniture flags a correct, non-numeric answer (an item's title, name, or category) as page furniture whenever it legitimately repeats verbatim between a listing page and that item's own detail page — the exact listing->detail pattern this repo already uses for prices — and this ceiling is named nowhere, violating M34's own acceptance criterion that the remaining answer-shape ceiling be named in docs/support-matrix.md rather than left implied.",
+      "evidence": "src/browser/verifier.py not_page_furniture has no exemption for non-numeric values. verify() with extractions=[{'value':'The Great Gatsby','page_text':'The Great Gatsby Price: £45.17','other_page_text':'Category: Travel The Great Gatsby £45.17'}] returns not_page_furniture=False, verdict FAIL, though that is the correct answer to 'open the book and tell me its title'. A second construction using a category breadcrumb reproduces it. docs/support-matrix.md D24 and ADR-016 name only two ceilings — numeric furniture undetected, and single-page no-op — neither covers this shape.",
+      "repro": "python3 -c \"import sys; sys.path.insert(0,'.'); from src.browser.verifier import verify; r=verify(trace=[{'i':0,'action':'click','postcondition_ok':True},{'i':1,'action':'extract'}], extractions=[{'value':'The Great Gatsby','page_text':'The Great Gatsby Price: £45.17','body_len':40,'other_page_text':'Category: Travel The Great Gatsby £45.17'}], answer='The Great Gatsby'); print(r['checks']['not_page_furniture'], r['verdict'])\" -> False FAIL",
+      "acceptance": "Either the ceiling is named explicitly in docs/support-matrix.md D24 / ADR-016, or the check is narrowed (e.g. exempting values grounded via an identity anchor, or requiring the furniture string to appear on a page that is not the immediate navigation predecessor/successor) so a real listing->detail title/name extraction is not converted from PASS to FAIL, backed by a new adversarial case that watches this shape red first.",
+      "orchestrator_note": "Reproduced independently: not_page_furniture=False, verdict FAIL, reason names the correct answer as chrome. Blocks. Routing note for the implementer: the acceptance offers 'name it OR narrow it', but listing->detail is the single most common navigation shape in this domain, so naming it as a declared ceiling would mean shipping a guard that breaks the common case. The narrowing is required; the ceiling is named for whatever survives it. Also relevant: the suite has 32 click+extract cases and none of them caught this, so the coverage gap is real and a case for the shape is part of the fix."
+    }
+  ]
+}

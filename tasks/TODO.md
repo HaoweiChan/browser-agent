@@ -76,24 +76,7 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M29 — A-exit criterion 5 is red on the deployed build, so ADR-015's A-freeze declaration is falsified            [status: pr]
-Spec: ADR-015 records criterion 5 as green offline with live confirmation
-pending. That confirmation ran on merged main (`788e8e9`) and did not confirm:
-`d00d2be0`, `470a4ebe`, `2343e0b4` returned `status: success` / `verdict: PASS`
-with `answer: "Warning!"`, and `5c574a44` with `answer: "Travel"`, for
-"the price of the first book in the Travel category" (truth: £45.17). All nine
-checks green. Every document of record that currently implies A-freeze is
-achieved is making a claim the evidence contradicts. Correct the record; do not
-wait for M34 to land first.
-Acceptance: the raw post-merge verification is committed (run_ids, verdict
-blocks, ground truth) and cited; ADR-015 amended so criterion 5 reads red with
-the deployed evidence, not green-pending; `docs/support-matrix.md` carries the
-row; README/analysis carry no surviving claim that A-freeze is achieved; a
-graded check fails if a document asserts criterion 5 green while the committed
-verification says otherwise. Vault copy of the evidence:
-`projects/career/2026-08-22-whaleforce-m10-post-merge-live-verification.md`.
-
-### M34 — an answer is still never checked for being responsive            [status: todo]
+### M34 — an answer is still never checked for being responsive            [status: pr]
 Spec: M7 declared this gap, M10's probe demonstrated it, and M10's fix closed
 only the "which X has the most Y" sentence shape. The general defect is live on
 merged main and reproduces on a plain single-hop extraction: a string that IS on
@@ -113,6 +96,33 @@ answer-shape ceiling that remains is named in `docs/support-matrix.md` rather
 than left implied.
 Out of scope: the extraction-quality gap (M28) — this task is about never
 reporting success for an unresponsive answer, not about extracting better.
+Status (2026-08-22, PR #30 pending, round 2 repaired): the adversarial case
+(`verifier-responsive-not-page-furniture`) landed and was watched red
+first, then the fix (`verify()`'s `not_page_furniture`, ADR-016) turned it
+green. Round 1 (R1, HIGH) found the first cut too broad — it flagged a
+correct listing→detail title/name as furniture, a false positive on this
+domain's single most common navigation shape — repaired by comparing each
+value's local page CONTEXT, not the bare value, against the other pages a
+run visited; the numeric exemption is gone, subsumed by the same rule
+(`verifier-listing-detail-title-not-furniture` pins the repaired shape).
+Round 2 (3 MEDIUM) found: (R2-1) the context window could still anchor on
+the wrong occurrence when a value legitimately repeats on the SAME page —
+repaired by anchoring on the resolved element's actual DOM offset
+(`TEXT_OFFSET_JS`/`_closest_occurrence`), pinned by
+`verifier-context-anchors-real-occurrence`; (R2-2) a fixture-parity claim
+("the same 50-category sidebar, same order") was false — restated honestly
+as a representative subset; (R2-3) `docs/support-matrix.md` D24 and
+ADR-016 carried round-by-round repair narrative and a superseded gate
+number, which belong only in `tasks/reviews/pr30-r*.json` — both rewritten
+to state current behaviour only. Every round, the original "Warning!"/
+"Travel" defect was re-confirmed to still fail loudly. `fast` 108/108,
+`invariant` 38/38, `live` 9/9, all against unmoved baseline. The surviving
+ceilings are named in `docs/support-matrix.md` D24. **Not closing this
+task**: the acceptance line "demonstrated on the deployed build across
+repeated runs" cannot be met from this environment (no LLM key, the
+deployed URL still serves `main`) — that repeated-run confirmation is the
+one thing left, run post-merge the same way M29 ran it for M10, and
+ADR-015 criterion 5 stays RED until it does.
 
 ## Debt
 

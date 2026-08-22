@@ -87,6 +87,45 @@ FILLABLE_JS = """el => el.isContentEditable || el.tagName === 'TEXTAREA'
   || (el.tagName === 'INPUT'
       && !['button', 'submit', 'reset', 'checkbox', 'radio', 'file', 'image'].includes(el.type))"""
 
+# M34 R2-1: an approximate character offset of `el`'s own text within
+# `document.body`'s rendered text -- walks up from `el` to <body>, summing
+# the text length of every preceding ELEMENT sibling at each level. Not
+# exact (bare text-node siblings between elements are not counted, and
+# `innerText`'s own whitespace collapsing is not reproduced here), but it
+# does not need to be: `_closest_occurrence` (below) only uses it to pick
+# WHICH occurrence of a repeated value is real, among candidates that are
+# typically hundreds of characters apart, not to index precisely into text.
+TEXT_OFFSET_JS = """el => {
+  let offset = 0, node = el;
+  while (node && node.tagName !== 'BODY') {
+    let sib = node.previousElementSibling;
+    while (sib) {
+      offset += (sib.innerText !== undefined ? sib.innerText : (sib.textContent || '')).length;
+      sib = sib.previousElementSibling;
+    }
+    node = node.parentElement;
+  }
+  return offset;
+}"""
+
+
+def _closest_occurrence(body: str, value: str, hint: int) -> int:
+    """Absolute offset of the occurrence of `value` in `body` nearest `hint`
+    (a DOM-derived approximate offset, see TEXT_OFFSET_JS) -- the same value
+    can legitimately appear more than once on one page (a decoy blurb and
+    the real answer, case verifier-context-anchors-real-occurrence /
+    PR #30 R2-1), and `str.find` alone always returns the FIRST, which is
+    not necessarily the one the resolver actually matched. -1 if `value`
+    is not in `body` at all."""
+    best, best_d = -1, None
+    i = body.find(value)
+    while i >= 0:
+        d = abs(i - hint)
+        if best_d is None or d < best_d:
+            best, best_d = i, d
+        i = body.find(value, i + 1)
+    return best
+
 
 class StepError(Exception):
     """A step failure whose class the executor already knows — an empty
@@ -217,7 +256,16 @@ async def navigate(page, url: str) -> None:
     # misattribution family this function exists to close.
 
 
-def evidence_window(body: str, value: str, anchor: str | None = None) -> str:
+def _window_lo(body: str, i: int) -> int:
+    """Start of the PAGE_TEXT_KEEP-wide window `evidence_window` centres on
+    offset `i` -- shared with the extract step (agent.py) so it can compute
+    where `i` lands INSIDE that window (case verifier-context-anchors-real-
+    occurrence / PR #30 R2-1) without duplicating this arithmetic."""
+    return max(0, i - PAGE_TEXT_KEEP // 2) if len(body) > PAGE_TEXT_KEEP else 0
+
+
+def evidence_window(body: str, value: str, anchor: str | None = None,
+                    offset: int | None = None) -> str:
     """Bounded page-text evidence that still contains what it will be judged on:
     the extracted value, and the identity anchor if the page carries one.
 
@@ -230,14 +278,19 @@ def evidence_window(body: str, value: str, anchor: str | None = None) -> str:
     Selecting the window is evidence handling, not grading: whatever is absent
     from the page is absent from the window too, and the check fails, which is
     the true verdict.
+
+    `offset` (M34 R2-1): the REAL position of `value` in `body`, when the
+    caller already knows it (`_closest_occurrence`) -- `value` can legitimately
+    occur more than once, and centring on `body.find(value)` (the default,
+    still used when `offset` is None) always picks the first, whether or not
+    that is where the extraction actually came from.
     """
     def around(i: int) -> str:
-        lo = max(0, i - PAGE_TEXT_KEEP // 2)
-        return body[lo:lo + PAGE_TEXT_KEEP]
+        return body[_window_lo(body, i):_window_lo(body, i) + PAGE_TEXT_KEEP]
 
     if len(body) <= PAGE_TEXT_KEEP:
         return body
-    i = body.find(value)
+    i = offset if offset is not None and offset >= 0 else body.find(value)
     win = around(i) if i >= 0 else body[:PAGE_TEXT_KEEP]
     j = body.find(anchor) if anchor else -1
     if j >= 0 and anchor not in win:
@@ -303,6 +356,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     # Raw evidence for the OutcomeVerifier: what was read, and what the page
     # said at the moment it was read. The verifier never sees our conclusion.
     extractions: list[dict] = []
+    # Every distinct page (by URL) this run has actually loaded, body text at
+    # the time it was last seen. M34: a string that is identical across two
+    # different pages of the same run is very likely site furniture (nav,
+    # banner) rather than an answer to a page-specific question -- this is
+    # the raw material for verify()'s `not_page_furniture` check, keyed by
+    # URL so re-visiting a page updates rather than duplicates its evidence.
+    page_bodies: dict[str, str] = {}
 
     # Hand each finished step to a live watcher (the gateway's SSE endpoint).
     # Every attempt is emitted, including the ones a ladder supersedes: the
@@ -354,6 +414,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 try:
                     await navigate(page, url)
                     obs = await observe(page)
+                    page_bodies[page.url] = await page.inner_text("body")
                     (run_dir / "observation.json").write_text(json.dumps(obs, indent=2))
                     rec["postcondition_ok"] = True
                 except Exception as e:
@@ -426,14 +487,43 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         raise StepError("extract", "extraction returned empty text")
                     body = await page.inner_text("body")
                     anchor = step.get("anchor")
+                    # M34 R2-1: which occurrence of `val` is this, when it is not
+                    # unique on the page (a decoy blurb beside the real answer,
+                    # case verifier-context-anchors-real-occurrence)? A DOM-derived
+                    # hint (TEXT_OFFSET_JS) picks the real one via `_closest_
+                    # occurrence`, rather than `evidence_window`/`_context` always
+                    # taking the first. `real_offset < 0` (value somehow not found
+                    # in body at all -- should not happen when `loc.inner_text()`
+                    # just returned it, but this is evidence capture, not an
+                    # assumption) degrades to the old first-occurrence behaviour
+                    # in both `evidence_window` and `value_offset` below.
+                    real_offset = _closest_occurrence(body, val, await loc.evaluate(TEXT_OFFSET_JS))
                     # body_len is the real page the value was read from -- verify()'s
                     # not_a_dump denominator prefers this over len(page_text), because
                     # page_text is evidence_window()'s output: capped at PAGE_TEXT_KEEP
                     # and doubled when a distant anchor forces a second window onto it
                     # (case verifier-dump-ratio-anchor-flip).
+                    # M34: evidence for verify()'s `not_page_furniture` -- every
+                    # OTHER distinct page this run has already loaded, excluding
+                    # the one the value was just read from. A value that is also
+                    # verbatim on a different page is very likely nav/banner
+                    # furniture, not an answer to a page-specific question
+                    # (docs/analysis.md §8a-3: "Warning!" and "Travel" both real,
+                    # grounded, non-empty answers to nothing). Recorded BEFORE
+                    # this page's own body is (re-)stored below, so a page never
+                    # gets compared against itself.
+                    other_page_text = " ".join(t for u, t in page_bodies.items() if u != page.url)
                     extractions.append(
-                        {"value": val, "page_text": evidence_window(body, val, anchor),
-                         "body_len": len(body)})
+                        {"value": val,
+                         "page_text": evidence_window(body, val, anchor, offset=real_offset),
+                         "body_len": len(body), "other_page_text": other_page_text,
+                         # Where `real_offset` lands INSIDE the window `page_text`
+                         # just captured -- what verify()'s `_context()` anchors
+                         # on, so it does not have to re-derive (and get wrong)
+                         # which occurrence this was.
+                         "value_offset": (real_offset - _window_lo(body, real_offset))
+                                         if real_offset >= 0 else None})
+                    page_bodies[page.url] = body
                     answers.append(val)
                     # Identity anchor (verifier L1): the entity the task names
                     # must be present where the answer was read.
@@ -474,7 +564,9 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         # after the submitted URL passed (url-guard-holds-after-navigation).
                         raise StepError("task", f"navigated to blocked URL: {page.url!r}")
                     if before is not None:
-                        rec["page_changed"] = (await page.inner_text("body")) != before
+                        after = await page.inner_text("body")
+                        rec["page_changed"] = after != before
+                        page_bodies[page.url] = after
                     checked = await check_state(page, step.get("expected_state"))
                     if checked is not None or rec["postcondition_ok"] is None:
                         rec["postcondition_ok"] = checked

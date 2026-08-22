@@ -1,0 +1,17 @@
+{
+  "pr": 30,
+  "round": 3,
+  "task": "M34",
+  "result": "APPROVED",
+  "scope": "repair diff a5b6bf7..82ad10c plus standing findings R2-1, R2-2, R2-3",
+  "standing_findings_verified_closed": ["R2-1", "R2-2", "R2-3"],
+  "findings": [],
+  "orchestrator_verification": {
+    "note": "Round 3 returned an empty findings array quickly relative to earlier rounds, so the orchestrator independently spot-checked the riskiest claims rather than accepting the approval on report alone.",
+    "no_case_or_fixture_weakened": "git diff a5b6bf7..82ad10c -- evals/ src/browser/fixtures/ is additions only: one new case, two new decoy fixtures, and nav-heavy-home.html's comment corrected for R2-2. Neither verifier-responsive-not-page-furniture nor verifier-listing-detail-title-not-furniture was touched.",
+    "offset_validation_sound": "_context uses the supplied offset only when page_text[offset:offset+len(value)] == value, else falls back to find() — the pre-R2-1 behaviour. A stale or wrong offset degrades safely rather than re-opening the furniture hole.",
+    "both_directions": "defect answers 'Warning!'/'Travel' still not_page_furniture=False/FAIL; correct listing->detail title not_page_furniture=True/PASS",
+    "gate_run_by_orchestrator": {"invariant": "38/38", "fast": "108/108", "live": "9/9"},
+    "wall_clock": "fast measured 60.01s against the 60s local ceiling — the ADR-013 straddling band under external machine load, score 1.000 with no case failure"
+  }
+}

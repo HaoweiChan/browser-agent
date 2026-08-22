@@ -1,0 +1,30 @@
+{
+  "pr": 30,
+  "round": 2,
+  "task": "M34",
+  "result": "REPAIRED",
+  "resolutions": [
+    {
+      "id": "R2-1",
+      "disposition": "fixed",
+      "case_id": "verifier-context-anchors-real-occurrence (new)",
+      "note": "Took the steer: anchored the offset instead of declaring a third ceiling, since the offset is knowable at the agent.py call site. Added TEXT_OFFSET_JS (src/browser/agent.py) -- an approximate DOM offset for the resolved element, summing preceding-sibling text length up the ancestor chain to <body> -- and _closest_occurrence(body, value, hint), which picks the occurrence of `value` in the page's body text nearest that hint instead of always the first. The resulting real_offset is threaded through evidence_window() (now offset-aware via a new optional `offset` param, backward compatible: existing invariant cases evidence-window-miss-is-bounded and verifier-dump-ratio-anchor-flip call it without the new param and are unaffected) and stored on the extraction as `value_offset` -- where the real occurrence lands INSIDE the page_text window (_window_lo, factored out of evidence_window's own around() so both agent.py and evidence_window compute the same window start from one function, not two copies of the arithmetic). verify()'s _context() (src/browser/verifier.py) now accepts an `offset` param: uses it when present and validated against page_text (page_text[offset:offset+len(value)] == value, guarding a stale or hand-built record), falls back to find() otherwise -- the pre-fix behaviour, still correct whenever a value occurs only once, which is most extractions.",
+      "red_watched": "New case verifier-context-anchors-real-occurrence: shop-decoy-home.html -> shop-decoy-detail.html (new fixtures). Both pages carry the identical sentence 'Deal of the day, do not miss this one: Zero-Item is now priced at $9.99 for a very limited time only, act fast before stock runs out.' (real furniture, padded well past the 20-char context window on both sides so only this shared sentence, not surrounding page structure, drives the match). The detail page ALSO carries a second, genuine $9.99 in the item's own Price group next to SKU-000/Material text the home page never carries -- the resolved target ({role: group, name: Price}) reads this second, real occurrence unambiguously, but body.find() always returns the FIRST (decoy) occurrence. Run against the pre-fix (bare find(), no offset) code: status failure:semantic, checks.not_page_furniture false, reason naming '$9.99' as chrome despite answer_matches: true.",
+      "green_after": "Same case, post-fix: status success, verdict PASS, not_page_furniture true, answer '$9.99'."
+    },
+    {
+      "id": "R2-2",
+      "disposition": "fixed",
+      "case_id": "n/a -- documentation correction, no new case",
+      "note": "Took the honest restatement, not real parity: fetching and exactly ordering books.toscrape.com's real ~50-category list was not cheap enough to be worth the risk of introducing another subtle mismatch (the review already found the fixture's own 35 items were internally out of order relative to the real site at the position it checked). docs/support-matrix.md D24, specs/decisions/ADR-016-m34-responsiveness-not-page-furniture.md, and src/browser/fixtures/nav-heavy-home.html's own comment no longer claim curl-confirmed parity with the real site's category count or order -- they now state plainly that nav-heavy-home.html and nav-heavy.html share a 35-item sidebar WITH EACH OTHER (a representative subset: many identical sibling entries surrounding the target link), which is what the check under test actually needs -- and separately, still true and re-confirmed, that the shape (a plain <a>, no <nav>, no role=navigation) matches the real site's sidebar markup.",
+      "verified": "curl -s https://books.toscrape.com/ | grep -c '<li>' -> 52 (matches the reviewer's count); no doc or fixture comment in this repair claims a specific count or order match against that number any more."
+    },
+    {
+      "id": "R2-3",
+      "disposition": "fixed",
+      "case_id": "n/a -- structural documentation cleanup, no new case",
+      "note": "docs/support-matrix.md D24 and specs/decisions/ADR-016-m34-responsiveness-not-page-furniture.md were both rewritten to state current behaviour and its ceilings only: no 'PR #30 R1/R2' labels, no 'round 1 found X, repaired by Y' narrative, no gate scoreline (the stale 106/107 is gone; current suite numbers are not restated in either document at all, since a document of record should not need re-editing every time the gate count moves). Both still cite the CASES that pin each behaviour (verifier-responsive-not-page-furniture, verifier-listing-detail-title-not-furniture, verifier-context-anchors-real-occurrence, tc2-shop-search-zh, trap-near-miss-entity) per the acceptance's own carve-out -- citing evidence is not the same as narrating rounds. ADR-016's 'Decision 2 -- the numeric exemption' subsection, which described a mechanism this PR no longer ships, is gone; the ADR's Decision section now describes the context-window + offset-anchoring mechanism as the single current design, with the numeric-exemption attempt folded into the 'why not' list (item 4) as ordinary rationale for why the FINAL shape looks the way it does, not as round history. tasks/TODO.md's M34 status note keeps round-referenced language deliberately -- CLAUDE.md's own layout names it a milestone-level PROGRESS tracker, which R2-3's acceptance does not scope in, and it is the one place this PR's own review history is expected to be legible without opening tasks/reviews/."
+    }
+  ],
+  "gate_after": {"invariant": "38/38", "fast": "108/108", "live": "9/9"}
+}
