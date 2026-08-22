@@ -1,0 +1,59 @@
+{
+  "pr": 35,
+  "round": 2,
+  "resolutions": [
+    {
+      "id": "R11",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "The band sentence cites its run by ledger timestamp (`Band source — `fast` at 134 cases, ts `20260823-041419`, **65.93s**`); the check requires a row with that ts, at that count, whose wall clock IS the published number. Cleanliness is judged AS OF that run: a dirty row is refused only when a clean one was already available when the band was published. Stable both directions — cannot deadlock the bootstrap, and later clean rows cannot retroactively redden a published band (the strict-form treadmill by another route). T-R42's \"bootstrap worked out\" claim corrected in place.",
+      "single_commit_proof": "commit 98085b6 (now 3a8bc61 after the status-block amend) adds evals/adversarial/history-dirty-precedes-the-report.json, taking fast 133->134 and invariant 52->53, republishes both bands from the runs that measured the new counts, and passed the pre-commit hook at `[eval] suite 'fast': 134/134 = 1.000` — no --no-verify.",
+      "watched_red": "citing a ts that is not a row at this count -> cites_no_recorded_run; citing a row whose wall clock is not the published number -> {published: 13.04, cited_run: 20260823-033200, actually_measured: 13.08}",
+      "verified_by_orchestrator": "ADR-019:64 and :95 carry the ts citations; git show HEAD:evals/report/history.jsonl -> 20260823-041419 fast 132/134 65.93 dirty True and 20260823-041729 invariant 53/53 13.32 dirty True; gate green at 134/134 and 53/53."
+    },
+    {
+      "id": "R10",
+      "resolution": "fixed",
+      "case": "published-band-slack-is-declared",
+      "detail": "ADR-019:180 now uses the marker, AND the check sweeps both documents for bare occurrences of the current `_band_step_s()` value, requiring every one to sit inside a marker — the class, not the instance.",
+      "watched_red": "the 99.99s mutation -> [{adr: declares_wrong_slack, declared: 99.99, one_ceiling_step_is: 4.35}]; leaving it bare as \"once per 4.35s\" (the state 4e7120d shipped) -> [{adr: unmarked_copies_of_the_slack_scalar, loose: 1, marked: 1, value: 4.35}]"
+    },
+    {
+      "id": "R12",
+      "resolution": "fixed",
+      "case": "history-dirty-precedes-the-report",
+      "suite": "invariant",
+      "detail": "New invariant check drives `main()` with `--report` into a temp report dir, with `git_dirty` replaced by a probe recording what that dir held when it was asked; plus a non-vacuity guard that the artifact was written and the row names it. The repo's own dirtiness is deliberately not consulted.",
+      "watched_red": "case before the check existed -> `unknown invariant check history-dirty-before-report` at invariant 50/53 = 0.943. Check implemented, evals/run.py reverted to the pre-fix ordering -> [{report_existed_when_dirty_was_asked: [\"20260823-041256-fast.json\"]}]"
+    },
+    {
+      "id": "R13",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "deviation": true,
+      "detail": "Products carry two decimals (65.93 x 1.15 = 75.82 -> 80; 13.32 x 1.15 = 15.32 -> 20) and the derivation's arrow must equal `_band_rule(x)`. README's whole band row (product and ceiling included) is now graded.",
+      "deviation_reason": "did NOT also require `ceiling == WALL_BUDGET_S[suite]` in the same assertion — combined with `_band_rule(x) == ceiling` it forces the rule applied to a fresh short sample to equal the committed ceiling, and that hit immediately: the first runs at 53 cases (12.87/12.89s) derive 15 against a committed 20, so R11's deadlock would have returned by another route. R4's property moved to a new `_ADR_CEILING` check on the Ruling line asserting the ceiling the ADR ADVERTISES is `WALL_BUDGET_S[suite]` — which is what R4's acceptance asked for.",
+      "watched_red": "one decimal -> [{suite: invariant, adr_row: [52, 13.08, 15.04, 20], readme_row: [52, 13.08, 15.0, 20]}, {derivation: [13.08, 15.0, 20], arithmetic: 15.04, rule_gives: 20}]; a derivation whose rule gives 15 under a stated 20 -> {derivation: [13.04, 14.996, 20], arithmetic: 15.0, rule_gives: 15, committed_ceiling: 20}; Ruling line edited to advertise 15 -> {suite: invariant, adr_ruling_ceiling: 15, committed_ceiling: 20}"
+    },
+    {
+      "id": "R14",
+      "resolution": "fixed",
+      "case": "docs-numbers-are-derived",
+      "detail": "The report-size check applies only to the suites the case is tagged with, with the reason at the site.",
+      "watched_red": "pre-fix, `live` grown by one -> {cites_a_report_of_a_different_tree: 20260823-000337-live.json, report_cases: 9, suite_now: 10} — unreachable offline. With the scoping, the same mutation leaves only {readme_does_not_say: \"--suite live        # 10 cases\"}, a text edit."
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [],
+  "debt_corrected": {
+    "T-R42": "the \"bootstrap worked out\" claim corrected per R11; acceptance re-aimed at the green half"
+  },
+  "self_found": [
+    "ADR-019 §6's \"the number beside each band is one real, clean-tree run\" and README's `clean run` column header — both created by round 2, both now describe the as-of rule"
+  ],
+  "note": "the `invariant` band moved twice inside this round, unprompted: the first 53-case runs derived 15, and the check refused that band the moment a 13.32s run landed. The ceiling did not move. ADR-019 §3 records that episode as the mechanism working.",
+  "gate": {
+    "invariant": "53/53 = 1.000, wall 12.78s",
+    "fast": "134/134 = 1.000, wall 66.2s"
+  }
+}
