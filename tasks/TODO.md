@@ -96,23 +96,29 @@ answer-shape ceiling that remains is named in `docs/support-matrix.md` rather
 than left implied.
 Out of scope: the extraction-quality gap (M28) — this task is about never
 reporting success for an unresponsive answer, not about extracting better.
-Status (2026-08-22, PR #30 pending): the adversarial case
+Status (2026-08-22, PR #30 pending, round 2 repaired): the adversarial case
 (`verifier-responsive-not-page-furniture`) landed and was watched red
 first, then the fix (`verify()`'s `not_page_furniture`, ADR-016) turned it
-green. Round 1 review (R1, HIGH) found the first cut too broad — it flagged
-a correct listing→detail title/name as furniture, a false positive on this
-domain's single most common navigation shape — and routed to repair:
-`not_page_furniture` now compares each value's local page CONTEXT, not the
-bare value, against the other pages a run visited (`PAGE_CONTEXT_WINDOW`,
-`_context()`); the numeric exemption is gone, subsumed by the same rule,
-closing rather than widening the numeric-furniture ceiling; a new case
-(`verifier-listing-detail-title-not-furniture`) pins the repaired shape,
-watched red before the repair and green after; the original "Warning!"/
-"Travel" defect was re-confirmed to still fail loudly post-repair. `fast`
-107/107, `invariant` 38/38, `live` 9/9, all against unmoved baseline. The
-surviving ceilings are named in `docs/support-matrix.md` D24 (single-page
-runs; the context-window width, swept on four shapes only). **Not closing
-this task**: the acceptance line "demonstrated on the deployed build across
+green. Round 1 (R1, HIGH) found the first cut too broad — it flagged a
+correct listing→detail title/name as furniture, a false positive on this
+domain's single most common navigation shape — repaired by comparing each
+value's local page CONTEXT, not the bare value, against the other pages a
+run visited; the numeric exemption is gone, subsumed by the same rule
+(`verifier-listing-detail-title-not-furniture` pins the repaired shape).
+Round 2 (3 MEDIUM) found: (R2-1) the context window could still anchor on
+the wrong occurrence when a value legitimately repeats on the SAME page —
+repaired by anchoring on the resolved element's actual DOM offset
+(`TEXT_OFFSET_JS`/`_closest_occurrence`), pinned by
+`verifier-context-anchors-real-occurrence`; (R2-2) a fixture-parity claim
+("the same 50-category sidebar, same order") was false — restated honestly
+as a representative subset; (R2-3) `docs/support-matrix.md` D24 and
+ADR-016 carried round-by-round repair narrative and a superseded gate
+number, which belong only in `tasks/reviews/pr30-r*.json` — both rewritten
+to state current behaviour only. Every round, the original "Warning!"/
+"Travel" defect was re-confirmed to still fail loudly. `fast` 108/108,
+`invariant` 38/38, `live` 9/9, all against unmoved baseline. The surviving
+ceilings are named in `docs/support-matrix.md` D24. **Not closing this
+task**: the acceptance line "demonstrated on the deployed build across
 repeated runs" cannot be met from this environment (no LLM key, the
 deployed URL still serves `main`) — that repeated-run confirmation is the
 one thing left, run post-merge the same way M29 ran it for M10, and

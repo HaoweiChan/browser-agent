@@ -1,0 +1,23 @@
+{
+  "id": "verifier-context-anchors-real-occurrence",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC3",
+  "trap": "value repeats on the SAME page it was extracted from -- _context() must anchor on the real extraction site, not the first textual occurrence",
+  "input": {
+    "task": "Open the Zero-Item deal and tell me its price.",
+    "fixture": "shop-decoy-home.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "link", "name": "Zero-Item" },
+        "expected_state": { "url_contains": "shop-decoy-detail" } },
+      { "action": "extract", "target": { "role": "group", "name": "Price" }, "anchor": null }
+    ]
+  },
+  "expect": { "status": "success", "verdict": "PASS", "answer": "$9.99" },
+  "provenance": "PR #30 R2-1 (MEDIUM): _context() picked the value's window via page_text.find(value) -- always the FIRST occurrence -- with no way to tell which occurrence the extraction actually came from. shop-decoy-detail.html carries '$9.99' twice: once inside a 'Deal of the day' blurb identical to shop-decoy-home.html's own blurb (real furniture, the landing page repeats it verbatim), and once in the item's own Price group next to SKU-000/Material text the landing page never carries. The resolved target ({role: group, name: Price}) unambiguously reads the SECOND, real $9.99, but the pre-fix bare-find() context anchored on the FIRST (decoy) occurrence, whose neighbourhood matches the landing page -- a correct answer wrongly flagged as chrome. Watched red before the fix: status failure:semantic, checks.not_page_furniture false. Green after: agent.py computes an approximate DOM offset for the resolved element (TEXT_OFFSET_JS, an ancestor/preceding-sibling text-length walk) and picks the occurrence of the value in `body` CLOSEST to that hint (_closest_occurrence) instead of always the first; the resulting offset travels through evidence_window() (now offset-aware) and the extraction's own value_offset field, and _context() anchors on it directly rather than re-deriving via find().",
+  "triage": {
+    "class": "false-positive-repair",
+    "note": "PR #30 round 2, R2-1 (MEDIUM, repair). Distinct from R1's listing->detail companion cases: this is a single page carrying two genuine occurrences of the same string, one of them a decoy, not two different pages."
+  }
+}

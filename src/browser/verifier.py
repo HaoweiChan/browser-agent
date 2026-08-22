@@ -191,16 +191,26 @@ def _clean(value) -> str:
     return re.sub(r"\s+", " ", str(value)).strip().casefold().strip(".,;:!")
 
 
-def _context(page_text: str, value: str, window: int = PAGE_CONTEXT_WINDOW) -> str:
+def _context(page_text: str, value: str, offset: int | None = None,
+            window: int = PAGE_CONTEXT_WINDOW) -> str:
     """`value` plus up to `window` raw characters either side of it, taken from
     where it actually sits in `page_text` -- the local neighbourhood
     `not_page_furniture` compares against a different page, on the theory that
     a repeated WIDGET (nav item, banner) carries its neighbours with it and a
-    coincidentally-repeated fact (a title, a price) does not. Falls back to
-    the bare value when it is not found in `page_text` at all (should not
-    happen when `grounded` has already passed on this extraction, but this
-    function makes no such assumption on its own)."""
-    i = page_text.find(value)
+    coincidentally-repeated fact (a title, a price) does not.
+
+    `offset` (M34 R2-1): agent.py's own record of where `value` really sits
+    in `page_text`, when `value` is not unique on the page -- a decoy blurb
+    beside the real answer (case verifier-context-anchors-real-occurrence)
+    means `page_text.find(value)` alone can anchor on the WRONG occurrence,
+    flagging a correct answer as furniture because the decoy's neighbourhood,
+    not the real one, happens to repeat elsewhere. Validated against
+    `page_text` before use (`offset` from a stale or hand-built record that
+    does not actually match `value` there is worth exactly nothing) and
+    falls back to `find()` otherwise -- the pre-R2-1 behaviour, still correct
+    whenever `value` occurs only once, which is most extractions."""
+    i = offset if (offset is not None and 0 <= offset
+                   and page_text[offset:offset + len(value)] == value) else page_text.find(value)
     if i < 0:
         return value
     return page_text[max(0, i - window): i + len(value) + window]
@@ -385,7 +395,7 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     # fact does not.
     furniture = [e["value"] for e in extractions or []
                  if len(_clean(e["value"])) >= PAGE_INVARIANT_MIN_CHARS
-                 and _clean(_context(e.get("page_text", ""), e["value"]))
+                 and _clean(_context(e.get("page_text", ""), e["value"], e.get("value_offset")))
                      in _clean(e.get("other_page_text", ""))]
     check("not_page_furniture", not furniture,
           f"value's surrounding text also appears verbatim on a different "

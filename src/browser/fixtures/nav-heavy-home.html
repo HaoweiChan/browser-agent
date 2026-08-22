@@ -1,19 +1,23 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Nav-heavy Fixture — Home</title>
-<!-- Landing page for nav-heavy.html (M34, case
-     responsive-answer-not-page-furniture): the two pages share the SAME
-     sidebar, verbatim, item for item -- matching books.toscrape.com's own
-     shape, confirmed by curl: the category sidebar is byte-identical on
-     every page of the real site, not just the "Travel" entry. A fixture
-     with only one shared string understated the real bug (PR #30 R1's
-     narrowing needs the whole repeated widget, not one coincidental
-     substring, to tell real chrome from a title that happens to repeat
-     between a listing row and its own detail page -- see
-     verifier.not_page_furniture and its "context" helper). No banner/alert
-     text here on purpose -- the furniture shape under test is a plain nav
-     link, the shape books.toscrape.com's own sidebar actually is (no <nav>,
-     no role=navigation). -->
+<!-- Landing page for nav-heavy.html (case
+     verifier-responsive-not-page-furniture): the two pages share the SAME
+     35-item sidebar with EACH OTHER, verbatim, item for item -- a
+     representative subset of books.toscrape.com's own sidebar shape (many
+     identical sibling category links surrounding the target), not a claim
+     of parity with the real site's own category list or count: the real
+     sidebar carries roughly 50 categories in an order this fixture does not
+     reproduce. What matters for the check under test is that the SAME
+     repeated widget recurs on both pages -- a fixture with only one shared
+     string understated that (verify()'s not_page_furniture compares LOCAL
+     CONTEXT around a value, not just the bare value, so it needs a whole
+     repeated widget, not one coincidental substring, to tell real chrome
+     from a title that happens to repeat between a listing row and its own
+     detail page). No banner/alert text here on purpose -- the furniture
+     shape under test is a plain nav link, the shape books.toscrape.com's
+     own sidebar actually is (no <nav>, no role=navigation, confirmed live
+     by curl). -->
 <header><a href="#top">Nav-heavy Shop</a></header>
 <aside>
   <ul>
