@@ -84,7 +84,7 @@ with `answer: "Warning!"`, and `5c574a44` with `answer: "Travel"`, for
 "the price of the first book in the Travel category" (truth: £45.17). All nine
 checks green. Every document of record that currently implies A-freeze is
 achieved is making a claim the evidence contradicts. Correct the record; do not
-wait for M30 to land first.
+wait for M34 to land first.
 Acceptance: the raw post-merge verification is committed (run_ids, verdict
 blocks, ground truth) and cited; ADR-015 amended so criterion 5 reads red with
 the deployed evidence, not green-pending; `docs/support-matrix.md` carries the
@@ -93,7 +93,7 @@ graded check fails if a document asserts criterion 5 green while the committed
 verification says otherwise. Vault copy of the evidence:
 `projects/career/2026-08-22-whaleforce-m10-post-merge-live-verification.md`.
 
-### M30 — an answer is still never checked for being responsive            [status: todo]
+### M34 — an answer is still never checked for being responsive            [status: todo]
 Spec: M7 declared this gap, M10's probe demonstrated it, and M10's fix closed
 only the "which X has the most Y" sentence shape. The general defect is live on
 merged main and reproduces on a plain single-hop extraction: a string that IS on

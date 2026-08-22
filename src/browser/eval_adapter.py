@@ -2043,12 +2043,39 @@ def _run_ui_rendered_case(case: dict) -> dict:
                   : Math.pow((channel + .055) / 1.055, 2.4))
                 .reduce((sum, channel, i) => sum + channel * [.2126,.7152,.0722][i], 0);
               const a = luminance(effective), b = luminance(background.slice(0, 3));
+              const progressStates = () => [...document.querySelectorAll("#progress li")]
+                .map(item => item.dataset.state);
+              const progressLabels = () => [...document.querySelectorAll("#progress li")]
+                .map(item => item.getAttribute("aria-label"));
+              resetProgress();
+              const progress = {start: progressStates(), start_labels: progressLabels()};
+              setPhase(phaseFor({action: "navigate"}));
+              progress.browser = progressStates();
+              progress.browser_labels = progressLabels();
+              setPhase(phaseFor({action: "click"}));
+              progress.action = progressStates();
+              progress.action_labels = progressLabels();
+              setPhase(phaseFor({action: "extract"}));
+              progress.verification = progressStates();
+              progress.verification_labels = progressLabels();
+              setTerminal("success");
+              progress.success = progressStates();
+              progress.success_labels = progressLabels();
+              progress.success_current = [...document.querySelectorAll("#progress li")]
+                .map(item => item.getAttribute("aria-current"));
+              resetProgress();
+              setTerminal("failure:env");
+              progress.failure = progressStates();
+              progress.failure_labels = progressLabels();
+              progress.failure_current = [...document.querySelectorAll("#progress li")]
+                .map(item => item.getAttribute("aria-current"));
               return {
                 inner_width: innerWidth,
                 document_width: document.documentElement.scrollWidth,
                 placeholder_contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05),
                 placeholder_color: getComputedStyle(input, "::placeholder").color,
-                input_background: getComputedStyle(input).backgroundColor
+                input_background: getComputedStyle(input).backgroundColor,
+                progress
               };
             }""", inp["target_length"])
             await context.close()
@@ -2067,7 +2094,39 @@ def _run_ui_rendered_case(case: dict) -> dict:
                 "minimum": inp["placeholder_minimum"],
                 "foreground": rendered["placeholder_color"],
                 "background": rendered["input_background"]}
+        if inp.get("progress_states") and rendered["progress"] != inp["progress_states"]:
+            wrong[f"{scheme}_progress"] = {"want": inp["progress_states"],
+                                               "got": rendered["progress"]}
     return {"passed": not wrong, "wrong": wrong, "got": got}
+
+
+def _run_ui_progress_case(case: dict) -> dict:
+    """The execution strip is driven only by acknowledged run/trace/result events."""
+    inp = case["input"]
+    page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    page = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
+    script = page.split("<script>", 1)[1].split("</script>", 1)[0]
+    wrong = {}
+
+    missing = [s for s in inp["fragments"] if s not in page]
+    if missing:
+        wrong["fragments"] = missing
+    missing_script = [s for s in inp["script_fragments"] if s not in script]
+    if missing_script:
+        wrong["script_fragments"] = missing_script
+    forbidden = [s for s in inp.get("forbid", []) if s in script]
+    if forbidden:
+        wrong["forbidden"] = forbidden
+
+    # The UI is allowed to interpret the trace, never manufacture a phase. The
+    # three branches are intentionally small: pre-plan navigation, extraction
+    # verification, and every executable action the trace already contains.
+    mapping = dict(re.findall(r'if \(s\.action === "([a-z]+)"\) return "([a-z]+)"',
+                              script))
+    if mapping != inp["step_phases"]:
+        wrong["step_phases"] = {"want": inp["step_phases"], "got": mapping}
+
+    return {"passed": not wrong, "wrong": wrong}
 
 
 def _check_supersede_dangling() -> dict:
@@ -2694,6 +2753,7 @@ KINDS = {
     "stream": _run_stream_case,
     "ui-style": _run_ui_style_case,
     "ui-rendered": _run_ui_rendered_case,
+    "ui-progress": _run_ui_progress_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
     "verifier-labels": _run_verifier_labels_case,

@@ -5,7 +5,7 @@ Status: accepted
 
 **Ruling**: the second held-out probe (criterion 5) came back RED — the inviolable property was violated, reproduced three times — and a scope-screen bypass beside it; both defects are fixed and eval-pinned in this same PR, and ~~criterion 5 is now green offline, with live re-confirmation against the deployed URL pending the post-merge redeploy~~. All 6 A-exit criteria are green or (criterion 2, unchanged) honestly partial.
 **Because**: the owner's decision on the RED probe was fix-then-freeze, not freeze-with-an-open-gate — CLAUDE.md rule 2 requires every new failure to become a case before it is fixed, and the M5 precedent (commit `d3f4daf`) established that a probe's fix is verified offline first and live only after the human merges and redeploys.
-**Amended 2026-08-22 (M29), owner's call**: the pending live re-confirmation ran against merged main (`788e8e9`) and **did not confirm** — criterion 5 is red on the deployed build. `docs/analysis.md` §8a-3 has the raw evidence: four post-merge runs of "tell me the price of the first book in the Travel category" against `https://whaleforce-browser-agent.zeabur.app`, three answered `"Warning!"` and one `"Travel"`, all reported `status: success` / `verdict: PASS`, none is the true £45.17. All nine verdict checks passed on every run — the answer is grounded (the string really is on the page) and non-responsive, a task shape none of M10's two fixes touch. The scope-screen fix held (`run_id 1902207e`, refused pre-browser at $0.00) and the `live` suite re-ran 9/9. Struck rather than deleted, per this same ADR's own citation of the plan's criterion-7 precedent (`docs/plans/completed/task1-a-level-plan.md`): the original ruling was the correct read of the evidence on 2026-08-22 before the redeploy confirmed anything, and quietly editing it to look right in hindsight would erase the exact "pending, not claimed" honesty this ADR was written to model. See the amended criterion 5 below and `docs/support-matrix.md` D23. Fix is `tasks/TODO.md` M30, explicitly out of this amendment's scope.
+**Amended 2026-08-22 (M29), owner's call**: the pending live re-confirmation ran against merged main (`788e8e9`) and **did not confirm** — criterion 5 is red on the deployed build. `docs/analysis.md` §8a-3 has the raw evidence: four post-merge runs of "tell me the price of the first book in the Travel category" against `https://whaleforce-browser-agent.zeabur.app`, three answered `"Warning!"` and one `"Travel"`, all reported `status: success` / `verdict: PASS`, none is the true £45.17. All nine verdict checks passed on every run — the answer is grounded (the string really is on the page) and non-responsive, a task shape none of M10's two fixes touch. The scope-screen fix held (`run_id 1902207e`, refused pre-browser at $0.00) and the `live` suite re-ran 9/9. Struck rather than deleted, per this same ADR's own citation of the plan's criterion-7 precedent (`docs/plans/completed/task1-a-level-plan.md`): the original ruling was the correct read of the evidence on 2026-08-22 before the redeploy confirmed anything, and quietly editing it to look right in hindsight would erase the exact "pending, not claimed" honesty this ADR was written to model. See the amended criterion 5 below and `docs/support-matrix.md` D23. Fix is `tasks/TODO.md` M34, explicitly out of this amendment's scope.
 **Enforced by**: `docs-numbers-are-derived` (extended at M29 to fail if a document asserts criterion 5 green while `docs/analysis.md` §8a-3 says otherwise), `report-citations-resolve`, `support-matrix-cites-real-cases`, `adr-header-and-index`, `verifier-aggregate-superlative-fails-loud`, `l5-refuse-delete-determiners`, `verifier-aggregate-ground-truth-untouched`
 
 ---
@@ -117,7 +117,7 @@ what is actually committed, not what the plan hoped for:
    discharging the one pending item ADR-015 criterion 6 could not take at
    merge time because openlibrary.org was unreachable while it was written.
    Fixing the general responsiveness gap is out of scope for this amendment
-   and is `tasks/TODO.md` M30.
+   and is `tasks/TODO.md` M34.
 6. **Gate — green.** `evals/report/20260822-035727-fast.json` and
    `evals/report/20260822-035627-invariant.json` (cited in `README.md`'s
    "Where it stands" block, recomputed by `docs-numbers-are-derived`):
@@ -157,7 +157,7 @@ not — a task shape outside either M10 fix reproduced a wrong-answer-as-
 success on the deployed build, four times, and once already before that on
 a different shape at M10's own probe. "The property holds in production" is
 no longer an open inference; the deployed measurement says it does not, and
-the fix is `tasks/TODO.md` M30.
+the fix is `tasks/TODO.md` M34.
 
 ## Consequences
 
@@ -181,7 +181,7 @@ inflections and a wider determiner set, the same shape as the M5 probe's
 `log ?into` fix. ~~Owner decides submission/public once the post-merge live
 re-confirmation of both fixes lands.~~ **Amended 2026-08-22 (M29)**: it
 landed, and it is red — see the header amendment, the amended criterion 5
-above, and `docs/analysis.md` §8a-3. `tasks/TODO.md` M30 (fix) and M31
+above, and `docs/analysis.md` §8a-3. `tasks/TODO.md` M34 (fix) and M31
 (planner-side superlative lint) are the follow-on work; this ADR is not
 reopened to chase them.
 
