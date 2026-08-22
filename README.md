@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 133 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 134 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260823-033320-fast.json`, with
-`evals/report/20260823-033200-invariant.json` and
+Latest offline baseline — `evals/report/20260823-042421-fast.json`, with
+`evals/report/20260823-042306-invariant.json` and
 `evals/report/20260823-000337-live.json`:
 
 ```
-fast  133/133    invariant  52/52    live  8/9    $0.0000    66.4s
+fast  134/134    invariant  53/53    live  8/9    $0.0000    66.2s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 23/23 · 5 replans
 ```
@@ -135,15 +135,14 @@ maximum under the strict form, once per band crossing under this one — and the
 ceiling is graded against the ledger directly, so the slack costs a reader
 precision and never costs the gate its teeth.
 
-At the case count this branch ships. Each band is derived from one committed
-run of this tree with nothing uncommitted in it — the graded citation is in
-ADR-019 §2/§3, and every other run is in the ledger; enumerating them here is
-the snapshot that drifted:
+At the case count this branch ships. Each band names one run of this tree by its
+ledger timestamp — the graded citation is in ADR-019 §2/§3, and every other run
+is in the ledger; enumerating them here is the snapshot that drifted:
 
-| suite | cases | clean run | × 1.15 | ceiling |
+| suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 133 | 66.41s | 76.4 | **80s** |
-| `invariant` | 52 | 13.08s | 15.0 | **20s** |
+| `fast` | 134 | 65.93s | 75.82 | **80s** |
+| `invariant` | 53 | 13.32s | 15.32 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of the shipped tree gave `invariant` 14.80-16.47s and `fast`
@@ -370,7 +369,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 144 cases (133 of them in the offline gate), it
+The eval set is not weak; it is 145 cases (134 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

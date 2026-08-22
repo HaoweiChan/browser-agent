@@ -144,10 +144,18 @@ Admitting non-green rows is argued in `_band_wrong`'s comment (a wall clock is a
 and requiring green deadlocks: this check is itself in both suites). Admitting DIRTY rows is
 argued nowhere, and it is the weaker half — a band can be justified by a tree that was never
 committed.
-Acceptance: the filter narrows to `dirty: false` rows (with the bootstrap worked out: a band
-can only be measured before the commit that publishes it, so the clean run always precedes
-the doc edit), or `_band_wrong`'s comment and ADR-019 §6 state that a band is measured on the
-working tree by construction and say what that costs. Watched red with the two rows above.
+Round 3 correction: that bootstrap claim was false, and PR #35 R11 proved it. A tree only
+reaches case count N+1 while the new case file is UNCOMMITTED, so every row at N+1 is dirty
+until the commit the check was blocking — requiring `dirty: false` outright deadlocked the
+one operation CLAUDE.md rule 2 makes routine. What ships instead: the band cites its run by
+ledger timestamp and cleanliness is judged as of that run, so a dirty row is refused only
+when a clean one was already available when the band was published.
+Acceptance: the remaining half is GREEN, which is neither required nor requirable the same
+way — this check is in both suites, so at a new count every run is red until the band is
+republished and no green row could exist to republish it from. Either a bootstrap that
+tolerates one red row and then requires green (the same as-of trick would work), or
+`_band_wrong`'s comment and ADR-019 §6 state that a band's source run may be red and say
+what that costs. Watched red with the two rows above.
 
 ### T-R43 — `_band_step_s` measures the ceiling step once and publishes it as a bound for every band            [status: todo]
 Origin: PR #35 R8

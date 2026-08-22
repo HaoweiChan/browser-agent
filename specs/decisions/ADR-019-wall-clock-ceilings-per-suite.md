@@ -61,8 +61,9 @@ debt (T-R40).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 133 cases, clean run at **66.41s**
-  (`evals/report/20260823-033320-fast.json`, 133/133, `dirty: false`).
+- Band source — `fast` at 134 cases, ts `20260823-041419`, **65.93s**
+  (`evals/report/20260823-041419-fast.json`; the run that measured the tree the
+  134th case was being added to, so `dirty: true` — see §6's last paragraph).
 
 Every run of this tree is in `evals/report/history.jsonl`, committed beside
 this file; the sentence above names the one the band is derived from, and
@@ -78,7 +79,7 @@ the shipped case count, which is the R21 defect this ADR was amended over. What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 66.41 × 1.15 = 76.4 → **80**. The band published for the earlier
+five — gives 65.93 × 1.15 = 75.82 → **80**. The band published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of
@@ -91,10 +92,18 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 52 cases, clean run at **13.08s**
-  (`evals/report/20260823-033200-invariant.json`, 52/52, `dirty: false`).
+- Band source — `invariant` at 53 cases, ts `20260823-041729`, **13.32s**
+  (53/53; ADR-012 writes no per-case report for a green run, so the ledger row
+  is the whole artifact — which is why the sentence cites the ts and not a file).
 
-The same rule gives 13.08 × 1.15 = 15.0 → **20**.
+The same rule gives 13.32 × 1.15 = 15.32 → **20**. Two decimals on the product
+because one is not enough to re-derive it: "15.3" and "15.0" both round up to a
+multiple of five differently depending on how a reader reads them, and the
+committed ceiling is 20 (PR #35 R13). Note the band moved within this round: the
+first two runs at 53 cases measured 12.87 and 12.89s, which derive **15**, and
+`published-band-matches-the-ledger` refused a band deriving 15 as soon as a
+13.32s run landed. That is §6 working — the ceiling did not ratchet down on the
+short sample, and the doc had to be re-measured when the ledger crossed the band.
 
 This number was **15** until PR #29 R21, and that was a reading error, not a
 rule change: the band behind it published five runs of a ledger holding
@@ -177,7 +186,8 @@ What differs is frequency. `published >= ledger max` forces a doc edit on every
 new maximum, and on a tree that moves 0.2-0.5s between consecutive runs most of
 the early runs at any new case count set one — each landing on whoever commits
 next, for drift of tenths of a second. The property kept here forces an edit
-when the band is crossed: once per 4.35s, which is a real change in what the
+when the band is crossed: once per one ceiling step (**4.35s**), which is a
+real change in what the
 tree costs and worth a human writing a number down. A regeneration script
 changes who types the number, not how often the interruption arrives.
 
@@ -206,16 +216,32 @@ ceiling does not ratchet down on one. Republish the maximum, leave the ceiling
 where the longer record put it, and move it down only with a measurement that
 says so (T-R39 carries the widened-window option).
 
-**What a reader should conclude.** The number beside each band is one real,
-clean-tree run — `published-band-matches-the-ledger` requires it to be a row in
-the ledger recorded with nothing uncommitted, so it is never a value nobody
-measured. It is not necessarily the slowest run in the ledger: red runs and
-runs taken mid-edit are in there too, and the maximum of all of them can sit up
-to one ceiling step above the band source without anything going red. The
+**What a reader should conclude.** The number beside each band is one named
+run: the sentence cites its ledger timestamp, and
+`published-band-matches-the-ledger` requires a row with that timestamp, at that
+case count, whose wall clock IS the published number. So it is never a value
+nobody measured. It is not necessarily the slowest run in the ledger — red runs
+and runs taken mid-edit are in there too, and the maximum of all of them can sit
+up to one ceiling step above the band source without anything going red. The
 ceiling beside it is correct either way, because it is graded against that
-maximum and not against the published number. If you want the exact current
-maximum, the ledger is the artefact — and the grader prints it, with the case
-count, whenever the band needs republishing.
+maximum and not against the published number.
+
+Whether the cited run was taken on a clean tree is judged **as of that run**: a
+dirty row is refused only if a clean one was already available when the band was
+published. Both halves of that are deliberate. Requiring clean outright
+deadlocked adding a case — a tree only reaches count N+1 while the new case is
+uncommitted, so every row at N+1 is dirty until the commit the check was
+blocking (PR #35 R11). And judging as-of rather than as-of-now is what stops
+later clean runs from retroactively reddening a published band, which is the
+same treadmill this section refuses for the strict form. Both bands above are
+live examples: each cites the run that measured its new case count, taken while
+the 134th case was still uncommitted, and the clean green runs of this tree that
+followed did not disturb them. The GREEN half is not required and not
+requirable the same way (T-R42): this check is in both suites, so at a new count
+every run is red until the band is republished.
+
+If you want the exact current maximum, the ledger is the artefact — and the
+grader prints it, with the case count, whenever the band needs republishing.
 
 ## Consequences
 

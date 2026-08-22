@@ -362,12 +362,12 @@ def _check_planner_prompt() -> dict:
 # checkable. Deliberately a labelled scalar, not the list of run times: a list
 # is a snapshot and `history.jsonl` grows on every gate run, so a grader that
 # string-matched it would go red on the next run rather than on a regression.
-# The one sentence per suite that ADR-019 must carry for its band to be checkable.
-# It names a CLEAN run — one recorded with no uncommitted change in the tree —
-# because round 1 of PR #35 published both bands off runs that were red and dirty
-# (R5), and a band justified by a tree that was never committed is not evidence.
+# The one sentence per suite that ADR-019 must carry for its band to be
+# checkable. It names the RUN the band came from by its ledger timestamp, so the
+# published number is not merely "some row" but that row (PR #29 R21 published
+# values from no run at all; PR #35 R5 published two from red, dirty ones).
 _BAND_LINE = re.compile(
-    r"Band source — `(fast|invariant)` at (\d+) cases, clean run at \*\*([\d.]+)s\*\*")
+    r"Band source — `(fast|invariant)` at (\d+) cases, ts `([\d-]+)`, \*\*([\d.]+)s\*\*")
 
 # ADR-019 §6's declaration of what the band property does NOT see: the size of
 # the hole, as a number the rule fixes rather than prose that can be softened
@@ -385,12 +385,20 @@ _README = Path(__file__).parents[2] / "README.md"
 # ADR's sentence rather than against the ledger a second time, so there is one
 # source and the two documents cannot disagree.
 _README_BAND_ROW = re.compile(
-    r"^\| `(fast|invariant)` \| (\d+) \| ([\d.]+)s \|", re.MULTILINE)
+    r"^\| `(fast|invariant)` \| (\d+) \| ([\d.]+)s \| ([\d.]+) \| \*\*(\d+)s\*\* \|",
+    re.MULTILINE)
 
-# "gives 66.38 × 1.15 = 76.3 → **80**" — the sentence that turns a published
-# maximum into a ceiling. Nothing used to read it, so §3 could derive 15 under a
-# heading that says 20s and no check could tell (PR #35 R4).
+# "gives 66.41 × 1.15 = 76.37 → **80**" — the sentence that turns a published
+# maximum into a ceiling. Nothing used to read it, so the ADR could argue a
+# ceiling nothing commits and no check could tell (PR #35 R4).
 _BAND_DERIVATION = re.compile(r"([\d.]+) × 1\.15 = ([\d.]+) → \*\*(\d+)\*\*")
+
+# The Ruling's own local ceilings. This is where "the ADR's published ceiling
+# equals `WALL_BUDGET_S[suite]`" belongs: the derivation sentence states what
+# the RULE gives from the current band, which at a fresh case count is a short
+# sample and legitimately lower — §6's no-ratchet-down rule. Tying the two
+# together instead would have made every case addition red (PR #35 R11/R13).
+_ADR_CEILING = re.compile(r"local `(fast|invariant)`[^,]*?\*\*(\d+)s\*\*")
 
 
 def _band_rule(x: float) -> int:
@@ -431,7 +439,7 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         if suite not in published:
             wrong.append({"suite": suite, "adr_publishes_no_band_line": True})
             continue
-        cases, said = published[suite]
+        cases, ts, said = published[suite]
         now = counts[suite]
         # Every recorded run at this case count, not only the green ones. A
         # wall clock is a wall clock whether or not a case failed, taking the
@@ -452,19 +460,30 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         if slowest is None:
             wrong.append({"suite": suite, "no_recorded_run_at": now})
             continue
-        # The published number must BE one of those runs, measured on a tree with
-        # nothing uncommitted in it. Not the maximum over clean runs — that is the
-        # strict property §6 refuses — just a real, clean measurement, which is
-        # what "value that appears in no recorded run" (PR #29 R21) and "red and
-        # dirty" (PR #35 R5) both violate. Green is NOT required and cannot be:
-        # this check is in both suites, so at a new case count every run is red
-        # until the band is republished, and a green row could never exist to
-        # republish it from.
-        if said not in [r["wall_s"] for r in rows
-                        if r["suite"] == suite and r["total"] == now
-                        and not r.get("dirty", True)]:
-            wrong.append({"suite": suite, "published": said,
-                          "is_not_a_clean_recorded_run_at": now})
+        # The cited run must exist at this count and must have measured the
+        # published number. Cleanliness is judged AS OF that run: a dirty row is
+        # refused only if a clean one was already available when the band was
+        # published. Requiring `clean` outright deadlocked the one operation
+        # CLAUDE.md rule 2 makes routine — a tree only reaches count N+1 while
+        # the new case is uncommitted, so every row at N+1 is dirty until the
+        # commit the check was blocking (PR #35 R11). Judging as-of the cited ts
+        # is stable: later clean rows cannot retroactively redden a published
+        # band, which is the treadmill §6 exists to refuse. Green is neither
+        # required nor requirable — this check is in both suites, so at a new
+        # count every run is red until the band is republished (T-R42).
+        at = [r for r in rows if r["suite"] == suite and r["total"] == now]
+        src = next((r for r in at if r["ts"] == ts), None)
+        if src is None:
+            wrong.append({"suite": suite, "cites_no_recorded_run": ts, "at": now})
+        elif src["wall_s"] != said:
+            wrong.append({"suite": suite, "published": said, "cited_run": ts,
+                          "actually_measured": src["wall_s"]})
+        elif src.get("dirty", True) and [r for r in at
+                                         if not r.get("dirty", True) and r["ts"] <= ts]:
+            wrong.append({"suite": suite, "cited_a_dirty_run": ts,
+                          "clean_runs_available_by_then":
+                          [r["ts"] for r in at
+                           if not r.get("dirty", True) and r["ts"] <= ts]})
         if _band_rule(said) != _band_rule(slowest):
             wrong.append({"suite": suite, "published_slowest": said,
                           "derives_ceiling": _band_rule(said),
@@ -515,7 +534,7 @@ def _check_published_band() -> dict:
     from evals.run import HISTORY, WALL_BUDGET_S, load_cases
 
     adr = _ADR019.read_text(encoding="utf-8")
-    lines = [(m.group(1), (int(m.group(2)), float(m.group(3))))
+    lines = [(m.group(1), (int(m.group(2)), m.group(3), float(m.group(4))))
              for m in _BAND_LINE.finditer(adr)]
     published = dict(lines)
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
@@ -525,13 +544,17 @@ def _check_published_band() -> dict:
     # file once already (PR #29 R24, the origin of T-R34). Same two numbers or
     # red: one number, two documents, no hand-kept copy.
     readme = _README.read_text(encoding="utf-8")
-    rows = [(m.group(1), (int(m.group(2)), float(m.group(3))))
+    rows = [(m.group(1), (int(m.group(2)), float(m.group(3)),
+                          float(m.group(4)), int(m.group(5))))
             for m in _README_BAND_ROW.finditer(readme)]
     table = dict(rows)
-    for suite, band in sorted(published.items()):
-        if table.get(suite) != band:
-            wrong.append({"suite": suite, "adr_band": list(band),
-                          "readme_band": list(table[suite]) if suite in table
+    for suite, (cases, _ts, said) in sorted(published.items()):
+        # The whole row, product and ceiling included: an ungraded copy is the
+        # one that drifts, which is the lesson of R1 and R2 in this same PR.
+        want = (cases, said, round(said * 1.15, 2), WALL_BUDGET_S[suite])
+        if table.get(suite) != want:
+            wrong.append({"suite": suite, "adr_row": list(want),
+                          "readme_row": list(table[suite]) if suite in table
                           else None})
     # Both parses are last-wins dicts, so a superseded band left above the live
     # one shadows it in silence — and if both land in the same band, publishes a
@@ -546,17 +569,33 @@ def _check_published_band() -> dict:
     # ceiling `evals/run.py` commits. Without this, growing a suite re-measures
     # the band downwards and §3 reads "-> **15**" under a heading that says 20s,
     # with every other property green (PR #35 R4).
-    for suite, (_, said) in sorted(published.items()):
+    for suite, (_, _ts, said) in sorted(published.items()):
         stated = [(float(a), float(b), int(c))
                   for a, b, c in _BAND_DERIVATION.findall(adr) if float(a) == said]
         if not stated:
             wrong.append({"suite": suite, "no_derivation_of": said})
             continue
         for x, product, ceiling in stated:
-            if round(x * 1.15, 1) != product or ceiling != WALL_BUDGET_S[suite]:
+            # Two decimals, and the ROUNDED product must itself round up to the
+            # ceiling: 13.08 x 1.15 is 15.042, published as "15.0" a reader
+            # applies the rule to 15.0 and lands on 15, not the committed 20
+            # (PR #35 R13). `_band_rule(x)` is the same assertion from the other
+            # end — the number the rule gives, not just the number committed.
+            if (round(x * 1.15, 2) != product or _band_rule(x) != ceiling
+                    or ceiling > WALL_BUDGET_S[suite]):
                 wrong.append({"suite": suite, "derivation": [x, product, ceiling],
-                              "arithmetic": round(x * 1.15, 1),
+                              "arithmetic": round(x * 1.15, 2),
+                              "rule_gives": _band_rule(x),
                               "committed_ceiling": WALL_BUDGET_S[suite]})
+    # ...and the ceiling the Ruling publishes IS the committed one. Separate
+    # from the derivation on purpose: the rule applied to a fresh short sample
+    # can come out below the committed ceiling and must not drag it down (§6),
+    # but the number the ADR advertises can never be a number nothing enforces.
+    ruling = {m.group(1): int(m.group(2)) for m in _ADR_CEILING.finditer(adr)}
+    for suite in sorted(WALL_BUDGET_S):
+        if ruling.get(suite) != WALL_BUDGET_S[suite]:
+            wrong.append({"suite": suite, "adr_ruling_ceiling": ruling.get(suite),
+                          "committed_ceiling": WALL_BUDGET_S[suite]})
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -590,6 +629,7 @@ def _check_published_band_slack() -> dict:
     # amending the rule and repairing the checked one left the other two green
     # and wrong (PR #35 R1). ponytail: a stray figure written WITHOUT the marker
     # is still invisible; upgrade to a bare-scalar sweep if that ever happens.
+    bare = re.compile(rf"(?<![\d.]){step_s:g}(?![\d])".replace(".", r"\."))
     for name, text in (("adr", adr), ("readme", _README.read_text(encoding="utf-8"))):
         said = [float(v) for v in _SLACK_MARK.findall(text)]
         if not said:
@@ -598,18 +638,28 @@ def _check_published_band_slack() -> dict:
             if abs(v - step_s) > 0.005:
                 wrong.append({name: "declares_wrong_slack", "declared": v,
                               "one_ceiling_step_is": step_s})
+        # ...and no copy of the figure outside the marker. The round-1 repair
+        # added the fourth copy in the same commit that claimed every copy was
+        # graded (PR #35 R10), so the marker alone closed the instance and not
+        # the class: every occurrence of the current value in either document
+        # must be inside a marker.
+        loose = (len(bare.findall(text))
+                 - sum(1 for v in said if abs(v - step_s) <= 0.005))
+        if loose:
+            wrong.append({name: "unmarked_copies_of_the_slack_scalar", "loose": loose,
+                          "marked": len(said), "value": step_s})
 
     def judge(said: float, ledger_max: float) -> list:
-        # Two clean rows: the one the band is published from and a slower one the
-        # ledger also holds. Both clean, so only property 2 can speak — the
-        # ceiling is 999 for the same reason.
-        rows = [{"suite": "s", "total": 1, "wall_s": w, "dirty": False}
-                for w in (said, ledger_max)]
-        return _band_wrong({"s": (1, said)}, {"s": 1}, {"s": 999.0}, rows)
+        # Two clean rows: the one the band cites and a slower one the ledger
+        # also holds. Both clean, so only property 2 can speak — the ceiling is
+        # 999 for the same reason.
+        rows = [{"suite": "s", "total": 1, "ts": t, "wall_s": w, "dirty": False}
+                for t, w in (("1", said), ("2", ledger_max))]
+        return _band_wrong({"s": (1, "1", said)}, {"s": 1}, {"s": 999.0}, rows)
 
     # The bound is measured against the bands ADR-019 actually publishes, so it
     # is the headroom a reader of THIS doc has, not a sample chosen to flatter.
-    published = {g.group(1): float(g.group(3)) for g in _BAND_LINE.finditer(adr)}
+    published = {g.group(1): float(g.group(4)) for g in _BAND_LINE.finditer(adr)}
     if not published:
         wrong.append({"adr_publishes_no_band_line": True})
     headroom = {}
@@ -632,12 +682,77 @@ def _check_published_band_slack() -> dict:
     # and red on property 3 with the 15s ceiling R21 found it defending.
     if not judge(12.96, 13.57):
         wrong.append({"r21_underpublished_band_green_on_property_2": [12.96, 13.57]})
-    if not _band_wrong({"s": (1, 12.96)}, {"s": 1}, {"s": 15.0},
-                       [{"suite": "s", "total": 1, "wall_s": w, "dirty": False}
-                        for w in (12.96, 13.57)]):
+    if not _band_wrong({"s": (1, "1", 12.96)}, {"s": 1}, {"s": 15.0},
+                       [{"suite": "s", "total": 1, "ts": t, "wall_s": w, "dirty": False}
+                        for t, w in (("1", 12.96), ("2", 13.57))]):
         wrong.append({"r21_underjustified_ceiling_green_on_property_3": 15.0})
     return {"passed": not wrong, "wrong": wrong,
             "got": {"declared_slack_s": step_s, "headroom_s": headroom}}
+
+
+def _check_history_dirty_before_report() -> dict:
+    """`dirty` describes the tree the run measured, not the artifact it wrote.
+
+    `evals/run.py` asked `git_dirty()` AFTER writing the per-case report, so
+    every `--report` run recorded itself dirty on account of its own untracked
+    file. ADR-019's band sentences are filtered on that field, so while the
+    ordering was wrong no clean band source was producible at all — and the fix
+    shipped with nothing grading it (PR #35 R12).
+
+    Drives `main()` with one stub case and `--report`, REPORT_DIR/HISTORY
+    redirected to a temp dir, and `git_dirty` replaced by a probe that records
+    what that directory held when it was asked. The ordering is the property;
+    the repo's own dirtiness is deliberately not consulted, or this would grade
+    the machine it runs on. Same stub/restore shape as `_main_exit_code`."""
+    import contextlib
+    import io
+    import json as _json
+    import sys
+    import tempfile
+    from pathlib import Path as _Path
+
+    import evals.run as R
+
+    stub = {"id": "history-dirty-probe", "_kind": "adversarial"}
+    argv, load, run = sys.argv, R.load_cases, R.run_case
+    report_dir, history, dirty_fn = R.REPORT_DIR, R.HISTORY, R.git_dirty
+    seen, wrong = {}, []
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = _Path(tmp)
+
+            def probe() -> bool:
+                seen.setdefault("reports_when_asked",
+                                sorted(x.name for x in tmp_path.glob("*-fast.json")))
+                return False
+
+            sys.argv = ["run", "--suite", "fast", "--report"]
+            R.load_cases = lambda suite: [stub]
+            R.run_case = lambda c: {"passed": True, "seconds": 0.01,
+                                    "id": c["id"], "kind": c["_kind"]}
+            R.REPORT_DIR, R.HISTORY = tmp_path, tmp_path / "history.jsonl"
+            R.git_dirty = probe
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                R.main()
+            line = _json.loads(R.HISTORY.read_text().splitlines()[-1])
+            written = sorted(x.name for x in tmp_path.glob("*-fast.json"))
+    finally:
+        sys.argv, R.load_cases, R.run_case = argv, load, run
+        R.REPORT_DIR, R.HISTORY, R.git_dirty = report_dir, history, dirty_fn
+
+    if seen.get("reports_when_asked"):
+        wrong.append({"report_existed_when_dirty_was_asked":
+                      seen["reports_when_asked"]})
+    if line.get("dirty") is not False:
+        wrong.append({"history_line_dirty": line.get("dirty")})
+    # Not vacuous: an empty report dir proves nothing if `--report` stopped
+    # writing, so the artifact must exist afterwards and the row must name it.
+    if not written or line.get("report") not in written:
+        wrong.append({"no_report_was_written": written, "row_says": line.get("report")})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"reports_when_asked": seen.get("reports_when_asked"),
+                    "written": written}}
 
 
 def _check_inv3() -> dict:
@@ -3155,8 +3270,13 @@ def _run_doc_counts_case(case: dict) -> dict:
             # ponytail: the case still NAMES the report — deriving "newest
             # committed report per suite" instead would repoint the block at the
             # next RED run, since green gate runs write no report at all.
+            # Only the suites this case is tagged with: `where_it_stands` also
+            # cites `live`, and applying the size check to it would let growing
+            # a NETWORK suite redden the offline $0 gate, clearable only by a
+            # network run (PR #35 R14). The live block's own staleness is
+            # visible through its citation, same as before this check existed.
             n = len(reports[suite]["results"])
-            if n != counts[suite]:
+            if suite in case.get("suites", []) and n != counts[suite]:
                 wrong.append({"cites_a_report_of_a_different_tree": rid,
                               "report_cases": n, "suite_now": counts[suite]})
         for suite, rep in reports.items():
@@ -3300,6 +3420,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "plan-gap": _check_plan_gap,
               "published-band": _check_published_band,
               "published-band-slack": _check_published_band_slack,
+              "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 
