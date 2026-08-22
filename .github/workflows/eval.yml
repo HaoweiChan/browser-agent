@@ -13,14 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # CI's own wall-clock ceiling. The local ruling is 60s; this runner is
-      # slower, and one number cannot be tight on a laptop and true here.
-      # Measured, not chosen: four runs of the merged tree on ubuntu-latest gave
-      # 64.29 / 67.51 / 68.94 / 68.96s — a 7% spread on identical code — and the
-      # rule is the slowest observed run plus 15%, rounded up to a multiple of
-      # five: 68.96 x 1.15 = 79.3 -> 80. Raising it is an ADR-013 amendment, and
-      # `fast-wall-clock-budget` grades the value declared here.
-      EVAL_WALL_BUDGET_S: "80"
+      # CI's own wall-clock ceilings, one variable per suite (ADR-017). One
+      # number cannot be tight locally and true on a runner ~1.6x slower, and
+      # `invariant` needs the same treatment `fast` already had: it was enforcing
+      # a locally-measured 15s that CI had never run, and CI went red at 15.06s
+      # and 15.22s with 46/46 passing (PR #29 R15).
+      #
+      # PROVISIONAL — this commit is a measurement run. Both numbers are
+      # deliberately far above anything this suite can take, so the workflow
+      # completes and reports what CI actually costs at the final case count.
+      # The ADR-017 amendment carrying the derived numbers is the next commit.
+      EVAL_WALL_BUDGET_S_FAST: "200"
+      EVAL_WALL_BUDGET_S_INVARIANT: "60"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

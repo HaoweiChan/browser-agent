@@ -81,6 +81,7 @@ Each step: {"action": "navigate|click|fill|extract|extract_all",
  "target": {"role": str|null, "name": str|null, "text": str|null, "near": str|null, "index": int|null} | null,
  "value": str|null,
  "anchor": str|null,
+ "rank": bool|null,
  "expected_state": {"url_contains": str} | {"text_visible": str} | {"role_visible": {"role": str, "name": str|null}} | null}
 Rules: `navigate` puts the URL in `value`. `extract` reads the target element's
 text as the answer. `extract_all` reads EVERY match of its target and returns
@@ -88,7 +89,11 @@ them as a list — use it whenever the task compares, ranks or counts across man
 items ("which X has the most/least Y", "the cheapest one"): extract the values
 to be compared, one per item, and never the answer itself. The comparison is
 done in code, not by you, so a plan that guesses the winner with a single
-`extract` is rejected before it runs. Targets are semantic (ARIA role + accessible name) — never
+`extract` is rejected before it runs. Every `extract_all` MUST set `rank`, and
+the run fails without it: `rank: true` when the task wants ONE item out of the
+set ("which is cheapest", "the most-quoted author"), `rank: false` when the
+task wants the set itself ("list every product with its price"). You are
+saying which the user asked for, not which item wins — code decides that. Targets are semantic (ARIA role + accessible name) — never
 CSS selectors. `index` (0-based) picks the k-th match when several elements
 share a role, e.g. the first search result. `near` picks the match closest to a
 visible string instead of counting: use it when the element you want has no name

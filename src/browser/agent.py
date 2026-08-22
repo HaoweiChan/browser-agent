@@ -393,7 +393,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 s0 = time.monotonic()
                 rec = {
                     "i": 1, "action": "navigate", "target": None, "value": url, "anchor": None,
-                    "resolved": None, "expected_state": None, "postcondition_ok": None,
+                    "rank": None, "resolved": None, "expected_state": None, "postcondition_ok": None,
                     "failure_class": None, "note": "pre-plan observation",
                     "retry_or_recovery": None, "superseded_by": None, "page_changed": None,
                     "screenshot": None, "ms": 0,
@@ -500,6 +500,19 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         (step.get("target") or {}).get(k) is not None for k in ("index", "near")):
                     raise StepError("task", "extract_all enumerates every match; `index`/`near` "
                                             "select one, so the plan says two different things")
+                # `extract_all` returns a set, and the answer is either that set
+                # or one item of it. Nothing in the plan's shape, the page or the
+                # trace distinguishes them, and three repairs that inferred it
+                # from the task text each shipped a raw enumeration as the answer
+                # to a single-answer question (PR #29 R2, R9, R16). So the plan
+                # must say, and a plan that does not is one the executor cannot
+                # honour — the same closed-world refusal an unknown action or an
+                # unsupported target key already gets
+                # (case extract-all-undeclared-intent-fails-loud).
+                if action == "extract_all" and not isinstance(step.get("rank"), bool):
+                    raise StepError("task", "extract_all must declare `rank`: true if the answer "
+                                            "is the one item the task ranks for, false if the "
+                                            "answer is the enumeration itself")
                 # `extract_all` wants every match, so ambiguity is the answer
                 # rather than a locate failure — the only difference in how a
                 # target is resolved.
@@ -563,7 +576,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 is what shows an evaluator that the strategy changed."""
                 rec = {
                     "i": len(trace) + 1, "action": step["action"], "target": step.get("target"),
-                    "value": step.get("value"), "anchor": step.get("anchor"), "resolved": None,
+                    "value": step.get("value"), "anchor": step.get("anchor"),
+                    "rank": step.get("rank"), "resolved": None,
                     "expected_state": step.get("expected_state"), "postcondition_ok": None,
                     "failure_class": None, "note": note, "retry_or_recovery": recovery,
                     "superseded_by": None, "page_changed": None, "screenshot": None, "ms": 0,
@@ -747,23 +761,26 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     answer = answers[0] if len(answers) == 1 else (answers or None)
     # An `extract_all` enumeration is reduced HERE, in code: the plan gathered
     # every candidate and `rank` picks the one the task's superlative asks for.
-    # Whether to reduce at all is `rank`'s own decision, from the task text: a
-    # task that asks for the enumeration keeps its list, a task that asks for one
-    # item out of it gets one. Both mistakes have been made here and both are
-    # cased — reducing a list-shaped task to one row (PR #29 R2,
-    # extract-all-list-task-keeps-every-row) and publishing the raw enumeration
-    # as the answer to a single-answer ranking (PR #29 R9,
-    # extract-all-cheapest-wording-still-reduces). The `len(answers) == 1` half
-    # stays here because it is about the PLAN, not the task: a plan that also
-    # extracts something else is composing a list, not ranking one
+    # Whether to reduce is the PLAN's declaration, not a guess from the task
+    # text. Three repairs guessed — from the answer's shape, from `is_aggregate`,
+    # then from a three-word enumerate regex — and each shipped a raw enumeration
+    # as the answer to a single-answer question (PR #29 R2, R9, R16). The
+    # executor refuses an `extract_all` that does not declare, so by the time an
+    # enumeration reaches here `enumerated` is a bool, never a guess. Everything
+    # about the COMPARISON is still code's: which value wins, and by what rule.
+    #
+    # The `len(answers) == 1` half is about the PLAN, not the task: a plan that
+    # also extracts something else is composing a list, not ranking one
     # (multi-extract-list). More than one enumeration never reaches here for an
     # aggregate task, because `plan_gap` runs at BOTH points where the executor
     # adopts a plan — the first plan and an act-ladder replan (PR #29 R3). A tie
     # is refused rather than guessed, and a refusal is `semantic`: the page was
     # read correctly and does not decide.
-    if len(answers) == 1 and isinstance(answer, list):
+    enumerated = next((s.get("rank") for s in trace
+                       if s.get("action") == "extract_all" and not s.get("superseded_by")), None)
+    if len(answers) == 1 and isinstance(answer, list) and enumerated is not None:
         try:
-            answer = rank(task, answer)
+            answer = rank(task, answer, enumerated)
         except ValueError as e:
             return done(failure="semantic", reason=str(e), final_url=final_url, digest=digest)
     # The run is graded by the verifier, not by having reached this line.

@@ -1,0 +1,25 @@
+{
+  "id": "extract-all-declared-intent-beats-wording",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "level": "L3",
+  "tc": "TC4",
+  "trap": "a single-answer ranking whose wording contains an enumerate word — the keyword heuristic gets it backwards",
+  "input": {
+    "task": "Check each product and tell me which one is the cheapest.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "extract_all", "target": { "role": "listitem" }, "rank": true }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Cobalt Floor Rug $18.00"
+  },
+  "provenance": "PR #29 R16. Two rounds running, the thing that broke was a regex guessing what the task asked for. R2 gated the reduction on the answer's shape and truncated a list task; R9 gated it on `is_aggregate` and published the enumeration for every `cheapest` wording; R16's repair gated it on `_ENUMERATE_REQUEST` = /\\b(list|every|each)\\b/ and did the same thing again for any single-answer ranking whose wording happens to contain one of those three words — 'Check each product and tell me which one is the cheapest' returned all four rows with `status: success` and `verdict: PASS`, byte-for-byte the shape R9 claimed to close. The third regex is deleted rather than widened. The PLAN now carries the cardinality — `extract_all` requires `rank: true|false`, because the planner is the one component that read the task — and code still does every comparison. Guessing is gone, not narrowed: there is no wording branch left to get backwards.",
+  "triage": {
+    "class": "silent-failure",
+    "watched_red": "before the fix: status success, checks {status: true, verdict: false}, answer ['Aurora Desk Lamp $39.00', 'Aurora Desk Lamp Pro $59.00', 'Meridian Wall Clock $24.50', 'Cobalt Floor Rug $18.00'] — the raw enumeration answering 'which one is the cheapest', with every runtime check green because `is_aggregate` is False for this wording so `aggregate_needs_comparison` never fires.",
+    "note": "the trio this case belongs to is the point: this one declares `rank: true` on a task whose wording says 'each', extract-all-list-task-keeps-every-row declares `rank: false` on a task whose wording says 'cheapest', and extract-all-undeclared-intent-fails-loud declares nothing at all. No two of them can be satisfied by any rule over the task text alone."
+  }
+}

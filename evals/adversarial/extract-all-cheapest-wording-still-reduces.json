@@ -1,7 +1,10 @@
 {
   "id": "extract-all-cheapest-wording-still-reduces",
   "task": "browser",
-  "suites": ["fast", "invariant"],
+  "suites": [
+    "fast",
+    "invariant"
+  ],
   "level": "L3",
   "tc": "TC4",
   "trap": "a single-answer ranking that `_AGGREGATE` misses — the enumeration must not be published as the answer",
@@ -9,7 +12,13 @@
     "task": "In this catalogue, find the cheapest product and tell me its exact price.",
     "fixture": "shop.html",
     "stub_plan": [
-      { "action": "extract_all", "target": { "role": "listitem" } }
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "listitem"
+        },
+        "rank": true
+      }
     ]
   },
   "expect": {

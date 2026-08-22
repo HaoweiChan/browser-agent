@@ -82,6 +82,7 @@ appears, in order — no post-hoc reconstruction).
   "target": {"role": "...", "name": "...", "text": "...", "near": "...", "index": 0} ,
   "value": "string | null",
   "anchor": "string | null",
+  "rank": "true | false | null",
   "resolved": {"tier": "role|text|attrs|structural", "description": "..."} ,
   "expected_state": {"url_contains": "..."} ,
   "postcondition_ok": true,
@@ -151,18 +152,24 @@ appears, in order — no post-hoc reconstruction).
   and before M31 the planner had no way to express the enumeration those
   questions rank over (M10 probe #3, `live-books-cheapest-travel`). Two rules
   follow from where the comparison happens:
+  - **`extract_all` MUST carry `rank`** — `true` if the answer is the one item
+    the task ranks for, `false` if the answer is the enumeration itself. A step
+    that omits it is a plan the executor cannot honour and stops the run as
+    `failure:task` (`extract-all-undeclared-intent-fails-loud`). It is the one
+    thing code cannot read off the page or the plan's shape, and three attempts
+    to infer it from the task text each published a raw enumeration as the
+    answer to a single-answer question (PR #29 R2, R9, R16). The declaration is
+    echoed into the TraceStep, so the decision has evidence behind it.
   - **the ranking is done in code, never by the model** (`verifier.rank`,
     called at answer assembly whenever the enumeration IS the whole answer):
-    the plan extracts the values to compare, and code picks the one the task's
-    superlative asks for — numbers compare as
-    numbers, anything else compares by how often it occurs. **Whether to reduce
-    at all is `rank`'s own decision, from the task text**: a task that asks for
-    the enumeration (`list`, `every`, `each`) keeps its list, anything else with
-    a ranking word gets one item. That is deliberately NOT the plan lint's
-    `is_aggregate` shape — the lint's vocabulary excludes price wording and the
-    reduction's does not, so a "cheapest" task is reduced but not linted
-    (`extract-all-cheapest-wording-still-reduces`,
-    `extract-all-list-task-keeps-every-row`, T-CHEAPEST-WORDING). A tie is
+    the plan says "one of these", never "this one". Code picks the one the
+    task's superlative asks for — numbers compare as numbers, anything else
+    compares by how often it occurs; `rank: true` with no ranking word in the
+    task refuses rather than picking (`rank-reduces-enumeration-in-code`). The
+    plan lint's `is_aggregate` shape is a different question and a different
+    vocabulary — it excludes price wording, so a "cheapest" task is reduced but
+    not linted (`extract-all-cheapest-wording-still-reduces`,
+    T-CHEAPEST-WORDING). A tie is
     `failure:semantic`, not a coin flip, the same ruling `near` already makes
     (`near-equidistant-is-ambiguous`). A task with no ranking word keeps its
     list, which is a legitimate answer shape.

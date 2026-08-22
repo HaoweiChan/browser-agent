@@ -1,7 +1,10 @@
 {
   "id": "extract-all-list-task-keeps-every-row",
   "task": "browser",
-  "suites": ["fast", "invariant"],
+  "suites": [
+    "fast",
+    "invariant"
+  ],
   "level": "L2",
   "tc": "TC4",
   "trap": "a list-shaped task whose wording contains a ranking word — the reduction must not fire",
@@ -9,9 +12,23 @@
     "task": "List every product in the catalogue with its price, cheapest first.",
     "fixture": "shop.html",
     "stub_plan": [
-      { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
-        "expected_state": { "text_visible": "Sorted by price (low to high)" } },
-      { "action": "extract_all", "target": { "role": "listitem" } }
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Sort by price (low to high)"
+        },
+        "expected_state": {
+          "text_visible": "Sorted by price (low to high)"
+        }
+      },
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "listitem"
+        },
+        "rank": false
+      }
     ]
   },
   "expect": {

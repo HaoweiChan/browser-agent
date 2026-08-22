@@ -550,7 +550,7 @@ def _run_verifier_case(case: dict) -> dict:
     # direction, ties), not in the browser. `answer: null` means "must refuse".
     for sc in inp.get("rank", []):
         try:
-            got = rank(sc["task"], list(sc["values"]))
+            got = rank(sc["task"], list(sc["values"]), sc["declared"])
         except ValueError:
             got = None
         if got != sc["answer"]:
@@ -2700,7 +2700,8 @@ def _run_wall_clock_case(case: dict) -> dict:
     import os
     import re
 
-    from evals.run import WALL_BUDGET_ENV, WALL_BUDGET_S, over_budget, wall_budget
+    from evals.run import (WALL_BUDGET_ENV, WALL_BUDGET_S, over_budget, wall_budget,
+                           wall_budget_env)
 
     exp = case["expect"]
     wrong = []
@@ -2711,9 +2712,11 @@ def _run_wall_clock_case(case: dict) -> dict:
     # exports EVAL_WALL_BUDGET_S=75, so the 70.01s row was correctly not-over and
     # the assertion that it IS over was wrong. A case about environment-dependent
     # ceilings that was itself environment-dependent (PR #20, found by CI).
-    prev = os.environ.get(WALL_BUDGET_ENV)
+    names = [wall_budget_env(x) for x in ("fast", "invariant")]
+    prev = {n: os.environ.get(n) for n in names}
     try:
-        os.environ.pop(WALL_BUDGET_ENV, None)
+        for n in names:
+            os.environ.pop(n, None)
         wrong += [r for r in case["input"]["rows"]
                   if over_budget(r["suite"], r["wall_seconds"]) is not r["over"]]
         # The per-environment override itself. A positive number moves the
@@ -2721,9 +2724,10 @@ def _run_wall_clock_case(case: dict) -> dict:
         # than switch the gate off, which is the quiet direction this PR keeps
         # finding.
         for r in case["input"]["env_override"]:
-            os.environ.pop(WALL_BUDGET_ENV, None)
+            for n in names:
+                os.environ.pop(n, None)
             if r["value"] is not None:
-                os.environ[WALL_BUDGET_ENV] = r["value"]
+                os.environ[wall_budget_env("fast")] = r["value"]
             got = wall_budget("fast")
             if got != r["budget"]:
                 wrong.append({"env": r["value"], "expected_ceiling": r["budget"], "got": got,
@@ -2733,31 +2737,38 @@ def _run_wall_clock_case(case: dict) -> dict:
         # what that suite costs — and the tag valve ADR-017 closed locally would
         # still be open there.
         for r in case["input"].get("invariant_override", []):
-            os.environ.pop(WALL_BUDGET_ENV, None)
+            for n in names:
+                os.environ.pop(n, None)
             if r["value"] is not None:
-                os.environ[WALL_BUDGET_ENV] = r["value"]
+                os.environ[wall_budget_env(r.get("via", "invariant"))] = r["value"]
             got = wall_budget("invariant")
             if got != r["budget"]:
                 wrong.append({"env": r["value"], "suite": "invariant",
                               "expected_ceiling": r["budget"], "got": got,
                               "note": r["note"]})
-        os.environ.pop(WALL_BUDGET_ENV, None)
+        for n in names:
+            os.environ.pop(n, None)
         applied = [dict(r, got=_main_exit_code(r["wall_seconds"]))
                    for r in case["input"]["applied_in_main"]]
         wrong += [r for r in applied if r["got"] != r["exit"]]
     finally:
-        os.environ.pop(WALL_BUDGET_ENV, None)
-        if prev is not None:
-            os.environ[WALL_BUDGET_ENV] = prev
+        for n, v in prev.items():
+            os.environ.pop(n, None)
+            if v is not None:
+                os.environ[n] = v
     # CI's ceiling is a committed number, not a YAML string nobody reads: the
     # workflow is the only place it takes effect, so the value it declares is
     # part of the ruling (the R8 lesson — a mechanism nothing consults).
     wf = (Path(__file__).parents[2] / ".github" / "workflows" / "eval.yml").read_text()
-    declared = re.search(rf"{WALL_BUDGET_ENV}:\s*\"?([0-9.]+)\"?", wf)
-    if not declared or float(declared.group(1)) != exp["ci_wall_seconds"]:
-        wrong.append({"workflow": WALL_BUDGET_ENV,
-                      "declared": declared.group(1) if declared else None,
-                      "expected": exp["ci_wall_seconds"]})
+    for suite, key in (("fast", "ci_wall_seconds"), ("invariant", "ci_invariant_wall_seconds")):
+        if key not in exp:
+            continue
+        env = wall_budget_env(suite)
+        declared = re.search(rf"{env}:\s*\"?([0-9.]+)\"?", wf)
+        if not declared or float(declared.group(1)) != exp[key]:
+            wrong.append({"workflow": env,
+                          "declared": declared.group(1) if declared else None,
+                          "expected": exp[key]})
     if WALL_BUDGET_S.get("fast") != exp["max_wall_seconds"]:
         wrong.append({"ruling": "fast", "budget": WALL_BUDGET_S.get("fast"),
                       "declared": exp["max_wall_seconds"]})

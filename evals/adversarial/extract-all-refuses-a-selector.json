@@ -1,7 +1,10 @@
 {
   "id": "extract-all-refuses-a-selector",
   "task": "browser",
-  "suites": ["fast", "invariant"],
+  "suites": [
+    "fast",
+    "invariant"
+  ],
   "level": "L3",
   "tc": "TC4",
   "trap": "an enumerating step carrying a one-of-many selector — the new verb's badge on a single-shot read",
@@ -9,7 +12,15 @@
     "fixture": "shop.html",
     "task": "Which product on this page has the most customer reviews?",
     "stub_plan": [
-      {"action": "extract_all", "target": {"role": "link", "near": "$39.00"}, "anchor": null}
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "link",
+          "near": "$39.00"
+        },
+        "anchor": null,
+        "rank": true
+      }
     ]
   },
   "expect": {

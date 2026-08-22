@@ -1,7 +1,10 @@
 {
   "id": "replan-cannot-launder-noop-action-extract-all",
   "task": "browser",
-  "suites": ["fast", "invariant"],
+  "suites": [
+    "fast",
+    "invariant"
+  ],
   "level": "L4",
   "tc": "TC4",
   "input": {
@@ -9,16 +12,39 @@
     "fixture": "shop.html",
     "stub_plans": [
       [
-        { "action": "click", "target": { "role": "heading", "name": "Nimbus Shop" },
-          "expected_state": { "text_visible": "Sorted by price (low to high)" } },
-        { "action": "extract_all", "target": { "role": "link" } }
+        {
+          "action": "click",
+          "target": {
+            "role": "heading",
+            "name": "Nimbus Shop"
+          },
+          "expected_state": {
+            "text_visible": "Sorted by price (low to high)"
+          }
+        },
+        {
+          "action": "extract_all",
+          "target": {
+            "role": "link"
+          },
+          "rank": false
+        }
       ],
       [
-        { "action": "extract_all", "target": { "role": "link" } }
+        {
+          "action": "extract_all",
+          "target": {
+            "role": "link"
+          },
+          "rank": false
+        }
       ]
     ]
   },
-  "expect": { "status": "failure:act", "recovery": false },
+  "expect": {
+    "status": "failure:act",
+    "recovery": false
+  },
   "provenance": "PR #29 R1. `replan-cannot-launder-noop-action` is the `extract` half of this and has been green since M3; M31 added a second extraction verb and the no-progress guard that stops a replan from dropping an action that changed nothing was left testing the literal string \"extract\" (`new_steps[0].get('action') == 'extract'`), while the two other action tests in the same commit were widened to `.startswith('extract')`. So the identical laundering, expressed with the new verb, walked straight through: the heading click changes nothing, the replan drops it and enumerates instead, and the run reports the UNSORTED catalogue as a successful answer. The guard now recognises every extraction verb, which is the root-cause shape rather than a second literal beside the first.",
   "triage": {
     "class": "silent-failure",

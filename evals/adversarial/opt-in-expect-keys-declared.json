@@ -8,7 +8,7 @@
     "declared": {
       "mutation_survived": ["l4-shop-element-reordered"],
       "answer_is_known_wrong": ["l4-shop-element-reordered", "live-quotes-js-role-tier-blind"],
-      "actions": ["verifier-aggregate-superlative-fails-loud", "probe3-quotes-most-quoted-author"],
+      "actions": ["verifier-aggregate-superlative-fails-loud", "probe3-quotes-most-quoted-author", "extract-all-undeclared-intent-fails-loud"],
       "planner_note_contains": ["probe3-quotes-most-quoted-author", "recovery-replan-postcondition"],
       "trace_note_contains": ["probe3-quotes-most-quoted-author"]
     }

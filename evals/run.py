@@ -88,7 +88,18 @@ WALL_BUDGET_S = {"fast": 75, "invariant": 15}
 # tight locally and true on a runner ~1.6x slower, so the environment sets its
 # own and both are enforced (ADR-013 amendment). `.github/workflows/eval.yml`
 # declares CI's, and `fast-wall-clock-budget` grades the value it declares.
+# One prefix, one variable per suite: `EVAL_WALL_BUDGET_S_FAST`,
+# `EVAL_WALL_BUDGET_S_INVARIANT`. It used to be a single unsuffixed variable for
+# `fast` alone, which meant `invariant` — once it had a ceiling — could not have
+# a per-environment number, and CI enforced a locally-measured 15s it had never
+# run (PR #29 R15: CI red at 15.06s and 15.22s while every local run was 12.2s).
+# ADR-013 Decision 3's ruling was that one number cannot be tight locally and
+# true on CI; ADR-017 gives both suites the same treatment instead of one.
 WALL_BUDGET_ENV = "EVAL_WALL_BUDGET_S"
+
+
+def wall_budget_env(suite):
+    return f"{WALL_BUDGET_ENV}_{suite.upper()}"
 
 
 def wall_budget(suite):
@@ -101,14 +112,11 @@ def wall_budget(suite):
     base = WALL_BUDGET_S.get(suite)
     if base is None:
         return None
-    # The override is the `fast` gate's, and only the `fast` gate's. One env var
-    # cannot carry two suites' numbers, and letting it raise `invariant`'s
-    # ceiling too would reopen the relief valve ADR-017 closed: on CI the
-    # override is 80, which is five times what `invariant` costs.
-    if suite != "fast":
-        return base
+    # Each suite reads its own variable, so an environment raising one ceiling
+    # cannot silently raise the other — that asymmetry is what let a tag choice
+    # act as a relief valve for the `fast` gate (PR #29 R13).
     try:
-        override = float(os.environ.get(WALL_BUDGET_ENV, ""))
+        override = float(os.environ.get(wall_budget_env(suite), ""))
     except ValueError:
         return base
     return override if override > 0 else base
@@ -270,7 +278,8 @@ def main():
         return 1
     if over_budget(args.suite, totals["wall_seconds"]):
         ceiling = wall_budget(args.suite)
-        source = (f"{WALL_BUDGET_ENV}={os.environ[WALL_BUDGET_ENV]}"
+        env = wall_budget_env(args.suite)
+        source = (f"{env}={os.environ[env]}"
                   if ceiling != WALL_BUDGET_S[args.suite] else "ADR-002 Decision 4")
         print(f"[eval] OVER BUDGET: suite '{args.suite}' wall clock "
               f"{totals['wall_seconds']}s > {ceiling}s ({source})", file=sys.stderr)

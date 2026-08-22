@@ -1,7 +1,9 @@
 {
   "id": "probe3-quotes-most-quoted-author",
   "task": "browser",
-  "suites": ["fast"],
+  "suites": [
+    "fast"
+  ],
   "level": "L3",
   "tc": "TC4",
   "input": {
@@ -9,10 +11,23 @@
     "task": "Which author has the most quotes listed on this page?",
     "stub_plans": [
       [
-        {"action": "extract", "target": {"role": "heading"}, "anchor": null}
+        {
+          "action": "extract",
+          "target": {
+            "role": "heading"
+          },
+          "anchor": null
+        }
       ],
       [
-        {"action": "extract_all", "target": {"role": "link"}, "anchor": null}
+        {
+          "action": "extract_all",
+          "target": {
+            "role": "link"
+          },
+          "anchor": null,
+          "rank": true
+        }
       ]
     ]
   },

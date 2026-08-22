@@ -55,22 +55,39 @@ which is the thing this ADR exists to keep out of the model).
 
 ### 2. The ranking is arithmetic, in code
 
-`verifier.rank(task, values)` reduces an enumeration to the item the task's
-superlative asks for. **Whether to reduce at all is its own decision, from the
-task text**: a task that asks for the enumeration (`list`, `every`, `each`)
-keeps its list; anything else with a `_RANK` word gets one item. Two wrong gates
-were tried here and both are cased. Gating on the answer's shape alone (a single
-list) truncated "list every product … cheapest first" from four rows to one and
-reported success (PR #29 R2, `extract-all-list-task-keeps-every-row`). Gating on
-`is_aggregate` instead over-corrected: it dropped the reduction for every
-`cheapest` wording — the milestone's own headline shape — and published the raw
-enumeration as a successful answer to a single-answer question (PR #29 R9,
-`extract-all-cheapest-wording-still-reduces`). The two cases are a pair: one
-rule has to keep both green, and either alone is satisfied by deleting the
-other's behaviour.
+`verifier.rank(task, values, declared)` reduces an enumeration to the item the
+task's superlative asks for. **Whether to reduce at all is the PLAN's
+declaration, not an inference**: `extract_all` must carry `rank: true|false`,
+and a step that omits it stops the run as `failure:task`
+(`extract-all-undeclared-intent-fails-loud`).
 
-The reduction and the lint therefore run on **different** vocabularies, on
-purpose. `_RANK` includes the price wording; `_AGGREGATE` does not, and `_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`. So a price-worded ranking is reduced but not linted — declared
+That is the third mechanism in this position and the first that cannot be
+wrong, because it does not decide anything. The three that could, each shipped
+a raw enumeration as the answer to a single-answer question, and each is cased:
+
+| gate | shipped | case |
+|---|---|---|
+| the answer's shape alone | "list every product … cheapest first" truncated four rows to one, `success` | `extract-all-list-task-keeps-every-row` (PR #29 R2) |
+| `is_aggregate(task)` | every `cheapest` wording lost the reduction; raw list, `success` | `extract-all-cheapest-wording-still-reduces` (PR #29 R9) |
+| `/\b(list|every|each)\b`| "Check **each** product and tell me which one is the cheapest" → raw list, `success` | `extract-all-declared-intent-beats-wording` (PR #29 R16) |
+
+The pattern is the point: the cardinality of the answer is a fact about what
+the user asked for, and the only component that read the request is the
+planner. Three regexes over the task text were three guesses, and each guess
+reached the user as `success`. The declaration is required rather than
+defaulted for the same reason — a default is a fourth guess.
+
+**This is not the LLM ranking.** The plan says "one of these" or "all of
+these"; code says which one, by which rule, and refuses a tie or a
+partly-numeric column. `rank: true` on a task that names no order refuses too:
+the plan and the task disagree and code does not break the tie. The
+declaration is echoed into the TraceStep, so the decision has evidence behind
+it rather than living only in a plan nobody kept.
+
+The reduction and the lint remain **different** questions on different
+vocabularies, on purpose: `_RANK` (which end of the order — reached only after
+the plan has declared it wants one item) includes the price wording;
+`_AGGREGATE` (is this a plan-lintable shape) does not, and `_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`. So a price-worded ranking is reduced but not linted — declared
 as T-CHEAPEST-WORDING, not fixed here.
 
 Three rules, chosen by what the values *are*: EVERY value

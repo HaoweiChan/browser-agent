@@ -57,11 +57,11 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-125 distinct cases (20 golden + 105 adversarial).
-185 browser actions in a `fast` run; **61 of the
-114** `fast` cases drive a real Chromium end to end — counted here as
+127 distinct cases (20 golden + 107 adversarial).
+189 browser actions in a `fast` run; **63 of the
+116** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260822-124846-fast.json` rather than tallied by hand (the
+`evals/report/20260822-153750-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
@@ -457,7 +457,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-125 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
+127 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -467,8 +467,8 @@ Empty cells are shown, not hidden.
 |---|---|---|---|---|
 | TC1 extract-on-page | 30 | | L1 | 34 |
 | TC2 search-then-extract | 8 | | L2 | 23 |
-| TC3 navigate-then-extract | 11 | | **L3** | **9 — 4 live (one of them unrun) + 5 fixture (the M10 aggregate-superlative twin, now caught by M31's plan lint; its M31 green twin `probe3-quotes-most-quoted-author`; `extract-all-refuses-a-selector`; `plan-lint-holds-across-a-midrun-replan`; and `extract-all-cheapest-wording-still-reduces`)** |
-| TC4 interact-then-extract | 24 | | L4 (mutation/recovery) | 16 |
+| TC3 navigate-then-extract | 11 | | **L3** | **11 — 4 live (one of them unrun) + 7 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, and the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`** |
+| TC4 interact-then-extract | 26 | | L4 (mutation/recovery) | 16 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
 | mechanism/unit probes | 46 | | untagged (unit probes) | 35 |
 

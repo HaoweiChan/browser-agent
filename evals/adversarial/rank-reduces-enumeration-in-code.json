@@ -25,7 +25,8 @@
           "£38.95",
           "£26.08"
         ],
-        "answer": "£23.21"
+        "answer": "£23.21",
+        "declared": true
       },
       {
         "note": "same list, opposite direction — 'most expensive' must not be read as the 'most' branch's mode over strings.",
@@ -36,7 +37,8 @@
           "£48.87",
           "£36.94"
         ],
-        "answer": "£49.43"
+        "answer": "£49.43",
+        "declared": true
       },
       {
         "note": "probe #3's shape: non-numeric values, so 'most' counts rather than compares.",
@@ -49,7 +51,8 @@
           "Albert Einstein",
           "J.K. Rowling"
         ],
-        "answer": "Albert Einstein"
+        "answer": "Albert Einstein",
+        "declared": true
       },
       {
         "note": "the counting direction inverts too — and the least-quoted author here is unique, so it is a rank and not a tie.",
@@ -61,7 +64,8 @@
           "J.K. Rowling",
           "Jane Austen"
         ],
-        "answer": "Jane Austen"
+        "answer": "Jane Austen",
+        "declared": true
       },
       {
         "note": "a tie is ambiguous and must be loud, the same ruling near-equidistant-is-ambiguous made for the resolver. Returning either name would be a confident wrong answer, which is the defect family this milestone exists to close.",
@@ -70,7 +74,8 @@
           "Albert Einstein",
           "Jane Austen"
         ],
-        "answer": null
+        "answer": null,
+        "declared": true
       },
       {
         "note": "no superlative in the task: the enumeration IS the answer and must survive untouched (multi-row list answers, contract: answer string|list).",
@@ -82,7 +87,8 @@
         "answer": [
           "Albert Einstein",
           "Jane Austen"
-        ]
+        ],
+        "declared": false
       },
       {
         "note": "a single-element enumeration reduces to its one element — nothing to compare, and no tie.",
@@ -90,7 +96,8 @@
         "values": [
           "Albert Einstein"
         ],
-        "answer": "Albert Einstein"
+        "answer": "Albert Einstein",
+        "declared": true
       },
       {
         "note": "cold review, M31: a price column with one non-numeric cell used to fall through to the counting branch, so the REPEATED price won 'highest' as a confident success. Mixed columns refuse, the same way a tie does.",
@@ -101,7 +108,8 @@
           "$149.00",
           "Out of stock"
         ],
-        "answer": null
+        "answer": null,
+        "declared": true
       },
       {
         "note": "the worse direction of the same defect: 'cheapest' over the mode branch picks the unique junk cell, and the tie guard never fires because it really is a unique winner. 'Out of stock' as a price, reported as success.",
@@ -113,10 +121,11 @@
           "£99.00",
           "Out of stock"
         ],
-        "answer": null
+        "answer": null,
+        "declared": true
       },
       {
-        "note": "PR #29 R9's other side: the task asks for the enumeration itself, so the ranking word in it is describing an ORDER, not selecting one row. Same values, same `_RANK` word, opposite answer — which is why the rule is a property of the task's request, not of the answer's shape.",
+        "note": "PR #29 R16: the plan declares `rank: false` and the list survives — even though the task's wording contains 'cheapest'. Its twin is row 13, same wording family, declared true. No rule over the task text can satisfy both, which is why the declaration is required and the enumerate-word regex is deleted.",
         "task": "List every product in the catalogue with its price, cheapest first.",
         "values": [
           "Cobalt Floor Rug $18.00",
@@ -127,7 +136,8 @@
           "Cobalt Floor Rug $18.00",
           "Meridian Wall Clock $24.50",
           "Aurora Desk Lamp $39.00"
-        ]
+        ],
+        "declared": false
       },
       {
         "note": "`\\blist\\b` must not match 'listed' — probe #3's own question contains it and is a single-answer ranking. This row is the boundary that keeps probe3-quotes-most-quoted-author green.",
@@ -137,7 +147,8 @@
           "Jane Austen",
           "Albert Einstein"
         ],
-        "answer": "Albert Einstein"
+        "answer": "Albert Einstein",
+        "declared": true
       },
       {
         "note": "'all' is deliberately NOT an enumerate-request word: 'of all the products' is a comparison frame, not a request for all of them, and treating it as one would publish the raw list for a single-answer question — the exact R9 defect.",
@@ -146,12 +157,46 @@
           "Aurora Desk Lamp $39.00",
           "Cobalt Floor Rug $18.00"
         ],
+        "answer": "Cobalt Floor Rug $18.00",
+        "declared": true
+      },
+      {
+        "note": "PR #29 R16: the wording contains 'each' and the answer is still one item, because the plan said so. This is the row the deleted `_ENUMERATE_REQUEST` regex got backwards end to end (extract-all-declared-intent-beats-wording).",
+        "task": "Check each product and tell me which one is the cheapest.",
+        "declared": true,
+        "values": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ],
         "answer": "Cobalt Floor Rug $18.00"
+      },
+      {
+        "note": "declared true, but the task names no order to rank by — refuse rather than pick. The plan and the task disagree and code does not get to break the tie.",
+        "task": "Tell me about the products on this page.",
+        "declared": true,
+        "values": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ],
+        "answer": null
+      },
+      {
+        "note": "declared false with no ranking word either: the ordinary multi-row list answer, untouched.",
+        "task": "Tell me about the products on this page.",
+        "declared": false,
+        "values": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ],
+        "answer": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ]
       }
     ]
   },
   "expect": {
-    "note": "each row is (task, enumerated values, the reduction code must produce; null means the reduction must refuse)"
+    "note": "each row is (task, the plan's `rank` declaration, enumerated values, the reduction code must produce; null means the reduction must refuse)"
   },
   "provenance": "M31. `extract_all` returns a list; the question asked for one item. The reduction is the half of the M31 spec that says rank/compare/count stays in code and never in the LLM, and it is what makes probe3-quotes-most-quoted-author and live-books-cheapest-travel answerable. Unit-shaped rather than end-to-end because the interesting failures are in the reduction rules (numbers vs counts, direction, ties, no-op), and a browser run per row would buy nothing and cost wall clock the fast suite does not have.",
   "triage": {

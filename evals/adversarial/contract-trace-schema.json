@@ -58,6 +58,7 @@
         "target",
         "value",
         "anchor",
+        "rank",
         "resolved",
         "expected_state",
         "postcondition_ok",
@@ -71,7 +72,7 @@
       ]
     }
   },
-  "provenance": "field-by-field mirror of specs/001-browser-contract.md, checked against a real run rather than read. Written after M2 close-out, when documenting identity anchors added `anchor` to the specced TraceStep while the executor never emitted it — prose drifted from code inside a single session, in the one direction (spec ahead of code) that reads as a feature nobody built. Watched red on exactly that missing key before the executor was fixed. M3 added two fields to this table — `budgets_spent.replans` and `TraceStep.superseded_by` — and the case went red on both the moment the code emitted them, before the spec was updated. That is the intended direction: code and prose are reconciled deliberately, in one edit, instead of drifting apart quietly. M9 (PR #15, R4) added `model` to RunResult so a run record says which planner produced it; this case went red on the new key first, which is the guard working — the shape may not grow by accident.",
+  "provenance": "field-by-field mirror of specs/001-browser-contract.md, checked against a real run rather than read. Written after M2 close-out, when documenting identity anchors added `anchor` to the specced TraceStep while the executor never emitted it — prose drifted from code inside a single session, in the one direction (spec ahead of code) that reads as a feature nobody built. Watched red on exactly that missing key before the executor was fixed. M3 added two fields to this table — `budgets_spent.replans` and `TraceStep.superseded_by` — and the case went red on both the moment the code emitted them, before the spec was updated. That is the intended direction: code and prose are reconciled deliberately, in one edit, instead of drifting apart quietly. M9 (PR #15, R4) added `model` to RunResult so a run record says which planner produced it; this case went red on the new key first, which is the guard working — the shape may not grow by accident. PR #29 R16 added `rank` to TraceStep — the plan's declaration of whether an `extract_all`'s answer is the enumeration or one item of it. This case went red on the new key before the contract was updated, which is the guard working: the shape may not grow by accident, and a declaration the trace does not carry is a decision with no evidence behind it.",
   "triage": {
     "class": "contract-drift",
     "note": "the contract is prose and prose does not fail a build; this case is its executable half. Tagged invariant — the frontend, the verifier and the EvalAuditor all consume this shape, so drift here breaks three consumers at once."
