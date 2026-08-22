@@ -1,0 +1,79 @@
+{
+  "pr": 29,
+  "round": 1,
+  "resolutions": [
+    {
+      "id": "R1",
+      "resolution": "fixed",
+      "case": "replan-cannot-launder-noop-action-extract-all",
+      "suite": "invariant",
+      "detail": "`drops_action` now recognises every extraction verb via `str(new_steps[0].get('action') or '').startswith('extract')`.",
+      "watched_red": "status success, verdict PASS, checks {status: false, recovery: false}, replans 1, answer [\"Aurora Desk Lamp\",\"Aurora Desk Lamp Pro\",\"Meridian Wall Clock\",\"Cobalt Floor Rug\"] — the catalogue in original order answering a task that asked for it sorted. Green after: failure:act, recovery: false."
+    },
+    {
+      "id": "R2",
+      "resolution": "fixed",
+      "case": "extract-all-list-task-keeps-every-row",
+      "suite": "invariant",
+      "detail": "The rank reduction is gated on `is_aggregate(task)` — the same predicate the lint uses, so exactly one shape of task is both linted and reduced.",
+      "watched_red": "checks {status: true, verdict: false}, answer \"Cobalt Floor Rug $18.00\" — one row where the task asked for every product; three rows extracted, stored as evidence, then silently dropped."
+    },
+    {
+      "id": "R3",
+      "resolution": "fixed",
+      "case": "plan-lint-holds-across-a-midrun-replan",
+      "suite": "invariant",
+      "detail": "`plan_gap` now runs at every point the executor adopts a plan: the first plan, and `steps[:si] + new_steps` when the act ladder replans.",
+      "watched_red": "status success, verdict PASS, all checks green including aggregate_needs_comparison: true, replans 1, answer [[4 link texts],[4 listitem texts]]. Green after: failure:act, replans 0."
+    },
+    {
+      "id": "R4",
+      "resolution": "debt",
+      "tid": "T-CHEAPEST-WORDING",
+      "detail": "Acceptance line in tasks/TODO.md amended to state what is proven offline and what is not, and that the mechanism provably cannot fire on that case's wording. No money spent, no stub. Residual logged with Origin: PR #29 R4; repro verified: plan_gap(\"In the Travel category, find the cheapest book and tell me its exact price.\", [{\"action\": \"extract\"}]) -> None."
+    },
+    {
+      "id": "R5",
+      "resolution": "fixed",
+      "case": "probe3-quotes-most-quoted-author + recovery-replan-postcondition",
+      "suite": "fast",
+      "detail": "Replan framing moved out of `live_planner` into the two call sites; the planner appends the note verbatim. `stub_planner` records every note it is handed and a new `expect.planner_note_contains` grades it.",
+      "watched_red": "with the shared prefix restored in planner.py and bare notes passed from agent.py: probe3 checks {..., planner_note_contains: false} and recovery-replan-postcondition checks {..., planner_note_contains: false} in the same run."
+    },
+    {
+      "id": "R6",
+      "resolution": "fixed",
+      "case": "probe3-quotes-most-quoted-author",
+      "suite": "fast",
+      "detail": "Case now asserts `recovery: false` and a new `expect.trace_note_contains`.",
+      "watched_red": "against the variant that breaks each: pending_recovery = True -> checks {..., recovery: false}; lint_note = None -> checks {..., trace_note_contains: false}."
+    },
+    {
+      "id": "R7",
+      "resolution": "debt",
+      "tid": "T-EXTRACT-ALL-VOLUME",
+      "detail": "Evidence and acceptance carried verbatim, plus a note on why it is not a one-line fix: the per-value window is what makes grounded/not_a_dump per-extraction, so collapsing it needs its own red-first case."
+    },
+    {
+      "id": "R8",
+      "resolution": "fixed",
+      "case": "n/a — orchestrator bookkeeping",
+      "detail": "M31 status corrected to in-progress in 07083e7."
+    }
+  ],
+  "corrected_published_claims": [
+    "src/browser/agent.py answer-assembly comment ('more than one enumeration never reaches here')",
+    "specs/decisions/ADR-016-m31-plan-lint.md — Ruling, Decisions 2 and 3, Enforced-by list",
+    "specs/decisions/INDEX.md",
+    "specs/001-browser-contract.md",
+    "docs/analysis.md §8a-2",
+    "docs/support-matrix.md D22",
+    "evals/adversarial/rank-reduces-enumeration-in-code.json row 1 note — now evidence for T-CHEAPEST-WORDING, not a claim about the agent"
+  ],
+  "gate": {
+    "invariant": "44/44 = 1.000",
+    "fast": "109/109 = 1.000",
+    "live": "9/9, $0.0000"
+  },
+  "rejected": []
+}
