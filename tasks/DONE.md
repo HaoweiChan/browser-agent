@@ -1,7 +1,7 @@
 # Done — one line per merged task
 
 Append-only index. Details live in each milestone's ADR/PR and
-`evals/report/pr-loop-ledger.jsonl`; the full milestone-table narrative is in git
+`tasks/pr-loop-ledger.jsonl`; the full milestone-table narrative is in git
 history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 
 - M0 — Harness (2026-08-15) — ADR-001

@@ -1,6 +1,6 @@
 # ADR-012: A history line every run, a full report only when it earns its keep
 
-Status: accepted · 2026-08-21 · groundwork GW-008
+Status: accepted · 2026-08-21
 
 **Ruling**: `evals/run.py` appends one line to `evals/report/history.jsonl` on every run, unconditionally; a full per-case report (`evals/report/<ts>-<suite>.json`) is written only on `--report`, `--suite all`, or a red run. A report is a **report of record** exactly when something outside `evals/report/` cites its filename as evidence — that set is now enforced, not just conventional.
 **Because**: 159 full reports (4.8MB) had accumulated on `main`, one per routine gate tick, when only ~68 were ever pointed at as evidence; every PR diff was paying full per-case JSON for runs nobody was going to read again, while the one thing worth keeping forever — the wall-clock/score time series — wasn't being kept as its own artifact at all.
@@ -28,8 +28,7 @@ evidence for a claim, not by having been generated.
 
 ## Decision 1 — the history line is unconditional and cheap
 
-Every run appends one JSONL line to `evals/report/history.jsonl`, schema
-shared across groundwork repos:
+Every run appends one JSONL line to `evals/report/history.jsonl`, schema:
 
 ```
 {"ts", "suite", "sha", "dirty", "passed", "total", "score", "wall_s",
@@ -95,7 +94,7 @@ generated concordance, not a document choosing to point at a report as
 evidence, and including it would have made every report "cited" by
 construction.
 
-Non-prunable by kind regardless of citation, per groundwork policy:
+Non-prunable by kind regardless of citation, by policy:
 `*-ablation.json`, `*-soak.json`, `*-live.json`, and the ledger
 `pr-loop-ledger.jsonl` — 25 files, all instrument/record artifacts governed
 by their own ADRs (ADR-006 live breadth, ADR-010 ablation), not routine gate
