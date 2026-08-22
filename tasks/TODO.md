@@ -118,6 +118,36 @@ Repro: renumber or delete the D21 row in `docs/support-matrix.md` and run
 Acceptance: a case resolves bare D-number citations against the support-matrix
 table and is watched red against a deliberately broken D-number first.
 
+### T-R33 — the judge's certify parser has no provider-side schema enforcement, so the strict boolean check is trusted on hope, not guaranteed            [status: todo]
+Origin: PR #33 R3 (MEDIUM, routed debt)
+Spec (claim): `live_judge`'s request to OpenRouter carries no `response_format`
+constraint, so nothing GUARANTEES `certify` arrives as a JSON boolean rather
+than a string, a number, or absent entirely — the strict `is True` check
+(docs/support-matrix.md D26) is the correct posture given that, but it means
+the app is hoping the model's own formatting habits stay boolean-shaped
+rather than enforcing the shape at the request level.
+Evidence: `src/browser/judge.py`'s `payload` in `live_judge` sets `model`,
+`messages`, `usage: {"include": True}` — no `response_format`. OpenRouter (and
+most providers behind it) supports `response_format: {"type": "json_object"}`
+for syntactically-valid JSON, and some models additionally support
+`{"type": "json_schema", "json_schema": {...}}` for a typed schema (certify
+as an actual boolean). Neither is attempted.
+Repro: n/a — this is an absence, not a reproducible defect; nothing here
+demonstrates the parser actually receiving a malformed shape from a real
+call, because there is no `OPENROUTER_API_KEY` in this environment (same
+constraint D26 states for the ceiling itself).
+Acceptance: add `response_format` to the request (`json_object` is the safe,
+widely-supported floor; `json_schema` with a strict `{"certify": boolean}`
+schema is the real fix if `deepseek/deepseek-v4-flash-0731` supports it) and
+verify it against a live call before trusting it — an untested schema
+constraint added here would be exactly the kind of unwatched change PR #33
+R3 warned against, just moved one layer down.
+Orchestrator note: MEDIUM in origin, routed to debt rather than fixed inline
+because it cannot be verified in this environment (no key) and a wrong or
+unsupported `response_format` value would fail the live path silently worse
+than today's absence of one. D26 stands regardless of how/whether this is
+picked up.
+
 ### T-R30 — the widened SCOPE_BLOCK determiner regex over-refuses informational/hypothetical delete questions            [status: todo]
 Origin: PR #25 R3 (LOW, routed debt)
 Spec (claim): the widened determiner regex over-refuses informational/hypothetical
