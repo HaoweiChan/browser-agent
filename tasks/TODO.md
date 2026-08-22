@@ -91,6 +91,11 @@ table outright); five plain-language limits linking to the full declared list
 with its count; a result panel that explains the status in one sentence and
 shows the answer first; and a form that refuses to spend a run on a URL-less
 task, lifting a site name out of the task text when there is one.
+Owner amendment (2026-08-22): no separate example-chip row — the per-site
+cards are the only example surface; cards list real sites only (fixture rows
+stay in the doc, not on the page) and carry no built-in/real-site tag; every
+card carries a Try button; the eyebrow line above the title goes and the
+subtitle is one short sentence; Known limits are short phrases, not sentences.
 Acceptance: gate green (invariant 100%, fast >= baseline) with no change to
 `POST /tasks`, agent, planner, verifier, or `docs/support-matrix.md`
 semantics. A NEW rendered case in the fast suite (no network), watched red
@@ -103,6 +108,11 @@ example prompt shipped on the page has a deployment `run_id` that answered
 correctly, cited in the code and the PR evidence — an example that cannot be
 reproduced is removed, not kept. `docs/ui.png` regenerated from a real
 deployment run through the current page; `docs/README.md` row updated.
+Every card has a Try example. An example on a site whose declared status is
+`supported`/`—` must cite a deployment run that answered correctly; an example
+on a site declared `unreliable`/`unsupported` may instead cite a run that
+demonstrates the declared status (fails loudly, never a wrong answer) and the
+card says so in one short line.
 Out of scope: planner quality on multi-hop / table lookup (M28, M34);
 API-side refusal of `url=null` (gateway cases pin it); rewriting
 `docs/product/assignment-requirements.md`.
@@ -137,6 +147,28 @@ Out of scope: extraction quality (M28), planner-side lint (M31). Do not remove
 M34's deterministic checks — they are cheaper and they run first.
 
 ## Debt
+
+### T-M35-WALL — the fast suite sits within 0.3s of its 60s wall-clock ceiling            [status: todo]
+Origin: M35 implementer
+Spec: `--suite fast` measured 59.01 / 59.06 s before M35 and 59.38 / 59.71 s
+with M35's one new rendered case (0.33 s on the shared browser). ADR-002
+Decision 4's ceiling is enforced by `evals.run` (`fast-wall-clock-budget`), so
+the next case — or ordinary machine noise — turns the gate red on timing, not
+on correctness, and the pre-commit hook with it — and it did: the orchestrator's
+gate on M35's first commit measured 60.31 / 60.73 s (`evals/report/
+20260822-170105-fast.json`, `-170218-fast.json`). M35 bought the margin back
+inside eval code only: `verifier-sparse-page-not-a-dump` moved from
+`slow-asset.html` to the equally sparse `sparse.html` (4.06 s → 0.44 s; it
+grades the page-size floor, not the hanging `load`), and the two rendered UI
+cases share one `_ui_page` render (no extra context). What remains is
+structural: ~45 s of the suite is product timeouts exercised on purpose (the
+2 s postcondition/`load` bounds, the 10 s click actionability bound in
+`l4-shop-overlay-modal`), so the next few cases will breach again.
+Repro: `.venv/bin/python -m evals.run --suite fast` twice and read `wall_s` in
+`evals/report/history.jsonl`; compare with the 60 s budget.
+Acceptance: a decision recorded in an ADR — either the suite sheds wall clock
+(shared contexts, fewer duplicate fixture loads, or the parallel runner M14) or
+the ceiling moves with a reason — and the suite runs with >= 5 s of headroom.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5
