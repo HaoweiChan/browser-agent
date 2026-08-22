@@ -1,0 +1,77 @@
+{
+  "pr": 34,
+  "round": 3,
+  "task": "M32",
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "FIRED \u2014 three review rounds without approval. Orchestrator stopped and escalated to the human rather than open a fourth repair round.",
+  "scope": "Repair review: git diff 5a88b9c..HEAD plus the standing findings R8, R9, R11. Not a fresh sweep.",
+  "standing_findings": {
+    "R8": {
+      "verdict": "CLOSED",
+      "evidence": "Exactly two production readers of page_changed exist (agent.py:771 and :827); both now route through changed_nothing, and :638 is the only writer. Reverting :771 to `outstanding.get('page_changed') is False` turns observe-drilldown-cannot-launder-unchecked-action red (status success, answer 'Aurora Desk Lamp', verdict PASS) and ONLY that case \u2014 the new case is non-redundant and pins the exact regression. Disabling the drill-down guard entirely turns both drill-down cases red. Other terminal sites hunted: done(answer=...) reachable from one line (:862); pending_supersede only ever receives cls == 'act' records (:832); a failed observe, a failed navigate (class nav), a url_guard trip (class task) and MAX_REPLANS exhaustion in both families all end at done(failure=...). False-positive direction checked with a purpose-built probe (act failure with page_changed null followed by a replan that legitimately acts, through both replan paths): passed True, recovery_verified 1/1, answer 'Cobalt Floor Rug'. No legitimate run is refused."
+    },
+    "R9": {
+      "verdict": "CLOSED",
+      "residue": [
+        "R14"
+      ],
+      "evidence": "The load-bearing premise of the author's correction branch is TRUE: mutating the deferral to `read_only = step['action'] in ('observe','extract')` turns recovery-replan-postcondition red with recovery_verified 0, recovery_expected 1. recovery_labelled_actions is a genuine whole-set comparison failing in both directions \u2014 a spurious label (read_only = False) reddens recovery-label-lands-on-the-extract, observe-drilldown-cannot-launder-noop-action and observe-drilldown-cannot-launder-unchecked-action; a missing one reddens the first. The published 'recovery 8/8 verified (14 rungs tried)' matches evals/report/20260822-192828-fast.json metrics exactly."
+    },
+    "R11": {
+      "verdict": "CLOSED",
+      "evidence": "maxlength=\"24\" is inert for every other case: the rendered a11y observation and inner_text('body') of shop.html are byte-identical with and without it (diff empty, body length 166 both ways), the longest other fill into #q is 8 chars ('Meridian'), the only 28-char fill in the repo targets forms.html, and mutate.py's _ATTRS regex cannot touch it. Full fast reproduced at 121/121, 209 actions. Rule 6 holds \u2014 no maxlength reference anywhere in production code."
+    }
+  },
+  "findings": [
+    {
+      "id": "R13",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The round-2 artifact's `case_redundancy_review` is false: `observe-cannot-launder-noop-action` no longer goes red when either mechanism its provenance names regresses, and the PR #34 R1 fix it exists to pin \u2014 `reads_without_acting`'s observe-transparency \u2014 now has zero eval coverage anywhere in the suite.",
+      "evidence": "src/browser/agent.py:169-189 (reads_without_acting, the R1 fix) and src/browser/agent.py:827 (elif drops_action and changed_nothing(rec), family 2's guard). evals/adversarial/observe-cannot-launder-noop-action.json:25-28 asserts only status: failure:act + recovery: false, and the drill-down guard added in the same PR (agent.py:769-776) reaches the identical terminal status on the identical input via the case's third stub plan [extract]. Two isolated source mutations, each reverting exactly one mechanism: (C) agent.py:827 -> `elif False:` \u2014 the case still PASSes, got.reason merely changes from the family-2 wording to the drill-down wording; only replan-cannot-launder-noop-action goes red. (D) reads_without_acting reverted to its pre-R1 one-liner `return bool(steps) and steps[0].get('action') == 'extract'` \u2014 the ENTIRE fast suite stays green: 121/121 = 1.000, 210 actions, 13 replans. Nothing grades actions or replans, so the gate is blind. Contradicts tasks/reviews/pr34-r2-resolution.json:53 and CLAUDE.md hard rule 2. Provenance: the masking was introduced by the round-1 repair (18f2746), not by 1e8997a \u2014 but the claim that it was checked and found absent is this round's.",
+      "repro": "rsync the tree to a scratch copy, apply mutation D to src/browser/agent.py:184-189, then `.venv/bin/python -m evals.run --suite fast` -> 121/121 = 1.000. Then mutation C alone (agent.py:827 -> `elif False:`) and run observe-cannot-launder-noop-action -> still passed=True.",
+      "acceptance": "observe-cannot-launder-noop-action (or a replacement) goes red when reads_without_acting loses its observe-transparency AND when agent.py:827's guard is disabled \u2014 e.g. by asserting the terminating step / got.reason shape, or the trace prefix (that the observe attempt never ran), so the family-2 refusal is distinguishable from the drill-down refusal. Watch it red under mutation D before the fix, per hard rule 2. Correct the case_redundancy_review answer in tasks/reviews/."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M32-6",
+      "claim": "The rewritten recovery-label clause attributes the label's landing site to the drill-down path, which never sets it \u2014 `pending_recovery` is assigned in family 2 only \u2014 and cites a case that contains no `observe` as the exemplar of \"the `extract` the drill-down was asked for\".",
+      "evidence": "specs/001-browser-contract.md:130-135: \"Both skip PAST an observe and land on the next attempt of any other kind, which is usually the extract the drill-down was asked for ... and recovery-replan-postcondition is the shape where it is the ONLY step the new plan has\". src/browser/agent.py:833 is the only assignment of pending_recovery, and it is inside family 2's act->replan branch; the drill-down branch (agent.py:743-791) sets only the pending note. evals/adversarial/recovery-replan-postcondition.json has stub plans [click(bad postcondition), extract] then [extract] \u2014 no observe, no drill-down, so nothing 'skips past' anything there; the label lands directly on the family-2 replan's first step. ADR-019 section 2 carries the same conflation.",
+      "repro": "grep -n 'pending_recovery' src/browser/agent.py -> 682, 694, 697, 833; only 833 assigns \"recovery\", and it is unreachable from the drill-down branch. Compare with specs/001-browser-contract.md:130-135.",
+      "acceptance": "The clause separates the two statements: the label defers past an observe and lands on the next non-observe attempt (which in recovery-replan-postcondition is a bare extract with no drill-down involved, and in recovery-label-lands-on-the-extract is the extract the drill-down's replan returned while a family-2 recovery is in flight).",
+      "route_note": "LOW, prose-only, no behavioural defect \u2014 the code is correct and graded; the clause describes its landing site imprecisely. Logged rather than repaired because the circuit breaker fired this round."
+    },
+    {
+      "id": "R15",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M32-7",
+      "claim": "specs/001-browser-contract.md's laundering clause was left at the round-1 wording while docs/support-matrix.md D25 and ADR-019 were both updated, so the contract omits the page_changed: null half of the rule and the case that pins it.",
+      "evidence": "specs/001-browser-contract.md:145-150 still reads \"... while a failed action that changed nothing is outstanding (observe-cannot-launder-noop-action, observe-drilldown-cannot-launder-noop-action)\" \u2014 no mention of the null half and no observe-drilldown-cannot-launder-unchecked-action. The same rule in docs/support-matrix.md D25 was rewritten this round to \"where 'changed nothing' covers both an attempt that ran and moved nothing and one that never got far enough to be compared\" and cites all three cases; specs/decisions/ADR-019:143-150 likewise. Nothing grades specs/001's case citations (support-matrix-cites-real-cases covers the matrix, not the contract), so the two documents of record can drift silently.",
+      "repro": "git diff 5a88b9c..HEAD -- specs/001-browser-contract.md docs/support-matrix.md \u2014 the D25 row gained the null clause and the third case id; the contract clause at :145-150 is unchanged.",
+      "acceptance": "specs/001-browser-contract.md:145-150 states the null half explicitly and cites observe-drilldown-cannot-launder-unchecked-action alongside the other two, matching D25 and ADR-019 word for word on the predicate.",
+      "route_note": "LOW, prose-only incompleteness in one of three documents that state the same rule; the other two are correct and the behaviour is graded. Logged rather than repaired because the circuit breaker fired this round."
+    }
+  ],
+  "verified_clean": [
+    ".eval-baseline.json, evals/run.py and ADR-013* byte-identical to main across the WHOLE PR; EVAL_WALL_BUDGET_S untouched",
+    "doc numbers all derive from evals/report/20260822-192828-fast.json (README 68.2s vs wall_seconds 68.16; 121/121; 8/8 recovery, 14 rungs; 23/23 diagnosis; 12 replans; cases_with_budgets 73); independent recount gives 132 cases = 20 golden + 112 adversarial with TC/level tallies matching docs/analysis.md section 6 exactly",
+    "no new refusal path added this round; both existing return done(...) sites remain inside the AsyncExitStack + finally: await ctx.close() \u2014 no BrowserContext leak",
+    "rule 6 holds \u2014 no maxlength or other fixture knowledge referenced anywhere in production code",
+    "no repair-round narrative in README / ADR-019 / docs/analysis.md / docs/support-matrix.md"
+  ],
+  "wall_clock": {
+    "reviewer_rederivation": "65.68 -> 68.16 = +2.48s from the two committed reports; the two new cases sum to 2.59s (recovery-label-lands-on-the-extract 2.39s, observe-drilldown-cannot-launder-unchecked-action 0.20s) and no pre-existing case moved more than 0.06s.",
+    "verdict": "The author's '+2.2s / 0.15s' slightly UNDERSTATES the cost; the attribution is otherwise correct and was disclosed unprompted.",
+    "cheap_design_check": "The +2.2s case genuinely cannot use the cheap shape: it needs page_changed: true, which only a postcondition failure produces (agent.py:638 runs before :643), and the cheap null shape would be refused by the family-2 guard at :827."
+  },
+  "gate": {
+    "invariant": "41/41 = 1.000, 7.9s, $0.0000",
+    "fast": "121/121 = 1.000 >= baseline 1.000, 68.62s, $0.0000 \u2014 non-zero exit on wall clock alone",
+    "live": "9/9 = 1.000, $0.0000",
+    "orchestrator_verified": "Re-run independently after 1e8997a: invariant 41/41 = 1.000 (7.9s), fast 121/121 = 1.000 (68.62s, 209 actions, $0.0000).",
+    "cumulative_wall_clock": "61.16s -> 68.62s over the PR, against a 60s ceiling that unmodified main already straddles at 61.72s / 60.02s (108/108 = 1.000)."
+  }
+}

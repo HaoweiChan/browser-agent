@@ -210,6 +210,43 @@ try to resolve any of them to a report in `evals/report/`.
 Acceptance: each remaining README wall clock names the report it came from and
 is recomputed by `docs-numbers-are-derived`, or is deleted.
 
+### T-M32-6 — the recovery-label clause credits the drill-down path with a label it never sets            [status: todo]
+Origin: PR #34 R14
+Spec: `specs/001-browser-contract.md:130-135` says the `recovery` label and the
+`superseded_by` pointer "skip past an `observe` and land on the next attempt of
+any other kind, which is usually the `extract` the drill-down was asked for",
+and cites `recovery-replan-postcondition` as the shape where that extract is
+the only step. Both halves conflate two paths: `pending_recovery` is assigned
+at `src/browser/agent.py:833` only, inside family 2's act->replan branch — the
+drill-down branch (`agent.py:743-791`) sets only the note — and
+`recovery-replan-postcondition`'s stub plans contain no `observe` at all, so
+nothing skips past anything there. ADR-019 §2 carries the same conflation.
+The code is correct and graded; only the prose is imprecise.
+Repro: `grep -n 'pending_recovery' src/browser/agent.py` -> 682, 694, 697, 833;
+only 833 assigns `"recovery"`, and it is unreachable from the drill-down branch.
+Acceptance: the clause separates the two statements — the label defers past an
+`observe` and lands on the next non-`observe` attempt, which in
+`recovery-replan-postcondition` is a bare `extract` with no drill-down involved
+and in `recovery-label-lands-on-the-extract` is the `extract` the drill-down's
+replan returned while a family-2 recovery is in flight.
+
+### T-M32-7 — the contract's laundering clause omits the `page_changed: null` half            [status: todo]
+Origin: PR #34 R15
+Spec: `docs/support-matrix.md` D25 and `specs/decisions/ADR-019` were both
+rewritten to say that "changed nothing" covers an attempt that ran and moved
+nothing AND one that never got far enough to be compared, citing all three
+laundering cases. `specs/001-browser-contract.md:145-150` was left at the
+earlier wording: no null half, and no
+`observe-drilldown-cannot-launder-unchecked-action`. Three documents state the
+same rule and one of them is now behind. Nothing grades the contract's case
+citations — `support-matrix-cites-real-cases` covers the matrix, not
+`specs/001` — so they can drift silently, which is how this happened.
+Repro: `git diff 5a88b9c..HEAD -- specs/001-browser-contract.md docs/support-matrix.md`.
+Acceptance: `specs/001-browser-contract.md:145-150` states the null half and
+cites the third case, matching D25 and ADR-019 word for word on the predicate;
+ideally a grader covers the contract's case citations the way
+`support-matrix-cites-real-cases` covers the matrix's.
+
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5
 Spec: `support-matrix-cites-real-cases` resolves backticked case-id tokens
