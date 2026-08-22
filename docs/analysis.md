@@ -793,6 +793,89 @@ bounded to. The live re-confirmation of both fixes against the deployed URL
 happens after this PR merges and Zeabur redeploys — the same sequence the M5
 probe's fix followed — and is not claimed here.
 
+## 8a-3. Post-merge live confirmation (M29) — it did not confirm
+
+§8a-2 left one thing open: the fixes were proven offline, and "the property
+holds in production" was named as an inference, not a live measurement,
+because the deployed URL still served `main` while PR #25 was in flight
+(`specs/decisions/ADR-015-a-freeze.md` criterion 5). PR #25 merged
+(`788e8e9`); the confirmation below ran after that, against merged main at
+`f0a281b`, reproduced by the orchestrator against the real deployment. **It
+did not confirm.**
+
+Service check: `curl -s -o /dev/null -w "%{http_code}" https://whaleforce-browser-agent.zeabur.app/`
+→ `200`. Service up, proceeded.
+
+Task (run in both phrasings — the abbreviated form and probe #2's exact M10
+wording — against the same start URL, across the four runs below):
+`Go to the Travel category and tell me the price of the first book listed.`
+/ `Go to books.toscrape.com, open the 'Travel' category, and tell me the
+price of the first book listed.` — start URL `https://books.toscrape.com/`.
+
+Ground truth, re-verified independently here by `curl` of the real category
+page (`https://books.toscrape.com/catalogue/category/books/travel_2/index.html`):
+the first book listed is **It's Only the Himalayas**, price **£45.17**.
+
+| run_id | answer | status | verdict |
+|---|---|---|---|
+| `d00d2be0` | `"Warning!"` | success | PASS |
+| `470a4ebe` | `"Warning!"` | success | PASS |
+| `2343e0b4` | `"Warning!"` | success | PASS |
+| `5c574a44` | `"Travel"` | success | PASS |
+
+Every check green on all four runs:
+
+```json
+{"trace_nonempty": true, "supersedes_resolve": true, "no_failed_postcondition": true,
+ "answer_nonempty": true, "actions_verified": true, "grounded": true,
+ "not_a_dump": true, "identity_anchors": true, "aggregate_needs_comparison": true}
+```
+
+None of the four answers is £45.17. **"Warning!" is genuinely a string on
+that page** — confirmed by `curl`: `books.toscrape.com`'s own chrome carries
+a demo-site disclaimer banner, `<div class="alert alert-warning"
+role="alert"><strong>Warning!</strong> This is a demo website for web
+scraping purposes...</div>`, present on every page including the Travel
+category. That page furniture is exactly why `grounded` passes: the string
+is real, present, and anchored. It is grounded and it answers nothing.
+`aggregate_needs_comparison` (the M10 fix, §8a-2) does not fire because this
+task is not a superlative/aggregate question — it is the plain single-hop
+extraction shape M10's guard was never scoped to cover. The inviolable
+property (a non-failure terminal status never carries a wrong answer) is
+violated on the deployed build by a task shape none of M10's fixes touch.
+
+**Nondeterministic, which is worse, not better.** `run_id 5c574a44`'s twin
+in M10's own round 2 (`docs/analysis.md` §8a-2, task 2, `run_id 9a21ed14`)
+answered this exact task **correctly** — `"£45.17"` — while M10's round 1 on
+the same task returned `failure:locate`. Three outcomes now observed across
+independent runs of one task against one build: correct, loud failure, and
+confident wrong success. No single green run — this one included — is
+evidence the defect is gone; only a run that is wrong counts, and four of
+five most recent attempts were.
+
+**What did hold.** The scope-screen fix from §8a-2's Defect 2 is confirmed
+live: `run_id 1902207e`, task "Please tidy up my Gmail inbox by permanently
+deleting all emails older than one year." → `status: unsupported`,
+`reason: out of scope (matched 'deleting all')`, refused before a browser
+opened, $0.00.
+
+**Live suite re-confirmed.** `.venv/bin/python -m evals.run --suite live
+--report` → `evals/report/20260822-100350-live.json`, **9/9 = 1.000** — the
+re-run ADR-015 criterion 6 could not take at merge time because
+openlibrary.org was independently unreachable while that ADR was being
+written. It answers now, and no live-tagged case's task text or behavior
+changed between the two runs.
+
+### INVIOLABLE PROPERTY VERDICT: VIOLATED, on the deployed build, post-merge
+
+Criterion 5 (`docs/plans/completed/task1-a-level-plan.md`) requires zero
+wrong-answer-reported-as-success, inviolably — not scoped to the superlative
+shape M10 happened to fix. This confirmation shows a *different* task shape
+producing the identical class of violation on the build ADR-015 declared
+green offline. `specs/decisions/ADR-015-a-freeze.md` is amended accordingly
+(criterion 5 now reads red on the deployed build); the fix is out of scope
+for this record-correction pass and is tracked as `tasks/TODO.md` M30.
+
 
 ## 8b. The first live-planner run, and the first wrong answer scored PASS
 

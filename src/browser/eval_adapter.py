@@ -2462,6 +2462,24 @@ def _run_doc_counts_case(case: dict) -> dict:
             missing = sorted(d for d in domains if d not in section)
             if missing:
                 wrong.append({"coverage_missing_domains": missing})
+
+    c5 = inp.get("criterion5")
+    if c5:
+        # Strip struck spans before scanning: ADR-015's own amendment convention
+        # keeps a falsified claim's original wording ~~struck~~ rather than
+        # deleted (the criterion-7 precedent it cites), so only prose asserting
+        # green OUTSIDE a strikethrough is a live claim worth failing on.
+        for docrel in c5["docs"]:
+            text = (RUN_ROOT / docrel).read_text(encoding="utf-8")
+            live_text = re.sub(r"~~.*?~~", "", text, flags=re.DOTALL)
+            for bad in c5.get("forbidden", []):
+                if bad in live_text:
+                    wrong.append({"asserts_criterion5_green": bad, "doc": docrel})
+        for docrel, needed in c5.get("required_in", {}).items():
+            text = (RUN_ROOT / docrel).read_text(encoding="utf-8")
+            for good in needed:
+                if good not in text:
+                    wrong.append({"missing_red_evidence": good, "doc": docrel})
     return {"passed": not wrong, "wrong": {"docs": wrong},
             "got": {"counts": counts, "domains": domains}}
 

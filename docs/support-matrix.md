@@ -54,6 +54,12 @@ D7 below has the measurements.
 Statuses: `supported` / `unreliable` / `unsupported` / `—` (not yet evaluated).
 Unsupported and unreliable rows must cite a concrete failing case id.
 
+## Declared limitations (M29 post-merge confirmation)
+
+| Limitation | Evidence | Status |
+|---|---|---|
+| **D23** — the inviolable property (criterion 5) does not hold on the deployed build, on a task shape neither M10 fix touches, and the violation is intermittent | ADR-015's live re-confirmation (`docs/analysis.md` §8a-3), run against merged main (`788e8e9`): "tell me the price of the first book in the Travel category" on `books.toscrape.com` reported `status: success` / `verdict: PASS` with `answer: "Warning!"` in 3 of 4 post-merge runs (`run_id`s `d00d2be0`, `470a4ebe`, `2343e0b4`) and `answer: "Travel"` in the fourth (`5c574a44`), against a verified ground truth of £45.17. All nine verdict checks passed on every run, including `grounded` — "Warning!" is a real string on the page (`books.toscrape.com`'s own demo-site disclaimer banner, confirmed by `curl`: `<div class="alert alert-warning"><strong>Warning!</strong> This is a demo website for web scraping purposes...</div>`, present on every page), so groundedness cannot distinguish "on the page" from "answers the question." `aggregate_needs_comparison` (M10's fix) does not fire because this is a plain single-hop extraction, not a superlative/aggregate question — the exact shape M10's guard was scoped to and no wider. **The same task is nondeterministic**: its M10-round-2 twin (`run_id 9a21ed14`) answered correctly (£45.17), and M10 round 1 on the identical task failed loudly instead (`failure:locate`) — three different outcomes now observed on one task against one build across two probe cycles | `unsupported` — this is the M30 defect (`tasks/TODO.md`), demonstrated a third time and now on the deployed build specifically, not just offline. Nothing in this repo currently checks whether an answer is *responsive* to the question asked, only whether it is grounded and non-empty (same gap as the unnumbered "An answer is never checked for being responsive" row above, M7 section) — `grounded`/`not_a_dump`/`identity_anchors`/`answer_nonempty` all pass on a page-furniture string. Declared, not guessed at: fixing this is explicitly out of scope for M29 (record-correction only) and is M30's whole job, which CLAUDE.md rule 2 requires to land as a watched-red case before any fix |
+
 ## Declared limitations (M10 A-freeze)
 
 | Limitation | Evidence | Status |

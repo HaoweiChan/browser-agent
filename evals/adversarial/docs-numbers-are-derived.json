@@ -26,14 +26,33 @@
       "split_quote": "{total} distinct cases ({golden} golden + {adversarial} adversarial)",
       "section_start": "## 6. Coverage",
       "section_end": "## 7. What is not measured"
+    },
+    "criterion5": {
+      "docs": [
+        "README.md",
+        "docs/analysis.md",
+        "docs/support-matrix.md",
+        "specs/decisions/ADR-015-a-freeze.md",
+        "specs/decisions/INDEX.md"
+      ],
+      "forbidden": [
+        "criterion 5 is now green",
+        "criterion 5 green offline",
+        "A-freeze is achieved",
+        "the inviolable property holds on the deployed"
+      ],
+      "required_in": {
+        "specs/decisions/ADR-015-a-freeze.md": ["RED on the deployed build", "§8a-3"],
+        "specs/decisions/INDEX.md": ["RED on the deployed build"]
+      }
     }
   },
   "expect": {
-    "note": "every count in README equals what the runner loads, and README's \"Where it stands\" block equals the reports it cites"
+    "note": "every count in README equals what the runner loads, README's \"Where it stands\" block equals the reports it cites, and no document asserts criterion 5 green (outside a struck-through historical record) while docs/analysis.md §8a-3's post-merge evidence says red"
   },
-  "provenance": "PR #21 review, R6 (MEDIUM) and R5 (MEDIUM) \u2014 the same class twice: a number in a document of record that this branch's own committed artifacts contradict. README said 91 fast / 101 total while the runner said 93 fast / 103 files (the edit added +5 for the new cases and carried a pre-existing -1 forward). D8 said `71.3-76.5s at M9 with five more cases` while the four fast reports committed in the same PR measure 79.01-79.75s with six more cases \u2014 understating a declared budget breach by ~3.4s, on the row M12 is keyed to. Neither number is re-typed here: the suite sizes come from `evals.run.load_cases`, the runner's own discovery, and the D8 range is recomputed from the `wall_seconds` of the reports the row cites. Watched red against the pre-fix documents: `readme_does_not_say: 'offline gate: 95 cases, zero paid calls'` and `d8_range: {the_cited_reports_show: '79.0-79.8s'}`. PR #23 R4 added the \"Where it stands\" half: the same commit that fixed the three graded count lines to 102/112 left the block beside them publishing `20260821-224446-fast.json` \u2014 `fast 98/98  invariant 30/30  59.4s`, a pre-merge run at a main-only sha \u2014 while the branch committed 102-result and 34-result reports at its own head. Ungraded prose next to graded prose drifts on the first merge. Watched red against that README: `readme_does_not_cite: 20260822-010408-fast.json` plus `readme_does_not_say: fast  102/102` / `invariant  34/34` / `59.6s`.",
+  "provenance": "PR #21 review, R6 (MEDIUM) and R5 (MEDIUM) \u2014 the same class twice: a number in a document of record that this branch's own committed artifacts contradict. README said 91 fast / 101 total while the runner said 93 fast / 103 files (the edit added +5 for the new cases and carried a pre-existing -1 forward). D8 said `71.3-76.5s at M9 with five more cases` while the four fast reports committed in the same PR measure 79.01-79.75s with six more cases \u2014 understating a declared budget breach by ~3.4s, on the row M12 is keyed to. Neither number is re-typed here: the suite sizes come from `evals.run.load_cases`, the runner's own discovery, and the D8 range is recomputed from the `wall_seconds` of the reports the row cites. Watched red against the pre-fix documents: `readme_does_not_say: 'offline gate: 95 cases, zero paid calls'` and `d8_range: {the_cited_reports_show: '79.0-79.8s'}`. PR #23 R4 added the \"Where it stands\" half: the same commit that fixed the three graded count lines to 102/112 left the block beside them publishing `20260821-224446-fast.json` \u2014 `fast 98/98  invariant 30/30  59.4s`, a pre-merge run at a main-only sha \u2014 while the branch committed 102-result and 34-result reports at its own head. Ungraded prose next to graded prose drifts on the first merge. Watched red against that README: `readme_does_not_cite: 20260822-010408-fast.json` plus `readme_does_not_say: fast  102/102` / `invariant  34/34` / `59.6s`. Extended at M29 (`docs/analysis.md` \u00a78a-3, `specs/decisions/ADR-015-a-freeze.md`): ADR-015's own header and criterion 5 asserted 'criterion 5 is now green offline, with live re-confirmation ... pending' and INDEX.md's one-liner said 'criterion 5 green offline with live re-confirmation pending redeploy' \u2014 both true when written, both falsified by the post-merge probe this milestone committed in the same document tree. Watched red against the pre-amendment files (git stash of this PR's ADR-015/INDEX.md edits): `asserts_criterion5_green: 'criterion 5 is now green'` (from both `specs/decisions/ADR-015-a-freeze.md` and `specs/decisions/INDEX.md`) and `asserts_criterion5_green: 'criterion 5 green offline'` (INDEX.md). The forbidden-phrase scan strips `~~struck~~` spans first, on purpose \u2014 ADR-015's own amendment convention (this ADR's citation of the plan's criterion-7 precedent) keeps the falsified original wording struck rather than deleted, and a naive substring scan would flag that preserved history forever; only prose asserting green OUTSIDE a strikethrough trips it.",
   "triage": {
     "class": "doc-drift",
-    "note": "tagged invariant \u2014 a hand-maintained count is wrong again by the next milestone, and this repo has already burned a review round on three documents carrying three different totals for the same thing (PR #15, R19). The failure mode this closes is not the wrong number, it is the number that nothing recomputes. Adding a case to the suite now turns this red until README is updated, which is the intended cost. D8's cited reports are immutable artifacts, so its assertion is stable; moving the range means citing the runs it was measured from. The block cites report files rather than recomputing 'the latest run' on purpose: a report is immutable, so the assertion is stable, and moving the block means citing the runs it was measured from \u2014 the same contract D8's retired half had."
+    "note": "tagged invariant \u2014 a hand-maintained count is wrong again by the next milestone, and this repo has already burned a review round on three documents carrying three different totals for the same thing (PR #15, R19). The failure mode this closes is not the wrong number, it is the number that nothing recomputes. Adding a case to the suite now turns this red until README is updated, which is the intended cost. D8's cited reports are immutable artifacts, so its assertion is stable; moving the range means citing the runs it was measured from. The block cites report files rather than recomputing 'the latest run' on purpose: a report is immutable, so the assertion is stable, and moving the block means citing the runs it was measured from \u2014 the same contract D8's retired half had. The M29 half is the same shape one level up: a milestone's own ADR asserted its gate criterion was green-pending, and the milestone after it is the one that knows whether pending resolved true or false \u2014 nothing forced that resolution back into the ADR until this case checked for it."
   }
 }
