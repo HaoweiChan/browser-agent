@@ -1,22 +1,23 @@
-# ADR-019: M32 — the planner can ask for a deeper view of the page
+# ADR-020: M32 — the planner can ask for a deeper view of the page
 
 Date: 2026-08-22
 Status: accepted
 
 **Ruling**: the plan vocabulary gains a fifth action, `observe`, whose `target` names a container the planner was already shown; the executor re-runs `observe()` scoped to that subtree with the whole `MAX_ELEMS` budget spent inside it and a 1,500-character text head, and hands the result to the planner through the observation+note arguments a replan already uses, spending one call from the existing `MAX_REPLANS` budget. Progressive disclosure of the PAGE; the capability list stays fully disclosed and the executor stays closed-world.
 **Because**: the planner's ceiling on M10 probe #4/#5/#7 was not that it misunderstood its tools — the closed-world executor would have graded that `failure:task` and zero runs did — but that the answer was verbatim in page text the planner was never shown, and `observe()`'s cap is what withheld it; raising the cap moves the cliff to the next larger page and taxes every task, while asking for one subtree taxes only the task that asks.
-**Enforced by**: `observe-drilldown-past-max-elems`, `observe-cap-hides-the-answer-element`, `observe-blind-plan-dumps-the-container`, `observe-refused-drilldown-stops-the-run`, `observe-drilldown-no-progress-stops-the-run`, `observe-drill-into-chrome-gets-the-page-budget`, `observe-drill-text-head-reaches-past-300`, `observe-cannot-launder-noop-action`, `observe-drilldown-cannot-launder-noop-action`, `observe-drilldown-cannot-launder-unchecked-action`, `recovery-label-lands-on-the-extract`, `observe-step-cannot-carry-expected-state`, `planner-note-is-not-always-a-failure`
+**Enforced by**: `observe-drilldown-past-max-elems`, `observe-cap-hides-the-answer-element`, `observe-blind-plan-dumps-the-container`, `observe-refused-drilldown-stops-the-run`, `observe-drilldown-no-progress-stops-the-run`, `observe-drill-into-chrome-gets-the-page-budget`, `observe-drill-text-head-reaches-past-300`, `observe-cannot-launder-noop-action`, `observe-cannot-launder-extract-all`, `observe-drilldown-cannot-launder-noop-action`, `observe-drilldown-cannot-launder-unchecked-action`, `recovery-label-lands-on-the-extract`, `observe-step-cannot-carry-expected-state`, `planner-note-is-not-always-a-failure`
 
 ---
 
 ## Number
 
-017 and 018 are deliberately skipped, not lost. ADR-016 exists twice in flight
-(merged `main` has ADR-016 for M34; the open `task/M31` branch carries its own
-ADR-016 plus an ADR-017), so M31 must renumber on merge and the first number
-that cannot collide with either branch is 019. Ids have been taken out from
-under concurrent sessions in this repo before; a gap is cheaper than a
-collision.
+Allocated twice. This ADR was written as 019 while `main` held nothing above
+016; M31 then merged (PR #29) carrying `ADR-018-m31-plan-lint.md` and
+`ADR-019-wall-clock-ceilings-per-suite.md`, so 019 became main's and this file
+renumbered to 020 on the merge. Whatever is already on `main` keeps its id —
+the same rule that renumbered this milestone's support-matrix row from D25 to
+D27. Every citation moved with it; none of main's ADR-019 references were
+touched.
 
 ## Context
 

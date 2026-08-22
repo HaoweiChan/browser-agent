@@ -1,0 +1,34 @@
+{
+  "id": "extract-all-cheapest-wording-still-reduces",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L3",
+  "tc": "TC4",
+  "trap": "a single-answer ranking that `_AGGREGATE` misses — the enumeration must not be published as the answer",
+  "input": {
+    "task": "In this catalogue, find the cheapest product and tell me its exact price.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "listitem"
+        },
+        "rank": true
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Cobalt Floor Rug $18.00"
+  },
+  "provenance": "PR #29 R9. The R2 repair gated the code-side reduction on `verifier.is_aggregate`, which requires BOTH a which/what/who frame and a word from {most, least, fewest, highest, lowest, greatest} — so every `cheapest`-worded single-answer ranking stopped being reduced and the raw enumeration was published as the answer with `status: success`. That is the milestone's own headline shape: this task is `evals/golden/live-books-cheapest-travel.json`'s wording moved onto the shop fixture, and `src/browser/planner.py`'s system prompt tells a real planner to use `extract_all` for exactly it (\"the cheapest one\") and promises the comparison is done in code. The gate is now inside `rank` itself and asks the question that actually separates the two shapes: does the task ask for the enumeration (`list`, `every`, `each`) or for one item out of it? `_RANK` decides direction as before, and `extract-all-list-task-keeps-every-row` — same fixture, same verb, a task that opens with \"List every product\" — stays green on the other side of the same rule.",
+  "triage": {
+    "class": "silent-failure",
+    "watched_red": "before the fix: status success, checks {status: true, verdict: false}, answer ['Aurora Desk Lamp $39.00', 'Aurora Desk Lamp Pro $59.00', 'Meridian Wall Clock $24.50', 'Cobalt Floor Rug $18.00'] — the raw four-row enumeration published as the answer to 'find the cheapest product and tell me its exact price', with every runtime check green.",
+    "note": "the pair (this case and extract-all-list-task-keeps-every-row) is the point: one rule has to keep both green, and either half alone can be satisfied by deleting the other's behaviour. The plan LINT is deliberately untouched by this fix and stays on `_AGGREGATE` — widening it would drag fifteen shop-fixture cases whose task says 'name the cheapest product' into a lint they have no reason to meet, which is the residual T-CHEAPEST-WORDING records."
+  }
+}

@@ -77,10 +77,11 @@ ABLATION_MODELS = [
 ALLOWED_MODELS = list(dict.fromkeys([DEFAULT_MODEL, *ABLATION_MODELS]))
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
-Each step: {"action": "navigate|click|fill|extract|observe",
+Each step: {"action": "navigate|click|fill|extract|extract_all|observe",
  "target": {"role": str|null, "name": str|null, "text": str|null, "near": str|null, "index": int|null} | null,
  "value": str|null,
  "anchor": str|null,
+ "rank": bool|null,
  "expected_state": {"url_contains": str} | {"text_visible": str} | {"role_visible": {"role": str, "name": str|null}} | null}
 Rules: `navigate` puts the URL in `value`. `extract` reads the target element's
 text as the answer. `observe` asks for a closer look: an observation is capped
@@ -88,14 +89,24 @@ and a long page is cut off mid-way, so when the answer is inside a container you
 can see but whose contents you cannot, target that container with `observe` and
 you are re-planned against that subtree alone — all of its elements, more of its
 text. It costs one planning call out of a small budget: ask once, then extract.
-Targets are semantic (ARIA role + accessible name) — never
+`extract_all` reads EVERY match of its target and returns
+them as a list — use it whenever the task compares, ranks or counts across many
+items ("which X has the most/least Y", "the cheapest one"): extract the values
+to be compared, one per item, and never the answer itself. The comparison is
+done in code, not by you, so a plan that guesses the winner with a single
+`extract` is rejected before it runs. Every `extract_all` MUST set `rank`, and
+the run fails without it: `rank: true` when the task wants ONE item out of the
+set ("which is cheapest", "the most-quoted author"), `rank: false` when the
+task wants the set itself ("list every product with its price"). You are
+saying which the user asked for, not which item wins — code decides that. Targets are semantic (ARIA role + accessible name) — never
 CSS selectors. `index` (0-based) picks the k-th match when several elements
 share a role, e.g. the first search result. `near` picks the match closest to a
 visible string instead of counting: use it when the element you want has no name
 of its own but sits beside one that does — a price beside a product, a value
 beside its table label, an author beside a byline. Prefer `near` over `index`
 when such a string exists; only these five target keys exist, and any other key
-fails the run. On an `extract` step, `anchor` is
+fails the run. Neither `index` nor `near` may appear on an `extract_all`: both
+pick one match and that step wants them all, so the run fails if you send both. On an `extract` step, `anchor` is
 the distinguishing name of the entity the task is about; the run fails if that
 string is absent from the page the answer was read from — use it whenever the
 task names a specific entity. Prefer few steps.
@@ -158,25 +169,41 @@ def stub_planner(plans: list):
     calls = [0]
 
     async def plan(task: str, url: str | None, observation: dict | None = None, note: str | None = None):
+        plan.notes.append(note)
         steps = plans[min(calls[0], len(plans) - 1)]
         calls[0] += 1
         return steps, {"llm_tokens": 0, "llm_usd": 0.0}
 
+    # Every note this planner was handed, in call order (None for the first
+    # plan). The stub discards the note when choosing what to return — that is
+    # what makes it deterministic — so without this record nothing could grade
+    # the message a real planner would have been sent (PR #29 R5).
+    plan.notes = []
     return plan
 
 
-def build_user_message(task: str, url: str | None, observation: dict | None = None,
-                       note: str | None = None) -> str:
-    """The user half of a planning prompt. Module-level and pure so a case can
-    grade it with no key and no spend (`planner-note-is-not-always-a-failure`).
+def build_user(task: str, url: str | None, observation: dict | None = None,
+               note: str | None = None) -> str:
+    """The user message a real planner is sent. Module-level and pure so it can
+    be graded without a key, a network call or a token.
 
-    `note` is rendered VERBATIM. It used to be wrapped in "A previous attempt
-    failed: …" here, which was true of the only caller at the time and became
-    false the moment M32 added one: a drill-down is a successful request for a
-    closer look, and telling the model it failed steers it away from the exact
-    container the answer is in. The framing now belongs to whichever caller
-    knows what happened — `agent.py`'s act-failure replan says "failed" in its
-    own note, and the drill-down does not (PR M32 cold review, finding 3).
+    The CALLER owns a replan's framing. The two callers are in different
+    situations — an `act` failure mid-run (plan the REMAINING work; the executed
+    prefix is not re-issued) and a plan the lint rejected before anything ran
+    (plan the WHOLE task; nothing has executed and the page is untouched) — and
+    one shared sentence here told a real model "A previous attempt failed" when
+    nothing had, then asked it to plan only what was still needed of a task none
+    of which had been done (PR #29 R5). So this function adds no framing of its
+    own: the note goes in verbatim.
+
+    That was the half of R5 nothing graded, because every offline case uses
+    `stub_planner` and never reaches this line (PR #29 R11). It is now a pure
+    function with a case over it (`planner-prompt-carries-the-note`); the
+    `expect.planner_note_contains` key grades the other half, what the call
+    sites pass. M32's cold review reached the same conclusion from the other
+    caller: a drill-down is a SUCCESSFUL request for a closer look, and a shared
+    "A previous attempt failed" wrapper told the model the step that asked for
+    it had failed (`planner-note-is-not-always-a-failure`).
     """
     user = f"Task: {task}\nStart URL: {url or 'none — choose one via navigate'}"
     if observation:
@@ -184,10 +211,7 @@ def build_user_message(task: str, url: str | None, observation: dict | None = No
 
         user += "\n\nCurrent page observation:\n" + render(observation)
     if note:
-        # Re-plan: what just happened, plus the page (or subtree) as it is now.
-        # Plan the REMAINING work from here — the steps already executed are
-        # not re-issued.
-        user += f"\n\n{note}\nPlan only the steps still needed, from the observation above."
+        user += "\n\n" + note
     return user
 
 
@@ -206,7 +230,7 @@ def live_planner(model: str = DEFAULT_MODEL):
             return json.load(resp)
 
     async def plan(task: str, url: str | None, observation: dict | None = None, note: str | None = None):
-        user = build_user_message(task, url, observation, note)
+        user = build_user(task, url, observation, note)
         payload = {
             "model": model,
             "messages": [

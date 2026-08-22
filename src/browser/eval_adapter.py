@@ -7,7 +7,9 @@ expectations, identity anchors, and external ground truth from the fixture
 `/state` endpoint.
 
 Case kinds (`input.kind`):
-- `invariant`    — pure-code property check, no browser (`check`: inv0 | inv1 | inv2)
+- `invariant`    — pure-code property check, no browser; `check` names one entry of
+                   the INVARIANTS registry at the foot of this file, which is the list —
+                   so this line cannot go stale by omitting a check
 - `adr-header-index` — decision-first ADR header + INDEX.md hygiene (no browser)
 - `observe`      — a11y observation shape
 - `url-guard`    — SSRF guard truth table
@@ -229,7 +231,7 @@ def _check_evidence_window_miss_bounded() -> dict:
     """evidence_window must still return a bounded window when the value is
     absent from the body on a page longer than PAGE_TEXT_KEEP — that window
     is what `grounded` then correctly fails on. No browser: a pure probe of
-    the function itself (agent.py:170)."""
+    the function itself (`agent.evidence_window`)."""
     from .agent import PAGE_TEXT_KEEP, evidence_window
 
     body = "x" * (PAGE_TEXT_KEEP + 1000)
@@ -245,8 +247,9 @@ def _check_evidence_window_miss_bounded() -> dict:
 def _check_dump_ratio_anchor_flip() -> dict:
     """`not_a_dump`'s denominator must be the real page (`body_len`), not the
     stored evidence window -- which agent.py caps at PAGE_TEXT_KEEP and can
-    double when a distant `anchor` forces a second window onto it (agent.py:
-    171-173). Reviewer-reported defect: the SAME value on the SAME page
+    double when a distant `anchor` forces a second window onto it
+    (`agent.evidence_window`, and the extract branch that calls it).
+    Reviewer-reported defect: the SAME value on the SAME page
     flipped FAIL -> PASS depending only on whether the plan carried a distant
     anchor, because the window (not the page) was the denominator. Pure probe
     of evidence_window() and verify() directly, no browser."""
@@ -282,6 +285,157 @@ def _check_dump_ratio_anchor_flip() -> dict:
         wrong.append(f"body_len-denominated ratio should read as a real answer: plain={plain_ok} anchored={anchored_ok}")
     return {"passed": not wrong, "wrong": wrong,
             "win_plain_len": len(win_plain), "win_anchored_len": len(win_anchored)}
+
+
+def _check_plan_gap() -> dict:
+    """The plan lint is a pure function over (task text, plan) — grade it as one.
+
+    The two end-to-end cases pin the run-level outcomes (rejected before any
+    action, and replanned into a green run). This is the truth table underneath
+    them, including the row neither reaches: a plan carrying TWO enumerations,
+    which is a gap for the same reason zero is — nothing says which set the
+    superlative ranks over — and which would otherwise surface as a list of
+    lists that the relaxed aggregate guard has no reason to reject.
+    """
+    from .agent import plan_gap
+
+    AGG = "Which product on this page has the most customer reviews?"
+    PLAIN = "What is the price of the Aurora Desk Lamp?"
+    one = [{"action": "extract_all", "target": {"role": "link"}, "rank": True}]
+    norank = [{"action": "extract_all", "target": {"role": "link"}, "rank": False}]
+    two = one + [{"action": "extract_all", "target": {"role": "listitem"}, "rank": True}]
+    plain = [{"action": "extract", "target": {"role": "link"}}]
+    rows = [
+        (AGG, [], True), (AGG, plain, True), (AGG, one, False),
+        (AGG, plain + one, True), (AGG, one + plain, True), (AGG, two, True),
+        # PR #29 R20: the plan enumerates exactly once and declares it compared
+        # nothing. Contradicts a task `is_aggregate` says asks for one item of a
+        # set, and for three rounds nothing compared the two halves.
+        (AGG, norank, True), (AGG, [dict(one[0])], False),
+        (PLAIN, [], False), (PLAIN, plain, False), (PLAIN, two, False),
+        (PLAIN, plain + one, False), (PLAIN, norank, False),
+    ]
+    wrong = [{"task": t, "plan": [s.get("action") for s in p], "expected_gap": want,
+              "got": plan_gap(t, p)}
+             for t, p, want in rows if bool(plan_gap(t, p)) is not want]
+    return {"passed": not wrong, "wrong": wrong}
+
+
+def _check_planner_prompt() -> dict:
+    """The message `live_planner` actually assembles — the half of PR #29 R5 that
+    `expect.planner_note_contains` does NOT reach.
+
+    That key reads `stub_planner.notes`, i.e. what the CALL SITE passed. Every
+    offline case uses the stub, so the line R5 changed in `live_planner` is
+    executed only by `full`-tagged cases, and reverting it left the whole suite
+    green (PR #29 R11). `build_user` is pure, so this costs no key, no network
+    and no token: the note must arrive verbatim and the planner must add no
+    framing of its own — in particular not the act ladder's sentence, which is
+    false in all three of its clauses on the lint's replan.
+    """
+    from .planner import build_user
+
+    ACT = ("A previous attempt failed: step 2 (click) failed: boom\n"
+           "Plan only the steps still needed from the page above.")
+    LINT = ("Your previous plan was rejected before anything ran: no enumeration\n"
+            "Nothing has executed and the page is unchanged; plan the whole task "
+            "from the page above.")
+    wrong = []
+    plain = build_user("T", "http://u")
+    if "A previous attempt" in plain or plain.rstrip().endswith("above."):
+        wrong.append({"no_note": "the planner invented replan framing", "user": plain})
+    for name, note in (("act", ACT), ("lint", LINT)):
+        user = build_user("T", "http://u", None, note)
+        if not user.endswith("\n\n" + note):
+            wrong.append({"note_not_verbatim": name, "user": user[-200:]})
+        # The framing must be exactly what the caller sent, no more: the lint's
+        # message must not acquire the act ladder's sentence on the way out.
+        if user.count("A previous attempt failed") != note.count("A previous attempt failed"):
+            wrong.append({"planner_added_framing": name, "user": user[-200:]})
+        if user.count("Plan only the steps still needed") != note.count(
+                "Plan only the steps still needed"):
+            wrong.append({"planner_added_framing": name, "user": user[-200:]})
+    return {"passed": not wrong, "wrong": wrong}
+
+
+# The one sentence per suite that ADR-019 must carry for its band to be
+# checkable. Deliberately a labelled scalar, not the list of run times: a list
+# is a snapshot and `history.jsonl` grows on every gate run, so a grader that
+# string-matched it would go red on the next run rather than on a regression.
+_BAND_LINE = re.compile(
+    r"Slowest recorded `(fast|invariant)` run at (\d+) cases: \*\*([\d.]+)s\*\*")
+
+
+def _check_published_band() -> dict:
+    """A published wall-clock band must be reproducible from the committed ledger.
+
+    Property, not snapshot (PR #29 R21). Three prose bands in this PR turned out
+    not to match `evals/report/history.jsonl` committed beside them — values that
+    were in no recorded run, the two slowest runs dropped unlabelled, and a
+    ceiling derived from a maximum that did not exist. What is graded here holds
+    as runs accumulate and goes red exactly when it should:
+
+      1. the doc's case count is the suite's current case count — so growing a
+         suite forces the band to be re-measured, the same contract
+         `docs-numbers-are-derived` has for README's totals;
+      2. the published number derives the SAME ceiling as the ledger's slowest
+         run does — `rule(published) == rule(ledger max)`, not
+         `published >= ledger max`. The harmful failure R21 found is a band
+         that justifies a lower ceiling than the truth (12.96s published where
+         13.57s was recorded: 15 where the rule said 20). Requiring exact
+         >= instead would redden on ordinary run-to-run variance — the tree
+         moved 0.2-0.5s between consecutive runs while this was being
+         written — and a doc that must be re-edited after every slightly slow
+         run is the rot this check exists to prevent, one level up;
+      3. the committed ceiling is >= ADR-013's rule applied to that ledger
+         maximum (slowest x 1.15, rounded up to a multiple of five). This is
+         the one that actually gates, and it does not move with noise.
+
+    A run slower than the published band reddens the NEXT gate run, which is the
+    intended cost: the band is a claim about this tree, and a tree that got
+    slower has to say so.
+    """
+    import json as _json
+
+    from evals.run import HISTORY, WALL_BUDGET_S, load_cases
+
+    adr = (Path(__file__).parents[2] / "specs" / "decisions"
+           / "ADR-019-wall-clock-ceilings-per-suite.md").read_text(encoding="utf-8")
+    published = {m.group(1): (int(m.group(2)), float(m.group(3)))
+                 for m in _BAND_LINE.finditer(adr)}
+    rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
+    wrong = []
+    for suite in sorted(WALL_BUDGET_S):
+        if suite not in published:
+            wrong.append({"suite": suite, "adr_publishes_no_band_line": True})
+            continue
+        cases, said = published[suite]
+        now = len(load_cases(suite))
+        if cases != now:
+            wrong.append({"suite": suite, "published_case_count": cases, "actual": now})
+            continue
+        # Every recorded run at this case count, not only the green ones. A
+        # wall clock is a wall clock whether or not a case failed, taking the
+        # max is the conservative direction — and requiring green would
+        # deadlock: this check is itself in both suites, so the first run after
+        # a band is republished could never be green while the band it needs is
+        # the one that run would produce.
+        recorded = [r["wall_s"] for r in rows
+                    if r["suite"] == suite and r["total"] == now]
+        if not recorded:
+            wrong.append({"suite": suite, "no_recorded_run_at": now})
+            continue
+        slowest = max(recorded)
+        rule = lambda x: ((int(x * 1.15) // 5) + 1) * 5
+        if rule(said) != rule(slowest):
+            wrong.append({"suite": suite, "published_slowest": said,
+                          "derives_ceiling": rule(said), "ledger_slowest": slowest,
+                          "ledger_derives": rule(slowest), "runs": len(recorded)})
+        required = rule(slowest)
+        if WALL_BUDGET_S[suite] < required:
+            wrong.append({"suite": suite, "ceiling": WALL_BUDGET_S[suite],
+                          "required_by_adr013_rule": required, "ledger_slowest": slowest})
+    return {"passed": not wrong, "wrong": wrong}
 
 
 def _check_inv3() -> dict:
@@ -414,14 +568,14 @@ def _run_schema_case(case: dict) -> dict:
 def _run_verifier_case(case: dict) -> dict:
     """Direct probes of the grader itself. The grader is the only component
     with no other component checking it, so it gets unit-shaped cases."""
-    from .verifier import answers_match
+    from .verifier import answers_match, rank
 
     inp = case["input"]
     wrong = []
     # A probe the adapter does not understand must be loud. Silently skipping an
     # unknown key scored this case PASS while it checked nothing at all — a case
     # that proves nothing is worse than no case, because it reads as coverage.
-    unknown = set(inp) - {"kind", "compare", "anchors", "superseded", "aggregate"}
+    unknown = set(inp) - {"kind", "compare", "anchors", "superseded", "aggregate", "rank"}
     if unknown:
         return {"passed": False, "error": f"unknown verifier probe(s): {sorted(unknown)}"}
     for got, want, should_match in inp.get("compare", []):
@@ -473,7 +627,10 @@ def _run_verifier_case(case: dict) -> dict:
     # nothing previously checked.
     for sc in inp.get("aggregate", []):
         v = verify(
-            trace=[{"i": 1, "action": "extract", "postcondition_ok": True}],
+            # M31: a row may supply its own trace, because whether the guard
+            # relaxes now depends on what the trace CONTAINS (an `extract_all`
+            # step that was really graded, not one a replan superseded).
+            trace=sc.get("trace") or [{"i": 1, "action": "extract", "postcondition_ok": True}],
             extractions=[{"value": sc["value"], "page_text": sc["page_text"]}],
             answer=sc["value"],
             expect=sc.get("expect"),
@@ -482,6 +639,19 @@ def _run_verifier_case(case: dict) -> dict:
         if (v["verdict"] == "PASS") != sc["pass"]:
             wrong.append({"aggregate": sc["task"], "should_pass": sc["pass"],
                           "verdict": v["verdict"], "checks": v["checks"]})
+    # M31: the reduction that turns an `extract_all` enumeration into the one
+    # item the task asked for. Unit-shaped for the same reason the rest of this
+    # runner is: it is code deciding which of several REAL values is the answer,
+    # and every interesting failure is in the rules (numbers vs counts,
+    # direction, ties), not in the browser. `answer: null` means "must refuse".
+    for sc in inp.get("rank", []):
+        try:
+            got = rank(sc["task"], list(sc["values"]), sc["declared"])
+        except ValueError:
+            got = None
+        if got != sc["answer"]:
+            wrong.append({"rank": sc["task"], "values": sc["values"],
+                          "expected": sc["answer"], "got": got})
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -789,7 +959,7 @@ def _run_observe_case(case: dict) -> dict:
     # order. Asserting the cap rather than assuming it — this is what makes
     # `observe-drilldown-past-max-elems` a drill-down case and not a plan that
     # would have worked anyway, and it reddens if MAX_ELEMS is ever raised to
-    # "fix" the defect instead of disclosing the subtree (ADR-019).
+    # "fix" the defect instead of disclosing the subtree (ADR-020).
     leaked = [n for n in exp.get("must_exclude_names", []) if n in names]
     # The other half of what an observation discloses: its text head. A drill
     # widens it (DRILL_TEXT_HEAD), and on a page whose content carries no
@@ -810,18 +980,21 @@ def _run_observe_case(case: dict) -> dict:
 def _run_planner_prompt_case(case: dict) -> dict:
     """What the LIVE planner actually sends, graded with no key and no spend.
 
-    `build_user_message` is the half of the live planner that is pure string
+    `planner.build_user` is the half of the live planner that is pure string
     assembly, and it was where a note describing a SUCCESSFUL drill-down got
     wrapped in "A previous attempt failed" — true of the only caller that
     existed when the wrapper was written, false for the one M32 added, and
     invisible to every case here because the `fast` suite stubs the planner one
-    level above this (M32 cold review, finding 3)."""
-    from .planner import build_user_message
+    level above this (M32 cold review, finding 3). M31 reached the same
+    conclusion from its own second caller (PR #29 R5) and carried it further:
+    the shared trailing sentence is gone too, so the note is the whole of what
+    a caller contributes."""
+    from .planner import build_user
 
     wrong = []
     for probe in case["input"]["prompts"]:
-        got = build_user_message(probe.get("task", "t"), probe.get("url"),
-                                 probe.get("observation"), probe.get("note"))
+        got = build_user(probe.get("task", "t"), probe.get("url"),
+                         probe.get("observation"), probe.get("note"))
         for want in probe.get("has", []):
             if want not in got:
                 wrong.append({"missing": want, "note": probe.get("note"), "got": got})
@@ -959,6 +1132,23 @@ def _run_fixture_case(case: dict) -> dict:
         checks["recovery_labelled_actions"] = sorted(
             {s["action"] for s in trace if s.get("retry_or_recovery") == "recovery"}
         ) == sorted(exp["recovery_labelled_actions"])
+    # "the browser never moved" is a claim about a COUNT, and no other key
+    # carries it: a plan rejected before the first action spends exactly the
+    # pre-plan navigation and nothing else (verifier-aggregate-superlative-fails-loud).
+    if "actions" in exp:
+        checks["actions"] = result["budgets_spent"]["actions"] == exp["actions"]
+    # What the PLANNER was told, and what the TRACE was told. Two replan paths
+    # reach the planner — the act ladder and the plan lint — and the stub
+    # discards the note, so without these keys nothing grades the message a real
+    # planner would receive, nor the trace record that says why the plan changed
+    # (PR #29 R5 and R6). `planner.notes` is the stub's own record.
+    if "planner_note_contains" in exp:
+        checks["planner_note_contains"] = any(
+            exp["planner_note_contains"] in (n or "") for n in getattr(planner, "notes", []))
+    if "trace_note_contains" in exp:
+        checks["trace_note_contains"] = any(
+            exp["trace_note_contains"] in (s.get("note") or "")
+            for s in trace if not s.get("superseded_by"))
     # Generic budgets_spent probe (M36): a case names the fields it cares
     # about and their exact expected values, e.g. `{"judge_calls": 1,
     # "judge_usd": 0.0}` to prove the judge ran exactly once and the fast
@@ -2517,7 +2707,10 @@ def _run_ui_progress_case(case: dict) -> dict:
     # The UI is allowed to interpret the trace, never manufacture a phase. The
     # three branches are intentionally small: pre-plan navigation, extraction
     # verification, and every executable action the trace already contains.
-    mapping = dict(re.findall(r'if \(s\.action === "([a-z]+)"\) return "([a-z]+)"',
+    # `[a-z_]` so a new action can't hide from this guard behind an underscore:
+    # `extract_all` (M31) is the first one, and the branch that routes it is
+    # spelled as its own `if` for exactly that reason.
+    mapping = dict(re.findall(r'if \(s\.action === "([a-z_]+)"\) return "([a-z]+)"',
                               script))
     if mapping != inp["step_phases"]:
         wrong["step_phases"] = {"want": inp["step_phases"], "got": mapping}
@@ -3020,6 +3213,9 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
               "mutation-metrics": _check_mutation_metrics,
+              "plan-gap": _check_plan_gap,
+              "published-band": _check_published_band,
+              "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 
 
@@ -3084,7 +3280,8 @@ def _run_wall_clock_case(case: dict) -> dict:
     import os
     import re
 
-    from evals.run import WALL_BUDGET_ENV, WALL_BUDGET_S, over_budget, wall_budget
+    from evals.run import (WALL_BUDGET_ENV, WALL_BUDGET_S, over_budget, wall_budget,
+                           wall_budget_env)
 
     exp = case["expect"]
     wrong = []
@@ -3095,9 +3292,11 @@ def _run_wall_clock_case(case: dict) -> dict:
     # exports EVAL_WALL_BUDGET_S=75, so the 70.01s row was correctly not-over and
     # the assertion that it IS over was wrong. A case about environment-dependent
     # ceilings that was itself environment-dependent (PR #20, found by CI).
-    prev = os.environ.get(WALL_BUDGET_ENV)
+    names = [wall_budget_env(x) for x in ("fast", "invariant")]
+    prev = {n: os.environ.get(n) for n in names}
     try:
-        os.environ.pop(WALL_BUDGET_ENV, None)
+        for n in names:
+            os.environ.pop(n, None)
         wrong += [r for r in case["input"]["rows"]
                   if over_budget(r["suite"], r["wall_seconds"]) is not r["over"]]
         # The per-environment override itself. A positive number moves the
@@ -3105,33 +3304,57 @@ def _run_wall_clock_case(case: dict) -> dict:
         # than switch the gate off, which is the quiet direction this PR keeps
         # finding.
         for r in case["input"]["env_override"]:
-            os.environ.pop(WALL_BUDGET_ENV, None)
+            for n in names:
+                os.environ.pop(n, None)
             if r["value"] is not None:
-                os.environ[WALL_BUDGET_ENV] = r["value"]
+                os.environ[wall_budget_env("fast")] = r["value"]
             got = wall_budget("fast")
             if got != r["budget"]:
                 wrong.append({"env": r["value"], "expected_ceiling": r["budget"], "got": got,
                               "note": r["note"]})
-        os.environ.pop(WALL_BUDGET_ENV, None)
+        # The override is the FAST gate's alone (ADR-019). If it raised every
+        # suite's ceiling, CI's 80 would apply to `invariant` too — five times
+        # what that suite costs — and the tag valve ADR-019 closed locally would
+        # still be open there.
+        for r in case["input"].get("invariant_override", []):
+            for n in names:
+                os.environ.pop(n, None)
+            if r["value"] is not None:
+                os.environ[wall_budget_env(r.get("via", "invariant"))] = r["value"]
+            got = wall_budget("invariant")
+            if got != r["budget"]:
+                wrong.append({"env": r["value"], "suite": "invariant",
+                              "expected_ceiling": r["budget"], "got": got,
+                              "note": r["note"]})
+        for n in names:
+            os.environ.pop(n, None)
         applied = [dict(r, got=_main_exit_code(r["wall_seconds"]))
                    for r in case["input"]["applied_in_main"]]
         wrong += [r for r in applied if r["got"] != r["exit"]]
     finally:
-        os.environ.pop(WALL_BUDGET_ENV, None)
-        if prev is not None:
-            os.environ[WALL_BUDGET_ENV] = prev
+        for n, v in prev.items():
+            os.environ.pop(n, None)
+            if v is not None:
+                os.environ[n] = v
     # CI's ceiling is a committed number, not a YAML string nobody reads: the
     # workflow is the only place it takes effect, so the value it declares is
     # part of the ruling (the R8 lesson — a mechanism nothing consults).
     wf = (Path(__file__).parents[2] / ".github" / "workflows" / "eval.yml").read_text()
-    declared = re.search(rf"{WALL_BUDGET_ENV}:\s*\"?([0-9.]+)\"?", wf)
-    if not declared or float(declared.group(1)) != exp["ci_wall_seconds"]:
-        wrong.append({"workflow": WALL_BUDGET_ENV,
-                      "declared": declared.group(1) if declared else None,
-                      "expected": exp["ci_wall_seconds"]})
+    for suite, key in (("fast", "ci_wall_seconds"), ("invariant", "ci_invariant_wall_seconds")):
+        if key not in exp:
+            continue
+        env = wall_budget_env(suite)
+        declared = re.search(rf"{env}:\s*\"?([0-9.]+)\"?", wf)
+        if not declared or float(declared.group(1)) != exp[key]:
+            wrong.append({"workflow": env,
+                          "declared": declared.group(1) if declared else None,
+                          "expected": exp[key]})
     if WALL_BUDGET_S.get("fast") != exp["max_wall_seconds"]:
         wrong.append({"ruling": "fast", "budget": WALL_BUDGET_S.get("fast"),
                       "declared": exp["max_wall_seconds"]})
+    if "invariant_wall_seconds" in exp and WALL_BUDGET_S.get("invariant") != exp["invariant_wall_seconds"]:
+        wrong.append({"ruling": "invariant", "budget": WALL_BUDGET_S.get("invariant"),
+                      "declared": exp["invariant_wall_seconds"]})
     # Every suite name the repo uses, not only the ones the rows happen to list:
     # `full` was missing and WALL_BUDGET_S["full"] = 1 slipped in green (R11).
     if sorted(WALL_BUDGET_S) != sorted(exp["suites_with_a_ceiling"]):

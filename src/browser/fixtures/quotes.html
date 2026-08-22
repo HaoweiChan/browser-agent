@@ -1,0 +1,48 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Quotes Fixture — page 1</title>
+<h1>Quotes Fixture</h1>
+
+<!-- Offline twin of the M10 held-out probe #3 shape (docs/analysis.md §8a-2):
+     ten quotes, authors repeating, the answer to "which author has the most
+     quotes" reachable ONLY by enumerating every author and counting. No quote
+     text is copied from anywhere — the strings below are placeholders; the
+     author names are the only load-bearing content, and the distribution
+     (Albert Einstein 3, J.K. Rowling 2, the rest 1 each) is what the case
+     grades.
+
+     The chrome links below (Login, Tags, Next) are the ones the real probe
+     answered WITH — it returned "Next →" as the most-quoted author — so
+     {role: link} enumerates them too, exactly as it would on the real page.
+     Counting survives that because each appears once and no author name is
+     rarer than the winner. That is a property of this page, not a guarantee:
+     a page whose chrome repeated more often than its most-quoted author would
+     hand the counting branch a wrong winner, which the case triage declares.
+     What this fixture deliberately does NOT reproduce is the targeting half of
+     probe #3 — on quotes.toscrape.com/js the authors carry no role at all
+     (support-matrix D7), and that is M32's subject, not this one's. -->
+
+<nav><a href="#login">Login</a> <a href="#tags">Tags</a></nav>
+
+<div class="quote"><span class="text">Placeholder quote one.</span>
+  by <small class="author"><a href="#a1">Albert Einstein</a></small></div>
+<div class="quote"><span class="text">Placeholder quote two.</span>
+  by <small class="author"><a href="#a2">J.K. Rowling</a></small></div>
+<div class="quote"><span class="text">Placeholder quote three.</span>
+  by <small class="author"><a href="#a3">Albert Einstein</a></small></div>
+<div class="quote"><span class="text">Placeholder quote four.</span>
+  by <small class="author"><a href="#a4">Jane Austen</a></small></div>
+<div class="quote"><span class="text">Placeholder quote five.</span>
+  by <small class="author"><a href="#a5">Marilyn Monroe</a></small></div>
+<div class="quote"><span class="text">Placeholder quote six.</span>
+  by <small class="author"><a href="#a6">Albert Einstein</a></small></div>
+<div class="quote"><span class="text">Placeholder quote seven.</span>
+  by <small class="author"><a href="#a7">André Gide</a></small></div>
+<div class="quote"><span class="text">Placeholder quote eight.</span>
+  by <small class="author"><a href="#a8">Thomas A. Edison</a></small></div>
+<div class="quote"><span class="text">Placeholder quote nine.</span>
+  by <small class="author"><a href="#a9">Eleanor Roosevelt</a></small></div>
+<div class="quote"><span class="text">Placeholder quote ten.</span>
+  by <small class="author"><a href="#a10">J.K. Rowling</a></small></div>
+
+<p><a href="#page2">Next →</a></p>

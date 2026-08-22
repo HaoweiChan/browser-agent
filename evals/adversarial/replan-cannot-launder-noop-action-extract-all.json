@@ -1,0 +1,54 @@
+{
+  "id": "replan-cannot-launder-noop-action-extract-all",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L4",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and list the product names.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        {
+          "action": "click",
+          "target": {
+            "role": "heading",
+            "name": "Nimbus Shop"
+          },
+          "expected_state": {
+            "text_visible": "Sorted by price (low to high)"
+          }
+        },
+        {
+          "action": "extract_all",
+          "target": {
+            "role": "link"
+          },
+          "rank": false
+        }
+      ],
+      [
+        {
+          "action": "extract_all",
+          "target": {
+            "role": "link"
+          },
+          "rank": false
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "recovery": false
+  },
+  "provenance": "PR #29 R1. `replan-cannot-launder-noop-action` is the `extract` half of this and has been green since M3; M31 added a second extraction verb and the no-progress guard that stops a replan from dropping an action that changed nothing was left testing the literal string \"extract\" (`new_steps[0].get('action') == 'extract'`), while the two other action tests in the same commit were widened to `.startswith('extract')`. So the identical laundering, expressed with the new verb, walked straight through: the heading click changes nothing, the replan drops it and enumerates instead, and the run reports the UNSORTED catalogue as a successful answer. The guard now recognises every extraction verb, which is the root-cause shape rather than a second literal beside the first.",
+  "triage": {
+    "class": "silent-failure",
+    "watched_red": "before the fix: status success, verdict PASS, checks {status: false, recovery: false}, budgets_spent.replans 1, answer ['Aurora Desk Lamp', 'Aurora Desk Lamp Pro', 'Meridian Wall Clock', 'Cobalt Floor Rug'] — the catalogue in its ORIGINAL order, published as the answer to a task that asked for it sorted. Its `extract` twin correctly ended failure:act on the same fixture, same click, same plan shape.",
+    "note": "tagged `fast` and `invariant`, like every other browser case in the invariant suite. It was briefly `invariant`-only, on the argument that the `fast` suite was at its wall-clock ceiling; that moved ~4.9s of real cost sideways, left the gate a coin flip and the published `fast` number stale, and cost the local pre-commit hook a regression guard it should run. The ceiling was re-measured instead (ADR-019: local `fast` 60 -> 80, local `invariant` 20, CI 90/20). This case is settle-bound: 2.29s, almost all of it the postcondition that never arrives."
+  }
+}

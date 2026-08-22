@@ -18,9 +18,9 @@
       "function setTerminal(status)", "resetProgress();", "setPhase(phaseFor(ev.step));",
       "setTerminal(ev.result.status);"
     ],
-    "step_phases": {"navigate": "browser", "extract": "verification"},
+    "step_phases": {"navigate": "browser", "extract": "verification", "extract_all": "verification"},
     "forbid": ["setInterval(", "setTimeout("]
   },
   "expect": {},
-  "provenance": "M30 eval-first. Before the execution surface existed, this case failed with every required progress hook, accessible phase, reader-facing support label, concise four-item limitations summary, and compact guard copy missing. It rejects timer-based progression and pins the only permitted trace interpretation: navigate is browser/page work, extract moves into verification, and other executor actions remain action work. The existing stream-shows-every-step case continues to grade that the underlying trace itself is complete and honest."
+  "provenance": "M30 eval-first. Before the execution surface existed, this case failed with every required progress hook, accessible phase, reader-facing support label, concise four-item limitations summary, and compact guard copy missing. It rejects timer-based progression and pins the only permitted trace interpretation: navigate is browser/page work, extract moves into verification, and other executor actions remain action work. The existing stream-shows-every-step case continues to grade that the underlying trace itself is complete and honest. M31 added `extract_all`, which is verification work like `extract`; the adapter's mapping regex was widened to `[a-z_]+` in the same edit, because an action name with an underscore in it would otherwise have been invisible to this check."
 }

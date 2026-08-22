@@ -10,7 +10,7 @@ SKIP_ROLES = {"generic", "none", "InlineTextBox", "LineBreak", "StaticText", "te
 MAX_ELEMS = 60
 TEXT_HEAD = 300
 
-# The drill-down's text head (M32, ADR-019). Bigger than TEXT_HEAD because the
+# The drill-down's text head (M32, ADR-020). Bigger than TEXT_HEAD because the
 # whole point of a scoped observation is to disclose what the capped page-level
 # one could not: probe #4/#5/#7 (docs/analysis.md §8a-2) each had the answer
 # verbatim in page text the planner was never shown. Bounded, not unbounded:

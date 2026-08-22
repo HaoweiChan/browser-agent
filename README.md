@@ -36,8 +36,8 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 131 cases, zero paid calls
-python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
+python3 -m evals.run --suite fast        # offline gate: 146 cases, zero paid calls
+python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
 
@@ -50,15 +50,21 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260822-235208-fast.json`, with
-`evals/report/20260822-235232-invariant.json` and
-`evals/report/20260822-234757-live.json`:
+Latest offline baseline — `evals/report/20260823-025332-fast.json`, with
+`evals/report/20260823-025402-invariant.json` and
+`evals/report/20260823-025349-live.json`:
 
 ```
-fast  131/131    invariant  41/41    live  8/9    $0.0000    67.8s
+fast  144/146    invariant  52/54    live  9/9    $0.0000    73.3s
 recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 25/25 · 12 replans
+diagnosis 31/31 · 13 replans
 ```
+
+`live` is 8/9 in that run because `live-ol-search-a11y-invisible` timed out on
+openlibrary.org's search page: the site was answering the bare home page in
+~9.5s to `curl` and exceeding the 20s navigation budget for search. An
+unreachable live dependency fails loudly rather than being stubbed (CLAUDE.md
+rule 4); `live` is not part of the gate.
 
 Every number in that block is recomputed from those three report files by
 `docs-numbers-are-derived`, so it can only go stale by citing a stale report —
@@ -78,14 +84,52 @@ suite straddles its ceiling rather than clears it. The same suite on CI (ubuntu-
 **59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
 on byte-identical code, which is why the wall-clock ceiling is per-environment
 rather than one number pretending to be portable. CI's ceiling is the slowest
-observed run plus 15% (80s); the local ceiling stays the original **60s** —
-a straddling band briefly pushed it to 70, but round-5 review could not
+observed run plus 15% (90s since ADR-019 §5, measured on CI at the shipped case
+count); the local ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
 58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
 further post-commit runs found the honest band is 58.83-60.26s, one run
-over the line by a few tenths and unexplained by load. Margin against 60s
-is real but thin, not a guarantee (§ ADR-013 Decision 4).
+over the line by a few tenths and unexplained by load.
+
+**M31 grew the suite and the 60s ceiling stopped being tenable.** It refused a
+commit that changed nothing but JSON, at 60.24s, with 109/109 passing. The
+first repair moved three browser cases to `invariant`-only tags, which took
+~4.9s out of the measured number and left the gate a coin flip while the
+published `fast` figure stayed at 59.7s — the wrong instrument. The cases are
+back in `fast` and the ceilings are re-measured instead
+([ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md)), by
+ADR-013's own rule: slowest observed run +15%, rounded up to a multiple of five.
+
+**Every band below is computed from `evals/report/history.jsonl`**, the ledger
+committed in this repo, and `published-band-matches-the-ledger` grades that on
+every run — the doc's case count must be the suite's current case count, the published
+maximum must derive the SAME ceiling as the ledger's slowest run does, and the
+committed ceiling must be at least the rule applied to that maximum. It is a property, not a snapshot, because the ledger grows
+on every gate run; a list of times would go red on the next run instead of on a
+regression. It exists because three bands in this PR did not match the ledger
+beside them, and one ceiling was derived from a maximum that was never measured
+(PR #29 R18, R21) — the same selective presentation ADR-013 Decision 4 was
+withdrawn over.
+
+At the case count this branch ships:
+
+| suite | cases | recorded runs | slowest | × 1.15 | ceiling |
+|---|---|---|---|---|---|
+| `fast` | 132 | 65.72 / 65.83 / 65.84 / 66.13 / 66.25 / 66.33s | 66.33s | 76.3 | **80s** |
+| `invariant` | 51 | 11.17 / 12.4 / 12.67 / 12.68 / 12.72 / 12.73 / 12.74 / 12.74 / 12.75 / 12.79 / 12.79 / 12.85 / 12.85 / 12.87 / 12.87 / 12.87 / 12.9 / 12.93 / 12.95 / 12.98 / 12.99 / 13 / 13.01 / 13.02 / 13.05 / 13.18 / 13.21 / 13.25 / 13.28 / 13.45 / 13.73 / 14.12s | 14.12s | 16.2 | **20s** |
+
+**CI has its own two, measured on CI** rather than projected from these — four
+attempts of the shipped tree gave `invariant` 14.80-16.47s and `fast`
+69.37-74.06s, so **20s** and **90s** by the same rule. The old CI `fast` ceiling
+of 80 was the next coin flip: 74.06s against it is 8% of margin on a runner
+whose own spread is 6.8% (ADR-019 §5). One variable per suite
+(`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`) carries them, so
+raising one environment's ceiling for one suite cannot silently raise another's.
+
+Margin against the observed local band is ~14s where before M31 it was ~0.2s.
+That is a real loosening and ADR-019 says so in those words: a ceiling whose job
+is to catch drift cannot also be the thing that fails on drift-free commits.
 
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
 measured where the time went instead of assuming: 42.2s is deliberate waiting
@@ -97,8 +141,10 @@ anyone would have guessed: M9's merge took the suite to 63.3s over a completion
 poll sleeping 2s between checks on runs that finish in under a second, and the
 branch's first CI run showed CI had been ~50% over the same ceiling for its whole
 existence with nothing checking — `main` runs `fast` in 89.62s. CI now carries its
-own measured ceiling (80s, from four runs at 64.3-69.0s on the merged tree) alongside a local 60s
-([ADR-013](specs/decisions/ADR-013-fast-suite-wall-clock.md)).
+own measured ceiling alongside a local one
+([ADR-013](specs/decisions/ADR-013-fast-suite-wall-clock.md); both re-measured
+by [ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) when M31
+grew the suite, and `invariant` given ceilings of its own).
 
 `live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one
@@ -157,7 +203,7 @@ plan   : navigate → extract {"role": "article", "index": 0}, anchor "Travel"
 answer : "It's Only the Himalayas … £45.17 …"     truth: £23.21
 ```
 
-Nothing was broken. There is no compare/rank/filter step in the plan
+Nothing was broken. At the time there was no compare/rank step in the plan
 vocabulary, so "cheapest" was planned as "read the first product tile"; the
 identity anchor was the *category*, which every product on a listing
 satisfies; and every runtime predicate was legitimately green. The eval case
@@ -171,6 +217,14 @@ So the property that holds is the narrower one, reaffirmed the hard way:
 **no run reports success with an answer the verifier can tell is wrong — and
 when a probe found a shape the verifier could not tell, that shape became a
 guard before the milestone closed.**
+
+M31 added the missing verb: `extract_all` reads *every* match of a target, and
+the ranking over what it enumerates is arithmetic in code (`verifier.rank`),
+never a judgement handed to the model. A plan that should have enumerated and
+did not is now refused before the browser moves. That makes this run's task
+*expressible*; it does not make the run above green, because
+`live-books-cheapest-travel` needs a real planner call and is still unrun
+(ADR-018, `docs/support-matrix.md` D22).
 
 **Read those with their denominators**, which is why they are printed as `x/y`:
 
@@ -232,8 +286,12 @@ ever parses to zero declared limitations. The pre-commit eval gate runs it.
 The biggest ones, stated plainly:
 
 - **Capability is about one hop deep.** The two held-out probes answered 2 of 8,
-  then 1 of 7. Second hops, aggregates ("which is cheapest"), and values living
-  only in an HTML attribute all fail — loudly, but they fail.
+  then 1 of 7. Second hops and values living only in an HTML attribute fail —
+  loudly, but they fail. Aggregates ("which is cheapest") gained a primitive at
+  M31 (`extract_all`, with the plan declaring whether the answer is the set or
+  one item of it and code doing every comparison) and are answered correctly
+  offline; no live run has demonstrated one, so the honest status is
+  expressible, not measured.
 - **Planning quality is barely measured.** Every suite case stubs the planner;
   the only measurements of it are the two probes and the M9 ablation — five
   tasks per model on the deployment ([ADR-010](specs/decisions/ADR-010-m9-model-ablation.md)),
@@ -286,7 +344,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 142 cases (131 of them in the offline gate), it
+The eval set is not weak; it is 157 cases (146 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
