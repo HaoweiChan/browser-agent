@@ -1,0 +1,21 @@
+{
+  "pr": 32,
+  "round": 2,
+  "task": "M35",
+  "head": "18f682b",
+  "scope": "repair diff 452114b..18f682b + standing findings",
+  "result": "APPROVED",
+  "gate": "invariant 39/39 = 1.000 · fast 109/109 = 1.000 (wall 55.9s)",
+  "findings": [
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "claim": "_check_examples_cover_matrix's key regex is line-anchored, so an EXAMPLES entry not starting its own line is silently dropped from the parsed set; every consequence produced fails in the safe direction (red, or caught by the rendered form case), so this is a robustness note, not a gap.",
+      "evidence": "src/browser/eval_adapter.py _check_examples_cover_matrix: re.findall(r'^\\s*\"([^\"]+)\":\\s*\\{', block, re.M) and page.split('const EXAMPLES = {',1)[1]. Scratch results on 18f682b: added doc row → red; renamed row → red both directions; 'const EXAMPLES={' reformat → IndexError recorded as passed=False (loud); escaped quote in a key → red; a second key appended mid-line → not parsed (passes only because it also has no row; a real-site row's example written mid-line goes red as rows_without_example).",
+      "repro": "Scratch copy; append ', \"zz.example\": {label: \"a\"' to the books line of EXAMPLES; run_case(ui-examples-cover-matrix) → passed True (zz.example unseen); put a real row's key mid-line → passed False.",
+      "acceptance": "No action required for M35; if the EXAMPLES block is ever reformatted, the check should parse the object rather than line starts.",
+      "route": "debt",
+      "debt_id": "T-R38"
+    }
+  ]
+}

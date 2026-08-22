@@ -76,7 +76,7 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M35 — Visitor-facing console: verified example prompts, plain-language capabilities and limits, no-URL guard            [status: in-progress]
+### M35 — Visitor-facing console: verified example prompts, plain-language capabilities and limits, no-URL guard            [status: pr]
 Spec: The page speaks to the reviewer, not to the person typing a task: a
 TC1..TC5 matrix of fixture names, four "headline" limits cut from D-row
 titles, and an optional start URL that invites the one task shape the planner
@@ -147,6 +147,11 @@ Out of scope: extraction quality (M28), planner-side lint (M31). Do not remove
 M34's deterministic checks — they are cheaper and they run first.
 
 ## Debt
+
+### T-R38 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: todo]
+Origin: PR #32 R7 (LOW)
+Spec: `_check_examples_cover_matrix` finds keys with `^\s*"([^"]+)":\s*\{` over the `const EXAMPLES = {` block, so an entry written mid-line is silently dropped from the parsed set. Every consequence reproduced fails in the safe direction today (added/renamed doc row → red; `const EXAMPLES={` reformat → IndexError → passed=False; a mid-line real-site key → red as rows_without_example), so this is robustness, not a gap.
+Acceptance: the check parses the object (whole-block regex or a JSON export of EXAMPLES) so formatting cannot change what it sees; a case pins that a mid-line key is counted.
 
 ### T-R34 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
 Origin: PR #32 R2 (LOW)
