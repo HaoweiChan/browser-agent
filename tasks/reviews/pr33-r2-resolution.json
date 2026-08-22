@@ -1,0 +1,17 @@
+{
+  "pr": 33,
+  "round": 2,
+  "task": "M36",
+  "result": "REPAIRED",
+  "resolutions": [
+    {
+      "id": "R3",
+      "disposition": "fixed",
+      "case_id": "judge-parse-response-strict-boolean (extended); docs/support-matrix.md D26 (new); tasks/TODO.md T-R33 (new, debt)",
+      "note": "Took (a) and (b) as instructed, not (c) alone. (b): `judge-parse-response-strict-boolean` gained a scenario for `{\"certify\": \"true\"}` (a string-boolean slip in the CERTIFYING direction, the mirror of round 1's reject-direction scenarios), asserting it rejects -- the case now documents one way the strict fix is wrong-shaped, not only six ways it is right-shaped. (a): `docs/support-matrix.md` D26 declares the ceiling in D22's own spirit -- names the failure mode plainly ('the judge certifies nothing at all' for the run distribution, not 'one run fails'), states nobody has observed what `deepseek/deepseek-v4-flash-0731` actually emits under this prompt because there is no `OPENROUTER_API_KEY` in this environment, and is `unsupported by design` rather than guessed at. Did not take (c): the strict `is True` check in `judge.py` is untouched -- normalising a hand-written set of true-spellings against a model nobody here can observe would be exactly the unwatched loosening the coordinator warned against, undoing R1's own fix in the direction R1 fixed it. Provider-side response-format enforcement (the real mitigation, per the coordinator's own framing) is routed to debt as `T-R33` (Origin: PR #33 R3) rather than attempted inline: `response_format` is untested in this environment (no key), and an unsupported or wrong schema value on the live request would fail the live path worse, and more silently, than today's absence of one -- the acceptance criterion explicitly allowed debt IF the D-row still lands now, which it does regardless of T-R33's disposition.",
+      "red_watched": "Could not be watched red, and said so rather than fabricating a red run: the strict `parsed[\"certify\"] is True` check ALREADY correctly rejects the string \"true\" (verified directly: `json.loads('{\"certify\": \"true\"}')[\"certify\"] is True` -> `False`) -- R1's fix already closed this direction as a side effect of closing the other one. This finding is a coverage/declaration gap, not a code defect: the new scenario is green on first run, and the acceptance criterion's own text treats a passing-but-uncharacterised boundary as the actual problem (grep across README/docs/analysis.md/ADR-017/support-matrix/TODO.md found the cost named nowhere but an inline code comment), which the D-row and the pinned scenario both now close.",
+      "green_after": "judge-parse-response-strict-boolean: passed true, wrong [] (10 scenarios, the new one included). All 8 round-1 judge cases plus judge-injection-marker-forge-cannot-escape-fence (round-1 repair) re-verified unchanged -- nothing weakened. docs-numbers-are-derived unaffected (no case added or removed this round, only one existing case's scenario list extended, so the fast/all counts stay 118/129)."
+    }
+  ],
+  "gate_after": {"invariant": "38/38", "fast": "118/118 = 1.000, cost $0.0000, judge $0.0000", "live": "unchanged from round 1 (9/9), not re-run -- this round touched no live-suite-affecting code"}
+}

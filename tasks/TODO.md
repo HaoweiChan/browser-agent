@@ -76,53 +76,31 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M34 — an answer is still never checked for being responsive            [status: pr]
-Spec: M7 declared this gap, M10's probe demonstrated it, and M10's fix closed
-only the "which X has the most Y" sentence shape. The general defect is live on
-merged main and reproduces on a plain single-hop extraction: a string that IS on
-the page ("Warning!") passes `grounded`, `not_a_dump`, `identity_anchors` and
-`answer_nonempty` while answering nothing. Third demonstration that
-responsiveness is not pattern-matchable — a fourth regex over the task string is
-very likely the wrong answer, and `T-R31`/`T-R32` already name the ceiling of
-the last one. The intermittency matters: probe #2 answered this same task
-correctly once, so the violation is nondeterministic and a single green run
-proves nothing.
-Depends: M29
-Acceptance: an adversarial case reproduces the grounded-but-unresponsive
-wrong-success and is watched red first; no terminal non-failure status can carry
-an answer that fails a responsiveness check; the fix is demonstrated on the
-deployed build across repeated runs of the same task, not one lucky roll; the
-answer-shape ceiling that remains is named in `docs/support-matrix.md` rather
-than left implied.
-Out of scope: the extraction-quality gap (M28) — this task is about never
-reporting success for an unresponsive answer, not about extracting better.
-Status (2026-08-22, PR #30 pending, round 2 repaired): the adversarial case
-(`verifier-responsive-not-page-furniture`) landed and was watched red
-first, then the fix (`verify()`'s `not_page_furniture`, ADR-016) turned it
-green. Round 1 (R1, HIGH) found the first cut too broad — it flagged a
-correct listing→detail title/name as furniture, a false positive on this
-domain's single most common navigation shape — repaired by comparing each
-value's local page CONTEXT, not the bare value, against the other pages a
-run visited; the numeric exemption is gone, subsumed by the same rule
-(`verifier-listing-detail-title-not-furniture` pins the repaired shape).
-Round 2 (3 MEDIUM) found: (R2-1) the context window could still anchor on
-the wrong occurrence when a value legitimately repeats on the SAME page —
-repaired by anchoring on the resolved element's actual DOM offset
-(`TEXT_OFFSET_JS`/`_closest_occurrence`), pinned by
-`verifier-context-anchors-real-occurrence`; (R2-2) a fixture-parity claim
-("the same 50-category sidebar, same order") was false — restated honestly
-as a representative subset; (R2-3) `docs/support-matrix.md` D24 and
-ADR-016 carried round-by-round repair narrative and a superseded gate
-number, which belong only in `tasks/reviews/pr30-r*.json` — both rewritten
-to state current behaviour only. Every round, the original "Warning!"/
-"Travel" defect was re-confirmed to still fail loudly. `fast` 108/108,
-`invariant` 38/38, `live` 9/9, all against unmoved baseline. The surviving
-ceilings are named in `docs/support-matrix.md` D24. **Not closing this
-task**: the acceptance line "demonstrated on the deployed build across
-repeated runs" cannot be met from this environment (no LLM key, the
-deployed URL still serves `main`) — that repeated-run confirmation is the
-one thing left, run post-merge the same way M29 ran it for M10, and
-ADR-015 criterion 5 stays RED until it does.
+### M36 — responsiveness is judged by an LLM, because four structural mechanisms have failed            [status: pr]
+Origin: PR #30 post-merge confirmation (2026-08-22, deployed build `2e94bed`); owner's call on the mechanism
+Spec: M34's `not_page_furniture` compares a 20-char context window on the
+assumption that site chrome carries its neighbours wherever it recurs. On
+books.toscrape.com the banner is preceded by page-specific text (a result
+count), so the windows differ and furniture passes. 6 wrong-answer-as-success
+in 9 deployed runs (`8ffc6fdc`, `4649a0c5`, `2f89cec2`, `81fe507f`, `8896c5ec`,
+`f2c00566`), zero clean correct answers on the defect task. That is the fourth
+mechanism falsified by real input and the third falsified at a shape its authors
+had declared acceptable (`log into`, `delete all`, `which...most`, now the
+context window). The owner's decision is to stop betting on structure and judge
+responsiveness with an LLM: does this answer actually answer this question.
+The deterministic checks stay and run first — the judge is the last rung of the
+escalation ladder, not a replacement for it.
+Acceptance: the real-site shape (chrome preceded by page-varying text) is an
+adversarial case watched red first; no terminal non-failure status can carry an
+answer the judge rejects; the judge fails CLOSED on error, timeout or missing
+key, and a case proves it; the `fast` suite still makes zero paid calls with the
+judge stubbed at its own injection boundary, and a case proves the boundary
+holds; a prompt-injection case proves page text cannot talk the judge into
+certifying a wrong answer; per-run judge cost and per-stage hit-rate land in the
+`evals/report/` entry; repeated runs on the deployed build show zero
+wrong-answer-as-success before criterion 5 moves.
+Out of scope: extraction quality (M28), planner-side lint (M31). Do not remove
+M34's deterministic checks — they are cheaper and they run first.
 
 ## Debt
 
@@ -139,6 +117,36 @@ Repro: renumber or delete the D21 row in `docs/support-matrix.md` and run
 `--suite invariant` — nothing goes red despite `agent.py` citing a dead D21.
 Acceptance: a case resolves bare D-number citations against the support-matrix
 table and is watched red against a deliberately broken D-number first.
+
+### T-R33 — the judge's certify parser has no provider-side schema enforcement, so the strict boolean check is trusted on hope, not guaranteed            [status: todo]
+Origin: PR #33 R3 (MEDIUM, routed debt)
+Spec (claim): `live_judge`'s request to OpenRouter carries no `response_format`
+constraint, so nothing GUARANTEES `certify` arrives as a JSON boolean rather
+than a string, a number, or absent entirely — the strict `is True` check
+(docs/support-matrix.md D26) is the correct posture given that, but it means
+the app is hoping the model's own formatting habits stay boolean-shaped
+rather than enforcing the shape at the request level.
+Evidence: `src/browser/judge.py`'s `payload` in `live_judge` sets `model`,
+`messages`, `usage: {"include": True}` — no `response_format`. OpenRouter (and
+most providers behind it) supports `response_format: {"type": "json_object"}`
+for syntactically-valid JSON, and some models additionally support
+`{"type": "json_schema", "json_schema": {...}}` for a typed schema (certify
+as an actual boolean). Neither is attempted.
+Repro: n/a — this is an absence, not a reproducible defect; nothing here
+demonstrates the parser actually receiving a malformed shape from a real
+call, because there is no `OPENROUTER_API_KEY` in this environment (same
+constraint D26 states for the ceiling itself).
+Acceptance: add `response_format` to the request (`json_object` is the safe,
+widely-supported floor; `json_schema` with a strict `{"certify": boolean}`
+schema is the real fix if `deepseek/deepseek-v4-flash-0731` supports it) and
+verify it against a live call before trusting it — an untested schema
+constraint added here would be exactly the kind of unwatched change PR #33
+R3 warned against, just moved one layer down.
+Orchestrator note: MEDIUM in origin, routed to debt rather than fixed inline
+because it cannot be verified in this environment (no key) and a wrong or
+unsupported `response_format` value would fail the live path silently worse
+than today's absence of one. D26 stands regardless of how/whether this is
+picked up.
 
 ### T-R30 — the widened SCOPE_BLOCK determiner regex over-refuses informational/hypothetical delete questions            [status: todo]
 Origin: PR #25 R3 (LOW, routed debt)

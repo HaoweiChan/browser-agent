@@ -1,0 +1,10 @@
+{
+  "id": "judge-run-budget-enforced",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "input": { "kind": "judge", "budget_enforced": true },
+  "expect": { "note": "a second _apply_judge call sharing one run's budgets dict fails CLOSED on an exhausted judge budget, rather than spending again" },
+  "provenance": "M36 acceptance criterion 5: 'Per-run budget enforced in code, failing loudly.' In production `_apply_judge` (agent.py) is only ever called once, at the terminal-verdict boundary -- nothing in the real step loop calls it twice, so this property is never naturally exercised end to end. The probe calls it directly, twice, against one shared `budgets` dict (`RUN_JUDGE_BUDGET = 1`, judge.py): the first call is genuinely within budget and certifies; the second must fail CLOSED -- `verdict: FAIL`, `checks.judge_available: false`, reason naming the exhausted budget -- even though the SAME always-certifying stub judge would have said yes again. `budgets['judge_calls']` staying at exactly `RUN_JUDGE_BUDGET` (not incrementing past it) is what a run-level spend cap enforced in code actually looks like, mirroring the existing `RUN_BUDGETS`/`budget_stop` shape for actions/llm_tokens (agent.py) rather than inventing a second one.",
+  "triage": { "class": "inviolable-property", "note": "defensive code with no live production path to exercise it naturally still needs its own case, or the guard is unverified until the day something calls it twice for real." }
+}
