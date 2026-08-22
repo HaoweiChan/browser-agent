@@ -22,7 +22,7 @@ README.md; this file is the working contract.
 .claude/hooks/     enforcement — the only layer that can actually block
 .githooks/         pre-commit eval gate (installed via core.hooksPath)
 specs/             ONLY: 000-invariants.md, per-task contracts, decisions/ADR-*.md
-docs/              planning package: product/ specs/ architecture/ evals/ plans/ + support-matrix.md, analysis.md (ADR-001)
+docs/              planning package: product/ architecture/ evals/ plans/ + support-matrix.md, analysis.md (ADR-001)
 tasks/TODO.md      milestone-level tracker only — micro-tasks stay in-session (ADR-001)
 evals/golden/      hand-labeled cases (JSON, one per case)
 evals/adversarial/ cases known or designed to break the pipeline

@@ -14,7 +14,7 @@ date, not the tense.
 | [`evals/evaluation-methodology.md`](evals/evaluation-methodology.md) | living | What is measured, how, and what was dropped with reasons; suite definitions; verifier layers | M9 |
 | [`evals/failure-taxonomy.md`](evals/failure-taxonomy.md) | living | The seven failure classes, correction vs maintenance, locator tiers, mutation catalogue | M6 |
 | [`product/assignment-requirements.md`](product/assignment-requirements.md) | living | Requirement matrix T1–T10 / E1–E5 with evidence status per row | M7 |
-| [`specs/001-task1-problem-definition.md`](specs/001-task1-problem-definition.md) | record | Operational problem definition and MUST/SHOULD/BACKLOG scope, written before code | M0 |
+| [`product/problem-definition.md`](product/problem-definition.md) | record | Operational problem definition and MUST/SHOULD/BACKLOG scope, written before code | M0 |
 | [`evals/scope-checkpoint.md`](evals/scope-checkpoint.md) | record | The 12 observed failures that chose the two recovery families before M3 | M2→M3 |
 | [`plans/completed/task1-b-level-plan.md`](plans/completed/task1-b-level-plan.md) | record | B-phase plan and exit criteria, final status | M5 |
 | [`plans/completed/task1-a-level-plan.md`](plans/completed/task1-a-level-plan.md) | record | A-phase plan and the six exit criteria the freeze walked | M10 |
