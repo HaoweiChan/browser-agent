@@ -76,6 +76,54 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
+### M34 — an answer is still never checked for being responsive            [status: pr]
+Spec: M7 declared this gap, M10's probe demonstrated it, and M10's fix closed
+only the "which X has the most Y" sentence shape. The general defect is live on
+merged main and reproduces on a plain single-hop extraction: a string that IS on
+the page ("Warning!") passes `grounded`, `not_a_dump`, `identity_anchors` and
+`answer_nonempty` while answering nothing. Third demonstration that
+responsiveness is not pattern-matchable — a fourth regex over the task string is
+very likely the wrong answer, and `T-R31`/`T-R32` already name the ceiling of
+the last one. The intermittency matters: probe #2 answered this same task
+correctly once, so the violation is nondeterministic and a single green run
+proves nothing.
+Depends: M29
+Acceptance: an adversarial case reproduces the grounded-but-unresponsive
+wrong-success and is watched red first; no terminal non-failure status can carry
+an answer that fails a responsiveness check; the fix is demonstrated on the
+deployed build across repeated runs of the same task, not one lucky roll; the
+answer-shape ceiling that remains is named in `docs/support-matrix.md` rather
+than left implied.
+Out of scope: the extraction-quality gap (M28) — this task is about never
+reporting success for an unresponsive answer, not about extracting better.
+Status (2026-08-22, PR #30 pending, round 2 repaired): the adversarial case
+(`verifier-responsive-not-page-furniture`) landed and was watched red
+first, then the fix (`verify()`'s `not_page_furniture`, ADR-016) turned it
+green. Round 1 (R1, HIGH) found the first cut too broad — it flagged a
+correct listing→detail title/name as furniture, a false positive on this
+domain's single most common navigation shape — repaired by comparing each
+value's local page CONTEXT, not the bare value, against the other pages a
+run visited; the numeric exemption is gone, subsumed by the same rule
+(`verifier-listing-detail-title-not-furniture` pins the repaired shape).
+Round 2 (3 MEDIUM) found: (R2-1) the context window could still anchor on
+the wrong occurrence when a value legitimately repeats on the SAME page —
+repaired by anchoring on the resolved element's actual DOM offset
+(`TEXT_OFFSET_JS`/`_closest_occurrence`), pinned by
+`verifier-context-anchors-real-occurrence`; (R2-2) a fixture-parity claim
+("the same 50-category sidebar, same order") was false — restated honestly
+as a representative subset; (R2-3) `docs/support-matrix.md` D24 and
+ADR-016 carried round-by-round repair narrative and a superseded gate
+number, which belong only in `tasks/reviews/pr30-r*.json` — both rewritten
+to state current behaviour only. Every round, the original "Warning!"/
+"Travel" defect was re-confirmed to still fail loudly. `fast` 108/108,
+`invariant` 38/38, `live` 9/9, all against unmoved baseline. The surviving
+ceilings are named in `docs/support-matrix.md` D24. **Not closing this
+task**: the acceptance line "demonstrated on the deployed build across
+repeated runs" cannot be met from this environment (no LLM key, the
+deployed URL still serves `main`) — that repeated-run confirmation is the
+one thing left, run post-merge the same way M29 ran it for M10, and
+ADR-015 criterion 5 stays RED until it does.
+
 ## Debt
 
 ### T-M32-1 — the reviewer UI has no phase for an `observe` step            [status: todo]
