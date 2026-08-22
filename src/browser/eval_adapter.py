@@ -365,6 +365,94 @@ def _check_planner_prompt() -> dict:
 _BAND_LINE = re.compile(
     r"Slowest recorded `(fast|invariant)` run at (\d+) cases: \*\*([\d.]+)s\*\*")
 
+# ADR-019 §6's declaration of what the band property does NOT see: the size of
+# the hole, as a number the rule's own constants fix (one ceiling step, 5s of
+# ceiling / 1.15) rather than prose that can be softened without a diff.
+_BAND_SLACK_LINE = re.compile(r"declared slack of \*\*([\d.]+)s\*\*")
+
+_ADR019 = (Path(__file__).parents[2] / "specs" / "decisions"
+           / "ADR-019-wall-clock-ceilings-per-suite.md")
+_README = Path(__file__).parents[2] / "README.md"
+
+# README republishes the same two scalars as a table row. Graded against the
+# ADR's sentence rather than against the ledger a second time, so there is one
+# source and the two documents cannot disagree.
+_README_BAND_ROW = re.compile(
+    r"^\| `(fast|invariant)` \| (\d+) \| ([\d.]+)s \|", re.MULTILINE)
+
+
+def _band_rule(x: float) -> int:
+    """ADR-013 Decision 3's rule: slowest observed +15%, rounded up to a five."""
+    return ((int(x * 1.15) // 5) + 1) * 5
+
+
+def _band_step_s() -> float:
+    """One ceiling step, in wall-clock seconds, read off `_band_rule` itself.
+
+    This is the width of a band, so it is exactly the slack ADR-019 §6 declares.
+    Re-typing `5 / 1.15` would mean an amendment to ADR-013's rule (the rounding
+    step, or the 15%) left the published slack unchanged and every check green
+    while the real hole doubled. `_band_rule` is monotonic, so bisect it for two
+    consecutive ceiling boundaries and subtract."""
+    def edge(c: int) -> float:  # inf{x : _band_rule(x) >= c}
+        lo, hi = 0.0, 1e4
+        for _ in range(64):
+            mid = (lo + hi) / 2
+            lo, hi = (lo, mid) if _band_rule(mid) >= c else (mid, hi)
+        return hi
+
+    c0, x = _band_rule(60.0), 60.0
+    while _band_rule(x) == c0:  # bounded: the rule is a step function of x
+        x += 0.5
+    return round(edge(_band_rule(x)) - edge(c0), 2)
+
+
+def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> list:
+    """The judgement `_check_published_band` makes, over values instead of files.
+
+    Split out for `published-band-slack-is-declared` (ADR-019 §6). The miss the
+    weak property allows cannot be demonstrated against the committed doc —
+    that doc is, by this very check, inside the band it publishes — so the case
+    that pins it needs a synthetic ledger and this needs to be callable."""
+    wrong = []
+    for suite in sorted(ceilings):
+        if suite not in published:
+            wrong.append({"suite": suite, "adr_publishes_no_band_line": True})
+            continue
+        cases, said = published[suite]
+        now = counts[suite]
+        # Every recorded run at this case count, not only the green ones. A
+        # wall clock is a wall clock whether or not a case failed, taking the
+        # max is the conservative direction — and requiring green would
+        # deadlock: this check is itself in both suites, so the first run after
+        # a band is republished could never be green while the band it needs is
+        # the one that run would produce.
+        recorded = [r["wall_s"] for r in rows
+                    if r["suite"] == suite and r["total"] == now]
+        slowest = max(recorded) if recorded else None
+        if cases != now:
+            # Carry the number the doc needs, not just the fact that it is
+            # stale: growing a suite reddens this, and the fix is to republish
+            # both scalars, so the red output is the whole regeneration step.
+            wrong.append({"suite": suite, "published_case_count": cases,
+                          "actual": now, "ledger_slowest_at_actual": slowest})
+            continue
+        if slowest is None:
+            wrong.append({"suite": suite, "no_recorded_run_at": now})
+            continue
+        if _band_rule(said) != _band_rule(slowest):
+            wrong.append({"suite": suite, "published_slowest": said,
+                          "derives_ceiling": _band_rule(said),
+                          "ledger_slowest": slowest,
+                          "ledger_derives": _band_rule(slowest),
+                          "runs": len(recorded)})
+        required = _band_rule(slowest)
+        if ceilings[suite] < required:
+            wrong.append({"suite": suite, "ceiling": ceilings[suite],
+                          "required_by_adr013_rule": required,
+                          "ledger_slowest": slowest})
+    return wrong
+
 
 def _check_published_band() -> dict:
     """A published wall-clock band must be reproducible from the committed ledger.
@@ -382,14 +470,16 @@ def _check_published_band() -> dict:
          run does — `rule(published) == rule(ledger max)`, not
          `published >= ledger max`. The harmful failure R21 found is a band
          that justifies a lower ceiling than the truth (12.96s published where
-         13.57s was recorded: 15 where the rule said 20). Requiring exact
-         >= instead would redden on ordinary run-to-run variance — the tree
-         moved 0.2-0.5s between consecutive runs while this was being
-         written — and a doc that must be re-edited after every slightly slow
-         run is the rot this check exists to prevent, one level up;
+         13.57s was recorded: 15 where the rule said 20). The strict form was
+         reconsidered in T-R34 and refused again: it reddens on ordinary
+         run-to-run variance, and since the ledger is appended by every gate
+         run it would redden the NEXT commit rather than the one that got
+         slower. What it lets through is bounded by one ceiling step and
+         DECLARED in ADR-019 §6, graded by `published-band-slack-is-declared`;
       3. the committed ceiling is >= ADR-013's rule applied to that ledger
          maximum (slowest x 1.15, rounded up to a multiple of five). This is
-         the one that actually gates, and it does not move with noise.
+         the one that actually gates, it reads the ledger and not the published
+         number, and it does not move with noise.
 
     A run slower than the published band reddens the NEXT gate run, which is the
     intended cost: the band is a claim about this tree, and a tree that got
@@ -399,43 +489,100 @@ def _check_published_band() -> dict:
 
     from evals.run import HISTORY, WALL_BUDGET_S, load_cases
 
-    adr = (Path(__file__).parents[2] / "specs" / "decisions"
-           / "ADR-019-wall-clock-ceilings-per-suite.md").read_text(encoding="utf-8")
-    published = {m.group(1): (int(m.group(2)), float(m.group(3)))
-                 for m in _BAND_LINE.finditer(adr)}
+    adr = _ADR019.read_text(encoding="utf-8")
+    lines = [(m.group(1), (int(m.group(2)), float(m.group(3))))
+             for m in _BAND_LINE.finditer(adr)]
+    published = dict(lines)
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
-    wrong = []
-    for suite in sorted(WALL_BUDGET_S):
-        if suite not in published:
-            wrong.append({"suite": suite, "adr_publishes_no_band_line": True})
-            continue
-        cases, said = published[suite]
-        now = len(load_cases(suite))
-        if cases != now:
-            wrong.append({"suite": suite, "published_case_count": cases, "actual": now})
-            continue
-        # Every recorded run at this case count, not only the green ones. A
-        # wall clock is a wall clock whether or not a case failed, taking the
-        # max is the conservative direction — and requiring green would
-        # deadlock: this check is itself in both suites, so the first run after
-        # a band is republished could never be green while the band it needs is
-        # the one that run would produce.
-        recorded = [r["wall_s"] for r in rows
-                    if r["suite"] == suite and r["total"] == now]
-        if not recorded:
-            wrong.append({"suite": suite, "no_recorded_run_at": now})
-            continue
-        slowest = max(recorded)
-        rule = lambda x: ((int(x * 1.15) // 5) + 1) * 5
-        if rule(said) != rule(slowest):
-            wrong.append({"suite": suite, "published_slowest": said,
-                          "derives_ceiling": rule(said), "ledger_slowest": slowest,
-                          "ledger_derives": rule(slowest), "runs": len(recorded)})
-        required = rule(slowest)
-        if WALL_BUDGET_S[suite] < required:
-            wrong.append({"suite": suite, "ceiling": WALL_BUDGET_S[suite],
-                          "required_by_adr013_rule": required, "ledger_slowest": slowest})
+    counts = {s: len(load_cases(s)) for s in WALL_BUDGET_S}
+    wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows)
+    # A dict comprehension over the matches is last-wins, so a superseded band
+    # left in the file shadows the live one in silence — and if both land in the
+    # same band, publishes a number from no recorded run with everything green.
+    for suite, _ in lines:
+        if [s for s, _ in lines].count(suite) > 1:
+            wrong.append({"suite": suite, "adr_publishes_two_band_lines": True})
+            break
+    # README's table is the other half of the same claim and drifted from this
+    # file once already (PR #29 R24, the origin of T-R34). Same two numbers or
+    # red: one number, two documents, no hand-kept copy.
+    readme = _README.read_text(encoding="utf-8")
+    table = {m.group(1): (int(m.group(2)), float(m.group(3)))
+             for m in _README_BAND_ROW.finditer(readme)}
+    for suite, band in sorted(published.items()):
+        if table.get(suite) != band:
+            wrong.append({"suite": suite, "adr_band": list(band),
+                          "readme_band": list(table[suite]) if suite in table
+                          else None})
     return {"passed": not wrong, "wrong": wrong}
+
+
+def _check_published_band_slack() -> dict:
+    """ADR-019 §6: the band property's blind spot is declared, bounded, and pinned.
+
+    `_check_published_band`'s property 2 is `rule(published) == rule(ledger
+    max)`, so a published maximum BELOW the ledger's is green while both derive
+    the same ceiling. PR #29 R24 asked whether that was a decision or an
+    artefact. This is what makes it a decision.
+
+    Driven with a synthetic one-suite ledger and a ceiling of 999 so that only
+    property 2 can speak — property 3 is graded against the real ledger by
+    `published-band-matches-the-ledger` and would otherwise mask the boundary.
+
+      - the miss is green right up to the top of the band, and red one
+        hundredth of a second past it, where the ceiling the doc justifies
+        stops being the ceiling the ledger requires;
+      - the harmful direction is still red, on BOTH properties: R21's real
+        numbers, 12.96s published where 13.57s was recorded, once with property
+        3 disabled and once with R21's own 15s ceiling in place;
+      - the width of the hole is one ceiling step and ADR-019 publishes it, as
+        a number `_band_step_s` reads off the rule rather than a sentence
+        someone can quietly soften.
+    """
+    wrong = []
+    step_s = _band_step_s()
+    adr = _ADR019.read_text(encoding="utf-8")
+    m = _BAND_SLACK_LINE.search(adr)
+    if not m:
+        wrong.append({"adr_declares_no_slack": True, "one_ceiling_step_is": step_s})
+    elif abs(float(m.group(1)) - step_s) > 0.005:
+        wrong.append({"adr_declared_slack": float(m.group(1)),
+                      "one_ceiling_step_is": step_s})
+
+    def judge(said: float, ledger_max: float) -> list:
+        return _band_wrong({"s": (1, said)}, {"s": 1}, {"s": 999.0},
+                           [{"suite": "s", "total": 1, "wall_s": ledger_max}])
+
+    # The bound is measured against the bands ADR-019 actually publishes, so it
+    # is the headroom a reader of THIS doc has, not a sample chosen to flatter.
+    published = {g.group(1): float(g.group(3)) for g in _BAND_LINE.finditer(adr)}
+    if not published:
+        wrong.append({"adr_publishes_no_band_line": True})
+    headroom = {}
+    for suite, said in sorted(published.items()):
+        top = said
+        # Bounded: one step is 4.35s, so a loop that walks past +10s means the
+        # rule stopped being monotonic and this must go red, not hang the suite.
+        while _band_rule(top) == _band_rule(said) and top < said + 10:
+            top = round(top + 0.01, 2)
+        headroom[suite] = round(top - 0.01 - said, 2)
+        if judge(said, round(top - 0.01, 2)):
+            wrong.append({"suite": suite, "declared_miss_went_red_at":
+                          round(top - 0.01, 2)})
+        if not judge(said, top):
+            wrong.append({"suite": suite, "stayed_green_past_the_band_at": top,
+                          "derives": _band_rule(top),
+                          "published_derives": _band_rule(said)})
+    # PR #29 R21, the direction that is NOT declared: a band justifying a lower
+    # ceiling than the truth. Red on property 2 (above, ceiling out of the way)
+    # and red on property 3 with the 15s ceiling R21 found it defending.
+    if not judge(12.96, 13.57):
+        wrong.append({"r21_underpublished_band_green_on_property_2": [12.96, 13.57]})
+    if not _band_wrong({"s": (1, 12.96)}, {"s": 1}, {"s": 15.0},
+                       [{"suite": "s", "total": 1, "wall_s": 13.57}]):
+        wrong.append({"r21_underjustified_ceiling_green_on_property_3": 15.0})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"declared_slack_s": step_s, "headroom_s": headroom}}
 
 
 def _check_inv3() -> dict:
@@ -3086,6 +3233,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "mutation-metrics": _check_mutation_metrics,
               "plan-gap": _check_plan_gap,
               "published-band": _check_published_band,
+              "published-band-slack": _check_published_band_slack,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 

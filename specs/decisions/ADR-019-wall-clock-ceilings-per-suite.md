@@ -5,7 +5,7 @@ Status: accepted
 
 **Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → **80s**, local `invariant` **20s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
-**Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `evals/run.py` `over_budget()`
+**Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `evals/run.py` `over_budget()`
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 75) and ADR-002 Decision 4 (a second suite now has a ceiling)
 
@@ -43,9 +43,12 @@ is worth less than the 4.9s it costs.
 
 ### 2. The local `fast` ceiling is 80s, computed from the ledger
 
-Every published band here is computed from `evals/report/history.jsonl` — the
-ledger committed in this repo — and `published-band-matches-the-ledger` grades
-that property on every run. It has to, because three bands in this PR did not
+Every LOCAL band here — this section's and §3's — is computed from
+`evals/report/history.jsonl`, the ledger committed in this repo, and
+`published-band-matches-the-ledger` grades that property on every run, against
+README's copy of the same two scalars as well. §5's CI numbers are not in that
+ledger and cannot be (no CI run commits its wall clock); they are hand-read off
+the workflow log, ungraded, and logged as debt (T-R40). It has to, because three bands in this PR did not
 match the ledger beside them: nine of fifteen runs published as "every run the
 ledger records", four values that appear in no recorded run, the two slowest
 `invariant` runs dropped unlabelled, and a maximum (64.71s) the ceiling was
@@ -55,11 +58,17 @@ decision that amends it.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Slowest recorded `fast` run at 132 cases: **66.33s** — 6 runs:
-  65.72 / 65.83 / 65.84 / 66.13 / 66.25 / 66.33s.
+- Slowest recorded `fast` run at 133 cases: **66.38s**.
+
+Every run behind that maximum is in `evals/report/history.jsonl`, committed
+beside this file. The enumeration that used to stand here — and the one in §3 —
+is gone: it was a snapshot of a file that grows on every gate run, nothing
+graded it, and it had drifted to publishing six of the eight runs recorded at
+the shipped case count, which is the R21 defect this ADR was amended over. What
+is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 66.33 × 1.15 = 76.3 → **80**. The band published for the earlier
+five — gives 66.38 × 1.15 = 76.3 → **80**. The band published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of
@@ -72,10 +81,9 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Slowest recorded `invariant` run at 51 cases: **14.12s** — 32 runs:
-  11.17 / 12.4 / 12.67 / 12.68 / 12.72 / 12.73 / 12.74 / 12.74 / 12.75 / 12.79 / 12.79 / 12.85 / 12.85 / 12.87 / 12.87 / 12.87 / 12.9 / 12.93 / 12.95 / 12.98 / 12.99 / 13 / 13.01 / 13.02 / 13.05 / 13.18 / 13.21 / 13.25 / 13.28 / 13.45 / 13.73 / 14.12s.
+- Slowest recorded `invariant` run at 52 cases: **13.22s** (ledger, as above).
 
-The same rule gives 14.12 × 1.15 = 16.2 → **20**.
+The same rule gives 13.22 × 1.15 = 15.2 → **20**.
 
 This number was **15** until PR #29 R21, and that was a reading error, not a
 rule change: the band behind it published five runs of a ledger holding
@@ -128,6 +136,48 @@ refusal. The reviewer projected ~72s and the measurement came in at 74.06s
 
 The runner is ~1.15x slower than this laptop on `fast` (74.06 vs 64.71) and
 ~1.27x on `invariant` (16.47 vs 12.96), which is why four numbers and not two.
+
+### 6. (2026-08-23) The band's slack is a declared ceiling, not an oversight
+
+PR #29 R24 asked why `published-band-matches-the-ledger` grades
+`rule(published) == rule(ledger max)` rather than `published >= ledger max`.
+The weak property is kept, and this section is the price of keeping it: the
+hole is measured, named, and pinned by a case, so nobody has to discover it.
+
+**What it lets through.** A published maximum may sit anywhere inside the band
+that derives the committed ceiling, so it can understate the ledger's slowest
+run by up to one ceiling step — five seconds of ceiling divided by the rule's
+1.15, a declared slack of **4.35s** of wall clock.
+`published-band-slack-is-declared` derives that bound from the rule's own
+constants rather than trusting this sentence, measures the headroom of each
+band published above, and reports both — no per-suite number is written here,
+because a number that moves with the band is the snapshot this section deletes
+everywhere else.
+
+**Why not the strict form.** `published >= ledger max` reddens on ordinary
+variance — this tree moves 0.2-0.5s between consecutive runs — and the ledger
+is appended by every gate run, *after* the case has been graded. So the run
+that sets a new maximum passes, and the commit that reddens is the NEXT one,
+whose author changed nothing that made anything slower. That is the failure
+ADR-013 Decision 4 was withdrawn over, relocated one level up into the doc. A
+regeneration script would make each repair one command; it would not stop the
+churn, and a number that is re-derived on every slightly slow run is not more
+honest than this one, only more frequent.
+
+**What the slack cannot hide.** §2's ceiling is graded against `rule(ledger
+max)` directly — from the ledger, never from the published number — so a tree
+that crosses the band still reddens the gate, and no ceiling is ever justified
+by a maximum smaller than the truth. The direction R21 found (12.96s published
+where 13.57s was recorded: 15 where the rule said 20) is red on both
+properties, and the case asserts it stays red.
+
+**What a reader should conclude.** The published maximum is the slowest run
+recorded when the band was last republished, not necessarily the slowest run in
+the ledger today. It is within 4.35s of it, and the ceiling beside it is
+correct either way. If you want the exact current maximum, the ledger is the
+artefact — and the grader prints it, with the case count, whenever the band
+needs republishing.
+
 
 ## Consequences
 

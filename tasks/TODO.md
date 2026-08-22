@@ -77,6 +77,69 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-R40 — the CI half of ADR-019 publishes bands no committed artifact can reproduce            [status: todo]
+Origin: T-R34 (cold review)
+Spec: ADR-019 §5 and README's CI paragraph publish four measured numbers (`invariant`
+14.80-16.47s, `fast` 69.37-74.06s) and derive 20/90 from them. None of those values is in
+`evals/report/history.jsonl`, and none can be: `.github/workflows/eval.yml` checks out, runs
+the two suites and stops — no step commits a history row, so a CI wall clock never reaches
+the ledger. `_BAND_LINE` has a group for the suite and none for the environment, so
+`published-band-matches-the-ledger` parses only the two local sentences. T-R34 scoped both
+blanket claims down to "every LOCAL band" rather than leave them false, but the CI band is
+still unfalsifiable prose deriving a live ceiling. Compounding: README publishes the CI band
+twice and incompatibly — `59.77 / 60.84 / 64.61 / 64.67s` in the M12 paragraph and
+`69.37-74.06s` in the ADR-019 paragraph, where 64.61 is in the ledger twice as a LOCAL run.
+Applying README's own rule to README's own first CI band gives 75, not the 90 it publishes.
+Acceptance: either CI's runs land in the ledger (a job step that appends and commits, or an
+artifact the check reads) and the band grader learns the environment dimension, or §5 and
+README's CI numbers are labelled as hand-read log values with the workflow run ids that
+produced them, and README's older CI band is struck. Watched red either way.
+
+### T-R41 — three files cite ADR-017 for the per-suite override that is ADR-019            [status: todo]
+Origin: T-R34 (cold review)
+Spec: `specs/decisions/INDEX.md:11`, `evals/run.py:103` ("ADR-017 gives both suites the same
+treatment") and `.github/workflows/eval.yml:16` ("one variable per suite (ADR-017)") all
+attribute the one-variable-per-suite ruling to ADR-017. ADR-017 is the M36 judge ADR
+(INDEX.md:26); the ruling is ADR-019 §4. `adr-header-and-index` grades Ruling-block presence
+and INDEX numbering, so no citation body is checked, and `report-citations-resolve` covers
+report filenames, not ADR references.
+Acceptance: the three citations name ADR-019, and a graded row resolves `ADR-0NN` references
+in `src/`, `evals/`, `.github/` and `specs/` against the ADR that actually carries the
+ruling — or at minimum against the file existing and its Ruling mentioning the subject.
+Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
+
+### T-R42 — the band admits dirty-tree and failing runs; `sha`, `dirty` and `passed` are recorded and ignored            [status: todo]
+Origin: T-R34 (cold review)
+Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone. Every row behind the
+bands this branch publishes is `"dirty": true` (they were produced while implementing, which
+is the only way to produce them), and the `fast` maximum 66.38s comes from a 132/133 run, the
+`invariant` maximum 13.22s from a 50/52 run. Admitting non-green runs is deliberate and argued
+in the docstring — a wall clock is a wall clock — but admitting dirty ones is not argued
+anywhere, and a band can therefore be justified by a tree that was never committed. A case
+swap that keeps `total` constant has the same effect: property 1 is satisfied trivially while
+the runs behind the band are from a tree that no longer exists.
+Acceptance: either the ledger filter takes `dirty`/`sha` into account (and the bootstrap of
+publishing a band from a clean tree is worked out — a band can only be measured before the
+commit that publishes it), or the docstring and ADR-019 state that a band is measured on the
+working tree by construction and say what that costs. Watched red either way.
+
+### T-R39 — a new case discards the whole measured band, and the fresh sample can justify a LOWER ceiling            [status: todo]
+Origin: T-R34
+Spec: `_band_wrong` filters the ledger to rows whose `total` equals the CURRENT case
+count, so adding one 0.0s pure-code case throws away every run recorded at the old
+count. Observed in this task: `invariant` had 34 runs at 51 cases (max 14.12s); adding
+one case left 2 runs at 52 cases (max 12.78s), whose derivation is 12.78 x 1.15 = 14.7
+-> **15** against a committed ceiling of 20. Nothing went red — property 3 is `ceiling
+>= rule(ledger max)`, so a ceiling ABOVE the rule is accepted — but a maintainer
+following the ADR's own derivation sentence literally would have ratcheted the local
+`invariant` ceiling from 20 down to 15, which is the number CI has already been red
+against twice (ADR-019 §3, §5). The band was only republishable at 13.22s here because
+four more runs were taken by hand.
+Acceptance: either the ledger filter widens (rows at >= the count, or the count band the
+suite's cost actually depends on) with the reasoning recorded, or the ADR states that a
+freshly-republished band is a lower bound and the committed ceiling never ratchets down
+on one, with a case pinning the direction. Watched red either way.
+
 ### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: todo]
 Origin: PR #29 R25
 Spec: `specs/decisions/INDEX.md:11` (rewritten by 3699b87) reads "fast 75s local / 90s CI"
