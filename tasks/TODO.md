@@ -37,7 +37,7 @@ a fixture twin of probe #3 (most-quoted author) and `live-books-cheapest-travel`
 go green against ground truth; D22 is re-measured and restated, not deleted;
 replan rate published per D7.
 
-### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: in-progress]
+### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
 but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
 page text the agent captured and absent from the a11y elements the planner
