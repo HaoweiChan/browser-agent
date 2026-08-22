@@ -1,0 +1,21 @@
+{
+  "pr": 32,
+  "round": 3,
+  "task": "M35",
+  "head": "ef11ff9",
+  "scope": "repair diff d5a606a..ef11ff9 (R3 promoted to repair by the owner)",
+  "result": "APPROVED",
+  "gate": "invariant 39/39 = 1.000 · fast 119/119 = 1.000 (wall 56.7s)",
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "claim": "The M35 ledger line's counters are stale after the R3 promotion: `repaired` is still 1 although R1 and R3 are both `fixed` in pr32-r1-resolution.json, and `rounds` is 2 while this is round 3.",
+      "evidence": "tasks/pr-loop-ledger.jsonl last line: rounds 2, repaired 1, debt_logged 5; tasks/reviews/pr32-r1-resolution.json: R1 and R3 both fixed.",
+      "repro": "grep -c '\"resolution\": \"fixed\"' tasks/reviews/pr32-r1-resolution.json → 2; tail -1 tasks/pr-loop-ledger.jsonl | grep -o '\"repaired\": [0-9]*' → 1.",
+      "acceptance": "Ledger line reads rounds 3, repaired 2.",
+      "route": "orchestrator",
+      "note": "ledger is the orchestrator's artifact — corrected in this commit"
+    }
+  ]
+}
