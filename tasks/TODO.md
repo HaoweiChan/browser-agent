@@ -375,11 +375,6 @@ Origin: PR #32 R2 (LOW)
 Spec: the page's no-URL guard derives a start URL from any `label.tld` token in the task text. Measured false positives: "What version of node.js is listed?" → `https://node.js`, "Open README.md and read the title" → `https://README.md`, "Find setup.exe download link" → `https://setup.exe`, "email john@example.com about it" → `https://example.com`. The lifted URL is written to `#url` and POSTed in the same click, so the run is spent (ends `failure:nav`, $0, but a slot and a red result the visitor did not intend).
 Acceptance: common file extensions and e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the `ui-no-url-guard-and-example-chips` case gains one such input asserting no POST and the guidance shown.
 
-### T-R35 — the quotes.toscrape.com card note generalises one run into a capability claim            [status: todo]
-Origin: PR #32 R3 (LOW)
-Spec: `EXAMPLES["quotes.toscrape.com (live)"].note` reads "Static pages work; the JS-rendered /js/ pages are the declared failure" while the matrix row is TC1 `unsupported`; the only evidence is one run (`24820d4c`, now 404 on the in-memory run store). A reader takes the note as a declared status.
-Acceptance: the note is phrased as the receipt, not a generalisation — e.g. "This static page answered correctly once (run 24820d4c); the declared failure is the JS-rendered /js/ pages" — or the row's declaration is widened in `docs/support-matrix.md` with evidence, never on the page alone.
-
 ### T-R36 — two case provenances cite dangling pre-rebase shas            [status: todo]
 Origin: PR #32 R5 (LOW)
 Spec: `evals/adversarial/ui-no-url-guard.json` says "watched red against the pre-M35 page (main 2a11142)" and `ui-execution-progress.json` cites `e07ac07`; neither commit is on any branch after the rebase onto `2e94bed`, so the red-first evidence becomes unreachable after gc and "2a11142" is not main.

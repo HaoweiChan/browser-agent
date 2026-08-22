@@ -13,8 +13,8 @@
   },
   {
     "id": "R3",
-    "resolution": "debt",
-    "debt_id": "T-R35"
+    "resolution": "fixed",
+    "note": "promoted from debt by the owner before merge; note reworded to the receipt"
   },
   {
     "id": "R4",

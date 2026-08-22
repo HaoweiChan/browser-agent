@@ -547,7 +547,7 @@ const EXAMPLES = {
   "quotes.toscrape.com (live)": {label: "Who said this quote?",
     url: "https://quotes.toscrape.com/",
     task: "Who wrote the quote about the world we have created?",  // run 24820d4c → "Albert Einstein"
-    note: "Static pages work; the JS-rendered /js/ pages are the declared failure."},
+    note: "This static page answered correctly once (run 24820d4c); the declared failure is the JS-rendered /js/ pages."},
   "openlibrary.org (live)": {label: "Author of a book",
     url: "https://openlibrary.org/books/OL7025919M",
     task: "Who is the author of this book?",   // run f1ecf157 → failure:extract (015b6778, 65af344f too: loud, never wrong)
