@@ -3,8 +3,8 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: the local `fast` ceiling is re-measured from 60s to **75s** by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five), and `invariant` gets a measured ceiling of its own at **15s**; `EVAL_WALL_BUDGET_S` is scoped to `fast`, the only suite it was ever measured for.
-**Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which took ~4.9s out of the measured number, left the published `fast` figure at 59.7s, and left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing.
+**Ruling**: four ceilings, one per (suite, environment), each measured where it is enforced — local `fast` 60 → **75s**, local `invariant` **15s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five), read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `evals/run.py` `over_budget()`
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 75) and ADR-002 Decision 4 (a second suite now has a ceiling)
@@ -86,26 +86,54 @@ The reason `invariant` needs one is not that it is slow. It is that without one,
 "move the case to `invariant`" is a way to make the `fast` number go down while
 the tree gets slower — which is exactly what happened, in this PR, one round ago.
 
-### 4. `EVAL_WALL_BUDGET_S` is scoped to `fast`
+### 4. One override variable per suite
 
-It was introduced for the `fast` gate on CI and its value (80) was measured for
-`fast`. Letting one env var raise every suite's ceiling would have closed the
-valve locally and left it open on CI, where 80 is five times what `invariant`
-costs. `wall_budget` now returns the committed number for any suite but `fast`,
-pinned by `fast-wall-clock-budget`'s `invariant_override` rows.
+The first version of this decision scoped the single `EVAL_WALL_BUDGET_S` to
+`fast` — which stopped it raising `invariant`'s ceiling, and in the same stroke
+made it impossible for `invariant` to have a per-environment number at all. CI
+then enforced §3's locally-measured 15s having never run it, and went red at
+15.06s and 15.22s with 46/46 passing. `.githooks/pre-commit` runs `fast` alone,
+so nothing local could catch it (PR #29 R15).
 
-Per-suite environment overrides are the upgrade path if a second environment
-ever needs its own `invariant` number. Not built: nothing needs it, and one
-unused knob per suite is the shape this repo keeps deleting.
+`wall_budget(suite)` now reads `EVAL_WALL_BUDGET_S_{SUITE}`. Each suite has its
+own variable, so raising one environment's `fast` ceiling cannot silently raise
+its `invariant` ceiling — the relief-valve property §3 is about — and each suite
+can be measured where it is enforced, which is what ADR-013 Decision 3 already
+ruled `fast` needed. `fast-wall-clock-budget` pins both directions.
+
+### 5. CI's two numbers, measured on CI: 90 and 20
+
+Not projected from local runs, which is the mistake §3 made. Four attempts of
+one commit (`d173340`, the tree this branch ships — 116 `fast`, 48 `invariant`):
+
+| attempt | `invariant` | `fast` |
+|---|---|---|
+| 1 | 16.47s | 69.54s |
+| 2 | 15.85s | 74.06s |
+| 3 | 14.80s | 69.37s |
+| 4 | 15.60s | 74.04s |
+
+Same rule: 16.47 × 1.15 = 18.9 → **20**; 74.06 × 1.15 = 85.2 → **90**.
+
+**CI's `fast` ceiling of 80 was the next coin flip, and this is the measurement
+that says so** rather than the promise the first version of this ADR left in its
+place. 74.06s against 80 is 8% of margin on a runner whose own spread across
+these four attempts is 6.8% — the same ratio that produced the local 60.24s
+refusal. The reviewer projected ~72s and the measurement came in at 74.06s
+(PR #29 R19).
+
+The runner is ~1.15x slower than this laptop on `fast` (74.06 vs 64.71) and
+~1.27x on `invariant` (16.47 vs 12.96), which is why four numbers and not two.
 
 ## Consequences
 
-- **CI's 80 is unchanged, and its margin is now thinner.** Nothing here measured
-  CI, and inventing a CI number is the one thing `fast-wall-clock-budget`'s own
-  `not_covered` section says this case cannot catch. CI ran `fast` at
-  64.29-68.96s when the suite was ~60s locally; it is now ~65s locally, so the
-  CI run of this branch is the measurement. If it lands over 80, the fix is an
-  amendment carrying that run's number — not a guess made here.
+- **CI's numbers are measured, not promised.** The first version of this ADR
+  left "the CI run of this branch is the measurement" as a promise; it came due
+  immediately and the answer was no, twice over — `invariant` red at 15.06s and
+  `fast` at 74.06s against 80. Both are now set from CI runs of the shipped
+  tree (§5). `fast-wall-clock-budget`'s own `not_covered` still says this case
+  cannot tell a measured number from an invented one; the four attempts are in
+  §5 and in the workflow comment so a reader can check rather than trust.
 - **The declared limitation stays declared.** Total wall clock is all that is
   graded: a case that gets 10s slower while another gets 10s faster is still
   invisible, and per-case timings still live in the committed reports.

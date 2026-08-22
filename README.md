@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260822-153750-fast.json`, with
-`evals/report/20260822-153803-invariant.json` and
+Latest offline baseline — `evals/report/20260822-161453-fast.json`, with
+`evals/report/20260822-161505-invariant.json` and
 `evals/report/20260822-111204-live.json`:
 
 ```
-fast  116/116    invariant  48/48    live  9/9    $0.0000    64.2s
+fast  116/116    invariant  48/48    live  9/9    $0.0000    64.8s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 19/19 · 5 replans
 ```
@@ -78,8 +78,8 @@ suite straddles its ceiling rather than clears it. The same suite on CI (ubuntu-
 **59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
 on byte-identical code, which is why the wall-clock ceiling is per-environment
 rather than one number pretending to be portable. CI's ceiling is the slowest
-observed run plus 15% (80s); the local ceiling was the original **60s** through
-M30 — a straddling band briefly pushed it to 70, but round-5 review could not
+observed run plus 15% (90s since ADR-017 §5, measured on CI at the shipped case
+count); the local ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
 58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
@@ -116,8 +116,12 @@ this branch ships — **9 green runs**: 64.17 / 64.34 / 64.53 / 64.54 / 64.55 /
 cases, 5 runs: 12.44 / 12.48 / 12.50 / 12.58 / 12.96s.
 
 64.71 × 1.15 = 74.4 → **75**; 12.96 × 1.15 = 14.9 → **15**. Both committed
-numbers survive the fuller data they should have been derived from in the first
-place. That is ~10s of margin where there used to be ~0.2s, which is the point:
+local numbers survive the fuller data they should have been derived from in the
+first place. **CI has its own two**, measured on CI rather than projected from
+these — four attempts of the shipped tree gave `invariant` 14.80-16.47s and
+`fast` 69.37-74.06s, so **20s** and **90s** by the same rule. The old CI `fast`
+ceiling of 80 was the next coin flip: 74.06s against it is 8% of margin on a
+runner whose own spread is 6.8% (ADR-017 §5). That is ~10s of margin where there used to be ~0.2s, which is the point:
 a ceiling whose job is to catch drift cannot also be the thing that fails on
 drift-free commits. It is a real loosening and ADR-017 says so in those words.
 

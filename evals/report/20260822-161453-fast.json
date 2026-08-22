@@ -6,10 +6,10 @@
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 5,
-    "ms": 56253,
-    "wall_seconds": 64.17,
+    "ms": 56869,
+    "wall_seconds": 64.85,
     "latency_p50": 0.11,
-    "latency_p95": 2.52,
+    "latency_p95": 2.51,
     "cases_with_budgets": 68
   },
   "metrics": {
@@ -34,7 +34,7 @@
       "advertised_unresolvable": [],
       "starved_by_chrome": [],
       "n_elements": 5,
-      "seconds": 0.43,
+      "seconds": 0.4,
       "id": "observe-hello-elements",
       "kind": "golden"
     },
@@ -75,9 +75,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 105
+        "ms": 100
       },
-      "seconds": 0.11,
+      "seconds": 0.1,
       "id": "tc1-hello-heading",
       "kind": "golden"
     },
@@ -205,7 +205,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 98
+        "ms": 97
       },
       "seconds": 0.1,
       "id": "tc1-shop-price-zh",
@@ -339,9 +339,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 282
+        "ms": 267
       },
-      "seconds": 0.28,
+      "seconds": 0.27,
       "id": "tc2-shop-search",
       "kind": "golden"
     },
@@ -427,9 +427,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 181
+        "ms": 198
       },
-      "seconds": 0.18,
+      "seconds": 0.2,
       "id": "tc3-shop-detail-nav",
       "kind": "golden"
     },
@@ -471,7 +471,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 199
+        "ms": 198
       },
       "seconds": 0.2,
       "id": "tc4-shop-sort-cheapest",
@@ -563,7 +563,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 431
+        "ms": 430
       },
       "seconds": 0.43,
       "id": "tc5-forms-submit-zh",
@@ -611,9 +611,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 414
+        "ms": 381
       },
-      "seconds": 0.42,
+      "seconds": 0.38,
       "id": "tc5-forms-submit",
       "kind": "golden"
     },
@@ -679,9 +679,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 362
+        "ms": 347
       },
-      "seconds": 0.36,
+      "seconds": 0.35,
       "id": "agent-launches-its-own-browser",
       "kind": "adversarial"
     },
@@ -735,9 +735,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 2,
-        "ms": 6439
+        "ms": 6644
       },
-      "seconds": 6.45,
+      "seconds": 6.65,
       "id": "budget-replans-exhausted",
       "kind": "adversarial"
     },
@@ -794,7 +794,7 @@
           "value"
         ]
       },
-      "seconds": 0.1,
+      "seconds": 0.12,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -825,7 +825,7 @@
           "quotes.toscrape.com": 3
         }
       },
-      "seconds": 0.03,
+      "seconds": 0.05,
       "id": "docs-numbers-are-derived",
       "kind": "adversarial"
     },
@@ -866,9 +866,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 104
+        "ms": 99
       },
-      "seconds": 0.11,
+      "seconds": 0.1,
       "id": "evidence-window-keeps-the-anchor",
       "kind": "adversarial"
     },
@@ -917,7 +917,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 110
+        "ms": 111
       },
       "seconds": 0.11,
       "id": "extract-all-cheapest-wording-still-reduces",
@@ -1052,9 +1052,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 107
+        "ms": 108
       },
-      "seconds": 0.11,
+      "seconds": 0.12,
       "id": "extract-all-refuses-a-selector",
       "kind": "adversarial"
     },
@@ -1110,7 +1110,7 @@
           "fast": 75,
           "invariant": 15
         },
-        "ci_ceiling": 200,
+        "ci_ceiling": 90,
         "main_exit": [
           {
             "wall_seconds": 64.59,
@@ -1124,7 +1124,7 @@
           }
         ]
       },
-      "seconds": 0.05,
+      "seconds": 0.04,
       "id": "fast-wall-clock-budget",
       "kind": "adversarial"
     },
@@ -1245,9 +1245,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 459
+        "ms": 449
       },
-      "seconds": 0.46,
+      "seconds": 0.45,
       "id": "l4-forms-a11y-stripped",
       "kind": "adversarial"
     },
@@ -1298,7 +1298,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 265
+        "ms": 264
       },
       "seconds": 0.27,
       "id": "l4-recover-name-to-text",
@@ -1352,7 +1352,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 349
+        "ms": 348
       },
       "seconds": 0.35,
       "id": "l4-shop-a11y-stripped",
@@ -1405,7 +1405,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 263
+        "ms": 265
       },
       "seconds": 0.27,
       "id": "l4-shop-button-text-renamed",
@@ -1459,7 +1459,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 332
+        "ms": 331
       },
       "seconds": 0.33,
       "id": "l4-shop-duplicate-labels",
@@ -1507,9 +1507,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114
+        "ms": 131
       },
-      "seconds": 0.12,
+      "seconds": 0.14,
       "id": "l4-shop-element-reordered-near",
       "kind": "adversarial"
     },
@@ -1555,10 +1555,10 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 115
+        "ms": 109
       },
       "known_wrong_ground_truth": "expect.answer pins the WRONG answer this build produces; a PASS here means 'the agent reproduced the known-wrong answer', never 'the answer is correct'",
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "l4-shop-element-reordered",
       "kind": "adversarial"
     },
@@ -1605,7 +1605,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 199
+        "ms": 198
       },
       "seconds": 0.2,
       "id": "l4-shop-ids-renamed",
@@ -1662,9 +1662,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 10329
+        "ms": 10314
       },
-      "seconds": 10.33,
+      "seconds": 10.32,
       "id": "l4-shop-overlay-modal",
       "kind": "adversarial"
     },
@@ -1760,7 +1760,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 284
+        "ms": 283
       },
       "seconds": 0.29,
       "id": "l4-shop-wrapper-nesting",
@@ -2031,9 +2031,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 227
+        "ms": 242
       },
-      "seconds": 0.23,
+      "seconds": 0.24,
       "id": "multi-extract-list",
       "kind": "adversarial"
     },
@@ -2088,9 +2088,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 8085
+        "ms": 8078
       },
-      "seconds": 8.09,
+      "seconds": 8.08,
       "id": "nav-action-load-event-never-fires",
       "kind": "adversarial"
     },
@@ -2131,9 +2131,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4061
+        "ms": 4086
       },
-      "seconds": 4.06,
+      "seconds": 4.09,
       "id": "nav-load-event-never-fires",
       "kind": "adversarial"
     },
@@ -2174,9 +2174,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 97
+        "ms": 112
       },
-      "seconds": 0.1,
+      "seconds": 0.11,
       "id": "near-anchor-substring",
       "kind": "adversarial"
     },
@@ -2260,9 +2260,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 116
+        "ms": 101
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "near-excludes-its-own-anchor",
       "kind": "adversarial"
     },
@@ -2385,9 +2385,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2225
+        "ms": 2344
       },
-      "seconds": 2.23,
+      "seconds": 2.35,
       "id": "plan-lint-holds-across-a-midrun-replan",
       "kind": "adversarial"
     },
@@ -2447,9 +2447,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2175
+        "ms": 2244
       },
-      "seconds": 2.18,
+      "seconds": 2.25,
       "id": "postcondition-compound-keys",
       "kind": "adversarial"
     },
@@ -2493,7 +2493,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 210
+        "ms": 209
       },
       "seconds": 0.21,
       "id": "postcondition-unverified-click",
@@ -2543,9 +2543,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 99
+        "ms": 116
       },
-      "seconds": 0.1,
+      "seconds": 0.12,
       "id": "probe3-quotes-most-quoted-author",
       "kind": "adversarial"
     },
@@ -2565,10 +2565,10 @@
           "busy",
           "idle"
         ],
-        "during_latency_s": 0.001,
-        "run_seconds": 2.52
+        "during_latency_s": 0.003,
+        "run_seconds": 2.51
       },
-      "seconds": 2.52,
+      "seconds": 2.51,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -2614,9 +2614,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2191
+        "ms": 2286
       },
-      "seconds": 2.2,
+      "seconds": 2.29,
       "id": "recovery-label-requires-strategy-change",
       "kind": "adversarial"
     },
@@ -2666,9 +2666,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 2241
+        "ms": 2314
       },
-      "seconds": 2.24,
+      "seconds": 2.32,
       "id": "recovery-replan-postcondition",
       "kind": "adversarial"
     },
@@ -2713,7 +2713,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 158
+        "ms": 154
       },
       "seconds": 0.16,
       "id": "relocate-fill-non-editable",
@@ -2810,9 +2810,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2185
+        "ms": 2222
       },
-      "seconds": 2.19,
+      "seconds": 2.23,
       "id": "replan-cannot-launder-noop-action-extract-all",
       "kind": "adversarial"
     },
@@ -2856,9 +2856,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2192
+        "ms": 2211
       },
-      "seconds": 2.2,
+      "seconds": 2.22,
       "id": "replan-cannot-launder-noop-action",
       "kind": "adversarial"
     },
@@ -2866,7 +2866,7 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "citations": 33,
+        "citations": 34,
         "skip": [
           "29991231-235959-fast.json"
         ]
@@ -2913,9 +2913,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 125
+        "ms": 148
       },
-      "seconds": 0.13,
+      "seconds": 0.17,
       "id": "resolver-substring-name",
       "kind": "adversarial"
     },
@@ -2956,7 +2956,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 109
+        "ms": 107
       },
       "seconds": 0.12,
       "id": "resolver-unknown-target-key",
@@ -2990,7 +2990,7 @@
       "wrong": {
         "soak": []
       },
-      "seconds": 0.07,
+      "seconds": 0.06,
       "id": "soak-counts-only-real-completions",
       "kind": "adversarial"
     },
@@ -3024,9 +3024,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 270
+        "ms": 249
       },
-      "seconds": 0.27,
+      "seconds": 0.25,
       "id": "stream-shows-every-step",
       "kind": "adversarial"
     },
@@ -3039,7 +3039,7 @@
         "status": "failure:env",
         "steps": 2
       },
-      "seconds": 2.19,
+      "seconds": 2.21,
       "id": "supersede-never-dangles",
       "kind": "adversarial"
     },
@@ -3051,7 +3051,7 @@
       },
       "got": {
         "rows": 9,
-        "limitations": 61,
+        "limitations": 62,
         "citations": 58
       },
       "seconds": 0.0,
@@ -3097,7 +3097,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 101
+        "ms": 99
       },
       "seconds": 0.11,
       "id": "trap-empty-extraction",
@@ -3143,7 +3143,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 333
+        "ms": 335
       },
       "seconds": 0.34,
       "id": "trap-form-not-submitted",
@@ -3187,9 +3187,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 180
+        "ms": 214
       },
-      "seconds": 0.18,
+      "seconds": 0.22,
       "id": "trap-near-miss-entity",
       "kind": "adversarial"
     },
@@ -3231,9 +3231,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 199
+        "ms": 180
       },
-      "seconds": 0.2,
+      "seconds": 0.18,
       "id": "trap-search-not-executed",
       "kind": "adversarial"
     },
@@ -3274,9 +3274,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 113
+        "ms": 98
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "trap-unsorted-cheapest",
       "kind": "adversarial"
     },
@@ -3317,9 +3317,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 107
+        "ms": 96
       },
-      "seconds": 0.11,
+      "seconds": 0.1,
       "id": "trap-wrong-field",
       "kind": "adversarial"
     },
@@ -3542,7 +3542,7 @@
           }
         }
       },
-      "seconds": 0.11,
+      "seconds": 0.13,
       "id": "ui-rendered-narrow",
       "kind": "adversarial"
     },
@@ -3586,16 +3586,16 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:60902/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:50273/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 151
+        "ms": 147
       },
-      "seconds": 0.16,
+      "seconds": 0.15,
       "id": "url-guard-holds-after-navigation",
       "kind": "adversarial"
     },
@@ -3706,9 +3706,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 191
+        "ms": 210
       },
-      "seconds": 0.19,
+      "seconds": 0.21,
       "id": "verifier-catches-listing-dump",
       "kind": "adversarial"
     },
@@ -3863,9 +3863,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4059
+        "ms": 4083
       },
-      "seconds": 4.06,
+      "seconds": 4.09,
       "id": "verifier-sparse-page-not-a-dump",
       "kind": "adversarial"
     },
@@ -3880,10 +3880,10 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 522,
-        "after": 522
+        "before": 565,
+        "after": 565
       },
-      "seconds": 0.05,
+      "seconds": 0.06,
       "id": "wall-clock-probe-history-isolated",
       "kind": "adversarial"
     }
