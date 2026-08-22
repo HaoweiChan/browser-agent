@@ -77,13 +77,18 @@ ABLATION_MODELS = [
 ALLOWED_MODELS = list(dict.fromkeys([DEFAULT_MODEL, *ABLATION_MODELS]))
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
-Each step: {"action": "navigate|click|fill|extract",
+Each step: {"action": "navigate|click|fill|extract|observe",
  "target": {"role": str|null, "name": str|null, "text": str|null, "near": str|null, "index": int|null} | null,
  "value": str|null,
  "anchor": str|null,
  "expected_state": {"url_contains": str} | {"text_visible": str} | {"role_visible": {"role": str, "name": str|null}} | null}
 Rules: `navigate` puts the URL in `value`. `extract` reads the target element's
-text as the answer. Targets are semantic (ARIA role + accessible name) — never
+text as the answer. `observe` asks for a closer look: an observation is capped
+and a long page is cut off mid-way, so when the answer is inside a container you
+can see but whose contents you cannot, target that container with `observe` and
+you are re-planned against that subtree alone — all of its elements, more of its
+text. It costs one planning call out of a small budget: ask once, then extract.
+Targets are semantic (ARIA role + accessible name) — never
 CSS selectors. `index` (0-based) picks the k-th match when several elements
 share a role, e.g. the first search result. `near` picks the match closest to a
 visible string instead of counting: use it when the element you want has no name
@@ -160,6 +165,32 @@ def stub_planner(plans: list):
     return plan
 
 
+def build_user_message(task: str, url: str | None, observation: dict | None = None,
+                       note: str | None = None) -> str:
+    """The user half of a planning prompt. Module-level and pure so a case can
+    grade it with no key and no spend (`planner-note-is-not-always-a-failure`).
+
+    `note` is rendered VERBATIM. It used to be wrapped in "A previous attempt
+    failed: …" here, which was true of the only caller at the time and became
+    false the moment M32 added one: a drill-down is a successful request for a
+    closer look, and telling the model it failed steers it away from the exact
+    container the answer is in. The framing now belongs to whichever caller
+    knows what happened — `agent.py`'s act-failure replan says "failed" in its
+    own note, and the drill-down does not (PR M32 cold review, finding 3).
+    """
+    user = f"Task: {task}\nStart URL: {url or 'none — choose one via navigate'}"
+    if observation:
+        from .observe import render
+
+        user += "\n\nCurrent page observation:\n" + render(observation)
+    if note:
+        # Re-plan: what just happened, plus the page (or subtree) as it is now.
+        # Plan the REMAINING work from here — the steps already executed are
+        # not re-issued.
+        user += f"\n\n{note}\nPlan only the steps still needed, from the observation above."
+    return user
+
+
 def live_planner(model: str = DEFAULT_MODEL):
     key = os.environ.get("OPENROUTER_API_KEY")
     if not key:
@@ -175,17 +206,7 @@ def live_planner(model: str = DEFAULT_MODEL):
             return json.load(resp)
 
     async def plan(task: str, url: str | None, observation: dict | None = None, note: str | None = None):
-        user = f"Task: {task}\nStart URL: {url or 'none — choose one via navigate'}"
-        if observation:
-            from .observe import render
-
-            user += "\n\nCurrent page observation:\n" + render(observation)
-        if note:
-            # Replan: the previous attempt and why it failed, plus the page as
-            # it actually is now. Plan the REMAINING work from here — the steps
-            # already executed are not re-issued.
-            user += (f"\n\nA previous attempt failed: {note}\n"
-                     "Plan only the steps still needed from the page above.")
+        user = build_user_message(task, url, observation, note)
         payload = {
             "model": model,
             "messages": [

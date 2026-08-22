@@ -382,7 +382,12 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
 
     from playwright.async_api import async_playwright
 
-    from .observe import observe
+    from .observe import DRILL_TEXT_HEAD, observe
+
+    # At most one scoped observation, produced by an `observe` step and consumed
+    # by the replan it triggers. A list rather than a variable so `execute`
+    # (nested) can write it without a `nonlocal` dance.
+    drilled: list[dict] = []
 
     answers: list = []
     async with contextlib.AsyncExitStack() as stack:
@@ -452,7 +457,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         raise StepError("task", f"blocked URL: {step.get('value')!r}")
                     await navigate(page, step["value"])
                     return
-                if action not in ("click", "fill", "extract"):
+                if action not in ("click", "fill", "extract", "observe"):
                     raise StepError("task", f"unknown action {action!r}")
                 # A key the resolver does not implement used to be dropped, and
                 # the step ran against whatever was left of its target — the plan
@@ -462,7 +467,26 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     raise StepError("task", f"unsupported target key(s) {sorted(unknown)}")
                 loc, tier = await resolve(page, step.get("target") or {})
                 rec["resolved"] = {"tier": tier, "description": str(step.get("target"))}
-                if action == "click":
+                if action == "observe":
+                    # An observation asserts nothing about the page, so there is
+                    # nothing for an expected_state to hold. Refused rather than
+                    # ignored (`resolver-unknown-target-key`'s rule): left to
+                    # `check_state`, a failing assertion raised StepError("act")
+                    # for a step that acted on nothing, diagnosed the run
+                    # `failure:act` and opened the act/replan recovery ladder for
+                    # it (M32 cold review, runner-up; case
+                    # observe-step-cannot-carry-expected-state).
+                    if step.get("expected_state"):
+                        raise StepError(
+                            "task", "an observe step cannot carry expected_state: "
+                                    f"{step['expected_state']}")
+                    # Drill-down (M32, ADR-019): re-observe THIS subtree with the
+                    # whole element budget and a longer text head, then hand it
+                    # to the replanner below. Reads the page and changes nothing,
+                    # so like `extract` it has no postcondition of its own.
+                    drilled.append(await observe(page, root=loc,
+                                                 text_head=DRILL_TEXT_HEAD))
+                elif action == "click":
                     await loc.click(timeout=10_000)
                 elif action == "fill":
                     # An element that cannot hold a value is the WRONG element,
@@ -555,7 +579,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 # Did this action change anything at all? The only evidence that
                 # separates a replan legitimately skipping work already done from
                 # one laundering an action that did nothing (replan-cannot-launder-noop-action).
-                before = await page.inner_text("body") if step["action"] != "extract" else None
+                before = (await page.inner_text("body")
+                          if step["action"] not in ("extract", "observe") else None)
                 try:
                     await execute(step, rec)
                     if url_guard and not url_guard(page.url):
@@ -609,14 +634,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
             # A replan's strategy switch belongs on the FIRST step of the new
             # plan — that is the attempt that differs from what failed. The rest
             # of the plan is ordinary execution and is not labelled recovery.
-            pending = None
+            pending = pending_recovery = None
             while si < len(steps):
                 if stop := budget_stop(budgets):
                     return done(failure="env", reason=stop)
                 step = steps[si]
-                rec, cls = await attempt(step, note=pending,
-                                         recovery="recovery" if pending else None)
-                pending = None
+                rec, cls = await attempt(step, note=pending, recovery=pending_recovery)
+                pending = pending_recovery = None
 
                 # --- Family 1: locate -> relocation (self-maintenance) --------
                 # Stale locator -> fresh a11y snapshot -> same intent at a
@@ -633,6 +657,70 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                             step = alt
                             break
 
+                # --- Drill-down: observe a subtree -> replan against it -------
+                # M32 (ADR-019). Not a recovery ladder: nothing failed. The
+                # planner looked at a capped observation, saw the container the
+                # answer is in and none of its contents, and asked for a closer
+                # look — progressive disclosure of the PAGE, not of the tool set
+                # (prompts/015). The scoped observation goes back through the
+                # same observation+note argument a replan already uses, and
+                # spends the same MAX_REPLANS budget, so a planner that keeps
+                # asking to look instead of acting runs out exactly like one that
+                # keeps failing (INV-3, budget_stop).
+                if step["action"] == "observe" and cls is None and drilled:
+                    scoped = drilled.pop()
+                    if budgets["replans"] >= MAX_REPLANS:
+                        # Loud, not a fall-through. `cls` is None here, so
+                        # letting the loop continue ran whatever the plan put
+                        # AFTER the observe — the run spent its whole planning
+                        # budget asking for a closer look, never got one, and
+                        # then answered from the observation the drill-down
+                        # existed to replace, reporting `success` (M32 cold
+                        # review, finding 1; case
+                        # observe-refused-drilldown-stops-the-run). `env` for
+                        # the same reason `budget_stop` uses it: a resource ran
+                        # out. The class of a ladder that failed to help is the
+                        # failure it was fixing (specs/000) — this ladder was
+                        # fixing nothing, so the exhaustion is the failure.
+                        return done(failure="env", reason=(
+                            f"step {rec['i']} asked to observe {step.get('target')} and the "
+                            f"replan budget is exhausted ({MAX_REPLANS}); the rest of this "
+                            "plan was written against an observation it asked to replace"))
+                    else:
+                        try:
+                            new_steps, usage = await planner(
+                                task, page.url, scoped,
+                                note=(f"step {rec['i']} asked to look closer at "
+                                      f"{step.get('target')}. The observation above is THAT "
+                                      "subtree only, not the whole page."))
+                        except PlanError as e:  # same split as the first plan
+                            budgets["llm_tokens"] += e.usage["llm_tokens"]
+                            budgets["llm_usd"] += e.usage["llm_usd"]
+                            return done(failure="env", reason=f"replanner rejected: {e}")
+                        except Exception as e:
+                            return done(failure="env", reason=f"replanner failed: {e}")
+                        budgets["llm_tokens"] += usage["llm_tokens"]
+                        budgets["llm_usd"] += usage["llm_usd"]
+                        # The one no-progress shape this branch can produce: a
+                        # plan that just asks to look at the same thing again.
+                        # Family 2's other two guards are about laundering a
+                        # FAILED action, and nothing failed here.
+                        if not new_steps or new_steps == steps[si:]:
+                            return done(failure="env", reason=(
+                                f"step {rec['i']} asked to observe {step.get('target')} and the "
+                                "replan made no progress (identical or empty plan)"))
+                        else:
+                            budgets["replans"] += 1
+                            pending = (f"replan #{budgets['replans']} after the drill-down at "
+                                       f"step {rec['i']}: {len(new_steps)} step(s) planned from "
+                                       "the subtree observation")
+                            # Same evolving prefix as family 2. The `observe`
+                            # step itself is dropped, not superseded: it did what
+                            # it was asked to do, and re-running it would be the
+                            # loop this budget exists to bound.
+                            steps = steps[:si] + new_steps
+                            continue
+
                 # --- Family 2: act -> postcondition invalidated -> replan -----
                 if cls == "act":
                     if budgets["replans"] >= MAX_REPLANS:
@@ -641,7 +729,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         try:
                             new_steps, usage = await planner(
                                 task, page.url, fresh,
-                                note=f"step {rec['i']} ({step['action']}) failed: {rec['note']}")
+                                note=("A previous attempt failed: "
+                                      f"step {rec['i']} ({step['action']}) failed: {rec['note']}"))
                         except PlanError as e:  # same split as the first plan
                             budgets["llm_tokens"] += e.usage["llm_tokens"]
                             budgets["llm_usd"] += e.usage["llm_usd"]
@@ -672,6 +761,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         else:
                             budgets["replans"] += 1
                             pending_supersede.append(rec)
+                            pending_recovery = "recovery"
                             pending = (f"replan #{budgets['replans']} after act failure at step "
                                        f"{rec['i']}: {len(new_steps)} step(s) planned from the "
                                        "page as it actually is")

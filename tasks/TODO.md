@@ -37,7 +37,7 @@ a fixture twin of probe #3 (most-quoted author) and `live-books-cheapest-travel`
 go green against ground truth; D22 is re-measured and restated, not deleted;
 replan rate published per D7.
 
-### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
+### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: in-progress]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
 but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
 page text the agent captured and absent from the a11y elements the planner
@@ -76,55 +76,34 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M34 — an answer is still never checked for being responsive            [status: pr]
-Spec: M7 declared this gap, M10's probe demonstrated it, and M10's fix closed
-only the "which X has the most Y" sentence shape. The general defect is live on
-merged main and reproduces on a plain single-hop extraction: a string that IS on
-the page ("Warning!") passes `grounded`, `not_a_dump`, `identity_anchors` and
-`answer_nonempty` while answering nothing. Third demonstration that
-responsiveness is not pattern-matchable — a fourth regex over the task string is
-very likely the wrong answer, and `T-R31`/`T-R32` already name the ceiling of
-the last one. The intermittency matters: probe #2 answered this same task
-correctly once, so the violation is nondeterministic and a single green run
-proves nothing.
-Depends: M29
-Acceptance: an adversarial case reproduces the grounded-but-unresponsive
-wrong-success and is watched red first; no terminal non-failure status can carry
-an answer that fails a responsiveness check; the fix is demonstrated on the
-deployed build across repeated runs of the same task, not one lucky roll; the
-answer-shape ceiling that remains is named in `docs/support-matrix.md` rather
-than left implied.
-Out of scope: the extraction-quality gap (M28) — this task is about never
-reporting success for an unresponsive answer, not about extracting better.
-Status (2026-08-22, PR #30 pending, round 2 repaired): the adversarial case
-(`verifier-responsive-not-page-furniture`) landed and was watched red
-first, then the fix (`verify()`'s `not_page_furniture`, ADR-016) turned it
-green. Round 1 (R1, HIGH) found the first cut too broad — it flagged a
-correct listing→detail title/name as furniture, a false positive on this
-domain's single most common navigation shape — repaired by comparing each
-value's local page CONTEXT, not the bare value, against the other pages a
-run visited; the numeric exemption is gone, subsumed by the same rule
-(`verifier-listing-detail-title-not-furniture` pins the repaired shape).
-Round 2 (3 MEDIUM) found: (R2-1) the context window could still anchor on
-the wrong occurrence when a value legitimately repeats on the SAME page —
-repaired by anchoring on the resolved element's actual DOM offset
-(`TEXT_OFFSET_JS`/`_closest_occurrence`), pinned by
-`verifier-context-anchors-real-occurrence`; (R2-2) a fixture-parity claim
-("the same 50-category sidebar, same order") was false — restated honestly
-as a representative subset; (R2-3) `docs/support-matrix.md` D24 and
-ADR-016 carried round-by-round repair narrative and a superseded gate
-number, which belong only in `tasks/reviews/pr30-r*.json` — both rewritten
-to state current behaviour only. Every round, the original "Warning!"/
-"Travel" defect was re-confirmed to still fail loudly. `fast` 108/108,
-`invariant` 38/38, `live` 9/9, all against unmoved baseline. The surviving
-ceilings are named in `docs/support-matrix.md` D24. **Not closing this
-task**: the acceptance line "demonstrated on the deployed build across
-repeated runs" cannot be met from this environment (no LLM key, the
-deployed URL still serves `main`) — that repeated-run confirmation is the
-one thing left, run post-merge the same way M29 ran it for M10, and
-ADR-015 criterion 5 stays RED until it does.
-
 ## Debt
+
+### T-M32-1 — the reviewer UI has no phase for an `observe` step            [status: todo]
+Origin: M32 (ADR-019), found while adding the drill-down.
+Spec: `phaseFor(s)` in `src/browser/server.py` maps `navigate` -> "browser" and
+`extract` -> "verification" and everything else to "action". An `observe` step
+reads the page and changes nothing, so showing it as "action" tells a watcher
+the agent is acting when it is looking. One line, but that file is M35's
+(the visitor-facing console) and this PR must not collide with it.
+Repro: run a task whose plan starts with an `observe` step and watch the SSE
+progress bar — the "action" phase lights up before anything is done.
+Acceptance: `observe` maps to a reading phase, and `ui-execution-progress`
+covers the mapping.
+
+### T-M32-2 — the post-edit invariant hook runs in the wrong worktree            [status: todo]
+Origin: M32, found while implementing.
+Spec: `.claude/hooks/post-edit-invariant.sh` cds to `$CLAUDE_PROJECT_DIR` and
+prefers `.venv/bin/python` there. When the session is working inside a
+`.claude/worktrees/` sibling, that variable still points at the ORIGINATING
+worktree, so the hook grades a different checkout than the one being edited,
+and with a bare `python3` if that checkout has no `.venv` — which reports
+`ModuleNotFoundError: No module named 'fastapi'` for 14 of 38 invariant cases
+on every single edit under `src/`. Loud, so nothing was silently wrong, but the
+feedback it gives is about neither the edit nor the tree.
+Repro: edit any file under `src/` from a worktree whose parent checkout has no
+`.venv` and read the hook's output.
+Acceptance: the hook resolves the tree from the edited file's path (or from
+`git rev-parse --show-toplevel` on it) rather than from `$CLAUDE_PROJECT_DIR`.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5

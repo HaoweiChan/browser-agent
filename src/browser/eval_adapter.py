@@ -475,7 +475,7 @@ def _run_verifier_case(case: dict) -> dict:
 
 
 def _run_observe_case(case: dict) -> dict:
-    from .observe import observe
+    from .observe import DRILL_TEXT_HEAD, observe
 
     url = f"{_base_url()}/fixtures/{case['input']['fixture']}"
 
@@ -504,6 +504,15 @@ def _run_observe_case(case: dict) -> dict:
             # contract. Same lesson as the screenshot bound one level up —
             # try/except bounds error propagation, never latency.
             await page.goto(url)
+            if drill := case["input"].get("drill"):
+                # The scoped observation, reached the way production reaches it:
+                # through the real resolver, from a target a plan could write.
+                # The eval harness does not get its own path to a subtree —
+                # that would grade something the executor never runs.
+                from .resolver import resolve
+
+                loc, _tier = await resolve(page, drill)
+                return await observe(page, root=loc, text_head=DRILL_TEXT_HEAD)
             return await observe(page)
         finally:
             await ctx.close()
@@ -524,13 +533,51 @@ def _run_observe_case(case: dict) -> dict:
     names, roles = {e["name"] for e in obs["elements"]}, {e["role"] for e in obs["elements"]}
     starved = ([n for n in exp.get("must_include_names", []) if n not in names]
                + [r for r in exp.get("must_include_roles", []) if r not in roles])
+    # The other direction, and the reason M32 exists: a name the page-level
+    # observation must NOT reach, because it sits past MAX_ELEMS in document
+    # order. Asserting the cap rather than assuming it — this is what makes
+    # `observe-drilldown-past-max-elems` a drill-down case and not a plan that
+    # would have worked anyway, and it reddens if MAX_ELEMS is ever raised to
+    # "fix" the defect instead of disclosing the subtree (ADR-019).
+    leaked = [n for n in exp.get("must_exclude_names", []) if n in names]
+    # The other half of what an observation discloses: its text head. A drill
+    # widens it (DRILL_TEXT_HEAD), and on a page whose content carries no
+    # addressable role that head is the ONLY thing the planner gets.
+    text_missing = [t for t in exp.get("text_head_contains", []) if t not in obs["text_head"]]
     return {
-        "passed": not missing and not unnameable and not starved,
+        "passed": not missing and not unnameable and not starved and not leaked
+                  and not text_missing,
         "missing": missing,
         "advertised_unresolvable": unnameable,
         "starved_by_chrome": starved,
+        "inside_the_cap_after_all": leaked,
+        "text_head_missing": text_missing,
         "n_elements": len(obs["elements"]),
     }
+
+
+def _run_planner_prompt_case(case: dict) -> dict:
+    """What the LIVE planner actually sends, graded with no key and no spend.
+
+    `build_user_message` is the half of the live planner that is pure string
+    assembly, and it was where a note describing a SUCCESSFUL drill-down got
+    wrapped in "A previous attempt failed" — true of the only caller that
+    existed when the wrapper was written, false for the one M32 added, and
+    invisible to every case here because the `fast` suite stubs the planner one
+    level above this (M32 cold review, finding 3)."""
+    from .planner import build_user_message
+
+    wrong = []
+    for probe in case["input"]["prompts"]:
+        got = build_user_message(probe.get("task", "t"), probe.get("url"),
+                                 probe.get("observation"), probe.get("note"))
+        for want in probe.get("has", []):
+            if want not in got:
+                wrong.append({"missing": want, "note": probe.get("note"), "got": got})
+        for want in probe.get("lacks", []):
+            if want in got:
+                wrong.append({"present": want, "note": probe.get("note"), "got": got})
+    return {"passed": not wrong, "wrong": wrong}
 
 
 def _run_fixture_case(case: dict) -> dict:
@@ -560,8 +607,20 @@ def _run_fixture_case(case: dict) -> dict:
     # the case fails loudly; stubbing it would grade a capability nobody ran
     # (CLAUDE.md rule 4).
     planner = live_planner() if inp.get("planner") == "live" else stub_planner(plans)
-    result = _run_agent(inp["task"], inp.get("url", fixture_url), planner, url_guard=guard,
-                        own_browser=inp.get("own_browser", False))
+    # What the planner was actually SHOWN, per call. A stub plan is hand-written
+    # (every plan in this repo is), so a case whose point is "the planner could
+    # not have known this string" proves nothing from the plan alone — the M32
+    # drill-down is exactly that shape. This records the observation each call
+    # received so `expect.planner_saw` can grade the disclosure itself rather
+    # than the hand-written plan that follows it.
+    shown: list = []
+
+    async def recording_planner(task, url, observation=None, note=None):
+        shown.append(observation)
+        return await planner(task, url, observation, note)
+
+    result = _run_agent(inp["task"], inp.get("url", fixture_url), recording_planner,
+                        url_guard=guard, own_browser=inp.get("own_browser", False))
 
     # Re-verify with ground truth the runtime cannot have: hand labels, identity
     # anchors, and the fixture's own record of what it received.
@@ -594,6 +653,18 @@ def _run_fixture_case(case: dict) -> dict:
         checks["recovery"] = bool(recovered) == exp["recovery"]
     if "replans" in exp:
         checks["replans"] = result["budgets_spent"]["replans"] == exp["replans"]
+    # One entry per planner call, in order: {"has": [...], "lacks": [...]} of
+    # strings that must / must not appear in the observation THAT call was given,
+    # rendered exactly as the live planner renders it into its prompt. The call
+    # count is graded too — a disclosure that never happened would otherwise
+    # pass by having no call to check.
+    if "planner_saw" in exp:
+        from .observe import render
+        seen = [render(o) if o else "" for o in shown]
+        checks["planner_saw"] = len(seen) == len(exp["planner_saw"]) and all(
+            all(w in text for w in want.get("has", []))
+            and not any(w in text for w in want.get("lacks", []))
+            for want, text in zip(exp["planner_saw"], seen))
     # A "recovery" label claims a strategy CHANGED. An attempt identical to the
     # one it replaced is a retry, and specs/001 keeps retries out of the
     # recovery metric by construction, not by intention.
@@ -2790,6 +2861,7 @@ KINDS = {
     "mutation": _run_mutation_case,
     "observe": _run_observe_case,
     "parse-plan": _run_parse_plan_case,
+    "planner-prompt": _run_planner_prompt_case,
     "readyz-transitions": _run_readyz_case,
     "relocate": _run_relocate_case,
     "schema": _run_schema_case,

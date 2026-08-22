@@ -78,7 +78,7 @@ appears, in order — no post-hoc reconstruction).
 ```json
 {
   "i": 1,
-  "action": "navigate | click | fill | extract",
+  "action": "navigate | click | fill | extract | observe",
   "target": {"role": "...", "name": "...", "text": "...", "near": "...", "index": 0} ,
   "value": "string | null",
   "anchor": "string | null",
@@ -116,6 +116,26 @@ appears, in order — no post-hoc reconstruction).
   to be dropped, and the step ran against whatever was left of the target —
   a plan quietly reinterpreted and a result reported for the weaker task that
   actually ran (`resolver-unknown-target-key`).
+- `observe` (M32, `ADR-019`) is the drill-down: its `target` names a container
+  the planner was already shown, and the executor re-runs the observation
+  scoped to that element — the whole `MAX_ELEMS` budget spent inside the
+  subtree, and a 1,500-character text head instead of 300. The result reaches
+  the planner as the `observation` argument of the next planning call, with a
+  `note` saying which target was drilled; there is no second channel and no
+  second observation format. It reads the page and changes nothing, so like
+  `extract` it carries no `expected_state`, records `page_changed: null`, and
+  never wears `retry_or_recovery: "recovery"` — nothing failed, and a
+  drill-down counted as a recovery rung inflates a published metric. An
+  `expected_state` on an `observe` step is refused as `failure:task`: there is
+  nothing for it to assert (`observe-step-cannot-carry-expected-state`). It
+  spends one call from the existing `MAX_REPLANS` budget and adds no budget of
+  its own, so the per-run call ceiling is unchanged. A refused drill-down —
+  budget exhausted, or a replan that returned nothing usable — ends the run as
+  `failure:env` naming the target that was asked for; it never falls through to
+  the steps the plan put after the `observe`, because those were written
+  against the observation the drill-down asked to replace
+  (`observe-refused-drilldown-stops-the-run`,
+  `observe-drilldown-no-progress-stops-the-run`).
 - `target.index` (0-based) selects the k-th match instead of requiring
   uniqueness — "the first search result" is a browsing primitive, not site
   knowledge. Without it, several matches remain a loud `locate` failure.
@@ -159,10 +179,14 @@ appears, in order — no post-hoc reconstruction).
   relocated at a different tier, and an `act` failure replanned from a fresh
   observation — on a replan the flag sits on the FIRST step of the new plan,
   the one that differs from what failed. No `"retry"` rung exists yet; when a
-  re-observe or wait rung is added it logs as `retry` and stays out of the
-  recovery metric by construction, not by intention.
+  wait rung is added it logs as `retry` and stays out of the recovery metric by
+  construction, not by intention. M32's re-observe rung (`observe`, `ADR-019`)
+  logs as neither: it is not a second attempt at anything, so it carries a note
+  and no label at all — this sentence used to promise it would log as `retry`,
+  and the drill-down falsified that in the same file that shipped it.
 - `page_changed` — did this action change the page's text at all? `null` on
-  `extract` (which changes nothing by definition) and on the pre-plan navigate.
+  `extract` and `observe` (neither changes anything by definition) and on the
+  pre-plan navigate.
   It exists for one decision: a replan may drop the step it replaces only when
   that step actually moved the page. Two runs can be identical in plan, trace
   and failure — a click that lands, a postcondition that never arrives, a
