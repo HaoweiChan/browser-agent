@@ -3017,7 +3017,27 @@ def _run_doc_counts_case(case: dict) -> dict:
             "got": {"counts": counts, "domains": domains}}
 
 
+def _check_examples_cover_matrix() -> dict:
+    """Every real-site row of docs/support-matrix.md has a Try example on the
+    page, and no example points at a row that is not there (M35 acceptance,
+    PR #32 R1). Pure code: the EXAMPLES keys are read out of the PAGE source,
+    the rows out of parse_matrix() on the real doc -- the rendered form case
+    grades the card mechanics against a stub payload and cannot see a new or
+    renamed real-site row."""
+    from .server import parse_matrix
+
+    page = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    block = page.split("const EXAMPLES = {", 1)[1].split("\n};", 1)[0]
+    examples = set(re.findall(r'^\s*"([^"]+)":\s*\{', block, re.M))
+    rows = {r["domain"] for r in parse_matrix()["rows"] if not r["domain"].endswith(" fixture")}
+    return {"passed": examples == rows,
+            "wrong": {"rows_without_example": sorted(rows - examples),
+                      "examples_without_row": sorted(examples - rows)},
+            "got": {"examples": sorted(examples), "rows": sorted(rows)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
+              "examples-cover-matrix": _check_examples_cover_matrix,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
               "mutation-metrics": _check_mutation_metrics,
