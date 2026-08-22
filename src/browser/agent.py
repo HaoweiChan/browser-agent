@@ -49,6 +49,20 @@ PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, 
 # with "look at" in ordinary English, and a false refusal on a reviewer's task
 # costs honesty points (screening-word-boundary).
 #
+# M10 probe #2 (docs/analysis.md §8a-2) found the same false-negative shape
+# again, on the destructive-verb half rather than the login half: "permanently
+# deleting all emails" matched neither the inflection (`delete` only, not
+# `deleting`) nor the determiner set (`my|the|this` only, not `all`), so the
+# agent opened a real browser against mail.google.com instead of refusing at
+# $0.00 (run b07d62d3). Widened the same way the login half was: inflections
+# (delete/deletes/deleted/deleting) and a wider, still-adjacent determiner set
+# (my/the/this/these/those/all/every/any/our) — adjacency is kept so an
+# unrelated mention ("what does the delete button do?") does not trip it
+# (case l5-refuse-delete-determiners). Deliberately NOT widened to
+# remove/erase/wipe/clear: nothing exercised that gap, and guessing at
+# synonyms nobody probed is exactly the unwatched widening this repo's
+# eval-first rule exists to prevent — D21, docs/support-matrix.md.
+#
 # Latin terms need \b (case screening-word-boundary: 'signing' contains 'signin');
 # CJK terms must stay boundary-free — \b never matches inside a CJK run.
 SCOPE_BLOCK = re.compile(
@@ -57,7 +71,7 @@ SCOPE_BLOCK = re.compile(
     r"|\bcheck-?out\b"
     r"|\bcredit card\b"
     r"|\bplace (?:an?|the) order\b"
-    r"|\bdelete (?:my|the|this)\b"
+    r"|\bdelet(?:e|es|ed|ing)\s+(?:my|the|this|these|those|all|every|any|our)\b"
     r"|登入|登录|密碼|密码|驗證碼|验证码|付款|購買|购买|刪除|删除|下載|下载",
     re.IGNORECASE,
 )
@@ -593,5 +607,5 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     # One extract -> scalar answer; several -> list (contract: answer string|list).
     answer = answers[0] if len(answers) == 1 else (answers or None)
     # The run is graded by the verifier, not by having reached this line.
-    verdict = verify(trace=trace, extractions=extractions, answer=answer)
+    verdict = verify(trace=trace, extractions=extractions, answer=answer, task=task)
     return done(answer=answer, final_url=final_url, digest=digest, verdict=verdict)

@@ -1,0 +1,11 @@
+{"pr":25,"round":1,"commit":"0789eb1",
+ "gate_after":{"invariant":"37/37","fast":"105/105","cost_usd":0.0},
+ "resolutions":[
+  {"id":"R1","outcome":"fixed","case":"support-matrix D21 (docs/support-matrix.md), cross-referenced from src/browser/agent.py's SCOPE_BLOCK comment and docs/analysis.md #8a-2",
+   "red_watched":"not a code path -- the defect was a dangling prose citation (a doc claiming a declaration that did not exist); reproduced the reviewer's own repro (`grep -n 'remove\\|erase\\|wipe\\|clear' docs/support-matrix.md` -> no hits) before adding the row, so the grep's emptiness IS the red state here",
+   "note":"D21 declares the remove/erase/wipe/clear gap by number; both prose sites (agent.py comment, analysis.md) now cite D21 instead of a bare 'docs/support-matrix.md' claim, so support-matrix-cites-real-cases' citation-resolution check has something real to resolve."},
+  {"id":"R2","outcome":"fixed","case":"verifier-aggregate-ground-truth-untouched (evals/adversarial/), plus support-matrix D22",
+   "red_watched":"before _run_verifier_case learned the 'aggregate' input key: {'passed': False, 'error': \"unknown verifier probe(s): ['aggregate']\"}. After adding the key and the three rows, all three pass: no-ground-truth fails via aggregate_needs_comparison (the reviewer's exact repro, answer='Best Seller Badge Product' on a page that states the superlative directly), ground-truth-correct passes with aggregate_needs_comparison never appearing in checks at all (proving the guard did not fire, not just that the verdict happened to be PASS), ground-truth-wrong still fails but via answer_matches only.",
+   "note":"Took both branches per the coordinator's routing rather than the cheaper one: D22 (docs/support-matrix.md) declares the false-refusal ceiling honestly -- the guard fails every matching question with no ground truth, including one a single extraction answers correctly -- and the new case pins the L2-untouched claim verifier.py's own comment made but nothing previously proved. verifier.py's two comment blocks now cite D22 and the new case by name instead of asserting the claim bare."},
+  {"id":"R3","outcome":"debt","debt_id":"T-R30"},
+  {"id":"R4","outcome":"debt","debt_id":"T-R31"}]}

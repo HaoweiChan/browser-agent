@@ -410,7 +410,7 @@ def _run_verifier_case(case: dict) -> dict:
     # A probe the adapter does not understand must be loud. Silently skipping an
     # unknown key scored this case PASS while it checked nothing at all — a case
     # that proves nothing is worse than no case, because it reads as coverage.
-    unknown = set(inp) - {"kind", "compare", "anchors", "superseded"}
+    unknown = set(inp) - {"kind", "compare", "anchors", "superseded", "aggregate"}
     if unknown:
         return {"passed": False, "error": f"unknown verifier probe(s): {sorted(unknown)}"}
     for got, want, should_match in inp.get("compare", []):
@@ -454,6 +454,23 @@ def _run_verifier_case(case: dict) -> dict:
         )
         if v["checks"]["identity_anchors"] != sc["pass"]:
             wrong.append({"anchors": sc["anchors"], "should_pass": sc["pass"]})
+    # PR #25 R2: the aggregate/superlative guard (verify()'s task kwarg) is
+    # pinned FAIL-only by verifier-aggregate-superlative-fails-loud. This is
+    # the other direction -- proof that supplying expect.answer (ground truth)
+    # bypasses the guard entirely and answers_match decides on its own merits,
+    # which is what the comment above the guard in verifier.py claims and
+    # nothing previously checked.
+    for sc in inp.get("aggregate", []):
+        v = verify(
+            trace=[{"i": 1, "action": "extract", "postcondition_ok": True}],
+            extractions=[{"value": sc["value"], "page_text": sc["page_text"]}],
+            answer=sc["value"],
+            expect=sc.get("expect"),
+            task=sc["task"],
+        )
+        if (v["verdict"] == "PASS") != sc["pass"]:
+            wrong.append({"aggregate": sc["task"], "should_pass": sc["pass"],
+                          "verdict": v["verdict"], "checks": v["checks"]})
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -555,6 +572,7 @@ def _run_fixture_case(case: dict) -> dict:
         answer=result["answer"],
         expect=exp,
         state=state,
+        task=inp["task"],
     )
     checks = {}
     if "status" in exp:
@@ -2157,7 +2175,8 @@ def _run_verifier_labels_case(case: dict) -> dict:
     tp = fp = fn = tn = 0
     fp_ids, fn_ids = [], []
     for r in records:
-        v = verify(trace=r["trace"], extractions=r["extractions"], answer=r["answer"])
+        v = verify(trace=r["trace"], extractions=r["extractions"], answer=r["answer"],
+                   task=r.get("task"))
         predicted_pass, actually_correct = v["verdict"] == "PASS", r["label"] == "correct"
         if predicted_pass and actually_correct:
             tp += 1
@@ -2472,7 +2491,38 @@ def _run_doc_counts_case(case: dict) -> dict:
         if stated and stated not in row:
             wrong.append({"d8_range": {"the_cited_reports_show": stated,
                                        "row": row[:300]}})
-    return {"passed": not wrong, "wrong": {"docs": wrong}, "got": {"counts": counts}}
+
+    cov = inp.get("analysis_coverage")
+    domains: dict[str, int] = {}
+    if cov:
+        golden = len(list((RUN_ROOT / "evals" / "golden").glob("*.json")))
+        adversarial = len(list((RUN_ROOT / "evals" / "adversarial").glob("*.json")))
+        for d in ("golden", "adversarial"):
+            for p in (RUN_ROOT / "evals" / d).glob("*.json"):
+                dom = json.loads(p.read_text()).get("domain")
+                if dom:
+                    domains[dom] = domains.get(dom, 0) + 1
+        doc_path = RUN_ROOT / cov["doc"]
+        text = doc_path.read_text(encoding="utf-8")
+        want_split = cov["split_quote"].format(golden=golden, adversarial=adversarial,
+                                                total=golden + adversarial)
+        if want_split not in text:
+            wrong.append({"analysis_does_not_say": want_split})
+        try:
+            start = text.index(cov["section_start"])
+            end = text.index(cov["section_end"], start)
+        except ValueError:
+            wrong.append({"coverage_section_not_found": cov})
+        else:
+            section = text[start:end]
+            # A domain with a live case must have its own row in the section —
+            # this is the exact shape M8 broke: quotes.toscrape.com shipped
+            # three cases and never got a row (docs/analysis.md §6, M10 audit).
+            missing = sorted(d for d in domains if d not in section)
+            if missing:
+                wrong.append({"coverage_missing_domains": missing})
+    return {"passed": not wrong, "wrong": {"docs": wrong},
+            "got": {"counts": counts, "domains": domains}}
 
 
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
