@@ -1,0 +1,59 @@
+{
+  "pr": 29,
+  "round": 3,
+  "resolutions": [
+    {
+      "id": "R15",
+      "resolution": "fixed",
+      "ci_run": 32561955630,
+      "ci_sha": "1c54183",
+      "ci_conclusion": "success",
+      "detail": "Root cause was NOT the ceiling alone: the PR had gone CONFLICTING against main, and GitHub creates no pull_request run for a conflicting PR, so later pushes produced no runs. Merged origin/main (7 conflicts: history.jsonl unioned by timestamp; INDEX/DONE/analysis/README/TODO/docs-numbers reconciled). Then both ceilings were measured ON CI over four attempts of the shipped tree (d173340, 116 fast / 48 invariant): invariant 16.47 / 15.85 / 14.80 / 15.60s; fast 69.54 / 74.06 / 69.37 / 74.04s. ADR-013's rule (slowest x 1.15, round up to five): 16.47 x 1.15 = 18.9 -> 20; 74.06 x 1.15 = 85.2 -> 90. Mechanism made symmetric: EVAL_WALL_BUDGET_S_FAST / EVAL_WALL_BUDGET_S_INVARIANT, one variable per suite, which is what ADR-013 D3 already ruled `fast` needed. Local ceilings stay 75/15 (locally measured). .eval-baseline.json untouched.",
+      "verified_by_orchestrator": "gh run list --branch task/M31 -> success at 1c54183 and d173340, failure at d5bf1ac and 0771679. CI log at 32561955630: invariant 48/48 = 1.000, fast 116/116 = 1.000, both steps completed. gh pr view 29 -> MERGEABLE / CLEAN."
+    },
+    {
+      "id": "R16",
+      "resolution": "fixed",
+      "case": "extract-all-declared-intent-beats-wording, extract-all-undeclared-intent-fails-loud",
+      "suite": "fast+invariant",
+      "detail": "The third regex is DELETED, not widened. `extract_all` now requires `rank: true|false` — the planner, the one component that read the request, states whether the answer is the set or one item of it; code still does every comparison, and `rank: true` with no ranking word in the task refuses rather than picking. A step that omits it is `failure:task`. The declaration is echoed into the TraceStep (`contract-trace-schema` went red on the new key first).",
+      "watched_red": "both cases before the fix: status success, answer ['Aurora Desk Lamp $39.00','Aurora Desk Lamp Pro $59.00','Meridian Wall Clock $24.50','Cobalt Floor Rug $18.00'] for \"Check each product and tell me which one is the cheapest\" — declared case checks {status: true, verdict: false}, undeclared case checks {status: false}. extract-all-list-task-keeps-every-row and extract-all-cheapest-wording-still-reduces stay green; 6 unit rows added, row 10 watched red on its own with the gate removed."
+    },
+    {
+      "id": "R17",
+      "resolution": "fixed",
+      "detail": "The miscited T-CHEAPEST-WORDING upgrade path went with the deleted regex. Surviving cites are all about the plan lint, which is what that block is about."
+    },
+    {
+      "id": "R18",
+      "resolution": "fixed",
+      "detail": "README and ADR-017 now publish EVERY `fast` run history.jsonl records, at both case counts, with partial-score runs labelled: 114 cases -> 11 green (64.25-64.98) + 4 at 113/114; 116 cases -> 9 green (64.17-64.71) + 3 intermediate; invariant 48 cases -> 12.44-12.96. Re-derived: 64.71 x 1.15 -> 75, 12.96 x 1.15 -> 15 — both committed local numbers survive the fuller data."
+    },
+    {
+      "id": "R19",
+      "resolution": "fixed",
+      "detail": "The projection was right: 80 was the next coin flip — CI fast measured 74.06s against it, 8% of margin on a runner whose own spread across the four attempts is 6.8%, the same ratio that produced the local 60.24s refusal. CI fast ceiling -> 90. No promise left standing in place of a measurement."
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [],
+  "human_decision": "amend the ceiling (option A) — relayed after the round-3 circuit breaker",
+  "ci": {
+    "run": 32561955630,
+    "sha": "1c54183",
+    "conclusion": "success",
+    "invariant": "48/48 = 1.000, wall 15.25s (ceiling 20)",
+    "fast": "116/116 = 1.000, wall 71.47s (ceiling 90)"
+  },
+  "local_gate": {
+    "invariant": "48/48 = 1.000, wall 12.61s (ceiling 15)",
+    "fast": "116/116 = 1.000, wall 64.49s (ceiling 75)",
+    "live": "9/9, $0.0000"
+  },
+  "commits": {
+    "4b41d6b": "R16/R17 — CI ceilings deliberately provisional for the measurement run, stated in the message",
+    "d173340": "merge origin/main, which unblocked CI",
+    "1c54183": "CI-measured ceilings + R18"
+  },
+  "no_verify_used": false
+}
