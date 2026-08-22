@@ -1,0 +1,15 @@
+{
+  "id": "published-band-matches-the-ledger",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "published-band"
+  },
+  "provenance": "PR #29 R21. Three times in this PR a published wall-clock band failed to match the `evals/report/history.jsonl` committed beside it: nine of fifteen runs published as 'every run the ledger records', four values that appear in no recorded run at that case count, the two slowest `invariant` runs dropped unlabelled, and a ceiling derived from a maximum (64.71s) that was never measured. Nothing graded any of it, which is why prose drifted that far — and the same selective-band presentation is what ADR-013 Decision 4 was withdrawn over. This grades the PROPERTY, not the snapshot: `history.jsonl` grows on every gate run, so a check that string-matched the published list would go red on the next run rather than on a regression. It asserts that the doc's case count is the current one, that the published slowest run is at least the ledger's slowest at that count, and that the committed ceiling is at least ADR-013's rule applied to it.",
+  "triage": {
+    "class": "doc-drift",
+    "note": "tagged invariant. The cost is deliberate and is the same one `docs-numbers-are-derived` charges: a run slower than the published band reddens the next gate run until the band is re-measured, and adding a case to a suite reddens it until the band is re-measured at the new count. A band nobody re-measures is the thing that produced R21."
+  }
+}

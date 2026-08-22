@@ -3,7 +3,7 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each measured where it is enforced — local `fast` 60 → **75s**, local `invariant` **15s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five), read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → **80s**, local `invariant` **20s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `evals/run.py` `over_budget()`
 
@@ -41,44 +41,48 @@ They are regression guards for three silent-success defects (PR #29 R1, R2, R3)
 and the local pre-commit hook runs `fast` alone. A guard the hook does not run
 is worth less than the 4.9s it costs.
 
-### 2. The local `fast` ceiling is 75s, measured
+### 2. The local `fast` ceiling is 80s, computed from the ledger
 
-The band is every `fast` run `evals/report/history.jsonl` records for the
-tree, not a selection from it. The first version of this decision published
-nine of the fifteen runs at 114 cases and called the spread 0.50s when the
-committed history showed 64.25-64.98 — the same selective presentation ADR-013
-Decision 4 was withdrawn over, in the decision that amends it (PR #29 R18).
+Every published band here is computed from `evals/report/history.jsonl` — the
+ledger committed in this repo — and `published-band-matches-the-ledger` grades
+that property on every run. It has to, because three bands in this PR did not
+match the ledger beside them: nine of fifteen runs published as "every run the
+ledger records", four values that appear in no recorded run, the two slowest
+`invariant` runs dropped unlabelled, and a maximum (64.71s) the ceiling was
+derived from that was never measured (PR #29 R18, R21). That is the same
+selective presentation ADR-013 Decision 4 was withdrawn over, repeated in the
+decision that amends it.
 
-- **114 cases, 11 green runs**: 64.25 / 64.32 / 64.58 / 64.59 / 64.63 / 64.64 /
-  64.64 / 64.68 / 64.75 / 64.95 / 64.98s. Four further runs scored 113/114
-  (64.48 / 64.59 / 64.61 / 64.66s) — intermediate tree states while cases were
-  being fixed, labelled rather than dropped.
-- **116 cases, the tree this branch ships, 9 green runs**: 64.17 / 64.34 /
-  64.53 / 64.54 / 64.55 / 64.56 / 64.63 / 64.68 / 64.71s, plus three
-  partial-score intermediate runs (64.39 at 114/116, 64.43 at 113/116, 64.79 at
-  115/116).
+**The ledger's numbers, at the case count this branch ships:**
+
+- Slowest recorded `fast` run at 119 cases: **66.5s** — 7 runs:
+  64.59 / 64.61 / 64.83 / 65.15 / 65.41 / 65.53 / 66.5s.
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 64.71 × 1.15 = 74.4 → **75** on the shipped tree (and 64.98 × 1.15
-= 74.7 → 75 on the wider 114-case set, so the number does not depend on which
-band is used). The same rule that set CI's 80, applied to a local band, not a
-number chosen to clear the runs.
+five — gives 65.53 × 1.15 = 75.4 → **80**. The band published for the earlier
+114- and 116-case trees is superseded rather than corrected in place: it was
+derived by hand from a subset, and the point of the grader is that nobody has
+to trust a hand-derived band again. The rule is unchanged; only the reading of
+it was wrong.
 
-This is a real loosening and it is not disguised as anything else. The margin
-against the observed band is ~10s where it used to be ~0.2s, and that is the
-point: a ceiling whose whole job is to catch drift cannot also be the thing
-that fails on drift-free commits. What has NOT changed is the mechanism — the
-ceiling is still applied by `evals/run.py` to the run it just measured, still
-exits non-zero, and is still graded by `fast-wall-clock-budget`.
+Margin against the observed band is ~14s where before M31 it was ~0.2s. That is
+a real loosening, and it is the point: a ceiling whose job is to catch drift
+cannot also be the thing that fails on drift-free commits — this one refused a
+commit that changed nothing but JSON.
 
-`.eval-baseline.json` is untouched. This is a wall-clock ceiling, not a score
-baseline, and `--update-baseline` was not run.
+### 3. `invariant` gets a ceiling: 20s
 
-### 3. `invariant` gets a ceiling: 15s
+- Slowest recorded `invariant` run at 51 cases: **14.12s** — 9 runs:
+  12.72 / 12.74 / 12.75 / 12.79 / 12.98 / 13.01 / 13.25 / 13.45 / 14.12s.
 
-Measured over five runs of the shipped 48-case tree: **12.44 / 12.48 / 12.50 /
-12.58 / 12.96s**; the same +15% round-up rule gives 12.96 × 1.15 = 14.9 →
-**15**. Two suites now have numbers, and
+The same rule gives 14.12 × 1.15 = 16.2 → **20**.
+
+This number was **15** until PR #29 R21, and that was a reading error, not a
+rule change: the band behind it published five runs of a ledger holding
+sixteen, dropping the two slowest (13.06 and 13.57s) without labelling them.
+13.57 × 1.15 = 15.6, so the rule had said 20 all along — and CI, which enforced
+the locally-derived 15 having never measured it, went red at 15.06s and 15.22s
+proving it. Two suites now have numbers, and
 `fast-wall-clock-budget` grades the SET, so a third suite acquiring cost
 without a ceiling turns it red.
 

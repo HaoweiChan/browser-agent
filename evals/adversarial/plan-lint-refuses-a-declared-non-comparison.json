@@ -1,0 +1,26 @@
+{
+  "id": "plan-lint-refuses-a-declared-non-comparison",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "level": "L3",
+  "tc": "TC4",
+  "trap": "the plan declares it did NO comparison, on a task whose whole shape is a comparison — and both guards accept it",
+  "input": {
+    "task": "Which product in this catalogue has the lowest price?",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "extract_all", "target": { "role": "listitem" }, "rank": false }
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "actions": 1,
+    "replans": 0
+  },
+  "provenance": "PR #29 R20, the third occurrence of one class (R9 -> R16 -> R20). M31 moved the cardinality decision to the plan, which was right, and then compared it against nothing: `plan_gap` computed `is_aggregate(task)` and inspected the extraction steps' ACTIONS but never their `rank`, and `aggregate_needs_comparison` relaxed on `any(action == 'extract_all')` — so a step that explicitly declared it did no comparison satisfied the guard whose stated job is 'nothing enumerated the set the question ranks over'. Code held both halves of the contradiction and compared them nowhere. `_AGGREGATE` is deliberately narrow and high-precision: a task matching it IS a which-one-of-a-set question, so a plan claiming the answer is the whole set is wrong about that task, and the lint now says so before the browser moves. The verifier keeps the same rule as its backstop for the one route the lint cannot see, a mid-run replan.",
+  "triage": {
+    "class": "silent-failure",
+    "watched_red": "before the fix: checks {status: false, actions: false, replans: true}, status success, verdict PASS, answer ['Aurora Desk Lamp $39.00', 'Aurora Desk Lamp Pro $59.00', 'Meridian Wall Clock $24.50', 'Cobalt Floor Rug $18.00'], budgets_spent.actions 2 — the raw enumeration answering 'which product has the lowest price', byte-for-byte the R9 and R16 output shape, with aggregate_needs_comparison green because the trace carried the word `extract_all`.",
+    "note": "`actions: 1` pins that this is caught by the LINT, before the browser moves, not by the verifier afterwards. Its mirror — a list-shaped task declared `rank: true` — is `extract-all-declared-rank-obeys-the-plan`, and is deliberately NOT refused: see that case and T-RANK-MIRROR."
+  }
+}

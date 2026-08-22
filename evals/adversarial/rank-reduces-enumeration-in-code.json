@@ -140,7 +140,7 @@
         "declared": false
       },
       {
-        "note": "`\\blist\\b` must not match 'listed' — probe #3's own question contains it and is a single-answer ranking. This row is the boundary that keeps probe3-quotes-most-quoted-author green.",
+        "note": "the wording of a single-answer ranking is now irrelevant to whether `rank` reduces — the plan's `declared` decides, and this row declares true. It survives PR #29 R16's deletion of the `_ENUMERATE_REQUEST` regex as the boundary it used to guard: the task contains 'listed', which that regex was carefully written not to match, and the answer is the same either way now. Kept as the row that would go red if a wording test were ever reintroduced on this path.",
         "task": "Which author has the most quotes listed on this page?",
         "values": [
           "Albert Einstein",
@@ -151,7 +151,7 @@
         "declared": true
       },
       {
-        "note": "'all' is deliberately NOT an enumerate-request word: 'of all the products' is a comparison frame, not a request for all of them, and treating it as one would publish the raw list for a single-answer question — the exact R9 defect.",
+        "note": "same: 'of all the products' used to be the phrasing an enumerate-request regex had to be careful NOT to read as a request for all of them. With the plan declaring, there is nothing to be careful about — this row pins that a comparison frame containing 'all' still reduces, which it does because nothing reads the wording for cardinality any more.",
         "task": "Of all the products here, which one is the cheapest?",
         "values": [
           "Aurora Desk Lamp $39.00",

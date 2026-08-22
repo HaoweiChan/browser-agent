@@ -2,32 +2,32 @@
   "suite": "invariant",
   "score": 1.0,
   "totals": {
-    "actions": 19,
+    "actions": 23,
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 5416,
-    "wall_seconds": 12.61,
+    "ms": 5594,
+    "wall_seconds": 12.93,
     "latency_p50": 0.0,
     "latency_p95": 2.27,
-    "cases_with_budgets": 9
+    "cases_with_budgets": 11
   },
   "metrics": {
-    "diagnosis_cases": 6,
-    "diagnosis_correct": 6
+    "diagnosis_cases": 7,
+    "diagnosis_correct": 7
   },
   "results": [
     {
       "passed": true,
       "wrong": [],
-      "seconds": 1.81,
+      "seconds": 1.83,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
     {
       "passed": true,
       "wrong": [],
-      "seconds": 0.0,
+      "seconds": 0.01,
       "id": "ablation-preflight-refuses-old-build",
       "kind": "adversarial"
     },
@@ -45,7 +45,7 @@
     {
       "passed": true,
       "wrong": {},
-      "seconds": 0.02,
+      "seconds": 0.03,
       "id": "analysis-ablation-table-not-estimated",
       "kind": "adversarial"
     },
@@ -102,7 +102,7 @@
           "value"
         ]
       },
-      "seconds": 0.31,
+      "seconds": 0.35,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -120,11 +120,11 @@
       },
       "got": {
         "counts": {
-          "fast": 116,
-          "invariant": 48,
+          "fast": 119,
+          "invariant": 51,
           "live": 9,
           "full": 10,
-          "all": 127
+          "all": 130
         },
         "domains": {
           "books.toscrape.com": 3,
@@ -182,7 +182,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 108
+        "ms": 107
       },
       "seconds": 0.11,
       "id": "extract-all-cheapest-wording-still-reduces",
@@ -225,10 +225,54 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 116
+        "ms": 115
       },
       "seconds": 0.12,
       "id": "extract-all-declared-intent-beats-wording",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {},
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "Cobalt Floor Rug $18.00",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 199
+      },
+      "seconds": 0.2,
+      "id": "extract-all-declared-rank-obeys-the-plan",
       "kind": "adversarial"
     },
     {
@@ -361,9 +405,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 110
+        "ms": 87
       },
-      "seconds": 0.12,
+      "seconds": 0.09,
       "id": "extract-all-undeclared-intent-fails-loud",
       "kind": "adversarial"
     },
@@ -469,7 +513,7 @@
       "advertised_unresolvable": [],
       "starved_by_chrome": [],
       "n_elements": 26,
-      "seconds": 0.05,
+      "seconds": 0.06,
       "id": "observe-content-survives-chrome",
       "kind": "adversarial"
     },
@@ -522,17 +566,62 @@
       "got": {
         "status": "failure:act",
         "answer": null,
-        "reason": "step 3 (click): StepError: expected_state not reached: {'text_visible': 'THIS TEXT NEVER APPEARS'}; replan rejected by the plan lint: the task asks which item of a set ranks highest or lowest, so the plan must read the page exactly once, with `extract_all`; this one reads it as ['extract_all', 'extract_all']. A single `extract` guesses the winner; a second read makes the answer a composite with nothing to rank. Enumerate the candidates once \u2014 the comparison is done in code, so extract the values to compare, not the answer"
+        "reason": "step 3 (click): StepError: expected_state not reached: {'text_visible': 'THIS TEXT NEVER APPEARS'}; replan rejected by the plan lint: the task asks which item of a set ranks highest or lowest, so the plan must read the page exactly once, with `extract_all`; this one reads it as [{'action': 'extract_all', 'target': {'role': 'link'}, 'rank': True}, {'action': 'extract_all', 'target': {'role': 'listitem'}, 'rank': True}]. A single `extract` guesses the winner; a second read makes the answer a composite with nothing to rank. Enumerate the candidates once \u2014 the comparison is done in code, so extract the values to compare, not the answer"
       },
       "budgets": {
         "actions": 3,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2314
+        "ms": 2277
       },
-      "seconds": 2.32,
+      "seconds": 2.28,
       "id": "plan-lint-holds-across-a-midrun-replan",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "replans": true,
+        "actions": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": false
+        },
+        "reason": "answer is empty; superlative/aggregate question over a set ('which X has the most/least Y') answered without an `extract_all` step that declared `rank: true`, so nothing compared the set the question ranks over; a layer-1-only verdict cannot tell a right guess from a wrong one, so it fails loudly rather than passing on unverifiable evidence"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [],
+      "got": {
+        "status": "failure:task",
+        "answer": null,
+        "reason": "plan rejected before execution: the task asks which item of a set ranks highest or lowest, and the plan enumerates the set but declares `rank: false` \u2014 that the answer is the whole enumeration. Those cannot both be right about this task. Declare `rank: true` and let code do the comparison, or the answer is a candidate list offered as the answer to a which-one question; the replan did not close the gap"
+      },
+      "budgets": {
+        "actions": 1,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 53
+      },
+      "seconds": 0.06,
+      "id": "plan-lint-refuses-a-declared-non-comparison",
       "kind": "adversarial"
     },
     {
@@ -540,6 +629,13 @@
       "wrong": [],
       "seconds": 0.0,
       "id": "planner-prompt-carries-the-note",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.01,
+      "id": "published-band-matches-the-ledger",
       "kind": "adversarial"
     },
     {
@@ -558,10 +654,10 @@
           "busy",
           "idle"
         ],
-        "during_latency_s": 0.003,
-        "run_seconds": 2.51
+        "during_latency_s": 0.002,
+        "run_seconds": 2.53
       },
-      "seconds": 2.51,
+      "seconds": 2.53,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -612,7 +708,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2259
+        "ms": 2258
       },
       "seconds": 2.27,
       "id": "replan-cannot-launder-noop-action-extract-all",
@@ -627,7 +723,7 @@
           "29991231-235959-fast.json"
         ]
       },
-      "seconds": 0.02,
+      "seconds": 0.01,
       "id": "report-citations-resolve",
       "kind": "adversarial"
     },
@@ -636,7 +732,7 @@
       "wrong": {
         "soak": []
       },
-      "seconds": 0.06,
+      "seconds": 0.07,
       "id": "soak-counts-only-real-completions",
       "kind": "adversarial"
     },
@@ -649,7 +745,7 @@
         "status": "failure:env",
         "steps": 2
       },
-      "seconds": 2.24,
+      "seconds": 2.26,
       "id": "supersede-never-dangles",
       "kind": "adversarial"
     },
@@ -715,16 +811,16 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:50580/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:61860/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 153
+        "ms": 143
       },
-      "seconds": 0.16,
+      "seconds": 0.15,
       "id": "url-guard-holds-after-navigation",
       "kind": "adversarial"
     },
@@ -764,7 +860,7 @@
           "identity_anchors": true,
           "aggregate_needs_comparison": false
         },
-        "reason": "answer is empty; superlative/aggregate question over a set ('which X has the most/least Y') answered without an `extract_all` step, so nothing enumerated the set the question ranks over; a layer-1-only verdict cannot tell a right guess from a wrong one, so it fails loudly rather than passing on unverifiable evidence"
+        "reason": "answer is empty; superlative/aggregate question over a set ('which X has the most/least Y') answered without an `extract_all` step that declared `rank: true`, so nothing compared the set the question ranks over; a layer-1-only verdict cannot tell a right guess from a wrong one, so it fails loudly rather than passing on unverifiable evidence"
       },
       "metrics": {
         "diagnosis_cases": 1,
@@ -774,14 +870,14 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "plan rejected before execution: the task asks which item of a set ranks highest or lowest, so the plan must read the page exactly once, with `extract_all`; this one reads it as ['extract']. A single `extract` guesses the winner; a second read makes the answer a composite with nothing to rank. Enumerate the candidates once \u2014 the comparison is done in code, so extract the values to compare, not the answer; the replan did not close the gap"
+        "reason": "plan rejected before execution: the task asks which item of a set ranks highest or lowest, so the plan must read the page exactly once, with `extract_all`; this one reads it as [{'action': 'extract', 'target': {'role': 'heading'}, 'anchor': None}]. A single `extract` guesses the winner; a second read makes the answer a composite with nothing to rank. Enumerate the candidates once \u2014 the comparison is done in code, so extract the values to compare, not the answer; the replan did not close the gap"
       },
       "budgets": {
         "actions": 1,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 50
+        "ms": 49
       },
       "seconds": 0.06,
       "id": "verifier-aggregate-superlative-fails-loud",
@@ -821,8 +917,8 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 566,
-        "after": 566
+        "before": 596,
+        "after": 596
       },
       "seconds": 0.05,
       "id": "wall-clock-probe-history-isolated",

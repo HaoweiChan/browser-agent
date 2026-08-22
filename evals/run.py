@@ -77,12 +77,18 @@ def run_case(case):
 # Decision 4; the round-5 review of ADR-013 Decision 4's amendment to 70 could
 # not reproduce the straddling band that justified it, so it was withdrawn).
 # Pinned by the case `fast-wall-clock-budget`.
-# Two suites, two numbers, both measured (ADR-017 amends ADR-013 Decision 4).
+# Two suites, two numbers, both computed from `evals/report/history.jsonl` by
+# ADR-013's rule and graded against it by `published-band-matches-the-ledger`
+# (ADR-017 amends ADR-013 Decision 4).
 # `invariant` gets one because it stopped being free: M31 put fixture runs in it,
 # and without a ceiling of its own the tag choice was an unbounded relief valve
 # for the `fast` gate — which is exactly how it got used, and how the `fast`
 # number stayed at 59.7s while ~4.9s of real cost moved sideways (PR #29 R13).
-WALL_BUDGET_S = {"fast": 75, "invariant": 15}
+# `invariant` was 15 until PR #29 R21: that number was derived from five runs
+# published as the band when the committed ledger held sixteen, the slowest at
+# 13.57s — 13.57 x 1.15 = 15.6, so the rule had always said 20. Both bands are
+# now graded against the ledger by `published-band-matches-the-ledger`.
+WALL_BUDGET_S = {"fast": 80, "invariant": 20}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its

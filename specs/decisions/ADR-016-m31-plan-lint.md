@@ -61,9 +61,9 @@ declaration, not an inference**: `extract_all` must carry `rank: true|false`,
 and a step that omits it stops the run as `failure:task`
 (`extract-all-undeclared-intent-fails-loud`).
 
-That is the third mechanism in this position and the first that cannot be
-wrong, because it does not decide anything. The three that could, each shipped
-a raw enumeration as the answer to a single-answer question, and each is cased:
+That is the fourth mechanism in this position. The first three each inferred
+the cardinality from the task text, each got it backwards on some wording, and
+each shipped a raw enumeration as the answer to a single-answer question:
 
 | gate | shipped | case |
 |---|---|---|
@@ -76,6 +76,36 @@ the user asked for, and the only component that read the request is the
 planner. Three regexes over the task text were three guesses, and each guess
 reached the user as `success`. The declaration is required rather than
 defaulted for the same reason — a default is a fourth guess.
+
+**Moving the decision was necessary and was not sufficient**, and the first
+version of this section claimed otherwise ("the first that cannot be wrong,
+because it does not decide anything"). A declaration can still be wrong; what
+changed is only who makes it. The fourth occurrence of the same class was the
+proof (PR #29 R20): a plan declaring `rank: false` on a task `is_aggregate`
+identifies as a which-one-of-a-set question published the raw enumeration as
+`success`, because code held both halves of that contradiction — its own shape
+test and the plan's declaration — and compared them nowhere. It compares them
+now, in `plan_gap` before the browser moves and in
+`aggregate_needs_comparison` as the backstop
+(`plan-lint-refuses-a-declared-non-comparison`).
+
+**The comparison is one-directional, and that is a ceiling, not an oversight.**
+`_AGGREGATE` is narrow and high-precision: when it matches, code is entitled to
+contradict a `rank: false`. When it does not match, code has no opinion at all —
+so a list-shaped task declared `rank: true` is obeyed and truncates to one item
+(`extract-all-declared-rank-obeys-the-plan`, the mirror of the case above, same
+task and fixture as `extract-all-list-task-keeps-every-row` with the opposite
+declaration and the opposite answer). The only signal that would catch it is a
+wording regex over `list`/`every`/`each`, which is exactly what R16 deleted for
+getting this call backwards. Declared as T-RANK-MIRROR rather than closed with
+the mechanism that has already failed three times.
+
+**No eval exercises a real planner emitting `rank`.** Every offline case sets
+the field by hand in a `stub_plan`; the only case that would put the decision in
+front of a real model is `live-books-cheapest-travel`, `full`-tagged and unrun.
+So "the planner is the one component that read the request" is the argument for
+this design, not a measured property of it — stated here rather than left to
+read as demonstrated.
 
 **This is not the LLM ranking.** The plan says "one of these" or "all of
 these"; code says which one, by which rule, and refuses a tie or a

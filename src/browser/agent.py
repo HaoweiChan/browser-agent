@@ -161,10 +161,25 @@ def plan_gap(task: str, steps: list) -> str | None:
     """
     if not is_aggregate(task):
         return None
-    reads = [s.get("action") for s in steps or []
+    reads = [s for s in steps or []
              if str(s.get("action") or "").startswith("extract")]
-    if reads == ["extract_all"]:
-        return None
+    actions = [s.get("action") for s in reads]
+    if actions == ["extract_all"]:
+        # The plan enumerates once — now check what it says it did with the
+        # enumeration. `rank: false` means "the answer is the whole set", which
+        # contradicts a task `is_aggregate` has already identified as asking
+        # for one item OF a set. Code held both halves of that contradiction
+        # and compared them nowhere for three rounds, so a plan that declared
+        # it did NO comparison satisfied the guard whose job is to notice that
+        # nothing compared anything (PR #29 R20, case
+        # plan-lint-refuses-a-declared-non-comparison).
+        if reads[0].get("rank") is True:
+            return None
+        return ("the task asks which item of a set ranks highest or lowest, and the plan "
+                "enumerates the set but declares `rank: false` — that the answer is the "
+                "whole enumeration. Those cannot both be right about this task. Declare "
+                "`rank: true` and let code do the comparison, or the answer is a candidate "
+                "list offered as the answer to a which-one question")
     # Every shape other than "exactly one enumeration and nothing else" leaves
     # the comparison with no single set of values to rank over, and all of them
     # are quiet rather than loud. Zero: a single `extract` guesses the winner.

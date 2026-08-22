@@ -427,13 +427,22 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     # reaches this check at all; what still reaches it is a mid-run replan that
     # dropped the enumeration (`verifier-aggregate-ground-truth-untouched` row 5).
     has_ground_truth = "answer" in expect or "state" in expect
-    enumerated = any(s.get("action") == "extract_all" for s in graded)
+    # `rank is True`, not merely "an `extract_all` is present": a step that
+    # declared `rank: false` said the answer is the whole enumeration, i.e. that
+    # it compared nothing — which is precisely what this check exists to catch,
+    # so accepting it as the comparison was the guard satisfying itself
+    # (PR #29 R20). agent.py's `plan_gap` refuses that plan before the browser
+    # moves; this is the backstop for the route the lint cannot see, a mid-run
+    # replan that swapped the enumeration for one that ranks nothing.
+    enumerated = any(s.get("action") == "extract_all" and s.get("rank") is True
+                     for s in graded)
     if task and not has_ground_truth:
         check("aggregate_needs_comparison", enumerated or not is_aggregate(task),
               "superlative/aggregate question over a set ('which X has the most/least Y') "
-              "answered without an `extract_all` step, so nothing enumerated the set the "
-              "question ranks over; a layer-1-only verdict cannot tell a right guess from "
-              "a wrong one, so it fails loudly rather than passing on unverifiable evidence")
+              "answered without an `extract_all` step that declared `rank: true`, so nothing "
+              "compared the set the question ranks over; a layer-1-only verdict cannot tell a "
+              "right guess from a wrong one, so it fails loudly rather than passing on "
+              "unverifiable evidence")
 
     layer = 1
 

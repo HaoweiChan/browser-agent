@@ -290,14 +290,19 @@ def _check_plan_gap() -> dict:
 
     AGG = "Which product on this page has the most customer reviews?"
     PLAIN = "What is the price of the Aurora Desk Lamp?"
-    one = [{"action": "extract_all", "target": {"role": "link"}}]
-    two = one + [{"action": "extract_all", "target": {"role": "listitem"}}]
+    one = [{"action": "extract_all", "target": {"role": "link"}, "rank": True}]
+    norank = [{"action": "extract_all", "target": {"role": "link"}, "rank": False}]
+    two = one + [{"action": "extract_all", "target": {"role": "listitem"}, "rank": True}]
     plain = [{"action": "extract", "target": {"role": "link"}}]
     rows = [
         (AGG, [], True), (AGG, plain, True), (AGG, one, False),
         (AGG, plain + one, True), (AGG, one + plain, True), (AGG, two, True),
+        # PR #29 R20: the plan enumerates exactly once and declares it compared
+        # nothing. Contradicts a task `is_aggregate` says asks for one item of a
+        # set, and for three rounds nothing compared the two halves.
+        (AGG, norank, True), (AGG, [dict(one[0])], False),
         (PLAIN, [], False), (PLAIN, plain, False), (PLAIN, two, False),
-        (PLAIN, plain + one, False),
+        (PLAIN, plain + one, False), (PLAIN, norank, False),
     ]
     wrong = [{"task": t, "plan": [s.get("action") for s in p], "expected_gap": want,
               "got": plan_gap(t, p)}
@@ -339,6 +344,78 @@ def _check_planner_prompt() -> dict:
         if user.count("Plan only the steps still needed") != note.count(
                 "Plan only the steps still needed"):
             wrong.append({"planner_added_framing": name, "user": user[-200:]})
+    return {"passed": not wrong, "wrong": wrong}
+
+
+# The one sentence per suite that ADR-017 must carry for its band to be
+# checkable. Deliberately a labelled scalar, not the list of run times: a list
+# is a snapshot and `history.jsonl` grows on every gate run, so a grader that
+# string-matched it would go red on the next run rather than on a regression.
+_BAND_LINE = re.compile(
+    r"Slowest recorded `(fast|invariant)` run at (\d+) cases: \*\*([\d.]+)s\*\*")
+
+
+def _check_published_band() -> dict:
+    """A published wall-clock band must be reproducible from the committed ledger.
+
+    Property, not snapshot (PR #29 R21). Three prose bands in this PR turned out
+    not to match `evals/report/history.jsonl` committed beside them — values that
+    were in no recorded run, the two slowest runs dropped unlabelled, and a
+    ceiling derived from a maximum that did not exist. What is graded here holds
+    as runs accumulate and goes red exactly when it should:
+
+      1. the doc's case count is the suite's current case count — so growing a
+         suite forces the band to be re-measured, the same contract
+         `docs-numbers-are-derived` has for README's totals;
+      2. the published slowest run is >= the slowest run the ledger records at
+         that case count (every run at that count, green or not — a wall clock
+         is a wall clock, and the max is the conservative direction) — the doc
+         may not understate what happened;
+      3. the committed ceiling is >= ADR-013's rule applied to that ledger
+         maximum (slowest x 1.15, rounded up to a multiple of five).
+
+    A run slower than the published band reddens the NEXT gate run, which is the
+    intended cost: the band is a claim about this tree, and a tree that got
+    slower has to say so.
+    """
+    import json as _json
+
+    from evals.run import HISTORY, WALL_BUDGET_S, load_cases
+
+    adr = (Path(__file__).parents[2] / "specs" / "decisions"
+           / "ADR-017-wall-clock-ceilings-per-suite.md").read_text(encoding="utf-8")
+    published = {m.group(1): (int(m.group(2)), float(m.group(3)))
+                 for m in _BAND_LINE.finditer(adr)}
+    rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
+    wrong = []
+    for suite in sorted(WALL_BUDGET_S):
+        if suite not in published:
+            wrong.append({"suite": suite, "adr_publishes_no_band_line": True})
+            continue
+        cases, said = published[suite]
+        now = len(load_cases(suite))
+        if cases != now:
+            wrong.append({"suite": suite, "published_case_count": cases, "actual": now})
+            continue
+        # Every recorded run at this case count, not only the green ones. A
+        # wall clock is a wall clock whether or not a case failed, taking the
+        # max is the conservative direction — and requiring green would
+        # deadlock: this check is itself in both suites, so the first run after
+        # a band is republished could never be green while the band it needs is
+        # the one that run would produce.
+        recorded = [r["wall_s"] for r in rows
+                    if r["suite"] == suite and r["total"] == now]
+        if not recorded:
+            wrong.append({"suite": suite, "no_recorded_run_at": now})
+            continue
+        slowest = max(recorded)
+        if said < slowest:
+            wrong.append({"suite": suite, "published_slowest": said,
+                          "ledger_slowest": slowest, "runs": len(recorded)})
+        required = ((int(slowest * 1.15) // 5) + 1) * 5
+        if WALL_BUDGET_S[suite] < required:
+            wrong.append({"suite": suite, "ceiling": WALL_BUDGET_S[suite],
+                          "required_by_adr013_rule": required, "ledger_slowest": slowest})
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -2697,6 +2774,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
               "mutation-metrics": _check_mutation_metrics,
               "plan-gap": _check_plan_gap,
+              "published-band": _check_published_band,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 

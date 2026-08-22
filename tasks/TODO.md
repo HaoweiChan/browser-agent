@@ -135,6 +135,32 @@ reporting success for an unresponsive answer, not about extracting better.
 
 ## Debt
 
+### T-RANK-MIRROR — a list-shaped task declared `rank: true` truncates to one item, and nothing contradicts it            [status: todo]
+Origin: PR #29 R20 (the mirror half; the aggregate half is fixed)
+Spec (claim): M31 requires the plan to declare `extract_all.rank`, and code now
+contradicts a declaration it can prove wrong — but it can only prove one
+direction. `is_aggregate(task)` is narrow and high-precision, so `rank: false`
+on a task it matches is refused (`plan-lint-refuses-a-declared-non-comparison`).
+There is no predicate for the other direction: a task that asks for the whole
+set is not something code recognises, so `rank: true` is obeyed and the answer
+is one row where the user asked for every row, reported `success`.
+Evidence: `extract-all-declared-rank-obeys-the-plan` pins exactly that — same
+task, same fixture and same verb as `extract-all-list-task-keeps-every-row`,
+opposite declaration, opposite answer, both green.
+Repro: run `extract-all-list-task-keeps-every-row`'s plan with `rank: true`;
+answer becomes "Cobalt Floor Rug $18.00" instead of the four rows.
+Acceptance: a signal that is not a wording regex over `list`/`every`/`each` —
+that mechanism decided this call three times and was backwards each time
+(PR #29 R2, R9, R16), so reintroducing it as a decider is explicitly out of
+scope. Candidates worth a red-first case: a second declaration the executor can
+cross-check against the evidence (e.g. an expected cardinality the enumeration
+must satisfy), or an L3 evidence-only check that asks whether one row answers
+the question. Until then the residual is that the planner's declaration is
+trusted wherever code has no opinion — which is most tasks.
+Note: `live-books-cheapest-travel` is the only case that would put this decision
+in front of a real planner and it is `full`-tagged and unrun, so there is no
+measurement of how often a real model gets `rank` right.
+
 ### T-CHEAPEST-WORDING — the plan lint does not fire on price-worded rankings, so nothing sends such a plan back            [status: todo]
 Origin: PR #29 R4, restated at PR #29 R9 and R12
 Spec (claim): the plan lint (`agent.plan_gap`) is gated on `verifier.is_aggregate`.
@@ -563,8 +589,16 @@ it — that case grades `run_task(browser=None)`, the production launch branch, 
 `ui-rendered-narrow` never routes through `run_task`. Do not widen that case:
 what is missing is a check on the eval harness's own renderers, not on the agent.
 
-### T-R25 — INDEX.md's ADR-002 line still publishes the withdrawn 70s local ceiling            [status: todo]
-Origin: PR #23 R8 (LOW, routed debt by the reviewer)
+### T-R25 — INDEX.md's ADR-002 line published withdrawn ceilings (both halves)            [status: fixed at PR #29 R22, kept for the mechanism]
+Origin: PR #23 R8 (LOW, routed debt by the reviewer); local half fixed and CI
+half found at PR #29 R22
+Update (PR #29 R22): the line published BOTH a withdrawn local number (70s) and
+a superseded CI one (80s, moved to 90s by ADR-017), and named neither ADR-017
+nor the `invariant` ceiling that has existed since it. All of that is corrected
+in the line now. What is NOT fixed is the mechanism: `adr-header-and-index`
+still checks only that each ADR appears in INDEX exactly once, so the prose of
+an INDEX line can still contradict the ADR it summarises with nothing red. That
+is what this block stays open for — the numbers were a symptom twice.
 Spec (claim): `specs/decisions/INDEX.md`'s ADR-002 line still publishes the
 withdrawn 70s local ceiling, contradicting ADR-002 itself and INDEX's own ADR-013
 line.
