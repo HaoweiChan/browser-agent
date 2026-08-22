@@ -665,6 +665,14 @@ def _run_fixture_case(case: dict) -> dict:
             all(w in text for w in want.get("has", []))
             and not any(w in text for w in want.get("lacks", []))
             for want, text in zip(exp["planner_saw"], seen))
+    # `observe` reads and changes nothing, so it replaces no failed attempt and
+    # recovers nothing — `specs/001-browser-contract.md` and ADR-019 both say so,
+    # and nothing checked it: the label rode in on `pending_recovery` and the
+    # step landed inside the published `recovery_rungs` figure (PR #34 R2).
+    if exp.get("no_recovery_label_on_observe"):
+        checks["no_recovery_label_on_observe"] = not [
+            s for s in trace
+            if s.get("action") == "observe" and s.get("retry_or_recovery") == "recovery"]
     # A "recovery" label claims a strategy CHANGED. An attempt identical to the
     # one it replaced is a retry, and specs/001 keeps retries out of the
     # recovery metric by construction, not by intention.
@@ -2530,6 +2538,13 @@ def _run_doc_counts_case(case: dict) -> dict:
             if want not in readme:
                 wrong.append({"readme_does_not_say": want, "from": ws["reports"][suite]})
         head = reports.get(ws["headline"])
+        # A baseline block is a claim that the tree is in this state. Citing a
+        # run that FAILED cases and publishing its wall clock as the tree's is
+        # the same defect as citing a stale report, one step worse (PR #34 R4).
+        if head and (failed := [r["id"] for r in head["results"] if not r["passed"]]):
+            wrong.append({"headline_report_is_red": ws["reports"][ws["headline"]],
+                          "failed": failed})
+            head = None  # the red baseline IS the finding; nothing under it is worth recomputing
         if head:
             t, m = head["totals"], head["metrics"]
             for want in (f"${t['llm_usd']:.4f}", f"{t['wall_seconds']:.1f}s",
@@ -2562,6 +2577,22 @@ def _run_doc_counts_case(case: dict) -> dict:
         if stated and stated not in row:
             wrong.append({"d8_range": {"the_cited_reports_show": stated,
                                        "row": row[:300]}})
+
+    # docs/analysis.md §1 publishes per-run counts (actions, how many cases
+    # drive a real browser) that nothing derived, so they aged three milestones
+    # behind the reports beside them while the sentence above them was being
+    # edited (PR #34 R5). Same rule as everything else here: recomputed from the
+    # headline report, never re-typed.
+    s1 = inp.get("analysis_section1")
+    if s1 and (head := reports.get(ws["headline"]) if ws else None):
+        vals = {"actions": int(head["totals"]["actions"]),
+                "with_browser": int(head["totals"]["cases_with_budgets"]),
+                "total": len(head["results"]),
+                "remaining": len(head["results"]) - int(head["totals"]["cases_with_budgets"])}
+        text = (RUN_ROOT / s1["doc"]).read_text(encoding="utf-8")
+        for q in s1["quotes"]:
+            if (want := q.format(**vals)) not in text:
+                wrong.append({"analysis_section1_does_not_say": want})
 
     cov = inp.get("analysis_coverage")
     domains: dict[str, int] = {}

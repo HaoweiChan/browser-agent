@@ -15,10 +15,18 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260822-181440-fast.json",
-        "invariant": "20260822-181626-invariant.json",
-        "live": "20260822-181203-live.json"
+        "fast": "20260822-185625-fast.json",
+        "invariant": "20260822-185726-invariant.json",
+        "live": "20260822-185648-live.json"
       }
+    },
+    "analysis_section1": {
+      "doc": "docs/analysis.md",
+      "quotes": [
+        "{actions} browser actions in a `fast` run",
+        "**{with_browser} of the {total}** cases drive a real Chromium end to end",
+        "The remaining {remaining} are those refusals"
+      ]
     },
     "d8_retired_2026_08_21": "The d8 half graded support-matrix D8 while D8 was an OPEN wall-clock breach: it recomputed the published range from the reports the row cited and required the row to cite them. M12 (PR #20, ADR-013) then CLOSED D8 — the row no longer publishes a breach range, so there is nothing left for this half to recompute, and it was failing on a row that had legitimately changed rather than on a defect. Retired rather than re-pointed because the number it protected is now gated directly and better: `fast-wall-clock-budget` asserts the suite's own wall clock against the ceiling (60s local, 80s CI) and `wall-clock-probe-history-isolated` covers the history side, so a regression reddens the gate itself instead of a prose range. The reports it cited (20260821-215759/215923-fast.json) were measured pre-M12 and are now uncited; they are prune candidates under ADR-012. The README-counts half stays — nothing else derives those, and it reddens the moment a case is added.",
     "analysis_coverage": {

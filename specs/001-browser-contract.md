@@ -124,8 +124,10 @@ appears, in order — no post-hoc reconstruction).
   `note` saying which target was drilled; there is no second channel and no
   second observation format. It reads the page and changes nothing, so like
   `extract` it carries no `expected_state`, records `page_changed: null`, and
-  never wears `retry_or_recovery: "recovery"` — nothing failed, and a
-  drill-down counted as a recovery rung inflates a published metric. An
+  never wears `retry_or_recovery: "recovery"` and never consumes a pending
+  `superseded_by` pointer — it replaces nothing and recovers nothing, and a
+  read-only step counted as a recovery rung inflates a published metric. Both
+  wait for the first attempt that acts. An
   `expected_state` on an `observe` step is refused as `failure:task`: there is
   nothing for it to assert (`observe-step-cannot-carry-expected-state`). It
   spends one call from the existing `MAX_REPLANS` budget and adds no budget of
@@ -135,7 +137,12 @@ appears, in order — no post-hoc reconstruction).
   the steps the plan put after the `observe`, because those were written
   against the observation the drill-down asked to replace
   (`observe-refused-drilldown-stops-the-run`,
-  `observe-drilldown-no-progress-stops-the-run`).
+  `observe-drilldown-no-progress-stops-the-run`). A plan that reaches an
+  `extract` with no page-changing step before it — leading `observe` steps do
+  not count as one — is refused by both replan paths while a failed action that
+  changed nothing is outstanding, and the run ends as that action's failure
+  (`observe-cannot-launder-noop-action`,
+  `observe-drilldown-cannot-launder-noop-action`).
 - `target.index` (0-based) selects the k-th match instead of requiring
   uniqueness — "the first search result" is a browsing primitive, not site
   knowledge. Without it, several matches remain a loud `locate` failure.

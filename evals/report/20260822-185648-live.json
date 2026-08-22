@@ -6,10 +6,10 @@
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 16318,
-    "wall_seconds": 16.54,
-    "latency_p50": 1.54,
-    "latency_p95": 3.32,
+    "ms": 22431,
+    "wall_seconds": 22.65,
+    "latency_p50": 1.64,
+    "latency_p95": 8.22,
     "cases_with_budgets": 9
   },
   "metrics": {
@@ -57,9 +57,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2167
+        "ms": 2268
       },
-      "seconds": 2.37,
+      "seconds": 2.47,
       "id": "live-books-detail-upc",
       "kind": "golden"
     },
@@ -102,7 +102,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2203
+        "ms": 2200
       },
       "seconds": 2.2,
       "id": "live-books-travel-price",
@@ -146,7 +146,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 979
+        "ms": 980
       },
       "seconds": 0.98,
       "id": "live-hn-item1-submitter",
@@ -234,9 +234,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 3322
+        "ms": 3057
       },
-      "seconds": 3.32,
+      "seconds": 3.06,
       "id": "live-ol-edition-title",
       "kind": "golden"
     },
@@ -281,9 +281,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2137
+        "ms": 8219
       },
-      "seconds": 2.14,
+      "seconds": 8.22,
       "id": "live-ol-search-a11y-invisible",
       "kind": "adversarial"
     },
@@ -325,9 +325,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1533
+        "ms": 1632
       },
-      "seconds": 1.54,
+      "seconds": 1.64,
       "id": "live-quotes-js-delayed-empty",
       "kind": "adversarial"
     },
@@ -369,7 +369,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1494
+        "ms": 1495
       },
       "known_wrong_ground_truth": "expect.answer pins the WRONG answer this build produces; a PASS here means 'the agent reproduced the known-wrong answer', never 'the answer is correct'",
       "seconds": 1.5,
@@ -414,9 +414,9 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1534
+        "ms": 1631
       },
-      "seconds": 1.54,
+      "seconds": 1.63,
       "id": "live-quotes-js-text-tier-reaches",
       "kind": "adversarial"
     }

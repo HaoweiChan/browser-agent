@@ -126,6 +126,26 @@ ADR-015 criterion 5 stays RED until it does.
 
 ## Debt
 
+### T-M32-3 — the two laundering cases cost 4.6s of a suite that already straddles its ceiling            [status: todo]
+Origin: PR #34 R1 (the fix, not the finding).
+Spec: `observe-cannot-launder-noop-action` (2.29s) and
+`observe-drilldown-cannot-launder-noop-action` (2.35s) both need an act failure
+to exist at all, and an act failure in this repo costs a full `SETTLE_BUDGET_MS`
+(10 x 200ms) because `check_state` runs its whole settle loop before returning
+False. That is the same price the three existing act-failure cases pay
+(`recovery-replan-postcondition` 2.33s, `recovery-label-requires-strategy-change`
+2.32s, `replan-cannot-launder-noop-action` 2.29s), so it is a house price rather
+than a defect in these two — but five cases now spend 11.6s of a 60s ceiling on
+one mechanism, and this PR added two of them. Measured: `fast` wall clock
+61.16s -> 65.68s across this repair.
+Repro: `evals/report/20260822-185625-fast.json`, sort `results` by `seconds`.
+Acceptance: either a cheaper way for a case to declare "this postcondition will
+not hold" (a per-case settle bound is the obvious one, and it must not weaken
+the production budget), or an explicit ruling that act-failure coverage is worth
+its share of the ceiling — recorded wherever the open wall-clock decision lands
+(PR #29 R21). Do NOT fix it by shortening SETTLE_TRIES: that is a production
+budget with `nav-load-event-never-fires` behind it.
+
 ### T-M32-1 — the reviewer UI has no phase for an `observe` step            [status: todo]
 Origin: M32 (ADR-019), found while adding the drill-down.
 Spec: `phaseFor(s)` in `src/browser/server.py` maps `navigate` -> "browser" and

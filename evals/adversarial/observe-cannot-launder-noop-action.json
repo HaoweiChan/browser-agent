@@ -1,0 +1,34 @@
+{
+  "id": "observe-cannot-launder-noop-action",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and name the cheapest product.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        { "action": "click", "target": { "role": "heading", "name": "Nimbus Shop" },
+          "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ],
+      [
+        { "action": "observe", "target": { "role": "list", "name": "Catalogue" } },
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ],
+      [
+        { "action": "extract", "target": { "role": "link", "index": 0 } }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "recovery": false
+  },
+  "provenance": "PR #34 R1 — the fourth occurrence of this repo's silent-success class, and the first one M32's own action opened. `replan-cannot-launder-noop-action` refuses a replan that drops a failed no-op action and reads the page as if it had worked, and it tested that by asking whether the new plan's FIRST step is an `extract`. M32 made `observe` a legal action that changes nothing, so `[observe, extract]` walks straight past the guard: the click's postcondition fails, `page_changed` is False, the replan is accepted, the observation reads nothing, and the extraction returns the pre-click answer. Watched red first on this branch with exactly the plans above: `status: success`, `answer: \"Aurora Desk Lamp\"` against a true cheapest of Cobalt Floor Rug $18.00, `verdict: PASS`, all ten L1 checks green, `{i:2, action:click, postcondition_ok:false, page_changed:false, superseded_by:3}`. The identical sequence on unmodified `main` dies loudly at `failure:task / unknown action 'observe'`, so the regression is M32's and the committed suite gave no signal — `replan-cannot-launder-noop-action` passes on both builds.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "the guard now asks the question it always meant: does this plan reach an `extract` without any state-changing step before it? Leading `observe` steps are transparent to that question because they change nothing, which is the same reason `page_changed` is null on them. A plan that looks and THEN acts (`[observe, click, extract]`) is not laundering and is still accepted — its drill-down twin is `observe-drilldown-cannot-launder-noop-action`."
+  }
+}

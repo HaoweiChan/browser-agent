@@ -16,6 +16,9 @@ TEXT_HEAD = 300
 # verbatim in page text the planner was never shown. Bounded, not unbounded:
 # 1,500 characters is ~375 tokens against a measured ~1,440-token planning call
 # (`cd7121fc`, `734d3d1f`), and it is a SUBTREE's text, not the page's.
+# Held by `observe-drill-text-head-reaches-past-300`: reverting this to 300
+# turns that case red, because the string it grades sits at character 585 of the
+# drilled subtree's text and in no observation's element list at any budget.
 DRILL_TEXT_HEAD = 1_500
 
 # Chrome gets a sub-budget of the total. A real site opens with a banner and a

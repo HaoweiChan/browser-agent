@@ -151,6 +151,29 @@ def classify(action: str, exc: BaseException) -> str:
     return "nav" if action == "navigate" else "act"
 
 
+def reads_without_acting(steps) -> bool:
+    """Does this plan reach an `extract` with nothing that changes the page
+    before it?
+
+    The question every replan has to answer before it is allowed to drop a
+    failed action: a plan that only READS is reporting the state the failed
+    action was supposed to change (`replan-cannot-launder-noop-action`). It
+    used to be asked as "is the first step an extract", which was the same
+    question while `extract` was the only read-only action. M32 added a second
+    one, and `[observe, extract]` walked straight through — the run reported
+    the pre-action answer with a green verdict (PR #34 R1,
+    `observe-cannot-launder-noop-action`). `observe` is transparent here for
+    the same reason its `page_changed` is null: it changes nothing. A plan
+    that looks and THEN acts is not laundering and is not refused.
+    """
+    for step in steps:
+        if step.get("action") == "extract":
+            return True
+        if step.get("action") != "observe":
+            return False
+    return False
+
+
 # Per run. The stub planner spends 0 tokens; a live one is capped here.
 RUN_BUDGETS = {"actions": 30, "llm_tokens": 100_000}
 
@@ -571,7 +594,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 # replacement attempt actually exists. Writing the pointer early
                 # shipped traces whose run-killing step claimed to be superseded
                 # by an index that was never created (case supersede-never-dangles).
-                if pending_supersede:
+                # `observe` is excluded: `superseded_by` claims "this failed
+                # attempt was replaced by that one", and an observation replaces
+                # nothing — it reads. The pointer waits for the first attempt
+                # that actually acts (PR #34 R1/R2). If the run ends before one,
+                # nothing is written and the failed step keeps
+                # `superseded_by: null`, which is the safe direction
+                # `supersede-never-dangles` asks for.
+                if pending_supersede and step["action"] != "observe":
                     pending_supersede.pop()["superseded_by"] = rec["i"]
                 budgets["actions"] += 1
                 s0 = time.monotonic()
@@ -639,8 +669,17 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 if stop := budget_stop(budgets):
                     return done(failure="env", reason=stop)
                 step = steps[si]
-                rec, cls = await attempt(step, note=pending, recovery=pending_recovery)
-                pending = pending_recovery = None
+                # Same rule for the label: a strategy switch is worn by the
+                # attempt that switches strategy, and an `observe` is not one —
+                # it recovered nothing, and `recovery_rungs` publishes the count
+                # (PR #34 R2; `specs/001-browser-contract.md`, ADR-019 §2 both
+                # already said so). It waits for the first acting attempt.
+                read_only = step["action"] == "observe"
+                rec, cls = await attempt(step, note=pending,
+                                         recovery=None if read_only else pending_recovery)
+                pending = None
+                if not read_only:
+                    pending_recovery = None
 
                 # --- Family 1: locate -> relocation (self-maintenance) --------
                 # Stale locator -> fresh a11y snapshot -> same intent at a
@@ -705,6 +744,21 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         # plan that just asks to look at the same thing again.
                         # Family 2's other two guards are about laundering a
                         # FAILED action, and nothing failed here.
+                        # The same evidence rule family 2 applies, because this
+                        # is a second planner call and it can return the same
+                        # laundering plan (PR #34 R1,
+                        # `observe-drilldown-cannot-launder-noop-action`). The
+                        # failed action is still outstanding here — an `observe`
+                        # attempt does not consume it — so the run dies of what
+                        # it actually died of: that action.
+                        outstanding = pending_supersede[-1] if pending_supersede else None
+                        if (outstanding is not None
+                                and outstanding.get("page_changed") is False
+                                and reads_without_acting(new_steps)):
+                            return done(failure="act", reason=(
+                                f"step {outstanding['i']} ({outstanding['action']}) failed and "
+                                "changed nothing on the page; the plan after the drill-down at "
+                                f"step {rec['i']} would read the page as if it had worked"))
                         if not new_steps or new_steps == steps[si:]:
                             return done(failure="env", reason=(
                                 f"step {rec['i']} asked to observe {step.get('target')} and the "
@@ -746,7 +800,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         # (recovery-replan-postcondition) clicks a control that
                         # really did re-sort the list, so page_changed tells them
                         # apart where nothing about the PLAN can.
-                        drops_action = new_steps and new_steps[0].get("action") == "extract"
+                        drops_action = reads_without_acting(new_steps)
                         if not new_steps or new_steps == steps[si:]:
                             rec["note"] += "; replan made no progress (identical or empty plan)"
                         elif new_steps[0] == steps[si]:

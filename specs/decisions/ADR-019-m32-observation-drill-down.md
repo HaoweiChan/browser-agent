@@ -5,7 +5,7 @@ Status: accepted
 
 **Ruling**: the plan vocabulary gains a fifth action, `observe`, whose `target` names a container the planner was already shown; the executor re-runs `observe()` scoped to that subtree with the whole `MAX_ELEMS` budget spent inside it and a 1,500-character text head, and hands the result to the planner through the observation+note arguments a replan already uses, spending one call from the existing `MAX_REPLANS` budget. Progressive disclosure of the PAGE; the capability list stays fully disclosed and the executor stays closed-world.
 **Because**: the planner's ceiling on M10 probe #4/#5/#7 was not that it misunderstood its tools — the closed-world executor would have graded that `failure:task` and zero runs did — but that the answer was verbatim in page text the planner was never shown, and `observe()`'s cap is what withheld it; raising the cap moves the cliff to the next larger page and taxes every task, while asking for one subtree taxes only the task that asks.
-**Enforced by**: `observe-drilldown-past-max-elems`, `observe-cap-hides-the-answer-element`, `observe-blind-plan-dumps-the-container`, `observe-refused-drilldown-stops-the-run`, `observe-drilldown-no-progress-stops-the-run`, `observe-drill-into-chrome-gets-the-page-budget`, `observe-step-cannot-carry-expected-state`, `planner-note-is-not-always-a-failure`
+**Enforced by**: `observe-drilldown-past-max-elems`, `observe-cap-hides-the-answer-element`, `observe-blind-plan-dumps-the-container`, `observe-refused-drilldown-stops-the-run`, `observe-drilldown-no-progress-stops-the-run`, `observe-drill-into-chrome-gets-the-page-budget`, `observe-drill-text-head-reaches-past-300`, `observe-cannot-launder-noop-action`, `observe-drilldown-cannot-launder-noop-action`, `observe-step-cannot-carry-expected-state`, `planner-note-is-not-always-a-failure`
 
 ---
 
@@ -100,12 +100,20 @@ the `fast` suite can grade the real string with no key and no spend
 (`planner-note-is-not-always-a-failure`). Found by cold review; the `fast`
 suite could not have seen it, because it stubs the planner one level above.
 
-The step that follows a drill-down carries the note but **not** the
-`recovery` label. A recovery label claims a strategy changed after something
-failed; nothing failed here, and wearing the label would have inflated the
-published "rungs tried" figure with an attempt that recovered nothing — the
-same flattering-number defect `mutation-metrics-honesty` and PR #12 R7 were
-filed against. `observe-drilldown-past-max-elems` asserts `recovery: false`.
+**An `observe` attempt replaces nothing and recovers nothing**, and two
+trace fields follow from that. It never wears `retry_or_recovery: "recovery"`
+— a recovery label claims a strategy changed after something failed, and
+wearing it would put a read-only step inside the published "rungs tried"
+figure, the same flattering-number defect `mutation-metrics-honesty` and PR #12
+R7 were filed against. And it never consumes a pending `superseded_by` pointer:
+that field claims "this failed attempt was replaced by that one", and an
+observation replaces nothing. Both wait for the first attempt that actually
+acts; if the run ends before one, the failed step keeps `superseded_by: null`,
+which is the direction `supersede-never-dangles` asks for.
+`observe-drilldown-past-max-elems` asserts `recovery: false` for a drill-down
+that follows nothing, and `observe-drilldown-cannot-launder-noop-action`
+asserts it for one that follows an act failure — where a legitimate `recovery`
+label is also present, on the step that does the acting.
 
 ### 3. It spends the existing budget, and no new one
 
@@ -116,6 +124,21 @@ hit the same wall. The worst case per run is therefore what it already was —
 one plan plus two further calls — so the run-level ceiling does not move.
 Bounded by `RUN_BUDGETS["llm_tokens"] = 100_000` above that, exactly as
 before (INV-3, `budget-replans-exhausted`).
+
+**Both replan paths apply the same laundering-evidence rule.** A plan may not
+reach an `extract` with nothing that changes the page before it while a failed
+action that changed nothing is still outstanding — that plan reports the state
+the failed action was supposed to produce. `replan-cannot-launder-noop-action`
+established the rule and asked it as "is the first step an `extract`", which
+was the same question while `extract` was the only read-only action; `observe`
+is a second one, so the test is now "does this plan read without acting first",
+with leading `observe` steps transparent to it for the same reason their
+`page_changed` is null (`agent.reads_without_acting`,
+`observe-cannot-launder-noop-action`). The drill-down's own replan is a second
+planner call and can return the same shape, so it carries the rule too and ends
+the run as the act failure it actually died of
+(`observe-drilldown-cannot-launder-noop-action`). A plan that looks and THEN
+acts is not laundering and is not refused.
 
 One no-progress guard applies: a replan that returns an empty plan, or the
 same steps that are already pending, is not taken. Family 2's other two
@@ -159,8 +182,8 @@ like every other planning behaviour here.
 
 The "after" row is arithmetic over committed measurements, not a measured
 after-run: measuring it directly means a `full`-suite run against a paid
-model, which this milestone did not spend. The gate that WAS run is `evals/report/20260822-181440-fast.json` — 116/116, score 1.000, cost $0.0000, wall 61.2s, of which the eight new cases are 0.76s — together with
-`evals/report/20260822-181626-invariant.json` (41/41).
+model, which this milestone did not spend. The gate that WAS run is `evals/report/20260822-185625-fast.json` — 119/119, score 1.000, cost $0.0000 — together with
+`evals/report/20260822-185726-invariant.json` (41/41).
 
 ## Rejected
 
@@ -206,7 +229,7 @@ debating critic.
    `live-quotes-js-role-tier-blind` keeps its honest marker: it still reports
    `success` with `"Next →"`, `answer_is_known_wrong: true`, and still passes
    (`live` suite 9/9 after this change,
-   `evals/report/20260822-181203-live.json`). One earlier `live` run on this
+   `evals/report/20260822-185648-live.json`). One earlier `live` run on this
    branch went 8/9 and is not this change: `openlibrary.org` did not answer
    inside the 20s navigation budget, so `live-ol-search-a11y-invisible` ended
    `failure:nav` before a locator was ever resolved. The same suite, unchanged,
