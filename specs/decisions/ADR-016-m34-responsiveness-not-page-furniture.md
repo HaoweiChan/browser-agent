@@ -3,9 +3,9 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: `verify()` gains `not_page_furniture`: an extracted value that is also verbatim on a DIFFERENT page this run visited fails the run, unless the value parses as a number — structural evidence from the run's own navigation, never the task string. Fixed and eval-pinned offline only; ADR-015 criterion 5 stays RED until the post-merge repeated-run confirmation against the redeployed build.
-**Because**: D23/T-R31/T-R32 already named the ceiling of a fourth keyword screen before this PR started, and the two real answers it needs to catch ("Warning!", "Travel") are both genuine site chrome — identical across pages independent of which page you're on — which the runtime already has the evidence to see without reading the question at all.
-**Enforced by**: `verifier-responsive-not-page-furniture`, `tc2-shop-search-zh`, `trap-near-miss-entity` (the numeric exemption's own regression guard), `docs-numbers-are-derived`, `support-matrix-cites-real-cases`
+**Ruling**: `verify()` gains `not_page_furniture`: an extraction's LOCAL CONTEXT (value + 20 chars either side, from the page it was read from) matching verbatim on a DIFFERENT page this run visited fails the run — structural evidence from the run's own navigation, never the task string. Amended round 1 (PR #30 R1): the first cut compared the bare value and a numeric exemption, both replaced by the context compare, because the bare-value version flagged a correct listing->detail title as furniture. Fixed and eval-pinned offline only; ADR-015 criterion 5 stays RED until the post-merge repeated-run confirmation against the redeployed build.
+**Because**: D23/T-R31/T-R32 already named the ceiling of a fourth keyword screen before this PR started, and the two real answers it needs to catch ("Warning!", "Travel") are genuine site chrome — the SAME repeated template fragment, neighbours included, on every page — which a coincidentally-repeated fact (a title, a price) is not, so comparing neighbourhoods rather than bare values separates them with one rule instead of a value-shape exemption.
+**Enforced by**: `verifier-responsive-not-page-furniture`, `verifier-listing-detail-title-not-furniture`, `tc2-shop-search-zh`, `trap-near-miss-entity`, `docs-numbers-are-derived`, `support-matrix-cites-real-cases`
 
 ---
 
@@ -99,12 +99,16 @@ both followed.
 on each extraction — no new site-specific knowledge (CLAUDE.md rule 6): the
 mechanism reads role-agnostic body text and URLs the executor already
 touches, never a selector or a literal site string. `src/browser/verifier.py`
-gained `not_page_furniture` and `PAGE_INVARIANT_MIN_CHARS`.
-`evals/adversarial/verifier-responsive-not-page-furniture.json` and
+gained `not_page_furniture`, `PAGE_INVARIANT_MIN_CHARS`, `PAGE_CONTEXT_WINDOW`
+and `_context()` (the last two from the round-1 amendment below — see it for
+why a bare-value compare was not the final shape).
+`evals/adversarial/verifier-responsive-not-page-furniture.json`,
+`evals/adversarial/verifier-listing-detail-title-not-furniture.json` and
 `src/browser/fixtures/nav-heavy-home.html` are new. `docs/support-matrix.md`
-gained D24, naming both declared ceilings (numeric furniture; a run that
-never leaves one page) rather than leaving them implied. `README.md` and
-`docs/analysis.md` case counts move 116→117 / 105→106 (`docs-numbers-are-
+gained D24, naming both declared ceilings (a run that never leaves one page;
+the context-window width being swept on four shapes, not proven for every
+shape) rather than leaving them implied. `README.md` and `docs/analysis.md`
+case counts move 116→118 / 105→107 across both rounds (`docs-numbers-are-
 derived`).
 
 **What this does not do.** It does not close D23 — D23 stays as the
@@ -112,3 +116,78 @@ historical record of the deployed-build violation, struck-not-deleted
 convention unchanged. It does not touch M28 (extraction-quality) or M31
 (planner-side superlative lint), both explicitly out of scope for M34. It
 does not claim the deployed build is fixed.
+
+## Amendment (PR #30 round 1, R1, HIGH, repair)
+
+**Finding.** The bare-value compare above flagged a CORRECT non-numeric
+answer as furniture whenever it legitimately repeats between a catalogue
+row and that item's own detail page — the exact listing→detail navigation
+shape `tc2-shop-search-zh` and `trap-near-miss-entity` already exercise for
+prices (both numeric, both exempted by the original cut), now shown for a
+title with no exemption to catch it:
+`verify(extractions=[{"value": "The Great Gatsby", "page_text": "The Great
+Gatsby Price: £45.17", "other_page_text": "Category: Travel The Great
+Gatsby £45.17"}])` returned `not_page_furniture: False`, `verdict: FAIL` for
+the right answer. Reproduced as a real fixture-driven run, watched red
+before this amendment: `verifier-listing-detail-title-not-furniture`
+(shop.html → shop-lamp-std.html, extracting the product's own `<h1>`) —
+`status: failure:semantic`, `verdict: FAIL`,
+`checks.not_page_furniture: false`, reason naming `"Aurora Desk Lamp"` as
+chrome.
+
+**Fix.** `not_page_furniture` now compares `_context(page_text, value,
+PAGE_CONTEXT_WINDOW=20)` — the value plus 20 raw characters either side of
+it, taken from the page it was read from — against `other_page_text`,
+instead of the bare value. Site chrome is one repeated template fragment,
+so its NEIGHBOURS repeat with it everywhere it recurs; a coincidentally-
+repeated fact does not: `shop.html`'s catalogue row reads "Aurora Desk Lamp
+$39.00" (title beside its row's price) while the product's own detail page
+reads "Aurora Desk Lamp $39.00 LAMP-STD Anodised aluminium..." (title
+beside its OWN page's SKU/Material) — the window diverges within a few
+characters. The numeric exemption is deleted outright, not narrowed: it was
+covering for the mechanism being too broad, not for numbers being special,
+and the same context compare handles `tc2-shop-search-zh`'s `$18.00` and
+`trap-near-miss-entity`'s `$59.00` correctly with no special case — one
+rule instead of two, and it closes the numeric-furniture ceiling D24
+previously declared rather than widening it.
+
+`PAGE_CONTEXT_WINDOW=20` is not a guess: swept at widths 10-60 against all
+four known shapes (the title case, both price cases, and the original
+"Travel"/"Warning!" furniture reproduced by `verifier-responsive-not-page-
+furniture`) — every width in that range agrees on all four, 20 sits in the
+middle, not at either edge (`/tmp` sweep script, not committed; the
+agreement itself is what the choice rests on, not a specific script).
+`nav-heavy-home.html` — the fixture landing page `verifier-responsive-not-
+page-furniture` uses — was widened from a one-item sidebar to the full
+35-item list identical to nav-heavy.html's, matching books.toscrape.com's
+own shape (confirmed live by `curl`: the same ~50-category sidebar, same
+order, on every page of the real site): a fixture where only the furniture
+STRING repeated and not its neighbours could not have exercised a
+context-window check honestly, and would have silently passed a check that
+was actually checking nothing.
+
+**Confirmed the original defect still fails loudly.** Both `verifier-
+responsive-not-page-furniture` (the "Travel" shape) and the reviewer's own
+repro against `verify()` directly were re-run after the narrowing:
+`not_page_furniture` still returns `False` / `verdict: FAIL` for "Travel"
+and for "Warning!" — the sidebar and banner carry their neighbours with
+them precisely because they are the same repeated fragment, which is what
+the context compare is built to catch. `tc2-shop-search-zh`,
+`trap-near-miss-entity`, and the new
+`verifier-listing-detail-title-not-furniture` all now pass. Full `fast`
+suite: 106/107 (the one non-pass is `docs-numbers-are-derived`, the
+expected doc-count drift this same case addition causes, not a regression).
+
+**Ceiling named, not left implied** (`docs/support-matrix.md` D24, rewritten
+in place since this is round-1 repair on an unmerged PR, not a retroactive
+edit of settled history): a single-page run still has no comparison
+evidence, unchanged; `PAGE_CONTEXT_WINDOW=20` is swept on four shapes, not
+proven for every shape — furniture whose immediate neighbours genuinely
+vary page-to-page (personalized chrome, a nav that highlights the current
+item) could false-negative through the widened check the way the narrower
+one used to false-positive, and a listing/detail pair whose immediate
+neighbours happen to align by coincidence could still false-positive.
+Narrower than the shape D24 previously declared, not proven closed. Neither
+is guessed at ahead of a probe, per CLAUDE.md rule 2. Criterion 5 remains
+RED throughout this amendment — nothing here touches the deployed-build
+question.

@@ -2,18 +2,56 @@
 <meta charset="utf-8">
 <title>Nav-heavy Fixture — Home</title>
 <!-- Landing page for nav-heavy.html (M34, case
-     responsive-answer-not-page-furniture): the two pages share one string,
-     "Travel", verbatim -- the sidebar category link on both. That is the
-     whole point of this fixture: a run that navigates home -> category and
-     then answers with a string that was ALSO on the page before it navigated
-     is very likely page furniture, not this page's content. No banner/alert
+     responsive-answer-not-page-furniture): the two pages share the SAME
+     sidebar, verbatim, item for item -- matching books.toscrape.com's own
+     shape, confirmed by curl: the category sidebar is byte-identical on
+     every page of the real site, not just the "Travel" entry. A fixture
+     with only one shared string understated the real bug (PR #30 R1's
+     narrowing needs the whole repeated widget, not one coincidental
+     substring, to tell real chrome from a title that happens to repeat
+     between a listing row and its own detail page -- see
+     verifier.not_page_furniture and its "context" helper). No banner/alert
      text here on purpose -- the furniture shape under test is a plain nav
      link, the shape books.toscrape.com's own sidebar actually is (no <nav>,
-     no role=navigation), not the easier alert-role case. -->
+     no role=navigation). -->
 <header><a href="#top">Nav-heavy Shop</a></header>
 <aside>
   <ul>
     <li><a href="nav-heavy.html">Travel</a></li>
+    <li><a href="#1">Mystery</a></li>
+    <li><a href="#2">Historical Fiction</a></li>
+    <li><a href="#3">Sequential Art</a></li>
+    <li><a href="#4">Classics</a></li>
+    <li><a href="#5">Philosophy</a></li>
+    <li><a href="#6">Romance</a></li>
+    <li><a href="#7">Womens Fiction</a></li>
+    <li><a href="#8">Fiction</a></li>
+    <li><a href="#9">Childrens</a></li>
+    <li><a href="#10">Religion</a></li>
+    <li><a href="#11">Nonfiction</a></li>
+    <li><a href="#12">Music</a></li>
+    <li><a href="#13">Default</a></li>
+    <li><a href="#14">Science Fiction</a></li>
+    <li><a href="#15">Sports and Games</a></li>
+    <li><a href="#16">Add a comment</a></li>
+    <li><a href="#17">Fantasy</a></li>
+    <li><a href="#18">New Adult</a></li>
+    <li><a href="#19">Young Adult</a></li>
+    <li><a href="#20">Science</a></li>
+    <li><a href="#21">Poetry</a></li>
+    <li><a href="#22">Paranormal</a></li>
+    <li><a href="#23">Art</a></li>
+    <li><a href="#24">Psychology</a></li>
+    <li><a href="#25">Autobiography</a></li>
+    <li><a href="#26">Parenting</a></li>
+    <li><a href="#27">Adult Fiction</a></li>
+    <li><a href="#28">Humor</a></li>
+    <li><a href="#29">Horror</a></li>
+    <li><a href="#30">History</a></li>
+    <li><a href="#31">Food and Drink</a></li>
+    <li><a href="#32">Christian</a></li>
+    <li><a href="#33">Business</a></li>
+    <li><a href="#34">Biography</a></li>
   </ul>
 </aside>
 <main>

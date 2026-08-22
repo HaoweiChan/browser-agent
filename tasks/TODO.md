@@ -96,17 +96,27 @@ answer-shape ceiling that remains is named in `docs/support-matrix.md` rather
 than left implied.
 Out of scope: the extraction-quality gap (M28) — this task is about never
 reporting success for an unresponsive answer, not about extracting better.
-Status (2026-08-22, PR pending): the adversarial case
+Status (2026-08-22, PR #30 pending): the adversarial case
 (`verifier-responsive-not-page-furniture`) landed and was watched red
 first, then the fix (`verify()`'s `not_page_furniture`, ADR-016) turned it
-green; `fast` 106/106 and `invariant` 38/38 against unmoved baseline; the
-numeric-furniture and single-page-run ceilings are named in
-`docs/support-matrix.md` D24. **Not closing this task**: the acceptance
-line "demonstrated on the deployed build across repeated runs" cannot be
-met from this environment (no LLM key, the deployed URL still serves
-`main`) — that repeated-run confirmation is the one thing left, run
-post-merge the same way M29 ran it for M10, and ADR-015 criterion 5 stays
-RED until it does.
+green. Round 1 review (R1, HIGH) found the first cut too broad — it flagged
+a correct listing→detail title/name as furniture, a false positive on this
+domain's single most common navigation shape — and routed to repair:
+`not_page_furniture` now compares each value's local page CONTEXT, not the
+bare value, against the other pages a run visited (`PAGE_CONTEXT_WINDOW`,
+`_context()`); the numeric exemption is gone, subsumed by the same rule,
+closing rather than widening the numeric-furniture ceiling; a new case
+(`verifier-listing-detail-title-not-furniture`) pins the repaired shape,
+watched red before the repair and green after; the original "Warning!"/
+"Travel" defect was re-confirmed to still fail loudly post-repair. `fast`
+107/107, `invariant` 38/38, `live` 9/9, all against unmoved baseline. The
+surviving ceilings are named in `docs/support-matrix.md` D24 (single-page
+runs; the context-window width, swept on four shapes only). **Not closing
+this task**: the acceptance line "demonstrated on the deployed build across
+repeated runs" cannot be met from this environment (no LLM key, the
+deployed URL still serves `main`) — that repeated-run confirmation is the
+one thing left, run post-merge the same way M29 ran it for M10, and
+ADR-015 criterion 5 stays RED until it does.
 
 ## Debt
 
