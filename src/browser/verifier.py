@@ -29,6 +29,16 @@ whether the answer answers the question, only whether it looks like the
 question was dodged by dumping the page. Only ground-truth L2 catches a wrong
 but focused answer, and a live run has no ground truth.
 
+`not_page_furniture` (M34, docs/support-matrix.md D24) is narrower than that
+sentence makes it sound: it catches one specific way an answer can fail to be
+responsive — the value is site chrome (nav, banner, footer), recognisable
+because it is ALSO verbatim on a different page the same run visited — not
+"does this answer the question" in general. A short, plausible, WRONG answer
+that is unique to the page it was read from (the near-miss trap above) still
+sails through this check exactly as it sails through `not_a_dump`; only
+ground-truth L2 catches that shape. Numeric values are exempted outright
+(docs/support-matrix.md D24 names why and what it costs).
+
 `identity_anchors` here reads `expect["anchors"]`, and agent.py's runtime call
 (agent.py:491) passes NO `expect` — so at runtime **this check is vacuous**;
 it only does anything when a caller (the eval adapter) supplies
@@ -66,6 +76,46 @@ _CURRENCY = "$€£¥₩₹"
 # (probe5-books-travel-dump) and 0.52 (probe5-shop-listing-dump). 0.35 sits in
 # the empty gap between them.
 DUMP_RATIO = 0.35
+
+# M34 (docs/analysis.md §8a-3, support-matrix D23): a THIRD demonstration that
+# semantic responsiveness is not pattern-matchable over the task string, this
+# time on a plain single-hop extraction with no aggregate/superlative shape
+# for `aggregate_needs_comparison` to catch. The deployed build answered
+# "tell me the price of the first book in the Travel category" with
+# "Warning!" (books.toscrape.com's own demo-site disclaimer banner, present
+# on every page) and, separately, "Travel" (the sidebar category link, also
+# present on every page) -- both real, grounded, non-empty, not a dump, and
+# answering nothing. Rejected as the fix: a fourth regex over the task
+# string, same shape and ceiling as SCOPE_BLOCK and _AGGREGATE below (T-R31/
+# T-R32) -- a keyword screen answers "does the TASK look like X", never
+# "does THIS ANSWER respond to it", and a rephrasing walks around it exactly
+# as the first three did. What actually distinguished both wrong answers from
+# a real one, in the evidence the runtime already has: neither is specific to
+# the page it was read from -- the same string sits verbatim on a DIFFERENT
+# page this run also visited (the site's own home page, in both cases,
+# confirmed live by curl against books.toscrape.com). A string identical
+# across two distinct pages is a hallmark of site furniture (nav, banner,
+# footer) -- something a page-specific question essentially never answers
+# with, task text unread. `PAGE_INVARIANT_MIN_CHARS` guards the one cheap
+# false-positive this invites: a short, generic value ("1", "OK", "Q4")
+# recurring elsewhere by pure coincidence is unremarkable and carries no
+# signal either way, so it is exempted rather than flagged.
+PAGE_INVARIANT_MIN_CHARS = 4
+
+# The other false positive this check invites, found by running it against the
+# `fast` suite rather than guessed at: a price legitimately repeats between a
+# catalogue row and that product's own detail page (tc2-shop-search-zh's
+# "$18.00", trap-near-miss-entity's "$59.00" -- the SKU anchor that ties the
+# detail page to its entity is not on the LISTING page, by design, so nothing
+# else already in this function tells the two shapes apart). A number is not
+# how site furniture speaks -- "Warning!" and "Travel" are not numbers, and no
+# case anywhere in this repo has a banner/nav string that IS one -- so a value
+# that parses via `_num_parts` is exempted from `not_page_furniture` outright.
+# Declared ceiling, not a guess held in reserve: a marketing banner reading a
+# generic price ("From $19.99") that recurs on every page and gets extracted
+# in place of the real one would slip past this exemption. Nothing in this
+# repo's evidence demonstrates that shape (docs/support-matrix.md), so it is
+# named rather than pre-emptively guarded against, per CLAUDE.md rule 2.
 
 # Restored at M7.2, this time with a case behind it. Phase 2 had a guard here
 # (`MIN_EVIDENCE = 20`) and removed it (ADR-008 Decision 3) because nothing in
@@ -286,6 +336,26 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
              and pt_len >= MIN_PAGE_CHARS
              and len(_clean(e["value"])) / pt_len >= DUMP_RATIO]
     check("not_a_dump", not dumps, f"value reproduces most of its own evidence window: {dumps}")
+
+    # M34: a value that is ALSO verbatim on a different page this run visited
+    # is very likely site furniture (nav, banner, footer), not an answer to a
+    # page-specific question -- the general shape behind "Warning!" and
+    # "Travel" both passing every other L1 check on the deployed build
+    # (docs/analysis.md §8a-3, support-matrix D23; see the comment above
+    # PAGE_INVARIANT_MIN_CHARS for why this and not a keyword screen).
+    # `other_page_text` is agent.py's running record of every OTHER distinct
+    # URL's body text at extraction time -- "" (no signal, no flag) when this
+    # run never visited a second page, or on the frozen labels/replay records
+    # that predate this field, the same optional-field precedent `body_len`
+    # already set above. Substring, not equality: the furniture string is
+    # rarely the WHOLE other page, same reasoning `grounded` already uses.
+    furniture = [e["value"] for e in extractions or []
+                 if len(_clean(e["value"])) >= PAGE_INVARIANT_MIN_CHARS
+                 and not _num_parts(_clean(e["value"]))
+                 and _clean(e["value"]) in _clean(e.get("other_page_text", ""))]
+    check("not_page_furniture", not furniture,
+          f"value also appears verbatim on a different page this run visited, "
+          f"which is page chrome, not a page-specific answer: {furniture}")
 
     # Page evidence ONLY. Including the answer would let an anchor equal to the
     # expected answer certify itself, which is a green check that cannot go red

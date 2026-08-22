@@ -96,6 +96,17 @@ answer-shape ceiling that remains is named in `docs/support-matrix.md` rather
 than left implied.
 Out of scope: the extraction-quality gap (M28) — this task is about never
 reporting success for an unresponsive answer, not about extracting better.
+Status (2026-08-22, PR pending): the adversarial case
+(`verifier-responsive-not-page-furniture`) landed and was watched red
+first, then the fix (`verify()`'s `not_page_furniture`, ADR-016) turned it
+green; `fast` 106/106 and `invariant` 38/38 against unmoved baseline; the
+numeric-furniture and single-page-run ceilings are named in
+`docs/support-matrix.md` D24. **Not closing this task**: the acceptance
+line "demonstrated on the deployed build across repeated runs" cannot be
+met from this environment (no LLM key, the deployed URL still serves
+`main`) — that repeated-run confirmation is the one thing left, run
+post-merge the same way M29 ran it for M10, and ADR-015 criterion 5 stays
+RED until it does.
 
 ## Debt
 

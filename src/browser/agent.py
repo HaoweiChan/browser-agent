@@ -303,6 +303,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
     # Raw evidence for the OutcomeVerifier: what was read, and what the page
     # said at the moment it was read. The verifier never sees our conclusion.
     extractions: list[dict] = []
+    # Every distinct page (by URL) this run has actually loaded, body text at
+    # the time it was last seen. M34: a string that is identical across two
+    # different pages of the same run is very likely site furniture (nav,
+    # banner) rather than an answer to a page-specific question -- this is
+    # the raw material for verify()'s `not_page_furniture` check, keyed by
+    # URL so re-visiting a page updates rather than duplicates its evidence.
+    page_bodies: dict[str, str] = {}
 
     # Hand each finished step to a live watcher (the gateway's SSE endpoint).
     # Every attempt is emitted, including the ones a ladder supersedes: the
@@ -354,6 +361,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 try:
                     await navigate(page, url)
                     obs = await observe(page)
+                    page_bodies[page.url] = await page.inner_text("body")
                     (run_dir / "observation.json").write_text(json.dumps(obs, indent=2))
                     rec["postcondition_ok"] = True
                 except Exception as e:
@@ -431,9 +439,20 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     # page_text is evidence_window()'s output: capped at PAGE_TEXT_KEEP
                     # and doubled when a distant anchor forces a second window onto it
                     # (case verifier-dump-ratio-anchor-flip).
+                    # M34: evidence for verify()'s `not_page_furniture` -- every
+                    # OTHER distinct page this run has already loaded, excluding
+                    # the one the value was just read from. A value that is also
+                    # verbatim on a different page is very likely nav/banner
+                    # furniture, not an answer to a page-specific question
+                    # (docs/analysis.md §8a-3: "Warning!" and "Travel" both real,
+                    # grounded, non-empty answers to nothing). Recorded BEFORE
+                    # this page's own body is (re-)stored below, so a page never
+                    # gets compared against itself.
+                    other_page_text = " ".join(t for u, t in page_bodies.items() if u != page.url)
                     extractions.append(
                         {"value": val, "page_text": evidence_window(body, val, anchor),
-                         "body_len": len(body)})
+                         "body_len": len(body), "other_page_text": other_page_text})
+                    page_bodies[page.url] = body
                     answers.append(val)
                     # Identity anchor (verifier L1): the entity the task names
                     # must be present where the answer was read.
@@ -474,7 +493,9 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         # after the submitted URL passed (url-guard-holds-after-navigation).
                         raise StepError("task", f"navigated to blocked URL: {page.url!r}")
                     if before is not None:
-                        rec["page_changed"] = (await page.inner_text("body")) != before
+                        after = await page.inner_text("body")
+                        rec["page_changed"] = after != before
+                        page_bodies[page.url] = after
                     checked = await check_state(page, step.get("expected_state"))
                     if checked is not None or rec["postcondition_ok"] is None:
                         rec["postcondition_ok"] = checked
