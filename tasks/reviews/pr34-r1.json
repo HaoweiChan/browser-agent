@@ -1,0 +1,91 @@
+{
+  "pr": 34,
+  "round": 1,
+  "task": "M32",
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "An `observe` step can supersede a failed no-op action, re-opening the exact silent-failure `replan-cannot-launder-noop-action` was filed against: the run reports `success` with a green verdict and the pre-action wrong answer.",
+      "evidence": "src/browser/agent.py:642 (`attempt(step, note=pending, recovery=pending_recovery)`) pops `pending_supersede` for whatever the next attempt is — including an `observe`, which is now a legal action (agent.py:460) and changes nothing (`before` is None at agent.py:582, `page_changed: null`). Family 2's `drops_action and not rec.get(\"page_changed\")` guard (agent.py:758) only fires when the replan's FIRST step is `extract`; an `observe` first step slips past it, and the drill-down's own replan path (agent.py:708) has no page_changed guard at all. Measured trace on `shop.html` with plan A = `[click heading 'Nimbus Shop' expected_state 'Sorted by price (low to high)', extract link#0]`, plan B = `[observe {role:list,name:Catalogue}, extract link#0]`, plan C = `[extract link#0]`: `{i:2, action:click, postcondition_ok:False, page_changed:False, superseded_by:3}`, `{i:3, action:observe}`, `{i:4, action:extract}` -> `status: success`, `answer: \"Aurora Desk Lamp\"` (true cheapest is Cobalt Floor Rug $18.00), `verdict: PASS`, all ten L1 checks green. The identical plan sequence on unmodified `main` dies loudly: `failure:task / step 3 (observe): unknown action 'observe'`. `replan-cannot-launder-noop-action` still passes on both builds, so the committed suite gives no signal.",
+      "repro": "Write the three-plan case above as evals/adversarial/observe-cannot-launder-noop-action.json (task `browser`, fixture `shop.html`, `expect: {\"status\": \"failure:act\", \"recovery\": false}`) and run `.venv/bin/python -m evals.run --suite fast` in the task-M32 worktree — it reports `success` / `Aurora Desk Lamp` and the case is RED.",
+      "acceptance": "A read-only step (`observe`) may not consume `pending_supersede` / may not stand as the replacement attempt for a failed action, or the drill-down path applies the same `page_changed` evidence rule family 2 applies. The case above is committed, watched red first, and green after; `replan-cannot-launder-noop-action` stays green."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "specs/001-browser-contract.md's new clause that an `observe` step \"never wears `retry_or_recovery: \\\"recovery\\\"`\" is false, and the offending step is counted in the published `recovery_rungs` metric.",
+      "evidence": "specs/001-browser-contract.md:127 and ADR-019 §2 (\"The step that follows a drill-down carries the note but **not** the `recovery` label ... wearing the label would have inflated the published 'rungs tried' figure\"). But agent.py:764 sets `pending_recovery = \"recovery\"` on any family-2 replan, and agent.py:642 hands it to the next `attempt` whatever its action is. Measured trace from R1's probe: `{i:3, action:'observe', retry_or_recovery:'recovery'}`, and the case result carried `metrics: {\"recovery_rungs\": 1, ...}` — a read-only step inside the exact figure the clause exists to protect. `observe-drilldown-past-max-elems` asserts `recovery: false`, but only for a drill-down that follows nothing; the act-failure -> `observe` path is untested.",
+      "repro": "Same probe as R1; dump `result['evidence']['trace']` — step 3 is `action: observe, retry_or_recovery: 'recovery'` — and read `metrics.recovery_rungs == 1`.",
+      "acceptance": "Either the contract clause is enforced (an `observe` attempt never receives the `recovery` label, and never enters `recovery_rungs`), or the clause is corrected to say when it can. Backed by a case that goes red if an `observe` step is labelled `recovery`."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`DRILL_TEXT_HEAD = 1_500` — published as a decided behaviour in three documents of record — has zero eval coverage: reverting it to 300 leaves all 127 cases green, and the one case whose provenance claims to demonstrate the widened head does not.",
+      "evidence": "src/browser/observe.py:19. Published as contract in specs/001-browser-contract.md:171 (\"a 1,500-character text head instead of 300\"), ADR-019 Decision 1, and docs/support-matrix.md D25. Mutation test: set `DRILL_TEXT_HEAD = 300` in a copy of the branch — `observe-drilldown-past-max-elems`, `observe-drill-into-chrome-gets-the-page-budget`, `observe-blind-plan-dumps-the-container`, `observe-cap-hides-the-answer-element`, `observe-refused-drilldown-stops-the-run`, `observe-drilldown-no-progress-stops-the-run`, `observe-step-cannot-carry-expected-state`, `planner-note-is-not-always-a-failure`, `observe-content-survives-chrome`, `observe-name-prohibited-roles` all still PASS. The reason `observe-drill-into-chrome-gets-the-page-budget`'s `text_head_contains: [\"Young Adult\"]` cannot catch it: measured on `nav-heavy.html`, the `complementary` subtree's whole `inner_text()` is 364 characters and `Young Adult` sits at index 209 — inside the unwidened 300 — so that case's provenance claim (\"`Young Adult` (past even the 60-element cap) is reachable in the widened text head\") is false about its own evidence. ADR-019 Consequence 2 also leans on this constant (\"the text head is the only thing that still reaches past it\").",
+      "repro": "In a copy of the worktree: `sed -i '' 's/DRILL_TEXT_HEAD = 1_500/DRILL_TEXT_HEAD = 300/' src/browser/observe.py && .venv/bin/python -m evals.run --suite fast` -> 116/116 = 1.000. For the second half: resolve `{role: complementary}` on nav-heavy.html and print `len(await loc.inner_text())` (364) and `.find('Young Adult')` (209).",
+      "acceptance": "A case whose fixture subtree carries the answer between character 300 and 1,500 of the drilled subtree's text, so that reverting `DRILL_TEXT_HEAD` to 300 turns the suite red; and `observe-drill-into-chrome-gets-the-page-budget`'s provenance corrected to stop attributing `Young Adult` to the widened head."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "README publishes seven wall clocks as measurements of the eight-case M32 tree, but four of the seven are intermediate 111/112-case trees, one is a RED run, and the two most recent committed 116-case runs are omitted.",
+      "evidence": "README.md:77-80: \"M32 added eight cases worth 0.76s of it and measured **60.12 / 60.39 / 60.70 / 60.86 / 61.12 / 61.20 / 61.20s** on the same machine\". Cross-referencing the branch's own committed `evals/report/history.jsonl` additions: 60.12 = ts 20260822-174309 at 111/111 cases; 61.20 = 174429 at 111/111; 60.39 = 175436 at 112/112; 60.70 = 175816 at 112/112; 61.12 = 181126 at 116/116; 60.86 = 181304 at 115/116, score 0.991379 (RED); 61.20 = 181440 at 116/116. Only three of the seven are 116-case runs and one of those failed. The two 116-case runs the branch committed after the paragraph — 60.98 (181821) and 60.99 (182027) — are not listed. `docs-numbers-are-derived` cannot catch this: its `where_it_stands` half only recomputes the cited report block, and its README half is substring presence.",
+      "repro": "`git diff main...task/M32 -- evals/report/history.jsonl | grep '^+{' | python3 -c \"import sys,json;[print(json.loads(l[1:])['ts'],json.loads(l[1:])['total'],json.loads(l[1:])['wall_s'],json.loads(l[1:])['score']) for l in sys.stdin if json.loads(l[1:])['suite']=='fast']\"` and compare against README.md:78.",
+      "acceptance": "The README band lists only runs of the tree it describes (116 cases, green), or states plainly which counts each measurement was taken at; the RED run is either excluded or labelled as such."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "docs/analysis.md §1 now contradicts itself: the PR updates \"127 distinct cases\" and leaves the next sentence publishing 170 actions / 54 of 97 cases / remaining 43, none of which is derivable from the report the PR commits.",
+      "evidence": "docs/analysis.md:65 (edited by this diff, 119 -> 127) is immediately followed by lines 61-67 (unchanged): \"170 browser actions in a `fast` run; 54 of the 97 cases drive a real Chromium end to end ... The remaining 43\". The report this PR commits, `evals/report/20260822-181440-fast.json`, has `totals.actions = 194`, `totals.cases_with_budgets = 68`, `len(results) = 116`. Line 57-59 of the same section asserts \"Every count in the rest of this section is the current one\". The drift pre-existed (main's report: 172 / 60 / 105) but this PR moved every one of those numbers further from truth while editing the sentence above them. `docs-numbers-are-derived`'s `analysis_coverage` half only scans from \"## 6. Coverage\" to \"## 7.\", so §1 is ungraded.",
+      "repro": "`.venv/bin/python -c \"import json;r=json.load(open('evals/report/20260822-181440-fast.json'));print(r['totals']['actions'], r['totals']['cases_with_budgets'], len(r['results']))\"` -> `194 68 116`; compare docs/analysis.md:61-67.",
+      "acceptance": "The §1 counts equal the committed report (194 / 68 of 116 / remaining 48), or the case's `analysis_coverage` scan is extended to §1 so the numbers cannot drift again silently."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The claim \"eight new eval cases, all watched red first\" is inaccurate for three of them, not one: two more cases pass unmodified on `main`.",
+      "evidence": "Running the eight new case files against a tree with `main`'s src/browser/{agent,observe,planner,verifier,resolver}.py and this branch's harness: `observe-blind-plan-dumps-the-container` PASSES (it characterises pre-change behaviour — `failure:semantic`, `not_a_dump: false`, answer = the whole table; its own file says \"Measured on the unmodified build\", so it is honest but was never red), and `observe-step-cannot-carry-expected-state` PASSES for an unrelated reason (`failure:task / unknown action 'observe'`, not the `expected_state` refusal it names). Only `observe-cap-hides-the-answer-element` was disclosed as green-by-design. Mitigating: `observe-step-cannot-carry-expected-state` IS a valid regression guard against the current build — removing the agent.py:472 refusal makes it red with `failure:act / expected_state not reached`, exactly as its provenance describes. The committed documents (D25, the case files) do not overclaim; the PR-level claim does.",
+      "repro": "Copy the worktree, overwrite src/browser/{agent,observe,planner,verifier,resolver}.py with `git show main:...`, then run the eight case ids through `evals.run.run_case`.",
+      "acceptance": "The PR body states which cases were red-first on `main`, which were red-first only on the intermediate (cold-review) build, and which are characterisation pins — matching what the case files already say.",
+      "route_note": "LOW and the defect is in the PR body, not the branch — the committed case files and D25 do not overclaim. Corrected by the orchestrator in the PR body this round rather than logged; no code change and no debt id."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The shipped reviewer UI mislabels an `observe` step as an action phase, and the fix is deferred to debt rather than made.",
+      "evidence": "src/browser/server.py:542-546 `phaseFor(s)` maps `navigate`->\"browser\", `extract`->\"verification\", everything else -> \"action\"; an `observe` step therefore lights the \"action\" phase while the agent is only reading. tasks/TODO.md T-M32-1 records this and defers it on the grounds that `task/M35` owns the file. The M32 spec's acceptance criteria do not mention the UI, so the deferral is defensible, but the mislabelling ships with the action this PR adds.",
+      "repro": "Run any task whose plan contains an `observe` step against `src.browser.server` and watch the SSE progress bar.",
+      "acceptance": "T-M32-1 is closed by M35, or `phaseFor` gains an `observe` branch covered by `ui-execution-progress`.",
+      "route_note": "LOW, outside M32's acceptance criteria, and already logged as tasks/TODO.md T-M32-1 (Origin: M32 / ADR-019). Reviewer agrees the deferral is defensible."
+    }
+  ],
+  "verified_clean": [
+    ".eval-baseline.json and evals/run.py byte-identical to main — no EVAL_WALL_BUDGET_S / ceiling / ADR-013 change hides in the diff",
+    "MAX_REPLANS = 2 unchanged, drill-down shares the same counter (observe-refused-drilldown-stops-the-run spends 2 and stops)",
+    "ADR-019 has no id collision (task/M31 carries ADR-016+017, task/M36 carries ADR-017, 018 free, 019 unique)",
+    "all ADR-019 token figures re-derive exactly from evals/report/20260821-004617-ablation.json (mean 1177.4, range 758-1693, 20/20 rows 0 replans, worst call 17754, 3x = 53262 < 100000); len(SYSTEM) exactly 2096 -> 2485 (+389 chars, +97 tokens at 4.00 chars/token)",
+    "the 0.76s re-derives exactly as the sum of the eight cases' seconds in evals/report/20260822-181440-fast.json",
+    "README 'Where it stands' block and the section 6 coverage tables re-derive exactly from the reports and case tags (127 = 20 golden + 107 adversarial; both columns now sum to 127, correcting a pre-existing 115-vs-119 drift)",
+    "fixture provenance numbers exact (77 elements uncapped, region 'Product Information' at 51, cell 'SN-88231' at 77, capped element 60 is a row)",
+    "live-quotes-js-role-tier-blind untouched, 9/9 in the committed live report, answer_is_known_wrong intact; D7's amendment names its own hand-probe evidence as uncommitted",
+    "independent gate reruns in a scratch copy reproduce invariant 41/41 = 1.000 (7.4s) and fast 116/116 = 1.000 (60.91s, $0.0000)",
+    "no site-specific selector, DOM path or navigation recipe entered src/browser/{agent,observe,planner,verifier}.py (CLAUDE.md rule 6)",
+    "executor still refuses unknown actions — 'unknown action observe' on the pre-change build proves the closed world is enforced by the same allowlist"
+  ],
+  "gate": {
+    "invariant": "41/41 = 1.000, 7.65s",
+    "fast": "116/116 = 1.000 >= baseline 1.000, 61.19s, $0.0000",
+    "note": "non-zero exit on wall clock alone; unmodified main measures 61.72s and 60.02s on this machine at 108/108 = 1.000. Pre-existing, open human decision (PR #29 R21). Not a finding."
+  }
+}
