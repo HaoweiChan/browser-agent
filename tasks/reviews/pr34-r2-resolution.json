@@ -11,27 +11,27 @@
       "cases": [
         "observe-drilldown-cannot-launder-unchecked-action"
       ],
-      "red_first": "status: success, answer: \"Aurora Desk Lamp\", verdict: PASS \u2014 against a true cheapest of Cobalt Floor Rug $18.00 \u2014 with {i:2, action:fill, failure_class:'act', page_changed:None, superseded_by:4}. The reviewer's own click-timeout probe was also reproduced (10.9s) before the cheap case was written.",
-      "fix": "Fixed at the shared point, not the call path the finding named: every page_changed reader in production code was grepped first \u2014 there were exactly two, and they disagreed. Both now go through agent.changed_nothing(rec), whose docstring records why null and False are the same answer (page_changed is assigned on the line after execute() returns, so anything raised inside it leaves null).",
+      "red_first": "status: success, answer: \"Aurora Desk Lamp\", verdict: PASS — against a true cheapest of Cobalt Floor Rug $18.00 — with {i:2, action:fill, failure_class:'act', page_changed:None, superseded_by:4}. The reviewer's own click-timeout probe was also reproduced (10.9s) before the cheap case was written.",
+      "fix": "Fixed at the shared point, not the call path the finding named: every page_changed reader in production code was grepped first — there were exactly two, and they disagreed. Both now go through agent.changed_nothing(rec), whose docstring records why null and False are the same answer (page_changed is assigned on the line after execute() returns, so anything raised inside it leaves null).",
       "green_after": "failure:act, answer: null. recovery-replan-postcondition, replan-cannot-launder-noop-action, observe-drilldown-cannot-launder-noop-action, observe-cannot-launder-noop-action all green."
     },
     {
       "id": "R9",
       "severity": "MEDIUM",
       "outcome": "fixed",
-      "branch_taken": "correction, not widening \u2014 the acceptance offered both",
+      "branch_taken": "correction, not widening — the acceptance offered both",
       "cases": [
         "recovery-label-lands-on-the-extract"
       ],
       "assertion": "recovery_labelled_actions (widened from no_recovery_label_on_observe, which structurally could not see the extract; now a whole-set comparison that fails in both directions)",
-      "red_first": "The contract's own claim was asserted \u2014 recovery_labelled_actions: [] , i.e. no read-only step wears the label \u2014 against a CORRECT run, and it came back ['extract'] (checks: {..., 'recovery_labelled_actions': False}, answer: 'Cobalt Floor Rug').",
-      "fix": "The widening branch was rejected with a reason: an extract is the attempt that COMPLETES a recovery, recovery-replan-postcondition is the shape where the replan is nothing but an extract, and forbidding it the label would make recovery_verified 0/1 there and turn that case red. The metric's question is not 'does this step change the page' but 'could this step have saved the run' \u2014 an observe produces no answer, an extract does. specs/001-browser-contract.md and ADR-019 section 2 now say that."
+      "red_first": "The contract's own claim was asserted — recovery_labelled_actions: [] , i.e. no read-only step wears the label — against a CORRECT run, and it came back ['extract'] (checks: {..., 'recovery_labelled_actions': False}, answer: 'Cobalt Floor Rug').",
+      "fix": "The widening branch was rejected with a reason: an extract is the attempt that COMPLETES a recovery, recovery-replan-postcondition is the shape where the replan is nothing but an extract, and forbidding it the label would make recovery_verified 0/1 there and turn that case red. The metric's question is not 'does this step change the page' but 'could this step have saved the run' — an observe produces no answer, an extract does. specs/001-browser-contract.md and ADR-019 section 2 now say that."
     },
     {
       "id": "R11",
       "severity": "LOW",
       "outcome": "fixed",
-      "fix": "T-M32-3 now states the true cost model: only a postcondition failure pays SETTLE_BUDGET_MS; an act failure raised inside execute never reaches check_state. The cheap design was also taken \u2014 shop.html's search box gets the maxlength every real search box has, so a too-long fill is truncated and the readback check raises instantly. R8's case costs 0.15s where the reviewer's click-timeout repro costs 10.9s."
+      "fix": "T-M32-3 now states the true cost model: only a postcondition failure pays SETTLE_BUDGET_MS; an act failure raised inside execute never reaches check_state. The cheap design was also taken — shop.html's search box gets the maxlength every real search box has, so a too-long fill is truncated and the readback check raises instantly. R8's case costs 0.15s where the reviewer's click-timeout repro costs 10.9s."
     },
     {
       "id": "R10",
@@ -50,14 +50,15 @@
   ],
   "case_redundancy_review": {
     "question": "Whether one of the three laundering cases became redundant once the cheap shape existed.",
-    "answer": "No. The three pin three distinct shapes and each triage note says which \u2014 family 2's guard with page_changed: false; the drill-down guard with page_changed: false (reached through a replan that legitimately acts); the drill-down guard with page_changed: null, which neither of the others can produce because both of theirs fail a postcondition rather than raising inside execute. Pinning only one of the two values is precisely how R8 happened, so neither was traded away for wall clock."
+    "answer": "CORRECTED by PR #34 R13. The claim as first written — that the three cases pin three distinct shapes — described the INPUTS the three cases drive, and asserted of the ASSERTIONS something that was not true of them. `observe-cannot-launder-noop-action` asserted only `failure:act` plus `recovery: false`, and the drill-down guard reaches that identical terminal status on that identical input one step later, so the case stayed green with family 2's guard replaced by `elif False:` and the whole fast suite stayed green (131/131 on the merged tree) with `reads_without_acting` reverted to its pre-R1 one-liner — the PR #34 R1 fix had no coverage anywhere. The round-2 answer below was not checked by mutation, and stating it as though it had been is the part of R13 that is about this artifact rather than about the code. What is true NOW: the three inputs remain distinct as described, and the assertions distinguish them — `observe-cannot-launder-noop-action` also asserts `trace_actions: [navigate, click]` and `replans: 0`, so a refusal at replan time is separable from a refusal after the observation was taken, and both mutations were watched red before the assertion landed.",
+    "original_answer_round_2": "No. The three pin three distinct shapes and each triage note says which — family 2's guard with page_changed: false; the drill-down guard with page_changed: false (reached through a replan that legitimately acts); the drill-down guard with page_changed: null, which neither of the others can produce because both of theirs fail a postcondition rather than raising inside execute. Pinning only one of the two values is precisely how R8 happened, so neither was traded away for wall clock."
   },
   "gate": {
     "invariant": "41/41 = 1.000, $0.0000",
-    "fast": "121/121 = 1.000 >= baseline 1.000, 68.09s, $0.0000 \u2014 OVER BUDGET",
+    "fast": "121/121 = 1.000 >= baseline 1.000, 68.09s, $0.0000 — OVER BUDGET",
     "live": "9/9 = 1.000, $0.0000",
     "orchestrator_verified": "Re-run independently after 1e8997a: invariant 41/41 = 1.000 (7.9s), fast 121/121 = 1.000 (68.62s, 209 actions, $0.0000).",
-    "wall_clock_attribution": "66.06s -> 68.09s. R8's case is 0.15s. The +2.2s is recovery-label-lands-on-the-extract, which needs a failed postcondition on an action that DID change the page and therefore cannot use the cheap shape \u2014 it is the page_changed: True half of the evidence. Counted into T-M32-3 with the other four postcondition-shaped cases. Cumulative for this PR: 61.16s -> 68.62s.",
+    "wall_clock_attribution": "66.06s -> 68.09s. R8's case is 0.15s. The +2.2s is recovery-label-lands-on-the-extract, which needs a failed postcondition on an action that DID change the page and therefore cannot use the cheap shape — it is the page_changed: True half of the evidence. Counted into T-M32-3 with the other four postcondition-shaped cases. Cumulative for this PR: 61.16s -> 68.62s.",
     "reports": [
       "20260822-192828-fast.json",
       "20260822-192917-invariant.json",

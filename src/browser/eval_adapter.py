@@ -926,6 +926,17 @@ def _run_fixture_case(case: dict) -> dict:
         checks["recovery"] = bool(recovered) == exp["recovery"]
     if "replans" in exp:
         checks["replans"] = result["budgets_spent"]["replans"] == exp["replans"]
+    # Which steps actually RAN, in order. A terminal status says what the run
+    # died of and not where, and two different guards can reach the same status
+    # on the same input — PR #34 R13: `observe-cannot-launder-noop-action`
+    # asserted only `failure:act` and stayed green when the family-2 guard it
+    # exists to pin was disabled, because the drill-down guard one step later
+    # produced the identical status. The trace prefix is what tells them apart:
+    # a refusal at replan time means the replanned steps never ran at all.
+    # Structural on purpose — `got.reason` would say the same thing and turn a
+    # reworded message into a false red.
+    if "trace_actions" in exp:
+        checks["trace_actions"] = [s["action"] for s in trace] == exp["trace_actions"]
     # One entry per planner call, in order: {"has": [...], "lacks": [...]} of
     # strings that must / must not appear in the observation THAT call was given,
     # rendered exactly as the live planner renders it into its prompt. The call
