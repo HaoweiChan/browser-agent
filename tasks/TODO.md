@@ -76,7 +76,7 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M34 — an answer is still never checked for being responsive            [status: in-progress]
+### M34 — an answer is still never checked for being responsive            [status: pr]
 Spec: M7 declared this gap, M10's probe demonstrated it, and M10's fix closed
 only the "which X has the most Y" sentence shape. The general defect is live on
 merged main and reproduces on a plain single-hop extraction: a string that IS on
