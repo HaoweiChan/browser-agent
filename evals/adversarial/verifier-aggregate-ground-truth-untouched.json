@@ -1,7 +1,10 @@
 {
   "id": "verifier-aggregate-ground-truth-untouched",
   "task": "browser",
-  "suites": ["fast", "invariant"],
+  "suites": [
+    "fast",
+    "invariant"
+  ],
   "input": {
     "kind": "verifier",
     "aggregate": [
@@ -18,7 +21,9 @@
         "task": "Which product is labeled as the most popular item on this page?",
         "value": "Best Seller Badge Product",
         "page_text": "Catalogue header and sidebar filler text padding this evidence window out to a realistic page length so the dump ratio never comes near threshold. Best Seller Badge Product -- our store's own badge says this is our most popular item, chosen by staff. More catalogue filler follows below the fold to round out the page.",
-        "expect": { "answer": "Best Seller Badge Product" },
+        "expect": {
+          "answer": "Best Seller Badge Product"
+        },
         "pass": true
       },
       {
@@ -26,15 +31,73 @@
         "task": "Which product is labeled as the most popular item on this page?",
         "value": "Best Seller Badge Product",
         "page_text": "Catalogue header and sidebar filler text padding this evidence window out to a realistic page length so the dump ratio never comes near threshold. Best Seller Badge Product -- our store's own badge says this is our most popular item, chosen by staff. More catalogue filler follows below the fold to round out the page.",
-        "expect": { "answer": "A Completely Different Product" },
+        "expect": {
+          "answer": "A Completely Different Product"
+        },
+        "pass": false
+      },
+      {
+        "note": "M31 relaxation: the trace really enumerated the candidate set with `extract_all`, so the comparison the guard says is missing WAS made -- in code (verifier.rank), over every candidate. No ground truth, same superlative task text, and it PASSes. This is the direction that lets D22's false-refusal cost shrink instead of being paid on every superlative run.",
+        "task": "Which product is labeled as the most popular item on this page?",
+        "trace": [
+          {
+            "i": 1,
+            "action": "extract_all",
+            "postcondition_ok": true,
+            "rank": true
+          }
+        ],
+        "value": "Best Seller Badge Product",
+        "page_text": "Catalogue header and sidebar filler text padding this evidence window out to a realistic page length so the dump ratio never comes near threshold. Best Seller Badge Product -- our store's own badge says this is our most popular item, chosen by staff. More catalogue filler follows below the fold to round out the page.",
+        "expect": null,
+        "pass": true
+      },
+      {
+        "note": "the backstop, and the reason the relaxation reads GRADED steps rather than every step in the trace: an act-ladder replan can drop the enumeration mid-run, superseding the `extract_all` and executing a bare `extract` in its place. The trace still CONTAINS the word; nothing that was graded enumerated anything. A relaxation written over `trace` instead of `graded` passes this row, which is the plan lint's residual hole laundering itself shut.",
+        "task": "Which product is labeled as the most popular item on this page?",
+        "trace": [
+          {
+            "i": 1,
+            "action": "extract_all",
+            "postcondition_ok": true,
+            "superseded_by": 2,
+            "rank": true
+          },
+          {
+            "i": 2,
+            "action": "extract",
+            "postcondition_ok": true
+          }
+        ],
+        "value": "Best Seller Badge Product",
+        "page_text": "Catalogue header and sidebar filler text padding this evidence window out to a realistic page length so the dump ratio never comes near threshold. Best Seller Badge Product -- our store's own badge says this is our most popular item, chosen by staff. More catalogue filler follows below the fold to round out the page.",
+        "expect": null,
+        "pass": false
+      },
+      {
+        "note": "PR #29 R20: the trace carries an `extract_all` that declared `rank: false` — the plan saying the answer is the whole enumeration, i.e. that it compared nothing. Relaxing on the WORD `extract_all` let that satisfy the guard whose job is to notice nothing compared anything.",
+        "task": "Which product is labeled as the most popular item on this page?",
+        "trace": [
+          {
+            "i": 1,
+            "action": "extract_all",
+            "postcondition_ok": true,
+            "rank": false
+          }
+        ],
+        "value": "Best Seller Badge Product",
+        "page_text": "Catalogue header and sidebar filler text padding this evidence window out to a realistic page length so the dump ratio never comes near threshold. Best Seller Badge Product -- our store's own badge says this is our most popular item, chosen by staff. More catalogue filler follows below the fold to round out the page.",
+        "expect": null,
         "pass": false
       }
     ]
   },
-  "expect": { "note": "each row is (task, value, page_text, expect, should_pass)" },
-  "provenance": "PR #25 R2 (MEDIUM, repair): verifier-aggregate-superlative-fails-loud pins only the no-ground-truth FAIL direction; nothing proved the comment's own claim that expect.answer still decides the L2 path on its own merits. Row 1 is the reviewer's exact repro (no expect -- fails loud, the declared D22 ceiling). Row 2 is the missing direction: the same task text, the same superlative phrasing, but with expect.answer supplied -- verify()'s has_ground_truth gate means aggregate_needs_comparison never even runs, so answers_match alone decides it, and it PASSes. Row 3 guards against a shallow fix that made the guard silently skip itself whenever expect is present regardless of correctness -- a wrong ground-truth answer must still fail, just for the ordinary L2 reason.",
+  "expect": {
+    "note": "each row is (task, value, page_text, expect, should_pass)"
+  },
+  "provenance": "PR #25 R2 (MEDIUM, repair): verifier-aggregate-superlative-fails-loud pins only the no-ground-truth FAIL direction; nothing proved the comment's own claim that expect.answer still decides the L2 path on its own merits. Row 1 is the reviewer's exact repro (no expect -- fails loud, the declared D22 ceiling). Row 2 is the missing direction: the same task text, the same superlative phrasing, but with expect.answer supplied -- verify()'s has_ground_truth gate means aggregate_needs_comparison never even runs, so answers_match alone decides it, and it PASSes. Row 3 guards against a shallow fix that made the guard silently skip itself whenever expect is present regardless of correctness -- a wrong ground-truth answer must still fail, just for the ordinary L2 reason. PR #29 R20 appended row 6: `rank: false` on the enumerating step must NOT relax the guard, because that declaration says no comparison happened. Watched red against the `any(action == 'extract_all')` form: should_pass false, verdict PASS.",
   "triage": {
     "class": "coverage-gap",
-    "note": "tagged invariant: the claim in verifier.py's own comment ('answers_match still decides them on their own merits') was uncited and unguarded -- the same species of defect as R1's dangling support-matrix citation, just inside code instead of docs. Watched red first as an 'unknown verifier probe(s)' error, since _run_verifier_case had no 'aggregate' key until this PR."
+    "note": "tagged invariant: the claim in verifier.py's own comment ('answers_match still decides them on their own merits') was uncited and unguarded -- the same species of defect as R1's dangling support-matrix citation, just inside code instead of docs. Watched red first as an 'unknown verifier probe(s)' error, since _run_verifier_case had no 'aggregate' key until this PR. M31 appended rows 4 and 5: the guard now relaxes on a trace carrying a GRADED `extract_all` step -- the comparison primitive the guard's own comment said the plan vocabulary lacked -- and row 5 pins that a superseded one, dropped by an act-ladder replan, does not count. Each was watched red against the variant it exists to rule out: row 4 against the pre-M31 guard (no relaxation at all) -- should_pass true, verdict FAIL; row 5 against a relaxation written over `trace` instead of `graded` -- should_pass false, verdict PASS."
   }
 }

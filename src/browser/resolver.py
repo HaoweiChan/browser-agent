@@ -97,8 +97,13 @@ async def _nearest(page, loc, near: str) -> int | None:
     return await page.evaluate(NEAREST_JS, [handles, cands])
 
 
-async def resolve(page, target: dict):
+async def resolve(page, target: dict, many: bool = False):
     """Return (locator, tier). Raises ResolveError with a locate subclass.
+
+    `many` is `extract_all`'s resolution: the first tier with ANY match wins and
+    the whole match set is returned, because "every author on this page" is a
+    question ambiguity is the ANSWER to, not an error. Nothing else changes —
+    same tiers, same order, same site-agnostic targets.
 
     `index` (0-based) picks the k-th match instead of demanding uniqueness —
     "the first result" is a real browsing primitive (TC2/TC4), not site
@@ -136,6 +141,10 @@ async def resolve(page, target: dict):
                 return loc.nth(i), "structural"
             continue
         n = await loc.count()
+        if many:
+            if n:
+                return loc, tier
+            continue
         if index is not None:
             if n > index:
                 return loc.nth(index), tier

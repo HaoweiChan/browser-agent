@@ -57,12 +57,15 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-129 distinct cases (20 golden + 109 adversarial).
-170 browser actions in a `fast` run; **54 of the
-97** cases drive a real Chromium end to end — counted here as
-cases that actually recorded browser actions: the six L5 refusal cases are
-end-to-end cases that deliberately stop before a browser opens. The remaining
-43 are those refusals plus pure-code probes of a single
+143 distinct cases (20 golden + 123 adversarial).
+209 browser actions in a `fast` run; **71 of the
+132** `fast` cases drive a real Chromium end to end — counted here as
+cases that actually recorded browser actions, read out of the committed report
+`evals/report/20260822-172256-fast.json` rather than tallied by hand (the
+previous version of this line carried an M8-era 54/97 against an M10-era total,
+and said so with the confidence of a derived number). The six L5 refusal cases
+are end-to-end cases that deliberately stop before a browser opens. The
+remaining 61 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
@@ -454,7 +457,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-129 distinct cases (M10, refreshed from the case files' own `tc`/`level`/`domain`
+143 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -462,12 +465,12 @@ Empty cells are shown, not hidden.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 30 | | L1 | 31 |
-| TC2 search-then-extract | 8 | | L2 | 22 |
-| TC3 navigate-then-extract | 11 | | **L3** | **5 — 4 live (one of them unrun) + 1 fixture (the probe-2 aggregate-superlative twin, M10)** |
-| TC4 interact-then-extract | 18 | | L4 (mutation/recovery) | 15 |
+| TC1 extract-on-page | 31 | | L1 | 35 |
+| TC2 search-then-extract | 8 | | L2 | 26 |
+| TC3 navigate-then-extract | 13 | | **L3** | **13 — 4 live (one of them unrun) + 9 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`, R20's `plan-lint-refuses-a-declared-non-comparison`, and M34's own page-furniture case** |
+| TC4 interact-then-extract | 28 | | L4 (mutation/recovery) | 16 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
-| mechanism/unit probes | 42 | | untagged (unit probes) | 34 |
+| mechanism/unit probes | 47 | | untagged (unit probes) | 35 |
 
 | Domain | Kind | Cases |
 |---|---|---|
@@ -747,9 +750,9 @@ folded into (M10, `specs/decisions/ADR-015-a-freeze.md`), watched red first:
   now takes the task text and fails any layer-1-only verdict (no
   `expect.answer`/`expect.state` — exactly the runtime shape, since a live
   run has no ground truth) on a "which X has the most/least/highest/lowest/
-  fewest/greatest Y" pattern: the plan vocabulary
-  (`navigate | click | fill | extract`) has no enumerate-and-count
-  primitive, so a single-shot extraction against that phrasing cannot be
+  fewest/greatest Y" pattern: the plan vocabulary at M10
+  (`navigate | click | fill | extract` — M31 added `extract_all`) had no
+  enumerate-and-count primitive, so a single-shot extraction against that phrasing cannot be
   trusted regardless of what it returns. `assemble_result`'s existing INV-2
   branch (a non-PASS verdict can never be reported as `success`) does the
   rest: the run now ends `failure:semantic` instead of `success`. Confirmed
@@ -792,6 +795,25 @@ property, and fixing it is out of the two-defect scope this repair was
 bounded to. The live re-confirmation of both fixes against the deployed URL
 happens after this PR merges and Zeabur redeploys — the same sequence the M5
 probe's fix followed — and is not claimed here.
+
+**What M31 closed afterwards.** Finding 1's own diagnosis above — "the
+aggregate-counting instruction is being planned as a single-element `extract`
+rather than something that requires enumerating and counting" — named a missing
+verb, and M10 could only answer it at the verifier. M31 added the verb
+(`extract_all`, every match of a target) and the reduction over what it
+enumerates (`verifier.rank`, arithmetic in code, never a judgement asked of the
+model), and put a deterministic lint at every point the executor adopts a plan
+— before the first action, and again when the `act` ladder replans mid-run: an
+aggregate-shaped task whose plan does not read the page exactly once, with
+`extract_all`, is replanned once with a note naming the gap, and stopped rather
+than executed if the gap survives.
+The probe's own question is now answered correctly offline against ground truth
+(`probe3-quotes-most-quoted-author`, a fixture twin of this page's author
+distribution), and the M10 case that pinned the wrong-success shape
+(`verifier-aggregate-superlative-fails-loud`) now ends before the browser acts
+at all. `specs/decisions/ADR-018-m31-plan-lint.md` records what that does not
+close: the lint is a regex over English with the same ceiling as `SCOPE_BLOCK`,
+and a directly-stated superlative is still refused (D22, re-measured).
 
 ## 8a-3. Post-merge live confirmation (M29) — it did not confirm
 
@@ -901,10 +923,13 @@ budgets : 2 actions · 1446 llm_tokens · $0.005454 · 6342 ms
 Three separate things had to line up for that to be scored PASS, and each one
 is already a declared limitation rather than a surprise:
 
-1. **No comparison exists in the plan vocabulary.** `navigate | click | fill |
-   extract` cannot express "compare eleven prices and return the minimum", so
+1. **No comparison existed in the plan vocabulary.** `navigate | click | fill |
+   extract` could not express "compare eleven prices and return the minimum", so
    "cheapest" became "extract the first product tile" — the one-hop-deep
-   ceiling from the M5 probe, reproduced exactly.
+   ceiling from the M5 probe, reproduced exactly. M31 added `extract_all` and a
+   code-side `rank` (§8a-2 above, ADR-018), which makes this plan expressible;
+   this run is not re-run here, because it needs a real planner call and the
+   case that would grade it is still `full`-tagged and unrun.
 2. **The identity anchor was `"Travel"`** — the category, not the entity. On an
    aggregate page every candidate satisfies it. This is `trap-search-not-executed`
    in the wild: the anchor certifies the wrong answer as readily as the right

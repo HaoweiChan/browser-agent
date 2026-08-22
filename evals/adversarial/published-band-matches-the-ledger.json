@@ -1,0 +1,19 @@
+{
+  "id": "published-band-matches-the-ledger",
+  "task": "browser",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "published-band"
+  },
+  "provenance": "PR #29 R21. Three times in this PR a published wall-clock band failed to match the `evals/report/history.jsonl` committed beside it: nine of fifteen runs published as 'every run the ledger records', four values that appear in no recorded run at that case count, the two slowest `invariant` runs dropped unlabelled, and a ceiling derived from a maximum (64.71s) that was never measured. Nothing graded any of it, which is why prose drifted that far — and the same selective-band presentation is what ADR-013 Decision 4 was withdrawn over. This grades the PROPERTY, not the snapshot: `history.jsonl` grows on every gate run, so a check that string-matched the published list would go red on the next run rather than on a regression. It asserts that the doc's case count is the current one, that the committed ceiling is at least ADR-013's rule applied to the ledger's slowest run at that count, and that the published number derives that same ceiling. The last one is deliberately `rule(published) == rule(ledger max)` rather than the stricter `published >= ledger max` the reviewer proposed: the harmful failure R21 found is a band that justifies a LOWER ceiling than the truth (12.96s published where 13.57s was recorded, giving 15 where the rule said 20), and the strict form reddens on ordinary variance instead — this tree moved 0.2-0.5s between consecutive runs while the check was being written, which would make the doc need re-editing after every slightly slow run. That is the same rot-by-construction trap in a different place, so the property graded is the one that matters.",
+  "triage": {
+    "class": "doc-drift",
+    "note": "tagged invariant. The cost is deliberate and is the same one `docs-numbers-are-derived` charges: a run slower than the published band reddens the next gate run until the band is re-measured, and adding a case to a suite reddens it until the band is re-measured at the new count. A band nobody re-measures is the thing that produced R21.",
+    "watched_red": "three ways, each against the defect it rules out. (1) Against the text as PR #29 R21 found it — ADR-019 publishing `invariant` 12.96s and `fast` 64.71s — the check reports {suite: invariant, published_slowest: 12.96, ledger_slowest: 13.57, ceiling: 15, required_by_adr013_rule: 20} and {suite: fast, published_slowest: 64.71, ledger_slowest: 65.14}: a maximum that was in no recorded run, and a ceiling the rule had never justified. (2) With the committed `invariant` ceiling put back to 15 against the current ledger: {suite: invariant, ceiling: 15, required_by_adr013_rule: 20, ledger_slowest: 14.12}. (3) Before ADR-019 carried any band line at all: {suite: fast, adr_publishes_no_band_line: true} and the same for invariant. It also went red for real, unplanned, during this commit's own preparation: a 66.50s `fast` run landed after the band was published at 65.53s, and the next gate run reported it — which is the behaviour, not a defect."
+  }
+}

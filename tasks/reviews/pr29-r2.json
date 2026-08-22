@@ -1,0 +1,79 @@
+{
+  "pr": 29,
+  "round": 2,
+  "scope": "repair diff 195fe78..HEAD + standing round-1 findings",
+  "standing_round1": {
+    "R1": "closed",
+    "R2": "closed but over-corrected -> R9",
+    "R3": "closed",
+    "R4": "closed (debt, authorized route)",
+    "R5": "partially closed -> R11",
+    "R6": "closed",
+    "R7": "closed (debt)",
+    "R8": "closed"
+  },
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R9",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The R2 repair over-corrects: gating the code-side reduction on `is_aggregate` silently drops the reduction for every ranking task `_AGGREGATE` misses — including every \"cheapest\" wording — so the raw enumeration is now published as the answer to a single-answer question with `status: success`.",
+      "evidence": "src/browser/agent.py:762 `if is_aggregate(task) and len(answers) == 1 and isinstance(answer, list):` against src/browser/verifier.py:120 `_AGGREGATE = (which|what|who).{0,80}(most|least|fewest|highest|lowest|greatest)` — no `cheapest`. src/browser/planner.py:86-90 tells a real planner to use `extract_all` for exactly these tasks (\"the cheapest one\") and promises \"The comparison is done in code, not by you\"; for a cheapest-wording task the comparison is now done by nobody. Measured on quotes.html, plan `[extract_all {role: link}]`, task \"Find the author quoted the most on this page and name them.\": HEAD returns success + a 13-item list; the same run at 195fe78 behaviour returns success + \"Albert Einstein\". The milestone's own headline case `evals/golden/live-books-cheapest-travel.json` is this exact shape. tasks/TODO.md:38-53 and ADR-016:207-215 present this as a pre-existing regex ceiling rather than as something this repair narrowed. No eval case covers the regression.",
+      "repro": "run_case with task \"Find the author quoted the most on this page and name them.\", fixture quotes.html, stub_plan [{action: extract_all, target:{role: link}}] -> HEAD: 13-item list, success. Force is_aggregate True to get 195fe78 behaviour: 'Albert Einstein'.",
+      "acceptance": "A red-first case pinning a single-answer ranking that `_AGGREGATE` misses (the `live-books-cheapest-travel` wording is the repo's own example) either reduced to one value or failed loudly — never a raw list reported as success — with `extract-all-list-task-keeps-every-row` still green; and if the narrowing is kept deliberately, tasks/TODO.md and ADR-016 must state that PR #29 removed the reduction for that wording rather than that M31 never had it."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The published wall-clock justification for putting the three new cases in `invariant` is not reproducible — the real cost is 64.81s, not the 60.13s README states — and one of the three is not settle-bound at all (0.20s, its postcondition does arrive).",
+      "evidence": "README.md:94 \"its three settle-bound ones — each spends the full 2s postcondition budget on a postcondition that deliberately never arrives\" and README.md:99 \"with all of them in `fast` the suite ran 60.13s and the gate refused it\". evals/report/20260822-120943-invariant.json per-case seconds: `extract-all-list-task-keeps-every-row` 0.20, `plan-lint-holds-across-a-midrun-replan` 2.36, `replan-cannot-launder-noop-action-extract-all` 2.29 (sum 4.85) against a committed `fast` total of 59.68s — \"all of them in fast\" is ~64.5s. Re-measured: retagging the three to [\"fast\",\"invariant\"] runs `fast` in 64.81s, $0.0000. The claim is repeated in evals/adversarial/extract-all-list-task-keeps-every-row.json:30.",
+      "repro": "copy the tree, retag the three case files' \"suites\" to [\"fast\",\"invariant\"], run `-m evals.run --suite fast` -> `wall 64.81s`",
+      "acceptance": "README publishes the number a reader can reproduce (either 64.8s for all three, or the subset the 60.13s figure actually refers to), and the 0.20s case either moves to `fast` — where it costs nothing and the pre-commit hook runs it — or the \"each spends the full 2s\" sentence stops covering it."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`expect.planner_note_contains` grades only the caller-side string in agent.py; the half of R5's defect that lived in `live_planner` is still ungraded, and the ADR claims otherwise.",
+      "evidence": "src/browser/eval_adapter.py:303-306 reads `planner.notes`, which only `stub_planner` (planner.py:159-171) populates; every offline case uses the stub, so planner.py:206 `user += \"\\n\\n\" + note` — the exact line R5 changed — is executed only by `full`-tagged cases. Demonstrated: reverting planner.py:206 to the old prefix leaves `probe3-quotes-most-quoted-author` reporting `planner_note_contains: True`, and invariant 44/44 + fast 109/109 stay green. Against that, ADR-016:161-168 says \"`stub_planner` records every note it is handed, so the message a real planner would receive is graded offline at $0\", and the case note says the key \"grades the message the planner is actually sent on the lint path\".",
+      "repro": "restore the `A previous attempt failed:` prefix around the `note` append in src/browser/planner.py, then run probe3-quotes-most-quoted-author -> planner_note_contains True",
+      "acceptance": "Either a case that grades the string `live_planner` actually assembles (a unit-shaped check over the message build, no network, no tokens), watched red with the prefix restored, or the ADR-016 and case-note claims are reworded to \"grades what the call site passes\", which is all they do."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The declared ceiling of the new `is_aggregate` gate is misstated in three published places — it blames the missing which/what/who frame, when the vocabulary half is what excludes \"cheapest\", and the repo's own committed cases falsify the stated version.",
+      "evidence": "tasks/TODO.md:97, ADR-016:65 and evals/adversarial/extract-all-list-task-keeps-every-row.json:30 all say a ranking \"phrased without a which/what/who frame\" is neither linted nor reduced. But `evals/adversarial/verifier-catches-listing-dump.json`'s committed task — \"Which product is the cheapest, and what is its price?\" — HAS the frame and `is_aggregate` still returns False, as does `rank-reduces-enumeration-in-code` row 9. The real ceiling is the conjunction: `_AGGREGATE` (verifier.py:120) needs both a which/what/who frame AND a word from {most, least, fewest, highest, lowest, greatest}; `cheapest`-style price wording lives only in `_RANK` (verifier.py:138).",
+      "repro": "`is_aggregate('Which product is the cheapest, and what is its price?')` -> False",
+      "acceptance": "All three statements name both halves of `_AGGREGATE` and cite a which-framed example that still misses (verifier-catches-listing-dump's own task), so a reader cannot conclude that adding a which-frame is enough to get the lint and the reduction."
+    },
+    {
+      "id": "R13",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "Three browser-driving cases were tagged `invariant`-only to stay under the `fast` ceiling, but the relief was not enough: the `fast` gate now fails intermittently on wall clock with every case passing, and the cost was moved into the one suite the repo has deliberately given no ceiling.",
+      "evidence": "CLAUDE.md defines `invariant` as \"must-always-hold, pure code, no LLM/network\"; the three new cases each drive a real Chromium against the loopback fixture server. Precedent for browser cases in `invariant` exists but every one is dual-tagged [\"fast\",\"invariant\"]; these three are the first `invariant`-only ones, and each case file states the reason is the `fast` ceiling. `evals/adversarial/fast-wall-clock-budget.json` pins `suites_with_a_ceiling: [\"fast\"]` and rows `{suite: invariant, wall_seconds: 999.0, over: false}` — the suite the cost moved into is unbounded by construction. Measured: invariant went 7.26s -> 12.20s while the published `fast` number stayed at 59.7s. OBSERVED BY THE ORCHESTRATOR at round 2, on a docs-only commit at e3a39c1+: `[eval] OVER BUDGET: suite 'fast' wall clock 60.24s > 60s (ADR-002 Decision 4)` with `suite 'fast': 109/109 = 1.000` — the pre-commit gate refused a commit that changed nothing but JSON under tasks/reviews/. Same tree, same commit, measured 59.68 / 59.70 / 59.80 / 60.24s across four runs. The tag shuffle therefore did not resolve the straddle it was justified by; it only moved ~4.9s out of the measured number and left the gate a coin flip.",
+      "repro": "`./.venv/bin/python -m evals.run --suite fast` repeatedly on HEAD — the run straddles 60s; 60.24s observed, exit non-zero, 109/109 passing.",
+      "acceptance": "The `fast` gate stops being a coin flip: either the ceiling is amended through ADR-013/ADR-002 D4 with the measured band published, or enough wall clock is moved out of `fast` that the ceiling is met with margin. Whichever route, `invariant` gets a declared ceiling of its own graded by `fast-wall-clock-budget` (a `suites_with_a_ceiling` set of two) so tag choice cannot be used as an unbounded relief valve, and CLAUDE.md's description of `invariant` matches what it now contains."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "A debt id cited by a new case resolves against nothing — the block is called T-CHEAPEST-WORDING, not T-AGGREGATE-WORDING.",
+      "evidence": "evals/adversarial/extract-all-list-task-keeps-every-row.json:30 \"That is T-AGGREGATE-WORDING in tasks/TODO.md\"; `grep -rn T-AGGREGATE-WORDING` returns that one line and nothing in tasks/TODO.md.",
+      "repro": "`grep -rn 'T-AGGREGATE-WORDING' .` -> one hit, in the case file only",
+      "acceptance": "The cite names T-CHEAPEST-WORDING (or the block is renamed), so every debt id quoted from a case file resolves in tasks/TODO.md.",
+      "route_note": "LOW would normally route to debt, but this is a one-token dangling cite inside a file this PR itself adds, and T-CASE-CITES already tracks the general class — logging a second debt block would be noise."
+    }
+  ],
+  "gate_failure": {
+    "round": 2,
+    "suite": "fast",
+    "observed": "wall clock 60.24s > 60s, 109/109 = 1.000, exit non-zero",
+    "note": "Observed by the orchestrator while committing the round-2 review artifact. Recorded, not retried away. Escalates R13 to HIGH."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "extract-all-declared-rank-obeys-the-plan",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "List every product in the catalogue with its price, cheapest first.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Sort by price (low to high)" },
+        "expected_state": { "text_visible": "Sorted by price (low to high)" } },
+      { "action": "extract_all", "target": { "role": "listitem" }, "rank": true }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Cobalt Floor Rug $18.00"
+  },
+  "provenance": "PR #29 R20's mirror, pinned as the behaviour rather than fixed, because the two directions are not symmetric and pretending otherwise would restore the guessing this milestone spent three rounds deleting. Same task and same fixture as `extract-all-list-task-keeps-every-row`, which declares `rank: false` and gets all four rows; this one declares `rank: true` and gets one. That is the declared-intent design working: the plan asked for one item and code gave it one. The reason the OTHER direction (`plan-lint-refuses-a-declared-non-comparison`) can be refused is that code has an independent, high-precision opinion there — `is_aggregate` matches — and here it has none: `is_aggregate` is False for this wording, and the only other signal would be a wording regex over 'list'/'every'/'each', which is exactly what PR #29 R16 deleted for getting this call backwards. So code obeys the plan and the residual is declared: T-RANK-MIRROR.",
+  "triage": {
+    "class": "declared-limitation",
+    "note": "the pair (this case and extract-all-list-task-keeps-every-row) is the whole argument in two files: identical task, identical fixture, identical verb, opposite declarations, opposite answers, both green. Nothing in the page or the plan's shape distinguishes them — only the declaration does, which is why it is required."
+  }
+}

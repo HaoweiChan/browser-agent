@@ -1,0 +1,79 @@
+{
+  "pr": 29,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The `replan-cannot-launder-noop-action` guard still tests the literal string \"extract\", so a replan whose first step is the new `extract_all` walks straight around it and launders a failed action that changed nothing on the page.",
+      "evidence": "src/browser/agent.py — `drops_action = new_steps and new_steps[0].get(\"action\") == \"extract\"`. The same commit changed two other action tests to `.startswith(\"extract\")` but not this one. Input: `replan-cannot-launder-noop-action` with its second stub plan changed to `[{\"action\": \"extract_all\", \"target\": {\"role\": \"link\"}}]` — the click fails its postcondition and changes nothing, the replan is accepted anyway, run ends `status: success`, `verdict: PASS`, answer = the UNSORTED product list. The unmodified `extract` replan correctly ends `failure:act`.",
+      "repro": "scratchpad repro2.py under the reviewer session: `./.venv/bin/python <path>` from the worktree prints `{\"status\": \"success\", \"answer\": [...unsorted...]}` where the pinned case prints `failure:act`.",
+      "acceptance": "`drops_action` recognises every extraction verb (e.g. `str(new_steps[0].get(\"action\") or \"\").startswith(\"extract\")`), and an `extract_all` twin of `replan-cannot-launder-noop-action` is added to `evals/adversarial/`, watched red first (success + PASS on the unsorted list) and green after (`failure:act`, `recovery: false`)."
+    },
+    {
+      "id": "R2",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "`rank` is applied to any single-`extract_all` answer whenever the task text contains a `_RANK` word — including tasks that legitimately want the whole list — silently reducing a multi-row answer to one row and reporting `success`.",
+      "evidence": "src/browser/agent.py answer-assembly: `if len(answers) == 1 and isinstance(answer, list): answer = rank(task, answer)` — gated on the answer's shape only, never on `is_aggregate`. Its comment claims `verifier-list-rows-not-a-dump` is safe, but that case is safe only because its plan is hand-pinned as four pre-M31 `extract` steps. `src/browser/planner.py` SYSTEM now tells the model to use `extract_all` whenever the task ranks/compares. Task \"List every product in the catalogue with its price, cheapest first.\" planned the way the new prompt asks (`click sort` + one `extract_all {role: listitem}`) yields `status: success`, answer `\"Cobalt Floor Rug $18.00\"` — one row instead of four. At runtime there is no `expect.answer`, so `verify()` returns PASS and the truncation is invisible.",
+      "repro": "scratchpad repro4.py — prints `status: success, answer: \"Cobalt Floor Rug $18.00\"`, plus `rank(\"List every product ... cheapest first.\", [4 rows]) -> \"Cobalt Floor Rug $18.00\"`.",
+      "acceptance": "`rank` runs only when the task is actually a single-answer ranking (e.g. gate on `is_aggregate(task)` or an explicit signal from the step), so an enumeration for a list-shaped task survives; a case pinning \"List every product ... cheapest first.\" planned as one `extract_all` returns all four rows, watched red first."
+    },
+    {
+      "id": "R3",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The lint's \"exactly one enumeration\" rule is enforced only against the first plan, so an act-ladder replan can add a second `extract_all` mid-run — producing exactly the unranked list-of-lists the ADR names as the defect the lint exists to stop, scored `success`/`PASS` with `aggregate_needs_comparison` green.",
+      "evidence": "src/browser/agent.py answer-assembly comment asserts \"More than one enumeration in one plan never reaches here; the plan lint requires exactly one for an aggregate task\" — false. `plan_gap` runs once, before the first action; the mid-run replan path (`steps = steps[:si] + new_steps`) is unlinted, and the relaxed guard in src/browser/verifier.py:415 asks `any(s.get(\"action\") == \"extract_all\" ...)`, i.e. \"is there one\", not \"exactly one\". Task \"Which product on this page has the most customer reviews?\", plan 1 `[extract_all {role: link}, click sort with an unreachable expected_state]`, replan `[extract_all {role: listitem}]` -> `status: success`, `verdict: PASS`, all checks green including `aggregate_needs_comparison: true`, answer = `[[4 link texts], [4 listitem texts]]`. Independent of R1: the failing click really does change the page, so widening `drops_action` would not catch it.",
+      "repro": "scratchpad repro6.py (page-changing click) and repro5.py (noop click) — both print `status: success`, `verdict: PASS`, list-of-lists answer.",
+      "acceptance": "Either the lint runs on every plan the executor adopts (including act-ladder replans), or the guard/answer-assembly refuses more than one graded enumeration on an aggregate task. A new adversarial case with the two-enumeration replan is watched red (`success`/`PASS`, list-of-lists) and ends loud after the fix."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The M31 acceptance line \"`live-books-cheapest-travel` goes green against ground truth\" is unmet, and the milestone's central mechanism provably cannot fire on that case at all.",
+      "evidence": "tasks/TODO.md M31 acceptance names the case as a green requirement. ADR-016 Consequences concedes it stays `full`-tagged and unrun, and that its lint does not fire. Confirmed: `_AGGREGATE` requires `(which|what|who) ... (most|least|fewest|highest|lowest|greatest)`, and the case's task is \"In the Travel category, find the cheapest book and tell me its exact price.\" — no match, so `plan_gap` returns None. The offline substitute (`rank-reduces-enumeration-in-code` row 1) grades only the reduction over eleven prices handed to it.",
+      "repro": "`./.venv/bin/python -c \"import sys;sys.path.insert(0,'.');from src.browser.verifier import is_aggregate;print(is_aggregate('In the Travel category, find the cheapest book and tell me its exact price.'))\"` -> False",
+      "acceptance": "Either the acceptance line is amended in tasks/TODO.md with the reason and the residual gap recorded as declared debt, or the case is made reachable (run with a key, or the lint's shape widened with a watched-red case for the price wording)."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The lint's replan reuses the act-ladder's mid-run recovery prompt, so a real planner is told \"A previous attempt failed\" and \"Plan only the steps still needed\" when nothing has executed and nothing has failed — and no eval exercises that path.",
+      "evidence": "src/browser/planner.py `live_planner.plan`: `if note: user += \"\\n\\nA previous attempt failed: {note}\\nPlan only the steps still needed from the page above.\"`. `agent.run_task` calls `planner(task, url, obs, note=gap)` from the lint branch, where zero steps have run. Nothing grades it: `stub_planner.plan` accepts `note` and discards it, which `probe3-quotes-most-quoted-author`'s own triage admits.",
+      "repro": "`grep -n 'A previous attempt failed' src/browser/planner.py` and `grep -n 'note=gap' src/browser/agent.py`; no fast/invariant case reaches the branch.",
+      "acceptance": "The lint's replan sends a prompt describing what actually happened (a rejected plan, nothing executed, plan the whole task), with a case that grades the message the planner receives — e.g. a stub planner that records its `note` and a check that the lint path's note is distinguishable from the act-ladder's."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Two behaviours ADR-016 states explicitly — the lint note is written onto the first step of the replanned plan, and that step is deliberately not labelled `recovery` — have no eval case behind them.",
+      "evidence": "ADR-016 and the `pending, pending_recovery = lint_note, False` change in src/browser/agent.py. `probe3-quotes-most-quoted-author` is the only case that traverses the branch and its `expect` is `{status, answer, replans, actions}` — no `recovery` key, so `checks[\"recovery\"]` is never computed, and nothing inspects the note text. A regression labelling the lint step `recovery` (inflating the ADR-003 recovery metric) would leave the suite green.",
+      "repro": "`grep -n 'recovery' evals/adversarial/probe3-quotes-most-quoted-author.json` returns nothing; fast suite is 109/109 regardless.",
+      "acceptance": "`probe3-quotes-most-quoted-author` (or a sibling) asserts `\"recovery\": false` and that the replanned plan's first trace record carries the lint note, watched red against a variant that sets `pending_recovery = True`."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`extract_all` has no cap on match count, and each match stores its own up-to-2000-char evidence window, so one enumeration multiplies the page text by the number of matches in `result.json` and in the API/SSE payload.",
+      "evidence": "src/browser/agent.py extract branch: `extractions.extend({\"value\": v, \"page_text\": evidence_window(body, v, anchor), ...} for v in vals)` with `PAGE_TEXT_KEEP = 2000` (agent.py:41) and no bound on `len(vals)`. `RUN_BUDGETS` caps actions/tokens/ms, not extraction volume. Measured: `extract_all {role: link}` on `quotes.html` yields 13 records each carrying its own window of the same body.",
+      "repro": "scratchpad repro8.py — 13 values, 13 windows, one page.",
+      "acceptance": "Either a declared cap on enumerated matches (loud when exceeded, like every other budget here) or one shared evidence window per `extract_all` step, with a case pinning the record count for a large enumeration."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "tasks/TODO.md still carries the M31 block as `[status: todo]` while the PR is open, although the same commit moved M30 and M10 from `[status: pr]` into DONE.md.",
+      "evidence": "tasks/TODO.md:15 `### M31 — ... [status: todo]`, unchanged by the diff that deleted the M30 and M10 blocks. Orchestrator bookkeeping slip in d3a1ee2.",
+      "repro": "`git diff main...HEAD -- tasks/TODO.md | grep -n 'status:'`",
+      "acceptance": "M31's status reflects where it actually is in the pr-loop."
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "pr": 29,
+  "round": 4,
+  "resolutions": [
+    {
+      "id": "R20",
+      "resolution": "fixed (primary) + rejected-with-reason (mirror, -> debt T-RANK-MIRROR)",
+      "case": "plan-lint-refuses-a-declared-non-comparison (+ a plan-gap-truth-table row and a verifier-aggregate-ground-truth-untouched row, each watched red); mirror pinned by extract-all-declared-rank-obeys-the-plan",
+      "detail": "`plan_gap` now reads the enumerating step's `rank`, not just its action, and `aggregate_needs_comparison` requires `rank is True` rather than the mere presence of `extract_all`.",
+      "watched_red": "the orchestrator's own repro: checks {status: false, actions: false, replans: true}, status success, verdict PASS, answer ['Aurora Desk Lamp $39.00','Aurora Desk Lamp Pro $59.00','Meridian Wall Clock $24.50','Cobalt Floor Rug $18.00'], actions 2. Verifier row red under the old form: should_pass false, verdict PASS.",
+      "mirror_rejection_reason": "`_AGGREGATE` gives code a high-precision opinion that can contradict `rank: false`, but code has NO predicate for 'this task wants the whole set' — the only candidate is a wording regex over list/every/each, which is precisely what R16 deleted for getting this call backwards. Pinned as behaviour by extract-all-declared-rank-obeys-the-plan: same task, fixture and verb as extract-all-list-task-keeps-every-row, opposite declaration, opposite answer, both green.",
+      "adr": "ADR-016:63's \"the first that cannot be wrong, because it does not decide anything\" is DELETED — replaced with \"moving the decision was necessary and was not sufficient\", the one-directional ceiling, and the plain statement that no offline case exercises a real planner emitting `rank` (only live-books-cheapest-travel, full-tagged, unrun).",
+      "verified_by_orchestrator": "the round-4 repro now returns status failure:task, answer null — was success + raw 4-item list."
+    },
+    {
+      "id": "R21",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "grader": "property-based, not snapshot — never string-matches a list of run times",
+      "detail": "Re-derived from every run the ledger records at the shipped case count: fast/122 slowest 66.23 x 1.15 = 76.2 -> ceiling 80 (was 75); invariant/51 slowest 14.12 x 1.15 = 16.2 -> ceiling 20 (was 15). README and ADR-017 now publish the full run lists computed from the ledger by script, not by hand.",
+      "watched_red": "three ways: (1) against the text as the orchestrator found it — {suite: invariant, published_slowest: 12.96, ledger_slowest: 13.57, ceiling: 15, required_by_adr013_rule: 20} and {suite: fast, published_slowest: 64.71, ledger_slowest: 65.14}; (2) with the ceiling put back to 15 — {ceiling: 15, required_by_adr013_rule: 20, ledger_slowest: 14.12}; (3) before any band line existed. It also went red for real and unplanned mid-commit when a 66.50s run landed after the band was published at 65.53s.",
+      "deviation_flagged": "property 2 is `rule(published) == rule(ledger max)`, NOT `published >= ledger max`. The strict form reddened on ordinary variance (this tree moves 0.2-0.5s between consecutive runs; the doc needed re-editing three times running) — the rot-by-construction trap the orchestrator warned about, one level up. The harmful failure R21 found is a band that justifies a LOWER ceiling than the truth, and that is what is graded. Reason recorded in the case provenance and the code comment."
+    },
+    {
+      "id": "R22",
+      "resolution": "fixed",
+      "detail": "README's band section rewritten (no EVAL_WALL_BUDGET_S, no \"15s against 12.2s\", no \"80s CI / 60s local\", no self-contradiction 25 lines later); INDEX's ADR-002 line now carries all four ceilings and lists ADR-017 as an amender; ADR-002 and ADR-013 reconciled. T-R25 extended to the CI half rather than a new block, and left open for the mechanism (INDEX prose can still contradict its ADR with nothing red)."
+    },
+    {
+      "id": "R23",
+      "resolution": "fixed",
+      "detail": "rank-reduces-enumeration-in-code rows 11-12 now describe why they survive the deleted regex rather than describing the regex; fast-wall-clock-budget's triage note describes the per-suite variables and the CI numbers 90/20."
+    }
+  ],
+  "rejected": [
+    {
+      "id": "R20-mirror",
+      "reason": "code has no predicate for 'this task wants the whole set'; the only candidate is the wording regex R16 deleted for getting the call backwards. Logged as T-RANK-MIRROR and pinned as behaviour."
+    }
+  ],
+  "debt_logged": [
+    "T-RANK-MIRROR"
+  ],
+  "human_decision": "option A, last round — relayed after the second circuit breaker",
+  "merge": {
+    "commit": "e7a0b5f",
+    "from": "origin/main",
+    "note": "M34 landed on main and rewrites the same extract branch. Both kept: M34's per-extraction evidence is now built inside M31's per-value loop, so an extract_all gets one M34-shaped record per row — what not_page_furniture needs to judge a row at a time. Surfaced a real defect, not a textual conflict: loc.evaluate on an extract_all locator is a Playwright strict-mode violation, so the offset hint is taken from loc.first. Four cases went red on it before the fix."
+  },
+  "ci": {
+    "run": 32565265797,
+    "sha": "e7a0b5f",
+    "conclusion": "success",
+    "invariant": "51/51, wall 16.29s (ceiling 20)",
+    "fast": "122/122, wall 75.78s (ceiling 90)"
+  },
+  "local_gate": {
+    "invariant": "51/51 = 1.000, wall 13.28s (ceiling 20)",
+    "fast": "122/122 = 1.000, wall 65.58s (ceiling 80)",
+    "live": "9/9, $0.0000"
+  },
+  "baseline_untouched": true,
+  "no_verify_used": false
+}

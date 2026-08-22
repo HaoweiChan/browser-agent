@@ -44,7 +44,7 @@ legitimately repeats between a catalogue row and that item's own detail page;
 docs/support-matrix.md D24 names what survives the narrowing.
 
 `identity_anchors` here reads `expect["anchors"]`, and agent.py's runtime call
-(agent.py:491) passes NO `expect` — so at runtime **this check is vacuous**;
+(`run_task`'s closing `verify(...)`) passes NO `expect` — so at runtime **this check is vacuous**;
 it only does anything when a caller (the eval adapter) supplies
 `expect.anchors`. The actual runtime identity gate is a different mechanism
 entirely: an inline `anchor not in body` check in agent.py's extract step,
@@ -64,6 +64,7 @@ trap cases in evals/adversarial/ hold both shapes open on purpose.
 """
 
 import re
+from collections import Counter
 from decimal import Decimal, InvalidOperation
 
                         # sign        digits           trailing unit (%, etc.)
@@ -161,9 +162,11 @@ MIN_PAGE_CHARS = 100
 # construction here: whatever the planner grabs is real, grounded, non-empty
 # and not a dump, because the check that is missing is not "is this real" but
 # "does the plan vocabulary (navigate | click | fill | extract) even have a
-# way to answer this question" — and for "which X has the most/least Y" it
-# does not: there is no enumerate-and-count primitive, so any single-shot
-# extraction is a guess wearing a PASS. Ground truth (L2) would catch a wrong
+# way to answer this question" — and at M10, for "which X has the most/least Y",
+# it did not: there was no enumerate-and-count primitive, so any single-shot
+# extraction was a guess wearing a PASS. (M31 added one, `extract_all`, which is
+# what the relaxation further down reads for; the guard below is unchanged for
+# every plan that still does not use it.) Ground truth (L2) would catch a wrong
 # guess; a live run has none, which is exactly probe #2's finding. Matches
 # ONLY the superlative-over-a-set shape, not "cheapest"/"most expensive"
 # (a price comparison, tracked separately — D14, `live-books-cheapest-travel`
@@ -185,6 +188,113 @@ _AGGREGATE = re.compile(
     r"\b(which|what|who)\b.{0,80}\b(most|least|fewest|highest|lowest|greatest)\b",
     re.IGNORECASE,
 )
+
+# Which END of the order the task asked for. Deliberately NOT `_AGGREGATE`'s
+# vocabulary, because the two answer different questions: `_AGGREGATE` decides
+# "is this an aggregate-shaped task", and it is the shared ceiling of the
+# verifier guard above and agent.py's plan lint (one regex, two callers);
+# this one only decides direction, once a plan has ALREADY enumerated, and it
+# has to cover the price comparisons `_AGGREGATE` excludes on purpose
+# (`live-books-cheapest-travel`, D14 — "cheapest" is not a superlative over a
+# set of counts). Widening one does not widen the other, which is the point.
+#
+# ponytail: only wording this repo has actually seen in a task is listed —
+# D21's lesson, that widening to synonyms nobody probed is the unwatched
+# expansion CLAUDE.md rule 2 exists to prevent. "most expensive" precedes
+# "most" so the alternation prefers the longer phrase at the same position.
+_RANK = re.compile(
+    r"\b(most expensive|cheapest|most|greatest|highest|least|fewest|lowest)\b",
+    re.IGNORECASE,
+)
+_RANK_MAX = {"most expensive", "most", "greatest", "highest"}
+
+def rank(task: str, values: list, declared: bool):
+    """Reduce an `extract_all` enumeration to the one item the task asked for.
+
+    This is the "rank/compare/count stays in code" half of M31: `extract_all`
+    gathers every candidate, and the comparison over them is arithmetic here,
+    never a judgement the model was asked to make. Two rules, picked by what the
+    values ARE rather than by what the task says they are:
+
+    - EVERY value parses as a number -> compare the numbers (prices, counts
+      already rendered on the page);
+    - NONE of them does -> count occurrences, because "which author has the
+      most quotes" is a question about how often a name appears;
+    - some but not all -> refuse (see the comment on that branch).
+
+    `declared` is the PLAN's `extract_all.rank`, and it is required — the one
+    thing code cannot read off the page or the plan's shape is whether the user
+    asked for the set or for one item of it. Three repairs tried to infer it
+    from the task text (the answer's shape, `is_aggregate`, then a three-word
+    enumerate regex) and all three shipped a raw enumeration as the answer to a
+    single-answer question (PR #29 R2, R9, R16). `declared=False` returns the
+    list untouched — a multi-row list is a legitimate answer shape (contract:
+    answer string|list, cases `verifier-list-rows-not-a-dump`,
+    `extract-all-list-task-keeps-every-row`). `declared=True` with no ranking
+    word in the task raises, because there is then no order to pick by.
+
+    What stays in code is every comparison: which value wins, and by what rule.
+    The plan says "one of these", never "this one".
+
+    A tie RAISES rather than picking one. The same ruling the resolver already
+    makes for proximity (`near-equidistant-is-ambiguous`): two winners mean the
+    page does not identify one, and choosing between them is a confident wrong
+    answer — the exact defect family this milestone exists to close.
+
+    ponytail: inside the numeric branch the comparison is on the Decimal alone,
+    so a column mixing CURRENCIES or units ("£23.21" beside "$18.00") ranks as
+    if they were commensurable — distinct from the partly-numeric case below,
+    which does refuse. No enumeration in this repo produces one: every
+    `extract_all` reads one column of one page. Upgrade path and repro:
+    tasks/TODO.md T-RANK-UNITS.
+    """
+    if not declared:
+        return values  # the plan says the enumeration IS the answer
+    if not values:
+        return values
+    m = _RANK.search(task or "")
+    if not m:
+        raise ValueError(
+            "the plan asked for one item out of the enumeration and the task names no "
+            "order to pick it by (no most/least/highest/lowest/cheapest/... in the task)")
+    want_max = m.group(1).casefold() in _RANK_MAX
+    nums = [_num_parts(_clean(v)) for v in values]
+    # A column that is only PARTLY numeric refuses. Falling through to the
+    # counting branch is the dangerous default: one "Out of stock" or "Price on
+    # request" in a price list demotes a comparison into a mode, so the repeated
+    # price wins "highest" and the junk cell — unique, count 1 — wins "cheapest",
+    # both as a confident `success`. Ties and mixed columns are the same fact:
+    # the enumeration does not identify one answer (cold review, M31).
+    if any(nums) and not all(nums):
+        raise ValueError(
+            "enumerated values are only partly numeric "
+            f"({sum(n is None for n in nums)} of {len(values)} do not parse as numbers), "
+            "so they cannot be compared as numbers or counted as labels")
+    if all(nums):
+        keyed = [(n[0], v) for n, v in zip(nums, values)]
+    else:
+        counts = Counter(_clean(v) for v in values)
+        keyed = [(counts[_clean(v)], v) for v in values]
+    best = (max if want_max else min)(k for k, _ in keyed)
+    winners = [v for k, v in keyed if k == best]
+    if len({_clean(v) for v in winners}) > 1:
+        raise ValueError(
+            f"{len(winners)} values tie for {m.group(1)!r} ({sorted(set(winners))}): "
+            "the enumeration does not identify one answer")
+    return winners[0]
+
+
+def is_aggregate(task: str) -> bool:
+    """Does this task ask which item of a set ranks highest/lowest?
+
+    One regex, two callers: `aggregate_needs_comparison` below (does this
+    verdict rest on a comparison that was never made?) and agent.py's
+    `plan_gap` (does this plan even contain the comparison?). The second exists
+    so the first stops being the only line of defence — a plan caught here never
+    runs, so the guard's declared false-refusal cost (D22) is paid on far fewer
+    runs than it was.
+    """
+    return bool(_AGGREGATE.search(task or ""))
 
 
 def _clean(value) -> str:
@@ -421,13 +531,33 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     # proves a WRONG expect.answer still fails for the L2 reason, not because
     # this guard double-fires. The cost of failing closed with no ground truth
     # is declared, not just paid: D22, docs/support-matrix.md.
+    #
+    # M31 relaxes it in exactly one direction: a trace that CONTAINS an
+    # `extract_all` step did enumerate the candidate set, and the comparison
+    # over that set was arithmetic (`rank`, above), not a guess — which is the
+    # primitive the comment above says the plan vocabulary was missing. The
+    # guard stands for every plan that still tries to answer a superlative with
+    # a single `extract` — which agent.py's `plan_gap` now rejects before the
+    # browser moves, so `verifier-aggregate-superlative-fails-loud` no longer
+    # reaches this check at all; what still reaches it is a mid-run replan that
+    # dropped the enumeration (`verifier-aggregate-ground-truth-untouched` row 5).
     has_ground_truth = "answer" in expect or "state" in expect
+    # `rank is True`, not merely "an `extract_all` is present": a step that
+    # declared `rank: false` said the answer is the whole enumeration, i.e. that
+    # it compared nothing — which is precisely what this check exists to catch,
+    # so accepting it as the comparison was the guard satisfying itself
+    # (PR #29 R20). agent.py's `plan_gap` refuses that plan before the browser
+    # moves; this is the backstop for the route the lint cannot see, a mid-run
+    # replan that swapped the enumeration for one that ranks nothing.
+    enumerated = any(s.get("action") == "extract_all" and s.get("rank") is True
+                     for s in graded)
     if task and not has_ground_truth:
-        check("aggregate_needs_comparison", not _AGGREGATE.search(task),
+        check("aggregate_needs_comparison", enumerated or not is_aggregate(task),
               "superlative/aggregate question over a set ('which X has the most/least Y') "
-              "has no enumerate-and-count step in the plan vocabulary; a layer-1-only "
-              "verdict cannot tell a right guess from a wrong one, so it fails loudly "
-              "rather than passing on unverifiable evidence")
+              "answered without an `extract_all` step that declared `rank: true`, so nothing "
+              "compared the set the question ranks over; a layer-1-only verdict cannot tell a "
+              "right guess from a wrong one, so it fails loudly rather than passing on "
+              "unverifiable evidence")
 
     layer = 1
 

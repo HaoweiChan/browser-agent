@@ -4,6 +4,12 @@ Every step is postcondition-verified against the page (never self-reported).
 Failures carry exactly one top-level class from docs/evals/failure-taxonomy.md,
 assigned by `classify` — rules over the action and the error, never an LLM.
 
+One deterministic plan lint runs between the plan and the first action
+(`plan_gap`): an aggregate-shaped task whose plan cannot express the comparison
+is replanned once with a note naming the gap, and stopped rather than executed
+if the gap survives (specs/decisions/ADR-018-m31-plan-lint.md). It is a second
+consumer of the replan budget, and it is not a recovery ladder — nothing failed.
+
 Two recovery ladders, both chosen from the observed failure distribution
 (docs/evals/scope-checkpoint.md) rather than from imagination:
 
@@ -22,7 +28,7 @@ from pathlib import Path
 from .judge import RUN_JUDGE_BUDGET
 from .planner import PlanError
 from .resolver import TARGET_KEYS, ResolveError, relocation_candidates, resolve
-from .verifier import verify
+from .verifier import is_aggregate, rank, verify
 
 MAX_FIXES = 2         # relocation rungs per failed step
 MAX_REPLANS = 2       # replans per task
@@ -172,6 +178,64 @@ def budget_stop(spent: dict) -> str | None:
 def screen(task: str) -> str | None:
     m = SCOPE_BLOCK.search(task)
     return f"out of scope (matched '{m.group(0)}'): auth/CAPTCHA/payment/destructive/download tasks are unsupported" if m else None
+
+
+def plan_gap(task: str, steps: list) -> str | None:
+    """Deterministic pre-flight over a PLAN. Non-None means: do not execute it.
+
+    One rule, and it is the one PR #25's verifier guard was built to catch after
+    the fact: an aggregate-shaped task ("which X has the most/least Y") whose
+    plan contains no enumerating step. `verify()` already fails that run — but
+    only once the browser has moved and a wrong answer has been produced to fail.
+    Here the same judgement is made from the plan alone, before the first action.
+
+    Structural, not behavioral, and no site knowledge (CLAUDE.md rule 6): it
+    reads the task's shape and the plan's actions, nothing about any page. It is
+    deliberately not an LLM critic — a second model has no more ground truth
+    than the first, and would put two stubbed models in an offline gate that
+    currently stubs one (specs/decisions/ADR-018-m31-plan-lint.md).
+
+    `is_aggregate` is shared with the verifier guard on purpose: one regex, two
+    callers, so widening the vocabulary widens both or neither. Its ceiling is
+    the ceiling of a regex over English — same as SCOPE_BLOCK's.
+    """
+    if not is_aggregate(task):
+        return None
+    reads = [s for s in steps or []
+             if str(s.get("action") or "").startswith("extract")]
+    actions = [s.get("action") for s in reads]
+    if actions == ["extract_all"]:
+        # The plan enumerates once — now check what it says it did with the
+        # enumeration. `rank: false` means "the answer is the whole set", which
+        # contradicts a task `is_aggregate` has already identified as asking
+        # for one item OF a set. Code held both halves of that contradiction
+        # and compared them nowhere for three rounds, so a plan that declared
+        # it did NO comparison satisfied the guard whose job is to notice that
+        # nothing compared anything (PR #29 R20, case
+        # plan-lint-refuses-a-declared-non-comparison).
+        if reads[0].get("rank") is True:
+            return None
+        return ("the task asks which item of a set ranks highest or lowest, and the plan "
+                "enumerates the set but declares `rank: false` — that the answer is the "
+                "whole enumeration. Those cannot both be right about this task. Declare "
+                "`rank: true` and let code do the comparison, or the answer is a candidate "
+                "list offered as the answer to a which-one question")
+    # Every shape other than "exactly one enumeration and nothing else" leaves
+    # the comparison with no single set of values to rank over, and all of them
+    # are quiet rather than loud. Zero: a single `extract` guesses the winner.
+    # Two enumerations: a list of lists. One enumeration PLUS a plain `extract`:
+    # the answer is a composite, `rank` never runs on it (it reduces an
+    # enumeration only when the enumeration is the whole answer), and the
+    # relaxed aggregate guard passes it because the trace does carry an
+    # `extract_all` — an unranked candidate list reported as `success` for a
+    # "which one" question, which is the defect this lint exists to stop.
+    # Found by the M31 spec-drift audit against this function's own first
+    # version, which asked only whether SOME step enumerated.
+    return ("the task asks which item of a set ranks highest or lowest, so the plan must "
+            f"read the page exactly once, with `extract_all`; this one reads it as {reads}. "
+            "A single `extract` guesses the winner; a second read makes the answer a "
+            "composite with nothing to rank. Enumerate the candidates once — the comparison "
+            "is done in code, so extract the values to compare, not the answer")
 
 
 async def check_state(page, expected: dict | None) -> bool | None:
@@ -448,7 +512,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 s0 = time.monotonic()
                 rec = {
                     "i": 1, "action": "navigate", "target": None, "value": url, "anchor": None,
-                    "resolved": None, "expected_state": None, "postcondition_ok": None,
+                    "rank": None, "resolved": None, "expected_state": None, "postcondition_ok": None,
                     "failure_class": None, "note": "pre-plan observation",
                     "retry_or_recovery": None, "superseded_by": None, "page_changed": None,
                     "screenshot": None, "ms": 0,
@@ -488,6 +552,46 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
             except Exception as e:
                 return done(failure="env", reason=f"planner failed: {e}")
 
+            # --- Plan lint: between the plan and the first action -------------
+            # A plan that cannot answer the question does not get to move the
+            # browser. Replan once, with a note naming the gap, charged to the
+            # SAME replan budget the act ladder spends from — so the lint cannot
+            # buy itself extra attempts — and stopped by the same no-progress
+            # rule: an identical or empty plan, or a second plan carrying the
+            # same gap, ends the run instead of executing. There is no third
+            # pass, and no path where a gapped plan runs anyway.
+            # The note also reaches the TRACE, on the first step of the new plan
+            # — a replan whose reason exists only in a planner prompt is a plan
+            # change with no evidence behind it. It is deliberately NOT labelled
+            # `recovery`: nothing failed and no ladder ran, and ADR-003 keeps
+            # that flag for a classified failure that switched strategy.
+            lint_note = None
+            if gap := plan_gap(task, steps):
+                # What actually happened, in the planner's own terms: a plan was
+                # rejected, nothing ran, the page is as it was. The act ladder's
+                # "a previous attempt failed / plan only the steps still needed"
+                # is false on every clause here (PR #29 R5).
+                gap_note = ("Your previous plan was rejected before anything ran: " + gap
+                            + "\nNothing has executed and the page is unchanged; plan the "
+                              "whole task from the page above.")
+                try:
+                    new_steps, usage = await planner(task, url, obs, note=gap_note)
+                except PlanError as e:  # same split as the first plan
+                    budgets["llm_tokens"] += e.usage["llm_tokens"]
+                    budgets["llm_usd"] += e.usage["llm_usd"]
+                    return done(failure="env", reason=f"replanner rejected: {e}")
+                except Exception as e:
+                    return done(failure="env", reason=f"replanner failed: {e}")
+                budgets["llm_tokens"] += usage["llm_tokens"]
+                budgets["llm_usd"] += usage["llm_usd"]
+                if not new_steps or new_steps == steps or plan_gap(task, new_steps):
+                    return done(failure="task",
+                                reason=f"plan rejected before execution: {gap}; the replan "
+                                       "did not close the gap")
+                budgets["replans"] += 1
+                lint_note = f"replanned before execution — plan lint: {gap}"
+                steps = new_steps
+
             async def execute(step, rec):
                 """Perform one step against the page. Raises; the caller classifies."""
                 action = step["action"]
@@ -496,7 +600,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         raise StepError("task", f"blocked URL: {step.get('value')!r}")
                     await navigate(page, step["value"])
                     return
-                if action not in ("click", "fill", "extract"):
+                if action not in ("click", "fill", "extract", "extract_all"):
                     raise StepError("task", f"unknown action {action!r}")
                 # A key the resolver does not implement used to be dropped, and
                 # the step ran against whatever was left of its target — the plan
@@ -504,7 +608,36 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # actually did (case resolver-unknown-target-key).
                 if unknown := set(step.get("target") or {}) - TARGET_KEYS:
                     raise StepError("task", f"unsupported target key(s) {sorted(unknown)}")
-                loc, tier = await resolve(page, step.get("target") or {})
+                # `index` and `near` both mean "of these matches, that one", which
+                # is the opposite of what `extract_all` asks for. Honouring the
+                # selector would enumerate exactly one value, rank it against
+                # nothing, and hand the verifier a trace whose `extract_all` step
+                # relaxes the aggregate guard for a single-shot read — the wrong
+                # answer of run 734d3d1f wearing this milestone's badge. Closed
+                # the same way an unknown target key is: loudly, as a plan the
+                # executor will not reinterpret (case extract-all-refuses-a-selector).
+                if action == "extract_all" and any(
+                        (step.get("target") or {}).get(k) is not None for k in ("index", "near")):
+                    raise StepError("task", "extract_all enumerates every match; `index`/`near` "
+                                            "select one, so the plan says two different things")
+                # `extract_all` returns a set, and the answer is either that set
+                # or one item of it. Nothing in the plan's shape, the page or the
+                # trace distinguishes them, and three repairs that inferred it
+                # from the task text each shipped a raw enumeration as the answer
+                # to a single-answer question (PR #29 R2, R9, R16). So the plan
+                # must say, and a plan that does not is one the executor cannot
+                # honour — the same closed-world refusal an unknown action or an
+                # unsupported target key already gets
+                # (case extract-all-undeclared-intent-fails-loud).
+                if action == "extract_all" and not isinstance(step.get("rank"), bool):
+                    raise StepError("task", "extract_all must declare `rank`: true if the answer "
+                                            "is the one item the task ranks for, false if the "
+                                            "answer is the enumeration itself")
+                # `extract_all` wants every match, so ambiguity is the answer
+                # rather than a locate failure — the only difference in how a
+                # target is resolved.
+                loc, tier = await resolve(page, step.get("target") or {},
+                                          many=action == "extract_all")
                 rec["resolved"] = {"tier": tier, "description": str(step.get("target"))}
                 if action == "click":
                     await loc.click(timeout=10_000)
@@ -526,8 +659,15 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         raise StepError("act", f"field readback {back!r} != filled value")
                     rec["postcondition_ok"] = True
                 else:
-                    val = (await loc.inner_text()).strip()
-                    if not val:
+                    # `extract` reads one element; `extract_all` reads every
+                    # match, which is the comparison primitive the plan
+                    # vocabulary lacked (probe #3, live-books-cheapest-travel).
+                    # The ranking over those values happens in code at answer
+                    # assembly, never in the model.
+                    vals = ([v.strip() for v in await loc.all_inner_texts()]
+                            if action == "extract_all" else [(await loc.inner_text()).strip()])
+                    vals = [v for v in vals if v]
+                    if not vals:
                         raise StepError("extract", "extraction returned empty text")
                     body = await page.inner_text("body")
                     anchor = step.get("anchor")
@@ -541,7 +681,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # just returned it, but this is evidence capture, not an
                     # assumption) degrades to the old first-occurrence behaviour
                     # in both `evidence_window` and `value_offset` below.
-                    real_offset = _closest_occurrence(body, val, await loc.evaluate(TEXT_OFFSET_JS))
+                    # `.first` is load-bearing: an `extract_all` locator resolves
+                    # to every match, and Playwright's strict mode refuses
+                    # `evaluate` on a multi-match locator. The hint is about
+                    # vals[0] either way; every later value falls back to its own
+                    # first occurrence, below.
+                    real_offset = _closest_occurrence(
+                        body, vals[0], await loc.first.evaluate(TEXT_OFFSET_JS))
                     # body_len is the real page the value was read from -- verify()'s
                     # not_a_dump denominator prefers this over len(page_text), because
                     # page_text is evidence_window()'s output: capped at PAGE_TEXT_KEEP
@@ -552,23 +698,33 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # the one the value was just read from. A value that is also
                     # verbatim on a different page is very likely nav/banner
                     # furniture, not an answer to a page-specific question
-                    # (docs/analysis.md §8a-3: "Warning!" and "Travel" both real,
-                    # grounded, non-empty answers to nothing). Recorded BEFORE
-                    # this page's own body is (re-)stored below, so a page never
-                    # gets compared against itself.
+                    # (docs/analysis.md §8a-3). Recorded BEFORE this page's own
+                    # body is (re-)stored below, so a page never gets compared
+                    # against itself.
+                    #
+                    # M31: one evidence record per enumerated value, because
+                    # `grounded`, `not_a_dump` and `not_page_furniture` all judge
+                    # per extraction — an enumeration is judged row by row
+                    # (verifier-list-rows-not-a-dump), not as one page-sized blob.
+                    # `extract` contributes exactly one value, so the loop is the
+                    # same code for both verbs.
                     other_page_text = " ".join(t for u, t in page_bodies.items() if u != page.url)
-                    extractions.append(
-                        {"value": val,
-                         "page_text": evidence_window(body, val, anchor, offset=real_offset),
-                         "body_len": len(body), "other_page_text": other_page_text,
-                         # Where `real_offset` lands INSIDE the window `page_text`
-                         # just captured -- what verify()'s `_context()` anchors
-                         # on, so it does not have to re-derive (and get wrong)
-                         # which occurrence this was.
-                         "value_offset": (real_offset - _window_lo(body, real_offset))
-                                         if real_offset >= 0 else None})
+                    for v in vals:
+                        # M34 R2-1: which occurrence of `v` is this, when it is
+                        # not unique on the page? The DOM hint picks the real one
+                        # rather than always taking the first. For `extract_all`
+                        # the hint is the step's locator, which spans every match,
+                        # so each value falls back to its own first occurrence —
+                        # the pre-M34 behaviour, per value.
+                        off = (real_offset if v == vals[0]
+                               else _closest_occurrence(body, v, -1))
+                        extractions.append(
+                            {"value": v,
+                             "page_text": evidence_window(body, v, anchor, offset=off),
+                             "body_len": len(body), "other_page_text": other_page_text,
+                             "value_offset": (off - _window_lo(body, off)) if off >= 0 else None})
                     page_bodies[page.url] = body
-                    answers.append(val)
+                    answers.append(vals if action == "extract_all" else vals[0])
                     # Identity anchor (verifier L1): the entity the task names
                     # must be present where the answer was read.
                     if anchor and anchor not in body:
@@ -581,7 +737,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 is what shows an evaluator that the strategy changed."""
                 rec = {
                     "i": len(trace) + 1, "action": step["action"], "target": step.get("target"),
-                    "value": step.get("value"), "anchor": step.get("anchor"), "resolved": None,
+                    "value": step.get("value"), "anchor": step.get("anchor"),
+                    "rank": step.get("rank"), "resolved": None,
                     "expected_state": step.get("expected_state"), "postcondition_ok": None,
                     "failure_class": None, "note": note, "retry_or_recovery": recovery,
                     "superseded_by": None, "page_changed": None, "screenshot": None, "ms": 0,
@@ -599,7 +756,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # Did this action change anything at all? The only evidence that
                 # separates a replan legitimately skipping work already done from
                 # one laundering an action that did nothing (replan-cannot-launder-noop-action).
-                before = await page.inner_text("body") if step["action"] != "extract" else None
+                before = (await page.inner_text("body")
+                          if not step["action"].startswith("extract") else None)
                 try:
                     await execute(step, rec)
                     if url_guard and not url_guard(page.url):
@@ -653,14 +811,16 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
             # A replan's strategy switch belongs on the FIRST step of the new
             # plan — that is the attempt that differs from what failed. The rest
             # of the plan is ordinary execution and is not labelled recovery.
-            pending = None
+            # `pending_recovery` is what carries the label, so the plan lint can
+            # leave its own note on that step without claiming a ladder ran.
+            pending, pending_recovery = lint_note, False
             while si < len(steps):
                 if stop := budget_stop(budgets):
                     return done(failure="env", reason=stop)
                 step = steps[si]
                 rec, cls = await attempt(step, note=pending,
-                                         recovery="recovery" if pending else None)
-                pending = None
+                                         recovery="recovery" if pending_recovery else None)
+                pending, pending_recovery = None, False
 
                 # --- Family 1: locate -> relocation (self-maintenance) --------
                 # Stale locator -> fresh a11y snapshot -> same intent at a
@@ -685,7 +845,9 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         try:
                             new_steps, usage = await planner(
                                 task, page.url, fresh,
-                                note=f"step {rec['i']} ({step['action']}) failed: {rec['note']}")
+                                note=(f"A previous attempt failed: step {rec['i']} "
+                                      f"({step['action']}) failed: {rec['note']}\n"
+                                      "Plan only the steps still needed from the page above."))
                         except PlanError as e:  # same split as the first plan
                             budgets["llm_tokens"] += e.usage["llm_tokens"]
                             budgets["llm_usd"] += e.usage["llm_usd"]
@@ -701,7 +863,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         # (recovery-replan-postcondition) clicks a control that
                         # really did re-sort the list, so page_changed tells them
                         # apart where nothing about the PLAN can.
-                        drops_action = new_steps and new_steps[0].get("action") == "extract"
+                        # Every extraction verb, not the literal string: M31 added
+                        # `extract_all` and this test kept naming only `extract`,
+                        # so the same laundering in the new verb walked straight
+                        # through (PR #29 R1, case
+                        # replan-cannot-launder-noop-action-extract-all).
+                        drops_action = bool(new_steps) and str(
+                            new_steps[0].get("action") or "").startswith("extract")
                         if not new_steps or new_steps == steps[si:]:
                             rec["note"] += "; replan made no progress (identical or empty plan)"
                         elif new_steps[0] == steps[si]:
@@ -713,9 +881,21 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         elif drops_action and not rec.get("page_changed"):
                             rec["note"] += ("; replan would skip a failed action that changed "
                                             "nothing on the page")
+                        # The lint runs at EVERY point the executor adopts a plan,
+                        # not only the first one. `steps[:si] + new_steps` is the
+                        # plan of record after this replan, executed prefix
+                        # included, so a replan that adds a second enumeration is
+                        # refused here exactly as the first plan would have been —
+                        # the run then ends as the `act` failure it already was.
+                        # Linting only the first plan let a mid-run replan produce
+                        # the unranked list of lists ADR-018 names as the defect
+                        # (PR #29 R3, case plan-lint-holds-across-a-midrun-replan).
+                        elif lint := plan_gap(task, steps[:si] + new_steps):
+                            rec["note"] += f"; replan rejected by the plan lint: {lint}"
                         else:
                             budgets["replans"] += 1
                             pending_supersede.append(rec)
+                            pending_recovery = True
                             pending = (f"replan #{budgets['replans']} after act failure at step "
                                        f"{rec['i']}: {len(new_steps)} step(s) planned from the "
                                        "page as it actually is")
@@ -742,6 +922,30 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
 
     # One extract -> scalar answer; several -> list (contract: answer string|list).
     answer = answers[0] if len(answers) == 1 else (answers or None)
+    # An `extract_all` enumeration is reduced HERE, in code: the plan gathered
+    # every candidate and `rank` picks the one the task's superlative asks for.
+    # Whether to reduce is the PLAN's declaration, not a guess from the task
+    # text. Three repairs guessed — from the answer's shape, from `is_aggregate`,
+    # then from a three-word enumerate regex — and each shipped a raw enumeration
+    # as the answer to a single-answer question (PR #29 R2, R9, R16). The
+    # executor refuses an `extract_all` that does not declare, so by the time an
+    # enumeration reaches here `enumerated` is a bool, never a guess. Everything
+    # about the COMPARISON is still code's: which value wins, and by what rule.
+    #
+    # The `len(answers) == 1` half is about the PLAN, not the task: a plan that
+    # also extracts something else is composing a list, not ranking one
+    # (multi-extract-list). More than one enumeration never reaches here for an
+    # aggregate task, because `plan_gap` runs at BOTH points where the executor
+    # adopts a plan — the first plan and an act-ladder replan (PR #29 R3). A tie
+    # is refused rather than guessed, and a refusal is `semantic`: the page was
+    # read correctly and does not decide.
+    enumerated = next((s.get("rank") for s in trace
+                       if s.get("action") == "extract_all" and not s.get("superseded_by")), None)
+    if len(answers) == 1 and isinstance(answer, list) and enumerated is not None:
+        try:
+            answer = rank(task, answer, enumerated)
+        except ValueError as e:
+            return done(failure="semantic", reason=str(e), final_url=final_url, digest=digest)
     # The run is graded by the verifier, not by having reached this line.
     verdict = verify(trace=trace, extractions=extractions, answer=answer, task=task)
     # M36: the judge is the LAST rung of the escalation ladder -- a run that

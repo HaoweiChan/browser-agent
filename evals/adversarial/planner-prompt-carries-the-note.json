@@ -1,0 +1,16 @@
+{
+  "id": "planner-prompt-carries-the-note",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "planner-prompt"
+  },
+  "provenance": "PR #29 R11. R5's defect had two halves and only one was graded. `expect.planner_note_contains` reads `stub_planner.notes` — what the CALL SITE passed — and every offline case uses the stub, so the line R5 actually changed in `live_planner` is executed only by `full`-tagged cases. The reviewer demonstrated it: reverting that line to the old shared prefix left `probe3-quotes-most-quoted-author` reporting `planner_note_contains: true` and both suites green, while a real planner went back to being told 'A previous attempt failed' about a plan that never ran. The message build is now the pure function `planner.build_user`, and this case grades it directly: the note arrives verbatim, and the planner adds no framing of its own in either direction — no replan sentence when there is no note, and the lint's message does not acquire the act ladder's.",
+  "triage": {
+    "class": "coverage-gap",
+    "watched_red": "with `build_user`'s note branch restored to the pre-R5 prefix (`user += f'\\n\\nA previous attempt failed: {note}\\nPlan only the steps still needed from the page above.'`), the check reports wrong: [{note_not_verbatim: 'act'}, {planner_added_framing: 'act'}, {planner_added_framing: 'act'}, {note_not_verbatim: 'lint'}, {planner_added_framing: 'lint'}, {planner_added_framing: 'lint'}] — the lint rows are the defect R5 was raised for, the act rows are the same string arriving twice.",
+    "note": "tagged invariant AND fast: it is pure code, costs nothing measurable, and is the only thing in the repo that reads the prompt a paid run would send. It grades the assembly, not the wording — no case can say whether a given sentence makes a real model plan better, and the `full` suite is where that would be measured."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "extract-all-undeclared-intent-fails-loud",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "level": "L3",
+  "tc": "TC4",
+  "trap": "an enumeration with no declared cardinality — the executor must not decide it by guessing",
+  "input": {
+    "task": "Check each product and tell me which one is the cheapest.",
+    "fixture": "shop.html",
+    "stub_plan": [
+      { "action": "extract_all", "target": { "role": "listitem" } }
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "actions": 2
+  },
+  "provenance": "PR #29 R16, the other half of extract-all-declared-intent-beats-wording. `extract_all` returns a set and the answer is either that set or one item of it; nothing in the plan, the page or the trace distinguishes them, so the executor refuses a plan that does not say. Closed-world, the same way an unknown action, an unsupported target key and `extract_all` carrying `index`/`near` are already closed — a plan the executor cannot honour stops the run loudly instead of being reinterpreted. The cost is declared rather than hidden: a real planner that omits the field fails the run, and the system prompt now requires it on every `extract_all`. The alternative — defaulting — is what the three previous repairs each did with a different regex, and each shipped a raw enumeration as a successful answer to a single-answer question.",
+  "triage": {
+    "class": "inviolable-property",
+    "watched_red": "before the fix: status success, checks {status: false}, answer ['Aurora Desk Lamp $39.00', 'Aurora Desk Lamp Pro $59.00', 'Meridian Wall Clock $24.50', 'Cobalt Floor Rug $18.00'], budgets_spent.actions 2 — the guess reaching the user as a successful answer, which is the property this case exists to make impossible.",
+    "note": "`actions: 2` pins that this is an EXECUTION-time refusal, not a plan-lint one: the pre-plan navigation plus the step that was attempted. The plan lint would have refused before the browser moved, but it only fires on `_AGGREGATE` shapes and this wording is not one — the two guards are deliberately in different places."
+  }
+}
