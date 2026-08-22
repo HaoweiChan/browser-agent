@@ -95,7 +95,7 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M35 — Visitor-facing console: verified example prompts, plain-language capabilities and limits, no-URL guard            [status: in-progress]
+### M35 — Visitor-facing console: verified example prompts, plain-language capabilities and limits, no-URL guard            [status: pr]
 Spec: The page speaks to the reviewer, not to the person typing a task: a
 TC1..TC5 matrix of fixture names, four "headline" limits cut from D-row
 titles, and an optional start URL that invites the one task shape the planner
@@ -365,6 +365,11 @@ already is (`ValueError` -> `failure:semantic`), watched red first. Deliberately
 NOT done in M31: no enumeration in this repo produces one — every `extract_all`
 in the eval set reads one column of one page — and the ponytail comment on
 `rank` names the ceiling and this upgrade path.
+### T-R38 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: todo]
+Origin: PR #32 R7 (LOW)
+Spec: `_check_examples_cover_matrix` finds keys with `^\s*"([^"]+)":\s*\{` over the `const EXAMPLES = {` block, so an entry written mid-line is silently dropped from the parsed set. Every consequence reproduced fails in the safe direction today (added/renamed doc row → red; `const EXAMPLES={` reformat → IndexError → passed=False; a mid-line real-site key → red as rows_without_example), so this is robustness, not a gap.
+Acceptance: the check parses the object (whole-block regex or a JSON export of EXAMPLES) so formatting cannot change what it sees; a case pins that a mid-line key is counted.
+
 ### T-R34 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
 Origin: PR #32 R2 (LOW)
 Spec: the page's no-URL guard derives a start URL from any `label.tld` token in the task text. Measured false positives: "What version of node.js is listed?" → `https://node.js`, "Open README.md and read the title" → `https://README.md`, "Find setup.exe download link" → `https://setup.exe`, "email john@example.com about it" → `https://example.com`. The lifted URL is written to `#url` and POSTed in the same click, so the run is spent (ends `failure:nav`, $0, but a slot and a red result the visitor did not intend).
