@@ -78,8 +78,7 @@ suite straddles its ceiling rather than clears it. The same suite on CI (ubuntu-
 **59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
 on byte-identical code, which is why the wall-clock ceiling is per-environment
 rather than one number pretending to be portable. CI's ceiling is the slowest
-observed run plus 15% — **92s** since 2026-08-23, re-derived at 131 cases from
-an all-green 80.34s run (ADR-020); the local ceiling stays the original **60s** —
+observed run plus 15% (80s); the local ceiling stays the original **60s** —
 a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at

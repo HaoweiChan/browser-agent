@@ -15,15 +15,12 @@ jobs:
     env:
       # CI's own wall-clock ceiling. The local ruling is 60s; this runner is
       # slower, and one number cannot be tight on a laptop and true here.
-      # Measured, not chosen: the rule is the slowest observed run in THIS
-      # environment plus 15%. It was 80 when the suite was ~100 cases (from a
-      # 68.96s run); at 131 cases CI measured 80.34s with every case passing,
-      # so 80.34 x 1.15 = 92.4 -> 92 (ADR-020, which also records why this is a
-      # ceiling derived against a smaller suite rather than a threshold moved
-      # to hide a red run, and what would falsify that). Raising it is an
-      # ADR-013 amendment, and `fast-wall-clock-budget` grades the value
-      # declared here.
-      EVAL_WALL_BUDGET_S: "92"
+      # Measured, not chosen: four runs of the merged tree on ubuntu-latest gave
+      # 64.29 / 67.51 / 68.94 / 68.96s — a 7% spread on identical code — and the
+      # rule is the slowest observed run plus 15%, rounded up to a multiple of
+      # five: 68.96 x 1.15 = 79.3 -> 80. Raising it is an ADR-013 amendment, and
+      # `fast-wall-clock-budget` grades the value declared here.
+      EVAL_WALL_BUDGET_S: "80"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
