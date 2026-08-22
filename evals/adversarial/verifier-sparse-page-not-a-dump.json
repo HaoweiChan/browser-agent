@@ -1,21 +1,36 @@
 {
   "id": "verifier-sparse-page-not-a-dump",
   "task": "browser",
-  "suites": ["fast"],
+  "suites": [
+    "fast"
+  ],
   "level": "L1",
   "tc": "TC1",
   "input": {
     "task": "What is the title on this page?",
-    "fixture": "slow-asset.html",
+    "fixture": "sparse.html",
     "stub_plan": [
-      { "action": "extract", "target": { "role": "heading", "index": 0 }, "anchor": "LAMP-SLOW" }
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "index": 0
+        },
+        "anchor": "LAMP-SLOW"
+      }
     ]
   },
-  "expect": { "status": "success", "answer": "The monk and the dancer", "anchors": ["LAMP-SLOW"] },
-  "provenance": "PR #10 merge collision: main added slow-asset.html (37 clean chars of body text) for its navigation-timeout cases, and the correct extraction from it -- the heading, 23 clean chars -- is 62% of the page. That is exactly the shape docs/support-matrix.md D3 declared rather than guarded: 'no fixture in the repo is sparse enough to demonstrate this'. Main's fixture demonstrates it, inside the same PR, so the declaration was falsified before it was even read. Watched red against the merged tree before the fix: not_a_dump computed the value/page ratio at 0.6216 (>= DUMP_RATIO=0.35) and FAILed a correct, fully-grounded answer -- verdict FAIL, checks.not_a_dump: false. specs/decisions/ADR-008-m7-verifier-accuracy.md Decision 7 records the guard's removal-then-restoration.",
+  "expect": {
+    "status": "success",
+    "answer": "The monk and the dancer",
+    "anchors": [
+      "LAMP-SLOW"
+    ]
+  },
+  "provenance": "PR #10 merge collision: main added slow-asset.html (37 clean chars of body text) for its navigation-timeout cases, and the correct extraction from it -- the heading, 23 clean chars -- is 62% of the page. That is exactly the shape docs/support-matrix.md D3 declared rather than guarded: 'no fixture in the repo is sparse enough to demonstrate this'. Main's fixture demonstrates it, inside the same PR, so the declaration was falsified before it was even read. Watched red against the merged tree before the fix: not_a_dump computed the value/page ratio at 0.6216 (>= DUMP_RATIO=0.35) and FAILed a correct, fully-grounded answer -- verdict FAIL, checks.not_a_dump: false. specs/decisions/ADR-008-m7-verifier-accuracy.md Decision 7 records the guard's removal-then-restoration. M35: moved from slow-asset.html to sparse.html — the same 37 clean characters of body text without the hanging image. This case grades the verifier's page-size floor, not the navigation wait; on slow-asset.html it spent ~4s (the 2s `load` bound plus the 2s screenshot bound) on a property it does not grade, which was a quarter of the fast suite's margin under ADR-013's 60s ceiling. Re-verified red after the move by setting MIN_PAGE_CHARS to 0: not_a_dump ratio 0.6216 >= 0.35, verdict FAIL — the same red as before.",
   "triage": {
     "class": "invariant-gap",
     "direction": "a false FAIL avoided -- not_a_dump must not fire below the new page-size floor (MIN_PAGE_CHARS=100 in src/browser/verifier.py), which sits between this fixture's 37-char page and the smallest real dump in the suite, probe5-shop-listing-dump's 195-char page.",
-    "note": "the two nav cases (nav-load-event-never-fires, nav-action-load-event-never-fires) use this same fixture to pin the navigation wait condition; this case pins the verifier's not_a_dump behavior on a sparse page and would still be red even with navigation fixed, until MIN_PAGE_CHARS exists."
+    "note": "the two nav cases (nav-load-event-never-fires, nav-action-load-event-never-fires) use slow-asset.html to pin the navigation wait condition; this case pins the verifier's not_a_dump behavior on the equally sparse sparse.html and would still be red even with navigation fixed, until MIN_PAGE_CHARS exists."
   }
 }

@@ -57,7 +57,7 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-129 distinct cases (20 golden + 109 adversarial).
+131 distinct cases (20 golden + 111 adversarial).
 170 browser actions in a `fast` run; **54 of the
 97** cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions: the six L5 refusal cases are
@@ -454,7 +454,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-129 distinct cases (M10, refreshed from the case files' own `tc`/`level`/`domain`
+131 distinct cases (M10, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
