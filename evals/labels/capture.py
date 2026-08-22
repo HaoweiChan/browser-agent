@@ -8,7 +8,7 @@ run whose trace reached the runtime `verify()` call inside agent.run_task —
 i.e. `result["verdict"] is not None`. Runs that die in the executor (empty
 extraction, absent anchor, ambiguous locate, ...) never get a verdict and are
 correctly excluded: that is the population `verify()` is ever actually judged
-on at runtime, since agent.py:491 calls it with NO `expect`.
+on at runtime, since `run_task`'s own closing `verify(...)` call passes NO `expect`.
 
 Fixture runs (source="fixture") are deterministic replays against the fixture
 server on loopback. Live runs (source="live") hit books.toscrape.com and

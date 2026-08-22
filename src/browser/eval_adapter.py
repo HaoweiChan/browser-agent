@@ -7,7 +7,9 @@ expectations, identity anchors, and external ground truth from the fixture
 `/state` endpoint.
 
 Case kinds (`input.kind`):
-- `invariant`    — pure-code property check, no browser (`check`: inv0 | inv1 | inv2)
+- `invariant`    — pure-code property check, no browser; `check` names one entry of
+                   the INVARIANTS registry at the foot of this file, which is the list —
+                   so this line cannot go stale by omitting a check
 - `adr-header-index` — decision-first ADR header + INDEX.md hygiene (no browser)
 - `observe`      — a11y observation shape
 - `url-guard`    — SSRF guard truth table
@@ -218,7 +220,7 @@ def _check_evidence_window_miss_bounded() -> dict:
     """evidence_window must still return a bounded window when the value is
     absent from the body on a page longer than PAGE_TEXT_KEEP — that window
     is what `grounded` then correctly fails on. No browser: a pure probe of
-    the function itself (agent.py:170)."""
+    the function itself (`agent.evidence_window`)."""
     from .agent import PAGE_TEXT_KEEP, evidence_window
 
     body = "x" * (PAGE_TEXT_KEEP + 1000)
@@ -234,8 +236,9 @@ def _check_evidence_window_miss_bounded() -> dict:
 def _check_dump_ratio_anchor_flip() -> dict:
     """`not_a_dump`'s denominator must be the real page (`body_len`), not the
     stored evidence window -- which agent.py caps at PAGE_TEXT_KEEP and can
-    double when a distant `anchor` forces a second window onto it (agent.py:
-    171-173). Reviewer-reported defect: the SAME value on the SAME page
+    double when a distant `anchor` forces a second window onto it
+    (`agent.evidence_window`, and the extract branch that calls it).
+    Reviewer-reported defect: the SAME value on the SAME page
     flipped FAIL -> PASS depending only on whether the plan carried a distant
     anchor, because the window (not the page) was the denominator. Pure probe
     of evidence_window() and verify() directly, no browser."""
@@ -271,6 +274,35 @@ def _check_dump_ratio_anchor_flip() -> dict:
         wrong.append(f"body_len-denominated ratio should read as a real answer: plain={plain_ok} anchored={anchored_ok}")
     return {"passed": not wrong, "wrong": wrong,
             "win_plain_len": len(win_plain), "win_anchored_len": len(win_anchored)}
+
+
+def _check_plan_gap() -> dict:
+    """The plan lint is a pure function over (task text, plan) — grade it as one.
+
+    The two end-to-end cases pin the run-level outcomes (rejected before any
+    action, and replanned into a green run). This is the truth table underneath
+    them, including the row neither reaches: a plan carrying TWO enumerations,
+    which is a gap for the same reason zero is — nothing says which set the
+    superlative ranks over — and which would otherwise surface as a list of
+    lists that the relaxed aggregate guard has no reason to reject.
+    """
+    from .agent import plan_gap
+
+    AGG = "Which product on this page has the most customer reviews?"
+    PLAIN = "What is the price of the Aurora Desk Lamp?"
+    one = [{"action": "extract_all", "target": {"role": "link"}}]
+    two = one + [{"action": "extract_all", "target": {"role": "listitem"}}]
+    plain = [{"action": "extract", "target": {"role": "link"}}]
+    rows = [
+        (AGG, [], True), (AGG, plain, True), (AGG, one, False),
+        (AGG, plain + one, True), (AGG, one + plain, True), (AGG, two, True),
+        (PLAIN, [], False), (PLAIN, plain, False), (PLAIN, two, False),
+        (PLAIN, plain + one, False),
+    ]
+    wrong = [{"task": t, "plan": [s.get("action") for s in p], "expected_gap": want,
+              "got": plan_gap(t, p)}
+             for t, p, want in rows if bool(plan_gap(t, p)) is not want]
+    return {"passed": not wrong, "wrong": wrong}
 
 
 def _check_inv3() -> dict:
@@ -403,14 +435,14 @@ def _run_schema_case(case: dict) -> dict:
 def _run_verifier_case(case: dict) -> dict:
     """Direct probes of the grader itself. The grader is the only component
     with no other component checking it, so it gets unit-shaped cases."""
-    from .verifier import answers_match
+    from .verifier import answers_match, rank
 
     inp = case["input"]
     wrong = []
     # A probe the adapter does not understand must be loud. Silently skipping an
     # unknown key scored this case PASS while it checked nothing at all — a case
     # that proves nothing is worse than no case, because it reads as coverage.
-    unknown = set(inp) - {"kind", "compare", "anchors", "superseded", "aggregate"}
+    unknown = set(inp) - {"kind", "compare", "anchors", "superseded", "aggregate", "rank"}
     if unknown:
         return {"passed": False, "error": f"unknown verifier probe(s): {sorted(unknown)}"}
     for got, want, should_match in inp.get("compare", []):
@@ -462,7 +494,10 @@ def _run_verifier_case(case: dict) -> dict:
     # nothing previously checked.
     for sc in inp.get("aggregate", []):
         v = verify(
-            trace=[{"i": 1, "action": "extract", "postcondition_ok": True}],
+            # M31: a row may supply its own trace, because whether the guard
+            # relaxes now depends on what the trace CONTAINS (an `extract_all`
+            # step that was really graded, not one a replan superseded).
+            trace=sc.get("trace") or [{"i": 1, "action": "extract", "postcondition_ok": True}],
             extractions=[{"value": sc["value"], "page_text": sc["page_text"]}],
             answer=sc["value"],
             expect=sc.get("expect"),
@@ -471,6 +506,19 @@ def _run_verifier_case(case: dict) -> dict:
         if (v["verdict"] == "PASS") != sc["pass"]:
             wrong.append({"aggregate": sc["task"], "should_pass": sc["pass"],
                           "verdict": v["verdict"], "checks": v["checks"]})
+    # M31: the reduction that turns an `extract_all` enumeration into the one
+    # item the task asked for. Unit-shaped for the same reason the rest of this
+    # runner is: it is code deciding which of several REAL values is the answer,
+    # and every interesting failure is in the rules (numbers vs counts,
+    # direction, ties), not in the browser. `answer: null` means "must refuse".
+    for sc in inp.get("rank", []):
+        try:
+            got = rank(sc["task"], list(sc["values"]))
+        except ValueError:
+            got = None
+        if got != sc["answer"]:
+            wrong.append({"rank": sc["task"], "values": sc["values"],
+                          "expected": sc["answer"], "got": got})
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -594,6 +642,11 @@ def _run_fixture_case(case: dict) -> dict:
         checks["recovery"] = bool(recovered) == exp["recovery"]
     if "replans" in exp:
         checks["replans"] = result["budgets_spent"]["replans"] == exp["replans"]
+    # "the browser never moved" is a claim about a COUNT, and no other key
+    # carries it: a plan rejected before the first action spends exactly the
+    # pre-plan navigation and nothing else (verifier-aggregate-superlative-fails-loud).
+    if "actions" in exp:
+        checks["actions"] = result["budgets_spent"]["actions"] == exp["actions"]
     # A "recovery" label claims a strategy CHANGED. An attempt identical to the
     # one it replaced is a retry, and specs/001 keeps retries out of the
     # recovery metric by construction, not by intention.
@@ -2121,7 +2174,10 @@ def _run_ui_progress_case(case: dict) -> dict:
     # The UI is allowed to interpret the trace, never manufacture a phase. The
     # three branches are intentionally small: pre-plan navigation, extraction
     # verification, and every executable action the trace already contains.
-    mapping = dict(re.findall(r'if \(s\.action === "([a-z]+)"\) return "([a-z]+)"',
+    # `[a-z_]` so a new action can't hide from this guard behind an underscore:
+    # `extract_all` (M31) is the first one, and the branch that routes it is
+    # spelled as its own `if` for exactly that reason.
+    mapping = dict(re.findall(r'if \(s\.action === "([a-z_]+)"\) return "([a-z]+)"',
                               script))
     if mapping != inp["step_phases"]:
         wrong["step_phases"] = {"want": inp["step_phases"], "got": mapping}
@@ -2529,6 +2585,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
               "mutation-metrics": _check_mutation_metrics,
+              "plan-gap": _check_plan_gap,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 
 

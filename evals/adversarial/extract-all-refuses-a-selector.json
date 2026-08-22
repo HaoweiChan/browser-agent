@@ -1,0 +1,24 @@
+{
+  "id": "extract-all-refuses-a-selector",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "level": "L3",
+  "tc": "TC4",
+  "trap": "an enumerating step carrying a one-of-many selector — the new verb's badge on a single-shot read",
+  "input": {
+    "fixture": "shop.html",
+    "task": "Which product on this page has the most customer reviews?",
+    "stub_plan": [
+      {"action": "extract_all", "target": {"role": "link", "near": "$39.00"}, "anchor": null}
+    ]
+  },
+  "expect": {
+    "status": "failure:task"
+  },
+  "provenance": "M31 self-review, before the milestone was committed. `extract_all` means 'every match'; `near` and `index` both mean 'of these matches, that one'. The resolver honours `near` before it honours `many`, so the combination resolved to a single element and the run enumerated one value, ranked it against nothing, and shipped a trace whose `extract_all` step relaxes the aggregate guard — the wrong answer of deployed run 734d3d1f wearing this milestone's badge, and the exact defect the milestone exists to close. Refused the same way an unknown target key is (`resolver-unknown-target-key`): the executor is closed-world and does not reinterpret a plan that says two things.",
+  "triage": {
+    "class": "inviolable-property",
+    "watched_red": "with the guard removed: status success, answer 'Aurora Desk Lamp' — the product beside the anchored price, not the one with the most reviews — verdict PASS with every check green including aggregate_needs_comparison, which relaxed because the trace carried the word `extract_all` for a step that enumerated exactly one element. A wrong answer scored success on a superlative question, which is the inviolable property this milestone is about. After the guard: status failure:task, reason 'extract_all enumerates every match; `index`/`near` select one, so the plan says two different things'.",
+    "note": "tagged invariant: this is the relaxation's own back door. The aggregate guard was relaxed on the strength of a graded `extract_all` step really having enumerated the candidate set; a step that enumerates one element makes that strength a formality."
+  }
+}

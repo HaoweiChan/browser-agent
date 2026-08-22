@@ -1,0 +1,128 @@
+{
+  "id": "rank-reduces-enumeration-in-code",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "verifier",
+    "rank": [
+      {
+        "note": "the live-books-cheapest-travel shape, offline: the eleven Travel-category prices enumerated by extract_all, reduced to the cheapest in code. Prices are that case's own hand-verified ground truth (minimum £23.21, 'The Road to Little Dribbling'). This is the reduction that has to exist for that case to be answerable at all — the deployed run 734d3d1f planned 'read article 0' and returned the FIRST price instead.",
+        "task": "In the Travel category, find the cheapest book and tell me its exact price.",
+        "values": [
+          "£45.17",
+          "£49.43",
+          "£48.87",
+          "£36.94",
+          "£37.33",
+          "£44.34",
+          "£30.54",
+          "£56.88",
+          "£23.21",
+          "£38.95",
+          "£26.08"
+        ],
+        "answer": "£23.21"
+      },
+      {
+        "note": "same list, opposite direction — 'most expensive' must not be read as the 'most' branch's mode over strings.",
+        "task": "Which book in this category is the most expensive?",
+        "values": [
+          "£45.17",
+          "£49.43",
+          "£48.87",
+          "£36.94"
+        ],
+        "answer": "£49.43"
+      },
+      {
+        "note": "probe #3's shape: non-numeric values, so 'most' counts rather than compares.",
+        "task": "Which author has the most quotes listed on this page?",
+        "values": [
+          "Albert Einstein",
+          "J.K. Rowling",
+          "Albert Einstein",
+          "Jane Austen",
+          "Albert Einstein",
+          "J.K. Rowling"
+        ],
+        "answer": "Albert Einstein"
+      },
+      {
+        "note": "the counting direction inverts too — and the least-quoted author here is unique, so it is a rank and not a tie.",
+        "task": "Which author has the fewest quotes listed on this page?",
+        "values": [
+          "Albert Einstein",
+          "Albert Einstein",
+          "J.K. Rowling",
+          "J.K. Rowling",
+          "Jane Austen"
+        ],
+        "answer": "Jane Austen"
+      },
+      {
+        "note": "a tie is ambiguous and must be loud, the same ruling near-equidistant-is-ambiguous made for the resolver. Returning either name would be a confident wrong answer, which is the defect family this milestone exists to close.",
+        "task": "Which author has the most quotes listed on this page?",
+        "values": [
+          "Albert Einstein",
+          "Jane Austen"
+        ],
+        "answer": null
+      },
+      {
+        "note": "no superlative in the task: the enumeration IS the answer and must survive untouched (multi-row list answers, contract: answer string|list).",
+        "task": "List every author on this page.",
+        "values": [
+          "Albert Einstein",
+          "Jane Austen"
+        ],
+        "answer": [
+          "Albert Einstein",
+          "Jane Austen"
+        ]
+      },
+      {
+        "note": "a single-element enumeration reduces to its one element — nothing to compare, and no tie.",
+        "task": "Which author has the most quotes listed on this page?",
+        "values": [
+          "Albert Einstein"
+        ],
+        "answer": "Albert Einstein"
+      },
+      {
+        "note": "cold review, M31: a price column with one non-numeric cell used to fall through to the counting branch, so the REPEATED price won 'highest' as a confident success. Mixed columns refuse, the same way a tie does.",
+        "task": "Which product on this page has the highest price?",
+        "values": [
+          "$19.99",
+          "$19.99",
+          "$149.00",
+          "Out of stock"
+        ],
+        "answer": null
+      },
+      {
+        "note": "the worse direction of the same defect: 'cheapest' over the mode branch picks the unique junk cell, and the tie guard never fires because it really is a unique winner. 'Out of stock' as a price, reported as success.",
+        "task": "Which product on this page is the cheapest?",
+        "values": [
+          "£10.00",
+          "£10.00",
+          "£99.00",
+          "£99.00",
+          "Out of stock"
+        ],
+        "answer": null
+      }
+    ]
+  },
+  "expect": {
+    "note": "each row is (task, enumerated values, the reduction code must produce; null means the reduction must refuse)"
+  },
+  "provenance": "M31. `extract_all` returns a list; the question asked for one item. The reduction is the half of the M31 spec that says rank/compare/count stays in code and never in the LLM, and it is what makes probe3-quotes-most-quoted-author and live-books-cheapest-travel answerable. Unit-shaped rather than end-to-end because the interesting failures are in the reduction rules (numbers vs counts, direction, ties, no-op), and a browser run per row would buy nothing and cost wall clock the fast suite does not have.",
+  "triage": {
+    "class": "coverage-gap",
+    "note": "tagged invariant: the ranking is the only place in this system where code, not the model, decides which of several real values is THE answer. Watched red first, before `verifier.rank` existed: `ImportError: cannot import name 'rank' from 'src.browser.verifier'` — the same shape the `aggregate` probe key was watched red as, since _run_verifier_case had no `rank` key either until its milestone. Rows 8 and 9 came from the M31 cold review and were watched red against the implementation as first written (`if all(nums)` falling through to the counting branch): row 8 returned '$19.99' and row 9 returned 'Out of stock', both as answers rather than refusals."
+  }
+}

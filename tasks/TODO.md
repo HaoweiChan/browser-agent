@@ -62,7 +62,8 @@ reasoning, never on a measurement; M9's ablation mechanism (ADR-010,
 `evals/ablation.py`) now exists and varies only the model.
 Spec: a second planner mode behind the unchanged
 `planner(task, url, obs, note)` boundary — OpenRouter native `tools=[…]` with
-the same four step schemas as function definitions, one model call per step,
+the same step schemas as function definitions (four when this block was
+written; five since M31 added `extract_all`), one model call per step,
 fresh observation after every step, step cap = `RUN_BUDGETS["actions"]`. No
 MCP: same process, no external client — MCP is transport, not capability.
 Every tool call lands in the trace record so the UI and verifier read the
@@ -77,6 +78,43 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-CASE-CITES — case ids cited from `src/` and from case files resolve against nothing            [status: todo]
+Origin: M31 cold review (secondary finding), the general form of T-R32.
+Spec (claim): `support-matrix-cites-real-cases` resolves backticked case-id
+tokens in `docs/support-matrix.md` against `evals/`, and nothing resolves the
+same tokens anywhere else. Code comments in `src/browser/verifier.py` and
+`src/browser/eval_adapter.py` and the `provenance`/`triage` prose inside case
+files all cite case ids heavily, and a renamed or folded-away case leaves them
+pointing at nothing with the whole suite green.
+Evidence: M31 folded one case into another mid-milestone and left three live
+references to the dead id — two in `src/`, one in a case file — found by cold
+review, not by the suite.
+Repro: rename any case file and grep for its old id under `src/` and
+`evals/*/*.json`; `--suite invariant` stays green.
+Acceptance: one case resolves case-id citations across `src/` and the case
+files themselves (the support-matrix half already exists), watched red against
+a deliberately dangling id first. Pairs naturally with T-R32, which is the same
+mechanism for D-numbers.
+
+### T-RANK-UNITS — `verifier.rank` compares enumerated numbers without checking they are commensurable            [status: todo]
+Origin: M31 implementation (`specs/decisions/ADR-016-m31-plan-lint.md` Decision 2),
+found while writing the reduction, out of that milestone's scope.
+Spec (claim): `rank` reduces an `extract_all` enumeration numerically whenever
+every value parses as a number, comparing on the Decimal alone — so a list
+mixing currencies ("£23.21", "$18.00") or units ("2.5%", "18") ranks as if the
+values were commensurable, and returns a confident winner. `answers_match` in
+the same file already refuses that comparison for exactly this reason
+(`verifier-sign-currency-percent`), which is what makes the omission a real
+inconsistency rather than a hypothetical.
+Evidence: `_num_parts` returns `(value, currency, unit)` and `rank` reads only
+`[0]`; nothing anywhere refuses a mixed list.
+Repro: `rank("which is cheapest", ["£23.21", "$18.00"])` -> "$18.00", no refusal.
+Acceptance: a mixed-currency / mixed-unit enumeration is refused the way a tie
+already is (`ValueError` -> `failure:semantic`), watched red first. Deliberately
+NOT done in M31: no enumeration in this repo produces one — every `extract_all`
+in the eval set reads one column of one page — and the ponytail comment on
+`rank` names the ceiling and this upgrade path.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5

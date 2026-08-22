@@ -78,7 +78,7 @@ appears, in order — no post-hoc reconstruction).
 ```json
 {
   "i": 1,
-  "action": "navigate | click | fill | extract",
+  "action": "navigate | click | fill | extract | extract_all",
   "target": {"role": "...", "name": "...", "text": "...", "near": "...", "index": 0} ,
   "value": "string | null",
   "anchor": "string | null",
@@ -144,6 +144,42 @@ appears, in order — no post-hoc reconstruction).
   the anchor outranks every neighbour — that is the row or card the value sits
   in (`near-prefers-the-container`) — and only the anchor's own element is
   excluded outright.
+- `extract_all` reads **every** match of its target instead of requiring the
+  target to identify one element, and contributes a list to `answer`. It is the
+  comparison primitive the vocabulary lacked: "which author has the most
+  quotes", "the cheapest one" cannot be answered by reading a single element,
+  and before M31 the planner had no way to express the enumeration those
+  questions rank over (M10 probe #3, `live-books-cheapest-travel`). Two rules
+  follow from where the comparison happens:
+  - **the ranking is done in code, never by the model** (`verifier.rank`,
+    called at answer assembly when the enumeration IS the whole answer, which
+    for an aggregate task the lint below guarantees): the plan extracts the
+    values to compare, and code picks the one the task's superlative asks for — numbers compare as
+    numbers, anything else compares by how often it occurs. A tie is
+    `failure:semantic`, not a coin flip, the same ruling `near` already makes
+    (`near-equidistant-is-ambiguous`). A task with no ranking word keeps its
+    list, which is a legitimate answer shape.
+  - **a plan that should have enumerated and did not is rejected before the
+    first action.** `agent.plan_gap` is a deterministic, site-agnostic lint
+    between the plan and the browser: an aggregate-shaped task (shared with
+    the verifier's own guard through `verifier.is_aggregate` — one regex, two
+    callers) whose extraction steps are not exactly one `extract_all` and
+    nothing else is replanned once with a note naming the gap and stopped by
+    the same no-progress rule as the `act` ladder. An accepted replan is
+    charged to the same `replans` budget; a rejected one ends the run, so it
+    bills tokens but no replan. It never executes
+    twice (`verifier-aggregate-superlative-fails-loud`,
+    `probe3-quotes-most-quoted-author`, `plan-gap-truth-table`,
+    `specs/decisions/ADR-016-m31-plan-lint.md`).
+  - **`index` and `near` are refused on this step**, because both select one of
+    the matches the step exists to enumerate; honouring either would enumerate
+    a single element and let the relaxed aggregate guard certify a single-shot
+    read (`extract-all-refuses-a-selector`). A tie in the ranking, and an
+    enumeration that is only partly numeric, are `failure:semantic` for the
+    same reason `near` refuses an ambiguous anchor.
+  Each enumerated value becomes its own `evidence.extractions` record, so
+  `grounded` and `not_a_dump` judge an enumeration row by row rather than as
+  one page-sized blob (`verifier-list-rows-not-a-dump`).
 - `anchor` (extract steps) is the identity anchor: the distinguishing string of
   the entity the task names. If it is absent from the page the answer was read
   from, the run is `failure:semantic`. Two known limits, both with cases: it is
@@ -162,7 +198,8 @@ appears, in order — no post-hoc reconstruction).
   re-observe or wait rung is added it logs as `retry` and stays out of the
   recovery metric by construction, not by intention.
 - `page_changed` — did this action change the page's text at all? `null` on
-  `extract` (which changes nothing by definition) and on the pre-plan navigate.
+  `extract`/`extract_all` (which change nothing by definition) and on the
+  pre-plan navigate.
   It exists for one decision: a replan may drop the step it replaces only when
   that step actually moved the page. Two runs can be identical in plan, trace
   and failure — a click that lands, a postcondition that never arrives, a

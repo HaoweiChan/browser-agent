@@ -1,0 +1,551 @@
+{
+  "suite": "invariant",
+  "score": 1.0,
+  "totals": {
+    "actions": 5,
+    "llm_tokens": 0,
+    "llm_usd": 0.0,
+    "replans": 0,
+    "ms": 292,
+    "wall_seconds": 7.26,
+    "latency_p50": 0.0,
+    "latency_p95": 1.84,
+    "cases_with_budgets": 3
+  },
+  "metrics": {
+    "diagnosis_cases": 3,
+    "diagnosis_correct": 3
+  },
+  "results": [
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 1.84,
+      "id": "ablation-env-failure-is-a-result",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "ablation-preflight-refuses-old-build",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "adr_files": 17,
+        "index_entries": 17
+      },
+      "seconds": 0.0,
+      "id": "adr-header-and-index",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.01,
+      "id": "analysis-ablation-table-not-estimated",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "result": [
+          "status",
+          "model",
+          "answer",
+          "reason",
+          "verdict",
+          "evidence",
+          "budgets_spent"
+        ],
+        "evidence": [
+          "trace",
+          "screenshots",
+          "extractions",
+          "final_url",
+          "final_page_digest"
+        ],
+        "verdict": [
+          "verdict",
+          "layer",
+          "ground_truth",
+          "checks",
+          "reason"
+        ],
+        "budgets_spent": [
+          "actions",
+          "llm_tokens",
+          "llm_usd",
+          "replans",
+          "ms"
+        ],
+        "trace_step": [
+          "action",
+          "anchor",
+          "expected_state",
+          "failure_class",
+          "i",
+          "ms",
+          "note",
+          "page_changed",
+          "postcondition_ok",
+          "resolved",
+          "retry_or_recovery",
+          "screenshot",
+          "superseded_by",
+          "target",
+          "value"
+        ]
+      },
+      "seconds": 0.32,
+      "id": "contract-trace-schema",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "docs": []
+      },
+      "got": {
+        "counts": {
+          "fast": 109,
+          "invariant": 41,
+          "live": 9,
+          "full": 10,
+          "all": 120
+        },
+        "domains": {
+          "books.toscrape.com": 3,
+          "openlibrary.org": 2,
+          "news.ycombinator.com": 2,
+          "quotes.toscrape.com": 3
+        }
+      },
+      "seconds": 0.03,
+      "id": "docs-numbers-are-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "window_len": 2000,
+      "seconds": 0.0,
+      "id": "evidence-window-miss-is-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [],
+      "got": {
+        "status": "failure:task",
+        "answer": null,
+        "reason": "step 2 (extract_all): StepError: extract_all enumerates every match; `index`/`near` select one, so the plan says two different things"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 110
+      },
+      "seconds": 0.12,
+      "id": "extract-all-refuses-a-selector",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "shape": true,
+        "classified": true
+      },
+      "wrong": {},
+      "got": {
+        "status": "failure:env",
+        "reason": "PlanError: OPENROUTER_API_KEY is not set"
+      },
+      "seconds": 0.0,
+      "id": "gateway-error-contract-shape",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "recorded_models": [],
+      "seconds": 0.0,
+      "id": "gateway-model-not-allowlisted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "recorded_models": [
+        "openai/gpt-5.6-luna",
+        "openai/gpt-5.6-luna",
+        "deepseek/deepseek-v4-pro",
+        "openai/gpt-5.6-luna",
+        "tencent/hy3",
+        "deepseek/deepseek-v4-flash-0731"
+      ],
+      "seconds": 0.01,
+      "id": "gateway-model-reaches-planner",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv3-budget-exhaustion-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-delete-determiners",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-login-contracted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "parsed_quietly": []
+      },
+      "seconds": 0.0,
+      "id": "matrix-parse-fails-loudly",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "mutation-metrics-honesty",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "missing": [],
+      "advertised_unresolvable": [],
+      "starved_by_chrome": [],
+      "n_elements": 26,
+      "seconds": 0.05,
+      "id": "observe-content-survives-chrome",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "opt-in-expect-keys-declared",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "plan-gap-truth-table",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "rank-reduces-enumeration-in-code",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "states": [
+          "idle",
+          "busy",
+          "idle"
+        ],
+        "during_latency_s": 0.001,
+        "run_seconds": 2.36
+      },
+      "seconds": 2.36,
+      "id": "readyz-tracks-the-run-slot",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "citations": 32,
+        "skip": [
+          "29991231-235959-fast.json"
+        ]
+      },
+      "seconds": 0.01,
+      "id": "report-citations-resolve",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "soak": []
+      },
+      "seconds": 0.08,
+      "id": "soak-counts-only-real-completions",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "dangling": []
+      },
+      "got": {
+        "status": "failure:env",
+        "steps": 2
+      },
+      "seconds": 2.2,
+      "id": "supersede-never-dangles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "illegal_status": [],
+        "dangling_citations": []
+      },
+      "got": {
+        "rows": 9,
+        "limitations": 61,
+        "citations": 57
+      },
+      "seconds": 0.0,
+      "id": "support-matrix-cites-real-cases",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "ui-execution-progress-is-trace-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "ui-tinboker-style",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "recovery": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": false,
+          "grounded": true,
+          "not_a_dump": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty; state-changing step(s) [2] carried no checkable postcondition"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "text"
+      ],
+      "got": {
+        "status": "failure:task",
+        "answer": null,
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:57028/fixtures/hello.html'"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 135
+      },
+      "seconds": 0.14,
+      "id": "url-guard-holds-after-navigation",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-aggregate-ground-truth-untouched",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "replans": true,
+        "actions": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": false
+        },
+        "reason": "answer is empty; superlative/aggregate question over a set ('which X has the most/least Y') answered without an `extract_all` step, so nothing enumerated the set the question ranks over; a layer-1-only verdict cannot tell a right guess from a wrong one, so it fails loudly rather than passing on unverifiable evidence"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [],
+      "got": {
+        "status": "failure:task",
+        "answer": null,
+        "reason": "plan rejected before execution: the task asks which item of a set ranks highest or lowest, so the plan must read the page exactly once, with `extract_all`; this one reads it as ['extract']. A single `extract` guesses the winner; a second read makes the answer a composite with nothing to rank. Enumerate the candidates once \u2014 the comparison is done in code, so extract the values to compare, not the answer; the replan did not close the gap"
+      },
+      "budgets": {
+        "actions": 1,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 47
+      },
+      "seconds": 0.05,
+      "id": "verifier-aggregate-superlative-fails-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "win_plain_len": 2000,
+      "win_anchored_len": 3615,
+      "seconds": 0.0,
+      "id": "verifier-dump-ratio-anchor-flip",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-numeric-precision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-sign-currency-percent",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-superseded-not-a-loophole",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "before": 455,
+        "after": 455
+      },
+      "seconds": 0.04,
+      "id": "wall-clock-probe-history-isolated",
+      "kind": "adversarial"
+    }
+  ]
+}

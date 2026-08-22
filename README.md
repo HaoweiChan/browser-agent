@@ -35,7 +35,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 105 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 109 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -49,14 +49,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260822-035727-fast.json`, with
-`evals/report/20260822-035627-invariant.json` and
-`evals/report/20260821-164456-live.json`:
+Latest offline baseline — `evals/report/20260822-112857-fast.json`, with
+`evals/report/20260822-112904-invariant.json` and
+`evals/report/20260822-111204-live.json`:
 
 ```
-fast  105/105    invariant  37/37    live  9/9    $0.0000    59.5s
+fast  109/109    invariant  41/41    live  9/9    $0.0000    59.2s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 15/15 · 4 replans
+diagnosis 16/16 · 5 replans
 ```
 
 Every number in that block is recomputed from those three report files by
@@ -84,7 +84,15 @@ independent measurers, idle and under deliberate CPU load, all landed at
 58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
 further post-commit runs found the honest band is 58.83-60.26s, one run
 over the line by a few tenths and unexplained by load. Margin against 60s
-is real but thin, not a guarantee (§ ADR-013 Decision 4).
+is real but thin, not a guarantee (§ ADR-013 Decision 4). Six runs of the M31
+tree on this machine measured **59.05 / 59.19 / 59.57 / 59.84 / 59.93 /
+60.05s** — five under, one over, and the one over exited non-zero exactly as
+the gate is meant to. M31's own four cases account for **0.19s** of that
+(0.09 + 0.10 + 0.00 + 0.00, read out of
+`evals/report/20260822-112857-fast.json`), so what these runs show is the
+straddle this suite was already declared to be in, not a cost this milestone
+introduced. Six runs are a sample, not a bound: the paragraph above is the
+reason that distinction is written down twice.
 
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
 measured where the time went instead of assuming: 42.2s is deliberate waiting
@@ -143,7 +151,7 @@ plan   : navigate → extract {"role": "article", "index": 0}, anchor "Travel"
 answer : "It's Only the Himalayas … £45.17 …"     truth: £23.21
 ```
 
-Nothing was broken. There is no compare/rank/filter step in the plan
+Nothing was broken. At the time there was no compare/rank step in the plan
 vocabulary, so "cheapest" was planned as "read the first product tile"; the
 identity anchor was the *category*, which every product on a listing satisfies;
 and every runtime predicate was legitimately green, because the value really
@@ -156,6 +164,14 @@ So the property that holds is narrower than the probe line suggests: **no run
 has reported success with an answer the *verifier could tell* was wrong.** With
 external ground truth, that gap is caught. Without it, on an aggregate page, it
 is not. Measuring the size of that gap is the next milestone's whole job.
+
+M31 added the missing verb: `extract_all` reads *every* match of a target, and
+the ranking over what it enumerates is arithmetic in code (`verifier.rank`),
+never a judgement handed to the model. A plan that should have enumerated and
+did not is now refused before the browser moves. That makes this run's task
+*expressible*; it does not make the run above green, because
+`live-books-cheapest-travel` needs a real planner call and is still unrun
+(ADR-016, `docs/support-matrix.md` D22).
 
 **Read those with their denominators**, which is why they are printed as `x/y`:
 
@@ -217,8 +233,11 @@ ever parses to zero declared limitations. The pre-commit eval gate runs it.
 The biggest ones, stated plainly:
 
 - **Capability is about one hop deep.** The held-out probe answered 2 of 8.
-  Second hops, aggregates ("which is cheapest"), and values living only in an
-  HTML attribute all fail — loudly, but they fail.
+  Second hops and values living only in an HTML attribute fail — loudly, but
+  they fail. Aggregates ("which is cheapest") gained a primitive at M31
+  (`extract_all` + a code-side ranking) and are answered correctly offline;
+  no live run has demonstrated one, so the honest status is expressible, not
+  measured.
 - **Planning quality is unmeasured by the suite.** Every case stubs the planner,
   so the probe is the only measurement of it, and it is the weakest link.
 - **Live planning is still unmeasured on every live domain.** M6 took live
@@ -266,7 +285,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 116 cases (105 of them in the offline gate), it
+The eval set is not weak; it is 120 cases (109 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

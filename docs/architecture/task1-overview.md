@@ -35,6 +35,17 @@ the observation evidence and extends or revises the plan. **Replan rate is a
 tracked metric** — if most tasks replan on most steps, the architecture claim is
 re-examined openly in an ADR rather than papered over.
 
+M31 gave the counter a second consumer: the plan lint
+(`specs/decisions/ADR-016-m31-plan-lint.md`) replans an aggregate-shaped task
+whose plan carries no enumerating step, and charges it to the same
+`budgets["replans"]` the `act` ladder spends from, so the two cannot
+independently exceed `MAX_REPLANS`. The published number is the `fast` suite's
+own, in README's "Where it stands" block and in every committed report's
+`metrics.replans` — recomputed from the cited report by
+`docs-numbers-are-derived`, never typed. It has stayed in the low single digits
+across the whole suite, which is what the honesty alarm above is watching: this
+architecture replans on the exception, not on most steps.
+
 ### Step schema (D9) — typed enough to verify, not a workflow DSL
 
 ```json

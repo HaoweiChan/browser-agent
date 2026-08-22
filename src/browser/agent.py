@@ -4,6 +4,12 @@ Every step is postcondition-verified against the page (never self-reported).
 Failures carry exactly one top-level class from docs/evals/failure-taxonomy.md,
 assigned by `classify` — rules over the action and the error, never an LLM.
 
+One deterministic plan lint runs between the plan and the first action
+(`plan_gap`): an aggregate-shaped task whose plan cannot express the comparison
+is replanned once with a note naming the gap, and stopped rather than executed
+if the gap survives (specs/decisions/ADR-016-m31-plan-lint.md). It is a second
+consumer of the replan budget, and it is not a recovery ladder — nothing failed.
+
 Two recovery ladders, both chosen from the observed failure distribution
 (docs/evals/scope-checkpoint.md) rather than from imagination:
 
@@ -21,7 +27,7 @@ from pathlib import Path
 
 from .planner import PlanError
 from .resolver import TARGET_KEYS, ResolveError, relocation_candidates, resolve
-from .verifier import verify
+from .verifier import is_aggregate, rank, verify
 
 MAX_FIXES = 2         # relocation rungs per failed step
 MAX_REPLANS = 2       # replans per task
@@ -132,6 +138,49 @@ def budget_stop(spent: dict) -> str | None:
 def screen(task: str) -> str | None:
     m = SCOPE_BLOCK.search(task)
     return f"out of scope (matched '{m.group(0)}'): auth/CAPTCHA/payment/destructive/download tasks are unsupported" if m else None
+
+
+def plan_gap(task: str, steps: list) -> str | None:
+    """Deterministic pre-flight over a PLAN. Non-None means: do not execute it.
+
+    One rule, and it is the one PR #25's verifier guard was built to catch after
+    the fact: an aggregate-shaped task ("which X has the most/least Y") whose
+    plan contains no enumerating step. `verify()` already fails that run — but
+    only once the browser has moved and a wrong answer has been produced to fail.
+    Here the same judgement is made from the plan alone, before the first action.
+
+    Structural, not behavioral, and no site knowledge (CLAUDE.md rule 6): it
+    reads the task's shape and the plan's actions, nothing about any page. It is
+    deliberately not an LLM critic — a second model has no more ground truth
+    than the first, and would put two stubbed models in an offline gate that
+    currently stubs one (specs/decisions/ADR-016-m31-plan-lint.md).
+
+    `is_aggregate` is shared with the verifier guard on purpose: one regex, two
+    callers, so widening the vocabulary widens both or neither. Its ceiling is
+    the ceiling of a regex over English — same as SCOPE_BLOCK's.
+    """
+    if not is_aggregate(task):
+        return None
+    reads = [s.get("action") for s in steps or []
+             if str(s.get("action") or "").startswith("extract")]
+    if reads == ["extract_all"]:
+        return None
+    # Every shape other than "exactly one enumeration and nothing else" leaves
+    # the comparison with no single set of values to rank over, and all of them
+    # are quiet rather than loud. Zero: a single `extract` guesses the winner.
+    # Two enumerations: a list of lists. One enumeration PLUS a plain `extract`:
+    # the answer is a composite, `rank` never runs on it (it reduces an
+    # enumeration only when the enumeration is the whole answer), and the
+    # relaxed aggregate guard passes it because the trace does carry an
+    # `extract_all` — an unranked candidate list reported as `success` for a
+    # "which one" question, which is the defect this lint exists to stop.
+    # Found by the M31 spec-drift audit against this function's own first
+    # version, which asked only whether SOME step enumerated.
+    return ("the task asks which item of a set ranks highest or lowest, so the plan must "
+            f"read the page exactly once, with `extract_all`; this one reads it as {reads}. "
+            "A single `extract` guesses the winner; a second read makes the answer a "
+            "composite with nothing to rank. Enumerate the candidates once — the comparison "
+            "is done in code, so extract the values to compare, not the answer")
 
 
 async def check_state(page, expected: dict | None) -> bool | None:
@@ -383,6 +432,39 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
             except Exception as e:
                 return done(failure="env", reason=f"planner failed: {e}")
 
+            # --- Plan lint: between the plan and the first action -------------
+            # A plan that cannot answer the question does not get to move the
+            # browser. Replan once, with a note naming the gap, charged to the
+            # SAME replan budget the act ladder spends from — so the lint cannot
+            # buy itself extra attempts — and stopped by the same no-progress
+            # rule: an identical or empty plan, or a second plan carrying the
+            # same gap, ends the run instead of executing. There is no third
+            # pass, and no path where a gapped plan runs anyway.
+            # The note also reaches the TRACE, on the first step of the new plan
+            # — a replan whose reason exists only in a planner prompt is a plan
+            # change with no evidence behind it. It is deliberately NOT labelled
+            # `recovery`: nothing failed and no ladder ran, and ADR-003 keeps
+            # that flag for a classified failure that switched strategy.
+            lint_note = None
+            if gap := plan_gap(task, steps):
+                try:
+                    new_steps, usage = await planner(task, url, obs, note=gap)
+                except PlanError as e:  # same split as the first plan
+                    budgets["llm_tokens"] += e.usage["llm_tokens"]
+                    budgets["llm_usd"] += e.usage["llm_usd"]
+                    return done(failure="env", reason=f"replanner rejected: {e}")
+                except Exception as e:
+                    return done(failure="env", reason=f"replanner failed: {e}")
+                budgets["llm_tokens"] += usage["llm_tokens"]
+                budgets["llm_usd"] += usage["llm_usd"]
+                if not new_steps or new_steps == steps or plan_gap(task, new_steps):
+                    return done(failure="task",
+                                reason=f"plan rejected before execution: {gap}; the replan "
+                                       "did not close the gap")
+                budgets["replans"] += 1
+                lint_note = f"replanned before execution — plan lint: {gap}"
+                steps = new_steps
+
             async def execute(step, rec):
                 """Perform one step against the page. Raises; the caller classifies."""
                 action = step["action"]
@@ -391,7 +473,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         raise StepError("task", f"blocked URL: {step.get('value')!r}")
                     await navigate(page, step["value"])
                     return
-                if action not in ("click", "fill", "extract"):
+                if action not in ("click", "fill", "extract", "extract_all"):
                     raise StepError("task", f"unknown action {action!r}")
                 # A key the resolver does not implement used to be dropped, and
                 # the step ran against whatever was left of its target — the plan
@@ -399,7 +481,23 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 # actually did (case resolver-unknown-target-key).
                 if unknown := set(step.get("target") or {}) - TARGET_KEYS:
                     raise StepError("task", f"unsupported target key(s) {sorted(unknown)}")
-                loc, tier = await resolve(page, step.get("target") or {})
+                # `index` and `near` both mean "of these matches, that one", which
+                # is the opposite of what `extract_all` asks for. Honouring the
+                # selector would enumerate exactly one value, rank it against
+                # nothing, and hand the verifier a trace whose `extract_all` step
+                # relaxes the aggregate guard for a single-shot read — the wrong
+                # answer of run 734d3d1f wearing this milestone's badge. Closed
+                # the same way an unknown target key is: loudly, as a plan the
+                # executor will not reinterpret (case extract-all-refuses-a-selector).
+                if action == "extract_all" and any(
+                        (step.get("target") or {}).get(k) is not None for k in ("index", "near")):
+                    raise StepError("task", "extract_all enumerates every match; `index`/`near` "
+                                            "select one, so the plan says two different things")
+                # `extract_all` wants every match, so ambiguity is the answer
+                # rather than a locate failure — the only difference in how a
+                # target is resolved.
+                loc, tier = await resolve(page, step.get("target") or {},
+                                          many=action == "extract_all")
                 rec["resolved"] = {"tier": tier, "description": str(step.get("target"))}
                 if action == "click":
                     await loc.click(timeout=10_000)
@@ -421,8 +519,15 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         raise StepError("act", f"field readback {back!r} != filled value")
                     rec["postcondition_ok"] = True
                 else:
-                    val = (await loc.inner_text()).strip()
-                    if not val:
+                    # `extract` reads one element; `extract_all` reads every
+                    # match, which is the comparison primitive the plan
+                    # vocabulary lacked (probe #3, live-books-cheapest-travel).
+                    # The ranking over those values happens in code at answer
+                    # assembly, never in the model.
+                    vals = ([v.strip() for v in await loc.all_inner_texts()]
+                            if action == "extract_all" else [(await loc.inner_text()).strip()])
+                    vals = [v for v in vals if v]
+                    if not vals:
                         raise StepError("extract", "extraction returned empty text")
                     body = await page.inner_text("body")
                     anchor = step.get("anchor")
@@ -431,10 +536,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                     # page_text is evidence_window()'s output: capped at PAGE_TEXT_KEEP
                     # and doubled when a distant anchor forces a second window onto it
                     # (case verifier-dump-ratio-anchor-flip).
-                    extractions.append(
-                        {"value": val, "page_text": evidence_window(body, val, anchor),
-                         "body_len": len(body)})
-                    answers.append(val)
+                    # One evidence record per value: `grounded` and `not_a_dump`
+                    # judge per extraction, so an enumeration is judged row by
+                    # row (verifier-list-rows-not-a-dump) rather than as one
+                    # page-sized blob.
+                    extractions.extend(
+                        {"value": v, "page_text": evidence_window(body, v, anchor),
+                         "body_len": len(body)} for v in vals)
+                    answers.append(vals if action == "extract_all" else vals[0])
                     # Identity anchor (verifier L1): the entity the task names
                     # must be present where the answer was read.
                     if anchor and anchor not in body:
@@ -465,7 +574,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                 # Did this action change anything at all? The only evidence that
                 # separates a replan legitimately skipping work already done from
                 # one laundering an action that did nothing (replan-cannot-launder-noop-action).
-                before = await page.inner_text("body") if step["action"] != "extract" else None
+                before = (await page.inner_text("body")
+                          if not step["action"].startswith("extract") else None)
                 try:
                     await execute(step, rec)
                     if url_guard and not url_guard(page.url):
@@ -517,14 +627,16 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
             # A replan's strategy switch belongs on the FIRST step of the new
             # plan — that is the attempt that differs from what failed. The rest
             # of the plan is ordinary execution and is not labelled recovery.
-            pending = None
+            # `pending_recovery` is what carries the label, so the plan lint can
+            # leave its own note on that step without claiming a ladder ran.
+            pending, pending_recovery = lint_note, False
             while si < len(steps):
                 if stop := budget_stop(budgets):
                     return done(failure="env", reason=stop)
                 step = steps[si]
                 rec, cls = await attempt(step, note=pending,
-                                         recovery="recovery" if pending else None)
-                pending = None
+                                         recovery="recovery" if pending_recovery else None)
+                pending, pending_recovery = None, False
 
                 # --- Family 1: locate -> relocation (self-maintenance) --------
                 # Stale locator -> fresh a11y snapshot -> same intent at a
@@ -580,6 +692,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
                         else:
                             budgets["replans"] += 1
                             pending_supersede.append(rec)
+                            pending_recovery = True
                             pending = (f"replan #{budgets['replans']} after act failure at step "
                                        f"{rec['i']}: {len(new_steps)} step(s) planned from the "
                                        "page as it actually is")
@@ -606,6 +719,20 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, hea
 
     # One extract -> scalar answer; several -> list (contract: answer string|list).
     answer = answers[0] if len(answers) == 1 else (answers or None)
+    # An `extract_all` enumeration is reduced HERE, in code: the plan gathered
+    # every candidate and `rank` picks the one the task's superlative asks for.
+    # Only an enumeration is offered to `rank`, and only when it is the whole
+    # answer: a plan that also extracts something else is composing a list, not
+    # ranking one (multi-extract-list, verifier-list-rows-not-a-dump — whose
+    # task says "cheapest first" and must keep all four rows). More than one
+    # enumeration in one plan never reaches here; the plan lint requires exactly
+    # one for an aggregate task. A tie is refused rather than guessed, and a
+    # refusal is `semantic`: the page was read correctly and does not decide.
+    if len(answers) == 1 and isinstance(answer, list):
+        try:
+            answer = rank(task, answer)
+        except ValueError as e:
+            return done(failure="semantic", reason=str(e), final_url=final_url, digest=digest)
     # The run is graded by the verifier, not by having reached this line.
     verdict = verify(trace=trace, extractions=extractions, answer=answer, task=task)
     return done(answer=answer, final_url=final_url, digest=digest, verdict=verdict)
