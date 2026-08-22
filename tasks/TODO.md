@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M31 — Plan lint: a superlative task with no enumerating step is sent back before the browser moves            [status: todo]
+### M31 — Plan lint: a superlative task with no enumerating step is sent back before the browser moves            [status: in-progress]
 Depends: M10
 Origin: PR #25 finding 3 — correct-answer rate 2/8 (25%) at M5 → 1/7 (14%)
 at the M10 probe — and the discussion it triggered (`prompts/015`). PR #25
