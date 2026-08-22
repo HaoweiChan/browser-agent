@@ -38,6 +38,70 @@ can be honestly green.
 Acceptance: A-exit criteria in `docs/plans/completed/task1-a-level-plan.md` all
 green → owner decides submission/public.
 
+### M31 — Plan lint: a superlative task with no enumerating step is sent back before the browser moves            [status: todo]
+Depends: M10
+Origin: PR #25 finding 3 — correct-answer rate 2/8 (25%) at M5 → 1/7 (14%)
+at the M10 probe — and the discussion it triggered (`prompts/015`). PR #25
+closed the aggregate hole on the *verifier* side: `aggregate_needs_comparison`
+fails closed on every superlative question without ground truth, and its own
+comment says why — "the plan vocabulary has no comparison primitive to have
+gotten it right WITH" — with the false-refusal cost declared as D22. This
+block is the planner-side half: stop emitting the plan that guard exists to
+catch, and give the planner the primitive so the guard can relax.
+Spec: (1) one new step `extract_all` — every match of a target, answer is a
+list; rank/compare/count stays in code (answer assembly + verifier), never in
+the LLM. (2) A deterministic, site-agnostic (rule 6) plan lint between plan
+and first action: task matches the aggregate shape (reuse `_AGGREGATE` —
+one regex, two callers, same ceiling as T-R31) and the plan has no
+enumerating step → do not execute; replan once with a note naming the gap,
+through the existing replan budget and no-progress guard. Not an LLM critic:
+structural not behavioral, fast suite stays $0 — the ADR says why a
+debater was considered and rejected.
+Acceptance: a case where the first plan lacks an enumerating step is watched
+red first (rejected before any action — `actions` spent = pre-plan nav only);
+a fixture twin of probe #3 (most-quoted author) and `live-books-cheapest-travel`
+go green against ground truth; D22 is re-measured and restated, not deleted;
+replan rate published per D7.
+
+### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
+Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
+but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
+page text the agent captured and absent from the a11y elements the planner
+was shown (`docs/analysis.md` §8a-2).
+Spec: progressive disclosure of the *page*, not the tool set — the whole
+vocabulary is ~524 tokens of system prompt and disclosing it lazily saves
+nothing while breaking the closed-world guarantee. One new action `observe`
+with a `target` subtree: the executor re-runs `observe()` scoped to that
+subtree with the full `MAX_ELEMS` budget and a longer text head, and the
+result reaches the replanner through the existing observation+note path.
+Costs one planning call, bounded by `MAX_REPLANS`. No site knowledge.
+Acceptance: an offline fixture case where the answer element sits past
+`MAX_ELEMS` in document order goes from `failure:locate`/dump to correct, red
+first; `quotes.toscrape.com/js` keeps its honest marker if it is still
+unplannable; tokens-per-task measured before/after from committed reports
+and stated (must stay inside the 100k run budget).
+
+### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
+Origin: `prompts/015` — "would an MCP / tool-calling loop raise completion?"
+`docs/architecture/task1-overview.md` chose B over A (LLM-per-step) on
+reasoning, never on a measurement; M9's ablation mechanism (ADR-010,
+`evals/ablation.py`) now exists and varies only the model.
+Spec: a second planner mode behind the unchanged
+`planner(task, url, obs, note)` boundary — OpenRouter native `tools=[…]` with
+the same four step schemas as function definitions, one model call per step,
+fresh observation after every step, step cap = `RUN_BUDGETS["actions"]`. No
+MCP: same process, no external client — MCP is transport, not capability.
+Every tool call lands in the trace record so the UI and verifier read the
+same evidence pipeline. Driven by `evals/ablation.py --planner toolcall`
+against the deployment on the M9 task set plus one probe-#3-shaped task;
+report as `-ablation.json` under the ADR-012 policy; `fast` stays on
+`stub_planner` — the arm is paid-only.
+Acceptance: `docs/analysis.md` §9 gains a per-arm row set (correct-answer,
+success, $/task, tokens, ms, planner calls) built from a committed report and
+guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
+with the measured gap or amends the A-vs-B table — decided by the numbers,
+with the fast-suite/inspectability cost of A stated either way.
+
 ## Debt
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
