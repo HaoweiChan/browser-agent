@@ -16,6 +16,8 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 - M9 — Cost/model ablation (2026-08-21) — ADR-010, PR #15 (mechanism) + PR #19 (numbers), support-matrix D12–D19; default moved to `openai/gpt-5.6-luna`
 - M12 — Fast-suite wall-clock over budget (2026-08-21) — ADR-013, PR #20; ceiling is per-environment now, ADR-002 D4 ends unmoved at 60s
 - M18 — TinBoker reviewer UI restyle (2026-08-21) — ADR-014, PR #23, trace in tasks/reviews/pr23-r*.json
+- M10 — A-Freeze (2026-08-22) — ADR-015, PR #25, trace in tasks/reviews/pr25-r*.json
+- M30 — Interview demo execution UI (2026-08-22) — PR #24, trace in tasks/reviews/pr24-r*.json
 
 ## B-floor exit criteria — final status
 All 6 met: criterion 2 (coverage/live breadth) was partial at the M5 freeze

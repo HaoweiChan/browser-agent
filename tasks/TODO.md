@@ -12,32 +12,6 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M30 — Interview demo execution UI            [status: pr]
-Spec: Make the reviewer UI communicate real task progress at a glance and trim
-the audit-heavy landing-page copy for an interview audience. Reuse the existing
-SSE/trace stream; progress must never advance from a timer or invented event.
-Acceptance: the running surface visibly distinguishes planning, browser/page
-work, action execution, verification, and terminal success/failure from real
-events; completed/current/upcoming states and reduced-motion behavior are
-rendered accessibly; full trace details remain available; the landing page shows
-only a concise 3–5-item limitations summary with the full evidence behind a
-disclosure, uses reader-facing support labels instead of TC1–TC5, and reduces the
-guard copy to one compact line without weakening the underlying controls or
-claims. Existing dark/light, 390px, no-dependency, DOM-hook, submission, result,
-and gate contracts remain green, with focused fail-before/pass-after evidence.
-Out of scope: executor behavior, SSE/result schemas, synthetic progress, and new
-frontend dependencies.
-
-### M10 — A-Freeze            [status: pr]
-Depends: M9, M12
-Spec: analysis/README/support-matrix refresh, prompts curated, second
-held-out probe vs the deployed URL (mandatory gate, raw results committed).
-Depends on M12 because the A-exit walk checks the gate against ADR-002, and
-the declared D4 wall-clock breach must be fixed or amended before the walk
-can be honestly green.
-Acceptance: A-exit criteria in `docs/plans/completed/task1-a-level-plan.md` all
-green → owner decides submission/public.
-
 ### M31 — Plan lint: a superlative task with no enumerating step is sent back before the browser moves            [status: todo]
 Depends: M10
 Origin: PR #25 finding 3 — correct-answer rate 2/8 (25%) at M5 → 1/7 (14%)
