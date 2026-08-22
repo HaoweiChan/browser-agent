@@ -1,0 +1,25 @@
+{
+  "id": "judge-fail-closed-on-error",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L3",
+  "tc": "TC1",
+  "trap": "the judge call raises (network/provider/timeout-shaped failure) on a run that passed every L1 check -- the run must NOT keep its PASS by default",
+  "input": {
+    "fixture": "shop-lamp-std.html",
+    "task": "What is the price of the Aurora Desk Lamp on this page?",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "group", "name": "Price" }, "anchor": "LAMP-STD" }
+    ],
+    "judge_verdicts": ["error"]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "verdict": "FAIL"
+  },
+  "provenance": "M36 acceptance criterion 2 (fail CLOSED): a judge call that raises for ANY reason -- network failure, provider error, timeout, a malformed response -- must never leave a run's prior PASS standing. `judge_verdicts: [\"error\"]` makes `stub_judge` raise `JudgeError` on the one call this run makes, standing in for every one of those network-shaped failures at $0.00 (the fast suite cannot exercise a real timeout, so the injected exception is the offline proxy for it). This is a genuinely PASSING L1 run -- shop-lamp-std.html's Price group extraction survives every deterministic check exactly as `tc1-shop-price` (its non-mutated sibling) does -- so the ONLY thing that can turn it into `failure:semantic` is `_apply_judge` treating the raised exception as a reject rather than skipping the check. Watched red against a version of `_apply_judge` that let an exception propagate uncaught (or silently kept the prior PASS) would show `status: success` here; the committed behaviour is `status: failure:semantic`, `reason` naming 'judge unavailable, failing closed', `budgets_spent.judge_calls: 1` (the call was attempted, not skipped) and `checks.judge_available: false` (distinct from `judge_responsive: false`, which would mean the judge ANSWERED and rejected -- this run never got an answer at all).",
+  "triage": {
+    "class": "inviolable-property",
+    "note": "fail-closed is proven end to end through the real pipeline (agent.py's actual `_apply_judge`, not a mock of the whole verdict), on the same fixture/plan a normal PASS case uses, so the only variable is the judge's own failure."
+  }
+}

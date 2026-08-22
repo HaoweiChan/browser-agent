@@ -1,0 +1,10 @@
+{
+  "id": "judge-missing-key-fails-closed",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "input": { "kind": "judge", "missing_key": true },
+  "expect": { "note": "live_judge() with no OPENROUTER_API_KEY raises JudgeError naming the key, before any network call could occur" },
+  "provenance": "M36 acceptance criterion 2 (missing key). This environment genuinely has no OPENROUTER_API_KEY (a stated M36 environment constraint), so the probe needs no mocking: `src/browser/judge.py`'s `live_judge()` must raise `JudgeError` with 'OPENROUTER_API_KEY' in the message, the same shape `live_planner()` already uses in planner.py for the identical situation. Watched red against a version of `live_judge` that checked the key AFTER a cache miss but still attempted the HTTP call anyway would hang or raise a bare `urllib` error with no actionable message and, worse, would not be distinguishable from a real transient network fault -- the case pins the SPECIFIC, recognisable failure mode a caller can act on.",
+  "triage": { "class": "inviolable-property", "note": "one half of the fail-closed acceptance criterion; judge-fail-closed-on-error covers the OTHER half (an exception from an otherwise-configured judge, mid-run, through the real pipeline)." }
+}

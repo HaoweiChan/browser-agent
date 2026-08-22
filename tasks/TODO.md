@@ -76,7 +76,7 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M36 — responsiveness is judged by an LLM, because four structural mechanisms have failed            [status: todo]
+### M36 — responsiveness is judged by an LLM, because four structural mechanisms have failed            [status: in-progress]
 Origin: PR #30 post-merge confirmation (2026-08-22, deployed build `2e94bed`); owner's call on the mechanism
 Spec: M34's `not_page_furniture` compares a 20-char context window on the
 assumption that site chrome carries its neighbours wherever it recurs. On

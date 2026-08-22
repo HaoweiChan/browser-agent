@@ -1,0 +1,38 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nav-heavy Notice Fixture</title>
+<!-- Target page for nav-heavy-notice-home.html (M36's motivating case,
+     judge-catches-varying-context-furniture). The site-notice text below is
+     byte-identical to the home page's own -- real chrome, present on both --
+     but here it is preceded by "Travel / 11 results." (a page-specific
+     result count) instead of the home page's "Pick a category from the
+     sidebar." PAGE_CONTEXT_WINDOW=20 raw characters either side means the
+     two windows do not match, so verify()'s not_page_furniture (M34, D24)
+     does not flag it: a real, undemonstrated-until-now gap in the fix's own
+     declared ceiling, not a hypothetical one. This is what the judge exists
+     to catch. Sidebar padding for the same MIN_PAGE_CHARS reason as the
+     home page's -- see its comment. -->
+<header><a href="#top">Nav-heavy Shop</a></header>
+<aside>
+  <ul>
+    <li><a href="#1">Mystery</a></li>
+    <li><a href="#2">Historical Fiction</a></li>
+    <li><a href="#3">Sequential Art</a></li>
+    <li><a href="#4">Classics</a></li>
+    <li><a href="#5">Philosophy</a></li>
+    <li><a href="#6">Romance</a></li>
+    <li><a href="#7">Womens Fiction</a></li>
+    <li><a href="#8">Fiction</a></li>
+    <li><a href="#9">Childrens</a></li>
+    <li><a href="#10">Religion</a></li>
+  </ul>
+</aside>
+<main>
+  <h1>Travel</h1>
+  <p>11 results.</p>
+  <div role="status" aria-label="Site notice">Demo content only, prices are not real.</div>
+  <article>
+    <a href="/fixtures/hello.html">Atlas of Remote Islands</a>
+    <div role="group" aria-label="Price"><span>£45.17</span></div>
+  </article>
+</main>

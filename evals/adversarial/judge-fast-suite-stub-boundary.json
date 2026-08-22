@@ -1,0 +1,26 @@
+{
+  "id": "judge-fast-suite-stub-boundary",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC1",
+  "trap": "a run that genuinely reaches the terminal-verdict boundary (every L1 check passes) must still cost $0.00 in the fast suite -- proving `stub_judge` is what actually answered, not `live_judge()` reached and silently spending nothing by luck",
+  "input": {
+    "fixture": "shop-lamp-std.html",
+    "task": "What is the price of the Aurora Desk Lamp on this page?",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "group", "name": "Price" }, "anchor": "LAMP-STD" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "verdict": "PASS",
+    "answer": "$39.00",
+    "budgets": { "judge_calls": 1, "judge_tokens": 0, "judge_usd": 0.0 }
+  },
+  "provenance": "M36 acceptance criterion 3: the `fast` suite makes zero paid calls with the judge stubbed at its own injection boundary, the way `stub_planner` is injected at the planner boundary (planner.py). `input` names no `judge`/`judge_verdicts` at all, so this run takes `_run_agent`'s DEFAULT judge -- exactly what every case written before M36 gets, and what a case author gets by doing nothing special. `budgets.judge_calls: 1` proves the judge stage was genuinely reached (this extraction passes every L1 check, so `_apply_judge` runs), not skipped for an unrelated reason; `judge_usd: 0.0` / `judge_tokens: 0` prove that reaching it cost nothing, which is only possible if the default is `stub_judge` and not `live_judge()` -- a `live_judge()` default would either raise (no OPENROUTER_API_KEY in this environment, case a case would go red on plainly) or, if a key were ever present in some future environment, silently spend. Read together with the `--suite fast` gate line this PR's own report shows (`cost $0.0000`), this case is the single-run half of that suite-wide claim: one case, one judge call, zero dollars, by construction rather than by coincidence.",
+  "triage": {
+    "class": "inviolable-property",
+    "note": "the boundary is proven by running the real production pipeline end to end and reading its own cost ledger, not by inspecting which function object got imported."
+  }
+}
