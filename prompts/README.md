@@ -25,11 +25,16 @@ it probably wasn't worth curating.
 ## Append-only
 
 A curated file records what was known and decided on its date and is never
-rewritten to look right in hindsight — the same principle ADR amendments
-follow (struck, not deleted; `specs/decisions/ADR-015-a-freeze.md`'s M29
-amendment is the example). A later correction gets a new numbered file (the
-M5 reopen is `prompts/008-a-level-reopen.md` after `007`) or a cross-link
-from the current source of truth (`specs/decisions/`), not an edit to the
-original. A prompt file's own outcome line reading stale after later events
-is expected, not a defect — that is precisely what distinguishes a dated
-record from a live one (PR #28 R3).
+silently reworded to look right in hindsight. Two things are both true at
+once, the same way they are for an ADR: nothing is deleted, and a claim the
+record shows was later falsified gets struck in place with a dated pointer
+to the correction — exactly `specs/decisions/ADR-015-a-freeze.md`'s M29
+amendment convention (struck-not-deleted, per its own citation of the
+A-level plan's criterion-7 precedent), applied here to `prompts/014-a-freeze.md`
+(PR #28 R5). A new milestone's own reopening still gets a new numbered file
+(the M5 reopen is `prompts/008-a-level-reopen.md` after `007`) rather than an
+edit to the prior one — striking is for a specific sentence later evidence
+falsified, not for narrating a new chapter of work. An UNSTRUCK claim that
+later turned out false is a live defect, not a dated record, which is why
+`docs-numbers-are-derived`'s criterion5 check scans `prompts/` like any other
+tracked markdown rather than excluding it (PR #28 R5).

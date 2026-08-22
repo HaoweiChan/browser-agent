@@ -116,24 +116,6 @@ reporting success for an unresponsive answer, not about extracting better.
 
 ## Debt
 
-### T-R33 — prompts/014-a-freeze.md's outcome line still reads as an unamended present-tense claim            [status: todo]
-Origin: PR #28 R3 (LOW, routed debt)
-Spec: `prompts/014-a-freeze.md:9-10` reads "criterion 5 green offline, live
-re-confirmation pending the post-merge redeploy" with no strikethrough and no
-pointer to the M29 correction. `prompts/README.md`'s new "Append-only"
-section (added in this same repair) states the convention this is correct
-under — a curated file records what was known on its date and is never
-rewritten — so this row is a documentation gap (no cross-link from 014 to
-ADR-015's amendment), not a live false claim: `docs-numbers-are-derived`'s
-criterion5 check deliberately excludes `prompts/` from its scan for exactly
-this reason.
-Repro: `sed -n '1,14p' prompts/014-a-freeze.md`
-Acceptance: add a one-line cross-reference from `prompts/014-a-freeze.md`'s
-outcome summary to `specs/decisions/ADR-015-a-freeze.md`'s M29 amendment, the
-same way a later prompt file would link back (`prompts/008-a-level-reopen.md`
-after `007`) — an edit to 014 itself, not a new file, since this is a
-pointer added going forward, not a rewrite of what was known on 2026-08-22.
-
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5
 Spec: `support-matrix-cites-real-cases` resolves backticked case-id tokens
