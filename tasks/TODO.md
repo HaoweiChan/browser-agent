@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M31 — Plan lint: a superlative task with no enumerating step is sent back before the browser moves            [status: todo]
+### M31 — Plan lint: a superlative task with no enumerating step is sent back before the browser moves            [status: pr]
 Depends: M10
 Origin: PR #25 finding 3 — correct-answer rate 2/8 (25%) at M5 → 1/7 (14%)
 at the M10 probe — and the discussion it triggered (`prompts/015`). PR #25
@@ -33,9 +33,27 @@ structural not behavioral, fast suite stays $0 — the ADR says why a
 debater was considered and rejected.
 Acceptance: a case where the first plan lacks an enumerating step is watched
 red first (rejected before any action — `actions` spent = pre-plan nav only);
-a fixture twin of probe #3 (most-quoted author) and `live-books-cheapest-travel`
-go green against ground truth; D22 is re-measured and restated, not deleted;
-replan rate published per D7.
+a fixture twin of probe #3 (most-quoted author) goes green against ground
+truth; D22 is re-measured and restated, not deleted; replan rate published
+per D7.
+Acceptance AMENDED at PR #29 R4 (reviewer finding, amend route chosen by the
+orchestrator): the original line also required `live-books-cheapest-travel` to
+go green. It does not, and the amendment records why rather than hiding it.
+That case is `full`-tagged — a real planner call against a real site — so
+running it spends money, and stubbing it is forbidden (hard rule 4); it has
+been declared unrun since M6 and still is. Worse for the milestone's own
+thesis, its wording ("In the Travel category, find the cheapest book and tell
+me its exact price") matches neither `_AGGREGATE` nor therefore the plan lint
+nor the code-side reduction, so M31's central mechanism provably cannot fire on
+it. What IS proven offline: the reduction gets that exact case right on its own
+ground truth (`rank-reduces-enumeration-in-code` row 1, the eleven hand-verified
+Travel prices reducing to £23.21), and the enumerate-then-rank path end to end
+on a superlative task (`probe3-quotes-most-quoted-author`), and — since PR #29
+R9 — the reduction itself on that exact wording end to end
+(`extract-all-cheapest-wording-still-reduces`). The residual is narrower than
+the first version of this amendment said: such a task IS reduced when the plan
+enumerates; what is missing is the lint that would make it enumerate, because
+`_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`. That is T-CHEAPEST-WORDING below.
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
@@ -62,7 +80,8 @@ reasoning, never on a measurement; M9's ablation mechanism (ADR-010,
 `evals/ablation.py`) now exists and varies only the model.
 Spec: a second planner mode behind the unchanged
 `planner(task, url, obs, note)` boundary — OpenRouter native `tools=[…]` with
-the same four step schemas as function definitions, one model call per step,
+the same step schemas as function definitions (four when this block was
+written; five since M31 added `extract_all`), one model call per step,
 fresh observation after every step, step cap = `RUN_BUDGETS["actions"]`. No
 MCP: same process, no external client — MCP is transport, not capability.
 Every tool call lands in the trace record so the UI and verifier read the
@@ -103,6 +122,205 @@ Out of scope: extraction quality (M28), planner-side lint (M31). Do not remove
 M34's deterministic checks — they are cheaper and they run first.
 
 ## Debt
+
+### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: todo]
+Origin: PR #29 R24
+Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README
+no longer publishes a property the grader does not implement — it now states
+what `_check_published_band` actually checks (case count matches, published
+maximum derives the SAME ceiling as the ledger maximum, committed ceiling >=
+the rule applied to that maximum) — and both README's band table and ADR-019's
+band lines are now regenerated from `evals/report/history.jsonl` by script, so
+the published run lists are the ledger's own and the derivation sentences
+multiply the ledger maximum at the shipped case count.
+What remains is the judgement call R24 raised: property 2 is
+`rule(published) == rule(ledger max)` rather than `published >= ledger max`.
+The weaker form was chosen deliberately (the strict form reddens on ordinary
+0.2-0.5s run-to-run variance, which is rot-by-construction one level up), and
+it does catch the harmful direction — a band justifying a LOWER ceiling than
+the truth. It does not catch a published maximum that is up to ~1.0s below the
+ledger's at these magnitudes while still landing in the same band.
+Acceptance: either the tighter property is adopted with a regeneration step
+that keeps the doc honest without hand-editing (the script that now produces
+these lists is the obvious hook), or the trade-off is stated in ADR-019 as a
+declared ceiling with the ~1.0s slack named, and a case pins the miss so it is
+a decision rather than an artefact of what was convenient to grade.
+
+### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: todo]
+Origin: PR #29 R25
+Spec: `specs/decisions/INDEX.md:11` (rewritten by 3699b87) reads "fast 75s local / 90s CI"
+while the same commit set `evals/run.py:91` to `{"fast": 80, "invariant": 20}` and INDEX:26's
+own ADR-019 line says "local `fast` 60 -> 80". ADR-019:10's Amends header says
+"(local `fast` ceiling 60 -> 75)", contradicting its own Ruling at :5 (60 -> 80).
+ADR-002:8 says "`fast` 80s local / 90s CI, `invariant` 20s local / 20s CI, since ADR-019"
+and then, in the same sentence, "then re-measured to 75s at M31 ... `invariant` has had its
+own 15s ceiling since ADR-019". T-R25 asserts "All of that is corrected in the line now" — it
+is not. Third occurrence of the defect T-R25 exists for.
+Acceptance: every ceiling statement in specs/ names 80/90/20/20; ADR-019's Amends header
+matches its Ruling; ADR-002's parenthetical stops asserting a live 15s invariant ceiling;
+T-R25's Update states what is actually fixed. Ideally one graded row that compares INDEX/ADR
+ceiling numbers against `WALL_BUDGET_S`, watched red against the current text.
+
+### T-R36 — `adr-header-and-index` cannot see an ADR file missing from INDEX when another shares its number            [status: todo]
+Origin: PR #29 R26
+Spec: The duplicate this block was opened for is resolved: main's M34 INDEX line
+was restored during the M36 merge, and this branch's two decisions renumbered to
+ADR-018 (M31 plan lint) and ADR-019 (wall-clock ceilings) so main keeps 016/017.
+What survives is the grader hole R26 named. `_run_adr_header_index_case`
+(`src/browser/eval_adapter.py`) computes `sorted(set(adr_nums) - set(index_nums))`,
+so if two files share a number and only one is indexed, the missing entry never
+appears in `missing_from_index` — the set collapses it. `duplicated_in_index`
+does catch a doubled INDEX line, which is what forced the renumber here, but the
+file-side blindness is untested and is what let R26's dropped M34 line survive a
+merge in the first place.
+Acceptance: `_run_adr_header_index_case` compares files to entries per FILE (or
+fails on a duplicated ADR number on disk), watched red against a tree with two
+same-numbered ADR files and one INDEX line. This is the general form
+T-ADR-NUM already tracks — fold it in if that block is promoted first.
+
+### T-R37 — a plural aggregate request is now refused as if it asked for one item            [status: todo]
+Origin: PR #29 R27
+Spec: `src/browser/agent.py:200-221` refuses whenever `is_aggregate(task)` and the single
+`extract_all` does not carry `rank is True`. `_AGGREGATE` is
+`\b(which|what|who)\b.{0,80}\b(most|least|fewest|highest|lowest|greatest)\b`, which matches
+"Which products in this catalogue have the lowest prices?" — not a which-ONE-of-a-set question.
+End-to-end on shop.html with the plan from `plan-lint-refuses-a-declared-non-comparison`:
+`status failure:task`, `answer null`, `budgets.actions 1`, reason "...Declare `rank: true` and
+let code do the comparison...", which would return one product for a question that asked for
+several. At `117301e` the same input returned the four-row list as success, so this is a
+regression introduced by PR #29's round-4 repair. It fails LOUD — a false refusal, not a wrong
+answer published as success. ADR-018's justification ("`_AGGREGATE` is narrow and
+high-precision: when it matches, code is entitled to contradict a `rank: false`") is falsified
+by that one input, and nothing declares the cost.
+Acceptance: either the lint's precondition is narrowed so a plural which-question is not treated
+as which-one (no new wording regex needed — the existing match already exposes the number), or
+ADR-018's "entitled to contradict" paragraph states this ceiling with this exact input as its
+evidence, and a case pins the behaviour so it is a decision rather than a side effect.
+
+### T-R38 — `extract_all` rows after the first lose M34's DOM-offset anchoring            [status: todo]
+Origin: PR #29 R28
+Spec: `src/browser/agent.py:675-676` — `off = (real_offset if v == vals[0] else
+_closest_occurrence(body, v, -1))`. Rows 2..n of an `extract_all` get hint -1, plain
+first-occurrence, which is the pre-R2-1 behaviour PR #30 R2-1 fixed. `docs/support-matrix.md:67`
+(D24) still says the context is "anchored to the actual DOM occurrence it was read from" and
+lists three uncaught shapes; this fourth is not among them (only a source comment names it).
+`loc.first` is the right call — `loc.evaluate` on a multi-match locator is a Playwright
+strict-mode violation — and the row-wise judging claim holds (verify() with two extraction
+records fails the set when only the second row's context repeats on the other page). But every
+M34 case uses `extract`, so the merged `extract_all` x `other_page_text` path is graded nowhere.
+Acceptance: D24 names the residual, or the hint is taken per-row via `loc.nth(i)`; plus one
+adversarial case running an `extract_all` across two pages where one enumerated row is chrome,
+watched red against a build that judges the set by row 0's evidence.
+
+### T-RANK-MIRROR — a list-shaped task declared `rank: true` truncates to one item, and nothing contradicts it            [status: todo]
+Origin: PR #29 R20 (the mirror half; the aggregate half is fixed)
+Spec (claim): M31 requires the plan to declare `extract_all.rank`, and code now
+contradicts a declaration it can prove wrong — but it can only prove one
+direction. `is_aggregate(task)` is narrow and high-precision, so `rank: false`
+on a task it matches is refused (`plan-lint-refuses-a-declared-non-comparison`).
+There is no predicate for the other direction: a task that asks for the whole
+set is not something code recognises, so `rank: true` is obeyed and the answer
+is one row where the user asked for every row, reported `success`.
+Evidence: `extract-all-declared-rank-obeys-the-plan` pins exactly that — same
+task, same fixture and same verb as `extract-all-list-task-keeps-every-row`,
+opposite declaration, opposite answer, both green.
+Repro: run `extract-all-list-task-keeps-every-row`'s plan with `rank: true`;
+answer becomes "Cobalt Floor Rug $18.00" instead of the four rows.
+Acceptance: a signal that is not a wording regex over `list`/`every`/`each` —
+that mechanism decided this call three times and was backwards each time
+(PR #29 R2, R9, R16), so reintroducing it as a decider is explicitly out of
+scope. Candidates worth a red-first case: a second declaration the executor can
+cross-check against the evidence (e.g. an expected cardinality the enumeration
+must satisfy), or an L3 evidence-only check that asks whether one row answers
+the question. Until then the residual is that the planner's declaration is
+trusted wherever code has no opinion — which is most tasks.
+Note: `live-books-cheapest-travel` is the only case that would put this decision
+in front of a real planner and it is `full`-tagged and unrun, so there is no
+measurement of how often a real model gets `rank` right.
+
+### T-CHEAPEST-WORDING — the plan lint does not fire on price-worded rankings, so nothing sends such a plan back            [status: todo]
+Origin: PR #29 R4, restated at PR #29 R9 and R12
+Spec (claim): the plan lint (`agent.plan_gap`) is gated on `verifier.is_aggregate`.
+`_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`.
+So a ranking task worded with `cheapest` is never linted: the planner may answer
+it with a single `extract` and the run reports whatever that one element said.
+The code-side REDUCTION is not affected — PR #29 R9 moved its gate off
+`is_aggregate` and onto `_RANK` plus an enumerate-request test, so an
+enumeration for such a task is reduced correctly (`rank-reduces-enumeration-in-code`
+row 1, `extract-all-cheapest-wording-still-reduces`). What is missing is only
+the push: nothing makes the planner enumerate in the first place.
+Evidence: `is_aggregate("Which product is the cheapest, and what is its price?")`
+-> False, on a task committed in this repo since M7. Same for
+`live-books-cheapest-travel`'s "In the Travel category, find the cheapest book
+and tell me its exact price."
+Repro: `plan_gap("In the Travel category, find the cheapest book and tell me its
+exact price.", [{"action": "extract"}])` -> None.
+Acceptance: either widen `_AGGREGATE`'s second half to the price vocabulary with
+a watched-red case — and prove it does not drag the fifteen shop-fixture cases
+whose task says "name the cheapest product" into a lint they have no reason to
+meet, which is why M31 did not widen it — or run `live-books-cheapest-travel`
+with a key and record what the planner does now that the verb exists.
+Note: the same regex ceiling T-R31 names for the verifier guard, with one more
+consumer. `_RANK` (the reduction) and `_AGGREGATE` (the lint and the verifier
+guard) are deliberately separate vocabularies; this block is about the second.
+
+### T-EXTRACT-ALL-VOLUME — `extract_all` has no cap on matches and stores one full evidence window per match            [status: todo]
+Origin: PR #29 R7
+Spec (claim, reviewer's evidence carried verbatim): `extract_all` has no cap on
+match count, and each match stores its own up-to-2000-char evidence window, so
+one enumeration multiplies the page text by the number of matches in
+`result.json` and in the API/SSE payload.
+Evidence (verbatim): src/browser/agent.py extract branch:
+`extractions.extend({"value": v, "page_text": evidence_window(body, v, anchor), ...} for v in vals)`
+with `PAGE_TEXT_KEEP = 2000` (agent.py:41) and no bound on `len(vals)`.
+`RUN_BUDGETS` caps actions/tokens/ms, not extraction volume. Measured:
+`extract_all {role: link}` on `quotes.html` yields 13 records each carrying its
+own window of the same body.
+Acceptance (verbatim): Either a declared cap on enumerated matches (loud when
+exceeded, like every other budget here) or one shared evidence window per
+`extract_all` step, with a case pinning the record count for a large
+enumeration.
+Note: the per-value window is not incidental — `grounded` and `not_a_dump` are
+judged per extraction, so collapsing to one shared window changes what those
+checks mean and needs its own red-first case, which is why this is not a
+one-line fix folded into PR #29.
+
+### T-CASE-CITES — case ids cited from `src/` and from case files resolve against nothing            [status: todo]
+Origin: M31 cold review (secondary finding), the general form of T-R32.
+Spec (claim): `support-matrix-cites-real-cases` resolves backticked case-id
+tokens in `docs/support-matrix.md` against `evals/`, and nothing resolves the
+same tokens anywhere else. Code comments in `src/browser/verifier.py` and
+`src/browser/eval_adapter.py` and the `provenance`/`triage` prose inside case
+files all cite case ids heavily, and a renamed or folded-away case leaves them
+pointing at nothing with the whole suite green.
+Evidence: M31 folded one case into another mid-milestone and left three live
+references to the dead id — two in `src/`, one in a case file — found by cold
+review, not by the suite.
+Repro: rename any case file and grep for its old id under `src/` and
+`evals/*/*.json`; `--suite invariant` stays green.
+Acceptance: one case resolves case-id citations across `src/` and the case
+files themselves (the support-matrix half already exists), watched red against
+a deliberately dangling id first. Pairs naturally with T-R32, which is the same
+mechanism for D-numbers.
+
+### T-RANK-UNITS — `verifier.rank` compares enumerated numbers without checking they are commensurable            [status: todo]
+Origin: M31 implementation (`specs/decisions/ADR-018-m31-plan-lint.md` Decision 2),
+found while writing the reduction, out of that milestone's scope.
+Spec (claim): `rank` reduces an `extract_all` enumeration numerically whenever
+every value parses as a number, comparing on the Decimal alone — so a list
+mixing currencies ("£23.21", "$18.00") or units ("2.5%", "18") ranks as if the
+values were commensurable, and returns a confident winner. `answers_match` in
+the same file already refuses that comparison for exactly this reason
+(`verifier-sign-currency-percent`), which is what makes the omission a real
+inconsistency rather than a hypothetical.
+Evidence: `_num_parts` returns `(value, currency, unit)` and `rank` reads only
+`[0]`; nothing anywhere refuses a mixed list.
+Repro: `rank("which is cheapest", ["£23.21", "$18.00"])` -> "$18.00", no refusal.
+Acceptance: a mixed-currency / mixed-unit enumeration is refused the way a tie
+already is (`ValueError` -> `failure:semantic`), watched red first. Deliberately
+NOT done in M31: no enumeration in this repo produces one — every `extract_all`
+in the eval set reads one column of one page — and the ponytail comment on
+`rank` names the ceiling and this upgrade path.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5
@@ -478,8 +696,16 @@ it — that case grades `run_task(browser=None)`, the production launch branch, 
 `ui-rendered-narrow` never routes through `run_task`. Do not widen that case:
 what is missing is a check on the eval harness's own renderers, not on the agent.
 
-### T-R25 — INDEX.md's ADR-002 line still publishes the withdrawn 70s local ceiling            [status: todo]
-Origin: PR #23 R8 (LOW, routed debt by the reviewer)
+### T-R25 — INDEX.md's ADR-002 line published withdrawn ceilings (both halves)            [status: fixed at PR #29 R22, kept for the mechanism]
+Origin: PR #23 R8 (LOW, routed debt by the reviewer); local half fixed and CI
+half found at PR #29 R22
+Update (PR #29 R22): the line published BOTH a withdrawn local number (70s) and
+a superseded CI one (80s, moved to 90s by ADR-019), and named neither ADR-019
+nor the `invariant` ceiling that has existed since it. All of that is corrected
+in the line now. What is NOT fixed is the mechanism: `adr-header-and-index`
+still checks only that each ADR appears in INDEX exactly once, so the prose of
+an INDEX line can still contradict the ADR it summarises with nothing red. That
+is what this block stays open for — the numbers were a symptom twice.
 Spec (claim): `specs/decisions/INDEX.md`'s ADR-002 line still publishes the
 withdrawn 70s local ceiling, contradicting ADR-002 itself and INDEX's own ADR-013
 line.

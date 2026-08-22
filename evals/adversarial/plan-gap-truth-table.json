@@ -1,0 +1,15 @@
+{
+  "id": "plan-gap-truth-table",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "plan-gap"
+  },
+  "provenance": "M31. `agent.plan_gap` is a pure function over (task text, plan) and the two end-to-end cases only reach two of its rows: `verifier-aggregate-superlative-fails-loud` (aggregate task, no enumerating step -> rejected before any action) and `probe3-quotes-most-quoted-author` (the same, replanned into an enumeration that answers correctly). This is the table underneath them. The rows that matter and that neither E2E case reaches are the ones where the plan reads the page more than once. TWO `extract_all` steps produce a list of lists as the answer. ONE `extract_all` beside a plain `extract` is worse and was the M31 spec-drift audit's top finding against this function's first version, which asked only whether SOME step enumerated: on `quotes.html` the plan `[extract heading, extract_all links]` for \"which author has the most quotes\" ran to `status: success`, `verdict: PASS`, every L1 check green, with the answer `[\"Quotes Fixture\", [\"Login\", \"Tags\", \"Albert Einstein\", ...]]` — an unranked candidate list, composite with the page heading, offered as the answer to a \"which one\" question. `verifier.rank` never sees it (it reduces an enumeration only when the enumeration is the whole answer) and the relaxed `aggregate_needs_comparison` check has no reason to reject a trace that does carry an enumeration. The rule is now \"read the page exactly once, with `extract_all`\", which makes zero, two, and one-plus-one the same gap. The non-aggregate rows are the other direction: the lint must not fire on an ordinary task however many enumerations its plan carries, or every list-shaped task starts replanning.",
+  "triage": {
+    "class": "coverage-gap",
+    "note": "tagged invariant, and watched red as an 'unknown invariant check plan-gap' error before the check existed — the same way inv3-budget-exhaustion-loud was. Watched red twice more against the first implementation of the lint, which asked `any(... == 'extract_all')`: the two-enumeration row and both one-plus-one orderings reported `expected_gap: true, got: null`."
+  }
+}

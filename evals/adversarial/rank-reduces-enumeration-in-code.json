@@ -1,0 +1,206 @@
+{
+  "id": "rank-reduces-enumeration-in-code",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "verifier",
+    "rank": [
+      {
+        "note": "the live-books-cheapest-travel shape, offline: the eleven Travel-category prices enumerated by extract_all, reduced to the cheapest in code. Prices are that case's own hand-verified ground truth (minimum £23.21, 'The Road to Little Dribbling'). This is the reduction that has to exist for that case to be answerable at all — the deployed run 734d3d1f planned 'read article 0' and returned the FIRST price instead. PR #29 R2 briefly gated the agent's call on `is_aggregate`, which this wording misses, so the raw list was published instead; R9 moved the gate into `rank` and this shape is reachable again (extract-all-cheapest-wording-still-reduces is its end-to-end twin).",
+        "task": "In the Travel category, find the cheapest book and tell me its exact price.",
+        "values": [
+          "£45.17",
+          "£49.43",
+          "£48.87",
+          "£36.94",
+          "£37.33",
+          "£44.34",
+          "£30.54",
+          "£56.88",
+          "£23.21",
+          "£38.95",
+          "£26.08"
+        ],
+        "answer": "£23.21",
+        "declared": true
+      },
+      {
+        "note": "same list, opposite direction — 'most expensive' must not be read as the 'most' branch's mode over strings.",
+        "task": "Which book in this category is the most expensive?",
+        "values": [
+          "£45.17",
+          "£49.43",
+          "£48.87",
+          "£36.94"
+        ],
+        "answer": "£49.43",
+        "declared": true
+      },
+      {
+        "note": "probe #3's shape: non-numeric values, so 'most' counts rather than compares.",
+        "task": "Which author has the most quotes listed on this page?",
+        "values": [
+          "Albert Einstein",
+          "J.K. Rowling",
+          "Albert Einstein",
+          "Jane Austen",
+          "Albert Einstein",
+          "J.K. Rowling"
+        ],
+        "answer": "Albert Einstein",
+        "declared": true
+      },
+      {
+        "note": "the counting direction inverts too — and the least-quoted author here is unique, so it is a rank and not a tie.",
+        "task": "Which author has the fewest quotes listed on this page?",
+        "values": [
+          "Albert Einstein",
+          "Albert Einstein",
+          "J.K. Rowling",
+          "J.K. Rowling",
+          "Jane Austen"
+        ],
+        "answer": "Jane Austen",
+        "declared": true
+      },
+      {
+        "note": "a tie is ambiguous and must be loud, the same ruling near-equidistant-is-ambiguous made for the resolver. Returning either name would be a confident wrong answer, which is the defect family this milestone exists to close.",
+        "task": "Which author has the most quotes listed on this page?",
+        "values": [
+          "Albert Einstein",
+          "Jane Austen"
+        ],
+        "answer": null,
+        "declared": true
+      },
+      {
+        "note": "no superlative in the task: the enumeration IS the answer and must survive untouched (multi-row list answers, contract: answer string|list).",
+        "task": "List every author on this page.",
+        "values": [
+          "Albert Einstein",
+          "Jane Austen"
+        ],
+        "answer": [
+          "Albert Einstein",
+          "Jane Austen"
+        ],
+        "declared": false
+      },
+      {
+        "note": "a single-element enumeration reduces to its one element — nothing to compare, and no tie.",
+        "task": "Which author has the most quotes listed on this page?",
+        "values": [
+          "Albert Einstein"
+        ],
+        "answer": "Albert Einstein",
+        "declared": true
+      },
+      {
+        "note": "cold review, M31: a price column with one non-numeric cell used to fall through to the counting branch, so the REPEATED price won 'highest' as a confident success. Mixed columns refuse, the same way a tie does.",
+        "task": "Which product on this page has the highest price?",
+        "values": [
+          "$19.99",
+          "$19.99",
+          "$149.00",
+          "Out of stock"
+        ],
+        "answer": null,
+        "declared": true
+      },
+      {
+        "note": "the worse direction of the same defect: 'cheapest' over the mode branch picks the unique junk cell, and the tie guard never fires because it really is a unique winner. 'Out of stock' as a price, reported as success.",
+        "task": "Which product on this page is the cheapest?",
+        "values": [
+          "£10.00",
+          "£10.00",
+          "£99.00",
+          "£99.00",
+          "Out of stock"
+        ],
+        "answer": null,
+        "declared": true
+      },
+      {
+        "note": "PR #29 R16: the plan declares `rank: false` and the list survives — even though the task's wording contains 'cheapest'. Its twin is row 13, same wording family, declared true. No rule over the task text can satisfy both, which is why the declaration is required and the enumerate-word regex is deleted.",
+        "task": "List every product in the catalogue with its price, cheapest first.",
+        "values": [
+          "Cobalt Floor Rug $18.00",
+          "Meridian Wall Clock $24.50",
+          "Aurora Desk Lamp $39.00"
+        ],
+        "answer": [
+          "Cobalt Floor Rug $18.00",
+          "Meridian Wall Clock $24.50",
+          "Aurora Desk Lamp $39.00"
+        ],
+        "declared": false
+      },
+      {
+        "note": "the wording of a single-answer ranking is now irrelevant to whether `rank` reduces — the plan's `declared` decides, and this row declares true. It survives PR #29 R16's deletion of the `_ENUMERATE_REQUEST` regex as the boundary it used to guard: the task contains 'listed', which that regex was carefully written not to match, and the answer is the same either way now. Kept as the row that would go red if a wording test were ever reintroduced on this path.",
+        "task": "Which author has the most quotes listed on this page?",
+        "values": [
+          "Albert Einstein",
+          "Jane Austen",
+          "Albert Einstein"
+        ],
+        "answer": "Albert Einstein",
+        "declared": true
+      },
+      {
+        "note": "same: 'of all the products' used to be the phrasing an enumerate-request regex had to be careful NOT to read as a request for all of them. With the plan declaring, there is nothing to be careful about — this row pins that a comparison frame containing 'all' still reduces, which it does because nothing reads the wording for cardinality any more.",
+        "task": "Of all the products here, which one is the cheapest?",
+        "values": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ],
+        "answer": "Cobalt Floor Rug $18.00",
+        "declared": true
+      },
+      {
+        "note": "PR #29 R16: the wording contains 'each' and the answer is still one item, because the plan said so. This is the row the deleted `_ENUMERATE_REQUEST` regex got backwards end to end (extract-all-declared-intent-beats-wording).",
+        "task": "Check each product and tell me which one is the cheapest.",
+        "declared": true,
+        "values": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ],
+        "answer": "Cobalt Floor Rug $18.00"
+      },
+      {
+        "note": "declared true, but the task names no order to rank by — refuse rather than pick. The plan and the task disagree and code does not get to break the tie.",
+        "task": "Tell me about the products on this page.",
+        "declared": true,
+        "values": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ],
+        "answer": null
+      },
+      {
+        "note": "declared false with no ranking word either: the ordinary multi-row list answer, untouched.",
+        "task": "Tell me about the products on this page.",
+        "declared": false,
+        "values": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ],
+        "answer": [
+          "Aurora Desk Lamp $39.00",
+          "Cobalt Floor Rug $18.00"
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "note": "each row is (task, the plan's `rank` declaration, enumerated values, the reduction code must produce; null means the reduction must refuse)"
+  },
+  "provenance": "M31. `extract_all` returns a list; the question asked for one item. The reduction is the half of the M31 spec that says rank/compare/count stays in code and never in the LLM, and it is what makes probe3-quotes-most-quoted-author and live-books-cheapest-travel answerable. Unit-shaped rather than end-to-end because the interesting failures are in the reduction rules (numbers vs counts, direction, ties, no-op), and a browser run per row would buy nothing and cost wall clock the fast suite does not have.",
+  "triage": {
+    "class": "coverage-gap",
+    "note": "tagged invariant: the ranking is the only place in this system where code, not the model, decides which of several real values is THE answer. Watched red first, before `verifier.rank` existed: `ImportError: cannot import name 'rank' from 'src.browser.verifier'` — the same shape the `aggregate` probe key was watched red as, since _run_verifier_case had no `rank` key either until its milestone. Rows 8 and 9 came from the M31 cold review and were watched red against the implementation as first written (`if all(nums)` falling through to the counting branch): row 8 returned '$19.99' and row 9 returned 'Out of stock', both as answers rather than refusals. PR #29 R9 added rows 10-12 for the enumerate-request rule that decides whether `rank` reduces at all. Row 10 is the one that goes red at THIS level — with the `_ENUMERATE_REQUEST` gate removed it returns 'Cobalt Floor Rug $18.00' where the task asked for every product. Rows 11 and 12 are boundary rows that pass either way; they exist so a later widening of that regex (adding 'listed', or 'all') turns red here instead of in production. The R2-gate defect rows 1 and 12 describe was never visible at this level at all — that gate lived at the agent's call site, so its red is end-to-end and belongs to extract-all-cheapest-wording-still-reduces."
+  }
+}

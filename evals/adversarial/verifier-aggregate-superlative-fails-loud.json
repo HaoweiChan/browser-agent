@@ -4,7 +4,7 @@
   "suites": ["fast", "invariant"],
   "level": "L3",
   "tc": "TC4",
-  "trap": "superlative/aggregate question over a set, no comparison primitive in the plan vocabulary",
+  "trap": "superlative/aggregate question over a set, plan with no comparison primitive in it",
   "input": {
     "fixture": "shop.html",
     "task": "Which product on this page has the most customer reviews?",
@@ -13,12 +13,14 @@
     ]
   },
   "expect": {
-    "status": "failure:semantic",
-    "verdict": "FAIL"
+    "status": "failure:task",
+    "actions": 1,
+    "replans": 0
   },
-  "provenance": "M10 probe #2 (docs/analysis.md §8a-2): 'On quotes.toscrape.com, which author has the most quotes listed on the first page?' reported status:success, verdict:PASS with a WRONG answer, reproduced three times (run_ids e9c242f9, f886ec29, and a round-1 twin) with two different wrong strings ('Next →', a pager link, and 'Quotes to Scrape', the page <title>). This is a fixture twin: a stub_plan that grabs the page's h1 ('Nimbus Shop', real, grounded, non-empty, not a dump) in answer to a question the plan vocabulary cannot actually answer (there is no enumerate-and-count step). Every existing L1 check passes on this shape by construction — that is the defect. `verify()` now takes the task text and fails any layer-1-only (no expect.answer/state) verdict on a 'which X has the most/least Y' pattern, which flips assemble_result's INV-2 branch to failure:semantic instead of success.",
+  "provenance": "M10 probe #2 (docs/analysis.md §8a-2): 'On quotes.toscrape.com, which author has the most quotes listed on the first page?' reported status:success, verdict:PASS with a WRONG answer, reproduced three times (run_ids e9c242f9, f886ec29, and a round-1 twin) with two different wrong strings ('Next →', a pager link, and 'Quotes to Scrape', the page <title>). This is a fixture twin: a stub_plan that grabs the page's h1 ('Nimbus Shop', real, grounded, non-empty, not a dump) in answer to a question the plan vocabulary could not actually answer. M10 fixed it at the verifier: `verify()` took the task text and failed any layer-1-only verdict on the superlative pattern, which flipped assemble_result's INV-2 branch to failure:semantic. M31 moves the same judgement one layer earlier — the plan lint (`agent.plan_gap`, sharing `verifier.is_aggregate` with that guard) rejects this plan BEFORE the first action, replans once with a note naming the gap, and stops when the stub planner returns the same plan again. `expect.actions: 1` is the whole point of the move: one action, the pre-plan navigation, and nothing else. A correct verdict that costs a browser action and a wrong answer to produce is worse than the same verdict for free.",
   "triage": {
     "class": "inviolable-property",
-    "watched_red": "before the fix: status success, verdict.verdict PASS, checks {trace_nonempty: true, supersedes_resolve: true, no_failed_postcondition: true, answer_nonempty: true, actions_verified: true, grounded: true, not_a_dump: true, identity_anchors: true} — identical shape to the probe's own reproduction. After the fix: status failure:semantic, verdict.verdict FAIL, checks also carrying aggregate_needs_comparison: false."
+    "watched_red": "M10, before the verifier guard: status success, verdict.verdict PASS, checks {trace_nonempty: true, supersedes_resolve: true, no_failed_postcondition: true, answer_nonempty: true, actions_verified: true, grounded: true, not_a_dump: true, identity_anchors: true} — identical shape to the probe's own reproduction. M31, with the lint branch disabled and this file's current expectation in place: checks {status: false, replans: true, actions: false}, status failure:semantic, answer 'Nimbus Shop', budgets_spent.actions 2 — the run still executed the plan and produced the wrong answer for the verifier to reject. After the lint: status failure:task, actions 1, answer null.",
+    "note": "the M10 verifier-side guard this case was written for is NOT retired with the E2E path — it is the backstop for the one route the lint cannot see (an act-ladder replan that drops the enumeration mid-run), and it is graded directly by `verifier-aggregate-ground-truth-untouched` rows 1, 4 and 5: fires with no ground truth, relaxes on a graded `extract_all`, and does NOT relax on a superseded one."
   }
 }

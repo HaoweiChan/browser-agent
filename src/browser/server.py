@@ -544,6 +544,7 @@ function resetProgress() {
 function phaseFor(s) {
   if (s.action === "navigate") return "browser";
   if (s.action === "extract") return "verification";
+  if (s.action === "extract_all") return "verification";
   return "action";
 }
 function setTerminal(status) {

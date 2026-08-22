@@ -1,0 +1,71 @@
+{
+  "pr": 29,
+  "round": 3,
+  "scope": "round-2 repair diff cb26de4..HEAD + standing round-2 findings",
+  "standing_round2": {
+    "R9": "NOT closed — narrowed, see R16",
+    "R10": "closed",
+    "R11": "closed",
+    "R12": "closed",
+    "R13": "closed locally but the fix created R15 on CI",
+    "R14": "closed"
+  },
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": {
+    "fired": true,
+    "reason": "3 review rounds without approval (pr-loop protocol)",
+    "blocker": "R15 — CI red at HEAD: invariant 15.06s > 15s with 46/46 = 1.000, fast step skipped",
+    "orchestrator_confirmation": "gh run list --branch task/M31: conclusion failure at 0771679, success at 195fe78 / 07083e7 / e3a39c1 / cb26de4"
+  },
+  "local_gate": {
+    "invariant": "46/46 = 1.000, wall 12.50s (ceiling 15s)",
+    "fast": "114/114 = 1.000, wall 64.65s (ceiling 75s)"
+  },
+  "findings": [
+    {
+      "id": "R15",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The round-2 repair's new `invariant` 15s ceiling is already breached on CI — this branch's own CI run at HEAD is RED with every case passing — and ADR-017 Decision 4 removed the only escape hatch, so CI cannot carry its own number.",
+      "evidence": "evals/run.py:85 `WALL_BUDGET_S = {\"fast\": 75, \"invariant\": 15}` plus evals/run.py:108 `if suite != \"fast\": return base` (EVAL_WALL_BUDGET_S no longer reaches `invariant`). GitHub Actions run 32553647353, head sha 0771679 (= branch HEAD), step `Run python -m evals.run --suite invariant`: `[eval] OVER BUDGET: suite 'invariant' wall clock 15.06s > 15s (ADR-002 Decision 4)` / `[eval] suite 'invariant': 46/46 = 1.000` / exit code 1 — and the `fast` step was then SKIPPED. The 15s was derived from local runs only (ADR-017 §3: 12.21/12.27 x 1.15 -> 15), while a contradicting CI measurement was already on this branch: run 32552024151 at cb26de4 measured `invariant` at 14.99s with 44 cases; HEAD adds two. .githooks/pre-commit:19 runs `--suite fast` only, so the new `invariant` ceiling is enforced ONLY in the environment it was never measured in. This is R13's own failure mode — a gate refusing a 100%-passing tree — moved one suite over by the fix for R13. INDEPENDENTLY CONFIRMED BY THE ORCHESTRATOR: `gh run list --branch task/M31` shows conclusion `failure` at 0771679, `success` at every earlier sha.",
+      "repro": "gh run view 32553647353 --log | grep 'OVER BUDGET' -> `suite 'invariant' wall clock 15.06s > 15s` with 46/46 = 1.000, exit 1",
+      "acceptance": "A green end-to-end CI run of this branch (both the `invariant` and the `fast` step), achieved by measuring `invariant` on ubuntu-latest and applying ADR-013's rule to that band — either a committed number with CI headroom or a per-environment override for `invariant`, since ADR-013 Decision 3's ruling that one wall-clock number cannot be tight locally and true on CI applies to this suite exactly as it did to `fast`. ADR-017 §4's argument for scoping the override to `fast` must be restated against the measured CI cost (15.06s), not the local 12.2s."
+    },
+    {
+      "id": "R16",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "R9's silent success is narrowed, not closed: the new `_ENUMERATE_REQUEST` heuristic publishes the raw enumeration as the answer to a single-answer ranking whenever the task text happens to contain `list`, `every` or `each` — a direction the ceiling comment, the ADR, the contract and the cases never mention.",
+      "evidence": "src/browser/verifier.py:163 `_ENUMERATE_REQUEST = re.compile(r\"\\b(list|every|each)\\b\")` and :197 `if _ENUMERATE_REQUEST.search(task or \"\"): return values`, reached unconditionally from src/browser/agent.py:764. On shop.html with `[extract_all {role: listitem}]`: task \"Check each product and tell me which one is the cheapest.\" -> status: success, verdict PASS, answer ['Aurora Desk Lamp $39.00','Aurora Desk Lamp Pro $59.00','Meridian Wall Clock $24.50','Cobalt Floor Rug $18.00']; same for \"From the list of products, which one is the cheapest?\". `is_aggregate` is False for both, so `aggregate_needs_comparison` does not fire and nothing goes loud — byte-for-byte the R9 output shape the repair says it closed. `rank-reduces-enumeration-in-code` rows 11-12 only pin `listed` and `all`, both already on the correct side; no row and no end-to-end case covers a single-answer ranking that DOES contain one of the three words. verifier.py:158-162 declares only the opposite direction, and specs/001-browser-contract.md:158-162 states the three-word rule as contract without naming this cost.",
+      "repro": "run_case on extract-all-cheapest-wording-still-reduces with task 'Check each product and tell me which one is the cheapest.' -> success / PASS / raw 4-item list",
+      "acceptance": "A red-first case for a single-answer ranking containing `each`/`every`/`list` that either reduces to one value or fails loudly — never a raw enumeration reported as `success` — with `extract-all-list-task-keeps-every-row` and `extract-all-cheapest-wording-still-reduces` both still green; or, if the residual is kept, the ceiling comment, ADR-016 and specs/001 must state THIS direction explicitly and a debt block must own it."
+    },
+    {
+      "id": "R17",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new heuristic's declared upgrade path cites a debt block that explicitly disclaims responsibility for it — the same dangling-cite class as R14.",
+      "evidence": "src/browser/verifier.py:162 \"Widen when a probe demonstrates one — T-CHEAPEST-WORDING.\" But tasks/TODO.md:100-121 (T-CHEAPEST-WORDING) is entirely about the plan lint and `_AGGREGATE`: its Spec says \"The code-side REDUCTION is not affected\", and its Acceptance is \"widen `_AGGREGATE`'s second half to the price vocabulary\". Nothing in that block covers widening `_ENUMERATE_REQUEST`.",
+      "repro": "grep -n 'T-CHEAPEST-WORDING' src/browser/verifier.py; sed -n '100,122p' tasks/TODO.md",
+      "acceptance": "The `_ENUMERATE_REQUEST` ceiling cites a debt block whose spec and acceptance actually cover the reduction's wording regex."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The published nine-run band behind the 75s ceiling is an unstated subset of the runs committed in the same diff, so its headline 'spread 0.50s' understates the real spread — though the derived ceiling itself is unaffected.",
+      "evidence": "README.md and ADR-017 §2 list nine runs (64.48-64.98, \"spread across nine runs is 0.50s\"). evals/report/history.jsonl — added by the same commit — records at least fourteen `fast` runs of that tree, including 64.25 and 64.32, which are omitted: the committed min/max is 64.25-64.98, a 0.73s spread. Three of the nine listed runs were scored 113/114, an intermediate tree state, and are not distinguished. ADR-013's rule uses the slowest run and 64.98 IS the true committed maximum, so 75 is correctly derived; only the band's presentation is selective — the exact pattern ADR-013 Decision 4 was withdrawn over.",
+      "repro": "compare the cb26de4/ea325d9 `fast` lines in evals/report/history.jsonl against the nine numbers in README.md and ADR-017 §2",
+      "acceptance": "README/ADR-017 either publish every `fast` run of that tree recorded in history.jsonl (min 64.25, max 64.98, spread 0.73s) or state that the nine are a selected subset and on what basis, with 113/114 runs labelled as such."
+    },
+    {
+      "id": "R19",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ADR-017 names 'the CI run of this branch' as the measurement that validates CI's unchanged 80s `fast` ceiling, and that measurement has still not happened, because the invariant step aborts the job first.",
+      "evidence": "ADR-017 Consequences: \"CI's 80 is unchanged... so the CI run of this branch is the measurement.\" Run 32553647353 (HEAD) shows step `Run python -m evals.run --suite fast` with conclusion `skipped`. The last completed CI `fast` figure is 66.93s at cb26de4 with 109 cases; HEAD adds the three settle-bound cases (~4.9s local) plus two cheap ones, so the untested CI figure is ~72s against 80 with an observed CI spread of 7-8%.",
+      "repro": "gh run view 32553647353 --json jobs -q '.jobs[].steps[] | select(.name|test(\"suite fast\")) | .conclusion' -> skipped",
+      "acceptance": "Once R15 unblocks the job, ADR-017's Consequences are updated with the actual CI `fast` number from a completed run of this branch, and the 80s ceiling is either confirmed with its margin stated or amended to that measurement."
+    }
+  ]
+}
