@@ -569,3 +569,11 @@
 {"ts": "20260822-161557", "suite": "invariant", "sha": "d173340", "dirty": true, "passed": 48, "total": 48, "score": 1.0, "wall_s": 13.06, "cost_usd": 0.0, "report": null, "p95_s": 2.27}
 {"ts": "20260822-161702", "suite": "fast", "sha": "d173340", "dirty": true, "passed": 116, "total": 116, "score": 1.0, "wall_s": 64.37, "cost_usd": 0.0, "report": null, "p95_s": 2.51, "recovery": "7/7", "mutation": "9/11"}
 {"ts": "20260822-161720", "suite": "live", "sha": "d173340", "dirty": true, "passed": 9, "total": 9, "score": 1.0, "wall_s": 18.68, "cost_usd": 0.0, "report": null, "p95_s": 5.18}
+{"ts": "20260822-161841", "suite": "fast", "sha": "d173340", "dirty": true, "passed": 116, "total": 116, "score": 1.0, "wall_s": 64.23, "cost_usd": 0.0, "report": null, "p95_s": 2.51, "recovery": "7/7", "mutation": "9/11"}
+{"ts": "20260822-162139", "suite": "invariant", "sha": "1c54183", "dirty": false, "passed": 48, "total": 48, "score": 1.0, "wall_s": 12.61, "cost_usd": 0.0, "report": null, "p95_s": 2.27}
+{"ts": "20260822-162244", "suite": "fast", "sha": "1c54183", "dirty": false, "passed": 116, "total": 116, "score": 1.0, "wall_s": 64.66, "cost_usd": 0.0, "report": null, "p95_s": 2.49, "recovery": "7/7", "mutation": "9/11"}
+{"ts": "20260822-162348", "suite": "invariant", "sha": "1c54183", "dirty": false, "passed": 48, "total": 48, "score": 1.0, "wall_s": 12.61, "cost_usd": 0.0, "report": null, "p95_s": 2.27}
+{"ts": "20260822-162452", "suite": "fast", "sha": "1c54183", "dirty": false, "passed": 116, "total": 116, "score": 1.0, "wall_s": 64.49, "cost_usd": 0.0, "report": null, "p95_s": 2.5, "recovery": "7/7", "mutation": "9/11"}
+{"ts": "20260822-162623", "suite": "fast", "sha": "1c54183", "dirty": true, "passed": 116, "total": 116, "score": 1.0, "wall_s": 64.59, "cost_usd": 0.0, "report": null, "p95_s": 2.51, "recovery": "7/7", "mutation": "9/11"}
+{"ts": "20260822-163157", "suite": "invariant", "sha": "9d1c851", "dirty": true, "passed": 48, "total": 48, "score": 1.0, "wall_s": 12.54, "cost_usd": 0.0, "report": "20260822-163157-invariant.json", "p95_s": 2.23}
+{"ts": "20260822-163233", "suite": "invariant", "sha": "9d1c851", "dirty": true, "passed": 48, "total": 48, "score": 1.0, "wall_s": 12.47, "cost_usd": 0.0, "report": "20260822-163233-invariant.json", "p95_s": 2.21}

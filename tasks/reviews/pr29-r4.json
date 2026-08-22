@@ -1,0 +1,82 @@
+{
+  "pr": 29,
+  "round": 4,
+  "scope": "round-3 repair diff d5bf1ac..HEAD (incl. the origin/main merge) + standing round-3 findings",
+  "standing_round3": {
+    "R15": "closed — CI green end-to-end at 1c54183, four CI attempts traceable, per-suite override fails loud when breached",
+    "R16": "NOT closed — guessing removed, silent-success path survives via a mis-declared `rank`, see R20",
+    "R17": "closed",
+    "R18": "NOT closed — see R21",
+    "R19": "closed"
+  },
+  "verified_closed_by_reviewer": [
+    "R15 (per-suite override fails loud: EVAL_WALL_BUDGET_S_INVARIANT=1 -> exit 1)",
+    "R17",
+    "the origin/main merge — main fully contained in HEAD, no history.jsonl line lost from either side, no new duplicate timestamps, no ADR/D/task-id collisions",
+    "commit messages — 4b41d6b really did ship provisional ceilings and says so; no document states the conflicting-PR cause in a way that contradicts the two real failing runs"
+  ],
+  "orchestrator_independent_verification": {
+    "R21": "git show 1c54183:evals/report/history.jsonl -> fast/116 green n=8 max 65.14; invariant/48 n=12 max 13.57. Published bands do not match.",
+    "R20": "run_case with task 'Which product in this catalogue has the lowest price?' (is_aggregate True) and rank: false -> checks {status: True, verdict: True}, status success, raw 4-item list."
+  },
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": {
+    "fired": true,
+    "round": 4,
+    "reason": "breaker already fired at round 3; the human's authorized bounded round did not converge",
+    "blocker": "R21 — the published wall-clock bands are not reproducible from the ledger committed beside them, and the local `invariant` ceiling of 15 is under-derived against a recorded 13.57s",
+    "structural": "R20 — third occurrence of the same silent-success class (R9 -> R16 -> R20)"
+  },
+  "gate": {
+    "local": {
+      "invariant": "48/48 = 1.000, wall 12.61s (ceiling 15)",
+      "fast": "116/116 = 1.000, wall 64.49s (ceiling 75)"
+    },
+    "ci": {
+      "run": 32561955630,
+      "sha": "1c54183",
+      "conclusion": "success",
+      "invariant": "48/48, wall 15.25s (ceiling 20)",
+      "fast": "116/116, wall 71.47s (ceiling 90)"
+    },
+    "pr": "MERGEABLE / CLEAN"
+  },
+  "findings": [
+    {
+      "id": "R21",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "R18 is not closed and the repair repeated its exact defect: the wall-clock bands ADR-017 and README publish as \"every run history.jsonl records, not a selection from it\" are not derivable from the ledger committed in the same commit — four of the nine published 116-case values exist nowhere in it, the two slowest recorded runs are omitted, and applying ADR-013's rule to the committed `invariant` band yields 20, not the 15 that ships.",
+      "evidence": "ADR-017:46 asserts the band is \"every `fast` run evals/report/history.jsonl records for the tree, not a selection from it\"; :56 publishes nine 116-case values (64.17/64.34/64.53/64.54/64.55/64.56/64.63/64.68/64.71) and :79 five 48-case invariant values (12.44-12.96); README.md:103,113,116 repeat both. ORCHESTRATOR-VERIFIED against `git show 1c54183:evals/report/history.jsonl`: fast/116 green has EIGHT runs — 64.17, 64.17, 64.23, 64.37, 64.53, 64.54, 64.85, 65.14 — so 64.34/64.55/64.56/64.71 appear nowhere at that case count and 64.23/64.37/64.85/65.14 are omitted; the declared maximum 64.71, on which the derivation 64.71 x 1.15 -> 75 rests, is not a recorded run, and the true recorded maximum is 65.14. The `fast` ceiling survives (65.14 x 1.15 = 74.9 -> 75) but the `invariant` half does not: the ledger records TWELVE green 48-case invariant runs — 12.31, 12.37, 12.44, 12.48, 12.50, 12.58, 12.61, 12.65, 12.74, 12.96, 13.06, 13.57 — of which the ADR publishes five and drops the two slowest unlabelled. 13.57 x 1.15 = 15.6 -> 20 by ADR-013's rule, against the 15 in evals/run.py:85. That is 1.43s of margin on a ceiling whose observed spread is 12.31-13.57 (~10%) — the same coin-flip condition that produced R13 (60.24 vs 60) and R15 (15.06 vs 15) earlier in this same PR. No grader compares any published band to history.jsonl, so this prose is ungated.",
+      "repro": "git show 1c54183:evals/report/history.jsonl | filter suite/total -> fast/116 green max 65.14 (8 runs, not 9); invariant/48 12 runs, max 13.57. `grep -c '\"wall_s\": 64.71,' evals/report/history.jsonl` -> 0",
+      "acceptance": "ADR-017 §2/§3 and README.md:103-116 publish bands a reader can reproduce line-for-line from the committed history.jsonl (or state explicitly which runs are excluded and on what substantiated basis), and the local `invariant` ceiling is re-derived by ADR-013's rule from the true slowest committed run — 13.57 x 1.15 -> 20 — or 13.57/13.06 are substantiated as droppable outliers before 15 is kept. Ideally one row in docs-numbers-are-derived recomputes min/max/count from history.jsonl for each published band, watched red against the current text first."
+    },
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R16's guessing is gone but the silent-success path is not: a plan that declares `rank: false` on an aggregate-shaped task still publishes the raw enumeration as `status: success` / `verdict: PASS`, and ADR-016's claim that the mechanism \"cannot be wrong, because it does not decide anything\" is false — code holds both halves of the contradiction (`is_aggregate(task)` and the step's declared `rank`) and compares them nowhere.",
+      "evidence": "src/browser/agent.py:781-783 trusts `enumerated` unconditionally; src/browser/verifier.py:430-432 relaxes the aggregate guard on `any(s.get(\"action\") == \"extract_all\" for s in graded)` — a step that explicitly declared it did NO comparison still satisfies the guard whose stated job is \"nothing enumerated the set the question ranks over\"; src/browser/agent.py:143-184 `plan_gap` already computes `is_aggregate(task)` and inspects the extract steps, but only their actions, never their `rank`. ORCHESTRATOR-VERIFIED on shop.html with the fast-suite stub planner: task \"Which product in this catalogue has the lowest price?\" (is_aggregate -> True) with stub_plan [{action: extract_all, target:{role: listitem}, rank: false}] -> checks {status: True, verdict: True}, status success, answer [\"Aurora Desk Lamp $39.00\",\"Aurora Desk Lamp Pro $59.00\",\"Meridian Wall Clock $24.50\",\"Cobalt Floor Rug $18.00\"] — byte-for-byte the R9/R16 output shape, third occurrence. The mirror also passes silently: \"List every product ... cheapest first.\" with rank: true -> success, answer truncated to \"Cobalt Floor Rug $18.00\" (R2's shape). ADR-016:63 publishes \"the first that cannot be wrong, because it does not decide anything\"; specs/001:155-162 documents the requirement but declares no residual for a mis-declaration, and no debt block owns it. No case pins `is_aggregate(task) and rank is False`. The only case that would exercise a REAL planner emitting `rank` is live-books-cheapest-travel, tagged `full`, not run — so \"the planner is the one component that read the request\" has zero eval evidence behind it.",
+      "repro": "run_case on extract-all-cheapest-wording-still-reduces with task 'Which product in this catalogue has the lowest price?' and stub_plan[0].rank=False -> success, verdict PASS, raw 4-item list",
+      "acceptance": "A red-first adversarial case pinning an aggregate-shaped task whose plan declares `rank: false` (and its mirror, a list-shaped task declared `rank: true`): the contradiction is refused loudly — cheapest fix is one clause in `plan_gap`, which already has `is_aggregate(task)` and the step, and/or `aggregate_needs_comparison` requiring the enumerating step to have declared `rank: true` — never a raw enumeration reported as `success`. Otherwise ADR-016 drops \"cannot be wrong\", specs/001 states the residual in this direction, and a debt block owns it."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The commit that changed the override mechanism and CI's ceilings left README self-contradicting on both, inside the same section.",
+      "evidence": "README.md:99-101 says `invariant` has \"a measured ceiling of its own (15s against a measured 12.2s)\" and that \"`EVAL_WALL_BUDGET_S` is scoped to `fast`\" — as of 1c54183 that variable no longer exists (evals/run.py:95-100 has EVAL_WALL_BUDGET_S_FAST / _INVARIANT), `invariant` has its own per-environment number, and 12.2s was the 46-case figure (the 48-case tree measures 12.31-13.57). Twenty-five lines later README.md:120-124 says the opposite (\"CI has its own two ... 20s and 90s\"). README.md:138 still publishes \"CI now carries its own measured ceiling (80s ...) alongside a local 60s\" — both superseded by this commit. specs/decisions/INDEX.md's ADR-002 line still reads \"(70s local, 80s CI ...)\" and does not list ADR-017 as an amender although ADR-017:11 declares it amends ADR-002; the local half is already owned as T-R25, the CI half is new this round.",
+      "repro": "sed -n '95,140p' README.md | grep -n 'EVAL_WALL_BUDGET_S\\|80s\\|60s\\|12.2s'",
+      "acceptance": "README's wall-clock section states one mechanism (per-suite variables) and one set of four numbers, and T-R25 is extended to cover the withdrawn 80s CI ceiling in INDEX.md's ADR-002 line."
+    },
+    {
+      "id": "R23",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "Notes describing the deleted `_ENUMERATE_REQUEST` regex as live behaviour survived its deletion in two committed case files.",
+      "evidence": "evals/adversarial/rank-reduces-enumeration-in-code.json rows 11 and 12 still read \"`\\\\blist\\\\b` must not match 'listed'\" and \"'all' is deliberately NOT an enumerate-request word\" — both rows now carry `declared: true` and test nothing about task wording, because verifier.py no longer contains a wording regex on that path. evals/adversarial/fast-wall-clock-budget.json triage.note still closes with \"The env override is scoped to `fast` ... and on CI the fast override is 80\" — the override is no longer scoped to `fast` (evals/run.py:112-122) and CI's fast override is 90 (.github/workflows/eval.yml:26).",
+      "repro": "grep -n 'must not match' evals/adversarial/rank-reduces-enumeration-in-code.json; grep -o 'The env override is scoped[^\"]*' evals/adversarial/fast-wall-clock-budget.json",
+      "acceptance": "Both notes describe the mechanism actually in the tree, or say explicitly that they are historical."
+    }
+  ]
+}
