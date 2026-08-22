@@ -36,7 +36,7 @@ tracked metric** — if most tasks replan on most steps, the architecture claim 
 re-examined openly in an ADR rather than papered over.
 
 M31 gave the counter a second consumer: the plan lint
-(`specs/decisions/ADR-016-m31-plan-lint.md`) replans an aggregate-shaped task
+(`specs/decisions/ADR-018-m31-plan-lint.md`) replans an aggregate-shaped task
 whose plan carries no enumerating step, and charges it to the same
 `budgets["replans"]` the `act` ladder spends from, so the two cannot
 independently exceed `MAX_REPLANS`. The published number is the `fast` suite's

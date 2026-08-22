@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
 from .agent import assemble_result, run_task
+from .judge import live_judge
 from .mutate import apply_mutation
 from .planner import ALLOWED_MODELS, DEFAULT_MODEL, live_planner
 
@@ -200,7 +201,8 @@ async def _execute(run_id: str, task: str, url: str | None, model: str):
         ACTIVE_RUN = run_id
         try:
             result = await run_task(
-                task, url, live_planner(model), RUN_ROOT / run_id, url_guard=url_ok,
+                task, url, live_planner(model), RUN_ROOT / run_id,
+                judge=live_judge(), url_guard=url_ok,
                 # Echoed back on the record so a committed ablation report is
                 # self-attributing rather than trusting the driver's loop variable.
                 model=model,

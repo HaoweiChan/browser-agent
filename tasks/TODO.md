@@ -95,53 +95,31 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M34 — an answer is still never checked for being responsive            [status: pr]
-Spec: M7 declared this gap, M10's probe demonstrated it, and M10's fix closed
-only the "which X has the most Y" sentence shape. The general defect is live on
-merged main and reproduces on a plain single-hop extraction: a string that IS on
-the page ("Warning!") passes `grounded`, `not_a_dump`, `identity_anchors` and
-`answer_nonempty` while answering nothing. Third demonstration that
-responsiveness is not pattern-matchable — a fourth regex over the task string is
-very likely the wrong answer, and `T-R31`/`T-R32` already name the ceiling of
-the last one. The intermittency matters: probe #2 answered this same task
-correctly once, so the violation is nondeterministic and a single green run
-proves nothing.
-Depends: M29
-Acceptance: an adversarial case reproduces the grounded-but-unresponsive
-wrong-success and is watched red first; no terminal non-failure status can carry
-an answer that fails a responsiveness check; the fix is demonstrated on the
-deployed build across repeated runs of the same task, not one lucky roll; the
-answer-shape ceiling that remains is named in `docs/support-matrix.md` rather
-than left implied.
-Out of scope: the extraction-quality gap (M28) — this task is about never
-reporting success for an unresponsive answer, not about extracting better.
-Status (2026-08-22, PR #30 pending, round 2 repaired): the adversarial case
-(`verifier-responsive-not-page-furniture`) landed and was watched red
-first, then the fix (`verify()`'s `not_page_furniture`, ADR-016) turned it
-green. Round 1 (R1, HIGH) found the first cut too broad — it flagged a
-correct listing→detail title/name as furniture, a false positive on this
-domain's single most common navigation shape — repaired by comparing each
-value's local page CONTEXT, not the bare value, against the other pages a
-run visited; the numeric exemption is gone, subsumed by the same rule
-(`verifier-listing-detail-title-not-furniture` pins the repaired shape).
-Round 2 (3 MEDIUM) found: (R2-1) the context window could still anchor on
-the wrong occurrence when a value legitimately repeats on the SAME page —
-repaired by anchoring on the resolved element's actual DOM offset
-(`TEXT_OFFSET_JS`/`_closest_occurrence`), pinned by
-`verifier-context-anchors-real-occurrence`; (R2-2) a fixture-parity claim
-("the same 50-category sidebar, same order") was false — restated honestly
-as a representative subset; (R2-3) `docs/support-matrix.md` D24 and
-ADR-016 carried round-by-round repair narrative and a superseded gate
-number, which belong only in `tasks/reviews/pr30-r*.json` — both rewritten
-to state current behaviour only. Every round, the original "Warning!"/
-"Travel" defect was re-confirmed to still fail loudly. `fast` 108/108,
-`invariant` 38/38, `live` 9/9, all against unmoved baseline. The surviving
-ceilings are named in `docs/support-matrix.md` D24. **Not closing this
-task**: the acceptance line "demonstrated on the deployed build across
-repeated runs" cannot be met from this environment (no LLM key, the
-deployed URL still serves `main`) — that repeated-run confirmation is the
-one thing left, run post-merge the same way M29 ran it for M10, and
-ADR-015 criterion 5 stays RED until it does.
+### M36 — responsiveness is judged by an LLM, because four structural mechanisms have failed            [status: pr]
+Origin: PR #30 post-merge confirmation (2026-08-22, deployed build `2e94bed`); owner's call on the mechanism
+Spec: M34's `not_page_furniture` compares a 20-char context window on the
+assumption that site chrome carries its neighbours wherever it recurs. On
+books.toscrape.com the banner is preceded by page-specific text (a result
+count), so the windows differ and furniture passes. 6 wrong-answer-as-success
+in 9 deployed runs (`8ffc6fdc`, `4649a0c5`, `2f89cec2`, `81fe507f`, `8896c5ec`,
+`f2c00566`), zero clean correct answers on the defect task. That is the fourth
+mechanism falsified by real input and the third falsified at a shape its authors
+had declared acceptable (`log into`, `delete all`, `which...most`, now the
+context window). The owner's decision is to stop betting on structure and judge
+responsiveness with an LLM: does this answer actually answer this question.
+The deterministic checks stay and run first — the judge is the last rung of the
+escalation ladder, not a replacement for it.
+Acceptance: the real-site shape (chrome preceded by page-varying text) is an
+adversarial case watched red first; no terminal non-failure status can carry an
+answer the judge rejects; the judge fails CLOSED on error, timeout or missing
+key, and a case proves it; the `fast` suite still makes zero paid calls with the
+judge stubbed at its own injection boundary, and a case proves the boundary
+holds; a prompt-injection case proves page text cannot talk the judge into
+certifying a wrong answer; per-run judge cost and per-stage hit-rate land in the
+`evals/report/` entry; repeated runs on the deployed build show zero
+wrong-answer-as-success before criterion 5 moves.
+Out of scope: extraction quality (M28), planner-side lint (M31). Do not remove
+M34's deterministic checks — they are cheaper and they run first.
 
 ## Debt
 
@@ -152,17 +130,17 @@ enforces "the committed ceiling must be at least the rule applied to the ledger'
 run at the current case count, **and the published maximum must be at least that run**".
 `src/browser/eval_adapter.py:417-421` implements `if rule(said) != rule(slowest)` — band
 equality — so a published maximum may sit up to ~1.0s below the ledger max and still pass.
-It currently does: ADR-017:58 publishes `66.23s — 8 runs`; the committed ledger has 14 runs
-at suite=fast/total=122 topping out at **66.48s**. ADR-017:62's derivation multiplies
+It currently does: ADR-019:58 publishes `66.23s — 8 runs`; the committed ledger has 14 runs
+at suite=fast/total=122 topping out at **66.48s**. ADR-019:62's derivation multiplies
 **65.53s**, which is not a 122-case run at all (it is from the superseded 119-case ledger),
 and `fast-wall-clock-budget` provenance (10) carries the same number under the words
 "re-derived from every run the ledger records at the shipped case count".
 The ceiling itself is NOT wrong: rule(66.48) = 80 = `WALL_BUDGET_S["fast"]`, so nothing is
 under-gated. What ships false is the claim about what is checked and which run was slowest.
 Acceptance: either the grader enforces the property README states (`published >= ledger max`,
-run list regenerated by script at commit time), or README:98-102, ADR-017 §2 and the
+run list regenerated by script at commit time), or README:98-102, ADR-019 §2 and the
 commit-message wording describe the property actually enforced and label the run list as a
-snapshot at a named sha rather than "every run the ledger records"; ADR-017's derivation line
+snapshot at a named sha rather than "every run the ledger records"; ADR-019's derivation line
 multiplies the ledger max at the shipped case count (66.48 x 1.15 = 76.5 -> 80), and
 provenance (10) is corrected the same way. Watched red first by putting a published value one
 band low.
@@ -171,34 +149,33 @@ band low.
 Origin: PR #29 R25
 Spec: `specs/decisions/INDEX.md:11` (rewritten by 3699b87) reads "fast 75s local / 90s CI"
 while the same commit set `evals/run.py:91` to `{"fast": 80, "invariant": 20}` and INDEX:26's
-own ADR-017 line says "local `fast` 60 -> 80". ADR-017:10's Amends header says
+own ADR-019 line says "local `fast` 60 -> 80". ADR-019:10's Amends header says
 "(local `fast` ceiling 60 -> 75)", contradicting its own Ruling at :5 (60 -> 80).
-ADR-002:8 says "`fast` 80s local / 90s CI, `invariant` 20s local / 20s CI, since ADR-017"
+ADR-002:8 says "`fast` 80s local / 90s CI, `invariant` 20s local / 20s CI, since ADR-019"
 and then, in the same sentence, "then re-measured to 75s at M31 ... `invariant` has had its
-own 15s ceiling since ADR-017". T-R25 asserts "All of that is corrected in the line now" — it
+own 15s ceiling since ADR-019". T-R25 asserts "All of that is corrected in the line now" — it
 is not. Third occurrence of the defect T-R25 exists for.
-Acceptance: every ceiling statement in specs/ names 80/90/20/20; ADR-017's Amends header
+Acceptance: every ceiling statement in specs/ names 80/90/20/20; ADR-019's Amends header
 matches its Ruling; ADR-002's parenthetical stops asserting a live 15s invariant ceiling;
 T-R25's Update states what is actually fixed. Ideally one graded row that compares INDEX/ADR
 ceiling numbers against `WALL_BUDGET_S`, watched red against the current text.
 
-### T-R36 — two decisions are numbered ADR-016 and the M34 INDEX entry was lost in a merge            [status: todo]
+### T-R36 — `adr-header-and-index` cannot see an ADR file missing from INDEX when another shares its number            [status: todo]
 Origin: PR #29 R26
-Spec: `git show 2e94bed:specs/decisions/INDEX.md` line 25 is M34's ADR entry. At HEAD that
-line is M31's ADR-016 only; M34's entry is gone, while `specs/decisions/` contains both
-`ADR-016-m31-plan-lint.md` and `ADR-016-m34-responsiveness-not-page-furniture.md`.
-Cross-references are ambiguous: README:221 and `plan-lint-holds-across-a-midrun-replan.json:53`
-mean M31's; `verifier-listing-detail-title-not-furniture.json:18` and this file's T-RANK-MIRROR
-neighbourhood mean M34's. `adr-header-and-index` is structurally blind to it —
-`src/browser/eval_adapter.py:1025-1030` computes `sorted(set(adr_nums) - set(index_nums))`, so
-two files numbered 016 collapse to one set element and the missing entry never surfaces in
-`missing_from_index`. Everything else main carried survived the merge (verified line-by-line:
-support-matrix D23/D24, DONE.md, TODO.md, pr-loop-ledger, verifier.py, all three M34 cases,
-all fixtures; history.jsonl lost 0 lines from either parent, no duplicate same-suite timestamps).
-Acceptance: the M34 decision gets its own number (ADR-018) and its own INDEX line, or both 016
-files are indexed unambiguously; and `_run_adr_header_index_case` compares files to entries per
-FILE (or fails on a duplicated ADR number on disk), watched red against the tree as it stands.
-This is the general form T-ADR-NUM already tracks — fold it in if that block is promoted first.
+Spec: The duplicate this block was opened for is resolved: main's M34 INDEX line
+was restored during the M36 merge, and this branch's two decisions renumbered to
+ADR-018 (M31 plan lint) and ADR-019 (wall-clock ceilings) so main keeps 016/017.
+What survives is the grader hole R26 named. `_run_adr_header_index_case`
+(`src/browser/eval_adapter.py`) computes `sorted(set(adr_nums) - set(index_nums))`,
+so if two files share a number and only one is indexed, the missing entry never
+appears in `missing_from_index` — the set collapses it. `duplicated_in_index`
+does catch a doubled INDEX line, which is what forced the renumber here, but the
+file-side blindness is untested and is what let R26's dropped M34 line survive a
+merge in the first place.
+Acceptance: `_run_adr_header_index_case` compares files to entries per FILE (or
+fails on a duplicated ADR number on disk), watched red against a tree with two
+same-numbered ADR files and one INDEX line. This is the general form
+T-ADR-NUM already tracks — fold it in if that block is promoted first.
 
 ### T-R37 — a plural aggregate request is now refused as if it asked for one item            [status: todo]
 Origin: PR #29 R27
@@ -211,12 +188,12 @@ End-to-end on shop.html with the plan from `plan-lint-refuses-a-declared-non-com
 let code do the comparison...", which would return one product for a question that asked for
 several. At `117301e` the same input returned the four-row list as success, so this is a
 regression introduced by PR #29's round-4 repair. It fails LOUD — a false refusal, not a wrong
-answer published as success. ADR-016's justification ("`_AGGREGATE` is narrow and
+answer published as success. ADR-018's justification ("`_AGGREGATE` is narrow and
 high-precision: when it matches, code is entitled to contradict a `rank: false`") is falsified
 by that one input, and nothing declares the cost.
 Acceptance: either the lint's precondition is narrowed so a plural which-question is not treated
 as which-one (no new wording regex needed — the existing match already exposes the number), or
-ADR-016's "entitled to contradict" paragraph states this ceiling with this exact input as its
+ADR-018's "entitled to contradict" paragraph states this ceiling with this exact input as its
 evidence, and a case pins the behaviour so it is a decision rather than a side effect.
 
 ### T-R38 — `extract_all` rows after the first lose M34's DOM-offset anchoring            [status: todo]
@@ -326,7 +303,7 @@ a deliberately dangling id first. Pairs naturally with T-R32, which is the same
 mechanism for D-numbers.
 
 ### T-RANK-UNITS — `verifier.rank` compares enumerated numbers without checking they are commensurable            [status: todo]
-Origin: M31 implementation (`specs/decisions/ADR-016-m31-plan-lint.md` Decision 2),
+Origin: M31 implementation (`specs/decisions/ADR-018-m31-plan-lint.md` Decision 2),
 found while writing the reduction, out of that milestone's scope.
 Spec (claim): `rank` reduces an `extract_all` enumeration numerically whenever
 every value parses as a number, comparing on the Decimal alone — so a list
@@ -357,6 +334,36 @@ Repro: renumber or delete the D21 row in `docs/support-matrix.md` and run
 `--suite invariant` — nothing goes red despite `agent.py` citing a dead D21.
 Acceptance: a case resolves bare D-number citations against the support-matrix
 table and is watched red against a deliberately broken D-number first.
+
+### T-R33 — the judge's certify parser has no provider-side schema enforcement, so the strict boolean check is trusted on hope, not guaranteed            [status: todo]
+Origin: PR #33 R3 (MEDIUM, routed debt)
+Spec (claim): `live_judge`'s request to OpenRouter carries no `response_format`
+constraint, so nothing GUARANTEES `certify` arrives as a JSON boolean rather
+than a string, a number, or absent entirely — the strict `is True` check
+(docs/support-matrix.md D26) is the correct posture given that, but it means
+the app is hoping the model's own formatting habits stay boolean-shaped
+rather than enforcing the shape at the request level.
+Evidence: `src/browser/judge.py`'s `payload` in `live_judge` sets `model`,
+`messages`, `usage: {"include": True}` — no `response_format`. OpenRouter (and
+most providers behind it) supports `response_format: {"type": "json_object"}`
+for syntactically-valid JSON, and some models additionally support
+`{"type": "json_schema", "json_schema": {...}}` for a typed schema (certify
+as an actual boolean). Neither is attempted.
+Repro: n/a — this is an absence, not a reproducible defect; nothing here
+demonstrates the parser actually receiving a malformed shape from a real
+call, because there is no `OPENROUTER_API_KEY` in this environment (same
+constraint D26 states for the ceiling itself).
+Acceptance: add `response_format` to the request (`json_object` is the safe,
+widely-supported floor; `json_schema` with a strict `{"certify": boolean}`
+schema is the real fix if `deepseek/deepseek-v4-flash-0731` supports it) and
+verify it against a live call before trusting it — an untested schema
+constraint added here would be exactly the kind of unwatched change PR #33
+R3 warned against, just moved one layer down.
+Orchestrator note: MEDIUM in origin, routed to debt rather than fixed inline
+because it cannot be verified in this environment (no key) and a wrong or
+unsupported `response_format` value would fail the live path silently worse
+than today's absence of one. D26 stands regardless of how/whether this is
+picked up.
 
 ### T-R30 — the widened SCOPE_BLOCK determiner regex over-refuses informational/hypothetical delete questions            [status: todo]
 Origin: PR #25 R3 (LOW, routed debt)
@@ -692,7 +699,7 @@ what is missing is a check on the eval harness's own renderers, not on the agent
 Origin: PR #23 R8 (LOW, routed debt by the reviewer); local half fixed and CI
 half found at PR #29 R22
 Update (PR #29 R22): the line published BOTH a withdrawn local number (70s) and
-a superseded CI one (80s, moved to 90s by ADR-017), and named neither ADR-017
+a superseded CI one (80s, moved to 90s by ADR-019), and named neither ADR-019
 nor the `invariant` ceiling that has existed since it. All of that is corrected
 in the line now. What is NOT fixed is the mechanism: `adr-header-and-index`
 still checks only that each ADR appears in INDEX exactly once, so the prose of

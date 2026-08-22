@@ -1,0 +1,10 @@
+{
+  "id": "judge-fail-closed-on-any-exception",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "input": { "kind": "judge", "fail_closed_on_exception": true },
+  "expect": { "note": "an exception the judge module does not define (not JudgeError) still fails the run closed" },
+  "provenance": "M36 acceptance criterion 2 says 'judge error, timeout, missing API key, malformed response, budget exhausted' -- an open-ended list, not a closed one. `judge-fail-closed-on-error` proves `JudgeError` specifically; this proves the boundary is `except Exception`, not `except JudgeError`, by handing `_apply_judge` a judge callable that raises a bare `ValueError` it has never heard of. A narrower catch (matching only JudgeError, mirroring `live_planner`'s deliberately narrow `PlanError` distinction in planner.py) would let this propagate uncaught -- which would still not be a false 'success' in THIS repo's call graph (server.py's outer catch-all and the eval harness's own top-level exception handling both turn an uncaught raise into a non-success result too), but it would mean fail-closed is an accident of what happens to wrap `run_task`, not a property `_apply_judge` itself guarantees. The distinction planner.py draws between PlanError (the model's fault) and everything else (a transport fault, scored differently by the ablation) does NOT apply here on purpose: the judge has no equivalent to 'the model answered with prose' that needs separating from 'the call failed' -- every failure mode is the same verdict, FAIL.",
+  "triage": { "class": "inviolable-property", "note": "guards against narrowing the except clause to `JudgeError` only, which would be the natural thing to copy from planner.py's PlanError precedent and would be wrong here." }
+}

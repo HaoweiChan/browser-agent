@@ -1,4 +1,4 @@
-# ADR-017: the wall-clock ceiling moves to where the tree lives, and `invariant` gets one too
+# ADR-019: the wall-clock ceiling moves to where the tree lives, and `invariant` gets one too
 
 Date: 2026-08-22
 Status: accepted
@@ -55,12 +55,12 @@ decision that amends it.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Slowest recorded `fast` run at 122 cases: **66.23s** — 8 runs:
-  65.25 / 65.29 / 65.41 / 65.52 / 65.62 / 65.84 / 66.03 / 66.23s.
+- Slowest recorded `fast` run at 132 cases: **66.33s** — 6 runs:
+  65.72 / 65.83 / 65.84 / 66.13 / 66.25 / 66.33s.
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 65.53 × 1.15 = 75.4 → **80**. The band published for the earlier
-114- and 116-case trees is superseded rather than corrected in place: it was
+five — gives 66.33 × 1.15 = 76.3 → **80**. The band published for the earlier
+114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of
 it was wrong.
@@ -72,8 +72,8 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Slowest recorded `invariant` run at 51 cases: **14.12s** — 17 runs:
-  11.17 / 12.72 / 12.74 / 12.75 / 12.79 / 12.79 / 12.87 / 12.87 / 12.93 / 12.98 / 12.99 / 13.0 / 13.01 / 13.05 / 13.25 / 13.45 / 14.12s.
+- Slowest recorded `invariant` run at 51 cases: **14.12s** — 32 runs:
+  11.17 / 12.4 / 12.67 / 12.68 / 12.72 / 12.73 / 12.74 / 12.74 / 12.75 / 12.79 / 12.79 / 12.85 / 12.85 / 12.87 / 12.87 / 12.87 / 12.9 / 12.93 / 12.95 / 12.98 / 12.99 / 13 / 13.01 / 13.02 / 13.05 / 13.18 / 13.21 / 13.25 / 13.28 / 13.45 / 13.73 / 14.12s.
 
 The same rule gives 14.12 × 1.15 = 16.2 → **20**.
 

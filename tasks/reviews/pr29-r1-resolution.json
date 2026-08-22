@@ -63,7 +63,7 @@
   ],
   "corrected_published_claims": [
     "src/browser/agent.py answer-assembly comment ('more than one enumeration never reaches here')",
-    "specs/decisions/ADR-016-m31-plan-lint.md — Ruling, Decisions 2 and 3, Enforced-by list",
+    "specs/decisions/ADR-018-m31-plan-lint.md — Ruling, Decisions 2 and 3, Enforced-by list",
     "specs/decisions/INDEX.md",
     "specs/001-browser-contract.md",
     "docs/analysis.md §8a-2",

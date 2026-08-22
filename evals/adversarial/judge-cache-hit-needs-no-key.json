@@ -1,0 +1,10 @@
+{
+  "id": "judge-cache-hit-needs-no-key",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "input": { "kind": "judge", "cache_hit_needs_no_key": true },
+  "expect": { "note": "a pre-populated cache entry answers live_judge() with no OPENROUTER_API_KEY at all, at $0.00, without raising" },
+  "provenance": "M36 acceptance criterion 5 (cached, cost-discipline rule 2): 'Cache keyed on a content hash of the inputs plus a prompt/params version so re-running the suite costs ~0 the second time.' This environment cannot exercise the OTHER half -- a live call populating the cache for the first time, since it has no OPENROUTER_API_KEY (stated plainly, not glossed over: M36 environment constraint 1) -- but it CAN prove the cache mechanism itself, using the real `live_judge()` function rather than a stub: the probe writes a fabricated entry under `_cache_key(task, answer, evidence, model)` directly to `runs/judge_cache.json` (the same file/format `live_judge` itself reads and writes), removes `OPENROUTER_API_KEY` from the environment, and calls `live_judge(model)(task, answer, evidence)` for that exact input. A cache MISS with no key raises (see judge-missing-key-fails-closed); this proves the HIT path short-circuits before the key is ever consulted, returning `usage.cached: true` and `llm_usd`/`llm_tokens` both 0.",
+  "triage": { "class": "inviolable-property", "note": "cache-first ordering (check cache, THEN check key) is deliberate: a cached verdict should not need a live key to keep answering after one is revoked or rotated out. This case is what pins that ordering, not just states it." }
+}

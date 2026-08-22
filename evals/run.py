@@ -220,13 +220,23 @@ def main():
     print(f"[eval] suite '{args.suite}': {passed}/{len(results)} = {score:.3f}")
     print(f"[eval] cost ${totals.get('llm_usd', 0):.4f} · {int(totals.get('llm_tokens', 0))} tok · "
           f"{int(totals.get('actions', 0))} actions · wall {totals['wall_seconds']}s · "
-          f"p50 {totals['latency_p50']}s p95 {totals['latency_p95']}s")
+          f"p50 {totals['latency_p50']}s p95 {totals['latency_p95']}s · "
+          f"judge ${totals.get('judge_usd', 0):.4f} · {int(totals.get('judge_tokens', 0))} tok · "
+          f"{int(totals.get('judge_calls', 0))} calls")
     if metrics:
         # Ratios are printed as x/y, never as a bare rate: the denominator is
         # the number of cases that could have exercised the mechanism, and it is
         # small enough that hiding it would flatter the number.
         def ratio(num, den):
             return f"{int(metrics.get(num, 0))}/{int(metrics.get(den, 0))}"
+        # M36 per-stage hit-rate: of every run whose verdict was actually
+        # evaluated, how many were rejected by the free L1 checks alone versus
+        # how many reached the judge (the last, paid rung) and what it did.
+        print(f"[eval] verdicts {ratio('l1_rejected_before_judge', 'verdict_evaluated')} rejected "
+              f"by L1 alone · judge reached {ratio('judge_invoked', 'verdict_evaluated')} "
+              f"({ratio('judge_certified', 'judge_invoked')} certified, "
+              f"{ratio('judge_rejected', 'judge_invoked')} rejected, "
+              f"{ratio('judge_unavailable', 'judge_invoked')} unavailable/failed-closed)")
         print(f"[eval] recovery {ratio('recovery_verified', 'recovery_expected')} verified "
               f"({int(metrics.get('recovery_rungs', 0))} rungs tried) · "
               f"mutation {ratio('mutation_passed', 'mutation_cases')} passed, "

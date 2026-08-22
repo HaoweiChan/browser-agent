@@ -57,15 +57,15 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-133 distinct cases (20 golden + 113 adversarial).
-202 browser actions in a `fast` run; **68 of the
-122** `fast` cases drive a real Chromium end to end — counted here as
+143 distinct cases (20 golden + 123 adversarial).
+209 browser actions in a `fast` run; **71 of the
+132** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
 `evals/report/20260822-172256-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 53 are those refusals plus pure-code probes of a single
+remaining 61 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
@@ -457,7 +457,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-133 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
+143 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -811,7 +811,7 @@ The probe's own question is now answered correctly offline against ground truth
 (`probe3-quotes-most-quoted-author`, a fixture twin of this page's author
 distribution), and the M10 case that pinned the wrong-success shape
 (`verifier-aggregate-superlative-fails-loud`) now ends before the browser acts
-at all. `specs/decisions/ADR-016-m31-plan-lint.md` records what that does not
+at all. `specs/decisions/ADR-018-m31-plan-lint.md` records what that does not
 close: the lint is a regex over English with the same ceiling as `SCOPE_BLOCK`,
 and a directly-stated superlative is still refused (D22, re-measured).
 
@@ -927,7 +927,7 @@ is already a declared limitation rather than a surprise:
    extract` could not express "compare eleven prices and return the minimum", so
    "cheapest" became "extract the first product tile" — the one-hop-deep
    ceiling from the M5 probe, reproduced exactly. M31 added `extract_all` and a
-   code-side `rank` (§8a-2 above, ADR-016), which makes this plan expressible;
+   code-side `rank` (§8a-2 above, ADR-018), which makes this plan expressible;
    this run is not re-run here, because it needs a real planner call and the
    case that would grade it is still `full`-tagged and unrun.
 2. **The identity anchor was `"Travel"`** — the category, not the entity. On an

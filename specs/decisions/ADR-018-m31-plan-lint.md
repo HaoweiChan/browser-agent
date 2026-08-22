@@ -1,4 +1,4 @@
-# ADR-016: The plan lint and `extract_all` — the planner-side half of the aggregate guard
+# ADR-018: The plan lint and `extract_all` — the planner-side half of the aggregate guard
 
 Date: 2026-08-22
 Status: accepted

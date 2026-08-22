@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 122 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 132 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,15 +50,21 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260822-172256-fast.json`, with
-`evals/report/20260822-172309-invariant.json` and
-`evals/report/20260822-111204-live.json`:
+Latest offline baseline — `evals/report/20260823-000232-fast.json`, with
+`evals/report/20260823-000031-invariant.json` and
+`evals/report/20260823-000337-live.json`:
 
 ```
-fast  122/122    invariant  51/51    live  9/9    $0.0000    65.5s
+fast  132/132    invariant  51/51    live  8/9    $0.0000    66.2s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 21/21 · 5 replans
+diagnosis 23/23 · 5 replans
 ```
+
+`live` is 8/9 in that run because `live-ol-search-a11y-invisible` timed out on
+openlibrary.org's search page: the site was answering the bare home page in
+~9.5s to `curl` and exceeding the 20s navigation budget for search. An
+unreachable live dependency fails loudly rather than being stubbed (CLAUDE.md
+rule 4); `live` is not part of the gate.
 
 Every number in that block is recomputed from those three report files by
 `docs-numbers-are-derived`, so it can only go stale by citing a stale report —
@@ -78,7 +84,7 @@ suite straddles its ceiling rather than clears it. The same suite on CI (ubuntu-
 **59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
 on byte-identical code, which is why the wall-clock ceiling is per-environment
 rather than one number pretending to be portable. CI's ceiling is the slowest
-observed run plus 15% (90s since ADR-017 §5, measured on CI at the shipped case
+observed run plus 15% (90s since ADR-019 §5, measured on CI at the shipped case
 count); the local ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
@@ -92,14 +98,14 @@ first repair moved three browser cases to `invariant`-only tags, which took
 ~4.9s out of the measured number and left the gate a coin flip while the
 published `fast` figure stayed at 59.7s — the wrong instrument. The cases are
 back in `fast` and the ceilings are re-measured instead
-([ADR-017](specs/decisions/ADR-017-wall-clock-ceilings-per-suite.md)), by
+([ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md)), by
 ADR-013's own rule: slowest observed run +15%, rounded up to a multiple of five.
 
 **Every band below is computed from `evals/report/history.jsonl`**, the ledger
 committed in this repo, and `published-band-matches-the-ledger` grades that on
-every run — the committed ceiling must be at least the rule applied to the
-ledger's slowest run at the current case count, and the published maximum must
-be at least that run. It is a property, not a snapshot, because the ledger grows
+every run — the doc's case count must be the suite's current case count, the published
+maximum must derive the SAME ceiling as the ledger's slowest run does, and the
+committed ceiling must be at least the rule applied to that maximum. It is a property, not a snapshot, because the ledger grows
 on every gate run; a list of times would go red on the next run instead of on a
 regression. It exists because three bands in this PR did not match the ledger
 beside them, and one ceiling was derived from a maximum that was never measured
@@ -110,19 +116,19 @@ At the case count this branch ships:
 
 | suite | cases | recorded runs | slowest | × 1.15 | ceiling |
 |---|---|---|---|---|---|
-| `fast` | 122 | 65.25 / 65.29 / 65.41 / 65.52 / 65.62 / 65.84 / 66.03 / 66.23s | 66.23s | 76.2 | **80s** |
-| `invariant` | 51 | 11.17 / 12.72 / 12.74 / 12.75 / 12.79 / 12.79 / 12.87 / 12.87 / 12.93 / 12.98 / 12.99 / 13.0 / 13.01 / 13.05 / 13.25 / 13.45 / 14.12s | 14.12s | 16.2 | **20s** |
+| `fast` | 132 | 65.72 / 65.83 / 65.84 / 66.13 / 66.25 / 66.33s | 66.33s | 76.3 | **80s** |
+| `invariant` | 51 | 11.17 / 12.4 / 12.67 / 12.68 / 12.72 / 12.73 / 12.74 / 12.74 / 12.75 / 12.79 / 12.79 / 12.85 / 12.85 / 12.87 / 12.87 / 12.87 / 12.9 / 12.93 / 12.95 / 12.98 / 12.99 / 13 / 13.01 / 13.02 / 13.05 / 13.18 / 13.21 / 13.25 / 13.28 / 13.45 / 13.73 / 14.12s | 14.12s | 16.2 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of the shipped tree gave `invariant` 14.80-16.47s and `fast`
 69.37-74.06s, so **20s** and **90s** by the same rule. The old CI `fast` ceiling
 of 80 was the next coin flip: 74.06s against it is 8% of margin on a runner
-whose own spread is 6.8% (ADR-017 §5). One variable per suite
+whose own spread is 6.8% (ADR-019 §5). One variable per suite
 (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`) carries them, so
 raising one environment's ceiling for one suite cannot silently raise another's.
 
 Margin against the observed local band is ~14s where before M31 it was ~0.2s.
-That is a real loosening and ADR-017 says so in those words: a ceiling whose job
+That is a real loosening and ADR-019 says so in those words: a ceiling whose job
 is to catch drift cannot also be the thing that fails on drift-free commits.
 
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
@@ -137,7 +143,7 @@ branch's first CI run showed CI had been ~50% over the same ceiling for its whol
 existence with nothing checking — `main` runs `fast` in 89.62s. CI now carries its
 own measured ceiling alongside a local one
 ([ADR-013](specs/decisions/ADR-013-fast-suite-wall-clock.md); both re-measured
-by [ADR-017](specs/decisions/ADR-017-wall-clock-ceilings-per-suite.md) when M31
+by [ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) when M31
 grew the suite, and `invariant` given ceilings of its own).
 
 `live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those
@@ -218,7 +224,7 @@ never a judgement handed to the model. A plan that should have enumerated and
 did not is now refused before the browser moves. That makes this run's task
 *expressible*; it does not make the run above green, because
 `live-books-cheapest-travel` needs a real planner call and is still unrun
-(ADR-016, `docs/support-matrix.md` D22).
+(ADR-018, `docs/support-matrix.md` D22).
 
 **Read those with their denominators**, which is why they are printed as `x/y`:
 
@@ -338,7 +344,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 133 cases (122 of them in the offline gate), it
+The eval set is not weak; it is 143 cases (132 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
