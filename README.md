@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 116 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 118 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold, no LLM, no network
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260822-175656-fast.json`, with
-`evals/report/20260822-175708-invariant.json` and
-`evals/report/20260822-175548-live.json`:
+Latest offline baseline — `evals/report/20260822-182833-fast.json`, with
+`evals/report/20260822-182724-invariant.json` and
+`evals/report/20260822-182855-live.json`:
 
 ```
-fast  116/116    invariant  38/38    live  9/9    $0.0000    60.1s
+fast  118/118    invariant  38/38    live  9/9    $0.0000    60.7s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 18/18 · 4 replans
 ```
@@ -286,7 +286,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 127 cases (116 of them in the offline gate), it
+The eval set is not weak; it is 129 cases (118 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
