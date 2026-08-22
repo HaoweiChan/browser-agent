@@ -1,0 +1,70 @@
+{
+  "pr": 35,
+  "round": 2,
+  "scope": "repair diff bdd8f41..HEAD + standing round-1 findings",
+  "standing_round1": {
+    "R1": "NOT closed — a fourth unmarked copy added by the repair itself, see R10",
+    "R2": "closed",
+    "R3": "closed",
+    "R4": "closed",
+    "R5": "closed for the stated acceptance, but the mechanism introduces R11",
+    "R6": "closed; the declared deviation was judged sound, but it introduces R14",
+    "R7": "closed",
+    "R8": "closed (debt T-R43)",
+    "R9": "closed"
+  },
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R11",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The new `dirty: false` requirement makes any commit that changes a suite's case count unable to pass the pre-commit gate — the same deadlock the implementer correctly avoided for `green`, reintroduced for `clean`.",
+      "evidence": "src/browser/eval_adapter.py:461-467 — `if said not in [r['wall_s'] for r in rows if r['suite']==suite and r['total']==now and not r.get('dirty', True)]`. `published-band-matches-the-ledger` is tagged [\"invariant\",\"fast\"], and `.githooks/pre-commit` runs `--suite fast` against the working tree that still holds the UNCOMMITTED new case, so `git_dirty()` (evals/run.py:170-178) is True for every run at the new count. The tree only reaches count N+1 while the case file is uncommitted, so no `dirty: false` row at N+1 can exist before the commit — and the commit is what the check blocks. The committed ledger shows the shape: every row taken while this branch was under edit is `dirty: true`; the two clean rows were only producible because the 133rd/52nd case was already committed at bdd8f41. CLAUDE.md hard rule 2 (\"every new failure becomes a case\") makes growing a suite the repo's most common operation; it now requires `--no-verify` plus a second republish commit, against hard rules 5 and 7. T-R42's restatement asserts the opposite as settled (\"the clean run always precedes the doc edit\"), which is false in exactly the case-count-change case.",
+      "repro": "ORCHESTRATOR-VERIFIED: `_band_wrong({'invariant':(53,p)},{'invariant':53},{'invariant':20.0}, [two dirty 53-case rows])` for p in (13.30, 13.11) -> both return [{'suite':'invariant','published':p,'is_not_a_clean_recorded_run_at':53}] and nothing else; the clean filter is the sole blocker.",
+      "acceptance": "Adding one adversarial case to `fast`/`invariant` and republishing the band from the run that measured it passes the pre-commit gate in a single commit with no `--no-verify` — e.g. the clean requirement relaxed to \"clean, or the only rows at this count are dirty\", or the ledger filter accepting the sha the case is being committed at. Watched red/green with a real throwaway case added, run, published, committed. T-R42's \"bootstrap worked out\" sentence corrected either way."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R1 is not closed: the repair commit itself adds a fourth, unmarked copy of the slack scalar to ADR-019, so the exact defect R1 named still exists — and the code comment asserting otherwise is false as written.",
+      "evidence": "ADR-019:180 — \"when the band is crossed: once per 4.35s, which is a real change in what the tree costs\" — added by 4e7120d's §6 rewrite, carrying the scalar without the `one ceiling step (**N.NNs**)` marker. src/browser/eval_adapter.py:373-378 claims \"Every restatement of it in either document carries this exact marker and is graded\". ORCHESTRATOR-VERIFIED: `grep -n '4\\.35' README.md specs/decisions/ADR-019-*.md` returns three hits — ADR-019:161 (marked), README.md:126 (marked), ADR-019:180 (UNMARKED). The `ponytail:` comment declares this residual hypothetical (\"if that ever happens\"); it had already happened in the same commit.",
+      "repro": "rewrite ADR-019:180's 'once per 4.35s' to 'once per 99.99s' -> `_check_published_band_slack()['passed']` True and `_check_published_band()['passed']` True; both gates green with the ADR publishing a 99.99s slack.",
+      "acceptance": "Either ADR-019:180 uses the graded marker, or the restatement drops the number and refers to the marked sentence; the mutation goes red. A bare-scalar sweep of both documents for the current `_band_step_s()` value would close the class rather than the instance."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The `evals/run.py` dirty-ordering fix — load-bearing for R5's whole clean-band mechanism — changes recorded behaviour with no eval case that could have gone red.",
+      "evidence": "evals/run.py:261-274 moves `sha, dirty = git_sha(), git_dirty()` above the report write. Swapping the two lines back restores the bug (every `--report` run records `dirty: true` over its own untracked artifact) and nothing goes red: the band check reads the already-committed clean rows, so both suites stay at 1.000. `grep -rln dirty evals/golden evals/adversarial` returns only soak-counts-only-real-completions.json and published-band-matches-the-ledger.json; neither exercises `main()`'s write order. The fix is mentioned only in prose. This is CLAUDE.md hard rule 2's exact target: a real defect fixed without a case.",
+      "repro": "revert evals/run.py:262 to compute git_sha()/git_dirty() inline at line 274, then run both suites -> both still 1.000",
+      "acceptance": "An invariant case that drives the history-line writer with a report being written and asserts `dirty` reflects the tree excluding the run's own artifact, watched red against the pre-fix ordering."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The republished `invariant` derivation prints an intermediate on the wrong side of its own rounding rule: a reader applying ADR-013's stated rule to the published `15.0` gets a ceiling of 15, not 20, and `_BAND_DERIVATION` accepts it because it rounds to one decimal.",
+      "evidence": "ADR-019:97 \"The same rule gives 13.08 × 1.15 = 15.0 → **20**\" and README.md:146 `| invariant | 52 | 13.08s | 15.0 | **20s** |`. ORCHESTRATOR-VERIFIED: 13.08 × 1.15 = 15.041999..., which is why `_band_rule(13.08)` is 20; `_band_rule(13.04)` is 15. src/browser/eval_adapter.py:393 checks `round(x*1.15, 1) != product`, so the displayed 15.0 passes. This is the exact mis-derivation ADR-019:102 and T-R39 warn about, reintroduced by the round-2 band source. Round 1's 13.22 -> 15.2 -> 20 did not have this property.",
+      "repro": "`13.08*1.15` -> 15.041999999999998; `_band_rule(13.08)` -> 20; `_band_rule(13.04)` -> 15",
+      "acceptance": "The published product shows enough precision to be re-derivable (15.04), in both ADR-019 §3 and README's table, and `_BAND_DERIVATION` asserts `_band_rule(x) == ceiling` rather than only `ceiling == WALL_BUDGET_S[suite]`.",
+      "route_note": "LOW would normally route to debt. Routed repair because it is a published number that leads a reader to the wrong ceiling, in a document this round is already editing, and the fix is one digit plus one assertion."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The new cited-report size check couples the offline gate to the network-only `live` suite: adding a `live`-tagged case reddens `fast` and `invariant` and can only be cleared by running `live` and committing a fresh live report.",
+      "evidence": "src/browser/eval_adapter.py:3157-3161 applies `n != counts[suite]` to every entry of `where_it_stands.reports`, and that dict includes \"live\": \"20260823-000337-live.json\", while `counts` is built for (fast, invariant, live, full, all) at :3131. The case is tagged [\"fast\",\"invariant\"]. Today live count = 9 and the cited report holds 9 results, so it passes; grow `live` to 10 and the offline gate goes red, repairable only by a network run. Before this diff the block stayed green. CLAUDE.md states `live` is not part of the gate, and README:66 documents that the live dependency can be unreachable.",
+      "repro": "add a `\"suites\": [\"live\"]` case file, then run `--suite invariant` -> red on docs-numbers-are-derived with {cites_a_report_of_a_different_tree: ...-live.json, report_cases: 9, suite_now: 10}",
+      "acceptance": "The size check is applied only to the suites the case is tagged with (or `live` is exempted with the reason stated), so an offline gate never requires a network run to go green — watched red by growing `live` alone.",
+      "route_note": "LOW would normally route to debt. Routed repair because an offline, $0 gate that can only be cleared by a network run is a gate-integrity problem, and the coupling was introduced by this round's own change."
+    }
+  ],
+  "gate": {
+    "invariant": "52/52 = 1.000",
+    "fast": "133/133 = 1.000"
+  }
+}
