@@ -108,37 +108,58 @@ in `src/`, `evals/`, `.github/` and `specs/` against the ADR that actually carri
 ruling — or at minimum against the file existing and its Ruling mentioning the subject.
 Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
 
-### T-R42 — the band admits dirty-tree and failing runs; `sha`, `dirty` and `passed` are recorded and ignored            [status: todo]
-Origin: T-R34 (cold review)
-Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone. Every row behind the
-bands this branch publishes is `"dirty": true` (they were produced while implementing, which
-is the only way to produce them), and the `fast` maximum 66.38s comes from a 132/133 run, the
-`invariant` maximum 13.22s from a 50/52 run. Admitting non-green runs is deliberate and argued
-in the docstring — a wall clock is a wall clock — but admitting dirty ones is not argued
-anywhere, and a band can therefore be justified by a tree that was never committed. A case
-swap that keeps `total` constant has the same effect: property 1 is satisfied trivially while
-the runs behind the band are from a tree that no longer exists.
-Acceptance: either the ledger filter takes `dirty`/`sha` into account (and the bootstrap of
-publishing a band from a clean tree is worked out — a band can only be measured before the
-commit that publishes it), or the docstring and ADR-019 state that a band is measured on the
-working tree by construction and say what that costs. Watched red either way.
+### T-R39 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
+Origin: T-R34, restated after PR #35 R4
+Spec: `_band_wrong` filters `history.jsonl` to rows whose `total` equals the CURRENT case
+count, so adding one 0.0s pure-code case discards every earlier run. Observed: `invariant`
+had 34 runs at 51 cases reaching 14.12s; the first two runs at 52 cases maxed at 12.78s,
+which derives **15** — the ceiling CI has been red against twice. PR #35 R4 correctly
+refused this as debt while ADR-019 §6 still claimed "no ceiling is ever justified by a
+maximum smaller than the truth"; that claim is gone, the residue is declared in §6 (a
+freshly republished band is a LOWER bound and a ceiling does not ratchet down on one), and
+the concrete failure — a derivation arguing 15 under a heading that says 20s — is now graded
+by `published-band-matches-the-ledger`.
+What remains here is only the option §6 names and does not take: widening the window (rows
+at nearby counts, or a floor at the previously published maximum) so a band re-measures from
+more than the two runs that happen to follow a case being added.
+Acceptance: a widened window with the reasoning recorded, watched red against the 52-case
+sample above — or an ADR line closing the option deliberately.
 
-### T-R39 — a new case discards the whole measured band, and the fresh sample can justify a LOWER ceiling            [status: todo]
-Origin: T-R34
-Spec: `_band_wrong` filters the ledger to rows whose `total` equals the CURRENT case
-count, so adding one 0.0s pure-code case throws away every run recorded at the old
-count. Observed in this task: `invariant` had 34 runs at 51 cases (max 14.12s); adding
-one case left 2 runs at 52 cases (max 12.78s), whose derivation is 12.78 x 1.15 = 14.7
--> **15** against a committed ceiling of 20. Nothing went red — property 3 is `ceiling
->= rule(ledger max)`, so a ceiling ABOVE the rule is accepted — but a maintainer
-following the ADR's own derivation sentence literally would have ratcheted the local
-`invariant` ceiling from 20 down to 15, which is the number CI has already been red
-against twice (ADR-019 §3, §5). The band was only republishable at 13.22s here because
-four more runs were taken by hand.
-Acceptance: either the ledger filter widens (rows at >= the count, or the count band the
-suite's cost actually depends on) with the reasoning recorded, or the ADR states that a
-freshly-republished band is a lower bound and the committed ceiling never ratchets down
-on one, with a case pinning the direction. Watched red either way.
+### T-R42 — nothing requires the runs behind a band to be green or clean            [status: todo]
+Origin: T-R34, evidence from PR #35 R5
+Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone; `sha`, `dirty` and
+`passed` are recorded on every row and read by nothing. Round 1 shipped both bands off red,
+dirty runs: at (invariant, 52) the 13.22s maximum was ts 20260823-023204 with
+`passed: 50, total: 52, dirty: true` while the other nine runs maxed at 12.88s, and at
+(fast, 133) the 66.38s maximum was ts 20260823-023406 with `passed: 132, total: 133,
+dirty: true`. Round 2 republishes both from committed green, clean `--report` runs of the shipped tree
+(ts 20260823-033320, `fast` 133/133, and ts 20260823-033200, `invariant` 52/52, both
+`dirty: false`) and `published-band-matches-the-ledger` now requires the published number to
+BE a clean row at that count. The GREEN half is still ungraded and cannot be graded the same
+way: this check is in both suites, so at a new case count every run is red until the band is
+republished, and no green row could ever exist to republish it from. Round 2 also had to fix `evals/run.py` before a clean row was
+even possible: `dirty` was read AFTER the report file was written, so every `--report` run
+recorded `dirty: true` on account of its own untracked artifact.
+Admitting non-green rows is argued in `_band_wrong`'s comment (a wall clock is a wall clock,
+and requiring green deadlocks: this check is itself in both suites). Admitting DIRTY rows is
+argued nowhere, and it is the weaker half — a band can be justified by a tree that was never
+committed.
+Acceptance: the filter narrows to `dirty: false` rows (with the bootstrap worked out: a band
+can only be measured before the commit that publishes it, so the clean run always precedes
+the doc edit), or `_band_wrong`'s comment and ADR-019 §6 state that a band is measured on the
+working tree by construction and say what that costs. Watched red with the two rows above.
+
+### T-R43 — `_band_step_s` measures the ceiling step once and publishes it as a bound for every band            [status: todo]
+Origin: PR #35 R8
+Spec: `_band_step_s` bisects two consecutive ceiling boundaries at x=60 and returns 4.35s,
+which `published-band-slack-is-declared` then asserts as the bound for both published bands,
+including `invariant`'s at 13.22s. The docstring justifies the bisection with "`_band_rule`
+is monotonic", but monotonicity only makes the bisection valid; what makes ONE measured step
+a bound for every band is that the rule is linear in x. Amend ADR-013's rule to anything
+scale-dependent — a percentage of the value, a floor at small magnitudes — and the published
+4.35s silently stops bounding the small band.
+Acceptance: name linearity as the assumption in the docstring, or measure the step at each
+published band and grade each against its own.
 
 ### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: todo]
 Origin: PR #29 R25

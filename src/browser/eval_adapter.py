@@ -362,13 +362,20 @@ def _check_planner_prompt() -> dict:
 # checkable. Deliberately a labelled scalar, not the list of run times: a list
 # is a snapshot and `history.jsonl` grows on every gate run, so a grader that
 # string-matched it would go red on the next run rather than on a regression.
+# The one sentence per suite that ADR-019 must carry for its band to be checkable.
+# It names a CLEAN run — one recorded with no uncommitted change in the tree —
+# because round 1 of PR #35 published both bands off runs that were red and dirty
+# (R5), and a band justified by a tree that was never committed is not evidence.
 _BAND_LINE = re.compile(
-    r"Slowest recorded `(fast|invariant)` run at (\d+) cases: \*\*([\d.]+)s\*\*")
+    r"Band source — `(fast|invariant)` at (\d+) cases, clean run at \*\*([\d.]+)s\*\*")
 
 # ADR-019 §6's declaration of what the band property does NOT see: the size of
-# the hole, as a number the rule's own constants fix (one ceiling step, 5s of
-# ceiling / 1.15) rather than prose that can be softened without a diff.
-_BAND_SLACK_LINE = re.compile(r"declared slack of \*\*([\d.]+)s\*\*")
+# the hole, as a number the rule fixes rather than prose that can be softened
+# without a diff. Every restatement of it in either document carries this exact
+# marker and is graded — PR #35 R1: the first version matched one sentence in
+# the ADR, so amending the rule and repairing that sentence left two more
+# copies of the old figure standing, green.
+_SLACK_MARK = re.compile(r"one ceiling step \(\*\*([\d.]+)s\*\*\)")
 
 _ADR019 = (Path(__file__).parents[2] / "specs" / "decisions"
            / "ADR-019-wall-clock-ceilings-per-suite.md")
@@ -379,6 +386,11 @@ _README = Path(__file__).parents[2] / "README.md"
 # source and the two documents cannot disagree.
 _README_BAND_ROW = re.compile(
     r"^\| `(fast|invariant)` \| (\d+) \| ([\d.]+)s \|", re.MULTILINE)
+
+# "gives 66.38 × 1.15 = 76.3 → **80**" — the sentence that turns a published
+# maximum into a ceiling. Nothing used to read it, so §3 could derive 15 under a
+# heading that says 20s and no check could tell (PR #35 R4).
+_BAND_DERIVATION = re.compile(r"([\d.]+) × 1\.15 = ([\d.]+) → \*\*(\d+)\*\*")
 
 
 def _band_rule(x: float) -> int:
@@ -440,6 +452,19 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         if slowest is None:
             wrong.append({"suite": suite, "no_recorded_run_at": now})
             continue
+        # The published number must BE one of those runs, measured on a tree with
+        # nothing uncommitted in it. Not the maximum over clean runs — that is the
+        # strict property §6 refuses — just a real, clean measurement, which is
+        # what "value that appears in no recorded run" (PR #29 R21) and "red and
+        # dirty" (PR #35 R5) both violate. Green is NOT required and cannot be:
+        # this check is in both suites, so at a new case count every run is red
+        # until the band is republished, and a green row could never exist to
+        # republish it from.
+        if said not in [r["wall_s"] for r in rows
+                        if r["suite"] == suite and r["total"] == now
+                        and not r.get("dirty", True)]:
+            wrong.append({"suite": suite, "published": said,
+                          "is_not_a_clean_recorded_run_at": now})
         if _band_rule(said) != _band_rule(slowest):
             wrong.append({"suite": suite, "published_slowest": said,
                           "derives_ceiling": _band_rule(said),
@@ -496,24 +521,42 @@ def _check_published_band() -> dict:
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
     counts = {s: len(load_cases(s)) for s in WALL_BUDGET_S}
     wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows)
-    # A dict comprehension over the matches is last-wins, so a superseded band
-    # left in the file shadows the live one in silence — and if both land in the
-    # same band, publishes a number from no recorded run with everything green.
-    for suite, _ in lines:
-        if [s for s, _ in lines].count(suite) > 1:
-            wrong.append({"suite": suite, "adr_publishes_two_band_lines": True})
-            break
     # README's table is the other half of the same claim and drifted from this
     # file once already (PR #29 R24, the origin of T-R34). Same two numbers or
     # red: one number, two documents, no hand-kept copy.
     readme = _README.read_text(encoding="utf-8")
-    table = {m.group(1): (int(m.group(2)), float(m.group(3)))
-             for m in _README_BAND_ROW.finditer(readme)}
+    rows = [(m.group(1), (int(m.group(2)), float(m.group(3))))
+            for m in _README_BAND_ROW.finditer(readme)]
+    table = dict(rows)
     for suite, band in sorted(published.items()):
         if table.get(suite) != band:
             wrong.append({"suite": suite, "adr_band": list(band),
                           "readme_band": list(table[suite]) if suite in table
                           else None})
+    # Both parses are last-wins dicts, so a superseded band left above the live
+    # one shadows it in silence — and if both land in the same band, publishes a
+    # number from no recorded run with everything green. Guarded on both sides:
+    # the ADR side was PR #29 R24, README's was the same hole two lines later
+    # (PR #35 R2).
+    for where, pairs in (("adr", lines), ("readme", rows)):
+        seen = [s for s, _ in pairs]
+        for suite in sorted({s for s in seen if seen.count(s) > 1}):
+            wrong.append({"suite": suite, f"{where}_publishes_two_bands": True})
+    # The ceiling the ADR DERIVES from that maximum, in prose, must be the
+    # ceiling `evals/run.py` commits. Without this, growing a suite re-measures
+    # the band downwards and §3 reads "-> **15**" under a heading that says 20s,
+    # with every other property green (PR #35 R4).
+    for suite, (_, said) in sorted(published.items()):
+        stated = [(float(a), float(b), int(c))
+                  for a, b, c in _BAND_DERIVATION.findall(adr) if float(a) == said]
+        if not stated:
+            wrong.append({"suite": suite, "no_derivation_of": said})
+            continue
+        for x, product, ceiling in stated:
+            if round(x * 1.15, 1) != product or ceiling != WALL_BUDGET_S[suite]:
+                wrong.append({"suite": suite, "derivation": [x, product, ceiling],
+                              "arithmetic": round(x * 1.15, 1),
+                              "committed_ceiling": WALL_BUDGET_S[suite]})
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -542,16 +585,27 @@ def _check_published_band_slack() -> dict:
     wrong = []
     step_s = _band_step_s()
     adr = _ADR019.read_text(encoding="utf-8")
-    m = _BAND_SLACK_LINE.search(adr)
-    if not m:
-        wrong.append({"adr_declares_no_slack": True, "one_ceiling_step_is": step_s})
-    elif abs(float(m.group(1)) - step_s) > 0.005:
-        wrong.append({"adr_declared_slack": float(m.group(1)),
-                      "one_ceiling_step_is": step_s})
+    # Every restatement, in both documents, not just the one sentence that used
+    # to be graded: three copies of 4.35s were published and one was checked, so
+    # amending the rule and repairing the checked one left the other two green
+    # and wrong (PR #35 R1). ponytail: a stray figure written WITHOUT the marker
+    # is still invisible; upgrade to a bare-scalar sweep if that ever happens.
+    for name, text in (("adr", adr), ("readme", _README.read_text(encoding="utf-8"))):
+        said = [float(v) for v in _SLACK_MARK.findall(text)]
+        if not said:
+            wrong.append({name: "declares_no_slack", "one_ceiling_step_is": step_s})
+        for v in said:
+            if abs(v - step_s) > 0.005:
+                wrong.append({name: "declares_wrong_slack", "declared": v,
+                              "one_ceiling_step_is": step_s})
 
     def judge(said: float, ledger_max: float) -> list:
-        return _band_wrong({"s": (1, said)}, {"s": 1}, {"s": 999.0},
-                           [{"suite": "s", "total": 1, "wall_s": ledger_max}])
+        # Two clean rows: the one the band is published from and a slower one the
+        # ledger also holds. Both clean, so only property 2 can speak — the
+        # ceiling is 999 for the same reason.
+        rows = [{"suite": "s", "total": 1, "wall_s": w, "dirty": False}
+                for w in (said, ledger_max)]
+        return _band_wrong({"s": (1, said)}, {"s": 1}, {"s": 999.0}, rows)
 
     # The bound is measured against the bands ADR-019 actually publishes, so it
     # is the headroom a reader of THIS doc has, not a sample chosen to flatter.
@@ -579,7 +633,8 @@ def _check_published_band_slack() -> dict:
     if not judge(12.96, 13.57):
         wrong.append({"r21_underpublished_band_green_on_property_2": [12.96, 13.57]})
     if not _band_wrong({"s": (1, 12.96)}, {"s": 1}, {"s": 15.0},
-                       [{"suite": "s", "total": 1, "wall_s": 13.57}]):
+                       [{"suite": "s", "total": 1, "wall_s": w, "dirty": False}
+                        for w in (12.96, 13.57)]):
         wrong.append({"r21_underjustified_ceiling_green_on_property_3": 15.0})
     return {"passed": not wrong, "wrong": wrong,
             "got": {"declared_slack_s": step_s, "headroom_s": headroom}}
@@ -3093,6 +3148,17 @@ def _run_doc_counts_case(case: dict) -> dict:
             reports[suite] = json.loads(path.read_text())
             if f"evals/report/{rid}" not in readme:
                 wrong.append({"readme_does_not_cite": rid})
+            # A report from a smaller tree still parses, so every number below
+            # recomputes correctly out of a run that is no longer this suite.
+            # That is how the block came to publish `fast 132/132` in a commit
+            # whose README said 133 cases four sections earlier (PR #35 R6).
+            # ponytail: the case still NAMES the report — deriving "newest
+            # committed report per suite" instead would repoint the block at the
+            # next RED run, since green gate runs write no report at all.
+            n = len(reports[suite]["results"])
+            if n != counts[suite]:
+                wrong.append({"cites_a_report_of_a_different_tree": rid,
+                              "report_cases": n, "suite_now": counts[suite]})
         for suite, rep in reports.items():
             n = len(rep["results"])
             want = f"{suite}  {sum(1 for r in rep['results'] if r['passed'])}/{n}"

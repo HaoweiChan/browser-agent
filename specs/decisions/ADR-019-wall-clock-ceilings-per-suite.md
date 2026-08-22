@@ -46,9 +46,8 @@ is worth less than the 4.9s it costs.
 Every LOCAL band here — this section's and §3's — is computed from
 `evals/report/history.jsonl`, the ledger committed in this repo, and
 `published-band-matches-the-ledger` grades that property on every run, against
-README's copy of the same two scalars as well. §5's CI numbers are not in that
-ledger and cannot be (no CI run commits its wall clock); they are hand-read off
-the workflow log, ungraded, and logged as debt (T-R40). It has to, because three bands in this PR did not
+README's copy of the same two scalars and against the ceiling each derivation
+sentence below lands on. It has to, because three bands in PR #29 did not
 match the ledger beside them: nine of fifteen runs published as "every run the
 ledger records", four values that appear in no recorded run, the two slowest
 `invariant` runs dropped unlabelled, and a maximum (64.71s) the ceiling was
@@ -56,19 +55,30 @@ derived from that was never measured (PR #29 R18, R21). That is the same
 selective presentation ADR-013 Decision 4 was withdrawn over, repeated in the
 decision that amends it.
 
+§5's CI numbers are not in that ledger and cannot be (no CI run commits their
+wall clock); they are hand-read off the workflow log, ungraded, and logged as
+debt (T-R40).
+
 **The ledger's numbers, at the case count this branch ships:**
 
-- Slowest recorded `fast` run at 133 cases: **66.38s**.
+- Band source — `fast` at 133 cases, clean run at **66.41s**
+  (`evals/report/20260823-033320-fast.json`, 133/133, `dirty: false`).
 
-Every run behind that maximum is in `evals/report/history.jsonl`, committed
-beside this file. The enumeration that used to stand here — and the one in §3 —
+Every run of this tree is in `evals/report/history.jsonl`, committed beside
+this file; the sentence above names the one the band is derived from, and
+`published-band-matches-the-ledger` requires it to be a row recorded with
+nothing uncommitted in the tree. Round 1 of PR #35 published both bands off
+runs that were red AND dirty — a band justified by a tree that was never
+committed (R5). The ledger's own maximum at a given count may be higher than
+the band source, because it includes red and dirty runs; §6 is why that is
+allowed and by how much. The enumeration that used to stand here — and the one in §3 —
 is gone: it was a snapshot of a file that grows on every gate run, nothing
 graded it, and it had drifted to publishing six of the eight runs recorded at
 the shipped case count, which is the R21 defect this ADR was amended over. What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 66.38 × 1.15 = 76.3 → **80**. The band published for the earlier
+five — gives 66.41 × 1.15 = 76.4 → **80**. The band published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of
@@ -81,9 +91,10 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Slowest recorded `invariant` run at 52 cases: **13.22s** (ledger, as above).
+- Band source — `invariant` at 52 cases, clean run at **13.08s**
+  (`evals/report/20260823-033200-invariant.json`, 52/52, `dirty: false`).
 
-The same rule gives 13.22 × 1.15 = 15.2 → **20**.
+The same rule gives 13.08 × 1.15 = 15.0 → **20**.
 
 This number was **15** until PR #29 R21, and that was a reading error, not a
 rule change: the band behind it published five runs of a ledger holding
@@ -147,37 +158,64 @@ hole is measured, named, and pinned by a case, so nobody has to discover it.
 **What it lets through.** A published maximum may sit anywhere inside the band
 that derives the committed ceiling, so it can understate the ledger's slowest
 run by up to one ceiling step — five seconds of ceiling divided by the rule's
-1.15, a declared slack of **4.35s** of wall clock.
+1.15, a declared slack of one ceiling step (**4.35s**) of wall clock.
 `published-band-slack-is-declared` derives that bound from the rule's own
 constants rather than trusting this sentence, measures the headroom of each
 band published above, and reports both — no per-suite number is written here,
 because a number that moves with the band is the snapshot this section deletes
 everywhere else.
 
-**Why not the strict form.** `published >= ledger max` reddens on ordinary
-variance — this tree moves 0.2-0.5s between consecutive runs — and the ledger
-is appended by every gate run, *after* the case has been graded. So the run
-that sets a new maximum passes, and the commit that reddens is the NEXT one,
-whose author changed nothing that made anything slower. That is the failure
-ADR-013 Decision 4 was withdrawn over, relocated one level up into the doc. A
-regeneration script would make each repair one command; it would not stop the
-churn, and a number that is re-derived on every slightly slow run is not more
-honest than this one, only more frequent.
+**Why not the strict form.** Not for the reason the first version of this
+section gave. It argued that the ledger line is appended after the run's cases
+are graded — `evals/run.py` — so the run that sets a new maximum passes and the
+NEXT commit reddens, on an author who changed nothing. That lag is real and it
+is shared: no run sees its own wall clock under EITHER form, and this section's
+own property reddens the next commit too when a run crosses the band. Naming it
+as the disqualifier was wrong (PR #35 R3).
 
-**What the slack cannot hide.** §2's ceiling is graded against `rule(ledger
-max)` directly — from the ledger, never from the published number — so a tree
-that crosses the band still reddens the gate, and no ceiling is ever justified
-by a maximum smaller than the truth. The direction R21 found (12.96s published
-where 13.57s was recorded: 15 where the rule said 20) is red on both
-properties, and the case asserts it stays red.
+What differs is frequency. `published >= ledger max` forces a doc edit on every
+new maximum, and on a tree that moves 0.2-0.5s between consecutive runs most of
+the early runs at any new case count set one — each landing on whoever commits
+next, for drift of tenths of a second. The property kept here forces an edit
+when the band is crossed: once per 4.35s, which is a real change in what the
+tree costs and worth a human writing a number down. A regeneration script
+changes who types the number, not how often the interruption arrives.
 
-**What a reader should conclude.** The published maximum is the slowest run
-recorded when the band was last republished, not necessarily the slowest run in
-the ledger today. It is within 4.35s of it, and the ceiling beside it is
-correct either way. If you want the exact current maximum, the ledger is the
-artefact — and the grader prints it, with the case count, whenever the band
-needs republishing.
+**What the slack cannot hide — and what it does not cover.** §2's ceiling is
+graded against `rule(ledger max)` directly, from the ledger, never from the
+published number, so a tree that crosses its band reddens the gate. R21's
+direction (12.96s published where 13.57s was recorded: 15 where the rule said
+20) is red on that property and on property 2, and the case asserts both.
 
+That is not the same as "no ceiling is ever justified by a maximum smaller than
+the truth", which is what this section claimed first and the filter falsifies
+(PR #35 R4). The ledger is filtered to rows at the CURRENT case count, so
+adding one 0.0s case discards every earlier run: `invariant` had 34 runs at 51
+cases reaching 14.12s, and the first two runs at 52 cases maxed at 12.78s,
+which derives **15** — the number CI has been red against twice. Property 3 is
+`>=`, so a committed ceiling above the freshly-derived one is accepted and
+nothing goes red. What was missing is that nothing read the ceiling this ADR
+*derives in prose*: §3 could have said "→ **15**" under a heading that says
+20s. `published-band-matches-the-ledger` now reads it — the derivation sentence
+must multiply the published maximum and land on the ceiling `evals/run.py`
+commits — so that state is red.
+
+The residue is declared, not graded: a freshly republished band is a short
+sample and therefore a LOWER bound on what the tree costs. The rule is that a
+ceiling does not ratchet down on one. Republish the maximum, leave the ceiling
+where the longer record put it, and move it down only with a measurement that
+says so (T-R39 carries the widened-window option).
+
+**What a reader should conclude.** The number beside each band is one real,
+clean-tree run — `published-band-matches-the-ledger` requires it to be a row in
+the ledger recorded with nothing uncommitted, so it is never a value nobody
+measured. It is not necessarily the slowest run in the ledger: red runs and
+runs taken mid-edit are in there too, and the maximum of all of them can sit up
+to one ceiling step above the band source without anything going red. The
+ceiling beside it is correct either way, because it is graded against that
+maximum and not against the published number. If you want the exact current
+maximum, the ledger is the artefact — and the grader prints it, with the case
+count, whenever the band needs republishing.
 
 ## Consequences
 

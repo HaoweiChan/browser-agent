@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260823-000232-fast.json`, with
-`evals/report/20260823-000031-invariant.json` and
+Latest offline baseline — `evals/report/20260823-033320-fast.json`, with
+`evals/report/20260823-033200-invariant.json` and
 `evals/report/20260823-000337-live.json`:
 
 ```
-fast  132/132    invariant  51/51    live  8/9    $0.0000    66.2s
+fast  133/133    invariant  52/52    live  8/9    $0.0000    66.4s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 23/23 · 5 replans
 ```
@@ -103,39 +103,47 @@ ADR-013's own rule: slowest observed run +15%, rounded up to a multiple of five.
 
 **Every LOCAL band below is computed from `evals/report/history.jsonl`**, the
 ledger committed in this repo, and `published-band-matches-the-ledger` grades
-that on every run — this table's row and ADR-019's sentence are checked against
-each other as well as against the ledger, because they drifted apart once
-(PR #29 R24) and a hand-kept second copy is how that happens. CI's two numbers
-below are NOT in this ledger and cannot be: no CI run commits its wall clock, so
-they are measured by hand off the workflow log and recorded in ADR-019 §5. That
-half is unfalsifiable here and is logged as debt (T-R40), not graded — the doc's case count must be the suite's current case count, the published
-maximum must derive the SAME ceiling as the ledger's slowest run does, and the
-committed ceiling must be at least the rule applied to that maximum, computed
-from the ledger rather than from the published number. It is a property, not a snapshot, because the ledger grows
-on every gate run; a list of times would go red on the next run instead of on a
-regression. It exists because three bands in this PR did not match the ledger
-beside them, and one ceiling was derived from a maximum that was never measured
-(PR #29 R18, R21) — the same selective presentation ADR-013 Decision 4 was
-withdrawn over.
+that on every run — the doc's case count must be the suite's current case count,
+the published maximum must derive the SAME ceiling as the ledger's slowest run
+does, the ceiling that maximum derives in the ADR's prose must be the ceiling
+`evals/run.py` commits, and the committed ceiling must be at least the rule
+applied to the ledger's maximum, computed from the ledger rather than from the
+published number. This table's row and ADR-019's sentence are checked against
+each other as well, because they drifted apart once (PR #29 R24) and a
+hand-kept second copy is how that happens. It is a property, not a snapshot,
+because the ledger grows on every gate run; a list of times would go red on the
+next run instead of on a regression. It exists because three bands in PR #29 did
+not match the ledger beside them, and one ceiling was derived from a maximum
+that was never measured (R18, R21) — the same selective presentation ADR-013
+Decision 4 was withdrawn over.
+
+CI's two numbers below are NOT in this ledger and cannot be: no CI run commits
+its wall clock, so they are measured by hand off the workflow log and recorded
+in ADR-019 §5. That half is unfalsifiable here and is logged as debt (T-R40),
+not graded.
 
 Same ceiling, not `published >= ledger max`: so the published maximum can be
-below the ledger's, by at most one ceiling step (**4.35s**), and the table
-below states the slowest run recorded when the band was last republished rather
-than the slowest in the ledger today. That is a declared limitation, not an
+below the ledger's, by at most one ceiling step (**4.35s**), and the table below
+states the slowest run recorded when the band was last republished rather than
+the slowest in the ledger today. That is a declared limitation, not an
 oversight — the reasoning is
 [ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) and
-`published-band-slack-is-declared` pins it: the strict form would redden the
-commit AFTER the one that got slower, and the ceiling is graded against the
-ledger directly, so the slack costs a reader precision and never costs the gate
-its teeth.
+`published-band-slack-is-declared` pins it. Both forms lag identically (the
+history line is appended after the run's cases are graded, so no run sees its
+own wall clock); what differs is how often a doc edit is forced — every new
+maximum under the strict form, once per band crossing under this one — and the
+ceiling is graded against the ledger directly, so the slack costs a reader
+precision and never costs the gate its teeth.
 
-At the case count this branch ships (the runs behind each maximum are in the
-ledger; enumerating them here is the snapshot that drifted):
+At the case count this branch ships. Each band is derived from one committed
+run of this tree with nothing uncommitted in it — the graded citation is in
+ADR-019 §2/§3, and every other run is in the ledger; enumerating them here is
+the snapshot that drifted:
 
-| suite | cases | slowest | × 1.15 | ceiling |
+| suite | cases | clean run | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 133 | 66.38s | 76.3 | **80s** |
-| `invariant` | 52 | 13.22s | 15.2 | **20s** |
+| `fast` | 133 | 66.41s | 76.4 | **80s** |
+| `invariant` | 52 | 13.08s | 15.0 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of the shipped tree gave `invariant` 14.80-16.47s and `fast`

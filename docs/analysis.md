@@ -59,13 +59,13 @@ its own report beside it.
 
 144 distinct cases (20 golden + 124 adversarial).
 209 browser actions in a `fast` run; **71 of the
-132** `fast` cases drive a real Chromium end to end — counted here as
+133** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260822-172256-fast.json` rather than tallied by hand (the
+`evals/report/20260823-033320-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 61 are those refusals plus pure-code probes of a single
+remaining 62 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
