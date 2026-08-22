@@ -416,6 +416,23 @@ PAGE = r"""<!doctype html>
        border:1px solid currentColor; padding:.17rem .45rem }
   .big.success { color:var(--ok) } .big.failure { color:var(--bad) }
   .big.unsupported { color:var(--warn) } .big.running { color:var(--accent) }
+  .progress { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.4rem;
+       list-style:none; margin:0 0 .9rem; padding:0 }
+  .progress li { min-width:0; border:1px solid var(--line); border-left:3px solid var(--line);
+       padding:.42rem .5rem; color:var(--dim); font-size:11px; line-height:1.25;
+       text-transform:uppercase; letter-spacing:.05em }
+  .progress li::before { content:"○ "; color:var(--dim) }
+  .progress li[data-state="complete"] { border-left-color:var(--ok); color:var(--fg) }
+  .progress li[data-state="complete"]::before { content:"✓ "; color:var(--ok) }
+  .progress li[data-state="current"] { border-left-color:var(--accent); color:var(--fg);
+       background:color-mix(in srgb,var(--accent) 8%,var(--panel)) }
+  .progress li[data-state="current"]::before { content:"› "; color:var(--accent) }
+  .progress li[data-state="failed"] { border-left-color:var(--bad); color:var(--bad) }
+  .progress li[data-state="failed"]::before { content:"× "; color:var(--bad) }
+  .limits-summary { margin:0; padding-left:1.2rem; color:var(--fg) }
+  .limits-summary li + li { margin-top:.35rem }
+  .limit-details { margin-top:.9rem }
+  .limit-details > div { margin-top:.65rem }
   a { color:var(--accent) }
   footer { color:var(--dim); border-top:1px solid var(--line); padding:1rem 0 2.5rem;
        font-size:12px; display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap }
@@ -460,12 +477,8 @@ PAGE = r"""<!doctype html>
       <button class="ghost" onclick="smoke()">Smoke test</button>
     </div>
   </div>
-  <p class="note" id="guards">URL allow-list (no
-    loopback/private/link-local in any spelling), 30 actions and 100k LLM tokens per run,
-    2 replans per task, one run at a time. A blocked URL is refused before a browser opens.
-    <code>POST /tasks</code> also takes an optional <code>model</code> field, gated on a
-    five-model allow-list and refused the same way — this form never sends one, so every
-    run started here uses the default planner model.</p>
+  <p class="note" id="guards">Guarded: public URLs only (private and loopback hosts blocked) ·
+    30 actions · 100k tokens · 2 replans · one active run.</p>
   <pre id="err" hidden></pre>
 </div>
 
@@ -473,6 +486,13 @@ PAGE = r"""<!doctype html>
   <h2><span class="section-no">02</span> Trace <span class="note" id="runid"></span></h2>
   <div class="status-line"><span class="big running" id="status">running</span>
     <span class="note" id="budgets"></span></div>
+  <ol class="progress" id="progress" aria-label="Run progress" aria-live="polite">
+    <li data-phase="planning" data-state="upcoming">Planning</li>
+    <li data-phase="browser" data-state="upcoming">Open page</li>
+    <li data-phase="action" data-state="upcoming">Run actions</li>
+    <li data-phase="verification" data-state="upcoming">Verify answer</li>
+    <li data-phase="complete" data-state="upcoming">Complete</li>
+  </ol>
   <div id="steps"></div>
   <div id="result"></div>
 </div>
@@ -483,9 +503,9 @@ PAGE = r"""<!doctype html>
   Served from <code>docs/support-matrix.md</code> — the same file the README renders.</p>
 <div id="matrix" class="panel table-wrap">loading&hellip;</div>
 
-<h2><span class="section-no">04</span> Declared limitations</h2>
-<p class="note">What this agent does <em>not</em> do, each citing the case that shows it.</p>
-<div id="limits" class="panel table-wrap">loading&hellip;</div>
+<h2><span class="section-no">04</span> Limitations</h2>
+<p class="note">Four headline limits; the full evidence remains below.</p>
+<div id="limits" class="panel">loading&hellip;</div>
 </main>
 
 <footer><span>Browser Agent / reviewer evidence surface</span><span>amber = command · cyan = interaction / recovery</span></footer>
@@ -495,6 +515,50 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let es = null, runId = null;
+const PHASES = ["planning", "browser", "action", "verification", "complete"];
+const SUPPORT_LABELS = {
+  TC1: "Read a page", TC2: "Search and read", TC3: "Navigate and read",
+  TC4: "Compare or sort", TC5: "Submit a form"
+};
+
+function progressItems() { return [...$("progress").children]; }
+function labelProgress() {
+  progressItems().forEach(item => item.setAttribute(
+    "aria-label", `${item.textContent} — ${item.dataset.state}`));
+}
+function setPhase(name) {
+  const current = PHASES.indexOf(name);
+  progressItems().forEach((item, index) => {
+    item.dataset.state = index < current ? "complete" : index === current ? "current" : "upcoming";
+    item.toggleAttribute("aria-current", index === current);
+  });
+  labelProgress();
+}
+function resetProgress() {
+  $("progress").removeAttribute("data-terminal");
+  $("progress").querySelector('[data-phase="complete"]').textContent = "Complete";
+  setPhase("planning");
+}
+function phaseFor(s) {
+  if (s.action === "navigate") return "browser";
+  if (s.action === "extract") return "verification";
+  return "action";
+}
+function setTerminal(status) {
+  const failed = !String(status).startsWith("success");
+  const items = progressItems(), active = items.findIndex(item => item.dataset.state === "current");
+  items.forEach((item, index) => {
+    if (index < PHASES.length - 1 && index <= active) item.dataset.state = "complete";
+    item.removeAttribute("aria-current");
+  });
+  if (failed && active >= 0) items[active].dataset.state = "failed";
+  const terminal = items[items.length - 1];
+  terminal.dataset.state = failed ? "failed" : "complete";
+  terminal.textContent = failed ? "Failed" : "Complete";
+  terminal.setAttribute("aria-current", "step");
+  $("progress").dataset.terminal = failed ? "failure" : "success";
+  labelProgress();
+}
 
 function badge(text, cls) { return `<span class="badge ${cls||""}">${esc(text)}</span>`; }
 
@@ -533,6 +597,7 @@ function stepEl(s) {
 function renderSteps(steps) { $("steps").innerHTML = steps.map(stepEl).join(""); }
 
 function renderResult(r) {
+  setTerminal(r.status);
   const kind = r.status.split(":")[0];
   $("status").className = "big " + kind;
   $("status").textContent = r.status;
@@ -565,6 +630,7 @@ async function submitTask() {
   $("go").disabled = true;
   $("err").hidden = true;
   $("live").hidden = false;
+  $("progress").hidden = true;
   $("steps").innerHTML = ""; $("result").innerHTML = "";
   $("status").className = "big running"; $("status").textContent = "running";
   $("budgets").textContent = ""; $("runid").textContent = "";
@@ -586,13 +652,15 @@ async function submitTask() {
       return;
     }
     runId = data.run_id;
+    resetProgress();
+    $("progress").hidden = false;
     $("runid").textContent = "run " + runId;
     es = new EventSource("/tasks/" + runId + "/stream");
     const live = [];
     es.onmessage = (e) => {
       const ev = JSON.parse(e.data);
-      if (ev.event === "step") { live.push(ev.step); renderSteps(live); }
-      else if (ev.event === "done") { es.close(); renderResult(ev.result); $("go").disabled = false; }
+      if (ev.event === "step") { live.push(ev.step); setPhase(phaseFor(ev.step)); renderSteps(live); }
+      else if (ev.event === "done") { es.close(); setTerminal(ev.result.status); renderResult(ev.result); $("go").disabled = false; }
     };
     es.onerror = () => {  // stream dropped — the run record is still the truth
       es.close();
@@ -609,6 +677,7 @@ async function submitTask() {
 
 function smoke() {
   $("live").hidden = false;
+  $("progress").hidden = true;
   $("steps").innerHTML = ""; $("result").innerHTML = "";
   $("runid").textContent = "platform smoke — real Chromium, no LLM spend";
   $("status").className = "big running"; $("status").textContent = "running";
@@ -632,15 +701,21 @@ fetch("/support-matrix").then(r => r.json()).then(m => {
   // parse_matrix refuses to return zero rows, so rows[0] is always there.
   const TCS = Object.keys(m.rows[0].cells);
   $("matrix").innerHTML = `<table><tr><th>Domain</th>${
-    TCS.map(t => `<th>${t}</th>`).join("")}</tr>${
+    TCS.map(t => `<th>${esc(SUPPORT_LABELS[t] || t)}</th>`).join("")}</tr>${
     m.rows.map(row => `<tr><td>${esc(row.domain)}</td>${TCS.map(t => {
       const v = row.cells[t] || "—";
       const cls = ["supported","unreliable","unsupported"].includes(v) ? v : "none";
       return `<td class="${cls}">${esc(v)}</td>`;
     }).join("")}</tr>`).join("")}</table>`;
-  $("limits").innerHTML = `<table><tr><th>Limitation</th><th>Evidence</th><th>Status</th></tr>${
-    m.limitations.map(l => `<tr><td>${esc(l.limitation)}</td><td><code>${
-      esc(l.evidence)}</code></td><td>${esc(l.status)}</td></tr>`).join("")}</table>`;
+  const summary = m.limitations.slice(0, 4);
+  const title = (text) => text.replace(/^\*\*D\d+\*\* — /, "").replace(/\s+/g, " ");
+  $("limits").innerHTML = `<ul class="limits-summary">${
+    summary.map(l => `<li>${esc(title(l.limitation))}</li>`).join("")}</ul>
+    <details class="limit-details"><summary>Full limitations and evidence (${m.limitations.length})</summary>
+      <div class="table-wrap"><table><tr><th>Limitation</th><th>Evidence</th><th>Status</th></tr>${
+        m.limitations.map(l => `<tr><td>${esc(l.limitation)}</td><td><code>${
+          esc(l.evidence)}</code></td><td>${esc(l.status)}</td></tr>`).join("")}</table></div>
+    </details>`;
 }).catch(e => { $("matrix").textContent = "support matrix unavailable: " + e; });
 </script>
 """

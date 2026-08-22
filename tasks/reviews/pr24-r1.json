@@ -1,0 +1,15 @@
+{
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "confidence": 0.93,
+      "claim": "Progress completion and failure states are visual-only, so the new surface does not render completed/current/upcoming states accessibly.",
+      "evidence": "src/browser/server.py:425-431 conveys complete/failed solely through CSS pseudo-content and color from data-state; src/browser/server.py:525-530 changes only data-state and aria-current, leaving a completed item with no accessible completed status. After a navigate event, Planning remains textually just Planning with no ARIA completion state. eval_adapter.py:2028-2046 checks data-state and aria-current only, so this can stay green.",
+      "repro": "After resetProgress(); setPhase('browser'); inspect each #progress li textContent, aria-current, and aria-label; the completed Planning item has no programmatic completed state.",
+      "acceptance": "Each progress item exposes its state in the accessibility tree, and the rendered narrow-screen case asserts those names/states for planning, browser, action, verification, success, and failure.",
+      "route": "repair"
+    }
+  ]
+}
