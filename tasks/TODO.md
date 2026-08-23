@@ -12,60 +12,57 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-R56 — the band subsystem's documents and its own strings say what the code does            [status: pr]
-Origin: bundles T-R45, T-R46, T-R47, T-R48, T-R49, T-R52, T-R54, T-R55 (PR #35 R8/R17/R18/R19/R20/R21/R22 + T-R34 cold review)
-Spec: Eight debt blocks from PR #35 are the same defect in the same two documents and one
-grader: a description that does not match the code it describes. They were bundled because
-each one edits `specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md`, `README.md` and
-`src/browser/eval_adapter.py`, so eight sequential PRs would conflict on every one. The
-mechanism changes from the same review (T-R44, T-R50, T-R51, T-R53) are deliberately NOT
-in this task — they change behaviour, these change what is claimed about it.
-Acceptance: every folded block's own acceptance is met, each watched red first where it
-names a mutation:
-- T-R45 — the slack sweep matches any decimal rendering of the current value, not the one
-  string `f"{step_s:g}"`; watched red with `4.350`. Or the limit is stated in the docstring
-  beside the existing `ponytail:` note.
-- T-R46 — either §6's two restating paragraphs and README:107-109/:121 defer to the item
-  numbers, or the "one list, one place / restated nowhere" claims at ADR-019:167-168, :48-49
-  and `specs/decisions/INDEX.md`:28 are narrowed to what is true.
-- T-R47 — the keys emitted by `_check_published_band_slack` name §6's item numbers (or no
-  number), and no string there uses the retired `property N` numbering.
-- T-R48 — ADR-019 §3/§6 say the 15-deriving band was reachable and is green under the
-  current check, not that a commit of PR #35 published it; or a sha is cited that did.
-- T-R49 — either `adr_publishes_no_band_line` and `no_recorded_run_at` are folded into §6's
-  list (or named as preconditions), or ADR-019:48-49 drops "exactly"; and :69 cites
-  item 2 (cited-run) and item 3 (same-ceiling) for the cited run and
-  item 4 (committed-ceiling) for the ceiling.
-- T-R52 — `specs/decisions/INDEX.md`, `evals/run.py` and `.github/workflows/eval.yml` cite
-  ADR-019 for the per-suite override, not ADR-017 (which is the M36 judge ADR), and a graded
-  row resolves `ADR-0NN` references in those files against the decision that actually rules.
-- T-R54 — linearity is named as the assumption in `_band_step_s`'s docstring, or the step is
-  measured at each published band and each graded against its own.
-- T-R55 — a band citation carries `passed/total` derived from the ledger row it names, or the
-  parenthetical is dropped from both citations; watched red by publishing a band whose
-  citation claims a result the row does not have.
-Out of scope: T-R44, T-R50, T-R51, T-R53 — behaviour, not description.
+### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: in-progress]
+Origin: PR #32 CI run 32626835735 (M31's check)
+Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
+process can see. CI's eval-gate job runs `--suite invariant` first, which
+appends its row to the job's copy of the ledger (16.02s at 52 cases on run
+32626835735 — CI is slower than the machine the band was measured on), then
+`--suite fast`, whose band check now compares ADR-019's published invariant
+slowest (12.92s at 52 cases, 8 local runs → rule 15) against a ledger whose
+slowest at 52 cases is CI's 16.02s → rule 20 → FAIL (`fast 132/133`), while
+the same tree is green locally. Main passes only because at 51 cases the
+published slowest happens to be 14.12s → 20 == CI's 16s → 20. The fast band
+cannot trip this way (its row is written after the fast run), so the defect
+is: any PR that grows the invariant suite by one case and republishes the band
+from local runs is red on CI unless some committed local run happens to derive
+the same ceiling CI's machine does. ADR-019 itself rules that ceilings are per
+(suite, environment); the grader is not.
+Repro: on a tree whose invariant case count differs from ADR-019's published
+band count, run `--suite invariant` on a slower machine, then `--suite fast` on
+the same ledger: `published-band-matches-the-ledger` reports
+`{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
+"ledger_slowest": 16.02, "ledger_derives": 20}`.
+Acceptance: rows carry their environment (e.g. the effective
+`EVAL_WALL_BUDGET_S_*` or an env tag) and the check compares a published band
+only against rows from the same environment; a case pins that a slower
+foreign-environment row does not redden the band. Until then, M35 moved its
+one new invariant case to `fast` (it is a pure-code doc check) so the
+invariant band stays the 51-case band main measured.
 
-### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: pr]
-Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
-Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
-class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
-Open Library's first publication year for a search result), the correct
-value was present verbatim inside the page text the agent itself captured —
-`star-rating Three`, the infobox population figure, "First published in
-1965" — but the run returned `failure:semantic` with a multi-hundred/
-multi-thousand-character raw page dump as the `answer` field instead of
-either isolating the value or failing with `answer: null`. This is graded a
-failure, not a wrong success, so it does not implicate the inviolable
-property (`not_a_dump` never sees it: the check only fires on `success`), and
-it is out of the two-defect scope M10's repair was bounded to.
-Acceptance: a case pins the "data was captured but answer is a page-text
-dump on failure" shape red first, then either the extraction step tries a
-narrower isolation before giving up, or `failure:semantic`'s `answer` field
-is null'd rather than carrying the dump — reviewer's call which is correct.
-Promoted from Debt 2026-08-23: today's post-deploy receipt rounds (PR #32/#37) showed the
-planner's output is the dominant source of flakiness on the five Try examples; M28 is the
-half that does not collide with M32 (PR #34, in flight in another session).
+Folds in T-R51 (same root cause — the ledger has no environment dimension, and no
+CI wall clock ever reaches it):
+> ADR-019 §5 and README's CI paragraph publish four measured numbers (`invariant`
+> 14.80-16.47s, `fast` 69.37-74.06s) and derive 20/90 from them. None of those values is in
+> `evals/report/history.jsonl`, and none can be: `.github/workflows/eval.yml` checks out, runs
+> the two suites and stops — no step commits a history row. `_BAND_LINE` has a group for the
+> suite and none for the environment, so `published-band-matches-the-ledger` parses only the
+> two local sentences. T-R34 scoped both blanket claims down to "every LOCAL band" rather than
+> leave them false, but the CI band is still unfalsifiable prose deriving a live ceiling.
+> Compounding: README publishes the CI band twice and incompatibly — `59.77 / 60.84 / 64.61 /
+> 64.67s` in the M12 paragraph and `69.37-74.06s` in the ADR-019 paragraph, where 64.61 is in
+> the ledger twice as a LOCAL run. Applying README's own rule to README's own first CI band
+> gives 75, not the 90 it publishes.
+> Acceptance (T-R51): either CI's runs land in the ledger (a job step that appends and commits,
+> or an artifact the check reads) and the band grader learns the environment dimension, or §5
+> and README's CI numbers are labelled as hand-read log values with the workflow run ids that
+> produced them, and README's older CI band is struck. Watched red either way.
+
+Why these two together: one fix serves both. If rows carry their environment and the
+check compares like with like, T-R44's cross-environment red cannot happen and T-R51's
+CI band becomes falsifiable from the same field. If instead CI's numbers are labelled
+hand-read, T-R44 still needs the environment tag, so the tag is the common floor.
+
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
@@ -138,24 +135,6 @@ more than the two runs that happen to follow a case being added.
 Acceptance: a widened window with the reasoning recorded, watched red against the 52-case
 sample above — or an ADR line closing the option deliberately.
 
-### T-R51 — the CI half of ADR-019 publishes bands no committed artifact can reproduce            [status: todo]
-Origin: T-R34 (cold review) (renumbered from T-R40 during the M35 merge — main had allocated that id independently)
-Spec: ADR-019 §5 and README's CI paragraph publish four measured numbers (`invariant`
-14.80-16.47s, `fast` 69.37-74.06s) and derive 20/90 from them. None of those values is in
-`evals/report/history.jsonl`, and none can be: `.github/workflows/eval.yml` checks out, runs
-the two suites and stops — no step commits a history row, so a CI wall clock never reaches
-the ledger. `_BAND_LINE` has a group for the suite and none for the environment, so
-`published-band-matches-the-ledger` parses only the two local sentences. T-R34 scoped both
-blanket claims down to "every LOCAL band" rather than leave them false, but the CI band is
-still unfalsifiable prose deriving a live ceiling. Compounding: README publishes the CI band
-twice and incompatibly — `59.77 / 60.84 / 64.61 / 64.67s` in the M12 paragraph and
-`69.37-74.06s` in the ADR-019 paragraph, where 64.61 is in the ledger twice as a LOCAL run.
-Applying README's own rule to README's own first CI band gives 75, not the 90 it publishes.
-Acceptance: either CI's runs land in the ledger (a job step that appends and commits, or an
-artifact the check reads) and the band grader learns the environment dimension, or §5 and
-README's CI numbers are labelled as hand-read log values with the workflow run ids that
-produced them, and README's older CI band is struck. Watched red either way.
-
 ### T-R53 — nothing requires the runs behind a band to be green or clean            [status: todo]
 Origin: T-R34, evidence from PR #35 R5 (renumbered from T-R42 during the M35 merge — main had allocated that id independently)
 Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone; `sha`, `dirty` and
@@ -189,34 +168,6 @@ republished and no green row could exist to republish it from. Either a bootstra
 tolerates one red row and then requires green (the same as-of trick would work), or
 `_band_wrong`'s comment and ADR-019 §6 state that a band's source run may be red and say
 what that costs. Watched red with the two rows above.
-
-### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: todo]
-Origin: PR #32 CI run 32626835735 (M31's check)
-Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
-process can see. CI's eval-gate job runs `--suite invariant` first, which
-appends its row to the job's copy of the ledger (16.02s at 52 cases on run
-32626835735 — CI is slower than the machine the band was measured on), then
-`--suite fast`, whose band check now compares ADR-019's published invariant
-slowest (12.92s at 52 cases, 8 local runs → rule 15) against a ledger whose
-slowest at 52 cases is CI's 16.02s → rule 20 → FAIL (`fast 132/133`), while
-the same tree is green locally. Main passes only because at 51 cases the
-published slowest happens to be 14.12s → 20 == CI's 16s → 20. The fast band
-cannot trip this way (its row is written after the fast run), so the defect
-is: any PR that grows the invariant suite by one case and republishes the band
-from local runs is red on CI unless some committed local run happens to derive
-the same ceiling CI's machine does. ADR-019 itself rules that ceilings are per
-(suite, environment); the grader is not.
-Repro: on a tree whose invariant case count differs from ADR-019's published
-band count, run `--suite invariant` on a slower machine, then `--suite fast` on
-the same ledger: `published-band-matches-the-ledger` reports
-`{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
-"ledger_slowest": 16.02, "ledger_derives": 20}`.
-Acceptance: rows carry their environment (e.g. the effective
-`EVAL_WALL_BUDGET_S_*` or an env tag) and the check compares a published band
-only against rows from the same environment; a case pins that a slower
-foreign-environment row does not redden the band. Until then, M35 moved its
-one new invariant case to `fast` (it is a pure-code doc check) so the
-invariant band stays the 51-case band main measured.
 
 ### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: todo]
 Origin: PR #29 R25
