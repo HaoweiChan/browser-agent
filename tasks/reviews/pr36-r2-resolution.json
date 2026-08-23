@@ -1,0 +1,61 @@
+{
+  "pr": 36,
+  "round": 2,
+  "resolutions": [
+    {
+      "id": "R10",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "Membership test first: `n not in slugs or slugs[n] != slug`. The case's watched_red now labels the retired `cites_no_such_six_item` output as history and records what the code emits today.",
+      "watched_red": "falsification reproduced: `§6 item 9 is why` -> {'passed': True, 'wrong': []}. After: {readme: reference_does_not_name_its_item, wrote: 'item 9', item_9_is: null}",
+      "verified_by_orchestrator": "reproduced on the repaired tree: passed False, {'readme': 'reference_does_not_name_its_item', 'wrote': 'item 9', 'item_9_is': None}"
+    },
+    {
+      "id": "R11",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "`_SIX_ITEM` matches `^(\\d+)\\. ` with the slug OPTIONAL; the list is enumerated by numbering first, then every line must carry a slug.",
+      "watched_red": "falsification: appending `9. a brand new rule with no slug at all;` -> {'passed': True, 'wrong': []}. After: {adr_six_list_is_not_1_to_n_with_slugs: [['1','count'],...,['9','']]}",
+      "verified_by_orchestrator": "reproduced: passed False with adr_six_list_is_not_1_to_n_with_slugs"
+    },
+    {
+      "id": "R12",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "The region is verified before it is read: each marker occurs exactly once in the file, and `_band_wrong` / `_check_published_band` / `_check_published_band_slack` are DEFINED inside it. The comment is corrected — the old \"IndexError / widens / both loud\" claim was two-thirds false.",
+      "watched_red": "marker-quoting comment: {marker_counts: [1,2], not_in_region: [all three], region_lines: 0}. Closing marker deleted: {marker_counts: [1,0], ...}. Band function moved below the marker: {marker_counts: [1,1], not_in_region: ['_check_published_band_slack'], region_lines: 373}.",
+      "self_found": "the first attempt at this guard was GREEN on the third mutation — it looked for `\"def _check_published_band_slack(\"` as a substring, and that literal sits inside the region as part of the guard's own list, satisfying itself. Same self-reference class as the markers. It matches `^def NAME(` at column 0 now, and the episode is in the case's watched_red.",
+      "verified_by_orchestrator": "reproduced the marker-quoting mutation: passed False, band_region_does_not_cover_the_band_code with marker_counts [1,2] and all three functions not_in_region"
+    },
+    {
+      "id": "R13",
+      "resolution": "fixed",
+      "detail": "Count dropped from both tasks/TODO.md and the case provenance — R8's second option — rather than corrected again."
+    },
+    {
+      "id": "R14",
+      "resolution": "fixed",
+      "detail": "INDEX says \"the marked band region of the check's source\"; the one §6 reference outside the region (`_run_doc_counts_case`) is no longer a numbered one — \"§6's references item\"."
+    },
+    {
+      "id": "R15",
+      "resolution": "fixed + debt",
+      "detail": "The six tasks/TODO.md references carry their slugs; T-R62 now names tasks/TODO.md as an unbound-reference surface and why it is not scanned (its prose says \"item N\" about other things — the R5 false-red shape), with a decision required in its acceptance."
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [],
+  "debt_extended": {
+    "T-R62": "now names tasks/TODO.md as the second ungraded surface, with the scan-or-declare decision in its acceptance"
+  },
+  "graded_clause_by_clause": {
+    "graded": "every item of §6's list is numbered and slugged, with no gap and no slugless item, appended ones included; every reference to it — in ADR-019, README, and the marked band region of src/browser/eval_adapter.py — names a number the list HAS and spells that item's slug, so a bare name, a name for an item that does not exist, a name aimed at the wrong item, a plural range and the retired `property N` numbering are each red; and the region is checked to be the band code before it is read, so a scan that stops scanning is red rather than green.",
+    "not_graded": "a paragraph that paraphrases a rule and names no item at all, and references in tasks/TODO.md (T-R62 carries both)",
+    "mutation_behind_each": "numbered/slugged/no gap -> R11 + mid-list deletion; no slugless appended item -> R11; number the list has -> R10; correct slug -> R2; bare name -> R10; plural range and `property N` -> round-1 mutations; region is the band code -> R12 x3"
+  },
+  "gate": {
+    "invariant": "53/53 = 1.000, wall 13.01s",
+    "fast": "136/136 = 1.000, wall 62.14s"
+  },
+  "flagged_to_human": "a third `--no-verify` ledger-row commit on this branch (one file, explained in its message). Round 1's R9 suggested rule 5 gain a named exception if the shape recurred; it has now recurred three times. Flagged, not acted on."
+}

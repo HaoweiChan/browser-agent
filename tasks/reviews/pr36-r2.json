@@ -1,0 +1,80 @@
+{
+  "pr": 36,
+  "round": 2,
+  "scope": "repair diff 6e19c3b..HEAD + standing round-1 findings",
+  "standing_round1": {
+    "R1": "closed for the narrowing, but the Graded half now overstates -> R10/R11",
+    "R2": "closed for slugged references; bare references and slugless items escape -> R10/R11; T-R59's residue in tasks/TODO.md -> R15",
+    "R3": "closed",
+    "R4": "closed",
+    "R5": "closed",
+    "R6": "closed",
+    "R7": "closed",
+    "R8": "count replaced with another wrong count -> R13",
+    "R9": "no action, unchanged"
+  },
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R10",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The repair silently deleted the `cites_no_such_six_item` guard: a reference to a §6 item that does not exist is now GREEN if it is written bare, so the mutation the case records as its own watched-red no longer reddens, and the 'Graded' half of §6 claims a property the code does not have.",
+      "evidence": "ORCHESTRATOR-VERIFIED. src/browser/eval_adapter.py:688-695 — `slug` is group(3) of `_SIX_REF` and is None when no `(slug)` follows, so `slugs.get(n) != slug` becomes `None != None` -> False for any number the list does not have. Rewriting README.md:125 `§6 item 3 (same-ceiling) is why` to `§6 item 9 is why` returns `{'passed': True, 'wrong': []}` — I reproduced this. The old code emitted `{readme: cites_no_such_six_item, items: [9], list_is_1_to: 7}` for exactly this input, and published-band-matches-the-ledger.json:17 STILL records that output as watched-red; the key no longer exists anywhere in src/. ADR-019:189-193 says Graded = \"every reference to this list ... names an item that exists AND spells its slug\"; README.md:108-111 says \"grades that each name points at the item it claims\". Neither holds for a bare name.",
+      "repro": "rewrite README's `§6 item 3 (same-ceiling) is why` to `§6 item 9 is why` -> `_check_published_band()` returns passed True, wrong []",
+      "acceptance": "A reference whose number is outside 1..N is red whether or not it carries a slug (e.g. `if n not in slugs or slugs[n] != slug`). Watched red with the bare `§6 item 9` mutation, and the case's watched_red updated to the output the current code actually emits instead of the retired `cites_no_such_six_item` shape."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "§6 item 8's stated property \"each item opens with its slug\" is not enforced for a trailing item: appending a slugless item 9 to §6 is invisible to both the 1..N check and the reference check.",
+      "evidence": "ORCHESTRATOR-VERIFIED. src/browser/eval_adapter.py:677-679 — `_SIX_ITEM` only matches lines that DO carry a slug, so a slugless item is simply absent from `slugs`; a gap in the middle is red, but a missing trailing item leaves `sorted(keys) == range(1, len+1)` intact. Appending `9. a brand new rule with no slug at all;` to §6 returns `{'passed': True, 'wrong': []}` — I reproduced this. Combined with R10, that new item can also be referenced bare and stay green. ADR-019:216-217 states this as graded.",
+      "repro": "append `9. a brand new rule with no slug at all;` to §6 -> passed True, wrong []",
+      "acceptance": "Numbered lines in §6 are enumerated independently of whether they carry a slug (match `^(\\d+)\\. ` first, then require the slug), so a slugless item is red. Watched red with the appended item 9."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The region-vacuity defect the implementer self-found is closed only for the one instance it hit — the region can still be silently truncated or widened by an ordinary edit, there is no non-vacuity guard, and the comment that claims otherwise is false in two of the three cases it names.",
+      "evidence": "src/browser/eval_adapter.py:681-686 — `region = here.split(_REGION[0],1)[1].split(_REGION[1],1)[0]`, with the comment at :682-684 asserting \"Deleting the opening marker is an IndexError and deleting the closing one widens the region to the rest of the file — both loud, neither silently empty.\" (a) Deleting the closing marker is NOT loud: the only §6 reference outside the region is eval_adapter.py:3738 `§6 item 8 (references)`, which resolves, and there is no `property N` outside — result passed True. (b) Any comment inside the region that quotes the end-marker text truncates the region silently: inserting a comment naming the end marker above `_BAND_RATE` shrinks the region from 458 lines to ~20 and the check stays green — and it then MASKS a real defect: mis-pointing `# Item 4 (committed-ceiling).` to `# Item 4 (derivation).` is red with the region intact and GREEN with it truncated. Moving a band function below the end marker, or adding band code after it, is the same hole. No assertion on region size or content exists.",
+      "repro": "insert a comment quoting the end-marker text above `_BAND_RATE`, then mis-point `# Item 4 (committed-ceiling).` -> red with the region intact, green with it truncated",
+      "acceptance": "A non-vacuity guard on the region — e.g. red unless the region contains `def _check_published_band(` and `def _band_wrong(`, and both markers were found exactly once in the file — plus the comment corrected to say what is actually loud. Watched red by inserting a marker-quoting comment and by deleting the closing marker."
+    },
+    {
+      "id": "R13",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R8 repair replaced one wrong count with another: T-R57's spec and the case's own provenance both state \"592 citations across 218 files\" while the shipped check reports 597 — the same description-does-not-match-the-code class, inside the commit written to close it.",
+      "evidence": "tasks/TODO.md:877-878 \"592 citations in 218 files on this tree\" and adr-header-and-index.json:14 \"592 citations across 218 files resolve on the committed tree\". `_run_adr_header_index_case` returns `{'adr_files': 20, 'index_entries': 20, 'adr_citations_seen': 597, 'files_scanned': 218}` on a tree whose only working-tree diff from HEAD is evals/report/history.jsonl, which the scan excludes (eval_adapter.py:1826). Nothing grades the number, so both suites stay green on it.",
+      "repro": "`_run_adr_header_index_case({'input':{}})['got']` -> adr_citations_seen 597",
+      "acceptance": "Both sites carry 597, or drop the count — the count is a moving target that nothing grades, which is R8's original acceptance clause (\"or drops the count\")."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "INDEX.md describes item 8's graded scope as \"the check's own source\" while ADR-019 and README both say \"the marked band region\" — and one §6 reference in that source file sits outside the graded region.",
+      "evidence": "specs/decisions/INDEX.md:28 (ADR-019 row): \"every reference to it — in that file, in README and in the check's own source — must name the item it points at, slug and all, or the gate is red\". eval_adapter.py:3738 (`_run_doc_counts_case`) carries `§6 item 8 (references)`, outside the region (361-819) and therefore ungraded. It is correct today; it drifts silently on a renumber.",
+      "repro": "strip the region from eval_adapter.py's text and scan the remainder for `item N` -> the §6 item 8 reference at :3738",
+      "acceptance": "INDEX.md:28 says \"the marked band region of the check's source\", matching ADR-019:214-216 and README.md:110 — or the region grows to cover eval_adapter.py:3738.",
+      "route_note": "LOW, but it is the same three-documents-disagree shape this PR exists to close, and the fix is one clause."
+    },
+    {
+      "id": "R15",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "T-R59 is closed for the three scanned texts but six bare `item N` references to §6 survive in hand-edited tasks/TODO.md, unbound to any slug and outside the graded set — the renumber-drift residue T-R59 named, unlogged under any new debt id.",
+      "evidence": "tasks/TODO.md:37, :902, :906, :928, :931, :934 — e.g. :902 \"§6 item 1, published case count == current case count\" and :931 \"satisfy item 5 for a band republished at 12.89\". tasks/TODO.md joined the ADR-citation scan this round (eval_adapter.py:1819) but not item 8's reference scan, which reads only ADR-019, README and the marked region. T-R59 was deleted from TODO.md and the residue is named only in tasks/reviews/pr36-r1-resolution.json, which nothing reads. tasks/TODO.md:902 is also a T-R62-class paraphrase.",
+      "repro": "grep -nP '(?<![A-Za-z])[Ii]tems? [0-9]+' tasks/TODO.md -> six hits",
+      "acceptance": "Either the six references carry their slugs and tasks/TODO.md joins item 8's scanned set, or T-R62 (or a new block) names tasks/TODO.md as an unbound-reference surface so the closure of T-R59 is honest about what it left.",
+      "route_note": "LOW, but closing a debt block while leaving its residue unnamed is precisely the honesty failure this task is about."
+    }
+  ],
+  "gate": {
+    "invariant": "53/53 = 1.000",
+    "fast": "136/136 = 1.000"
+  },
+  "note": "R10 is a REGRESSION: the repair removed a guard that existed at 6e19c3b, and the case file still records that guard's output as its watched_red. A check weaker than its own recorded evidence."
+}

@@ -358,16 +358,28 @@ def _check_planner_prompt() -> dict:
     return {"passed": not wrong, "wrong": wrong}
 
 
+# ==== ADR-019 §6 band section: begin ====
+# Everything between these two markers is the band subsystem, and
+# §6 item 8 (references) reads THIS REGION of this file — not the whole 3,900-line
+# adapter, which serves every task in the repo and would hand the band case a
+# red for an `item N` written about something else entirely (PR #36 R5).
+#
 # The one sentence per suite that ADR-019 must carry for its band to be
-# checkable. Deliberately a labelled scalar, not the list of run times: a list
-# is a snapshot and `history.jsonl` grows on every gate run, so a grader that
+# checkable. It names the RUN the band came from by its ledger timestamp and
+# repeats that row's RESULT, so the published number is not merely "some row"
+# but that row, with what it scored disclosed (PR #29 R21 published values from
+# no run at all; PR #35 R5 published two from red, dirty ones; T-R55 found
+# `fast`'s band citing a 134/136 run in silence beside `invariant`'s, which
+# disclosed 53/53 — a reader reasonably reads the silence as a pass). Green is
+# deliberately not required of a band source (§6 item 2 (cited-run)), which is exactly
+# why
+# the result has to be stated, and graded, wherever a band is cited.
+# Deliberately a labelled scalar, not the list of run times: a list is a
+# snapshot and `history.jsonl` grows on every gate run, so a grader that
 # string-matched it would go red on the next run rather than on a regression.
-# The one sentence per suite that ADR-019 must carry for its band to be
-# checkable. It names the RUN the band came from by its ledger timestamp, so the
-# published number is not merely "some row" but that row (PR #29 R21 published
-# values from no run at all; PR #35 R5 published two from red, dirty ones).
 _BAND_LINE = re.compile(
-    r"Band source — `(fast|invariant)` at (\d+) cases, ts `([\d-]+)`, \*\*([\d.]+)s\*\*")
+    r"Band source — `(fast|invariant)` at (\d+) cases, ts `([\d-]+)`, "
+    r"\*\*([\d.]+)s\*\*, (\d+)/(\d+)")
 
 # ADR-019 §6's declaration of what the band property does NOT see: the size of
 # the hole, as a number the rule fixes rather than prose that can be softened
@@ -380,6 +392,12 @@ _SLACK_MARK = re.compile(r"one ceiling step \(\*\*([\d.]+)s\*\*\)")
 _ADR019 = (Path(__file__).parents[2] / "specs" / "decisions"
            / "ADR-019-wall-clock-ceilings-per-suite.md")
 _README = Path(__file__).parents[2] / "README.md"
+_INDEX = Path(__file__).parents[2] / "specs" / "decisions" / "INDEX.md"
+
+# Any decimal (or integer) token, for reading a document's numbers as numbers
+# instead of as the one string that happened to be typed when the check was
+# written (T-R45).
+_DECIMAL_TOKEN = re.compile(r"(?<![\d.])\d+(?:\.\d+)?(?![\d.])")
 
 # README republishes the same two scalars as a table row. Graded against the
 # ADR's sentence rather than against the ledger a second time, so there is one
@@ -391,7 +409,40 @@ _README_BAND_ROW = re.compile(
 # "gives 66.41 × 1.15 = 76.37 → **80**" — the sentence that turns a published
 # maximum into a ceiling. Nothing used to read it, so the ADR could argue a
 # ceiling nothing commits and no check could tell (PR #35 R4).
-_BAND_DERIVATION = re.compile(r"([\d.]+) × 1\.15 = ([\d.]+) → \*\*(\d+)\*\*")
+# The rate and the rounding step are ADR-013 Decision 3's two constants, and
+# they are written ONCE here: `_band_rule`, this regex and every product this
+# file recomputes read them. Re-typed, an amendment to the rule (PR #35 cold
+# review, F3) would have left the check enforcing the retired rate — green on a
+# document still publishing the old arithmetic, and red on the one repaired to
+# the new — which is the same defect as a re-typed slack scalar, one level up.
+# §6's list carries a stable slug per item — `3. (same-ceiling) …` — and every
+# reference to it spells both: `item 3 (same-ceiling)`. The number alone is a
+# POSITION, and a position survives being re-pointed at a different rule
+# (PR #36 R2) or the list being renumbered under it; the slug is the
+# content half, so the two disagreeing is red.
+_SIX_ITEM = re.compile(r"^(\d+)\. (?:\(([a-z][a-z-]*)\) )?", re.M)
+# The slug may wrap onto the next line, behind a comment marker if the reference
+# is in source — these are prose documents and a reference near a line end is not
+# a defect.
+_SIX_REF = re.compile(
+    r"(?<![A-Za-z])([Ii]tems?) (\d+)(?:(?:[ ]|\n[ ]*#?[ ]*)\(([a-z][a-z-]*)\))?")
+# Built, not written out: a literal copy of either marker HERE would be the
+# first one `split` finds, and the region would be the few lines between this
+# tuple and itself — which is exactly what happened while writing this, with
+# 300 lines of band code silently unscanned and the check green.
+_REGION = tuple(f"# ==== ADR-019 §6 band section: {edge} ===="
+                for edge in ("begin", "end"))
+
+# What has to be inside those markers, matched at column 0: the band functions,
+# and the module-level constants the band checks read. Named rather than
+# inferred, so what it does NOT pin is legible — ADR-019 §6 says which.
+_BAND_DEF = re.compile(
+    r"^(?:def )?(_band\w*|_check_published_band\w*|_BAND\w*|_SIX\w*"
+    r"|_SLACK_MARK|_REGION)\b", re.M)
+
+_BAND_RATE, _BAND_STEP = 1.15, 5
+_BAND_DERIVATION = re.compile(
+    rf"([\d.]+) × {re.escape(f'{_BAND_RATE:g}')} = ([\d.]+) → \*\*(\d+)\*\*")
 
 # The Ruling's own local ceilings. This is where "the ADR's published ceiling
 # equals `WALL_BUDGET_S[suite]`" belongs: the derivation sentence states what
@@ -403,17 +454,25 @@ _ADR_CEILING = re.compile(r"local `(fast|invariant)`[^,]*?\*\*(\d+)s\*\*")
 
 def _band_rule(x: float) -> int:
     """ADR-013 Decision 3's rule: slowest observed +15%, rounded up to a five."""
-    return ((int(x * 1.15) // 5) + 1) * 5
+    return ((int(x * _BAND_RATE) // _BAND_STEP) + 1) * _BAND_STEP
 
 
 def _band_step_s() -> float:
     """One ceiling step, in wall-clock seconds, read off `_band_rule` itself.
 
     This is the width of a band, so it is exactly the slack ADR-019 §6 declares.
-    Re-typing `5 / 1.15` would mean an amendment to ADR-013's rule (the rounding
-    step, or the 15%) left the published slack unchanged and every check green
-    while the real hole doubled. `_band_rule` is monotonic, so bisect it for two
-    consecutive ceiling boundaries and subtract."""
+    Re-typing the quotient would mean an amendment to ADR-013's rule (either of
+    `_BAND_STEP`, `_BAND_RATE`) left the published slack unchanged and every
+    check green while the real hole doubled. `_band_rule` is monotonic, so bisect it for two
+    consecutive ceiling boundaries and subtract.
+
+    ASSUMES the rule is LINEAR in x (`int(x * _BAND_RATE) // _BAND_STEP`), which makes
+    ONE step measured at x=60 a bound for EVERY published band, including
+    `invariant`'s at ~13s. Monotonicity only makes the bisection valid; linearity
+    is what makes the answer scale-free. Amend ADR-013's rule to anything
+    scale-dependent — a percentage of the value, a floor at small magnitudes —
+    and this has to become a measurement at each published band, graded against
+    its own (T-R54)."""
     def edge(c: int) -> float:  # inf{x : _band_rule(x) >= c}
         lo, hi = 0.0, 1e4
         for _ in range(64):
@@ -433,13 +492,18 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
     Split out for `published-band-slack-is-declared` (ADR-019 §6). The miss the
     weak property allows cannot be demonstrated against the committed doc —
     that doc is, by this very check, inside the band it publishes — so the case
-    that pins it needs a synthetic ledger and this needs to be callable."""
+    that pins it needs a synthetic ledger and this needs to be callable.
+
+    Two of the shapes below are preconditions of the list rather than items of
+    it, and ADR-019 §6 names them as such (T-R49): `adr_publishes_no_band_line`
+    is the whole list having nothing to grade, and `no_recorded_run_at` is
+    item 2 (cited-run) having no candidate row at all."""
     wrong = []
     for suite in sorted(ceilings):
         if suite not in published:
             wrong.append({"suite": suite, "adr_publishes_no_band_line": True})
             continue
-        cases, ts, said = published[suite]
+        cases, ts, said, passed, total = published[suite]
         now = counts[suite]
         # Every recorded run at this case count, not only the green ones. A
         # wall clock is a wall clock whether or not a case failed, taking the
@@ -451,8 +515,8 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
                     if r["suite"] == suite and r["total"] == now]
         slowest = max(recorded) if recorded else None
         if cases != now:
-            # Carry the number the doc needs, not just the fact that it is
-            # stale: growing a suite reddens this, and the fix is to republish
+            # Item 1 (count). Carry the number the doc needs, not just the fact that it
+            # is stale: growing a suite reddens this, and the fix is to republish
             # both scalars, so the red output is the whole regeneration step.
             wrong.append({"suite": suite, "published_case_count": cases,
                           "actual": now, "ledger_slowest_at_actual": slowest})
@@ -460,8 +524,8 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         if slowest is None:
             wrong.append({"suite": suite, "no_recorded_run_at": now})
             continue
-        # The cited run must exist at this count and must have measured the
-        # published number. Cleanliness is judged AS OF that run: a dirty row is
+        # Item 2 (cited-run). The cited run must exist at this count and must have measured
+        # the published number. Cleanliness is judged AS OF that run: a dirty row is
         # refused only if a clean one was already available when the band was
         # published. Requiring `clean` outright deadlocked the one operation
         # CLAUDE.md rule 2 makes routine — a tree only reaches count N+1 while
@@ -484,12 +548,20 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
                           "clean_runs_available_by_then":
                           [r["ts"] for r in at
                            if not r.get("dirty", True) and r["ts"] <= ts]})
+        # Item 2 (cited-run), the result half: the citation claims the row's own
+        # `passed/total`, not prose beside it (T-R55).
+        if src is not None and (src["passed"], src["total"]) != (passed, total):
+            wrong.append({"suite": suite, "cited_run": ts,
+                          "citation_claims": f"{passed}/{total}",
+                          "row_records": f"{src['passed']}/{src['total']}"})
+        # Item 3 (same-ceiling).
         if _band_rule(said) != _band_rule(slowest):
             wrong.append({"suite": suite, "published_slowest": said,
                           "derives_ceiling": _band_rule(said),
                           "ledger_slowest": slowest,
                           "ledger_derives": _band_rule(slowest),
                           "runs": len(recorded)})
+        # Item 4 (committed-ceiling).
         required = _band_rule(slowest)
         if ceilings[suite] < required:
             wrong.append({"suite": suite, "ceiling": ceilings[suite],
@@ -507,10 +579,15 @@ def _check_published_band() -> dict:
     from a maximum that did not exist. What is graded holds as runs accumulate
     and goes red exactly when it should.
 
-    **The seven properties are listed in ADR-019 §6 and are not restated here.**
-    That is the point of the section: this docstring carried its own three-item
-    version for three rounds while the check grew to seven, and the two drifted
-    (PR #35 R15/R16). Each block below names the item it implements.
+    **What is required is listed in ADR-019 §6.** This docstring carried its own
+    three-item version for three rounds while the check grew (PR #35 R15/R16),
+    then carried the COUNT while the list grew by one more (cold review of
+    T-R56) — a restatement small enough to look like prose is still a
+    restatement, and neither was graded. So the blocks below name the item they
+    implement and say nothing else about it, in the `item N (slug)` form
+    item 8 (references) grades. What that form buys is that a name pointed at
+    the wrong item is red; a paraphrase carrying no name is still invisible, and
+    ADR-019 §6 says so in those terms.
 
     A run slower than the published band reddens the NEXT gate run, which is the
     intended cost: the band is a claim about this tree, and a tree that got
@@ -522,7 +599,8 @@ def _check_published_band() -> dict:
     from evals.run import HISTORY, WALL_BUDGET_S, load_cases
 
     adr = _ADR019.read_text(encoding="utf-8")
-    lines = [(m.group(1), (int(m.group(2)), m.group(3), float(m.group(4))))
+    lines = [(m.group(1), (int(m.group(2)), m.group(3), float(m.group(4)),
+                           int(m.group(5)), int(m.group(6))))
              for m in _BAND_LINE.finditer(adr)]
     published = dict(lines)
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
@@ -530,22 +608,24 @@ def _check_published_band() -> dict:
     wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows)
     # README's table is the other half of the same claim and drifted from this
     # file once already (PR #29 R24, the origin of T-R34). The whole row or red:
-    # one set of numbers, two documents, no hand-kept copy (ADR-019 §6 item 7).
+    # one set of numbers, two documents, no hand-kept copy — ADR-019 §6
+    # item 7 (readme-row).
     readme = _README.read_text(encoding="utf-8")
     rows = [(m.group(1), (int(m.group(2)), float(m.group(3)),
                           float(m.group(4)), int(m.group(5))))
             for m in _README_BAND_ROW.finditer(readme)]
     table = dict(rows)
-    for suite, (cases, _ts, said) in sorted(published.items()):
+    for suite, (cases, _ts, said, _p, _t) in sorted(published.items()):
         # The whole row, product and ceiling included: an ungraded copy is the
         # one that drifts, which is the lesson of R1 and R2 in this same PR.
-        want = (cases, said, round(said * 1.15, 2), WALL_BUDGET_S[suite])
+        want = (cases, said, round(said * _BAND_RATE, 2), WALL_BUDGET_S[suite])
         if table.get(suite) != want:
             wrong.append({"suite": suite, "adr_row": list(want),
                           "readme_row": list(table[suite]) if suite in table
                           else None})
-    # Both parses are last-wins dicts, so a superseded band left above the live
-    # one shadows it in silence — and if both land in the same band, publishes a
+    # Item 7 (readme-row), second half. Both parses are last-wins dicts, so a
+    # superseded band left above the live one shadows it in silence — and if
+    # both land in the same band, publishes a
     # number from no recorded run with everything green. Guarded on both sides:
     # the ADR side was PR #29 R24, README's was the same hole two lines later
     # (PR #35 R2).
@@ -554,14 +634,15 @@ def _check_published_band() -> dict:
         for suite in sorted({s for s in seen if seen.count(s) > 1}):
             wrong.append({"suite": suite, f"{where}_publishes_two_bands": True})
     # The ceiling the ADR DERIVES from that maximum, in prose, must be the one
-    # the RULE gives — not the one `evals/run.py` commits (ADR-019 §6 item 5).
+    # the RULE gives — not the one `evals/run.py` commits (ADR-019 §6 item 5
+    # (derivation)).
     # Requiring the committed ceiling here reddens every case addition: a fresh
     # count has two or three runs, a short sample derives lower, and the commit
     # adding the case cannot pass its own gate (PR #35 R11). So "-> **15**"
     # under a heading that says 20s IS green, and §6 declares that residue;
     # what is graded is that the arrow is arithmetically the rule's own answer
     # and never above the committed ceiling.
-    for suite, (_, _ts, said) in sorted(published.items()):
+    for suite, (_, _ts, said, _p, _t) in sorted(published.items()):
         stated = [(float(a), float(b), int(c))
                   for a, b, c in _BAND_DERIVATION.findall(adr) if float(a) == said]
         if not stated:
@@ -573,13 +654,13 @@ def _check_published_band() -> dict:
             # applies the rule to 15.0 and lands on 15, not the committed 20
             # (PR #35 R13). `_band_rule(x)` is the same assertion from the other
             # end — the number the rule gives, not just the number committed.
-            if (round(x * 1.15, 2) != product or _band_rule(x) != ceiling
+            if (round(x * _BAND_RATE, 2) != product or _band_rule(x) != ceiling
                     or ceiling > WALL_BUDGET_S[suite]):
                 wrong.append({"suite": suite, "derivation": [x, product, ceiling],
-                              "arithmetic": round(x * 1.15, 2),
+                              "arithmetic": round(x * _BAND_RATE, 2),
                               "rule_gives": _band_rule(x),
                               "committed_ceiling": WALL_BUDGET_S[suite]})
-    # ...and the ceiling the Ruling publishes IS the committed one. Separate
+    # Item 6 (ruling): the ceiling the Ruling publishes IS the committed one. Separate
     # from the derivation on purpose: the rule applied to a fresh short sample
     # can come out below the committed ceiling and must not drag it down (§6),
     # but the number the ADR advertises can never be a number nothing enforces.
@@ -588,27 +669,113 @@ def _check_published_band() -> dict:
         if ruling.get(suite) != WALL_BUDGET_S[suite]:
             wrong.append({"suite": suite, "adr_ruling_ceiling": ruling.get(suite),
                           "committed_ceiling": WALL_BUDGET_S[suite]})
+    # Item 8 (references). §6's numbered list is the normative statement of what
+    # this check requires; the blocks above name the item they implement and say
+    # nothing else about it. What is graded is the naming, not the absence of a
+    # paraphrase: a reference carries the item's NUMBER AND ITS SLUG, and both
+    # must agree with the list. Position alone was not enough — PR #36 R2
+    # re-pointed README's third-item reference at an unrelated item and this
+    # check stayed green, because 6 is a number the list has. The slug binds a
+    # reference to content: move an item under a different number, or aim a
+    # sentence at the wrong one, and every reference that disagrees is red. A
+    # restatement carrying no reference at all is still invisible here (T-R62),
+    # which is why nothing in these documents claims otherwise.
+    six = adr[adr.index("### 6."):adr.index("## Consequences")]
+    # Every numbered line, THEN its slug — reading the list through a
+    # slug-bearing pattern made a slugless item simply absent, and an absent
+    # LAST item left `1..N` intact, so a rule could be appended with no slug and
+    # then referred to bare (PR #36 R11).
+    listed = _SIX_ITEM.findall(six)
+    slugs = {n: s for n, s in listed if s}
+    if ([n for n, _ in listed] != [str(i) for i in range(1, len(listed) + 1)]
+            or len(slugs) != len(listed)):
+        wrong.append({"adr_six_list_is_not_1_to_n_with_slugs": listed})
+    # This file's own share is the marked band region, not all 3,900 lines
+    # (PR #36 R5): an `item N` written about something else entirely is not a
+    # reference to this list. A region that stops covering the band code is the
+    # dangerous direction — it takes the scan with it and stays green — and it
+    # has happened twice here already: the markers quoted in their own
+    # definition (458 lines -> 68, green), and a fixed list of three names that
+    # said nothing about band code added later (PR #36 R16). So the region is
+    # checked before it is read, on three counts: each marker occurs EXACTLY
+    # once in the file, every name in the band set below is between them, and
+    # both markers start their own line with the closing one outside any body.
+    here = Path(__file__).read_text(encoding="utf-8")
+    marker_counts = [here.count(m) for m in _REGION]
+    region = (here.split(_REGION[0], 1)[-1].split(_REGION[1], 1)[0]
+              if marker_counts == [1, 1] else "")
+    # The band set, located in the FILE by OFFSET. Two earlier versions of
+    # this test were satisfied from inside the region by text that describes
+    # it: a fixed tuple of names whose literals sit here, and then a substring
+    # test that the very comment warning against it spelled out — the words
+    # "def _band_wrong(" in a comment made that definition inside-the-region
+    # wherever its body actually was (PR #36 R19). No comment can be an offset.
+    # `_BAND…`/`_SIX…`/`_SLACK_MARK`/`_REGION` are in the pattern because the
+    # module-level half of this subsystem is what the OPENING edge drops
+    # (PR #36 R20); it is a named set, not everything band-shaped, and
+    # `_ADR019`, `_README`, `_INDEX`, `_DECIMAL_TOKEN`, `_README_BAND_ROW` and
+    # `_ADR_CEILING` are deliberately outside it — see ADR-019 §6.
+    begin, end = ((here.index(_REGION[0]), here.index(_REGION[1]))
+                  if marker_counts == [1, 1] else (0, 0))
+    strays = [m.group(1) for m in _BAND_DEF.finditer(here)
+              if not begin < m.start() < end]
+    # ...and both markers sit at a top-level boundary: each starts its own line,
+    # and the closing one is not inside a body — moved up into one it leaves
+    # every definition on the correct side of it, keeps the counts at [1, 1],
+    # and still drops the rest of that body (PR #36 R16). The first non-blank
+    # line after it says which: indented means mid-body.
+    after = here.split(_REGION[1], 1)[-1].lstrip("\n")
+    off_boundary = (bool(after[:1]) and after[:1].isspace()
+                    or any(here[i - 1:i] not in ("", "\n") for i in (begin, end)))
+    if marker_counts != [1, 1] or strays or off_boundary:
+        wrong.append({"band_region_does_not_cover_the_band_code":
+                      {"marker_counts": marker_counts, "outside_the_region": strays,
+                       "markers_off_a_top_level_boundary": off_boundary,
+                       "region_lines": region.count("\n")}})
+    for where, text in (("adr", adr), ("readme", readme), ("eval_adapter", region)):
+        for m in _SIX_REF.finditer(text):
+            word, n, slug = m.group(1).lower(), m.group(2), m.group(3)
+            # A plural range cannot carry one item's slug, so it
+            # is not a form this convention allows: name each item.
+            # `n not in slugs` FIRST: `slugs.get(n) != slug` is `None != None`
+            # for a bare reference to an item that does not exist, which is how
+            # the round-1 guard against exactly that got deleted by the round-1
+            # repair (PR #36 R10).
+            if word == "items" or n not in slugs or slugs[n] != slug:
+                wrong.append({where: "reference_does_not_name_its_item",
+                              "wrote": m.group(0).strip(),
+                              f"item_{n}_is": slugs.get(n)})
+        # Space-only for `item N` above, because `_` is an identifier separator
+        # and `missing_item_9` is not a reference to anything (PR #36 R5). The
+        # retired numbering keeps `[ _]`: it is the shape the two renamed keys
+        # had, and inside this region nothing else spells it.
+        retired = re.findall(r"(?<![A-Za-z])propert(?:y|ies)[ _](\d+)", text)
+        if retired:
+            wrong.append({where: "uses_the_retired_property_numbering",
+                          "found": sorted(set(retired))})
     return {"passed": not wrong, "wrong": wrong}
 
 
 def _check_published_band_slack() -> dict:
     """ADR-019 §6: the band property's blind spot is declared, bounded, and pinned.
 
-ADR-019 §6 item 3 is `rule(published) == rule(ledger max)`, so a
+ADR-019 §6 item 3 (same-ceiling) is `rule(published) == rule(ledger max)`, so a
     published number BELOW the ledger's maximum is green while both derive the
     same ceiling. PR #29 R24 asked whether that was a decision or an
     artefact. This is what makes it a decision.
 
     Driven with a synthetic one-suite ledger and a ceiling of 999 so that only
-    item 3 can speak — item 4 is graded against the real ledger by
-    `published-band-matches-the-ledger` and would otherwise mask the boundary.
+    item 3 (same-ceiling) can speak — item 4 (committed-ceiling) is graded
+    against the real ledger by `published-band-matches-the-ledger` and would
+    otherwise mask the boundary.
 
       - the miss is green right up to the top of the band, and red one
         hundredth of a second past it, where the ceiling the doc justifies
         stops being the ceiling the ledger requires;
       - the harmful direction is still red, on BOTH items: R21's real
-        numbers, 12.96s published where 13.57s was recorded, once with property
-        4 disabled and once with R21's own 15s ceiling in place;
+        numbers, 12.96s published where 13.57s was recorded, once with
+        item 4 (committed-ceiling) disabled and once with R21's own 15s ceiling
+        in place;
       - the width of the hole is one ceiling step and ADR-019 publishes it, as
         a number `_band_step_s` reads off the rule rather than a sentence
         someone can quietly soften.
@@ -616,15 +783,18 @@ ADR-019 §6 item 3 is `rule(published) == rule(ledger max)`, so a
     wrong = []
     step_s = _band_step_s()
     adr = _ADR019.read_text(encoding="utf-8")
-    # Every restatement, in both documents, not just the one sentence that used
-    # to be graded: three copies of 4.35s were published and one was checked, so
-    # amending the rule and repairing the checked one left the other two green
-    # and wrong (PR #35 R1). ponytail: a stray figure written WITHOUT the marker
-    # is still invisible; upgrade to a bare-scalar sweep if that ever happens.
-    bare = re.compile(rf"(?<![\d.]){step_s:g}(?![\d])".replace(".", r"\."))
-    for name, text in (("adr", adr), ("readme", _README.read_text(encoding="utf-8"))):
+    # Every restatement, in every document that publishes the figure, not just
+    # the one sentence that used to be graded: three copies of 4.35s were
+    # published and one was checked, so amending the rule and repairing the
+    # checked one left the other two green and wrong (PR #35 R1). INDEX.md is
+    # swept too — it carried a fourth, unmarked copy (T-R56's sweep) — but is
+    # not required to DECLARE the bound: it is a digest that cites §6.
+    for name, text, must_declare in (
+            ("adr", adr, True),
+            ("readme", _README.read_text(encoding="utf-8"), True),
+            ("index", _INDEX.read_text(encoding="utf-8"), False)):
         said = [float(v) for v in _SLACK_MARK.findall(text)]
-        if not said:
+        if must_declare and not said:
             wrong.append({name: "declares_no_slack", "one_ceiling_step_is": step_s})
         for v in said:
             if abs(v - step_s) > 0.005:
@@ -633,9 +803,18 @@ ADR-019 §6 item 3 is `rule(published) == rule(ledger max)`, so a
         # ...and no copy of the figure outside the marker. The round-1 repair
         # added the fourth copy in the same commit that claimed every copy was
         # graded (PR #35 R10), so the marker alone closed the instance and not
-        # the class: every occurrence of the current value in either document
-        # must be inside a marker.
-        loose = (len(bare.findall(text))
+        # the class: every occurrence of the current value in any of these
+        # documents must be inside a marker.
+        #
+        # The sweep is NUMERIC, not a match on the one string `f"{step_s:g}"`
+        # (T-R45): every decimal token in the document is read as a float and
+        # compared to the bound by the same 0.005 the marked copies are judged
+        # by, so `4.350`, `4.35 s` and `4.3500` are all the same published value
+        # and none of them is invisible. ponytail: a copy ROUNDED to a different
+        # number (`4.4` in a table cell) is a different value and still outside
+        # this — upgrade to a per-document rounding tolerance if one appears.
+        loose = (sum(1 for tok in _DECIMAL_TOKEN.findall(text)
+                     if abs(float(tok) - step_s) <= 0.005)
                  - sum(1 for v in said if abs(v - step_s) <= 0.005))
         if loose:
             wrong.append({name: "unmarked_copies_of_the_slack_scalar", "loose": loose,
@@ -643,11 +822,12 @@ ADR-019 §6 item 3 is `rule(published) == rule(ledger max)`, so a
 
     def judge(said: float, ledger_max: float) -> list:
         # Two clean rows: the one the band cites and a slower one the ledger
-        # also holds. Both clean, so only §6 item 3 can speak — the ceiling is
+        # also holds. Both clean, so only §6 item 3 (same-ceiling) can speak — the
+        # ceiling is
         # 999 for the same reason.
-        rows = [{"suite": "s", "total": 1, "ts": t, "wall_s": w, "dirty": False}
-                for t, w in (("1", said), ("2", ledger_max))]
-        return _band_wrong({"s": (1, "1", said)}, {"s": 1}, {"s": 999.0}, rows)
+        rows = [{"suite": "s", "total": 1, "passed": 1, "ts": t, "wall_s": w,
+                 "dirty": False} for t, w in (("1", said), ("2", ledger_max))]
+        return _band_wrong({"s": (1, "1", said, 1, 1)}, {"s": 1}, {"s": 999.0}, rows)
 
     # The bound is measured against the bands ADR-019 actually publishes, so it
     # is the headroom a reader of THIS doc has, not a sample chosen to flatter.
@@ -670,16 +850,25 @@ ADR-019 §6 item 3 is `rule(published) == rule(ledger max)`, so a
                           "derives": _band_rule(top),
                           "published_derives": _band_rule(said)})
     # PR #29 R21, the direction that is NOT declared: a band justifying a lower
-    # ceiling than the truth. Red on §6 item 3 (above, ceiling out of the way)
-    # and red on item 4 with the 15s ceiling R21 found it defending.
+    # ceiling than the truth. Red on §6 item 3 (same-ceiling) above, with the
+    # ceiling out of the way, and red on item 4 (committed-ceiling) with the 15s
+    # ceiling R21 found it defending.
     if not judge(12.96, 13.57):
-        wrong.append({"r21_underpublished_band_green_on_property_2": [12.96, 13.57]})
-    if not _band_wrong({"s": (1, "1", 12.96)}, {"s": 1}, {"s": 15.0},
-                       [{"suite": "s", "total": 1, "ts": t, "wall_s": w, "dirty": False}
-                        for t, w in (("1", 12.96), ("2", 13.57))]):
-        wrong.append({"r21_underjustified_ceiling_green_on_property_3": 15.0})
+        wrong.append({"r21_underpublished_band_green_on_item_3": [12.96, 13.57]})
+    # ...and item 4 (committed-ceiling) by name, not merely "something went red": item 3
+    # (same-ceiling) fires on
+    # these numbers too, so `if not _band_wrong(...)` would have been satisfied
+    # by item 3 (same-ceiling) alone and this key would have claimed a guard that was no
+    # longer
+    # there (cold review of T-R56). The item-4 shape is `required_by_adr013_rule`.
+    if not any("required_by_adr013_rule" in w for w in _band_wrong(
+            {"s": (1, "1", 12.96, 1, 1)}, {"s": 1}, {"s": 15.0},
+            [{"suite": "s", "total": 1, "passed": 1, "ts": t, "wall_s": w,
+              "dirty": False} for t, w in (("1", 12.96), ("2", 13.57))])):
+        wrong.append({"r21_underjustified_ceiling_green_on_item_4": 15.0})
     return {"passed": not wrong, "wrong": wrong,
             "got": {"declared_slack_s": step_s, "headroom_s": headroom}}
+# ==== ADR-019 §6 band section: end ====
 
 
 def _check_history_dirty_before_report() -> dict:
@@ -1613,6 +1802,24 @@ def _run_adr_header_index_case(case: dict) -> dict:
     `**Ruling**:` block of at most 3 lines before its first `---`, and
     specs/decisions/INDEX.md must list each ADR exactly once, matched by
     number so a renamed slug can't hide a missing or duplicated entry.
+
+    ...and every `ADR-0NN` citation in README and under `src/`, `evals/`,
+    `specs/`, `.github/`, `docs/` and `prompts/` resolves:
+    the decision exists, and where the citation names a section — `ADR-019 §4`,
+    the form this repo already uses — that section exists in it. Three files
+    attributed the per-suite wall-clock override to ADR-017, the M36 judge ADR,
+    for a whole milestone (T-R52): nothing read a citation, so the number could
+    be anyone's. A section reference is the part of a citation body a machine
+    can settle — ADR-017 has no numbered sections at all, so the miscitation is
+    red the moment it is written in the §-form.
+
+    ponytail: what is NOT graded is that the cited section RULES on the subject
+    the citing sentence is about. Three mechanisms for that were measured
+    against this tree and all three were unusable — rare-word overlap between
+    the citing line and the Ruling (70 false positives), the cited ADR having to
+    enforce a mechanism named on the same line (40), and a file having to cite
+    every ADR that uniquely owns an identifier it uses (8 files, all legitimate).
+    Logged as T-R57 rather than shipped as noise.
     """
     import re
 
@@ -1641,12 +1848,59 @@ def _run_adr_header_index_case(case: dict) -> dict:
     missing_index = sorted(set(adr_nums) - set(index_nums))
     dup_index = sorted({n for n in index_nums if index_nums.count(n) > 1})
 
+    # Sections, per ADR: `### 4. ...` headings, the numbering a `§N` citation
+    # points at. An ADR with none (ADR-017 is one) can be cited, never sectioned.
+    root = Path(__file__).parents[2]
+    sections = {}
+    for p in adr_files:
+        n = re.match(r"ADR-(\d+)", p.name).group(1)
+        sections[n] = set(re.findall(r"^#{2,3} (\d+)\.", p.read_text(encoding="utf-8"),
+                                     re.M))
+    # Everything hand-edited that carries rules or evidence — including
+    # `tasks/TODO.md`, `tasks/DONE.md` and `CLAUDE.md`, which between them carry
+    # ~100 citations and were outside this sweep while its own description said
+    # only the reviewer records were (PR #36 R3). `tasks/reviews/` IS out, on
+    # the ground REPORT_CITATION_SKIP names: those files are verbatim reviewer
+    # records, never edited, and six of PR #29's citations point the judge ADR's
+    # number at wall-clock sections it does not have — the record of the
+    # confusion T-R52 repaired, not a citation this repo gets to fix. (Their
+    # exact form is not quoted here, for the same reason REPORT_CITATION_SKIP
+    # spells its exception out in prose: this sweep reads this file too.)
+    # `evals/report/` is out because those are machine-written artifacts.
+    citing = [root / "README.md", root / "CLAUDE.md",
+              root / "tasks" / "TODO.md", root / "tasks" / "DONE.md"]
+    for d in ("src", "evals", "specs", ".github", "docs", "prompts"):
+        citing += [p for p in (root / d).rglob("*")
+                   if p.is_file()
+                   and p.suffix in (".py", ".md", ".yml", ".yaml", ".json")
+                   and "__pycache__" not in p.parts
+                   and not p.is_relative_to(root / "evals" / "report")]
+    dangling, bad_section, resolved = [], [], 0
+    for p in sorted(citing):
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        rel = str(p.relative_to(root))
+        # `_ADR019`, `required_by_adr013_rule`, `watched_red_adr017` — the tree
+        # spells decisions in identifiers too, and the last of those was a fifth
+        # T-R52 miscitation sitting outside `ADR-(\d{3})` while this check
+        # reported every citation resolving (PR #36 R4).
+        for m in re.finditer(r"(?<![A-Za-z])ADR[-_]?(\d{3})(?: §(\d+))?",
+                             text, re.I):
+            num, sec = m.group(1), m.group(2)
+            resolved += 1
+            if num not in sections:
+                dangling.append({"file": rel, "cites": f"ADR-{num}"})
+            elif sec and sec not in sections[num]:
+                bad_section.append({"file": rel, "cites": f"ADR-{num} §{sec}",
+                                    "has_sections": sorted(sections[num])})
+
     wrong = {k: v for k, v in {
         "missing_ruling": missing_ruling, "ruling_too_long": bad_length,
         "missing_from_index": missing_index, "duplicated_in_index": dup_index,
+        "cites_no_such_adr": dangling, "cites_no_such_section": bad_section,
     }.items() if v}
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"adr_files": len(adr_files), "index_entries": len(index_nums)}}
+            "got": {"adr_files": len(adr_files), "index_entries": len(index_nums),
+                    "adr_citations_seen": resolved, "files_scanned": len(citing)}}
 
 
 def _run_readyz_case(case: dict) -> dict:
@@ -3543,7 +3797,12 @@ def _run_doc_counts_case(case: dict) -> dict:
             # phrase no document may carry again (R15, R16). ponytail: a
             # blacklist catches re-assertion of THESE rules, not the general
             # class; the general defence is one description in one place, which
-            # is what ADR-019 §6 now is.
+            # is what ADR-019 §6 is. What §6's references item adds, graded
+            # by `published-band-matches-the-ledger`, is narrower than this
+            # comment used to claim (PR #36 R2): it grades that a sentence
+            # deferring to the list names an item that exists and spells its
+            # slug — so a deferral pointed at the wrong rule is red — and
+            # nothing at all about a paragraph that copies a rule silently.
             for bad in inp.get("describes_a_deleted_rule", []):
                 if _live(bad) in live_text:
                     wrong.append({"describes_a_deleted_rule": bad, "doc": docrel})

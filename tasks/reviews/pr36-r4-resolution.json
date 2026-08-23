@@ -1,0 +1,49 @@
+{
+  "pr": 36,
+  "round": 4,
+  "resolutions": [
+    {
+      "id": "R19",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "Membership is a BYTE OFFSET (`begin < m.start() < end`), not a substring test. Nothing written in a comment can be an offset.",
+      "watched_red": "falsification first: `_band_wrong`'s body moved out returned {'passed': True, 'wrong': []}. After, each of the five band definitions moved below the end marker in turn: _band_rule (region_lines 505), _band_step_s (481), _band_wrong (426), _check_published_band (324), _check_published_band_slack (398) — each passed False with outside_the_region naming it.",
+      "verified_by_orchestrator": "the orchestrator's own R19 repro (moving `_band_wrong` below the end marker) now returns passed False with outside_the_region: ['_band_wrong']"
+    },
+    {
+      "id": "R20",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "The pinned set now includes the module-level constants the band checks read (`_BAND...`, `_SIX...`, `_SLACK_MARK`, `_REGION`), and BOTH markers must start their own line. The key that claimed only the closing marker is renamed `markers_off_a_top_level_boundary`.",
+      "watched_red": "begin marker moved down to just above `_BAND_RATE` with a reference re-pointed inside the dropped block -> {marker_counts:[1,1], outside_the_region:['_BAND_LINE','_SLACK_MARK','_SIX_ITEM','_SIX_REF','_REGION','_BAND_DEF'], region_lines:429}. Six more watched so \"either marker\" is true of both: band code after the end marker; closing marker into a body; opening marker deleted; opening marker quoted twice; a marker sharing a line with code; closing marker deleted (round 2, re-verified). Eleven in total, and ADR-019 §6 now ENUMERATES them instead of counting them wrong."
+    },
+    {
+      "id": "R21",
+      "resolution": "fixed",
+      "detail": "One `(references)` in the region's header comment.",
+      "verified_by_orchestrator": "eval_adapter.py:362-364 reads `§6 item 8 (references) reads THIS REGION of this file` with no duplication"
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [
+    "T-R63"
+  ],
+  "human_decision": "one tight pass on R19/R20/R21 after round 4 surfaced a HIGH, then merge",
+  "sweep": {
+    "covered": "ADR-019, README, INDEX, all three case files AND this round's own additions, grepped for guarantee-shaped language (`every...`, `all N...`, `cannot`, `no literal`, `nothing can`, `immune`, `guarantee`, `always`, `each clause`); 21 hits read in context",
+    "narrowed_own_claims": [
+      "`# EVERY band definition in the file is inside it` -> 'every name in the band set below' (twice)",
+      "'the one form of membership a comment cannot spell its way into' -> 'a form ... (PR #36 R19, where a substring test was satisfied by the comment warning against it)'",
+      "the key name `end_marker_inside_a_body`, which had silently grown to cover both markers, renamed rather than left describing half of what it tests"
+    ],
+    "verified": "the excluded-names claim is exact (`_ADR019`, `_README`, `_INDEX`, `_DECIMAL_TOKEN`, `_README_BAND_ROW`, `_ADR_CEILING` do not match `_BAND_DEF`), and none carries an `item N` reference today. NOTE (corrected after PR #36's confirming review, R22): the derived claim that T-R63's residue is therefore empty was WRONG — the unpinned header comment between the begin marker and the first pinned name carries two graded references, so the region can still lose content with every predicate green. T-R63 is corrected in place."
+  },
+  "debt": {
+    "T-R63": "the guard pins a named set, not everything band-shaped; band code added later under an unmatched name, or one of the six excluded constants growing a §6 reference, would be unpinned. Acceptance names the two ways to close it."
+  },
+  "gate": {
+    "invariant": "53/53 = 1.000, wall 13.13s",
+    "fast": "136/136 = 1.000, wall 62.39s"
+  },
+  "flagged_to_human": "a fifth `--no-verify` ledger-row commit (ed31875), same shape. The accumulated evidence for R9's suggested rule-5 exception; left for the human."
+}

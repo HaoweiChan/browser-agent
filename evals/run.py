@@ -72,14 +72,17 @@ def run_case(case):
 
 
 # Wall-clock ceilings, by suite. Repo policy in the same sense as the
-# invariant-100% rule below: `fast` is the pre-commit gate, and past 60s it
-# stops being run honestly (specs/decisions/ADR-002-performance-thresholds.md
-# Decision 4; the round-5 review of ADR-013 Decision 4's amendment to 70 could
-# not reproduce the straddling band that justified it, so it was withdrawn).
+# invariant-100% rule below: `fast` is the pre-commit gate, and a gate nobody
+# will sit through stops being run honestly (ADR-002 Decision 4,
+# specs/decisions/ADR-002-performance-thresholds.md). The number is not a
+# taste: it is the ledger's band plus 15%, rounded up to a five, re-derived
+# whenever the tree's cost moves — 60 through M30, 80 since ADR-019 §2. The one
+# time it moved on a band nobody could reproduce, the round-5 review of ADR-013
+# Decision 4's amendment to 70, it was withdrawn the same day.
 # Pinned by the case `fast-wall-clock-budget`.
 # Two suites, two numbers, both computed from `evals/report/history.jsonl` by
 # ADR-013's rule and graded against it by `published-band-matches-the-ledger`
-# (ADR-017 amends ADR-013 Decision 4).
+# (ADR-019 §2 amends ADR-013 Decision 4).
 # `invariant` gets one because it stopped being free: M31 put fixture runs in it,
 # and without a ceiling of its own the tag choice was an unbounded relief valve
 # for the `fast` gate — which is exactly how it got used, and how the `fast`
@@ -100,7 +103,7 @@ WALL_BUDGET_S = {"fast": 80, "invariant": 20}
 # a per-environment number, and CI enforced a locally-measured 15s it had never
 # run (PR #29 R15: CI red at 15.06s and 15.22s while every local run was 12.2s).
 # ADR-013 Decision 3's ruling was that one number cannot be tight locally and
-# true on CI; ADR-017 gives both suites the same treatment instead of one.
+# true on CI; ADR-019 §4 gives both suites the same treatment instead of one.
 WALL_BUDGET_ENV = "EVAL_WALL_BUDGET_S"
 
 
