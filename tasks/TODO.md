@@ -12,62 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-R56 — the band subsystem's documents and its own strings say what the code does            [status: pr]
-Origin: bundles T-R45, T-R46, T-R47, T-R48, T-R49, T-R52, T-R54, T-R55 (PR #35 R8/R17/R18/R19/R20/R21/R22 + T-R34 cold review)
-Spec: Eight debt blocks from PR #35 are the same defect in the same two documents and one
-grader: a description that does not match the code it describes. They were bundled because
-each one edits `specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md`, `README.md` and
-`src/browser/eval_adapter.py`, so eight sequential PRs would conflict on every one. The
-mechanism changes from the same review (T-R44, T-R50, T-R51, T-R53) are deliberately NOT
-in this task — they change behaviour, these change what is claimed about it.
-Acceptance: every folded block's own acceptance is met, each watched red first where it
-names a mutation:
-- T-R45 — the slack sweep matches any decimal rendering of the current value, not the one
-  string `f"{step_s:g}"`; watched red with `4.350`. Or the limit is stated in the docstring
-  beside the existing `ponytail:` note.
-- T-R46 — either §6's two restating paragraphs and README:107-109/:121 defer to the item
-  numbers, or the "one list, one place / restated nowhere" claims at ADR-019:167-168, :48-49
-  and `specs/decisions/INDEX.md`:28 are narrowed to what is true.
-- T-R47 — the keys emitted by `_check_published_band_slack` name §6's item numbers (or no
-  number), and no string there uses the retired `property N` numbering.
-- T-R48 — ADR-019 §3/§6 say the 15-deriving band was reachable and is green under the
-  current check, not that a commit of PR #35 published it; or a sha is cited that did.
-- T-R49 — either `adr_publishes_no_band_line` and `no_recorded_run_at` are folded into §6's
-  list (or named as preconditions), or ADR-019:48-49 drops "exactly"; and :69 cites
-  item 2 (cited-run) and item 3 (same-ceiling) for the cited run and
-  item 4 (committed-ceiling) for the ceiling.
-- T-R52 — `specs/decisions/INDEX.md`, `evals/run.py` and `.github/workflows/eval.yml` cite
-  ADR-019 for the per-suite override, not ADR-017 (which is the M36 judge ADR), and a graded
-  row resolves `ADR-0NN` references in those files against the decision that actually rules.
-- T-R54 — linearity is named as the assumption in `_band_step_s`'s docstring, or the step is
-  measured at each published band and each graded against its own.
-- T-R55 — a band citation carries `passed/total` derived from the ledger row it names, or the
-  parenthetical is dropped from both citations; watched red by publishing a band whose
-  citation claims a result the row does not have.
-Out of scope: T-R44, T-R50, T-R51, T-R53 — behaviour, not description.
-
-### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: pr]
-Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
-Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
-class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
-Open Library's first publication year for a search result), the correct
-value was present verbatim inside the page text the agent itself captured —
-`star-rating Three`, the infobox population figure, "First published in
-1965" — but the run returned `failure:semantic` with a multi-hundred/
-multi-thousand-character raw page dump as the `answer` field instead of
-either isolating the value or failing with `answer: null`. This is graded a
-failure, not a wrong success, so it does not implicate the inviolable
-property (`not_a_dump` never sees it: the check only fires on `success`), and
-it is out of the two-defect scope M10's repair was bounded to.
-Acceptance: a case pins the "data was captured but answer is a page-text
-dump on failure" shape red first, then either the extraction step tries a
-narrower isolation before giving up, or `failure:semantic`'s `answer` field
-is null'd rather than carrying the dump — reviewer's call which is correct.
-Promoted from Debt 2026-08-23: today's post-deploy receipt rounds (PR #32/#37) showed the
-planner's output is the dominant source of flakiness on the five Try examples; M28 is the
-half that does not collide with M32 (PR #34, in flight in another session).
-
-### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: todo]
+### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: in-progress]
 Origin: post-deploy receipt rounds for PR #32/#37/#38 (2026-08-23). `349e4839`,
 `e08b7627`, `bcae4fe7`, `63b9d944` (HN item 1, "Who submitted this story?"):
 `extract {role: link, name: "pg"}` → `ResolveError: 2 matches`; the relocation
@@ -117,24 +62,6 @@ reason and `judge_attempts: 2`; `judge-fail-closed-on-*` cases stay green;
 `docs/analysis.md` cost section states the worst-case extra judge call per
 run; gate green under the ADR-019 ceiling.
 Out of scope: judge prompt/model changes; retrying a reasoned FAIL.
-
-### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
-Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
-but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
-page text the agent captured and absent from the a11y elements the planner
-was shown (`docs/analysis.md` §8a-2).
-Spec: progressive disclosure of the *page*, not the tool set — the whole
-vocabulary is ~524 tokens of system prompt and disclosing it lazily saves
-nothing while breaking the closed-world guarantee. One new action `observe`
-with a `target` subtree: the executor re-runs `observe()` scoped to that
-subtree with the full `MAX_ELEMS` budget and a longer text head, and the
-result reaches the replanner through the existing observation+note path.
-Costs one planning call, bounded by `MAX_REPLANS`. No site knowledge.
-Acceptance: an offline fixture case where the answer element sits past
-`MAX_ELEMS` in document order goes from `failure:locate`/dump to correct, red
-first; `quotes.toscrape.com/js` keeps its honest marker if it is still
-unplannable; tokens-per-task measured before/after from committed reports
-and stated (must stay inside the 100k run budget).
 
 ### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
 Origin: `prompts/015` — "would an MCP / tool-calling loop raise completion?"
@@ -392,6 +319,11 @@ unrelated PR is how two trackers end up disagreeing.
 Repro: `grep -c 'T-R34' tasks/DONE.md` -> 0, while `tasks/pr-loop-ledger.jsonl`
 holds a T-R34 row dated 2026-08-23 and `git log --oneline origin/main` shows
 PR #35 merged.
+Status (2026-08-23, PR #40 housekeeping): both instances are now filed — T-R34
+and M37 have DONE.md lines, as do T-R56, M28 and M32 — so the repro above no
+longer reproduces. The block stays open for the guard only: the gap has now
+recurred across five tasks and was closed by hand each time, which is the
+argument for the second acceptance branch rather than the first.
 Acceptance: DONE.md gains its T-R34 line (and M37's when that closes), or the
 pr-loop close step is what writes it so the gap cannot recur — the latter is
 the better fix, since this is the second instance in two milestones. Cheap
