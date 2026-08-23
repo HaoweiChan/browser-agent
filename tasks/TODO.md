@@ -1006,6 +1006,37 @@ Acceptance: the Ruling parse refuses a suite that matches twice (same shape as
 the band. Watched red with a second ceiling phrase, and with a 12.89 band whose only
 derivation is §6's counterexample.
 
+### T-R66 — M28 half (b): isolate the asked cell before giving up on a container extraction            [status: todo]
+Origin: M28 implementer
+Spec: M28 shipped half (a) — a verifier-rejected run now carries `answer: null`, the
+rejected extraction stays in `evidence.extractions`, and `verify()` cites offending values
+by a bounded preview (`CITE_CHARS`) rather than quoting the dump back into `reason`
+(`extract-container-dump-is-not-the-answer`). Half (b), trying ONE narrower isolation
+before failing, was not built: on the live run (4bade630) the plan's `near` was the table
+CAPTION ("Tokyo 東京都"), not the label of the asked value, so re-resolving descendant cells
+near that anchor cannot pick "Population" — any site-agnostic isolation has to read the
+TASK text for a label word, and a keyword heuristic over the task is the regex-over-English
+ceiling this repo has already paid for three times (SCOPE_BLOCK, `_AGGREGATE`, D23). The
+cell-targeted plan already works on the same page shape (`{role: cell, near: "Motto"}`,
+runs 735cf2da / a5b9b065), so the honest upgrade is planner targeting (M32's half) or a
+replan note that names the shape ("the container you extracted holds N cells; target the
+one the question asks for") — not an executor heuristic.
+Acceptance: a replan-after-dump path or a planner prompt rule, pinned by the same fixture
+(`city-infobox.html`) with the container plan as the FIRST stub plan and the cell plan as
+the second; plus a negative twin where the label is absent and the run must still end
+`answer: null`, never a guessed cell.
+
+### T-R67 — docs/analysis.md §6 task-class / difficulty table is ungraded and has drifted            [status: todo]
+Origin: M28 implementer
+Spec: the §6 table says it is "refreshed from the case files' own `tc`/`level`/`domain`
+tags", but only the golden/adversarial split and the domain rows are graded
+(`docs-numbers-are-derived`, `analysis_coverage`). Tallying the tags at 148 cases gives
+TC1 35 / TC4 28 / TC3 13 / TC2 8 / TC5 6 and L1 46 / L2 26 / L4 16 / L3 15 / L5 8; the
+table carries TC1 32 and L1 36 (M28 bumped each by one for its own case; the rest of the
+gap predates it). The L3 cell is prose naming cases, which is why nobody regenerated it.
+Acceptance: the TC/level counts join `analysis_coverage`'s graded set (derived from the
+tags, same as the split), or the table is cut down to the graded rows and says so.
+
 ## Notes
 
 ### Reopen — A-phase (2026-08-17)

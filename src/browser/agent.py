@@ -373,9 +373,16 @@ def assemble_result(trace, answer, budgets, failure=None, reason=None, final_url
     if status == "success" and (not answer or not trace):
         status, reason = "failure:extract", reason or "empty answer or empty trace"
     # INV-2: the executor's claim never outranks the verifier (specs/000).
+    # M28: ...and a rejected answer is not an answer. The demoted run used to
+    # carry the rejected extraction as its `answer` -- a whole infobox, ~1.5k
+    # chars, on the deployed build (run 4bade630, case
+    # extract-container-dump-is-not-the-answer). What was read stays in
+    # `evidence.extractions`, in full, where the verifier read it from; the
+    # user-facing field says what the verdict says: nothing here answers.
     if status == "success" and verdict and verdict.get("verdict") != "PASS":
         status = "failure:semantic"
         reason = reason or f"verifier {verdict['verdict']}: {verdict.get('reason')}"
+        answer = None
     return {
         "status": status,
         # Which planner model produced this run. `None` from callers that do not

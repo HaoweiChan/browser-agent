@@ -566,7 +566,7 @@ const EXAMPLES = {
 const LIMITS = [
   "Needs a start URL or a site named in the task — no web search",
   "One visible value per page; second-page tasks (open category → read price) unreliable",
-  "Large tables / infoboxes: often fails, returns the whole block",
+  "Large tables / infoboxes: often fails — reads the whole block, not the one cell",
   "Can pass verification with a wrong answer — known defect, fix in progress",
   "Login, payment, CAPTCHA, delete, download: refused",
 ];
