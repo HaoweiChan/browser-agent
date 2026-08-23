@@ -30,6 +30,13 @@ jobs:
       # (PR #29 R19). `fast-wall-clock-budget` grades both values declared here.
       EVAL_WALL_BUDGET_S_FAST: "90"
       EVAL_WALL_BUDGET_S_INVARIANT: "20"
+      # Which environment measured a history row (ADR-019 §7). The `invariant`
+      # step below appends its row to this job's copy of the ledger before the
+      # `fast` step grades ADR-019 §3's locally-measured band against it, so
+      # without a tag CI's own number reddened a band it never measured — red on
+      # CI, green locally, same tree (T-R44). `evals/run.py` would fall back to
+      # `ci` here anyway, since Actions sets `CI`; this says it out loud.
+      EVAL_ENV: ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

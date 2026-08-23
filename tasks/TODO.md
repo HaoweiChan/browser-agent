@@ -106,6 +106,45 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-R73 — no CI wall clock reaches the committed ledger, so ADR-019 §5's four numbers are checkable only by a reader            [status: todo]
+Origin: T-R44
+Spec: T-R51 was closed on the labelling route, not the ledger route (ADR-019 §7): §5's four
+CI numbers now name eval-gate run 32561162459 attempts 1-4, which `gh run view 32561162459
+--attempt N --log` reprints, and README's older unlabelled CI band (59.77 / 60.84 / 64.61 /
+64.67s) is struck. What is still true is that `.github/workflows/eval.yml` runs the two
+suites and stops: no CI row is in `evals/report/history.jsonl`, so `published-band-matches-
+the-ledger` grades exactly one environment's bands here and §6 item 9 (environment) has one
+value to discriminate on. The mechanism to do better exists now — rows carry `env` and the
+band sentence names it — so a CI band would be gradeable the day a CI row lands.
+Acceptance: either a workflow step that publishes CI's history row as an artifact the check
+can read (or commits it), plus `Band source — ci ...` sentences in §5 that item 9 grades, or
+a recorded decision that CI's numbers stay reader-verified and §5/§7 say so permanently.
+
+### T-R74 — nothing grades that CI actually tags its rows `ci`            [status: todo]
+Origin: T-R44
+Spec: `evals/run.py` `env_tag()` returns `EVAL_ENV` if set, else `ci` when the runner sets
+`CI`, else `local`; `.github/workflows/eval.yml` sets `EVAL_ENV: ci`. The `local` branch is
+exercised by every gate run and the `ci` branch is reproducible on a laptop with `CI=1`, but
+that GitHub Actions sets `CI`, that the workflow's variable survives into the row, and that
+CI's `invariant` row is therefore excluded from a `local` band are all asserted rather than
+demonstrated — the same shape T-R51 was about, one level down. If the tag silently came out
+`local` on CI, T-R44's defect would return with every check green.
+Acceptance: `fast-wall-clock-budget` (which already parses the workflow for its two ceiling
+declarations) also pins that the workflow declares an environment that is not `local`, or a
+CI artifact carries the row and something reads its `env`. Watched red with the declaration
+removed.
+
+### T-R75 — README's `main runs fast in 89.62s` is the same unlabelled CI figure T-R51 struck its neighbours for            [status: todo]
+Origin: T-R44
+Spec: the M12 paragraph in README still publishes a bare CI measurement — "`main` runs
+`fast` in 89.62s" — with no run id and no artifact behind it. T-R44 struck the four-number
+CI band two sections above it for exactly that (nothing named the run, one value was a LOCAL
+ledger row) and labelled ADR-019 §5's four with eval-gate run 32561162459. This one was left
+because it is narrative about a ceiling that no longer exists, not a band anything derives
+from, so striking it was outside T-R44's acceptance.
+Acceptance: the figure carries the workflow run id that produced it, or it is cut to the
+claim that survives ("CI had been ~50% over the same ceiling with nothing checking").
+
 ### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
 Origin: M37 implementer
 Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"

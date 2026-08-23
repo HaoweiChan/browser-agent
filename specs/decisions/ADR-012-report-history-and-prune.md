@@ -31,9 +31,16 @@ evidence for a claim, not by having been generated.
 Every run appends one JSONL line to `evals/report/history.jsonl`, schema:
 
 ```
-{"ts", "suite", "sha", "dirty", "passed", "total", "score", "wall_s",
+{"ts", "suite", "sha", "dirty", "env", "passed", "total", "score", "wall_s",
  "cost_usd", "report"}
 ```
+
+**Amended 2026-08-23 (T-R44):** `env` is new — `local`, `ci`, or whatever
+`EVAL_ENV` says. A wall-clock ceiling is per (suite, environment) and the band
+grader had no way to tell two environments' rows apart, so on CI a band measured
+on a laptop was reddened by CI's own row; ADR-019 §7 is the reasoning and
+`_LEGACY_ENV` is what the rows written before this line count as. The other
+fields are unchanged.
 
 plus this fork's own extras when the adapters produced them (`p95_s`,
 `recovery`, `mutation` — ratios, matching the console printout). `sha`/`dirty`

@@ -55,18 +55,24 @@ derived from that was never measured (PR #29 R18, R21). That is the same
 selective presentation ADR-013 Decision 4 was withdrawn over, repeated in the
 decision that amends it.
 
-§5's CI numbers are not in that ledger and cannot be (no CI run commits their
-wall clock); they are hand-read off the workflow log, ungraded, and logged as
-debt (T-R51).
+§5's CI numbers are not in that ledger and cannot be — no CI run commits its
+wall clock, and this ADR does not make one: §7 says why, and labels them for what
+they are, hand-read off the log of a named workflow run so a reader can re-read
+it. They stay ungraded by `published-band-matches-the-ledger`, which reads this
+repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 137 cases, ts `20260823-200546`, **62.34s**, 137/137
-  (`evals/report/20260823-200546-fast.json`; the run that measured this tree
+- Band source — local `fast` at 138 cases, ts `20260823-211124`, **61.99s**, 136/138
+  (`evals/report/20260823-211124-fast.json`; the run that measured this tree
   while its newest case was still uncommitted, so `dirty: true`).
 
-The `137/137` is the cited row's own result, graded against it, not prose beside
-it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
+The `136/138` is the cited row's own result, graded against it, not prose beside
+it (T-R55) — and this one is a red run. The two cases it fails are
+`published-band-matches-the-ledger` and `docs-numbers-are-derived`, both of which
+go red at a fresh case count and stay red until the numbers are republished,
+which is what this sentence and §3's are doing; the invariant row §3 cites is the
+same run of the same tree and fails the same two. It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
 
@@ -84,7 +90,7 @@ the shipped case count, which is the R21 defect this ADR was amended over. What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 62.34 × 1.15 = 71.69 → **75**. The band published for the earlier
+five — gives 61.99 × 1.15 = 71.29 → **75**. The band published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of
@@ -97,11 +103,13 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 53 cases, ts `20260823-041729`, **13.32s**, 53/53
-  (ADR-012 writes no per-case report for a green run, so the ledger row is the
-  whole artifact — which is why the sentence cites the ts and not a file).
+- Band source — local `invariant` at 54 cases, ts `20260823-211142`, **13.68s**, 52/54
+  (`evals/report/20260823-211142-invariant.json`; the same red-at-a-fresh-count
+  run §2 describes. ADR-012 writes no per-case report for a green run, so a band
+  cited from one has only its ledger row — which is why the sentence cites a ts
+  and not a file).
 
-The same rule gives 13.32 × 1.15 = 15.32 → **20**. Two decimals on the product
+The same rule gives 13.68 × 1.15 = 15.73 → **20**. Two decimals on the product
 because one is not enough to re-derive it: "15.3" and "15.0" both round up to a
 multiple of five differently depending on how a reader reads them, and the
 committed ceiling is 20 (PR #35 R13). Note the band moved within this round, and be
@@ -149,10 +157,12 @@ ruled `fast` needed. `fast-wall-clock-budget` pins both directions.
 
 ### 5. CI's two numbers, measured on CI: 90 and 20
 
-Not projected from local runs, which is the mistake §3 made. Four attempts of
-one commit (`d173340` — 116 `fast`, 48 `invariant`; the tree at the time of
-measurement, smaller than the one this branch ships, which is part of why the
-CI half is debt, T-R51):
+Not projected from local runs, which is the mistake §3 made. **Hand-read off the
+workflow log, not from the ledger** (§7): four attempts of eval-gate run
+[32561162459](https://github.com/HaoweiChan/browser-agent/actions/runs/32561162459)
+on commit `d173340` — 116 `fast`, 48 `invariant`; the tree at the time of
+measurement, smaller than the one this branch ships. `gh run view 32561162459
+--attempt N --log` reprints each line below.
 
 | attempt | `invariant` | `fast` |
 |---|---|---|
@@ -160,6 +170,13 @@ CI half is debt, T-R51):
 | 2 | 15.85s | 74.06s |
 | 3 | 14.80s | 69.37s |
 | 4 | 15.60s | 74.04s |
+
+Each cell is one `[eval] cost … wall Ns` line of that attempt's log, with
+`invariant` 48/48 and `fast` 116/116 in all four. Nothing grades the four
+measurements: `published-band-matches-the-ledger` reads the committed ledger and
+no CI row is in it, and `fast-wall-clock-budget` grades only that the workflow
+declares the two ceilings they derive — not that anyone ever measured them. The
+run id is what a reader checks instead of the gate (§7).
 
 Same rule: 16.47 × 1.15 = 18.9 → **20**; 74.06 × 1.15 = 85.2 → **90**.
 
@@ -197,11 +214,15 @@ aimed at the wrong item, a plural range and the retired `property N` numbering
 are each red; and the region is checked before it is read — one occurrence of
 each marker in the file, both markers starting their own line, the closing one
 not inside a body, and every name in the band set (`_band…`,
-`_check_published_band…`, `_BAND…`, `_SIX…`, `_SLACK_MARK`, `_REGION`) between
+`_check_published_band…`, `_BAND…`, `_SIX…`, `_SLACK_MARK`, `_REGION`,
+`_LEGACY_ENV`) between
 them by byte offset, a form of membership no comment can spell its way into
 (PR #36 R19, where a substring test was satisfied by the comment warning
-against it). Eleven ways of making this scan stop scanning have been watched
-red: each of the five definitions moved out of the region one at a time, band
+against it). Every way found so far of making this scan stop scanning has been
+watched red — the count that used to stand here went stale the first time the
+band set grew, which is the lesson two paragraphs up:
+each of the six definitions and the `_LEGACY_ENV` constant moved out of the
+region one at a time, band
 code added after the end marker, either marker deleted, a comment quoting a
 marker a second time, a marker sharing a line with code, the closing marker
 moved into a body, and the opening one moved inward past the module-level
@@ -242,6 +263,12 @@ is about this section itself:
    bare name, a name the list has no item for, the `property N` numbering
    PR #35 round 4 retired, and a plural range no single slug can carry are each
    red.
+9. (environment) the band sentence names the environment it was measured in, and
+   every item above reads only the ledger rows recorded there. A row carrying no
+   `env` field is read as `local`, because every row committed before T-R44 is one
+   and all of them are local runs. A band naming an environment the ledger holds
+   no rows for lands in the `no_recorded_run_at` precondition below rather than
+   passing for want of anything to compare against.
 
 Green is required nowhere in that list and cannot be (T-R53); item 2 (cited-run) requires
 the result to be *stated*, not to be a pass. Item 5 (derivation) states the rule's value and
@@ -349,6 +376,68 @@ which is why item 2 (cited-run) requires the result to be disclosed instead.
 
 If you want the exact current maximum, the ledger is the artefact — and the
 grader prints it, with the case count, whenever the band needs republishing.
+
+### 7. (2026-08-23) A band belongs to an environment, and the ledger records which
+
+The Ruling above has said "one per (suite, environment)" since this ADR was
+written. The grader had not: `published-band-matches-the-ledger` read every
+`history.jsonl` row the process could see. On CI that is a strictly larger set
+than the committed ledger, because `.github/workflows/eval.yml` runs
+`--suite invariant` first and that run appends its own row — on slower hardware —
+to the job's copy of the file before `--suite fast` grades §3's band against it.
+Red on CI, green locally, on the same tree (PR #32, CI run 32626835735). `main`
+passes today by coincidence: at the shipped case count CI's number and this
+laptop's happen to derive the same ceiling. It has already cost something —
+M35 moved a new invariant case into `fast` to keep §3's band on the count `main`
+measured — and it is the trap every case-adding PR walks into (T-R44).
+
+**Every history row written from here on carries an `env` tag** (`evals/run.py`
+`env_tag()`) — the rows already committed do not, which is the next paragraph — and §6
+item 9 (environment) filters the ledger to the band's own environment before any
+other item reads it. The tag is `EVAL_ENV` when set, otherwise `ci` when the
+runner sets `CI`, otherwise `local`. It is deliberately NOT derived from the
+effective `EVAL_WALL_BUDGET_S_*`, the obvious candidate: CI's `invariant` ceiling
+is 20 and so is this laptop's, so that reading would have given both environments
+one tag on the very suite the defect appeared in.
+
+A row with no `env` field reads as `local` (`_LEGACY_ENV`). That is not a default
+chosen for convenience: every row written before this section is untagged and
+every one of them was measured here, because nothing but a local run has ever
+appended to the committed file — which is §5's problem, below. Be exact about
+what rests on it, since the obvious claim is wrong: the bands in §2 and §3 cite
+rows recorded AFTER the tag existed, so setting `_LEGACY_ENV` to anything else
+leaves `published-band-matches-the-ledger` green today — the untagged rows it
+would orphan are all at case counts nobody publishes a band for. What holds the
+reading up is the case, not the live ledger:
+`band-is-graded-against-its-own-environment` drives an untagged row through
+`_band_wrong` and requires it to be judged as a local one. The reading becomes
+load-bearing again the moment a band is republished from a row this ADR predates,
+which is the only way an old row can matter.
+
+**§5 stays hand-read, and now says so with a run id.** The other route was to
+make CI's wall clock land in the ledger — a job step that commits a row, or an
+artifact the check reads. It is not taken here: a step that commits from a
+pull-request job is a permissions-and-push-loop problem to solve for one number
+per run, and it cannot be verified from a laptop, which is the exact shape that
+produced this debt (numbers published that no committed artifact reproduces). So
+§5's four numbers are labelled for what they are and pinned to eval-gate run
+32561162459, attempts 1-4, where `gh run view … --log` reprints them. What is
+graded stays what was graded: `fast-wall-clock-budget` checks that the workflow
+declares the ceilings §5 names. That those ceilings came from a measurement is
+still not graded and cannot be from here — the run id makes it checkable by a
+reader, not by the gate (T-R51 closed on that reading; T-R73 carries the ledger
+route if it is ever wanted).
+
+**What this does not reach.** No CI band is published, so §6 item 9
+(environment) has exactly one environment to grade in this repo today —
+`local` — and the CI half of the mechanism is asserted rather than demonstrated
+here. `env_tag()` was exercised on all three branches from a laptop (`CI=1` → `ci`,
+unset → `local`, `EVAL_ENV=staging` → `staging`), but that GitHub Actions sets
+`CI`, that the workflow's `EVAL_ENV: ci` reaches the row, and that CI's
+`invariant` row is therefore excluded from a `local` band are none of them graded
+by anything (T-R74). The first CI run of this branch is the measurement, and this
+ADR does not promise the answer — the last time this file did, it came due
+immediately and the answer was no, twice over (Consequences, below).
 
 ## Consequences
 

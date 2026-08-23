@@ -1,18 +1,18 @@
 {
   "suite": "invariant",
-  "score": 1.0,
+  "score": 0.9629629629629629,
   "totals": {
     "actions": 23,
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 5517,
+    "ms": 5580,
     "judge_calls": 4,
     "judge_tokens": 0,
     "judge_usd": 0.0,
-    "wall_seconds": 13.13,
+    "wall_seconds": 13.68,
     "latency_p50": 0.0,
-    "latency_p95": 2.22,
+    "latency_p95": 2.29,
     "cases_with_budgets": 11
   },
   "metrics": {
@@ -26,14 +26,14 @@
     {
       "passed": true,
       "wrong": [],
-      "seconds": 2.22,
+      "seconds": 2.64,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
     {
       "passed": true,
       "wrong": [],
-      "seconds": 0.0,
+      "seconds": 0.01,
       "id": "ablation-preflight-refuses-old-build",
       "kind": "adversarial"
     },
@@ -42,9 +42,11 @@
       "wrong": {},
       "got": {
         "adr_files": 20,
-        "index_entries": 20
+        "index_entries": 20,
+        "adr_citations_seen": 605,
+        "files_scanned": 220
       },
-      "seconds": 0.0,
+      "seconds": 0.05,
       "id": "adr-header-and-index",
       "kind": "adversarial"
     },
@@ -53,6 +55,13 @@
       "wrong": {},
       "seconds": 0.02,
       "id": "analysis-ablation-table-not-estimated",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "band-is-graded-against-its-own-environment",
       "kind": "adversarial"
     },
     {
@@ -111,7 +120,7 @@
           "value"
         ]
       },
-      "seconds": 0.33,
+      "seconds": 0.34,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -123,17 +132,37 @@
       "kind": "adversarial"
     },
     {
-      "passed": true,
+      "passed": false,
       "wrong": {
-        "docs": []
+        "docs": [
+          {
+            "readme_does_not_say": "offline gate: 138 cases, zero paid calls"
+          },
+          {
+            "readme_does_not_say": "it is 149 cases (138 of them in the offline gate)"
+          },
+          {
+            "cites_a_report_of_a_different_tree": "20260823-200546-fast.json",
+            "report_cases": 137,
+            "suite_now": 138
+          },
+          {
+            "cites_a_report_of_a_different_tree": "20260823-161810-invariant.json",
+            "report_cases": 53,
+            "suite_now": 54
+          },
+          {
+            "analysis_does_not_say": "149 distinct cases (20 golden + 129 adversarial)"
+          }
+        ]
       },
       "got": {
         "counts": {
-          "fast": 136,
-          "invariant": 53,
+          "fast": 138,
+          "invariant": 54,
           "live": 9,
           "full": 10,
-          "all": 147
+          "all": 149
         },
         "domains": {
           "books.toscrape.com": 3,
@@ -196,7 +225,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 115,
+        "ms": 117,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -247,12 +276,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114,
+        "ms": 113,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "extract-all-declared-intent-beats-wording",
       "kind": "adversarial"
     },
@@ -356,7 +385,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 198,
+        "ms": 197,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -408,7 +437,7 @@
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "extract-all-refuses-a-selector",
       "kind": "adversarial"
     },
@@ -451,7 +480,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 109,
+        "ms": 111,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -504,7 +533,7 @@
       "got": {
         "reports_when_asked": [],
         "written": [
-          "20260823-161801-fast.json"
+          "20260823-211132-fast.json"
         ]
       },
       "seconds": 0.01,
@@ -636,12 +665,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2235,
+        "ms": 2280,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.24,
+      "seconds": 2.29,
       "id": "plan-lint-holds-across-a-midrun-replan",
       "kind": "adversarial"
     },
@@ -685,7 +714,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 52,
+        "ms": 56,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -702,8 +731,23 @@
       "kind": "adversarial"
     },
     {
-      "passed": true,
-      "wrong": [],
+      "passed": false,
+      "wrong": [
+        {
+          "suite": "fast",
+          "env": "local",
+          "published_case_count": 137,
+          "actual": 138,
+          "ledger_slowest_at_actual": 61.99
+        },
+        {
+          "suite": "invariant",
+          "env": "local",
+          "published_case_count": 53,
+          "actual": 54,
+          "ledger_slowest_at_actual": 13.67
+        }
+      ],
       "seconds": 0.02,
       "id": "published-band-matches-the-ledger",
       "kind": "adversarial"
@@ -714,7 +758,7 @@
       "got": {
         "declared_slack_s": 4.35,
         "headroom_s": {
-          "fast": 2.77,
+          "fast": 2.87,
           "invariant": 4.07
         }
       },
@@ -739,9 +783,9 @@
           "idle"
         ],
         "during_latency_s": 0.001,
-        "run_seconds": 2.5
+        "run_seconds": 2.51
       },
-      "seconds": 2.5,
+      "seconds": 2.51,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -793,12 +837,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2187,
+        "ms": 2199,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.19,
+      "seconds": 2.21,
       "id": "replan-cannot-launder-noop-action-extract-all",
       "kind": "adversarial"
     },
@@ -806,7 +850,7 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "citations": 39,
+        "citations": 38,
         "skip": [
           "29991231-235959-fast.json"
         ]
@@ -900,14 +944,14 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:51819/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:57905/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 148,
+        "ms": 149,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -970,7 +1014,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 52,
+        "ms": 51,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1013,8 +1057,8 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 909,
-        "after": 909
+        "before": 1059,
+        "after": 1059
       },
       "seconds": 0.05,
       "id": "wall-clock-probe-history-isolated",

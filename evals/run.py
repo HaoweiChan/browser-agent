@@ -170,6 +170,27 @@ def git_sha():
     return _git("rev-parse", "--short", "HEAD")
 
 
+# Which machine measured a row. A ceiling is per (suite, environment) — ADR-019's
+# own Ruling — but until T-R44 the ledger had no environment dimension at all, so
+# `published-band-matches-the-ledger` compared a locally-measured band against
+# whatever rows the process could see. On CI that includes CI's own `invariant`
+# row, appended by the step before: red on CI, green locally, same tree.
+#
+# NOT derived from the effective `EVAL_WALL_BUDGET_S_*`, which is the obvious
+# guess and is wrong in exactly the case that produced the defect: CI's
+# `invariant` ceiling is 20 and so is this laptop's, so the two environments
+# would share a tag on the suite that broke.
+#
+# `CI` is set by GitHub Actions (and by essentially every other runner), so the
+# fallback tags a runner correctly without the workflow having to remember; the
+# explicit variable is there for a third environment that wants a name of its own.
+EVAL_ENV = "EVAL_ENV"
+
+
+def env_tag():
+    return os.environ.get(EVAL_ENV) or ("ci" if os.environ.get("CI") else "local")
+
+
 def git_dirty():
     """Working tree dirty, excluding history.jsonl itself.
 
@@ -275,6 +296,7 @@ def main():
 
     history_line = {
         "ts": stamp, "suite": args.suite, "sha": sha, "dirty": dirty,
+        "env": env_tag(),
         "passed": passed, "total": len(results), "score": round(score, 6),
         "wall_s": totals.get("wall_seconds", 0.0), "cost_usd": totals.get("llm_usd"),
         "report": report_name,
