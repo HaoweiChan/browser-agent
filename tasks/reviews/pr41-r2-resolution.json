@@ -1,0 +1,62 @@
+{
+  "pr": 41,
+  "round": 2,
+  "resolutions": [
+    {
+      "id": "R7",
+      "resolution": "fixed",
+      "kind": "prose, no case needed",
+      "detail": "Confirmed all four probes True before touching it. The whole file is now at the sibling's state: the stale tail ('latent today at 16.03s ... ungreenable locally above 17.39s') is replaced with the item-3/item-4 split, `NOT THE WALL CLOCK` is scoped to run 32637648447 and says explicitly that on 32626835735 it IS the wall clock, the watched_red sentence is corrected, and triage.note (2)/(3) point at the run and at what the provenance actually says. Also caught unprompted: watched_red's (0) was titled 'THE ROOT CAUSE' — scoped to 32637648447, since there are two. Swept every case file for the three phrases; the only remaining `latent` is the sibling's approved 'it is not latent'.",
+      "verified_by_orchestrator": "all three probes now False: 'latent' in provenance, unscoped 'NOT THE WALL CLOCK', and 'not the clause PR #32 fired' in watched_red"
+    },
+    {
+      "id": "R8",
+      "resolution": "fixed",
+      "kind": "behavioural, watched red",
+      "detail": "Ranges and ceilings are bound in a single regex match, so the suite->ceiling mapping is read rather than assumed.",
+      "watched_red": "README `**90s**` -> `**85s**` was GREEN, now {ci_range_or_ceiling_is_not_the_adr_table, suite: fast, readme_says: [69.37, 74.06, 85], adr_table_gives: [69.37, 74.06, 90]}; `**20s**` -> `**25s**` likewise for invariant; a second bolded CI band appended was GREEN, now {publishes_more_than_one_ci_band, found: [...]}",
+      "declared_gap": "the one-band rule reads the BOLDED four-value form, so an unbolded second list is not seen — deliberate, because README's superseded 95-case band is written exactly that way and reddening on it would push the honest record out of the document. Stated in the triage note.",
+      "verified_by_orchestrator": "both ceiling mutations reproduced red against the CI-ranges sentence. NOTE: the orchestrator's first probe was wrong, not the implementer's report — `**90s**` appears twice in README and the probe mutated the local band table row (:173) rather than the CI sentence (:179) the check reads. Re-probed correctly."
+    },
+    {
+      "id": "R9",
+      "resolution": "fixed",
+      "kind": "prose",
+      "detail": "Both documents rewritten. §5 now says the table is graded, that editing a cell reddens the gate, and that `published-band-matches-the-ledger` still does not see these numbers (which is why a second case exists). README says the same and narrows the ungraded part to the one thing that cannot be graded here. The past-tense quotes are consistent with §5 again."
+    },
+    {
+      "id": "R10",
+      "resolution": "fixed",
+      "kind": "prose/debt",
+      "detail": "Verified that `min(ts)` over the env-tagged rows IS 20260823-140957, so `<` selected zero. The repro is now `ts > \"20260823-16\"` -> the real 51 rows, 20260823-210938..20260823-220602, shas 0efb0e9/9840e23/f90b58d, at fast 138/154 and invariant 54/59. Heading and body corrected from 55, the counts list corrected (it omitted fast/154 and invariant/59), and the block states the inverted direction explicitly — a Taipei stamp sorts ABOVE a same-day UTC stamp — plus why a repro selecting nothing is worse than no block.",
+      "verified_by_orchestrator": "the corrected selection returns 51 rows"
+    },
+    {
+      "id": "R11",
+      "resolution": "fixed",
+      "kind": "prose",
+      "detail": "Against the 16.02s the paragraph names: 1.37s / 8.55%. Stated, with a parenthetical that 1.36s / 8.5% is the same arithmetic against run 32637648447's 16.03s."
+    },
+    {
+      "id": "R12",
+      "resolution": "fixed",
+      "kind": "behavioural, watched red",
+      "detail": "Tolerance bounded to `[ \\t]*\\n?[ \\t]*` and the whole parse scoped to §5's own section.",
+      "watched_red": "the id moved two paragraphs from the phrase -> names_no_workflow_run_for_the_ci_numbers; §5 stripped of the id while later sections keep it -> same key"
+    },
+    {
+      "id": "R13",
+      "resolution": "fixed",
+      "kind": "prose",
+      "detail": "The three counts are gone. The paragraph states the principle (a row count in prose is a snapshot of a file that grows on every gate run) and points at `ledger_slowest` as the artefact. The one surviving row count in the file is main's historical PR #34 R21 narrative about a past commit's state — left alone."
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [],
+  "sweep": "all six band/ceiling checks green individually; adr-header-and-index clean. Structural mutations re-run after editing eval_adapter.py: env filter neutered -> red; stamp() back to local -> red; the ts definition moved out of the band region -> outside_the_region. Confirmed `_check_ci_numbers_are_derived` correctly sits OUTSIDE the band region (it does not match `_BAND_DEF`, and its regexes are function-local, so §6's enumeration of unpinned module-level names stays accurate).",
+  "provisional_unchanged": "band citations, README's table row, case-count strings and 'Where it stands' untouched; one final re-derivation after #40 and #42",
+  "gate": {
+    "invariant": "61/61 = 1.000",
+    "fast": "156/156 = 1.000"
+  }
+}
