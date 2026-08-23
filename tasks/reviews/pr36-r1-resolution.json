@@ -1,0 +1,85 @@
+{
+  "pr": 36,
+  "round": 1,
+  "resolutions": [
+    {
+      "id": "R1",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "The four absolute claims (ADR-019 §2 and §6, INDEX.md, the check's docstring) are narrowed to what item 8 grades; §6 now splits **Graded** / **Not graded** in those words. Block comments that paraphrased their item are bare references (`# Item 4 (committed-ceiling).`). A fifth instance of the same shape found while doing it — INDEX's \"its numbers are published there and nowhere else\", false of README/evals/run.py/the workflow — is gone.",
+      "watched_red": "the falsification recorded in provenance: R2's mutation green (passed True, wrong []) under the old claim",
+      "residue": "T-R62 — a paraphrase that names no item is invisible to item 8"
+    },
+    {
+      "id": "R2",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "Slug option taken and T-R59 closed rather than carried: §6 items carry stable slugs (`3. (same-ceiling) ...`); every reference spells number AND slug, in ADR-019, README and a marked band region of eval_adapter.py.",
+      "watched_red": "{readme: reference_does_not_name_its_item, wrote: 'item 6 (same-ceiling)', item_6_is: 'ruling'}. Renumber case: item inserted at position 3 -> 20+ reds. Code comments too: {eval_adapter: ..., wrote: 'Item 4 (derivation)', item_4_is: 'committed-ceiling'}.",
+      "verified_by_orchestrator": "reproduced the R2 mutation on the repaired tree: `_check_published_band()` returns passed False with {'readme': 'reference_does_not_name_its_item', 'wrote': 'item 6 (same-ceiling)', 'item_6_is': 'ruling'}"
+    },
+    {
+      "id": "R3",
+      "resolution": "fixed",
+      "case": "adr-header-and-index",
+      "detail": "tasks/TODO.md, tasks/DONE.md and CLAUDE.md join `citing`; the comment and provenance name the real exclusions (tasks/reviews/ verbatim records, evals/report/ machine artifacts). 592 citations across 218 files.",
+      "watched_red": "{cites_no_such_adr: [{file: 'tasks/TODO.md', cites: 'ADR-042'}, ...]}"
+    },
+    {
+      "id": "R4",
+      "resolution": "fixed",
+      "case": "adr-header-and-index",
+      "detail": "Key renamed watched_red_adr017 -> watched_red_adr019; the resolver reads identifier spellings ((?<![A-Za-z])ADR[-_]?(\\d{3}), case-insensitive), and `not_covered` states it resolves existence and section only, never the ruling.",
+      "watched_red": "{cites_no_such_adr: [{file: 'evals/adversarial/fast-wall-clock-budget.json', cites: 'ADR-042'}]} from a lowercase key"
+    },
+    {
+      "id": "R5",
+      "resolution": "fixed",
+      "detail": "`item N` takes a space separator only, and this file's share is the marked region rather than 3,900 lines. `property N` keeps `[ _]` (the retired keys' shape), scoped to the region — stated in the comment.",
+      "watched_red": "{\"missing_item_9\": x}, line_item_12, my_items_4 -> all match nothing now; each matched before"
+    },
+    {
+      "id": "R6",
+      "resolution": "fixed",
+      "detail": "tasks/TODO.md T-R50 spec drops the \"34 runs\" count, matching ADR-019's repair."
+    },
+    {
+      "id": "R7",
+      "resolution": "fixed",
+      "detail": "README:125-127 and :137 attribute the timestamp and result to ADR-019 §2/§3 and say the table carries the four values item 7 (readme-row) grades."
+    },
+    {
+      "id": "R8",
+      "resolution": "fixed",
+      "detail": "T-R57's spec names all six directories plus the four files and the 592/218 figure."
+    },
+    {
+      "id": "R9",
+      "resolution": "no action",
+      "detail": "as directed. Disclosed: this round produced one more ledger commit of the same shape, one file, explained in its message."
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [
+    "T-R62"
+  ],
+  "debt_closed": [
+    "T-R59 — closed by the slug binding, not carried"
+  ],
+  "debt_corrected": {
+    "T-R57": "spec corrected per R8"
+  },
+  "graded_vs_stated": {
+    "graded": "§6's list is 1..N with no gaps and each item opens with its slug; every reference to the list — in ADR-019, README, and inside the marked band region of eval_adapter.py — names a number the list has AND spells that item's slug, both agreeing. A deferral aimed at the wrong rule is red, a list renumbered under its references is red on every one, a plural range is red, and the retired `property N` numbering is red.",
+    "merely_stated": "that no paragraph copies a rule instead of naming it — nothing counts copies; labelled that way in all four places instead of denied, logged as T-R62. Also: a correct reference inside a wrong sentence, since no mechanism reads prose."
+  },
+  "self_found": {
+    "claim": "the region markers were two constants holding the marker text VERBATIM, so `split` found the closing marker inside its own tuple: the region was 68 lines and 456 lines of band code went unscanned with the check green",
+    "fix": "markers are built (f\"... {edge} ...\") rather than quoted; restoring the real region immediately reddened five references the rewrite had broken (a slug wrapped mid-token, `§6 item 3 (above, ...)`, two slugs continued behind a `#`)",
+    "verified_by_orchestrator": "eval_adapter.py:433-434 builds _REGION with an f-string over ('begin','end')"
+  },
+  "gate": {
+    "invariant": "53/53 = 1.000",
+    "fast": "136/136 = 1.000, wall 62.2s"
+  }
+}
