@@ -63,13 +63,12 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 168 cases, ts `20260824-001838`, **73.15s**, 166/168
-  (`dirty: true`, ts-only for the ADR-012 reason §3 gives. PR #42's round-2
-  repair added three more cases, so the count moved again and no clean row can
-  exist at 168 until those cases are committed — the paragraph below is that
-  whole story, and the receipt commit that re-cites this clean is the second
-  half of it. Its two reds are exactly the two doc-derivation cases a case
-  addition reddens.)
+- Band source — `fast` at 168 cases, ts `20260824-002753`, **72.19s**, 168/168
+  (`dirty: false`, ts-only for the ADR-012 reason §3 gives. A clean, green gate
+  run of the committed tree `28cda58`. The ledger's maximum at this count is
+  73.66s from a dirty run of the same code; both derive the same ceiling, which
+  is what item 3 (same-ceiling) requires, and the difference between them is
+  the declared slack §6 bounds.)
 
 **Ablation probes are not runs, and their rows are deleted rather than cited.**
 PR #42's repair had to prove that each narrowing conjunct is pinned, which
@@ -112,15 +111,16 @@ stamped eight hours behind ours. M28's merge commit paid this once at 153 cases
 (a dirty row, 70.46s, 151/153, re-cited clean in the commit after). M38 paid it
 at 158 (dirty in the implementing commit, clean `20260823-223759` in the
 receipt), again at 165 (dirty in `fb71f37`, clean `20260823-233143` re-cited by
-`820d807`), and a third time at 168 for round 2's three cases — dirty in the
-repair commit, clean in the receipt beside it. The price is per case-count
+`820d807`), and a third time at 168 for round 2's three cases (dirty
+`20260824-001838` in the repair commit `28cda58`, clean `20260824-002753`
+re-cited here). The price is per case-count
 change, not per PR, and it is paid rather than dodged by citing a stale clean
 row from a smaller tree: a band has to describe the tree that ships. A dirty
 citation cannot be left standing, either, and that is not tidiness — item 2
 (cited-run) plus `T-M32-13`'s zone bug make it structurally red the moment CI
 appends its own clean row at this count.
 
-The `166/168` is the cited row's own result, graded against it, not prose beside
+The `168/168` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -141,7 +141,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 73.15 × 1.15 = 84.12 → **85**, which is BELOW the committed 90
+five — gives 72.19 × 1.15 = 83.02 → **85**, which is BELOW the committed 90
 and does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. Item
