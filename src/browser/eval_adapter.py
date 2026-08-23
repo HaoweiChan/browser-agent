@@ -1103,6 +1103,22 @@ def _check_ci_numbers_are_derived() -> dict:
         return {"passed": False, "wrong": [{"adr_five_table_rows": len(rows)}]}
     by = {"invariant": [r[0] for r in rows], "fast": [r[1] for r in rows]}
 
+    # All eight cells, in attempt order, against the second copy that already
+    # exists: `.github/workflows/eval.yml`'s own comment block. Without this only
+    # `fast` was cell-wise graded — `invariant` is used through `min`/`max` alone,
+    # so attempts 2 and 4 were numbers in a spec that nothing read, which is the
+    # T-R51 residue this case exists to close (PR #41 R14). The workflow copy was
+    # itself ungraded, so this closes a third-copy drift in the same stroke; what
+    # it cannot do is tell either copy from the measurement, which stays T-R73.
+    wf_cells = {m[1]: [float(m[2]), float(m[3]), float(m[4]), float(m[5])]
+                for m in _re.finditer(
+                    r"^\s*#\s+(invariant|fast)\s+([\d.]+) / ([\d.]+) / ([\d.]+) / "
+                    r"([\d.]+)s\s*$", wf, _re.M)}
+    for suite in sorted(by):
+        if wf_cells.get(suite) != by[suite]:
+            wrong.append({"suite": suite, "adr_five_table": by[suite],
+                          "workflow_comment": wf_cells.get(suite)})
+
     # The run id that makes them checkable, in both documents.
     # The id may sit on the NEXT line, inside a markdown link — these are prose
     # documents and a citation near a line end is not a defect (same reasoning as

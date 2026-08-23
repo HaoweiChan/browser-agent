@@ -573,23 +573,39 @@ case count. That is the same assumption ADR-019 §7 states for the pre-`env` row
 holds for the same reason — counts only grow. What is new is that `env`-tagged no longer
 implies UTC-stamped, so a reader who uses the tag as a proxy for "post-switch" is wrong for
 these 51 rows.
-Repro — note the `>`, and note that the first published version of this block used `<` and
-therefore selected NOTHING, which is worse than filing no block at all because the next
-reader concludes the residual is gone (PR #41 R10):
+Repro. This block has now published two wrong selectors, which is worth more than the
+selector itself: the first used `ts < "20260823-140957"` and returned NOTHING, because that
+IS `min(ts)` over every env-tagged row (PR #41 R10) — worse than filing no block, since the
+next reader concludes the residual is gone. Its replacement, `ts > "20260823-16"`, was right
+for exactly one day: it returns 51 rows at the commit that wrote it and 52 at the next one,
+having picked up a UTC row stamped `20260823-160006`. Both failures are the same mistake the
+block is about — reading a naive stamp as if it ordered real time.
+
+The set is CLOSED (nothing will ever be added to it), so bound it on both sides by the
+window the Taipei stamps actually occupy, and do not use a bare threshold:
 
     rows = [json.loads(l) for l in open("evals/report/history.jsonl") if l.strip()]
-    pre  = [r for r in rows if "env" in r and r["ts"] > "20260823-16"]
+    pre  = [r for r in rows if "env" in r
+            and "20260823-2000" <= r["ts"] <= "20260823-2359"]
     # -> 51 rows, ts 20260823-210938 .. 20260823-220602, all `env: local`,
     #    shas 0efb0e9 / 9840e23 / f90b58d, at fast 138/154 and invariant 54/59.
-    # min(ts) over ALL env-tagged rows is 20260823-140957 — the first UTC one —
-    # so any `ts < that` filter is empty by construction.
+    # The env-tagged stamps occupy hours 14/15/16 (UTC) and 21/22 (Taipei) on
+    # 2026-08-23, with nothing between: that gap is the switch.
 
-Compare any of those 51 against a post-switch row of the same suite and count and the
-ordering is inverted.
+Note that `f90b58d` appears on BOTH sides — it was HEAD while the stamp change sat
+uncommitted — so sha is not a discriminator either. Compare any of those 51 against a
+post-switch row of the same suite and count and the ordering is inverted.
 Acceptance: either the ledger records the regime per row (an offset, or a marker field) so
 the two are distinguishable without inference, or a band cited at a count that holds rows
-from both regimes is refused — watched red by citing a band at `fast` 138, where both
-regimes are present. A third option is
+from both regimes is refused.
+**Watch it red on a CONSTRUCTED ledger, not on the committed one.** Grouping every
+env-tagged row by (suite, total) and regime yields NO mixed bucket: fast/138 [0 UTC, 10
+Taipei], fast/154 [0, 5], invariant/54 [0, 30], invariant/59 [0, 6], and the UTC rows sit
+only at fast/155-156 and invariant/60-61. An earlier version of this line prescribed a
+watched-red "at `fast` 138, where both regimes are present", which is false — fast/138 is
+ten rows, all Taipei — and someone following it would have seen green and concluded their
+guard was broken (PR #41 R16). Drive `_band_wrong` with a two-row ledger you build, the way
+`band-is-graded-against-its-own-environment` drives all five of its probes. A third option is
 to accept it permanently and have ADR-019 §7 say `env`-tagged does not imply UTC-stamped,
 which is what it says today.
 

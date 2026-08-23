@@ -237,18 +237,29 @@ measurement, smaller than the one this branch ships. `gh run view 32561162459
 | 4 | 15.60s | 74.04s |
 
 Each cell is one `[eval] cost … wall Ns` line of that attempt's log, with
-`invariant` 48/48 and `fast` 116/116 in all four. **This table is graded** — as of
-T-R44, by `ci-numbers-are-derived`: it is the single source, README's four values,
-its two ranges and the ceilings it derives are read back FROM it, the run id above
-must appear in both documents, and the ceilings this section derives must be the
-ones `.github/workflows/eval.yml` declares. Edit a cell and the gate reddens.
-`published-band-matches-the-ledger` still does not see these numbers — it reads
-the committed ledger and no CI row is in it — which is why a second case exists.
+`invariant` 48/48 and `fast` 116/116 in all four. **All eight cells of this table
+are graded**, by `ci-numbers-are-derived`, and each of the eight was watched red
+one at a time: they are compared cell-by-cell, in attempt order, against the copy
+in `.github/workflows/eval.yml`'s comment block, so editing either copy reddens
+the gate and deleting the workflow's block does too. Round 1 of that case did NOT
+do this: `invariant`'s column was only ever read through `min`/`max`, so attempts
+2 and 4 could be edited freely with everything green — two numbers in a spec that
+nothing read, which is the exact residue this case exists to close (PR #41 R14).
 
-What stays ungraded is exactly one thing, and it cannot be graded from here: that
-anyone ever ran those four attempts. The run id is what a reader checks
-(`gh run view … --log`); the gate only refuses the documents drifting apart, or a
-run id no document names (T-R73).
+From this table the same case also reads back README's four `fast` values, both
+min-max ranges, both ceilings those ranges derive, and the run id above, which
+must appear in both documents; and it requires the ceilings derived here to be
+the ones the workflow declares. `published-band-matches-the-ledger` still does
+not see any of these numbers — it reads the committed ledger and no CI row is in
+it — which is why a second case exists at all.
+
+Two things are NOT pinned, stated because the alternative is a sentence claiming
+more than it does. First: that anyone ever ran these four attempts. Both copies
+could be wrong together and the gate would stay green; the run id is what a
+reader checks (`gh run view … --log`), and T-R73 carries the ledger route that
+would make it a mechanism. Second: CI figures published anywhere other than this
+section, README and the workflow comment — ADR-013's copy of the superseded
+95-case band is not read here, and is owned by `task/T-M32-9`.
 
 Same rule: 16.47 × 1.15 = 18.9 → **20**; 74.06 × 1.15 = 85.2 → **90**.
 
@@ -568,12 +579,21 @@ pull-request job is a permissions-and-push-loop problem to solve for one number
 per run, and it cannot be verified from a laptop, which is the exact shape that
 produced this debt (numbers published that no committed artifact reproduces). So
 §5's four numbers are labelled for what they are and pinned to eval-gate run
-32561162459, attempts 1-4, where `gh run view … --log` reprints them. What is
-graded stays what was graded: `fast-wall-clock-budget` checks that the workflow
-declares the ceilings §5 names. That those ceilings came from a measurement is
-still not graded and cannot be from here — the run id makes it checkable by a
-reader, not by the gate (T-R51 closed on that reading; T-R73 carries the ledger
-route if it is ever wanted).
+32561162459, attempts 1-4, where `gh run view … --log` reprints them.
+
+**What is graded grew, and this paragraph is the third place that said otherwise**
+(PR #41 R15; it was written when the labelling route shipped with nothing behind
+it, and left standing through two rounds that closed the same claim elsewhere).
+At HEAD, `fast-wall-clock-budget` checks that the workflow declares the ceilings
+§5 names, AND `ci-numbers-are-derived` pins all eight cells of §5's table against
+the workflow's own copy of them, README's four `fast` values, both ranges, both
+derived ceilings, and the run id in both documents. §5 states which mutation
+demonstrates each.
+
+What is still not graded, and cannot be from here, is the one thing this route
+never claimed: that those four attempts were ever run. The run id makes that
+checkable by a reader, not by the gate (T-R51 closed on that reading; T-R73
+carries the ledger route if it is ever wanted).
 
 **Two properties ship, and neither substitutes for the other.** "A band is graded
 against its own environment" is about *which rows* an item reads; "`ts` is a
