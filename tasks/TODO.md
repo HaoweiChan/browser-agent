@@ -12,60 +12,32 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-R56 — the band subsystem's documents and its own strings say what the code does            [status: pr]
-Origin: bundles T-R45, T-R46, T-R47, T-R48, T-R49, T-R52, T-R54, T-R55 (PR #35 R8/R17/R18/R19/R20/R21/R22 + T-R34 cold review)
-Spec: Eight debt blocks from PR #35 are the same defect in the same two documents and one
-grader: a description that does not match the code it describes. They were bundled because
-each one edits `specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md`, `README.md` and
-`src/browser/eval_adapter.py`, so eight sequential PRs would conflict on every one. The
-mechanism changes from the same review (T-R44, T-R50, T-R51, T-R53) are deliberately NOT
-in this task — they change behaviour, these change what is claimed about it.
-Acceptance: every folded block's own acceptance is met, each watched red first where it
-names a mutation:
-- T-R45 — the slack sweep matches any decimal rendering of the current value, not the one
-  string `f"{step_s:g}"`; watched red with `4.350`. Or the limit is stated in the docstring
-  beside the existing `ponytail:` note.
-- T-R46 — either §6's two restating paragraphs and README:107-109/:121 defer to the item
-  numbers, or the "one list, one place / restated nowhere" claims at ADR-019:167-168, :48-49
-  and `specs/decisions/INDEX.md`:28 are narrowed to what is true.
-- T-R47 — the keys emitted by `_check_published_band_slack` name §6's item numbers (or no
-  number), and no string there uses the retired `property N` numbering.
-- T-R48 — ADR-019 §3/§6 say the 15-deriving band was reachable and is green under the
-  current check, not that a commit of PR #35 published it; or a sha is cited that did.
-- T-R49 — either `adr_publishes_no_band_line` and `no_recorded_run_at` are folded into §6's
-  list (or named as preconditions), or ADR-019:48-49 drops "exactly"; and :69 cites
-  item 2 (cited-run) and item 3 (same-ceiling) for the cited run and
-  item 4 (committed-ceiling) for the ceiling.
-- T-R52 — `specs/decisions/INDEX.md`, `evals/run.py` and `.github/workflows/eval.yml` cite
-  ADR-019 for the per-suite override, not ADR-017 (which is the M36 judge ADR), and a graded
-  row resolves `ADR-0NN` references in those files against the decision that actually rules.
-- T-R54 — linearity is named as the assumption in `_band_step_s`'s docstring, or the step is
-  measured at each published band and each graded against its own.
-- T-R55 — a band citation carries `passed/total` derived from the ledger row it names, or the
-  parenthetical is dropped from both citations; watched red by publishing a band whose
-  citation claims a result the row does not have.
-Out of scope: T-R44, T-R50, T-R51, T-R53 — behaviour, not description.
-
-### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: pr]
-Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
-Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
-class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
-Open Library's first publication year for a search result), the correct
-value was present verbatim inside the page text the agent itself captured —
-`star-rating Three`, the infobox population figure, "First published in
-1965" — but the run returned `failure:semantic` with a multi-hundred/
-multi-thousand-character raw page dump as the `answer` field instead of
-either isolating the value or failing with `answer: null`. This is graded a
-failure, not a wrong success, so it does not implicate the inviolable
-property (`not_a_dump` never sees it: the check only fires on `success`), and
-it is out of the two-defect scope M10's repair was bounded to.
-Acceptance: a case pins the "data was captured but answer is a page-text
-dump on failure" shape red first, then either the extraction step tries a
-narrower isolation before giving up, or `failure:semantic`'s `answer` field
-is null'd rather than carrying the dump — reviewer's call which is correct.
-Promoted from Debt 2026-08-23: today's post-deploy receipt rounds (PR #32/#37) showed the
-planner's output is the dominant source of flakiness on the five Try examples; M28 is the
-half that does not collide with M32 (PR #34, in flight in another session).
+### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: in-progress]
+Origin: PR #43 (M40) post-merge re-probe of the deployment, 2026-08-23
+Spec: M40 declared three live rows from 43 runs against the build deployed BEFORE PR #34 (M32).
+After M32 deployed, a re-probe of the same tasks shows a new dominant failure shape that none of
+D28's three shapes covers: the planner emits `extract {"role": "WebArea", "name": "<the page
+title>"}` — the document root, named by `<title>` — and the relocation rung then retargets as
+`{text: "<the page title>"}` and resolves nothing. Measured: x-rates.com 0/2 (`b8b95067`,
+`133264ee`, was 3/3 pre-M32), multpl.com 0/2 (`bdc38f65` container dump via a Table link,
+`c7fa2623` three `observe` steps then a click and no extraction; was 2/3), quotes.toscrape.com's
+author page 0/1 (`6811f8bf` — extracted "Quotes to Scrape", the site title, and the M36 judge
+rejected it; was 3/3), openlibrary.org 0/1 (`a6797fbe`, same WebArea shape). companiesmarketcap.com
+is unaffected (2/2, `d0b63c7e`, `f2c8c624`) — its answer is the accessible NAME of a heading, so
+the plan never needs a container.
+Not claimed: that M32 CAUSED this. The probe is one task phrasing per page against a deployment
+that also moved model-side; `WebArea` targets appear in two pre-M32 runs too (`8c1a3344` stooq,
+`c80b1dd0` coingecko). What is measured is that four of five re-probed tasks that answered before
+do not answer now, and that the shape they share is a container target the resolver cannot use.
+Acceptance: an offline fixture case pinning `extract {role: WebArea}` (and the `{text: <title>}`
+relocation it degrades into) as a refused plan rather than a locate failure — the plan lint is the
+natural home, next to the container-dump clause M28/T-R66 already owns — watched red first.
+Out of scope (orchestrator scope call, pr-loop SPEC 2026-08-24): the second acceptance half,
+"the D28 rows re-declared from a post-fix probe of the same tasks". D28 does not exist on `main`
+— it ships with PR #43, still open — and a post-fix probe requires the fix DEPLOYED, which cannot
+happen inside the PR that contains it. Re-declaring D28 is therefore sequenced after PR #43 merges
+and this fix deploys, and is logged as its own block rather than left as an ungateable clause on
+this one. This PR delivers the offline refusal and its watched-red cases.
 
 ### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: todo]
 Origin: post-deploy receipt rounds for PR #32/#37/#38 (2026-08-23). `349e4839`,
@@ -118,24 +90,6 @@ reason and `judge_attempts: 2`; `judge-fail-closed-on-*` cases stay green;
 run; gate green under the ADR-019 ceiling.
 Out of scope: judge prompt/model changes; retrying a reasoned FAIL.
 
-### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
-Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
-but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
-page text the agent captured and absent from the a11y elements the planner
-was shown (`docs/analysis.md` §8a-2).
-Spec: progressive disclosure of the *page*, not the tool set — the whole
-vocabulary is ~524 tokens of system prompt and disclosing it lazily saves
-nothing while breaking the closed-world guarantee. One new action `observe`
-with a `target` subtree: the executor re-runs `observe()` scoped to that
-subtree with the full `MAX_ELEMS` budget and a longer text head, and the
-result reaches the replanner through the existing observation+note path.
-Costs one planning call, bounded by `MAX_REPLANS`. No site knowledge.
-Acceptance: an offline fixture case where the answer element sits past
-`MAX_ELEMS` in document order goes from `failure:locate`/dump to correct, red
-first; `quotes.toscrape.com/js` keeps its honest marker if it is still
-unplannable; tokens-per-task measured before/after from committed reports
-and stated (must stay inside the 100k run budget).
-
 ### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
 Origin: `prompts/015` — "would an MCP / tool-calling loop raise completion?"
 `docs/architecture/task1-overview.md` chose B over A (LLM-per-step) on
@@ -159,6 +113,22 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M40-3 — D28's rows are declared against a build that predates the WebArea refusal            [status: todo]
+Depends: T-M40-2
+Origin: PR #43 (M40) T-M40-2, split at pr-loop SPEC 2026-08-24 — the half of T-M40-2's
+acceptance that cannot be gated inside T-M40-2's own PR.
+Spec: T-M40-2's acceptance ends "then the D28 rows re-declared from a post-fix probe of the
+same tasks". That clause is structurally not deliverable by the PR that carries the fix: a
+post-fix probe reads the DEPLOYED build, and the deploy is a push to `origin/main` (Zeabur),
+which happens after merge. D28 additionally lives on PR #43's branch and is not on `main`.
+So the rows that describe the WebArea failure shape stay declared against the pre-fix build
+until someone re-probes deliberately.
+Acceptance: after PR #43 has merged AND T-M40-2's fix is live on the deployed URL, the same
+tasks named in T-M40-2 (x-rates.com, multpl.com, quotes.toscrape.com's author page,
+openlibrary.org, companiesmarketcap.com as the control) are re-probed against that build and
+D28's rows re-declared from the results — including declaring a row `unsupported` where the
+probe says so. The build the probe measured is cited by sha.
 
 ### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
 Origin: PR #34 R17.
