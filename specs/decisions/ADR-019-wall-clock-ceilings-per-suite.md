@@ -3,9 +3,11 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → **80s**, local `invariant` **20s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → **90s** (ADR-021), local `invariant` **20s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `evals/run.py` `over_budget()`
+
+**Amended by**: ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 80) and ADR-002 Decision 4 (a second suite now has a ceiling)
 
@@ -41,7 +43,7 @@ They are regression guards for three silent-success defects (PR #29 R1, R2, R3)
 and the local pre-commit hook runs `fast` alone. A guard the hook does not run
 is worth less than the 4.9s it costs.
 
-### 2. The local `fast` ceiling is 80s, computed from the ledger
+### 2. The local `fast` ceiling is 90s, computed from the ledger
 
 Every LOCAL band here — this section's and §3's — is computed from
 `evals/report/history.jsonl`, the ledger committed in this repo, and
@@ -63,16 +65,29 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 138 cases, ts `20260823-211124`, **61.99s**, 136/138
-  (`evals/report/20260823-211124-fast.json`; the run that measured this tree
-  while its newest case was still uncommitted, so `dirty: true`).
+- Band source — local `fast` at 155 cases, ts `20260823-141120`, **70.34s**, 153/155
+  (`evals/report/20260823-141120-fast.json`; `dirty: true` — the only row this
+  count has, for the reason the next paragraph gives. The stamp is UTC, as every
+  row written since §7 is. The ledger's own maximum at this count derives the
+  same ceiling; it is not copied here, see §3.)
 
-The `136/138` is the cited row's own result, graded against it, not prose beside
-it (T-R55) — and this one is a red run. The two cases it fails are
-`published-band-matches-the-ledger` and `docs-numbers-are-derived`, both of which
-go red at a fresh case count and stay red until the numbers are republished,
-which is what this sentence and §3's are doing; the invariant row §3 cites is the
-same run of the same tree and fails the same two. It is stated because a band source is taken as it is found — item 2 (cited-run)
+**This band was dirty for one commit, and that price is what §7 removed.** A case
+addition forces a dirty citation: the tree only reaches 155 cases while the new
+case is uncommitted, which is the entire reason the dirty allowance exists. A
+dirty citation used to be green locally and red on CI — `T-M32-13` is the
+diagnosis, the ledger's `ts` being a naive local stamp compared
+lexicographically against CI's UTC ones, so item 2 (cited-run) refused a dirty
+row against any clean row stamped earlier and every CI row is clean and stamped
+eight hours behind ours. The band published at 153 cases paid it in full: M28's
+merge commit published `ts 20260823-211340`, 70.46s, 151/153, dirty, and the next
+commit re-cited a clean run that could not exist until the first had landed. Two
+commits, by construction, for one case addition. §7 gives every row an
+environment and item 9 (environment) keeps CI's out of a `local` band's ledger,
+so this band cites its dirty row once and stays green on both sides. That is the
+concrete thing §7 buys, and this sentence is the first band to spend it.
+
+The `153/155` is the cited row's own result, graded against it, not prose beside
+it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
 
@@ -86,46 +101,86 @@ because it includes red runs and runs taken mid-edit; §6 is why that is allowed
 and by how much. The enumeration that used to stand here — and the one in §3 —
 is gone: it was a snapshot of a file that grows on every gate run, nothing
 graded it, and it had drifted to publishing six of the eight runs recorded at
-the shipped case count, which is the R21 defect this ADR was amended over. What
+the shipped case count, which is the R21 defect this ADR was amended over
+(PR #35 R21; PR #34 R21 is the same defect found independently on the M32
+branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 61.99 × 1.15 = 71.29 → **75**. The band published for the earlier
+five — gives 70.34 × 1.15 = 80.89 → **85**, which is BELOW the committed 90 and
+does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
+slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
+band is a short sample and therefore a lower bound on what the tree costs. One
+run at 153 cases is exactly that short sample. Item 5 (derivation) grades the
+arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
+that says 90 is green and declared rather than a contradiction. The band
+published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of
 it was wrong.
 
-Margin against the observed band is ~18s where before M31 it was ~0.2s. That is
+Margin against the observed band is ~19s where before M31 it was ~0.2s. That is
 a real loosening, and it is the point: a ceiling whose job is to catch drift
 cannot also be the thing that fails on drift-free commits — this one refused a
 commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 54 cases, ts `20260823-211142`, **13.68s**, 52/54
-  (`evals/report/20260823-211142-invariant.json`; the same red-at-a-fresh-count
-  run §2 describes. ADR-012 writes no per-case report for a green run, so a band
-  cited from one has only its ledger row — which is why the sentence cites a ts
-  and not a file).
+- Band source — local `invariant` at 60 cases, ts `20260823-140957`, **13.48s**, 58/60
+  (`evals/report/20260823-140957-invariant.json`; `dirty: true`, for the reason
+  §2 gives — and green on both sides now, which is §7's doing. Two rows were
+  available at this count, 13.48 / 13.46s, taken as they came rather than
+  selected for their numbers; this is the slower, chosen so the published number
+  sits as close to the ledger's own maximum as a real run allows — §6 tolerates
+  up to one ceiling step of slack, and R21's point was that publishing below the
+  maximum is how a band drifts, so take the least slack on offer.)
 
-The same rule gives 13.68 × 1.15 = 15.73 → **20**. Two decimals on the product
-because one is not enough to re-derive it: "15.3" and "15.0" both round up to a
-multiple of five differently depending on how a reader reads them, and the
-committed ceiling is 20 (PR #35 R13). Note the band moved within this round, and be
-precise about why. The first two runs at 53 cases measured 12.87 and 12.89s,
-which derive **15**; a band published from them was reachable and is green under
-the check as it now stands — §6 item 5 (derivation) does not require the rule's value to
-equal the committed ceiling. No commit of this branch ever published it
-(`git log -S` on this file finds that figure only in the round-4 repair, quoting
-it as an example), so the claim is reproducible rather than historical: call
-`_band_wrong` with the band at 12.89s citing ts `20260823-041431` (51/53) and a
-ledger holding only the two rows recorded at 53 cases by then, and it returns
-`[]` (T-R48). What took the state out of reach was item 3 (same-ceiling), when a 13.32s run
-landed and the ledger's maximum
-crossed into the next band. Had that run not landed, the 15-deriving band would
-have stood. This is the declared deviation in §6, not a mechanism catching
-something.
+Neither band quotes the ledger's maximum as a number any more, and that is the
+fix for a defect this file produced twice. §3 published **13.80s** and the final
+`origin/main` merge brought in a 13.92s row (ts `20260823-202223`, dirty, 57/58)
+that made the sentence false — while §2, two sections up, was hand-copying its
+own maximum by the same method, so the two halves of one decision disagreed on
+method (PR #34 R29). A hand-copied scalar sitting beside a computed one is
+exactly the drift class R21 and `T-M32-8` both name. The maximum is whatever
+`published-band-matches-the-ledger` reports as `ledger_slowest`, computed over
+every row at the current case count — red and mid-edit runs included, which is
+why it can exceed the band source (§6, and the paragraph above) — and the
+grader prints it, with the case count, whenever a band needs republishing.
+Nothing here went red on either scalar: both derived 20, which is precisely why
+this had to be caught by reading rather than by the gate.
+
+The same rule gives 13.48 × 1.15 = 15.50 → **20**, which is the committed
+ceiling. Two decimals on the product because one is not enough to re-derive it:
+"15.8" and "15.0" round up to a multiple of five differently depending on how a
+reader reads them (PR #35 R13).
+
+Both bands above are republished at the case count this branch ships after five
+`origin/main` merges and two rounds' own cases: `fast` 136 → 155, `invariant`
+53 → 60. Neither is the enumeration this file used to carry. PR #34 R21 found
+that enumeration publishing three runs where the ledger held six and calling the
+smallest of them the maximum — the same defect PR #35 had already fixed here by
+deleting the list and citing one graded row instead, which is the resolution
+both findings get.
+
+The paragraph below records the 53-case band this file carried before those
+merges. It is kept because its reasoning about §6 item 5 (derivation) is general
+and its evidence is reproducible; the numbers in it are that superseded band's,
+not the one published above.
+
+The rule gave 13.32 × 1.15 = 15.32 → **20** there. Note the band moved within
+that round, and be precise about why. The first two runs at 53 cases measured
+12.87 and 12.89s, which derive **15**; a band published from them was reachable
+and is green under the check as it now stands — §6 item 5 (derivation) does not
+require the rule's value to equal the committed ceiling. No commit ever
+published it (`git log -S` on this file finds that figure only in the round-4
+repair, quoting it as an example), so the claim is reproducible rather than
+historical: call `_band_wrong` with the band at 12.89s citing ts
+`20260823-041431` (51/53) and a ledger holding only the two rows recorded at 53
+cases by then, and it returns `[]` (T-R48). What took the state out of reach was
+item 3 (same-ceiling), when a 13.32s run landed and the ledger's maximum crossed
+into the next band. Had that run not landed, the 15-deriving band would have
+stood. This is the declared deviation in §6, not a mechanism catching something.
 
 This number was **15** until PR #29 R21, and that was a reading error, not a
 rule change: the band behind it published five runs of a ledger holding
@@ -221,7 +276,7 @@ them by byte offset, a form of membership no comment can spell its way into
 against it). Every way found so far of making this scan stop scanning has been
 watched red — the count that used to stand here went stale the first time the
 band set grew, which is the lesson two paragraphs up:
-each of the six definitions and the `_LEGACY_ENV` constant moved out of the
+each of the seven definitions and the `_LEGACY_ENV` constant moved out of the
 region one at a time, band
 code added after the end marker, either marker deleted, a comment quoting a
 marker a second time, a marker sharing a line with code, the closing marker
@@ -486,21 +541,60 @@ still not graded and cannot be from here — the run id makes it checkable by a
 reader, not by the gate (T-R51 closed on that reading; T-R73 carries the ledger
 route if it is ever wanted).
 
-**What this does not reach, and it is the important paragraph. These are two
-different claims, and only one of them is delivered here.** "A band is graded
-against its own environment" is a property about *which rows* an item reads;
-"`ts` is a valid total order on real time" is a property about *how those rows
-are ordered*. This section delivers the first. It makes the second's failure
-unreachable across the CI/local split — a foreign row never reaches the clause
-that misreads the ordering — and it repairs nothing about the ordering itself.
-`ts` is still naive local time compared as a string, so a laptop that changes
-zone between two runs, a DST shift, or a `history.jsonl` merged by unioning on
-`ts` — which is how PR #29 R3 resolved that conflict — reproduces the identical
-failure with no CI involved. Read the two as one property and the ordering bug
-becomes a mystery the next person inherits, which is the whole reason this
-paragraph is here: the defect is carried as T-R77, with the control above as its
-repro and the two candidate closures named there, and it is NOT fixed by this
-section.
+**Two properties ship, and neither substitutes for the other.** "A band is graded
+against its own environment" is about *which rows* an item reads; "`ts` is a
+valid total order on real time" is about *how those rows are ordered*. They are
+different claims, and the first attempt at this section delivered only the first
+and let a reader infer the second — which is how the next person inherits an
+ordering bug as a mystery. Both are here now:
+
+- **`env` scoping** (item 9 (environment), above). A foreign-environment row is
+  the wrong row to derive a ceiling from whatever its stamp says, so CI's
+  `invariant` row reaches neither the dirty clause nor `ledger max`. This is what
+  closes the second symptom, which no stamp change would have touched.
+- **`ts` is stamped in UTC** — `evals/run.py` `stamp()`, `time.gmtime`. This is
+  the ordering key itself, and it is the fix for the clause that actually fired.
+  Graded by `ledger-ts-orders-real-time`, which sets both zones explicitly with
+  `TZ` and `time.tzset()` and re-derives T-M32-13's pair from its two real
+  instants: a check that asked the host what time it is would be red on this
+  laptop and GREEN on a UTC runner, which is the environment-dependent shape
+  `fast-wall-clock-budget` has been falsified by twice.
+
+T-M32-13 closes on the pair, and `tasks/DONE.md` records it — it is `task/M32`'s
+finding and its diagnosis is the one this section is written from.
+
+**The migration, stated for the ledger as it actually exists.** Switching the
+stamp does not convert the ~1,300 rows already committed. They keep their naive
+local stamps and are NOT rewritten: no row records the zone it was written in, so
+a conversion would have to invent one, which is precisely the fabricated
+precision this repo grades against everywhere else. So the ledger holds
+local-stamped rows before this commit and UTC-stamped rows after it, and the
+boundary moved from "which machine wrote this" to "which side of this commit" —
+it did not disappear.
+
+What makes that safe is narrow and worth stating exactly, because it is an
+assumption and not a mechanism: `_band_wrong` only ever reads rows at the CURRENT
+case count, and both live counts contain only post-switch rows — this commit's
+own two cases moved `fast` to 155 and `invariant` to 60, and every row at those
+counts was written after the switch. Case counts only grow, so a live count only
+ever gains post-switch rows. The thing that would break it is re-citing a band at
+an older count, where the two stamp regimes coexist.
+
+That is deliberately NOT graded, and the reason is a check that was written,
+passed, and deleted for passing. It compared every row at a live count against a
+`20260823-140000` boundary — and cleared the pre-switch rows, because a
+post-switch UTC stamp of that day is `20260823-14xxxx` while the pre-switch local
+rows at the same count are `20260823-21xxxx`, so the stale rows sort ABOVE the
+boundary rather than below it. No `ts` threshold can separate the two regimes,
+for the same reason the bug existed at all. A check that is green on exactly the
+state it exists to refuse is worse than no check, so this is an assumption with
+its limit named rather than a mechanism with a false description.
+
+**And what a `ts` in this file means now.** Every timestamp §2 and §3 cite is a
+UTC stamp of a post-switch row. The timestamps quoted in the diagnosis above —
+`20260823-192533`, `20260823-041729` — are pre-switch rows and are naive local
+Asia/Taipei, which is the whole point of quoting them; they are historical
+evidence, not citations a reader should convert.
 
 **And what is asserted rather than demonstrated.** No CI band is published, so §6
 item 9 (environment) has exactly one environment to grade in this repo today —

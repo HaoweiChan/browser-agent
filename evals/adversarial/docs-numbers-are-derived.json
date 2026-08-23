@@ -15,9 +15,9 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260823-211616-fast.json",
-        "invariant": "20260823-211508-invariant.json",
-        "live": "20260823-161828-live.json"
+        "fast": "20260823-141536-fast.json",
+        "invariant": "20260823-141415-invariant.json",
+        "live": "20260823-164737-live.json"
       }
     },
     "d8_retired_2026_08_21": "The d8 half graded support-matrix D8 while D8 was an OPEN wall-clock breach: it recomputed the published range from the reports the row cited and required the row to cite them. M12 (PR #20, ADR-013) then CLOSED D8 — the row no longer publishes a breach range, so there is nothing left for this half to recompute, and it was failing on a row that had legitimately changed rather than on a defect. Retired rather than re-pointed because the number it protected is now gated directly and better: `fast-wall-clock-budget` asserts the suite's own wall clock against the ceiling (60s local, 80s CI) and `wall-clock-probe-history-isolated` covers the history side, so a regression reddens the gate itself instead of a prose range. The reports it cited (20260821-215759/215923-fast.json) were measured pre-M12 and are now uncited; they are prune candidates under ADR-012. The README-counts half stays — nothing else derives those, and it reddens the moment a case is added.",
@@ -44,6 +44,7 @@
         ]
       }
     },
+    "headline_red_excludes_this_case_2026_08_22": "The headline-report-is-red check (PR #34 R4) ignores THIS case's own row in the report it inspects. Not a loophole: a superseded report showing this case red says only that the block was stale when it was taken, which is what fixing the block cures — and without the exclusion the guard has no fixed point, because once it goes red every subsequent report contains it failing and no green report can ever be produced to cite. Found by merging origin/main (M36) into task/M32, where every number had to move at once. Any OTHER failing case still disqualifies the report, which is the whole of what R4 asked for.",
     "describes_a_deleted_rule": [
       "nothing uncommitted in the tree",
       "the ceiling that maximum derives in the ADR's prose must be the ceiling",

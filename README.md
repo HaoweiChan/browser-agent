@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 138 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 155 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,14 +50,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260823-211616-fast.json`, with
-`evals/report/20260823-211508-invariant.json` and
-`evals/report/20260823-161828-live.json`:
+Latest offline baseline — `evals/report/20260823-141536-fast.json`, with
+`evals/report/20260823-141415-invariant.json` and
+`evals/report/20260823-164737-live.json`:
 
 ```
-fast  138/138    invariant  54/54    live  9/9    $0.0000    62.9s
-recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 24/24 · 5 replans
+fast  155/155    invariant  60/60    live  9/9    $0.0000    70.4s
+recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
+diagnosis 33/33 · 13 replans
 ```
 
 `live` is not part of the gate, and it goes red when a site is having a bad
@@ -119,11 +119,13 @@ Every row written since T-R44 carries the environment
 that measured it — a row older than that reads as `local`, which all of them are
 — and item 9 (environment) grades a band only against its own environment. CI's
 `invariant` row, appended to the job's copy of the file by the step before, used
-to redden a band measured here: `ts` is naive local time compared as a string, so
+to redden a band measured here: `ts` was naive local time compared as a string, so
 that row followed the band row by 25 minutes and sorted eight hours before it,
 and being clean it answered "a clean row was already available by then". The
-ordering bug itself is untouched and carried as T-R77; ADR-019 §7 has the
-mechanism, the control, and what the filter does and does not repair. It is a property, not a
+ordering bug behind it is fixed too, in the same PR and separately: `ts` is
+stamped in UTC now, so the comparison compares what it claims to (T-M32-13).
+ADR-019 §7 has the mechanism, the control, and why these are two properties
+rather than one. It is a property, not a
 snapshot, because the ledger grows on every gate
 run; a list of times would go red on the next run instead of on a regression. It
 exists because three bands in PR #29 did not match the ledger beside them, and
@@ -159,8 +161,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 138 | 61.99s | 71.29 | **80s** |
-| `invariant` | 54 | 13.68s | 15.73 | **20s** |
+| `fast` | 155 | 70.34s | 80.89 | **90s** |
+| `invariant` | 60 | 13.48s | 15.5 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of one commit (`d173340`, 116 `fast` / 48 `invariant` cases, a smaller
@@ -388,7 +390,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 149 cases (138 of them in the offline gate), it
+The eval set is not weak; it is 166 cases (155 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

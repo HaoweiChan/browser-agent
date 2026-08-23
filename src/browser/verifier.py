@@ -174,7 +174,8 @@ CITE_CHARS = 80
 # it did not: there was no enumerate-and-count primitive, so any single-shot
 # extraction was a guess wearing a PASS. (M31 added one, `extract_all`, which is
 # what the relaxation further down reads for; the guard below is unchanged for
-# every plan that still does not use it.) Ground truth (L2) would catch a wrong
+# every plan that still does not use it. M32's `observe` is NOT one — it
+# discloses more of the page, it does not count.) Ground truth (L2) would catch a wrong
 # guess; a live run has none, which is exactly probe #2's finding. Matches
 # ONLY the superlative-over-a-set shape, not "cheapest"/"most expensive"
 # (a price comparison, tracked separately — D14, `live-books-cheapest-travel`

@@ -1,0 +1,27 @@
+{
+  "id": "observe-step-cannot-carry-expected-state",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "input": {
+    "task": "What is the serial number of the Nimbus Field Notebook?",
+    "fixture": "deep-spec.html",
+    "stub_plan": [
+      {
+        "action": "observe",
+        "target": { "role": "region", "name": "Product Information" },
+        "expected_state": { "text_visible": "Dispatched today" }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "replans": 0,
+    "recovery": false
+  },
+  "provenance": "M32 cold review, runner-up finding — watched RED first. An `observe` step reads the page and changes nothing, so it has no state to assert; nothing rejected a plan that put an `expected_state` on one, and the system prompt advertises the key per-step without excluding `observe`. Measured on the pre-fix build: `check_state` failed, `StepError(\"act\")` was raised for a step that acted on nothing, `classify` returned `act`, and the run was diagnosed `failure:act` and routed into the act/replan recovery ladder — a read-only step wearing an action failure, scored against the wrong class by `diagnosis_correct` and able to pull the `recovery` label onto whatever the replanner returned. Now it is what it always was: a plan the executor cannot honour, `failure:task`, before the observation is taken.",
+  "triage": {
+    "class": "contract-drift",
+    "note": "same family as `resolver-unknown-target-key`, and refused rather than ignored for the same reason: silently dropping the key would run a plan the planner did not write and report on it. `replans: 0` is asserted because the defect's real cost was not the wrong class, it was the recovery ladder the wrong class opened."
+  }
+}

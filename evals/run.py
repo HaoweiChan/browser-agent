@@ -91,7 +91,7 @@ def run_case(case):
 # published as the band when the committed ledger held sixteen, the slowest at
 # 13.57s — 13.57 x 1.15 = 15.6, so the rule had always said 20. Both bands are
 # now graded against the ledger by `published-band-matches-the-ledger`.
-WALL_BUDGET_S = {"fast": 80, "invariant": 20}
+WALL_BUDGET_S = {"fast": 90, "invariant": 20}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its
@@ -176,11 +176,13 @@ def git_sha():
 # and on CI that includes CI's own `invariant` row, appended by the step before.
 #
 # What that row did was NOT "be slower": it was CLEAN and its `ts` sorted early.
-# `stamp` below is naive local time, and the band check treats those strings as an
-# ordering on real time, so a CI row written 25 minutes after the band row lands
-# eight hours before it and answers yes to "was a clean row already available?"
-# ADR-019 §7 has the mechanism and the control; T-R77 carries the `ts` half, which
-# this tag makes unreachable across environments without repairing it.
+# `stamp` below was naive local time then, and the band check treats those strings
+# as an ordering on real time, so a CI row written 25 minutes after the band row
+# landed eight hours before it and answered yes to "was a clean row already
+# available?" ADR-019 §7 has the mechanism and the control. `stamp` is UTC now,
+# which fixes the ordering key; this tag is the OTHER property and neither
+# substitutes for the other — a foreign row is the wrong row to derive a ceiling
+# from whatever its stamp says.
 #
 # NOT derived from the effective `EVAL_WALL_BUDGET_S_*`, which is the obvious
 # guess and is wrong in exactly the case that produced the defect: CI's
@@ -196,6 +198,25 @@ EVAL_ENV = "EVAL_ENV"
 
 def env_tag():
     return os.environ.get(EVAL_ENV) or ("ci" if os.environ.get("CI") else "local")
+
+
+def stamp(instant=None):
+    """The ledger's `ts`, in UTC.
+
+    Naive local time until T-M32-13. `_band_wrong` orders these strings as real
+    time — item 2 (cited-run) refuses a dirty citation against any CLEAN row
+    stamped earlier — and the ledger mixes zones, because a laptop writes local
+    and a runner writes UTC. A CI row 25 minutes later in real time sorted eight
+    hours earlier, was clean, and disqualified a citation it did not predate; on
+    a tree that only reaches count N+1 while the new case is uncommitted, that
+    made every case addition cost two commits. Graded by
+    `ledger-ts-orders-real-time`, which sets both zones explicitly so it cannot
+    pass by running on a UTC host.
+
+    Rows written before the switch keep their local stamps: nothing records the
+    zone a row was written in, so rewriting them would be invented precision.
+    ADR-019 §7 states what that leaves."""
+    return time.strftime("%Y%m%d-%H%M%S", time.gmtime(instant))
 
 
 def git_dirty():
@@ -288,7 +309,7 @@ def main():
     write_report = (args.report or args.suite == "all" or red) and not args.no_report
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    stamp = time.strftime("%Y%m%d-%H%M%S")
+    ts = stamp()
     # Read the tree BEFORE writing the report: the report is an untracked file
     # in the tree it is describing, so asking afterwards made every `--report`
     # run record `dirty: true` on account of its own artifact — and the bands
@@ -296,13 +317,13 @@ def main():
     sha, dirty = git_sha(), git_dirty()
     report_name = None
     if write_report:
-        report_name = f"{stamp}-{args.suite}.json"
+        report_name = f"{ts}-{args.suite}.json"
         (REPORT_DIR / report_name).write_text(json.dumps(
             {"suite": args.suite, "score": score, "totals": totals, "metrics": metrics,
              "results": results}, indent=2))
 
     history_line = {
-        "ts": stamp, "suite": args.suite, "sha": sha, "dirty": dirty,
+        "ts": ts, "suite": args.suite, "sha": sha, "dirty": dirty,
         "env": env_tag(),
         "passed": passed, "total": len(results), "score": round(score, 6),
         "wall_s": totals.get("wall_seconds", 0.0), "cost_usd": totals.get("llm_usd"),

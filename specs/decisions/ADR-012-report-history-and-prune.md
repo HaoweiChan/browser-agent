@@ -35,8 +35,12 @@ Every run appends one JSONL line to `evals/report/history.jsonl`, schema:
  "cost_usd", "report"}
 ```
 
-**Amended 2026-08-23 (T-R44):** `env` is new — `local`, `ci`, or whatever
-`EVAL_ENV` says. A wall-clock ceiling is per (suite, environment) and the band
+**Amended 2026-08-23 (T-R44):** `ts` is **UTC** (`time.gmtime`), and `env` is new
+— `local`, `ci`, or whatever `EVAL_ENV` says. `ts` was naive local time until
+that commit, and rows written before it keep their local stamps: nothing records
+the zone a row was written in, so converting them would be invented precision.
+The band check orders rows by `ts`, and across two zones that ordering is simply
+wrong — T-M32-13, ADR-019 §7, graded by `ledger-ts-orders-real-time`. A wall-clock ceiling is per (suite, environment) and the band
 grader had no way to tell two environments' rows apart, so on CI a band measured
 on a laptop was reddened by CI's own row; ADR-019 §7 is the reasoning and
 `_LEGACY_ENV` is what the rows written before this line count as. The other
