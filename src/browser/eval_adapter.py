@@ -3722,6 +3722,19 @@ def _run_soak_accounting_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": {"soak": wrong}}
 
 
+# "python3 -m evals.run --suite fast   # ..., wall clock <= 75s" — a runnable
+# gate command and, in its own trailing comment, the ceiling that command
+# enforces. The one form in this repo's markdown that can only ever mean the
+# LIVE ceiling: it tells a contributor what the gate they are about to run
+# will refuse. Narrative prose about a past ceiling ("the 60s ceiling of its
+# day", "moved to 70", "60 -> 80") is not separable from a live publication by
+# any cheap pattern — ADR-002 and ADR-013 keep their old numbers deliberately,
+# as the record of what was decided then — so this grades the command form and
+# says nothing about the prose. See `_run_doc_counts_case`.
+_SUITE_CMD = re.compile(r"--suite (\w+)[^\n#]*#([^\n]*)")
+_CEILING_LITERAL = re.compile(r"(\d+(?:\.\d+)?)\s*(?:s|secs?|seconds)\b")
+
+
 def _run_doc_counts_case(case: dict) -> dict:
     """Numbers in the documents of record, derived rather than re-typed.
 
@@ -3740,7 +3753,7 @@ def _run_doc_counts_case(case: dict) -> dict:
     stale report, which the citation check makes visible.
     """
     from evals.run import ROOT as RUN_ROOT
-    from evals.run import load_cases
+    from evals.run import WALL_BUDGET_S, load_cases
 
     inp, wrong = case["input"], []
     counts = {s: len(load_cases(s)) for s in ("fast", "invariant", "live", "full", "all")}
@@ -3933,7 +3946,38 @@ def _run_doc_counts_case(case: dict) -> dict:
         required_in = c5.get("required_in", {})
         for path in md_files:
             docrel = path.relative_to(RUN_ROOT).as_posix()
-            live_text = _live(path.read_text(encoding="utf-8"))
+            raw = path.read_text(encoding="utf-8")
+            live_text = _live(raw)
+            # A gate command that publishes its own ceiling must publish the one
+            # `evals/run.py` commits. Four documents drifted off `WALL_BUDGET_S`
+            # at once (T-M32-9) because each of them re-typed the number and
+            # nothing read it back; the ceiling has moved twice in two days, so
+            # a fix that only corrects today's literals buys one milestone. Raw
+            # text, not `live_text`: these live in fenced code blocks, where the
+            # markdown unwrapping above has nothing to do and the newline the
+            # per-command match needs has been normalised away. Only suites that
+            # HAVE a committed ceiling are graded — `live`/`full`/`all` have
+            # none, and a duration mentioned in their comments is prose, not a
+            # gate. Struck spans come out first, the same convention `_live`
+            # applies below and for the same reason: `prompts/` is append-only
+            # and records the gate block as it stood on its date, so a
+            # superseded ceiling there is struck with a dated pointer, never
+            # rewritten — and a guard that reddens on preserved history is a
+            # guard someone turns off. The residual, stated rather than
+            # implied: a ceiling published anywhere OTHER than a `--suite`
+            # comment is invisible here, and deliberately so.
+            if inp.get("commands_publish_the_committed_ceiling"):
+                unstruck = re.sub(r"~~.*?~~", "", raw, flags=re.DOTALL)
+                for suite, comment in _SUITE_CMD.findall(unstruck):
+                    if suite not in WALL_BUDGET_S:
+                        continue
+                    for lit in _CEILING_LITERAL.findall(comment):
+                        if float(lit) != WALL_BUDGET_S[suite]:
+                            wrong.append({
+                                "publishes_a_ceiling_nothing_enforces":
+                                    f"--suite {suite} ... {lit}s",
+                                "committed": WALL_BUDGET_S[suite],
+                                "doc": docrel})
             for bad in c5.get("forbidden", []):
                 if _live(bad) in live_text:
                     wrong.append({"asserts_criterion5_green": bad, "doc": docrel})

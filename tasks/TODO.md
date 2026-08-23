@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: in-progress]
+### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: pr]
 Promoted from Debt to Queue 2026-08-23 by the owner.
 Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
 routed to debt in round 4, never written into this file until round 5.
@@ -36,6 +36,18 @@ Commands blocks named explicitly, since that is the file a new contributor
 reads as the contract. Nothing graded changes; if it can be graded cheaply
 (one sweep over tracked markdown for a ceiling literal that is not the
 committed one), do that instead and watch it red on CLAUDE.md first.
+Update 2026-08-23: done, with two corrections to the spec above. Leg (2) does
+not reproduce — `INDEX.md` carries no "75s local" on this tree or on
+`origin/main`; that text was PR #29 R5's finding and was fixed there, by
+dropping the literal, which is the same shape used here. A fourth site the spec
+does not name was found by the sweep and fixed: `ADR-002`'s Ruling published
+"`fast` 80s local ... `invariant` has had its own 15s ceiling since ADR-019",
+two wrong numbers in one sentence (this is also T-R35's third leg — see
+T-M32-17). Literals dropped rather than corrected in CLAUDE.md and ADR-002;
+`fast-wall-clock-budget`'s note and `evals/run.py`'s OVER BUDGET source label
+corrected in place. Graded by `docs-numbers-are-derived`'s new
+`commands_publish_the_committed_ceiling` sweep, watched red on CLAUDE.md first;
+its deliberate narrowness is T-M32-16.
 
 ### T-R56 — the band subsystem's documents and its own strings say what the code does            [status: pr]
 Origin: bundles T-R45, T-R46, T-R47, T-R48, T-R49, T-R52, T-R54, T-R55 (PR #35 R8/R17/R18/R19/R20/R21/R22 + T-R34 cold review)
@@ -184,6 +196,65 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M32-16 — a live ceiling published in any shape other than a gate command is still ungraded            [status: todo]
+Origin: T-M32-9.
+Spec: the sweep T-M32-9 added (`docs-numbers-are-derived`,
+`commands_publish_the_committed_ceiling`) grades exactly one form: a runnable
+`--suite X` command whose own trailing comment publishes a ceiling. That is the
+only form in this repo's markdown that can *only* mean the live number. It
+reaches nothing else, on purpose — ~93 lines of tracked markdown pair a seconds
+literal with a ceiling word and nearly all are the record (ADR-002 Decision 4's
+60s, ADR-013's derivation prose, README's history), and ADR-002's Ruling carried
+a live number and a historical one in one sentence, so no cheap pattern
+separates them. The two live non-command publications that exist today are
+covered by other means, not by a rule: ADR-019's Ruling by
+`published-band-matches-the-ledger` item 6 (ruling), ADR-002's by having had its
+literals removed. A third document publishing a live pair would be ungraded.
+This is the mechanism T-R25 has stayed open for since PR #23 R8 — "a guard that
+reads the ceiling out of `WALL_BUDGET_S` instead of out of prose" — now built
+for one form and unbuilt for the rest; whoever closes this should close T-R25
+with it.
+Repro: write "`fast` 75s local" into any tracked markdown outside a `--suite`
+comment; the suites stay green.
+Acceptance: either a convention that marks a live ceiling statement so it can be
+swept (the `**Ns**` form `_ADR_CEILING` already relies on inside ADR-019 is the
+obvious candidate), or the honest finding that dropping the literal everywhere
+is the whole defence — argued, not defaulted to.
+
+### T-M32-17 — T-R35 is closed on all four acceptance clauses; delete the block            [status: todo]
+Origin: T-M32-9.
+Spec: not an audit — the audit is done, and this is the evidence. T-R35 ("three
+specs files still publish the withdrawn 75s/15s ceilings as current") has four
+acceptance clauses and every one of them is satisfied on this tree:
+(1) "every ceiling statement in specs/ names 80/90/20/20" — satisfied, and the
+clause is now itself a stale literal: the enforced local `fast` has been 90
+since ADR-021, so a reader obeying T-R35 verbatim would re-introduce the exact
+defect T-R35 exists to catch. That is the clearest sign the block has aged out
+rather than been left undone.
+(2) "ADR-019's Amends header matches its Ruling" — satisfied.
+`specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:12` reads "**Amends**:
+ADR-013 Decision 4 (local `fast` ceiling 60 → 80)", which is its Ruling's own
+number; the "60 -> 75" T-R35 quotes is gone.
+(3) "ADR-002's parenthetical stops asserting a live 15s invariant ceiling" —
+satisfied by T-M32-9, which dropped both literals from that Ruling rather than
+correcting them.
+(4) "T-R25's Update states what is actually fixed" — satisfied. T-R25 carries
+`[status: fixed at PR #29 R22, kept for the mechanism]` and an Update that
+separates what was corrected from what was not, naming the mechanism as the
+open half. T-R35's own premise ("T-R25 asserts ... it is not") no longer holds.
+Its fifth, optional clause — "ideally one graded row that compares INDEX/ADR
+ceiling numbers against `WALL_BUDGET_S`" — is what T-M32-9 built, narrower;
+T-M32-16 records exactly how much narrower and is the block that inherits it.
+T-R35's separately-named leg on `specs/decisions/INDEX.md:11` ("fast 75s local")
+never needed this branch at all: PR #29 R5 fixed it, by dropping the literal,
+and `grep -c '75s local' specs/decisions/INDEX.md` is 0 both on disk and on
+`origin/main`.
+Repro: run T-R35's own repro — `grep -n '75s local' specs/decisions/INDEX.md`,
+`grep -n '60 → 75' specs/decisions/ADR-019-*.md` — both empty.
+Acceptance: T-R35 deleted from tasks/TODO.md with a DONE.md line citing this
+block, not re-audited. If any clause above is wrong, the correction belongs
+here, in the block that made the claim.
 
 ### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
 Origin: PR #34 R17.

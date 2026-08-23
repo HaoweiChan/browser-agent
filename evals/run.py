@@ -303,8 +303,12 @@ def main():
     if over_budget(args.suite, totals["wall_seconds"]):
         ceiling = wall_budget(args.suite)
         env = wall_budget_env(args.suite)
+        # ADR-002 Decision 4 set the first ceiling; ADR-019 (as amended by
+        # ADR-021) is what rules on the numbers now, and naming the superseded
+        # one sent a reader to a document that no longer holds them.
         source = (f"{env}={os.environ[env]}"
-                  if ceiling != WALL_BUDGET_S[args.suite] else "ADR-002 Decision 4")
+                  if ceiling != WALL_BUDGET_S[args.suite]
+                  else "ADR-019 as amended by ADR-021")
         print(f"[eval] OVER BUDGET: suite '{args.suite}' wall clock "
               f"{totals['wall_seconds']}s > {ceiling}s ({source})", file=sys.stderr)
         return 1
