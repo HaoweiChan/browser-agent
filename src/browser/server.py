@@ -417,6 +417,13 @@ PAGE = r"""<!doctype html>
     color-scheme:light;
   } }
   * { box-sizing:border-box }
+  /* `hidden` is a `display:none` UA default, and every one of this page's own
+     layout rules outranks it: `.status-line{display:flex}` and
+     `.progress{display:grid}` both kept rendering under `hidden=true`, so the
+     idle panel showed a RUNNING chip with the spinner over an empty progress
+     rail while the DOM correctly reported both as hidden. One rule, not a class
+     per element -- the attribute is the intent and it should win. */
+  [hidden] { display:none !important }
   html { min-height:100%; background:var(--bg) }
   body { margin:0; min-height:100vh; background-color:var(--bg); color:var(--fg);
          font:14px/1.6 var(--mono); letter-spacing:-.01em;
