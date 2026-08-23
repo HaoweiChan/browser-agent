@@ -84,5 +84,18 @@
       "EVAL_WALL_BUDGET_S* (never set)"
     ],
     "no_update_baseline": true
+  },
+  "second_merge": {
+    "why": "origin/main moved again to efb2711 (M37, PR #37) while b50c7b1 was landing, so PR #34 went CONFLICTING a second time and GitHub ran no checks on b50c7b1 either. This is the fourth mid-flight move of main during PR #34.",
+    "conflicts": "Two, both append-only logs, resolved by union with nothing lost. history.jsonl: 1047 ours + 11 theirs-only + 1 restored row (below) = 1059, re-sorted by ts. pr-loop-ledger.jsonl: theirs' order plus our M32 row = 15 rows; theirs-only M37 and ours-only M32 both present.",
+    "auto_merged_files_read": "src/browser/eval_adapter.py: zero lines lost from our side, and all three of main's M37 additions are present (the news.ycombinator.com _UI_MATRIX row, the `button: chip.textContent` capture, and the expected_examples assertion block); our _check_steps_adopt_only and its INVARIANTS entry are intact. tasks/TODO.md: one heading is gone from our side, `### T-R34`, and that is main's own deliberate removal (T-R34 merged as PR #35) rather than a merge loss -- its four `Origin: T-R34` cross-references survive. All 11 T-M32-* blocks intact, M32 still `[status: pr]`.",
+    "case_counts": "Unchanged by M37 -- fast 152, invariant 58, all 163 -- because M37 edited an existing case (ui-no-url-guard.json) rather than adding one. So no published count moved, and the ADR-019 bands, README table and docs/analysis figures were re-verified rather than re-derived: published-band-matches-the-ledger, published-band-slack-is-declared, docs-numbers-are-derived and adr-header-and-index all pass unchanged. The ledger's maximum at fast 152 did move (70.38 -> 71.01s) and still derives 85, which is what item 3 grades.",
+    "ledger_rows_lost_and_partially_restored": "Between the b50c7b1 commit and this merge, two rows appended to evals/report/history.jsonl after the commit were no longer in the worktree, which was clean against HEAD. One is the pre-commit hook's own gate row for b50c7b1 -- `ts 20260823-193416, fast, 152/152, 71.01s` -- quoted verbatim from this session's own tool output and RESTORED into the union. The other was an invariant verification run (58/58, 13.46s reported by the runner, but its exact ts and full row were not captured verbatim) and is NOT reconstructed: writing a ledger line from memory would be fabricating evidence in the one file this PR has spent two rounds insisting is append-only. Cause not established from inside this worktree; the file's mtime is later than the commit, so it was appended to and then reverted to HEAD by something outside this session.",
+    "new_debt": "T-M32-12 -- T-R34 merged as PR #35 and efb2711 removed its Queue block from tasks/TODO.md, but tasks/DONE.md never got its one-line entry. M37 is one step behind in the same state. Pre-existing on origin/main, logged rather than repaired.",
+    "gate_on_the_merged_tree": {
+      "invariant": "58/58 = 1.000, wall 13.46s against the 20s ceiling, $0.0000",
+      "fast": "152/152 = 1.000, wall 70.83s against the 90s ceiling, $0.0000, 242 actions",
+      "live": "not re-run -- nothing in the M37 merge touches a live path, and the previous run of this branch was 9/9 = 1.000 at $0.0000"
+    }
   }
 }

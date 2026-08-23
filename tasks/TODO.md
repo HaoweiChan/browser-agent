@@ -12,28 +12,30 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: pr]
-Origin: PR #29 R24
-Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README
-no longer publishes a property the grader does not implement — it now states
-what `_check_published_band` actually checks (case count matches, published
-maximum derives the SAME ceiling as the ledger maximum, committed ceiling >=
-the rule applied to that maximum) — and both README's band table and ADR-019's
-band lines are now regenerated from `evals/report/history.jsonl` by script, so
-the published run lists are the ledger's own and the derivation sentences
-multiply the ledger maximum at the shipped case count.
-What remains is the judgement call R24 raised: property 2 is
-`rule(published) == rule(ledger max)` rather than `published >= ledger max`.
-The weaker form was chosen deliberately (the strict form reddens on ordinary
-0.2-0.5s run-to-run variance, which is rot-by-construction one level up), and
-it does catch the harmful direction — a band justifying a LOWER ceiling than
-the truth. It does not catch a published maximum that is up to ~1.0s below the
-ledger's at these magnitudes while still landing in the same band.
-Acceptance: either the tighter property is adopted with a regeneration step
-that keeps the doc honest without hand-editing (the script that now produces
-these lists is the obvious hook), or the trade-off is stated in ADR-019 as a
-declared ceiling with the ~1.0s slack named, and a case pins the miss so it is
-a decision rather than an artefact of what was convenient to grade.
+### M37 — The HN card's Try example no longer reproduces on the deployed build — swap it for one that does            [status: pr]
+Spec: M35 shipped five per-site Try examples, each cited to a deployment run
+that answered correctly. After the merge the post-deploy receipt round found
+`news.ycombinator.com` "Who submitted this story?" (item?id=1) failing 5/5 —
+`349e4839`, `e08b7627`, `bcae4fe7`, `63b9d944` and one more, all
+`failure:locate`: the planner now targets link "pg", the page has two "pg"
+links, and relocation by text hits the same ambiguity. The card is declared
+`unreliable`, so the page is not lying, but M35's acceptance says an example
+that cannot be reproduced is removed, not kept. The same page answers "What is
+the title of this story?" correctly on every try seen (`97f2157d`, `4453fae6`
+→ "Y Combinator", the item's real title) and "Which site was this story
+submitted from?" (`a1470b64` → ycombinator.com).
+Acceptance: `EXAMPLES["news.ycombinator.com (live)"]` becomes task "What is
+the title of this story?" with the same start URL, label "Title of an HN
+story", and its code comment cites `97f2157d` / `4453fae6` and the retired
+example's failing runs; `ui-no-url-guard-and-example-chips` and
+`ui-examples-cover-matrix` stay green with no stub change beyond what the new
+text needs; gate green (invariant 100%, fast >= baseline, under the ADR-019
+ceiling); after merge and redeploy the orchestrator runs the five Try
+examples once more and the HN card answers "Y Combinator" — the receipt goes
+in the PR evidence pack. No other page text changes.
+Out of scope: why the planner's "pg" targeting regressed (planner quality —
+M28/M32 territory; note it in the PR if a cause is obvious, do not fix it);
+the openlibrary card, which fails as its note declares.
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
@@ -122,6 +124,29 @@ against the expectation instead of subscripting `None`, for EVERY `expect`
 shape that implies verdict PASS — empty, `{"status": "success"}`, and
 `{"verdict": "PASS"}` alike — with the fix watched red on a non-empty `expect`
 first, so it cannot be closed by special-casing the empty one.
+
+### T-M32-12 — T-R34 left the Queue when it merged but never got its DONE.md line            [status: todo]
+Origin: PR #34, found during the fourth `origin/main` merge of round 5 while
+reading the auto-merged `tasks/TODO.md`.
+Spec: `tasks/DONE.md` is the append-only "one line per merged task" index.
+T-R34 merged as PR #35 (`3eac663`); `efb2711` then removed its `### T-R34`
+Queue block from `tasks/TODO.md`, leaving only four `Origin: T-R34`
+cross-references and no DONE.md line. So a merged task vanished from both
+trackers, and the only record that it shipped is the pr-loop ledger row and git
+history. M37 is in the same state one step earlier — merged as PR #37 while
+`tasks/TODO.md` still carries it at `[status: pr]` and DONE.md does not list it
+— which suggests the closing bookkeeping step is being skipped, not that T-R34
+was a one-off. Pre-existing on `origin/main`; not this branch's doing, and not
+repaired here because editing another task's completion record from inside an
+unrelated PR is how two trackers end up disagreeing.
+Repro: `grep -c 'T-R34' tasks/DONE.md` -> 0, while `tasks/pr-loop-ledger.jsonl`
+holds a T-R34 row dated 2026-08-23 and `git log --oneline origin/main` shows
+PR #35 merged.
+Acceptance: DONE.md gains its T-R34 line (and M37's when that closes), or the
+pr-loop close step is what writes it so the gap cannot recur — the latter is
+the better fix, since this is the second instance in two milestones. Cheap
+guard if one is wanted: every task id that has a `pr-loop-ledger.jsonl` row and
+no `### <id>` heading in TODO.md must have a DONE.md line.
 
 ### T-M32-8 — ADR-002's Ruling and the CI band publish ceilings nothing derives from the ledger            [status: todo]
 Origin: PR #34 R18, extended by PR #34 R21. Routed to debt in round 4 and
@@ -395,6 +420,23 @@ Acceptance: the band citation carries `passed/total` from the row it names, deri
 than typed — the ledger row has both fields — or the parenthetical is dropped from both so
 there is nothing to be inconsistent about. Watched red by publishing a band whose citation
 claims a result the row does not have.
+
+### T-R62 — the EXAMPLES header comment dates every receipt 2026-08-22, but the HN entry's receipts are 2026-08-23            [status: todo]
+Origin: PR #37 R2 (LOW)
+Spec: `src/browser/server.py` EXAMPLES header comment says "Every entry was run against the deployment on 2026-08-22"; M37 swapped the HN entry for one whose receipts (`97f2157d`, `4453fae6`) are dated 2026-08-23. A JS comment, not rendered, but a reader of the source takes it as the receipt date.
+Acceptance: the comment states the date per entry or "on or after 2026-08-22"; nothing grades comments, so this is a doc fix with no case.
+
+### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
+Origin: M37 implementer
+Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
+because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
+failure:locate, two "pg" links). The form's `#task` placeholder in `src/browser/server.py`
+(`placeholder="e.g. Who submitted this story?"`) is the same prompt, unchanged because M37's
+acceptance reads "No other page text changes" and nothing grades placeholder text. A visitor
+who types the placeholder verbatim against the HN card's URL reproduces the retired failure.
+Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
+"What is the title of this story?" is the obvious one), pinned by the ui-form case the way
+`expected_examples` pins a chip — or a note that placeholders are illustrative only.
 
 ### T-R45 — the slack sweep matches the rendered scalar, not the value            [status: todo]
 Origin: PR #35 R18
