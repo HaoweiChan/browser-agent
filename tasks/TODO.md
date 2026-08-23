@@ -67,6 +67,57 @@ Promoted from Debt 2026-08-23: today's post-deploy receipt rounds (PR #32/#37) s
 planner's output is the dominant source of flakiness on the five Try examples; M28 is the
 half that does not collide with M32 (PR #34, in flight in another session).
 
+### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: todo]
+Origin: post-deploy receipt rounds for PR #32/#37/#38 (2026-08-23). `349e4839`,
+`e08b7627`, `bcae4fe7`, `63b9d944` (HN item 1, "Who submitted this story?"):
+`extract {role: link, name: "pg"}` → `ResolveError: 2 matches`; the relocation
+rung retargets as `{text: "pg"}` and hits the same two. `e985e048`
+(quotes.toscrape.com): `{text: "Albert Einstein"}` → 3 matches. `e6768ee0`:
+`{near: "“The world as we have created it …”"}` → no tier resolved (curly
+quotes / long near string). In every case the page held the answer and the
+plan named it; the resolver gave up on ambiguity the page itself could settle.
+Spec: when a semantic target resolves to N>1 elements, the resolver tries
+site-agnostic narrowing before failing: (1) the planner's `near`/`anchor`
+string as a proximity tiebreaker; (2) the first match in document order ONLY
+when the plan carried `index: null` and the task wording is singular — never
+silently when the matches differ in role; (3) `near` matching normalises
+typographic quotes/whitespace and falls back to a prefix of the string. The
+trace records which narrowing rung fired (`retry_or_recovery` semantics of
+specs/001 apply: a narrowing that changed strategy is a recovery, a re-run of
+the same locator is a retry). No site knowledge (CLAUDE.md rule 6).
+Acceptance: fixture cases pin each shape red first — two same-role links
+sharing a name with a distinguishing `near`; three text matches with an
+anchor; a `near` string with curly quotes — and go green; a negative case
+pins that matches differing in role are NOT auto-picked; `ui-no-url-guard`/
+`ui-examples-cover-matrix` unchanged; gate green under the ADR-019 ceiling;
+after merge the HN/quotes examples are re-run 3× each on the deployment and
+the receipts go in the PR evidence pack.
+Out of scope: planner quality (M32), judge availability (M39).
+
+### M39 — A malformed judge response is retried once before failing closed            [status: todo]
+Origin: post-deploy receipt round for PR #38 (2026-08-23). Run `7787f9c9`
+(HN item 1, "What is the title of this story?"): extraction `"Y Combinator"`
+was correct, every L1 predicate passed, and the run ended `failure:semantic`
+with reason `judge unavailable, failing closed: JudgeError: malformed judge
+response: JSONDecodeError: Expecting value: line 1 column 1 (char 0)`. The
+next two runs of the same task (`833bd511`, `6c66bdd4`) passed. ADR-017's
+fail-closed rule is right — a judge that cannot be read must not certify —
+but one transient malformed completion currently costs a correct run outright.
+Spec: on `JudgeError` caused by an unparseable/empty completion (NOT on a
+missing key, NOT on a refusal, NOT on a reasoned FAIL), `judge()` retries the
+same call exactly once with the same prompt; the second failure fails closed
+exactly as today. Both attempts' usage is billed and recorded; the verdict
+records `judge_attempts`. Bounded: one retry, no backoff loop, no model
+switch; the retry stays inside the run's token/USD budget and ADR-017's
+fail-closed semantics are otherwise unchanged.
+Acceptance: a stub-judge case pins the shape red first (first completion
+malformed, second well-formed → PASS with `judge_attempts: 2`); a negative
+case pins that two malformed completions still fail closed with the existing
+reason and `judge_attempts: 2`; `judge-fail-closed-on-*` cases stay green;
+`docs/analysis.md` cost section states the worst-case extra judge call per
+run; gate green under the ADR-019 ceiling.
+Out of scope: judge prompt/model changes; retrying a reasoned FAIL.
+
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
 but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
