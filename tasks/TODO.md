@@ -88,6 +88,18 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
+Origin: M37 implementer
+Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
+because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
+failure:locate, two "pg" links). The form's `#task` placeholder in `src/browser/server.py`
+(`placeholder="e.g. Who submitted this story?"`) is the same prompt, unchanged because M37's
+acceptance reads "No other page text changes" and nothing grades placeholder text. A visitor
+who types the placeholder verbatim against the HN card's URL reproduces the retired failure.
+Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
+"What is the title of this story?" is the obvious one), pinned by the ui-form case the way
+`expected_examples` pins a chip — or a note that placeholders are illustrative only.
+
 ### T-R50 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
 Origin: T-R34, restated after PR #35 R4 (renumbered from T-R39 during the M35 merge — main had allocated that id independently)
 Spec: `_band_wrong` filters `history.jsonl` to rows whose `total` equals the CURRENT case

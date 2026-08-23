@@ -1,0 +1,11 @@
+{
+  "pr": 37,
+  "round": 2,
+  "task": "M37",
+  "head": "f589b1a",
+  "scope": "repair diff 5002996..f589b1a + standing findings",
+  "result": "APPROVED",
+  "gate": "invariant 53/53 = 1.000 \u00b7 fast 136/136 = 1.000 (wall 61.8s)",
+  "findings": [],
+  "reviewer_note": "label graded by exact string equality on chip textContent; six mutations (label reverted, task reverted, trailing space, nbsp, case, double space) all red; shipped text green"
+}

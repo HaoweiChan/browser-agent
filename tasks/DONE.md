@@ -24,6 +24,7 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 - M36 — Responsiveness judged by an LLM, last rung of the ladder (2026-08-22) — ADR-017, PR #33, trace in tasks/reviews/pr33-r*.json
 - M35 — Visitor-facing console: verified example prompts, plain-language limits, no-URL guard (2026-08-23) — PR #32, trace in tasks/reviews/pr32-r*.json
 - T-R34 — the band's slack becomes a declared ceiling (2026-08-23) — ADR-019, PR #35, trace in tasks/reviews/pr35-r*.json; 4 rounds, 1 circuit breaker
+- M37 — Swap the HN Try example for one that reproduces on the deployed build (2026-08-23) — PR #37, efb2711
 
 ## B-floor exit criteria — final status
 All 6 met: criterion 2 (coverage/live breadth) was partial at the M5 freeze

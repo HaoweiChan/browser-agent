@@ -1,0 +1,50 @@
+{
+  "pr": 37,
+  "round": 1,
+  "task": "M37",
+  "head": "0801265",
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 53/53 = 1.000 · fast 136/136 = 1.000 (wall 62.2s)",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "claim": "The acceptance names label \"Title of an HN story\" but nothing grades the label — the old label passes green beside the new task.",
+      "evidence": "src/browser/server.py:810 renders `Try: ${esc(ex.label)}` on the chip; src/browser/eval_adapter.py:3026-3029 grades only chip task+url. Scratch mutation: label reverted to \"Who posted this HN story?\" with the new task -> ui-no-url-guard-and-example-chips {\"passed\": true, \"wrong\": {}}.",
+      "repro": "sed -i '' 's/label: \"Title of an HN story\"/label: \"Who posted this HN story?\"/' src/browser/server.py (scratch copy) && run_case(evals/adversarial/ui-no-url-guard.json) -> passed",
+      "acceptance": "expected_examples[HN] carries `label` and the grader compares the chip's button text (or EXAMPLES[key].label) to it; the mutation above goes red, the shipped text stays green.",
+      "route": "repair"
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "claim": "EXAMPLES header comment now overstates: \"Every entry was run against the deployment on 2026-08-22\" while the HN entry's receipts (97f2157d/4453fae6) are 2026-08-23 per the PR body.",
+      "evidence": "src/browser/server.py:534-535 vs PR #37 body 'Example receipts (deployment, 2026-08-23)'.",
+      "repro": "git diff origin/main...task/M37 -- src/browser/server.py; read lines 533-540",
+      "acceptance": "Comment date reads 2026-08-22/23 (or 'on or after'), or the orchestrator accepts it under 'no other page text changes' (it is a JS comment, not rendered).",
+      "route": "debt",
+      "debt_id": "T-R62"
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "claim": "The #task placeholder still advertises the retired 5/5-failing prompt; spec-compliant ('no other page text changes') and debt T-R61 is logged, but the page now carries a prompt M35's own rule says should be removed.",
+      "evidence": "src/browser/server.py:483 `placeholder=\"e.g. Who submitted this story?\"`; tasks/TODO.md T-R61 block present.",
+      "repro": "grep -n placeholder= src/browser/server.py",
+      "acceptance": "Orchestrator decision: fold into M37 (one string + pin) or leave as T-R61.",
+      "route": "debt",
+      "debt_id": "T-R61",
+      "note": "already logged by the implementer as T-R61"
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "claim": "None of the cited run_ids resolve on the deployment — receipts are unverifiable externally; pre-existing (in-memory run store), not introduced here, but the post-merge receipt in the evidence pack will be unverifiable the same way after the next redeploy.",
+      "evidence": "curl https://whaleforce-browser-agent.zeabur.app/tasks/97f2157d -> 404 {\"detail\":\"unknown run_id\"}; same for all seven ids checked.",
+      "repro": "curl -s https://whaleforce-browser-agent.zeabur.app/tasks/4453fae6",
+      "acceptance": "Evidence pack captures the GET /tasks/<id> JSON body at receipt time rather than the id alone.",
+      "route": "orchestrator",
+      "note": "post-merge receipt round will capture the GET /tasks/<id> bodies into tasks/reviews/pr37-receipts.json"
+    }
+  ]
+}
