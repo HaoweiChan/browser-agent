@@ -305,6 +305,13 @@ def _check_plan_gap() -> dict:
     norank = [{"action": "extract_all", "target": {"role": "link"}, "rank": False}]
     two = one + [{"action": "extract_all", "target": {"role": "listitem"}, "rank": True}]
     plain = [{"action": "extract", "target": {"role": "link"}}]
+    # T-M40-2. The document root, as `observe` puts it at the top of every
+    # observation: role `WebArea`, name the page <title>. The rows below are the
+    # ones the end-to-end case cannot reach, and the first of them is the whole
+    # placement question — `PLAIN` is not aggregate-shaped, so a clause written
+    # below `if not is_aggregate(task)` is dead here, and every task in the
+    # M40 re-probe is this shape.
+    ROOT = {"role": "WebArea", "name": "Some Page — A Site"}
     rows = [
         (AGG, [], True), (AGG, plain, True), (AGG, one, False),
         (AGG, plain + one, True), (AGG, one + plain, True), (AGG, two, True),
@@ -314,6 +321,39 @@ def _check_plan_gap() -> dict:
         (AGG, norank, True), (AGG, [dict(one[0])], False),
         (PLAIN, [], False), (PLAIN, plain, False), (PLAIN, two, False),
         (PLAIN, plain + one, False), (PLAIN, norank, False),
+        # T-M40-2: extracting the document root is refused whatever the task
+        # shape, and refused for `extract_all` too — enumerating a root is one
+        # dump, not a set. Spelling is the model's, not Chromium's, so the
+        # comparison is case-folded and covers the `RootWebArea` spelling other
+        # builds emit and the ARIA `document` role for an embedded one.
+        (PLAIN, [{"action": "extract", "target": ROOT}], True),
+        (PLAIN, [{"action": "extract", "target": {"role": "webarea"}}], True),
+        (PLAIN, [{"action": "extract", "target": {"role": "RootWebArea"}}], True),
+        (PLAIN, [{"action": "extract", "target": {"role": " WebArea "}}], True),
+        # ...and ARIA `document` is NOT refused, though the first version of this
+        # clause refused it. It is not the root: it is an author-supplied role on
+        # an in-page container (`<div class="modal-dialog" role="document">` is
+        # Bootstrap boilerplate), Playwright resolves it, and on the fixture built
+        # for the cold review it resolved to a 40-character confirmation inside a
+        # dialog — a correct answer refused with a reason asserting the node was
+        # "the ENTIRE page". A container that MIGHT be too big is `not_a_dump`'s
+        # judgement, with the page in hand (ADR-024 §1); only the root is refusable
+        # from the plan alone, because only the root is the whole page by
+        # construction.
+        (PLAIN, [{"action": "extract", "target": {"role": "document"}}], False),
+        (PLAIN, [{"action": "extract",
+                  "target": {"role": "document", "name": "Order confirmation"}}], False),
+        (AGG, [{"action": "extract_all", "target": ROOT, "rank": True}], True),
+        (PLAIN, plain + [{"action": "extract", "target": ROOT}], True),
+        # ...and the other direction, which is load-bearing: M32's drill-down
+        # targets a container ON PURPOSE, so `observe` on the root is a plan
+        # about what to look at next, not an answer offered from a container.
+        # Same for a click: nothing is being read off it.
+        (PLAIN, [{"action": "observe", "target": ROOT}] + plain, False),
+        (PLAIN, [{"action": "click", "target": ROOT}] + plain, False),
+        # A target with no role at all must not fault the clause.
+        (PLAIN, [{"action": "extract", "target": {"text": "Some Page — A Site"}}], False),
+        (PLAIN, [{"action": "extract"}], False),
     ]
     wrong = [{"task": t, "plan": [s.get("action") for s in p], "expected_gap": want,
               "got": plan_gap(t, p)}

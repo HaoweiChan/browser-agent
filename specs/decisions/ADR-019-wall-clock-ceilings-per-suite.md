@@ -63,31 +63,41 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 153 cases, ts `20260823-212240`, **70.20s**, 153/153
-  (`dirty: false`, ts-only for the ADR-012 reason §3 gives. Two clean rows were
-  available at this count — 70.20 / 70.19s, taken as they came — and this is the
-  slower, on §3's least-slack rule. The ledger's own maximum at this count
-  derives the same ceiling; it is not copied here, see §3.)
+- Band source — `fast` at 154 cases, ts `20260824-002450`, **71.51s**, 152/154
+  (`dirty: true`, ts-only for the ADR-012 reason §3 gives. Dirty by construction —
+  T-M40-2's own case is what takes the suite to 154, so it is uncommitted while
+  every run at 154 is taken, and item 2 (cited-run) allows that exactly here: no
+  clean row at this count exists to prefer. Of the rows recorded at this count
+  when the band was republished, this is the slowest, on §3's least-slack rule.
+  The 152/154 is the row's own result: it measured the wall clock while the two
+  doc-bookkeeping cases were still red on the very numbers this republication
+  supplies.)
 
-**This band was dirty for one commit, and the reason is worth keeping.** A case
-addition forces a dirty citation: the tree only reaches 153 cases while the new
-case is uncommitted, which is the entire reason the dirty allowance exists. But
-a dirty citation is red on CI and green locally — `T-M32-13` is the diagnosis,
-the ledger's `ts` being a naive local stamp compared lexicographically against
-CI's UTC ones, so item 2 (cited-run) refuses a dirty row against any clean row
-stamped earlier and every CI row is clean and stamped eight hours behind ours.
-So M28's merge commit published `ts 20260823-211340`, 70.46s, 151/153, dirty,
-and this commit re-cites the clean run that could not exist until that one had
-landed. Two commits, by construction, for one case addition. That is the price
-`T-M32-13` records; it is paid here rather than dodged by citing a stale clean
-row from the 152-case tree, because the count changed and a band has to describe
-the tree that ships.
+**Both bands here are dirty, and the reason is structural.** A case addition
+forces a dirty citation: the tree only reaches its new count while the new case
+is uncommitted, which is the entire reason the dirty allowance exists. Item 2
+(cited-run) refuses a dirty row only against a clean row at the same count
+stamped earlier, and at a fresh count there is none. What that allowance does
+NOT cover is CI: a dirty citation is red there and green locally — `T-M32-13` is
+the diagnosis, the ledger's `ts` being a naive local stamp compared
+lexicographically against CI's UTC ones, so every CI row is clean and stamped
+eight hours behind ours. The M32 episode is the worked example: M28's merge
+commit published `ts 20260823-211340`, 70.46s, 151/153, dirty, and the commit
+after it re-cited a clean run that could not exist until the first had landed.
+Two commits, by construction, for one case addition. That is the price
+`T-M32-13` records, and it is paid rather than dodged by citing a stale clean row
+from the smaller tree, because the count changed and a band has to describe the
+tree that ships.
 
-The `153/153` is the cited row's own result, graded against it, not prose beside
-The `151/153` is the cited row's own result, graded against it, not prose beside
-it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
-requires a run that happened, and green is required nowhere in §6 — so a reader
-comparing two bands should not have to read silence as a pass.
+The `152/154` and `59/59` above are the cited rows' own results, graded against
+them, not prose beside them (T-R55). They are stated because a band source is
+taken as it is found — item 2 (cited-run) requires a run that happened, and green
+is required nowhere in §6 — so a reader comparing two bands should not have to
+read silence as a pass. Both rows are runs of this tree taken while the two
+doc-bookkeeping cases (`docs-numbers-are-derived`,
+`published-band-matches-the-ledger`) were red on precisely the numbers this
+republication supplies; no third case failed in either, and `invariant`'s cited
+row is a fully green one.
 
 Every run of this tree is in `evals/report/history.jsonl`, committed beside
 this file; the sentence above names the one the band is derived from by its
@@ -105,7 +115,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 70.20 × 1.15 = 80.73 → **85**, which is BELOW the committed 90 and
+five — gives 71.51 × 1.15 = 82.24 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
@@ -125,16 +135,15 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 58 cases, ts `20260823-200456`, **13.78s**, 58/58
-  (`dirty: false`, ts-only for the same ADR-012 reason as §2. Four clean rows
-  were available at this count — 12.93 / 13.78 / 13.18 / 13.12s, taken as they
-  came rather than selected for their numbers. 12.93s is disqualified: it
-  derives **15** where the ledger's maximum derives 20 — item 3 (same-ceiling).
-  Of the three that qualify this is the slowest, chosen so the
-  published number sits as close to the ledger's own maximum as a real run
-  allows — §6 tolerates up to one ceiling step of slack, and R21's point was
-  that publishing below the maximum is how a band drifts, so take the least
-  slack on offer.)
+- Band source — `invariant` at 59 cases, ts `20260824-003032`, **14.33s**, 59/59
+  (`dirty: true`, ts-only for the same ADR-012 reason as §2, and dirty for the
+  same construction reason §2 gives — the case that takes the suite to 59 is the
+  one being committed. The slowest row recorded at this count when the band was
+  republished, taken as it came rather than selected for its number: §6 tolerates
+  up to one ceiling step of slack, and R21's point was that publishing below the
+  maximum is how a band drifts, so take the least slack on offer. Both scalars
+  stay uncopied from the ledger's own maximum, for the reason the paragraph below
+  §3's band gives.)
 
 Neither band quotes the ledger's maximum as a number any more, and that is the
 fix for a defect this file produced twice. §3 published **13.80s** and the final
@@ -150,14 +159,15 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.78 × 1.15 = 15.85 → **20**, which is the committed
+The same rule gives 14.33 × 1.15 = 16.48 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
 
-Both bands above are republished at the case count this branch ships after four
-`origin/main` merges and this round's own case: `fast` 136 → 152, `invariant`
-53 → 58. Neither is the enumeration this file used to carry. PR #34 R21 found
+Both bands above are republished at the case count this branch ships. M32
+republished them after four `origin/main` merges and its own case (`fast`
+136 → 152, `invariant` 53 → 58); T-M40-2 republishes them again for one case,
+`fast` 153 → 154 and `invariant` 58 → 59. Neither is the enumeration this file used to carry. PR #34 R21 found
 that enumeration publishing three runs where the ledger held six and calling the
 smallest of them the maximum — the same defect PR #35 had already fixed here by
 deleting the list and citing one graded row instead, which is the resolution

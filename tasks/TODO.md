@@ -114,6 +114,89 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M40-2-1 — `observe` still hands the planner the document root as element #1 of every page            [status: todo]
+Origin: T-M40-2 implementation, 2026-08-24. Verified in code, not inferred: `observe.walk`
+starts at `page.accessibility.snapshot(...)`'s root, whose role is `WebArea` and whose name is
+the page `<title>`; the role is in neither `SKIP_ROLES` nor `NAME_PROHIBITED`, so `render`
+prints `- WebArea — 'Quotes Fixture — page 1'` as the first element of every observation.
+Reproduced on `src/browser/fixtures/quotes.html` with the production `observe`.
+Spec: T-M40-2 refuses the resulting PLAN (ADR-024). It deliberately does not stop the
+observation from advertising the target, which is the other half of the root cause: the
+planner is shown an answer-shaped string attached to a node no extraction can use. Dropping
+the root node (or renaming it) is a two-line change in `src/browser/observe.py` and it was NOT
+made in T-M40-2's PR for one reason: it changes what every run sees, its effect is only
+measurable by a live probe, and T-M40-3 is that probe — shipping both levers at once would
+leave a recovered row unattributable to either. Note the shape is not purely repo-side:
+`WebArea` targets appear in two pre-M32 runs (`8c1a3344`, `c80b1dd0`), so a model that knows
+the term may emit it whether or not the observation offers it. The lint is the guard either way.
+Acceptance: after T-M40-3 has measured the lint alone on a deployed build, decide whether to
+drop the root from the observation, with the decision recorded and an offline case pinning
+whichever behaviour is chosen (the render no longer carrying the root, or a stated reason it
+still does).
+
+### T-M40-2-2 — the planner system prompt says nothing about container targets            [status: todo]
+Origin: T-M40-2 implementation, 2026-08-24. `src/browser/planner.py`'s system prompt tells a
+model to `observe` a container it can see but cannot read into; nothing tells it not to
+`extract` from one. The runtime correction exists (ADR-024's refusal is replanned with a note
+naming the offending role), but it costs a planner round trip on every occurrence.
+Spec: a prompt line is a one-line diff and plausibly prevents the loop entirely. Held out of
+T-M40-2's PR for the same attribution reason as T-M40-2-1, and with the same ceiling: a prompt
+change is graded offline only by `_check_planner_prompt` (that the string is assembled), never
+by whether a model obeys it — the `full` suite is the only place that could measure obedience
+and it spends tokens.
+Acceptance: taken with T-M40-2-1 after T-M40-3's probe, or dropped if the probe shows the lint
+alone recovers the rows.
+
+### T-M40-2-4 — the refused plan's REPLAN can name the same node one tier down, and answer with the page title            [status: todo]
+Origin: T-M40-2 cold review, 2026-08-24, finding 1. Repro, constructible as a fast case:
+`hello.html` (its `<title>` and `<h1>` are the same string), task "What does the second heading
+on this page say?", `stub_plans` = [[extract {role: WebArea, name: "Hello Fixture"}],
+[extract {text: "Hello Fixture"}]]. Plan 1 is refused by ADR-024's clause; plan 2 is what a real
+planner most plausibly returns, because the gap note re-shows the SAME observation whose element
+#1 is still `WebArea — 'Hello Fixture'` and whose text head opens with that string. Plan 2 passes
+the lint, resolves at the text tier onto the `<h1>`, and the run reports `status: success`,
+`answer: "Hello Fixture"`, `replans: 1`, all ten L1 checks green, judge certified — the same
+terminal state ADR-024 was written against, reached one replan later instead of one relocation
+later.
+Spec: the lint cannot see this. `plan_gap(task, steps)` takes no page and no title, and the only
+rule that would catch it — refuse an extraction whose target string equals the page title — is
+already refuted by a committed case: `evals/golden/tc1-hello-heading.json` asks for the heading
+on that same fixture and its correct answer IS that string. So the fix is not in the lint. The
+two candidates are T-M40-2-1 (stop advertising the root in the observation, which removes the
+string the planner is copying) and giving the lint the observation it is linting against, which
+is a signature change across three adoption points.
+Acceptance: the repro above committed as an adversarial case, watched red, and closed by
+whichever lever T-M40-3's probe justifies.
+
+### T-M40-2-5 — an `observe` onto the document root fails to locate, and its recovery rung is labelled but answers nothing            [status: todo]
+Origin: T-M40-2 cold review, 2026-08-24, finding 3. `observe {role: WebArea, name: <title>}` is
+deliberately NOT refused (ADR-024 §3 — refusing it would be a rule about M32's drill-down), but
+it does not work either: `resolve` gives 0 matches for the root, `classify` makes it a `locate`
+failure, and the relocation ladder runs on a read-only step. Before T-M40-2's rung guard that
+ladder retargeted it as `{text: <title>}` and drilled into the title's own heading — a
+13-character subtree handed to the planner under the note "The observation above is THAT subtree
+only, not the whole page", for a request that named the whole document. With the guard the rung
+is gone; what remains is a step whose locate failure has no rung at all, plus the older half of
+the finding: `agent.py` labels a relocation attempt `retry_or_recovery: "recovery"` regardless of
+verb, so a read-only `observe` rung counts into `recovery_rungs` — which is exactly what
+`recovery-label-lands-on-the-extract` rules out for the drill-down deferral ("it produces no
+answer, so labelling it counts a rung that recovered nothing").
+Spec: two decisions, both ADR-020's subject rather than ADR-024's — whether an `observe` onto an
+unresolvable container is a loud `failure:locate` instead of a relocation, and whether a
+relocation rung on a read-only verb may wear the `recovery` label at all.
+Acceptance: a case pinning whichever answer is taken, watched red first.
+
+### T-M40-2-3 — `docs/analysis.md` §6 says "six L5 refusal cases" where the case files carry eight            [status: todo]
+Origin: T-M40-2 implementation, 2026-08-24, noticed while updating the §6 counts that
+`docs-numbers-are-derived` DOES grade (the golden/adversarial split and the domain rows).
+Counting `level` over `evals/golden` + `evals/adversarial` gives L5 = 8; §6's prose says six.
+Pre-existing and unrelated to T-M40-2's case, which is L3.
+Spec: the TC/level tables in §6 are hand-maintained beside a split line that is derived, which
+is the exact drift class `docs-numbers-are-derived` exists to close — the check simply does not
+reach them.
+Acceptance: either the tables are derived from the case files' own tags by that check, or the
+prose is corrected and the residue declared.
+
 ### T-M40-3 — D28's rows are declared against a build that predates the WebArea refusal            [status: todo]
 Depends: T-M40-2
 Origin: PR #43 (M40) T-M40-2, split at pr-loop SPEC 2026-08-24 — the half of T-M40-2's
