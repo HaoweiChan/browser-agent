@@ -2803,6 +2803,7 @@ _UI_MATRIX = {
     "rows": [
         {"domain": "shop fixture", "cells": {"TC1": "supported", "TC2": "supported"}},
         {"domain": "books.toscrape.com (live)", "cells": {"TC1": "—", "TC3": "unreliable"}},
+        {"domain": "news.ycombinator.com (live)", "cells": {"TC1": "unreliable"}},  # M37: so its chip renders
         {"domain": "openlibrary.org (live)", "cells": {"TC1": "unreliable", "TC2": "unsupported"}},
         {"domain": "quotes.toscrape.com (live)", "cells": {"TC1": "unsupported"}},
         {"domain": "wikipedia.org", "cells": {"TC1": "—"}}],
@@ -2982,6 +2983,7 @@ def _run_ui_form_case(case: dict) -> dict:
             chip.click(); await tick();
             out.chips.push({key: chip.dataset.example, task: $("task").value,
                             url: $("url").value, calls: calls.slice(),
+                            button: chip.textContent,
                             in_card: !!chip.closest("#matrix .card")});
           }
           out.card_list = [...document.querySelectorAll("#matrix .card")].map(card => ({
@@ -3020,6 +3022,14 @@ def _run_ui_form_case(case: dict) -> dict:
         if not e or not chip["in_card"] or chip["task"] != e["task"] or chip["url"] != want_url \
                 or posted != [{"task": e["task"], "url": want_url}]:
             wrong.setdefault("chips", []).append(chip)
+    # The chip loop is reflexive (graded against the page's own EXAMPLES); this
+    # pins the literal text a chip must fill and show, so swapping an example is
+    # eval-first (PR #37 R1: the rendered button text `Try: <label>` too).
+    for key, want in inp.get("expected_examples", {}).items():
+        chip = next((c for c in got["chips"] if c["key"] == key), None)
+        if not chip or chip["task"] != want["task"] or chip["url"] != want["url"] \
+                or chip["button"] != f"Try: {want['label']}":
+            wrong.setdefault("expected_examples", {})[key] = chip
     if got["stray"]:  # owner amendment: no chip row, no eyebrow, no built-in/real-site tag
         wrong["stray_elements"] = got["stray"]
     if expect["limits_contains"] not in got["limits_text"]:

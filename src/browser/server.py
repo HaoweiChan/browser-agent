@@ -541,9 +541,13 @@ const EXAMPLES = {
   "books.toscrape.com (live)": {label: "Price of a book",
     url: "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
     task: "What is the price of this book?"},                  // run ac69e850 → "£51.77"
-  "news.ycombinator.com (live)": {label: "Who posted this HN story?",
+  "news.ycombinator.com (live)": {label: "Title of an HN story",
     url: "https://news.ycombinator.com/item?id=1",
-    task: "Who submitted this story?"},                        // run bcdc8f8a → "pg"
+    // runs 97f2157d, 4453fae6 → "Y Combinator" (M37). Retired "Who submitted
+    // this story?" (run bcdc8f8a → "pg"): post-M35 it failed 5/5 on the
+    // deployment — 349e4839, e08b7627, bcae4fe7, 63b9d944, failure:locate,
+    // the planner targets link "pg" and the page has two.
+    task: "What is the title of this story?"},
   "quotes.toscrape.com (live)": {label: "Who said this quote?",
     url: "https://quotes.toscrape.com/",
     task: "Who wrote the quote about the world we have created?",  // run 24820d4c → "Albert Einstein"
