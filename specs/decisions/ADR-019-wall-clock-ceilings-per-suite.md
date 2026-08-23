@@ -63,11 +63,11 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 158 cases, ts `20260823-221935`, **70.72s**, 156/158
-  (`dirty: true`, ts-only for the ADR-012 reason §3 gives. No clean row exists
-  at this count and none can until the cases are committed — the paragraph
-  below is that whole story. The ledger's own maximum at this count derives the
-  same ceiling; it is not copied here, see §3.)
+- Band source — `fast` at 158 cases, ts `20260823-223759`, **71.20s**, 158/158
+  (`dirty: false`, ts-only for the ADR-012 reason §3 gives. The first clean row
+  at this count — it could not exist until the commit that created the count
+  had landed, which is the paragraph below. The ledger's own maximum at this
+  count derives the same ceiling; it is not copied here, see §3.)
 
 **This band was dirty for one commit, and the reason is worth keeping.** A case
 addition forces a dirty citation: the tree only reaches its new case count while
@@ -78,15 +78,15 @@ lexicographically against CI's UTC ones, so item 2 (cited-run) refuses a dirty
 row against any clean row stamped earlier and every CI row is clean and stamped
 eight hours behind ours. M28's merge commit paid this once at 153 cases (it
 published a dirty row, 70.46s, 151/153, and re-cited a clean one in the commit
-after). M38 pays it again at 158: the band above IS that dirty row, taken while
-the five new cases were uncommitted and red on exactly the two doc-derivation
-cases a case addition reddens, and the commit after this one re-cites the clean
-run that cannot exist until this one has landed. Two commits, by construction,
+after). M38 paid it again at 158: its implementing commit published the dirty
+row `20260823-221935`, 70.72s, 156/158 — red on exactly the two doc-derivation
+cases a case addition reddens — and this commit re-cites the clean run above,
+which could not exist until that one had landed. Two commits, by construction,
 per case addition. That is the price `T-M32-13` records; it is paid here rather
 than dodged by citing a stale clean row from the smaller tree, because the count
 changed and a band has to describe the tree that ships.
 
-The `156/158` is the cited row's own result, graded against it, not prose beside
+The `158/158` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -107,7 +107,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 70.72 × 1.15 = 81.33 → **85**, which is BELOW the committed 90 and
+five — gives 71.20 × 1.15 = 81.88 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
