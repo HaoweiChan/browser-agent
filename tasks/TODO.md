@@ -87,6 +87,25 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M38-5 — a guard-ablation probe lands in the ledger and can become the band the ADR must publish            [status: todo]
+Origin: PR #42, R2/R3's acceptance.
+Spec: proving that a conjunct is pinned means running the whole suite with that
+conjunct removed, and `evals/run.py` appends a history row for every run — so a
+build that never shipped can be the ledger's maximum at a case count, and
+ADR-019 §6 item 3 (same-ceiling) then FORCES the published band to be that row.
+That is what happened here: the shipped tree's own runs sat at 71.9-72.6s and
+the band published is 74.29s from a `READS`-widened probe. The direction is
+conservative and the workload is identical, so this is not a wrong number; it is
+a number whose provenance the ledger cannot express, and the ADR has to explain
+it in prose every time.
+Repro: run `--suite fast` with any resolver conjunct ablated, then run
+`published-band-matches-the-ledger` — the probe row is indistinguishable from a
+gate run.
+Acceptance: either the runner learns an opt-out (`--no-history`, used by
+probes), or the row carries a marker the band filter can exclude, watched red
+against a ledger containing a probe row that is the maximum. Cheapest honest
+version is the opt-out; the marker is the one a future reviewer can verify.
+
 ### T-M38-1 — D28's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: todo]
 Origin: M38, ADR-022's accepted risk.
 Spec: rung 1 reuses the step's identity `anchor` as a proximity anchor whenever

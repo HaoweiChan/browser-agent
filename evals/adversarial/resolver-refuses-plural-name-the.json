@@ -1,0 +1,30 @@
+{
+  "id": "resolver-refuses-plural-name-the",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "Name the authors quoted in this thread.",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "text": "Marisol Vance"
+        },
+        "anchor": null
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "PR #42 R4 (MEDIUM). `_PLURAL_ASK` was a seven-token list, and the reviewer walked around it with ordinary phrasings: `Name the authors...`, `Who are the authors...?`, `Give me the authors...` and the ZH plural form each returned `success, answer 'Marisol Vance'` — one of three authors offered as the answer to a question about the set. This case is the imperative-plus-plural-noun shape (`name the authors`), which carries its plural in the NOUN rather than in a quantifier. `anchor: null` on purpose: with no anchor, rung 1 cannot fire, so the only thing that can refuse this plan is the plural test itself. Watched red first, on the committed regex: `status success, answer 'Marisol Vance'`, verdict PASS.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "one phrasing of the widened plural test, watched red before the widening — the repo's rule for every regex over English (D21): widen on a phrasing a probe actually found, never on synonyms nobody has seen. The remaining ceiling is declared in docs/support-matrix.md D28."
+  }
+}

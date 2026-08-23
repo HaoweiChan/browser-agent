@@ -123,11 +123,24 @@ READS = {"extract"}
 # Does the task ask for MORE THAN ONE thing? Then one of several matches is an
 # answer by omission, and the plan should have used `extract_all`.
 #
-# ponytail: a regex over English, the same ceiling as agent.SCOPE_BLOCK and
-# verifier._AGGREGATE — only wording this repo has actually seen, widened when
-# a probe finds the next phrasing rather than by guessing at synonyms (D21).
+# Three shapes, because a quantifier is only one of the ways English asks for a
+# set (PR #42 R4, which walked around the first version with three ordinary
+# phrasings): a quantifier, an imperative or request naming a PLURAL NOUN
+# ("name the authors" — and not "name the author", which is why the trailing s
+# is required), and the plural copula ("who are the authors"). CJK alternatives
+# carry NO `\b`: the boundary never matches inside a CJK run, so the whole
+# English list was structurally inert on the six ZH cases this repo ships —
+# the lesson agent.SCOPE_BLOCK already carries (case screening-word-boundary).
+#
+# ponytail: still a regex over natural language, the same ceiling as
+# agent.SCOPE_BLOCK and verifier._AGGREGATE — widened on phrasings a probe
+# actually found, never on synonyms nobody has seen (D21). What it still misses
+# is declared in docs/support-matrix.md D28, not left to be discovered.
 _PLURAL_ASK = re.compile(
-    r"\b(all|every|each|both|list|how many|which ones|names of)\b", re.IGNORECASE)
+    r"\b(all|every|each|both|list|how many|which ones|names of|who are|what are)\b"
+    r"|\b(?:name|list|give|show)(?: me)? the \w+s\b"
+    r"|所有|全部|列出|哪些|每一?[個个]|各[個个]",
+    re.IGNORECASE)
 
 
 def _loose(s: str):
@@ -258,16 +271,26 @@ async def resolve(page, target: dict, many: bool = False,
     # earlier tier, and narrowing inside the loop would pre-empt it.
     if ambiguous:
         tier, loc, n = ambiguous
-        # Both rungs are for READING steps only. Narrowing turns a loud failure
-        # into an answer; on a click or a fill it would turn one into an ACT on
-        # a control the plan did not uniquely name, and every ruling this file
-        # carries says that stays loud (near-equidistant-is-ambiguous,
-        # l4-shop-duplicate-labels, which the act ladder rescues instead).
-        # `near` is exempt above because the plan asked for proximity there;
-        # nothing here was asked for. `observe` is excluded with the acting
-        # verbs: drilling into the wrong container feeds the planner a subtree
-        # nobody asked about, and it has its own ladder (ADR-020).
-        if action not in READS:
+        # Two refusals gate BOTH rungs, because both are about whether this
+        # ambiguity may be settled at all — not about which candidate wins.
+        #
+        # 1. READING steps only. Narrowing turns a loud failure into an answer;
+        #    on a click or a fill it would turn one into an ACT on a control the
+        #    plan did not uniquely name, and every ruling this file carries says
+        #    that stays loud (resolver-refuses-narrowing-a-click, and the act
+        #    ladder rescues l4-shop-duplicate-labels instead). `near` is exempt
+        #    above because the plan asked for proximity there; nothing here was
+        #    asked for. `observe` is excluded with the acting verbs: drilling
+        #    into the wrong container feeds the planner a subtree nobody asked
+        #    about, and it has its own ladder (ADR-020).
+        # 2. SINGULAR tasks only. One of several matches is not a worse answer
+        #    to a plural ask, it is an answer to a different question — wrong by
+        #    omission, and silently so. This test used to live inside rung 2,
+        #    which meant a plural ask whose step carried an identity anchor was
+        #    answered from the first rung with nothing checking the shape of the
+        #    question at all (PR #42 R1, the milestone's own defect:
+        #    resolver-refuses-plural-with-anchor).
+        if action not in READS or _PLURAL_ASK.search(task or ""):
             raise ResolveError("ambiguous-match", f"{n} matches at tier {tier} for {target}")
         # Rung 1. The identity anchor is a string from the part of the page the
         # task is about, so it is a proximity anchor the plan already carries
@@ -286,12 +309,18 @@ async def resolve(page, target: dict, many: bool = False,
         #   - the plan carried no `index` — true by construction at this point
         #     (an `index` returns above, or moves to the next tier), so it is
         #     not re-tested here;
-        #   - the task asks for ONE thing (resolver-refuses-plural-wording);
-        #   - the step READS — enforced for both rungs above;
+        #   - the task asks for ONE thing — the shared guard above
+        #     (resolver-refuses-plural-wording and its phrasing family);
+        #   - the step READS — the shared guard above
+        #     (resolver-refuses-narrowing-a-click);
         #   - the matches are interchangeable: same role, same reading
-        #     (resolver-refuses-mixed-roles, resolver-narrows-by-anchor-proximity).
-        if (not _PLURAL_ASK.search(task or "")
-                and await page.evaluate(INTERCHANGEABLE_JS, await loc.element_handles())):
+        #     (resolver-refuses-mixed-roles for the role half,
+        #     resolver-refuses-different-readings for the text half).
+        # Interchangeability gates this rung ONLY. Rung 1 exists to choose
+        # between candidates that differ, from evidence the plan carries; a rung
+        # that may only pick between identical elements is not a proximity rung
+        # at all (PR #42 R1's second half, declined for that reason).
+        if await page.evaluate(INTERCHANGEABLE_JS, await loc.element_handles()):
             return loc.first, tier, "document-order"
         raise ResolveError("ambiguous-match", f"{n} matches at tier {tier} for {target}")
     raise ResolveError("element-not-found", f"no tier resolved {target}")

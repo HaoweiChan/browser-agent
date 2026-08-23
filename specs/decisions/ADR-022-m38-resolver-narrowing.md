@@ -3,9 +3,9 @@
 Date: 2026-08-23
 Status: accepted
 
-**Ruling**: when a semantic target resolves to N>1 elements at every tier, `resolve()` tries three site-agnostic narrowing rungs before raising `ambiguous-match`: on a READING step only, (1) the step's identity `anchor` reused as a proximity anchor and (2) the first match in document order, the latter only when the task asks for one thing and the matches are interchangeable (same role AND same reading); and on any step, (3) inside proximity matching, an anchor string matched through typographic variants and then by its first 40 characters. The rung that fired is named in the trace step's `note` (`narrowed: <rung>`); none of them is labelled `retry_or_recovery`.
+**Ruling**: when a semantic target resolves to N>1 elements at every tier, `resolve()` tries three site-agnostic narrowing rungs before raising `ambiguous-match`: on a READING step whose task asks for ONE thing, (1) the step's identity `anchor` reused as a proximity anchor and (2) the first match in document order, the latter only when the matches are interchangeable (same role AND same reading); and on any step, (3) inside proximity matching, an anchor string matched through typographic variants and then by its first 40 characters. The rung that fired is named in the trace step's `note` (`narrowed: <rung>`); none of them is labelled `retry_or_recovery`.
 **Because**: six deployment runs died `failure:locate` on pages that held the answer and plans that named it — two `pg` links on an HN item (`349e4839`, `e08b7627`, `bcae4fe7`, `63b9d944`), three `Albert Einstein` matches on quotes.toscrape.com (`e985e048`), and a `near` anchor the page rendered with typographic quotes (`e6768ee0`). In each, the ambiguity was one the page itself settles.
-**Enforced by**: `resolver-narrows-by-anchor-proximity`, `resolver-narrows-identical-matches`, `resolver-near-normalises-typography`, `resolver-refuses-mixed-roles`, `resolver-refuses-plural-wording`, and unchanged: `l4-shop-duplicate-labels`, `near-equidistant-is-ambiguous`, `near-anchor-substring`, `relocation-preserves-near`
+**Enforced by**: the rungs — `resolver-narrows-by-anchor-proximity`, `resolver-narrows-identical-matches`, `resolver-near-normalises-typography`; the guards, each red when and only when its own conjunct is removed — `resolver-refuses-narrowing-a-click` (reading steps), `resolver-refuses-plural-with-anchor` + `resolver-refuses-plural-wording` (singular task, both rungs) + `resolver-refuses-plural-name-the` / `-who-are` / `-give-me` / `-zh` (the wording), `resolver-refuses-mixed-roles` (role half) and `resolver-refuses-different-readings` (text half); and unchanged: `l4-shop-duplicate-labels`, `near-equidistant-is-ambiguous`, `near-anchor-substring`, `relocation-preserves-near`
 
 ---
 
@@ -43,14 +43,30 @@ given its chance to resolve uniquely** — a clean single match at the text tier
 still beats a narrowed one at the role tier, so narrowing sits after the loop
 rather than inside it.
 
-Rungs 1 and 2 are for **reading steps only** — narrowing turns a loud failure
-into an answer, and on a click or a fill it would turn one into an act on a
-control the plan did not uniquely name. `near` is exempt because the plan asked
-for proximity there; nothing in this section was asked for. `observe` is
-excluded with the acting verbs: drilling the wrong container feeds the planner a
-subtree nobody asked about, and it has its own ladder (ADR-020). tasks/TODO.md
-M38 did not scope the rungs by action; this is the second place the guard is
-narrower than the spec, for the same reason as the first.
+**Two refusals gate BOTH rungs** (amended, PR #42 R1), because both answer
+"may this ambiguity be settled without asking?" rather than "which candidate
+wins":
+
+- **reading steps only.** Narrowing turns a loud failure into an answer, and on
+  a click or a fill it would turn one into an act on a control the plan did not
+  uniquely name. `near` is exempt because the plan asked for proximity there;
+  nothing in this section was asked for. `observe` is excluded with the acting
+  verbs: drilling the wrong container feeds the planner a subtree nobody asked
+  about, and it has its own ladder (ADR-020).
+- **singular tasks only.** One of several matches is not a worse answer to a
+  plural ask — it is an answer to a different question, wrong by omission and
+  silently so.
+
+The second of those shipped INSIDE rung 2, which left rung 1 answering plural
+asks: `List all the users who posted in this thread.` with an identity anchor
+returned one of two users, `success`, verdict PASS. That is the defect this ADR
+exists to prevent, in the rung nobody guarded, and the committed negative case
+did not catch it because its anchor was the candidate text itself, so it never
+reached rung 1 at all (PR #42 R1, `resolver-refuses-plural-with-anchor`, and
+`resolver-refuses-plural-wording` re-anchored to reach rung 1).
+
+tasks/TODO.md M38 did not scope the rungs by action; that is the second place
+the guard is narrower than the spec, for the same reason as the first.
 
 1. **`anchor-proximity`.** The plan's identity anchor is a string from the part
    of the page the task is about, so it is a proximity anchor the plan already
@@ -60,10 +76,26 @@ narrower than the spec, for the same reason as the first.
 2. **`document-order`.** The first match. Four conjuncts, and the rung is
    refused if any fails:
    - the plan carried no `index` — true by construction where the rung sits;
-   - the task does not ask for several things (`_PLURAL_ASK`);
+   - the task does not ask for several things — the shared guard above;
    - the step READS (`extract`) rather than acts — the shared guard above;
    - the matches are **interchangeable**: same `role || tagName` and the same
-     normalised text.
+     normalised text. This one gates rung 2 ONLY. Rung 1 exists to choose
+     between candidates that DIFFER, from evidence the plan carries; a rung
+     allowed to pick only between identical elements is not a proximity rung at
+     all, and gating it that way would delete it along with its own case. That
+     half of PR #42 R1's acceptance is declined for that reason; the plural half
+     is fixed above.
+2b. **What `_PLURAL_ASK` reads** (amended, PR #42 R4). Three shapes, because a
+   quantifier is only one of the ways English asks for a set: a quantifier
+   (`all`, `every`, `both`, `how many`…), an imperative or request naming a
+   PLURAL NOUN (`name the authors` — the trailing `s` is required, so `name the
+   author` still narrows), and the plural copula (`who are the authors`). The
+   CJK alternatives carry no `\b`, because the boundary never matches inside a
+   CJK run and the English list was therefore structurally inert on the six ZH
+   cases this repo ships — the lesson `agent.SCOPE_BLOCK` already carried
+   (`screening-word-boundary`). One case per phrasing, each watched red against
+   the committed regex. It is still a regex over natural language and D28
+   carries what it misses.
 3. **`near-normalised` / `near-prefix`.** `_nearest` gains two passes after
    exact and substring: a regex that accepts typographic variants of
    quote/apostrophe/dash characters and collapses whitespace runs, and then the
@@ -96,9 +128,12 @@ the ambiguity is real. Three matches that read identically, or two elements one
 of which sits inside the line the anchor names, are not a page that failed to
 say which — they are a resolver that refused to look. So the rungs are gated to
 exactly the shapes where the page has already answered, and rung 2's conjuncts
-are individually pinned by negative cases (`resolver-refuses-mixed-roles`,
-`resolver-refuses-plural-wording`, `l4-shop-duplicate-labels`) so that widening
-any one of them turns a case red rather than turning a run into a guess.
+and the shared refusals are individually pinned by negative cases —
+`resolver-refuses-mixed-roles`, `resolver-refuses-different-readings`,
+`resolver-refuses-narrowing-a-click`, and the plural family — each red when and
+only when its own conjunct is removed, verified by ablating each one over the
+whole suite rather than by argument, so widening any of them turns exactly one
+case red rather than turning a run into a guess.
 
 **Make the planner disambiguate (a replan on `locate`)** — it already can, and
 `relocation_candidates` already spends a rung on it. On the four HN runs it
@@ -106,17 +141,21 @@ retargeted at a different tier and hit the same two matches, because the ambigui
 is in the page, not in the tier. A second planning call costs money and a round
 trip to re-derive what document order already knows.
 
-**Narrowing on any action, not just reads** — rejected, and it is why
-`l4-shop-duplicate-labels` still passes: two buttons with the same accessible
-name do different things, and clicking the first is an act nobody authorised.
-That mutation's whole point is that role+name *uniqueness* broke, and it must
-keep being rescued by relocation rather than answered by a coin flip. The same
-argument extends to rung 1 and it is applied there: an identity `anchor` is
+**Narrowing on any action, not just reads** — rejected: two buttons with the
+same accessible name do different things, and clicking the first is an act
+nobody authorised. `resolver-refuses-narrowing-a-click` is what pins that, and
+it is the ONLY thing that does: two controls, one accessible name, the same
+reading, different effects, so every other conjunct passes and widening `READS`
+presses the wrong button. This ADR previously credited
+`l4-shop-duplicate-labels` with pinning it and PR #42 R2 falsified that —
+that mutation's two buttons carry different visible text, so the
+interchangeability test blocks them too and widening `READS` alone left the
+whole suite green. `l4-shop-duplicate-labels` keeps its own job (role+name
+uniqueness breaking, rescued by relocation); it does not do this one. The same
+argument extends to rung 1 and is applied there: an identity `anchor` is
 contractually an extract-step field (specs/001), and using it to choose which
 control to press would read a signal that means something else as authority to
-act. No case distinguishes the two versions — no plan in the suite puts an
-`anchor` on a click — so this is a refusal chosen on the record rather than
-demonstrated, and it is the safe direction of an untestable choice.
+act.
 
 **Rung 2 guarded only on role, as tasks/TODO.md M38 specified** — implemented
 with the text half added, not instead. The role conjunct is vacuous on the role
@@ -125,12 +164,20 @@ vacuous on the text tier (`exact=True` returns one string by construction), so
 either alone leaves the other tier unguarded: `{role: link, name: "user
 profile"}` over two bylines reading "arden" and "bellweather" is same-role,
 different-answer, and role alone would have picked one. Each half is the whole
-guard on one tier, which is why both are here.
+guard on one tier, which is why both are here. The text half is pinned by
+`resolver-refuses-different-readings` and the role half by
+`resolver-refuses-mixed-roles`; each is red when and only when its own half is
+removed. PR #42 R3 is why that sentence names those two cases and not
+`resolver-narrows-by-anchor-proximity`, which the ADR used to cite here and
+which cannot pin anything of the sort — rung 1 fires there, rung 2 is never
+reached, and that fixture's document order coincides with its expected answer.
 
 ## Consequences
 
 - Ambiguity is no longer terminal in three shapes, and remains terminal in every
-  other. The `fast` suite gains 5 cases (153 -> 158) and ~0.6s.
+  other. The `fast` suite gains 12 cases (153 -> 165) and ~1.3s — five for the
+  rungs, seven for the guards, after PR #42 round 1 found three of the original
+  five passing for reasons unrelated to the guard they claimed to pin.
 - One declared limitation, `docs/support-matrix.md` **D28**: the role test reads
   `getAttribute('role') || tagName`, not the computed ARIA role.
 - `resolve()` returns a 3-tuple and takes the step's `anchor`, the task string

@@ -1,0 +1,22 @@
+{
+  "id": "resolver-refuses-narrowing-a-click",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "Reply to bellweather in this thread.",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      { "action": "click", "target": { "role": "button", "name": "Reply" },
+        "expected_state": { "text_visible": "Replying to bellweather" } }
+    ]
+  },
+  "expect": { "status": "failure:locate" },
+  "provenance": "PR #42 R2 (MEDIUM). The reading-step conjunct — narrowing is for `extract`, never for a step that acts — was pinned by NOTHING: widening `READS` to {extract, click, fill, observe} left the whole fast suite 158/158 green, while three documents of record (docs/support-matrix.md, ADR-022, browser-domain/SKILL.md) named `l4-shop-duplicate-labels` as the case that reddens when it goes. It does not: that mutation's two same-named buttons carry DIFFERENT visible text, so the text half of the interchangeability test blocks them too, and only ablating both conjuncts reddens it. This fixture supplies what was missing — two buttons with one accessible name, the same reading, and different effects. Watched red by ablation with `READS = {'extract', 'click', 'fill', 'observe'}` and nothing else changed: the run narrows to the FIRST button, clicks it, the page says 'Replying to arden', and the run ends `failure:act` on the postcondition — a control pressed that the plan never uniquely named. With the conjunct in place the run never acts at all: `failure:locate`, `2 matches at tier role`.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "the conjunct, alone. The two candidates are interchangeable by every other test in the guard (same role, same rendered text) and the task is singular, so `READS` is the only thing between this plan and a wrong button press. `l4-shop-duplicate-labels` keeps its own job — role+name uniqueness breaking, rescued by relocation — and the documents no longer claim it does this one.",
+    "not_covered": "which button the ambiguity SHOULD resolve to. Nothing on this page says, which is the point: the loud failure hands it back to the replan ladder, exactly as the act family does."
+  }
+}

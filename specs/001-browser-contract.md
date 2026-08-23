@@ -214,15 +214,17 @@ appears, in order — no post-hoc reconstruction).
   question the plan failed to answer; often the page answers it. After every
   tier has had its chance at a *unique* match — a clean single match at a later
   tier still outranks any narrowing at an earlier one — two rungs are tried,
-  and only on a step that READS: the step's identity `anchor` reused as a
-  proximity anchor (winning as tier `structural`, for the same reason `near`
-  does), and the first match in document order. On a `click`, a `fill` or an
-  `observe` the ambiguity stays loud, because narrowing there would act on a
-  control the plan did not uniquely name rather than read one of several
-  identical values. The second rung is refused further unless the task asks
-  for one thing, the plan carried no `index`, and the matches are
-  interchangeable — same role and same rendered text, so the choice cannot
-  change the answer. Removing any one of those turns a case red
+  and only on a step that READS and whose task asks for ONE thing: the step's
+  identity `anchor` reused as a proximity anchor (winning as tier `structural`,
+  for the same reason `near` does), and the first match in document order. On a
+  `click`, a `fill` or an `observe` the ambiguity stays loud, because narrowing
+  there would act on a control the plan did not uniquely name rather than read
+  one of several identical values; on a plural ask it stays loud because one of
+  several matches answers a different question — wrong by omission, and that
+  test gates BOTH rungs, not just the second (`resolver-refuses-plural-with-
+  anchor`). The second rung is refused further unless the plan carried no
+  `index` and the matches are interchangeable — same role and same rendered
+  text, so the choice cannot change the answer. Removing any one of those turns a case red
   (`resolver-refuses-mixed-roles`, `resolver-refuses-plural-wording`,
   `l4-shop-duplicate-labels`), and everything not covered by the rungs stays
   the loud `locate` failure it was.

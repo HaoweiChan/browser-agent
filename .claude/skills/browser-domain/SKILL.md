@@ -63,18 +63,35 @@ warning as `near:` — three rungs, each bought with a deployment run, and the
 guards are the whole thing. They run AFTER the tier loop, never inside it: a
 clean single match at the text tier outranks a narrowed one at the role tier.
 
+- **Two shared refusals gate rungs 1-2**, and they are about whether the
+  ambiguity may be settled at all: the step must READ (`extract`), and the task
+  must ask for ONE thing. Narrowing a click presses a control nobody named
+  (`resolver-refuses-narrowing-a-click` — the only case that pins this;
+  `l4-shop-duplicate-labels` does NOT, whatever three documents said before
+  PR #42 R2, because its two buttons also differ in text). A plural ask answered
+  from one match is wrong by omission, and this test sat inside rung 2 for one
+  round, so rung 1 answered plural asks with an anchor
+  (`resolver-refuses-plural-with-anchor`).
 - **Rung 1, `anchor-proximity`.** The step's identity anchor reused as a `near`.
   Opportunistic, so unlike `near` an anchor that names two places falls through
   to rung 2 instead of raising — loudness belongs to what the plan asked for
   (`resolver-narrows-by-anchor-proximity`).
 - **Rung 2, `document-order`.** The first match, under four conjuncts: no
-  `index` (structural), a task that asks for one thing, a READING step, and
-  matches interchangeable in role AND rendered text. The two halves of
-  "interchangeable" are not redundant — role is vacuous on the role tier and
-  text is vacuous on the text tier (`exact=True`), so each is the whole guard
-  on the other's tier (`resolver-refuses-mixed-roles`,
-  `resolver-refuses-plural-wording`, and `l4-shop-duplicate-labels` for the
-  reading half: two same-named BUTTONS must still fail and relocate).
+  `index` (structural), the two shared refusals, and matches interchangeable in
+  role AND rendered text. The two halves of "interchangeable" are not redundant
+  — role is vacuous on the role tier and text is vacuous on the text tier
+  (`exact=True`), so each is the whole guard on the other's tier:
+  `resolver-refuses-mixed-roles` (role), `resolver-refuses-different-readings`
+  (text). Interchangeability gates rung 2 ONLY — rung 1 is *for* candidates
+  that differ.
+- **Every conjunct is pinned by ablation, not by argument.** Each guard case is
+  red when and only when its own conjunct goes; check that whenever you touch
+  one, because three of the original five cases passed for reasons unrelated to
+  the guard they named — a degenerate anchor, a second conjunct masking the
+  first, a fixture whose document order matched the right answer.
+  `_PLURAL_ASK` is three English shapes plus boundary-free CJK markers (`\b`
+  never matches inside a CJK run), one case per phrasing; D28 carries the rest
+  of the ceiling.
 - **Rung 3, `near-normalised` / `near-prefix`.** Two more anchor passes after
   exact and substring: typographic quote/dash variants with whitespace runs
   collapsed, then the anchor's first 40 characters
