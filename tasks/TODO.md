@@ -33,17 +33,20 @@ band count, run `--suite invariant` on a slower machine, then `--suite fast` on
 the same ledger: `published-band-matches-the-ledger` reports
 `{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
 "ledger_slowest": 16.02, "ledger_derives": 20}`.
-Correction (2026-08-23, implementer): the Repro and the sentence above about
-slower hardware name the wrong clause. Wall clock is not what fired on run
-32626835735. `ts` is naive local time compared as a string, CI's row is clean,
-and it sorted eight hours before a band row it followed by 25 minutes — so item 2
-(cited-run)'s dirty allowance, not item 3 (same-ceiling), reddened the band.
-Root-caused on `task/M32` as T-M32-13, replayed before the fix was described;
-ADR-019 §7 carries the mechanism and the control. The `slowest` symptom this
-block describes is real but was latent (16.03s derives the committed 20; it only
-bites above 17.39s). The acceptance below is unchanged and is met either way —
-the environment tag closes both clauses — and the `ts` ordering itself is carried
-as T-M32-13, which this PR also fixes — separately, by stamping `ts` in UTC.
+Note (2026-08-23, implementer): **the Repro above is correct and stands.** An
+earlier revision of this block struck it, on the argument that item 2
+(cited-run)'s dirty allowance and a naive-local `ts` were what reddened run
+32626835735. That was a different run's mechanism transplanted onto this one:
+PR #32's head is `434a98d`, and `git show 434a98d:src/browser/eval_adapter.py`
+has no `_band_wrong` and no `cited_a_dirty_run` — its `_BAND_LINE` carries no
+timestamp group at all, so no clause in that tree could read a `ts` or a `dirty`
+flag. What fired there is exactly what the Repro says: item 3 (same-ceiling), on
+the wall clock, 12.92s published against CI's 16.02s. The `ts` mechanism is real
+and belongs to run 32637648447 (sha `11545a1`, `task/M32`, T-M32-13); this PR
+fixes that too, separately, by stamping `ts` in UTC. ADR-019 §7 keeps the two
+runs and the two clauses apart. One correction to the Repro's own wording: item 4
+(committed-ceiling) did NOT fire on 32626835735 — 20 against `rule(16.02)` = 20
+holds — so item 3 (same-ceiling) is the whole of it.
 Acceptance: rows carry their environment (e.g. the effective
 `EVAL_WALL_BUDGET_S_*` or an env tag) and the check compares a published band
 only against rows from the same environment; a case pins that a slower
@@ -167,6 +170,46 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-R76 — a strike must name what it looked at, because three correct records were removed as unevidenced in one day            [status: todo]
+Origin: PR #41 R1, plus two instances found cross-session on `task/M32`
+Spec: Three times in one day a correct record was struck or contradicted because
+whoever checked could not see its evidence — never because the evidence was absent.
+In each case the disproof was one command away, and in each case the
+stricter-sounding move (remove the unevidenced claim) was the one that destroyed
+information. That is what makes it worth a decision rather than three review
+artifacts: **the failure disguises itself as rigour.**
+
+1. A `ts`-ordering diagnosis, correct for CI run `32637648447` (sha `11545a1`, the
+   `20260823-192533` / `20260823-115044` pair), was generalised to run
+   `32626835735` (sha `434a98d`), where the mechanism cannot exist:
+   `git show 434a98d:src/browser/eval_adapter.py | grep -c cited_a_dirty_run` is 0.
+   T-R44's original Repro was struck as wrong; it was right for its own run.
+   Disproof cost: one `git show`.
+2. The over-scoping that caused (1): "items 3/4 hold today" with margin to 17.39s
+   was true of one run and false as stated. Item 3 fired at **16.02s** on the other
+   — published 12.92s derives 15, CI's 16.02s derives 20. Disproof cost: one
+   `gh run view` of a run nobody had opened.
+3. README strikes an earlier CI band "because nothing named the run it came from".
+   `ADR-013:162-164` names it — commit `09b9740`, run `32455716866`, three re-runs,
+   all four numbers reproducing verbatim. Disproof cost: reading two lines further
+   down a file already open.
+
+The common factor is not carelessness: the cost of looking was higher than the cost
+of asserting, so the assertion won.
+Proposed ruling (the ADR's job is to settle it, not this block): a strike must name
+what it looked at and failed to find — the same discipline this repo already applies
+to citing a report for a number. A record struck without that is an assertion about
+the striker's search, published as a fact about the world.
+Acceptance: an ADR recording the ruling with these three instances as its evidence,
+and a graded consequence if one can be found that does not itself cost more than it
+saves — the honest fallback is a stated convention with the instances as its record.
+Not gateable as prose alone; the ADR must say which half it is.
+Out of scope for T-R44: this is a decision about review practice, not about wall-clock
+bands. Deliberately NOT folded into T-R44's ADR — that PR's subject is the ledger's
+environment dimension and its timestamp, and bolting an unrelated ruling onto it is
+the scope creep the debt rule exists to prevent. The other session declined it for
+`task/T-M32-9` on the symmetric ground that #40 allocated no ADR by design.
 
 ### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
 Origin: PR #34 R17.
