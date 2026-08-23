@@ -1,0 +1,88 @@
+{
+  "pr": 34,
+  "round": 5,
+  "task": "M32",
+  "note": "Written by the implementer session that performed the repair, not reconstructed. Round 4's artifact had to be reconstructed after a teardown; this one is committed with the work.",
+  "resolutions": [
+    {
+      "id": "R23",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "origin/main (3eac663, PR #35) merged into task/M32. All eight predicted conflicts resolved. Append-only logs unioned with no line lost from either parent: history.jsonl 889 (ours) + 914 (theirs) - 768 (base) = 1035, plus the round-5 reviewer's own uncommitted gate line, = 1036 rows, re-sorted by ts; pr-loop-ledger.jsonl kept theirs' order (which preserves base) and appended the M32 row, 14 rows, ours-only M32 and theirs-only T-R34/M35 all present. ADR-019 took main's side wholesale -- main had already replaced the enumeration with a single graded band-source citation and a seven-item spec in a new section 6, which is strictly stronger and is also R21's acceptance -- plus our Amended-by ADR-021 line and the Ruling's local fast ceiling corrected 80 -> 90. INDEX.md's ADR-019 line took main's text with our amended-by clause appended. TODO.md was reconstructed as a union: main's file (which moved M31/M36 to DONE.md and added T-R39..T-R55 and T-M35-WALL) plus our nine T-M32-* blocks re-inserted at the head of Debt and M32's status set to pr. README, docs/analysis.md and docs-numbers-are-derived.json took our side for the numbers and then had EVERY published number re-derived from reports of the merged tree, not reconciled between the two parents. No duplicate ADR or D numbers (main tops out at ADR-019; ours are 020/021).",
+      "auto_merged_files_read": "src/browser/agent.py is byte-identical to origin/main's -- main touched it not at all (`git diff HEAD...origin/main -- src/browser/agent.py` is empty), so the region where adopt() lives took no merge at all this time. src/browser/eval_adapter.py auto-merged with 621 lines of main's changes; a line-level diff of our side against the merged file shows exactly ONE thing lost, the old _check_published_band and its _BAND_LINE regex, superseded by main's stronger version of both. Nothing in the M32 observe/laundering paths was removed; all 15 observe-* cases are present and green.",
+      "cross_parent_reds": "None. No case from either parent went red on the merged tree once the doc numbers were republished. Two graded reds appeared during the merge and are documented as real cross-parent findings rather than resolved away: main's `published-band-matches-the-ledger` item 6 grades ADR-019's Ruling against WALL_BUDGET_S, and our ADR-021 had moved that to 90 while both parents' Ruling still said 80 -- fixed by correcting the Ruling and the README band row, not by reverting either parent."
+    },
+    {
+      "id": "R25",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "branch": "enforcing",
+      "cases": [
+        "plan-adoption-is-the-only-steps-rebind"
+      ],
+      "red_first": "Watched red on three mutations before it was allowed to be green. (1) The reviewer's own: agent.py `adopted, gap = adopt(si, new_steps)` -> `adopted, gap = (steps[:si] + new_steps, None)` -- red at BOTH `steps = adopted` sites (lines 675 and 1043), because the check follows the alias and `adopted` stops being adopt-derived. (2) A genuine fourth site: `steps = adopt(si, new_steps)[0]` -> `steps = steps[:si] + new_steps` -- red at 1119. (3) In-place: `steps.extend(new_steps)` -- red at 1119 as mutates_steps_in_place. agent.py restored byte-identical after each.",
+      "fix": "`_check_steps_adopt_only` parses src/browser/agent.py with ast and asserts: every Assign whose target is `steps` is either the single first-plan binding (an Await) or adopt-derived -- adopt(...), adopt(...)[i], or a local every one of whose bindings is adopt-derived; no AugAssign/AnnAssign/NamedExpr binds `steps`; no subscript assignment or list-mutating method call on `steps`; and exactly one first-plan binding exists. Read structurally rather than by regex on purpose: the mutation that produced R16 leaves the visible line `steps = adopted` untouched, so a grep for `steps =` sees a linted rebind. Tagged invariant + fast. specs/001-browser-contract.md:225-228 and agent.py's adopt() docstring now name the case instead of asserting the property on convention, and both say plainly that the modal claim stood unenforced for one round (R25) and that this is the same shape as ADR-018's version that R16 falsified.",
+      "not_covered": "adopt() itself could stop calling plan_gap -- a different assertion, graded by observe-drilldown-replan-is-linted, plan-lint-holds-across-a-midrun-replan and plan-gap-truth-table. A future binding through a helper that merely returns adopt()'s value would be red here even though it is safe; deliberate, because a new adoption path should be a human decision."
+    },
+    {
+      "id": "R21",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "Resolved by taking main's ADR-019 rather than by editing our enumeration: main had independently hit the same defect (its own R21) and fixed it by DELETING both enumerations and publishing one band-source sentence per suite that cites a ledger row by timestamp, graded end to end by published-band-matches-the-ledger's seven items -- including item 3, rule(published) == rule(ledger max), which is exactly what our enumeration violated. Both bands were then re-derived from the merged tree: `fast` 152 cases, ts 20260823-192648, 70.22s, 70.22 x 1.15 = 80.75 -> 85; `invariant` 58 cases, ts 20260823-192533, 13.15s, 13.15 x 1.15 = 15.12 -> 20. Both cited runs are GREEN (152/152 and 58/58) and the ADR says so explicitly, because R21's finding was that the old enumeration published only the red runs. Each band also names the ledger's own maximum at that count (70.38s and 13.80s) and says it derives the same ceiling. The derived 85 is BELOW the committed 90 and does not move it -- section 6's no-ratchet-down rule -- and the ADR states that rather than leaving a reader to reconcile an arrow with the ceiling above it.",
+      "commit_message_claim": "The round-4 commit's 'bands re-derived from fully green merged-tree reports' was false and is not repeated. This round's bands ARE from green runs, and the ADR names the run and its score so the claim is checkable rather than asserted."
+    },
+    {
+      "id": "R22",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "ADR-021's section is retitled 'What CI has measured -- and which tree it was' and now states that run 32627229208 measured commit 920218e, the PARENT, at 146 fast / 54 invariant; that `gh run list --commit 8d38c52` and `--commit d60da88` both return nothing because a CONFLICTING PR silently gets no checks; and that CI has never measured the tree this PR ships. The numbers (88.39s / 146/146, 16.79s / 54/54) all verify and are kept, now labelled with the sha they belong to. The 'red CI fast run on the next case anyone adds' prediction is corrected to already due rather than pending, because the case it predicted against shipped in the same commit and this round adds another. The Decision bullet that said 'CI has not yet produced a fast measurement on this tree' was contradicting the same file and is rewritten. INDEX.md's ADR-021 line no longer asserts both halves: it names 920218e as the only measured tree and states that CI has never measured this one.",
+      "left_open": "Raising CI's ceiling is deliberately NOT done in this commit. .github/workflows/eval.yml and .eval-baseline.json are untouched (git diff against HEAD is empty for both, and for .githooks/)."
+    },
+    {
+      "id": "R24",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "README's sentence no longer claims a score for the run cited above it. Rewritten as a standing note about openlibrary.org's flakiness -- the ~9.5s home page, the 20s navigation budget, and that live-ol-search-a11y-invisible takes live to 8/9 on a bad day -- explicitly labelled as a real outcome on OTHER runs and not on the cited one, with the defect itself recorded (a claim-versus-artifact contradiction two lines under the block that exists to prevent exactly that). The cited report 20260823-164737-live.json is score 1.0, 9/9, and the block above says 9/9. Mechanism gap unchanged: the sentence is still ungraded, which is T-M32-10's gap in the reverse direction and stays logged there."
+    },
+    {
+      "id": "R26",
+      "severity": "LOW",
+      "outcome": "debt",
+      "debt_id": "T-M32-11 (amended)",
+      "note": "Trigger restated: the crash needs any `expect` that implies verdict PASS, not an empty one. The block now cites eval_adapter.py's want_verdict expression (truthy when expect omits status, or sets status: success, or names a verdict) and the `result['verdict']['verdict']` subscript that is None for any run ending before grading, names the run.py catch that keeps the suite from aborting, gives the repro with a NON-empty expect, and states an acceptance covering all three expect shapes with the fix watched red on a non-empty one first so it cannot be closed by special-casing the empty case."
+    },
+    {
+      "id": "R27",
+      "severity": "LOW",
+      "outcome": "debt",
+      "debt_id": "T-M32-9 (created and extended)",
+      "note": "T-M32-9 did NOT exist. It and T-M32-8 were routed to debt in round 4 and recorded in pr34-r4-resolution.json, but no block was ever written into tasks/TODO.md -- found while acting on R27. Both blocks are now written. T-M32-9 names CLAUDE.md's Gate and Commands blocks first (invariant <= 15s, fast <= 75s against the enforced 20 and 90), then INDEX.md's ADR-017 line and fast-wall-clock-budget's expect.note, and marks which are pre-existing on main. T-M32-8 carries R18/R21's residue: ADR-002's Ruling/Status/Amended-by and the ungraded CI band."
+    }
+  ],
+  "found_beyond_the_brief": [
+    {
+      "what": "T-M32-8 and T-M32-9 were routed to debt in round 4 but never written into tasks/TODO.md.",
+      "action": "Both blocks written this round rather than logged as new debt -- a debt id that lives only in a review artifact is not tracked, and R27's acceptance required T-M32-9 to exist."
+    },
+    {
+      "what": "The merged tree's ADR-019 Ruling published local `fast` 80 while evals/run.py commits 90 -- red under main's new item 6, which our parent did not have and main's parent did not need.",
+      "action": "Fixed in the merge (Ruling reads 60 -> 80 -> **90s** (ADR-021)), not resolved by reverting either parent."
+    },
+    {
+      "what": "tasks/pr-loop-ledger.jsonl's M32 row still reads rounds: 3 with round-3 counters, while this is round 5.",
+      "action": "NOT edited. The row is the orchestrator's closing artifact and its counters are contestable (R6 is 'debt' in the round-1 findings and 'no_change_needed' in the resolution); writing a guessed tally would be worse than leaving a row everyone can see is open. Flagged for the orchestrator to close at merge."
+    }
+  ],
+  "gate": {
+    "invariant": "58/58 = 1.000, wall 13.35s against the 20s ceiling (evals/run.py WALL_BUDGET_S), $0.0000",
+    "fast": "152/152 = 1.000, wall 69.94s against the 90s ceiling, $0.0000, 242 actions",
+    "live": "9/9 = 1.000, wall 24.82s, $0.0000, 21 actions",
+    "untouched": [
+      ".eval-baseline.json",
+      ".github/workflows/eval.yml",
+      ".githooks/",
+      "EVAL_WALL_BUDGET_S* (never set)"
+    ],
+    "no_update_baseline": true
+  }
+}

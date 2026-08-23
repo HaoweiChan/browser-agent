@@ -224,8 +224,13 @@ appears, in order — no post-hoc reconstruction).
     again on the plan of record when either mid-run replanner returns one: the
     `act` ladder, and M32's drill-down. There are three, not two, and the third
     was adopted unlinted until `observe-drilldown-replan-is-linted` (PR #34
-    R16); they now splice through a single `adopt()` so a fourth cannot be
-    added without a lint. An aggregate-shaped task (shared with
+    R16); they now splice through a single `adopt()`, and
+    `plan-adoption-is-the-only-steps-rebind` reads `agent.py` structurally and
+    fails if any binding of `steps` after the first plan is not adopt-derived,
+    so a fourth adoption point is red before it can run. That sentence was a
+    modal promise resting on convention for one round (PR #34 R25) — the same
+    shape as ADR-018's "that is the invariant, not the two call sites", which
+    is what R16 falsified — and it is now enforced instead. An aggregate-shaped task (shared with
     the verifier's own guard through `verifier.is_aggregate` — one regex, two
     callers) whose extraction steps are not exactly one `extract_all` and
     nothing else is replanned once with a note naming the gap and stopped by

@@ -1,0 +1,17 @@
+{
+  "id": "ui-examples-cover-matrix",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "kind": "invariant",
+    "check": "examples-cover-matrix"
+  },
+  "expect": {},
+  "provenance": "PR #32 R1 (MEDIUM): the acceptance line 'every card has a Try example' was graded only against the rendered form case's stub _UI_MATRIX, whose three real-site rows were all in EXAMPLES by construction -- a new or renamed real-site row in docs/support-matrix.md rendered a card with no Try button while the gate stayed green (reviewer repro: an extra `example.org (live)` row, card with buttons: 0, both UI cases passed). This pure-code check parses the EXAMPLES keys out of the PAGE source and requires them to equal the set of non-fixture domains parse_matrix() returns from the real doc, in both directions. Watched red before it was committed by the reviewer's own repro shape -- the `wikipedia.org` entry removed from EXAMPLES: rows_without_example ['wikipedia.org'] -- and green with the entry restored. Tagged `fast`, not `invariant`, like the other pure-code doc/page consistency checks (docs-numbers-are-derived): growing the invariant suite by one case made ADR-019's locally-measured invariant band derive a different ceiling than CI's own slower invariant row (16.02s at 52 cases, run 32626835735) and reddened `published-band-matches-the-ledger` on CI only — T-R44.",
+  "triage": {
+    "class": "invariant-gap",
+    "note": "The rendered case pins the card mechanics; this pins that the page's example list and the support matrix's real-site rows are the same set, so the doc stays the single source."
+  }
+}

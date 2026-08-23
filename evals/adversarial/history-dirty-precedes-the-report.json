@@ -1,0 +1,19 @@
+{
+  "id": "history-dirty-precedes-the-report",
+  "task": "browser",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "history-dirty-before-report"
+  },
+  "provenance": "PR #35 R12. `evals/run.py` called `git_dirty()` AFTER writing the per-case report, so every `--report` run recorded `dirty: true` on account of its own untracked artifact -- the run described the tree it had just changed rather than the tree it measured. That field is not decoration: ADR-019's band sentences are filtered on it (`published-band-matches-the-ledger`), so while the ordering was wrong no clean band source was producible at all, and round 1 of this PR published both bands off dirty rows partly because of it. The fix is a two-line reorder and it was shipped with nothing grading it -- swap the lines back and both suites stay 1.000, because the band check reads rows that were already committed. This drives `main()` with a stub case and `--report` into a temp report dir, replacing `git_dirty` with a probe that records what that directory held when it was asked. Ordering is the whole property; the repo's real dirtiness is deliberately not consulted, or the case would grade the machine it runs on.",
+  "triage": {
+    "class": "ungraded-fix",
+    "note": "tagged invariant, pure code, no network, no browser. It also pins that the report IS written on this path -- an empty report directory proves nothing if `--report` silently stopped writing, so the case asserts the artifact exists afterwards and that the history line names it.",
+    "watched_red": "two rounds. (1) Case written before the check existed, `--suite invariant` 50/53 = 0.943: [FAIL] history-dirty-precedes-the-report -- \"unknown invariant check history-dirty-before-report\", beside the two reds adding a case always causes (published-band {suite: fast, published_case_count: 133, actual: 134, ledger_slowest_at_actual: null} + {suite: invariant, published_case_count: 52, actual: 53, ledger_slowest_at_actual: 12.87}, and docs-numbers-are-derived on the 134/145 strings and both cited reports). (2) Check implemented, `evals/run.py` reverted to the pre-fix ordering (`git_dirty()` inline in the history line, below the report write): {passed: false, wrong: [{report_existed_when_dirty_was_asked: [20260823-041256-fast.json]}], got: {reports_when_asked: [20260823-041256-fast.json], written: [20260823-041256-fast.json]}} -- the run reading the tree it had just changed. Green with the reorder restored."
+  }
+}

@@ -362,58 +362,85 @@ def _check_planner_prompt() -> dict:
 # checkable. Deliberately a labelled scalar, not the list of run times: a list
 # is a snapshot and `history.jsonl` grows on every gate run, so a grader that
 # string-matched it would go red on the next run rather than on a regression.
+# The one sentence per suite that ADR-019 must carry for its band to be
+# checkable. It names the RUN the band came from by its ledger timestamp, so the
+# published number is not merely "some row" but that row (PR #29 R21 published
+# values from no run at all; PR #35 R5 published two from red, dirty ones).
 _BAND_LINE = re.compile(
-    r"Slowest recorded `(fast|invariant)` run at (\d+) cases: \*\*([\d.]+)s\*\*")
+    r"Band source — `(fast|invariant)` at (\d+) cases, ts `([\d-]+)`, \*\*([\d.]+)s\*\*")
+
+# ADR-019 §6's declaration of what the band property does NOT see: the size of
+# the hole, as a number the rule fixes rather than prose that can be softened
+# without a diff. Every restatement of it in either document carries this exact
+# marker and is graded — PR #35 R1: the first version matched one sentence in
+# the ADR, so amending the rule and repairing that sentence left two more
+# copies of the old figure standing, green.
+_SLACK_MARK = re.compile(r"one ceiling step \(\*\*([\d.]+)s\*\*\)")
+
+_ADR019 = (Path(__file__).parents[2] / "specs" / "decisions"
+           / "ADR-019-wall-clock-ceilings-per-suite.md")
+_README = Path(__file__).parents[2] / "README.md"
+
+# README republishes the same two scalars as a table row. Graded against the
+# ADR's sentence rather than against the ledger a second time, so there is one
+# source and the two documents cannot disagree.
+_README_BAND_ROW = re.compile(
+    r"^\| `(fast|invariant)` \| (\d+) \| ([\d.]+)s \| ([\d.]+) \| \*\*(\d+)s\*\* \|",
+    re.MULTILINE)
+
+# "gives 66.41 × 1.15 = 76.37 → **80**" — the sentence that turns a published
+# maximum into a ceiling. Nothing used to read it, so the ADR could argue a
+# ceiling nothing commits and no check could tell (PR #35 R4).
+_BAND_DERIVATION = re.compile(r"([\d.]+) × 1\.15 = ([\d.]+) → \*\*(\d+)\*\*")
+
+# The Ruling's own local ceilings. This is where "the ADR's published ceiling
+# equals `WALL_BUDGET_S[suite]`" belongs: the derivation sentence states what
+# the RULE gives from the current band, which at a fresh case count is a short
+# sample and legitimately lower — §6's no-ratchet-down rule. Tying the two
+# together instead would have made every case addition red (PR #35 R11/R13).
+_ADR_CEILING = re.compile(r"local `(fast|invariant)`[^,]*?\*\*(\d+)s\*\*")
 
 
-def _check_published_band() -> dict:
-    """A published wall-clock band must be reproducible from the committed ledger.
+def _band_rule(x: float) -> int:
+    """ADR-013 Decision 3's rule: slowest observed +15%, rounded up to a five."""
+    return ((int(x * 1.15) // 5) + 1) * 5
 
-    Property, not snapshot (PR #29 R21). Three prose bands in this PR turned out
-    not to match `evals/report/history.jsonl` committed beside them — values that
-    were in no recorded run, the two slowest runs dropped unlabelled, and a
-    ceiling derived from a maximum that did not exist. What is graded here holds
-    as runs accumulate and goes red exactly when it should:
 
-      1. the doc's case count is the suite's current case count — so growing a
-         suite forces the band to be re-measured, the same contract
-         `docs-numbers-are-derived` has for README's totals;
-      2. the published number derives the SAME ceiling as the ledger's slowest
-         run does — `rule(published) == rule(ledger max)`, not
-         `published >= ledger max`. The harmful failure R21 found is a band
-         that justifies a lower ceiling than the truth (12.96s published where
-         13.57s was recorded: 15 where the rule said 20). Requiring exact
-         >= instead would redden on ordinary run-to-run variance — the tree
-         moved 0.2-0.5s between consecutive runs while this was being
-         written — and a doc that must be re-edited after every slightly slow
-         run is the rot this check exists to prevent, one level up;
-      3. the committed ceiling is >= ADR-013's rule applied to that ledger
-         maximum (slowest x 1.15, rounded up to a multiple of five). This is
-         the one that actually gates, and it does not move with noise.
+def _band_step_s() -> float:
+    """One ceiling step, in wall-clock seconds, read off `_band_rule` itself.
 
-    A run slower than the published band reddens the NEXT gate run, which is the
-    intended cost: the band is a claim about this tree, and a tree that got
-    slower has to say so.
-    """
-    import json as _json
+    This is the width of a band, so it is exactly the slack ADR-019 §6 declares.
+    Re-typing `5 / 1.15` would mean an amendment to ADR-013's rule (the rounding
+    step, or the 15%) left the published slack unchanged and every check green
+    while the real hole doubled. `_band_rule` is monotonic, so bisect it for two
+    consecutive ceiling boundaries and subtract."""
+    def edge(c: int) -> float:  # inf{x : _band_rule(x) >= c}
+        lo, hi = 0.0, 1e4
+        for _ in range(64):
+            mid = (lo + hi) / 2
+            lo, hi = (lo, mid) if _band_rule(mid) >= c else (mid, hi)
+        return hi
 
-    from evals.run import HISTORY, WALL_BUDGET_S, load_cases
+    c0, x = _band_rule(60.0), 60.0
+    while _band_rule(x) == c0:  # bounded: the rule is a step function of x
+        x += 0.5
+    return round(edge(_band_rule(x)) - edge(c0), 2)
 
-    adr = (Path(__file__).parents[2] / "specs" / "decisions"
-           / "ADR-019-wall-clock-ceilings-per-suite.md").read_text(encoding="utf-8")
-    published = {m.group(1): (int(m.group(2)), float(m.group(3)))
-                 for m in _BAND_LINE.finditer(adr)}
-    rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
+
+def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> list:
+    """The judgement `_check_published_band` makes, over values instead of files.
+
+    Split out for `published-band-slack-is-declared` (ADR-019 §6). The miss the
+    weak property allows cannot be demonstrated against the committed doc —
+    that doc is, by this very check, inside the band it publishes — so the case
+    that pins it needs a synthetic ledger and this needs to be callable."""
     wrong = []
-    for suite in sorted(WALL_BUDGET_S):
+    for suite in sorted(ceilings):
         if suite not in published:
             wrong.append({"suite": suite, "adr_publishes_no_band_line": True})
             continue
-        cases, said = published[suite]
-        now = len(load_cases(suite))
-        if cases != now:
-            wrong.append({"suite": suite, "published_case_count": cases, "actual": now})
-            continue
+        cases, ts, said = published[suite]
+        now = counts[suite]
         # Every recorded run at this case count, not only the green ones. A
         # wall clock is a wall clock whether or not a case failed, taking the
         # max is the conservative direction — and requiring green would
@@ -422,20 +449,302 @@ def _check_published_band() -> dict:
         # the one that run would produce.
         recorded = [r["wall_s"] for r in rows
                     if r["suite"] == suite and r["total"] == now]
-        if not recorded:
+        slowest = max(recorded) if recorded else None
+        if cases != now:
+            # Carry the number the doc needs, not just the fact that it is
+            # stale: growing a suite reddens this, and the fix is to republish
+            # both scalars, so the red output is the whole regeneration step.
+            wrong.append({"suite": suite, "published_case_count": cases,
+                          "actual": now, "ledger_slowest_at_actual": slowest})
+            continue
+        if slowest is None:
             wrong.append({"suite": suite, "no_recorded_run_at": now})
             continue
-        slowest = max(recorded)
-        rule = lambda x: ((int(x * 1.15) // 5) + 1) * 5
-        if rule(said) != rule(slowest):
+        # The cited run must exist at this count and must have measured the
+        # published number. Cleanliness is judged AS OF that run: a dirty row is
+        # refused only if a clean one was already available when the band was
+        # published. Requiring `clean` outright deadlocked the one operation
+        # CLAUDE.md rule 2 makes routine — a tree only reaches count N+1 while
+        # the new case is uncommitted, so every row at N+1 is dirty until the
+        # commit the check was blocking (PR #35 R11). Judging as-of the cited ts
+        # is stable: later clean rows cannot retroactively redden a published
+        # band, which is the treadmill §6 exists to refuse. Green is neither
+        # required nor requirable — this check is in both suites, so at a new
+        # count every run is red until the band is republished (T-R53).
+        at = [r for r in rows if r["suite"] == suite and r["total"] == now]
+        src = next((r for r in at if r["ts"] == ts), None)
+        if src is None:
+            wrong.append({"suite": suite, "cites_no_recorded_run": ts, "at": now})
+        elif src["wall_s"] != said:
+            wrong.append({"suite": suite, "published": said, "cited_run": ts,
+                          "actually_measured": src["wall_s"]})
+        elif src.get("dirty", True) and [r for r in at
+                                         if not r.get("dirty", True) and r["ts"] <= ts]:
+            wrong.append({"suite": suite, "cited_a_dirty_run": ts,
+                          "clean_runs_available_by_then":
+                          [r["ts"] for r in at
+                           if not r.get("dirty", True) and r["ts"] <= ts]})
+        if _band_rule(said) != _band_rule(slowest):
             wrong.append({"suite": suite, "published_slowest": said,
-                          "derives_ceiling": rule(said), "ledger_slowest": slowest,
-                          "ledger_derives": rule(slowest), "runs": len(recorded)})
-        required = rule(slowest)
-        if WALL_BUDGET_S[suite] < required:
-            wrong.append({"suite": suite, "ceiling": WALL_BUDGET_S[suite],
-                          "required_by_adr013_rule": required, "ledger_slowest": slowest})
+                          "derives_ceiling": _band_rule(said),
+                          "ledger_slowest": slowest,
+                          "ledger_derives": _band_rule(slowest),
+                          "runs": len(recorded)})
+        required = _band_rule(slowest)
+        if ceilings[suite] < required:
+            wrong.append({"suite": suite, "ceiling": ceilings[suite],
+                          "required_by_adr013_rule": required,
+                          "ledger_slowest": slowest})
+    return wrong
+
+
+def _check_published_band() -> dict:
+    """A published wall-clock band must be reproducible from the committed ledger.
+
+    Property, not snapshot (PR #29 R21): three prose bands in that PR did not
+    match the `evals/report/history.jsonl` committed beside them — values in no
+    recorded run, the two slowest runs dropped unlabelled, a ceiling derived
+    from a maximum that did not exist. What is graded holds as runs accumulate
+    and goes red exactly when it should.
+
+    **The seven properties are listed in ADR-019 §6 and are not restated here.**
+    That is the point of the section: this docstring carried its own three-item
+    version for three rounds while the check grew to seven, and the two drifted
+    (PR #35 R15/R16). Each block below names the item it implements.
+
+    A run slower than the published band reddens the NEXT gate run, which is the
+    intended cost: the band is a claim about this tree, and a tree that got
+    slower has to say so. That lag is shared with the strict form and is NOT the
+    argument against it — §6 has the argument, which is frequency.
+    """
+    import json as _json
+
+    from evals.run import HISTORY, WALL_BUDGET_S, load_cases
+
+    adr = _ADR019.read_text(encoding="utf-8")
+    lines = [(m.group(1), (int(m.group(2)), m.group(3), float(m.group(4))))
+             for m in _BAND_LINE.finditer(adr)]
+    published = dict(lines)
+    rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
+    counts = {s: len(load_cases(s)) for s in WALL_BUDGET_S}
+    wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows)
+    # README's table is the other half of the same claim and drifted from this
+    # file once already (PR #29 R24, the origin of T-R34). The whole row or red:
+    # one set of numbers, two documents, no hand-kept copy (ADR-019 §6 item 7).
+    readme = _README.read_text(encoding="utf-8")
+    rows = [(m.group(1), (int(m.group(2)), float(m.group(3)),
+                          float(m.group(4)), int(m.group(5))))
+            for m in _README_BAND_ROW.finditer(readme)]
+    table = dict(rows)
+    for suite, (cases, _ts, said) in sorted(published.items()):
+        # The whole row, product and ceiling included: an ungraded copy is the
+        # one that drifts, which is the lesson of R1 and R2 in this same PR.
+        want = (cases, said, round(said * 1.15, 2), WALL_BUDGET_S[suite])
+        if table.get(suite) != want:
+            wrong.append({"suite": suite, "adr_row": list(want),
+                          "readme_row": list(table[suite]) if suite in table
+                          else None})
+    # Both parses are last-wins dicts, so a superseded band left above the live
+    # one shadows it in silence — and if both land in the same band, publishes a
+    # number from no recorded run with everything green. Guarded on both sides:
+    # the ADR side was PR #29 R24, README's was the same hole two lines later
+    # (PR #35 R2).
+    for where, pairs in (("adr", lines), ("readme", rows)):
+        seen = [s for s, _ in pairs]
+        for suite in sorted({s for s in seen if seen.count(s) > 1}):
+            wrong.append({"suite": suite, f"{where}_publishes_two_bands": True})
+    # The ceiling the ADR DERIVES from that maximum, in prose, must be the one
+    # the RULE gives — not the one `evals/run.py` commits (ADR-019 §6 item 5).
+    # Requiring the committed ceiling here reddens every case addition: a fresh
+    # count has two or three runs, a short sample derives lower, and the commit
+    # adding the case cannot pass its own gate (PR #35 R11). So "-> **15**"
+    # under a heading that says 20s IS green, and §6 declares that residue;
+    # what is graded is that the arrow is arithmetically the rule's own answer
+    # and never above the committed ceiling.
+    for suite, (_, _ts, said) in sorted(published.items()):
+        stated = [(float(a), float(b), int(c))
+                  for a, b, c in _BAND_DERIVATION.findall(adr) if float(a) == said]
+        if not stated:
+            wrong.append({"suite": suite, "no_derivation_of": said})
+            continue
+        for x, product, ceiling in stated:
+            # Two decimals, and the ROUNDED product must itself round up to the
+            # ceiling: 13.08 x 1.15 is 15.042, published as "15.0" a reader
+            # applies the rule to 15.0 and lands on 15, not the committed 20
+            # (PR #35 R13). `_band_rule(x)` is the same assertion from the other
+            # end — the number the rule gives, not just the number committed.
+            if (round(x * 1.15, 2) != product or _band_rule(x) != ceiling
+                    or ceiling > WALL_BUDGET_S[suite]):
+                wrong.append({"suite": suite, "derivation": [x, product, ceiling],
+                              "arithmetic": round(x * 1.15, 2),
+                              "rule_gives": _band_rule(x),
+                              "committed_ceiling": WALL_BUDGET_S[suite]})
+    # ...and the ceiling the Ruling publishes IS the committed one. Separate
+    # from the derivation on purpose: the rule applied to a fresh short sample
+    # can come out below the committed ceiling and must not drag it down (§6),
+    # but the number the ADR advertises can never be a number nothing enforces.
+    ruling = {m.group(1): int(m.group(2)) for m in _ADR_CEILING.finditer(adr)}
+    for suite in sorted(WALL_BUDGET_S):
+        if ruling.get(suite) != WALL_BUDGET_S[suite]:
+            wrong.append({"suite": suite, "adr_ruling_ceiling": ruling.get(suite),
+                          "committed_ceiling": WALL_BUDGET_S[suite]})
     return {"passed": not wrong, "wrong": wrong}
+
+
+def _check_published_band_slack() -> dict:
+    """ADR-019 §6: the band property's blind spot is declared, bounded, and pinned.
+
+ADR-019 §6 item 3 is `rule(published) == rule(ledger max)`, so a
+    published number BELOW the ledger's maximum is green while both derive the
+    same ceiling. PR #29 R24 asked whether that was a decision or an
+    artefact. This is what makes it a decision.
+
+    Driven with a synthetic one-suite ledger and a ceiling of 999 so that only
+    item 3 can speak — item 4 is graded against the real ledger by
+    `published-band-matches-the-ledger` and would otherwise mask the boundary.
+
+      - the miss is green right up to the top of the band, and red one
+        hundredth of a second past it, where the ceiling the doc justifies
+        stops being the ceiling the ledger requires;
+      - the harmful direction is still red, on BOTH items: R21's real
+        numbers, 12.96s published where 13.57s was recorded, once with property
+        4 disabled and once with R21's own 15s ceiling in place;
+      - the width of the hole is one ceiling step and ADR-019 publishes it, as
+        a number `_band_step_s` reads off the rule rather than a sentence
+        someone can quietly soften.
+    """
+    wrong = []
+    step_s = _band_step_s()
+    adr = _ADR019.read_text(encoding="utf-8")
+    # Every restatement, in both documents, not just the one sentence that used
+    # to be graded: three copies of 4.35s were published and one was checked, so
+    # amending the rule and repairing the checked one left the other two green
+    # and wrong (PR #35 R1). ponytail: a stray figure written WITHOUT the marker
+    # is still invisible; upgrade to a bare-scalar sweep if that ever happens.
+    bare = re.compile(rf"(?<![\d.]){step_s:g}(?![\d])".replace(".", r"\."))
+    for name, text in (("adr", adr), ("readme", _README.read_text(encoding="utf-8"))):
+        said = [float(v) for v in _SLACK_MARK.findall(text)]
+        if not said:
+            wrong.append({name: "declares_no_slack", "one_ceiling_step_is": step_s})
+        for v in said:
+            if abs(v - step_s) > 0.005:
+                wrong.append({name: "declares_wrong_slack", "declared": v,
+                              "one_ceiling_step_is": step_s})
+        # ...and no copy of the figure outside the marker. The round-1 repair
+        # added the fourth copy in the same commit that claimed every copy was
+        # graded (PR #35 R10), so the marker alone closed the instance and not
+        # the class: every occurrence of the current value in either document
+        # must be inside a marker.
+        loose = (len(bare.findall(text))
+                 - sum(1 for v in said if abs(v - step_s) <= 0.005))
+        if loose:
+            wrong.append({name: "unmarked_copies_of_the_slack_scalar", "loose": loose,
+                          "marked": len(said), "value": step_s})
+
+    def judge(said: float, ledger_max: float) -> list:
+        # Two clean rows: the one the band cites and a slower one the ledger
+        # also holds. Both clean, so only §6 item 3 can speak — the ceiling is
+        # 999 for the same reason.
+        rows = [{"suite": "s", "total": 1, "ts": t, "wall_s": w, "dirty": False}
+                for t, w in (("1", said), ("2", ledger_max))]
+        return _band_wrong({"s": (1, "1", said)}, {"s": 1}, {"s": 999.0}, rows)
+
+    # The bound is measured against the bands ADR-019 actually publishes, so it
+    # is the headroom a reader of THIS doc has, not a sample chosen to flatter.
+    published = {g.group(1): float(g.group(4)) for g in _BAND_LINE.finditer(adr)}
+    if not published:
+        wrong.append({"adr_publishes_no_band_line": True})
+    headroom = {}
+    for suite, said in sorted(published.items()):
+        top = said
+        # Bounded: one step is 4.35s, so a loop that walks past +10s means the
+        # rule stopped being monotonic and this must go red, not hang the suite.
+        while _band_rule(top) == _band_rule(said) and top < said + 10:
+            top = round(top + 0.01, 2)
+        headroom[suite] = round(top - 0.01 - said, 2)
+        if judge(said, round(top - 0.01, 2)):
+            wrong.append({"suite": suite, "declared_miss_went_red_at":
+                          round(top - 0.01, 2)})
+        if not judge(said, top):
+            wrong.append({"suite": suite, "stayed_green_past_the_band_at": top,
+                          "derives": _band_rule(top),
+                          "published_derives": _band_rule(said)})
+    # PR #29 R21, the direction that is NOT declared: a band justifying a lower
+    # ceiling than the truth. Red on §6 item 3 (above, ceiling out of the way)
+    # and red on item 4 with the 15s ceiling R21 found it defending.
+    if not judge(12.96, 13.57):
+        wrong.append({"r21_underpublished_band_green_on_property_2": [12.96, 13.57]})
+    if not _band_wrong({"s": (1, "1", 12.96)}, {"s": 1}, {"s": 15.0},
+                       [{"suite": "s", "total": 1, "ts": t, "wall_s": w, "dirty": False}
+                        for t, w in (("1", 12.96), ("2", 13.57))]):
+        wrong.append({"r21_underjustified_ceiling_green_on_property_3": 15.0})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"declared_slack_s": step_s, "headroom_s": headroom}}
+
+
+def _check_history_dirty_before_report() -> dict:
+    """`dirty` describes the tree the run measured, not the artifact it wrote.
+
+    `evals/run.py` asked `git_dirty()` AFTER writing the per-case report, so
+    every `--report` run recorded itself dirty on account of its own untracked
+    file. ADR-019's band sentences are filtered on that field, so while the
+    ordering was wrong no clean band source was producible at all — and the fix
+    shipped with nothing grading it (PR #35 R12).
+
+    Drives `main()` with one stub case and `--report`, REPORT_DIR/HISTORY
+    redirected to a temp dir, and `git_dirty` replaced by a probe that records
+    what that directory held when it was asked. The ordering is the property;
+    the repo's own dirtiness is deliberately not consulted, or this would grade
+    the machine it runs on. Same stub/restore shape as `_main_exit_code`."""
+    import contextlib
+    import io
+    import json as _json
+    import sys
+    import tempfile
+    from pathlib import Path as _Path
+
+    import evals.run as R
+
+    stub = {"id": "history-dirty-probe", "_kind": "adversarial"}
+    argv, load, run = sys.argv, R.load_cases, R.run_case
+    report_dir, history, dirty_fn = R.REPORT_DIR, R.HISTORY, R.git_dirty
+    seen, wrong = {}, []
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = _Path(tmp)
+
+            def probe() -> bool:
+                seen.setdefault("reports_when_asked",
+                                sorted(x.name for x in tmp_path.glob("*-fast.json")))
+                return False
+
+            sys.argv = ["run", "--suite", "fast", "--report"]
+            R.load_cases = lambda suite: [stub]
+            R.run_case = lambda c: {"passed": True, "seconds": 0.01,
+                                    "id": c["id"], "kind": c["_kind"]}
+            R.REPORT_DIR, R.HISTORY = tmp_path, tmp_path / "history.jsonl"
+            R.git_dirty = probe
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                R.main()
+            line = _json.loads(R.HISTORY.read_text().splitlines()[-1])
+            written = sorted(x.name for x in tmp_path.glob("*-fast.json"))
+    finally:
+        sys.argv, R.load_cases, R.run_case = argv, load, run
+        R.REPORT_DIR, R.HISTORY, R.git_dirty = report_dir, history, dirty_fn
+
+    if seen.get("reports_when_asked"):
+        wrong.append({"report_existed_when_dirty_was_asked":
+                      seen["reports_when_asked"]})
+    if line.get("dirty") is not False:
+        wrong.append({"history_line_dirty": line.get("dirty")})
+    # Not vacuous: an empty report dir proves nothing if `--report` stopped
+    # writing, so the artifact must exist afterwards and the row must name it.
+    if not written or line.get("report") not in written:
+        wrong.append({"no_report_was_written": written, "row_says": line.get("report")})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"reports_when_asked": seen.get("reports_when_asked"),
+                    "written": written}}
 
 
 def _check_inv3() -> dict:
@@ -2582,6 +2891,57 @@ def _run_ui_style_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong}
 
 
+# Inert /support-matrix payload for the rendered UI cases: one fixture row that
+# must NOT render as a card, real-site rows that must, two declared limitations
+# for the count link. A module constant, like _TRACE above, so every rendered
+# case sees the same page whichever runs first.
+_UI_MATRIX = {
+    "rows": [
+        {"domain": "shop fixture", "cells": {"TC1": "supported", "TC2": "supported"}},
+        {"domain": "books.toscrape.com (live)", "cells": {"TC1": "—", "TC3": "unreliable"}},
+        {"domain": "openlibrary.org (live)", "cells": {"TC1": "unreliable", "TC2": "unsupported"}},
+        {"domain": "quotes.toscrape.com (live)", "cells": {"TC1": "unsupported"}},
+        {"domain": "wikipedia.org", "cells": {"TC1": "—"}}],
+    "limitations": [
+        {"limitation": "**D1** — one", "evidence": "a", "status": "unsupported"},
+        {"limitation": "**D2** — two", "evidence": "b", "status": "unsupported"}]}
+_UI_ORIGIN = "http://console.test"
+_UI_PAGES: dict[tuple[int, str], object] = {}
+
+
+async def _ui_page(width: int, scheme: str):
+    """The PAGE rendered once per (viewport width, colour scheme) on the suite's
+    shared Chromium and kept open for every rendered UI case -- the fast suite's
+    wall clock is the gate, so the two UI cases share one render instead of
+    each paying a context (M35; M30 folded its assertions the same way).
+    Served by route interception on a fake origin (relative fixture URLs need
+    an origin, which `set_content` does not give); /support-matrix is fulfilled
+    from _UI_MATRIX; everything else is aborted. No server, no network."""
+    page = _UI_PAGES.get((width, scheme))
+    if page is not None and not page.is_closed():
+        return page
+    page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    page_html = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
+    context = await (await _browser()).new_context(
+        viewport={"width": width, "height": 844}, color_scheme=scheme)
+    page = await context.new_page()
+
+    async def serve(route, request):
+        if request.url == _UI_ORIGIN + "/":
+            await route.fulfill(body=page_html, content_type="text/html")
+        elif request.url == _UI_ORIGIN + "/support-matrix":
+            await route.fulfill(json=_UI_MATRIX)
+        else:
+            await route.abort()
+    await page.route("**/*", serve)
+    await page.goto(_UI_ORIGIN + "/")
+    await page.wait_for_function(  # matrix fetch landed, whatever it drew
+        "!document.getElementById('matrix').textContent.startsWith('loading')",
+        timeout=5000)
+    _UI_PAGES[(width, scheme)] = page
+    return page
+
+
 def _run_ui_rendered_case(case: dict) -> dict:
     """Rendered narrow-screen overflow and effective placeholder contrast.
 
@@ -2589,21 +2949,15 @@ def _run_ui_rendered_case(case: dict) -> dict:
     BrowserContext per colour scheme -- `viewport` and `color_scheme` are
     context options, so owning a browser bought nothing and cost 0.29s per
     invocation against 0.075s here, on a suite whose wall clock is the gate
-    (PR #23 R5).
+    (PR #23 R5). The contexts are the `_ui_page` cache, shared with the form
+    case (M35).
     """
     inp = case["input"]
-    page_source = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
-    page_html = page_source.split('PAGE = r"""', 1)[1].split('"""', 1)[0]
 
     async def go():
         results = {}
-        browser = await _browser()
         for scheme in inp["schemes"]:
-            context = await browser.new_context(
-                viewport={"width": inp["viewport_width"], "height": 844},
-                color_scheme=scheme)
-            page = await context.new_page()
-            await page.set_content(page_html)
+            page = await _ui_page(inp["viewport_width"], scheme)
             results[scheme] = await page.evaluate("""(targetLength) => {
               document.getElementById("live").hidden = false;
               document.getElementById("steps").innerHTML = stepEl({
@@ -2664,7 +3018,6 @@ def _run_ui_rendered_case(case: dict) -> dict:
                 progress
               };
             }""", inp["target_length"])
-            await context.close()
         return results
 
     got = _await(go())
@@ -2683,6 +3036,90 @@ def _run_ui_rendered_case(case: dict) -> dict:
         if inp.get("progress_states") and rendered["progress"] != inp["progress_states"]:
             wrong[f"{scheme}_progress"] = {"want": inp["progress_states"],
                                                "got": rendered["progress"]}
+    return {"passed": not wrong, "wrong": wrong, "got": got}
+
+
+def _run_ui_form_case(case: dict) -> dict:
+    """The form refuses a URL-less task, lifts a site name out of the task text,
+    and every example chip fills task + URL from its EXAMPLES entry (M35).
+
+    Drives the real PAGE on the `_ui_page` render it shares with the narrow
+    case (no extra context); `window.fetch` is stubbed to record and reject --
+    no server, no network, no run is spent. The rows it grades against are
+    _UI_MATRIX.
+    """
+    inp, expect = case["input"], case["expect"]
+
+    async def go():
+        page = await _ui_page(inp["viewport_width"], inp["scheme"])
+        got = await page.evaluate("""async (inp) => {
+          const calls = [];
+          window.fetch = (u, o) => {
+            calls.push({url: String(u), body: o && o.body ? JSON.parse(o.body) : null});
+            return Promise.reject(new Error("stubbed: no run"));
+          };
+          const tick = () => new Promise(r => setTimeout(r, 0));  // let submitTask's catch land
+          const out = {origin: location.origin,
+                       examples: typeof EXAMPLES === "object" ? EXAMPLES : {},
+                       limits_text: $("limits").textContent,
+                       stray: document.querySelectorAll("#examples, .eyebrow, .kind").length};
+          $("task").value = inp.no_url_task; $("url").value = "";
+          $("go").click(); await tick();
+          out.no_url = {err_hidden: $("err").hidden, err_text: $("err").textContent,
+                        go_disabled: $("go").disabled, url: $("url").value, calls: calls.slice()};
+          calls.length = 0;
+          $("task").value = inp.site_task; $("url").value = "";
+          $("go").click(); await tick();
+          out.site = {url: $("url").value, go_disabled: $("go").disabled, calls: calls.slice()};
+          out.chips = [];
+          for (const chip of document.querySelectorAll("[data-example]")) {
+            calls.length = 0;
+            $("task").value = ""; $("url").value = "";
+            chip.click(); await tick();
+            out.chips.push({key: chip.dataset.example, task: $("task").value,
+                            url: $("url").value, calls: calls.slice(),
+                            in_card: !!chip.closest("#matrix .card")});
+          }
+          out.card_list = [...document.querySelectorAll("#matrix .card")].map(card => ({
+            text: card.textContent, buttons: card.querySelectorAll("[data-example]").length,
+            key: (card.querySelector("[data-example]") || {dataset: {}}).dataset.example}));
+          return out;
+        }""", inp)
+        return got
+
+    got = _await(go())
+    wrong = {}
+    nu = got["no_url"]
+    if nu["calls"] or nu["err_hidden"] or nu["go_disabled"] or nu["url"] \
+            or expect["guidance_contains"] not in nu["err_text"]:
+        wrong["no_url"] = nu
+    site = got["site"]
+    posted = [c["body"] for c in site["calls"] if c["url"] == "/tasks"]
+    if site["url"] != expect["site_url"] or site["go_disabled"] \
+            or posted != [{"task": inp["site_task"], "url": expect["site_url"]}]:
+        wrong["site"] = site
+    examples = got["examples"]
+    # Cards are the only example surface: one card per real-site row, no fixture
+    # rows, exactly one Try button per card, and a note where the example has one.
+    cards = got["card_list"]
+    want_cards = [r["domain"] for r in _UI_MATRIX["rows"] if not r["domain"].endswith(" fixture")]
+    if [c["key"] for c in cards] != want_cards or any(c["buttons"] != 1 for c in cards):
+        wrong["cards"] = cards
+    for c in cards:
+        note = (examples.get(c["key"]) or {}).get("note")
+        if note and note not in c["text"]:
+            wrong.setdefault("notes_missing", []).append(c["key"])
+    for chip in got["chips"]:
+        e = examples.get(chip["key"])
+        want_url = e and (e["url"] if "://" in e["url"] else got["origin"] + e["url"])
+        posted = [c["body"] for c in chip["calls"] if c["url"] == "/tasks"]
+        if not e or not chip["in_card"] or chip["task"] != e["task"] or chip["url"] != want_url \
+                or posted != [{"task": e["task"], "url": want_url}]:
+            wrong.setdefault("chips", []).append(chip)
+    if got["stray"]:  # owner amendment: no chip row, no eyebrow, no built-in/real-site tag
+        wrong["stray_elements"] = got["stray"]
+    if expect["limits_contains"] not in got["limits_text"]:
+        wrong["limits_text"] = got["limits_text"]
     return {"passed": not wrong, "wrong": wrong, "got": got}
 
 
@@ -3042,6 +3479,22 @@ def _run_doc_counts_case(case: dict) -> dict:
             reports[suite] = json.loads(path.read_text())
             if f"evals/report/{rid}" not in readme:
                 wrong.append({"readme_does_not_cite": rid})
+            # A report from a smaller tree still parses, so every number below
+            # recomputes correctly out of a run that is no longer this suite.
+            # That is how the block came to publish `fast 132/132` in a commit
+            # whose README said 133 cases four sections earlier (PR #35 R6).
+            # ponytail: the case still NAMES the report — deriving "newest
+            # committed report per suite" instead would repoint the block at the
+            # next RED run, since green gate runs write no report at all.
+            # Only the suites this case is tagged with: `where_it_stands` also
+            # cites `live`, and applying the size check to it would let growing
+            # a NETWORK suite redden the offline $0 gate, clearable only by a
+            # network run (PR #35 R14). The live block's own staleness is
+            # visible through its citation, same as before this check existed.
+            n = len(reports[suite]["results"])
+            if suite in case.get("suites", []) and n != counts[suite]:
+                wrong.append({"cites_a_report_of_a_different_tree": rid,
+                              "report_cases": n, "suite_now": counts[suite]})
         for suite, rep in reports.items():
             n = len(rep["results"])
             want = f"{suite}  {sum(1 for r in rep['results'] if r['passed'])}/{n}"
@@ -3202,6 +3655,17 @@ def _run_doc_counts_case(case: dict) -> dict:
             for bad in c5.get("forbidden", []):
                 if _live(bad) in live_text:
                     wrong.append({"asserts_criterion5_green": bad, "doc": docrel})
+            # Same sweep, different reason: sentences that describe a rule the
+            # code no longer implements. A repair keeps outliving its own
+            # description here — three rounds of PR #35 in a row — so each rule
+            # this PR deleted or weakened leaves its old wording behind as a
+            # phrase no document may carry again (R15, R16). ponytail: a
+            # blacklist catches re-assertion of THESE rules, not the general
+            # class; the general defence is one description in one place, which
+            # is what ADR-019 §6 now is.
+            for bad in inp.get("describes_a_deleted_rule", []):
+                if _live(bad) in live_text:
+                    wrong.append({"describes_a_deleted_rule": bad, "doc": docrel})
             for good in required_in.get(docrel, []):
                 if _live(good) not in live_text:
                     wrong.append({"missing_red_evidence": good, "doc": docrel})
@@ -3209,12 +3673,119 @@ def _run_doc_counts_case(case: dict) -> dict:
             "got": {"counts": counts, "domains": domains}}
 
 
+def _check_steps_adopt_only() -> dict:
+    """`steps` is never rebound after the first plan except through `adopt()`.
+
+    ADR-018 stated this as an invariant ("that is the invariant, not the two
+    call sites") and nothing enforced it, so M32's drill-down adopted a replan
+    with no lint and reproduced the silent-success class a seventh time
+    (PR #34 R16). The repair routed all three adoption points through one
+    nested `adopt()` and the contract then published "a fourth adoption point
+    cannot be added without a lint" — the SAME modal promise, one round later,
+    still resting on convention (PR #34 R25). This is what makes it true: a
+    raw splice at a new site is red here before it can be green in a run.
+
+    Read structurally, not by regex, because the defect the reviewer
+    demonstrated is invisible to one: `adopted, gap = (steps[:si] + new_steps,
+    None)` leaves the line `steps = adopted` untouched, so the rebind still
+    LOOKS linted. Any local that reaches `steps` has to be adopt-derived too.
+    """
+    import ast
+
+    src = (Path(__file__).with_name("agent.py")).read_text(encoding="utf-8")
+    tree = ast.parse(src)
+
+    def targets(node):
+        for t in ast.walk(node):
+            if isinstance(t, ast.Name) and isinstance(t.ctx, ast.Store):
+                yield t.id
+
+    def adopt_derived(v):
+        # `adopt(...)` or `adopt(...)[0]` — the two shapes the executor uses.
+        while isinstance(v, ast.Subscript):
+            v = v.value
+        return (isinstance(v, ast.Call) and isinstance(v.func, ast.Name)
+                and v.func.id == "adopt")
+
+    # Locals that hold an adopt() result. A name qualifies only if EVERY
+    # binding of it is adopt-derived — one non-adopt binding elsewhere in the
+    # module disqualifies the name, which is exactly the mutation above.
+    binds: dict[str, list] = {}
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign):
+            for name in {x for t in n.targets for x in targets(t)}:
+                binds.setdefault(name, []).append(n.value)
+        elif isinstance(n, (ast.AugAssign, ast.AnnAssign, ast.NamedExpr)):
+            for name in targets(n.target):
+                binds.setdefault(name, []).append(getattr(n, "value", None))
+    adopt_names = {k for k, vs in binds.items()
+                   if vs and all(adopt_derived(v) for v in vs)}
+
+    wrong = []
+    first_plan = 0
+    for n in ast.walk(tree):
+        line = getattr(n, "lineno", None)
+        if isinstance(n, ast.Assign) and any("steps" == x
+                                             for t in n.targets for x in targets(t)):
+            v = n.value
+            if isinstance(v, ast.Await):
+                # The first plan is not spliced into anything; it is linted
+                # where it lands. Exactly one such binding is allowed.
+                first_plan += 1
+                continue
+            if not (adopt_derived(v)
+                    or (isinstance(v, ast.Name) and v.id in adopt_names)):
+                wrong.append({"line": line, "rebinds_steps_without_adopt":
+                              ast.unparse(n)})
+        elif isinstance(n, (ast.AugAssign, ast.AnnAssign, ast.NamedExpr)) and (
+                "steps" in set(targets(n.target))):
+            wrong.append({"line": line, "rebinds_steps_without_adopt":
+                          ast.unparse(n)})
+        elif isinstance(n, ast.Assign) and any(
+                isinstance(t, ast.Subscript) and isinstance(t.value, ast.Name)
+                and t.value.id == "steps" for t in n.targets):
+            wrong.append({"line": line, "mutates_steps_in_place": ast.unparse(n)})
+        elif (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+              and isinstance(n.func.value, ast.Name) and n.func.value.id == "steps"
+              and n.func.attr in {"append", "extend", "insert", "pop", "remove",
+                                  "clear", "sort", "reverse", "__setitem__"}):
+            wrong.append({"line": line, "mutates_steps_in_place": ast.unparse(n)})
+    if first_plan != 1:
+        wrong.append({"first_plan_bindings": first_plan, "expected": 1})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"adopt_derived_locals": sorted(adopt_names & {"adopted"}),
+                    "first_plan_bindings": first_plan}}
+
+
+def _check_examples_cover_matrix() -> dict:
+    """Every real-site row of docs/support-matrix.md has a Try example on the
+    page, and no example points at a row that is not there (M35 acceptance,
+    PR #32 R1). Pure code: the EXAMPLES keys are read out of the PAGE source,
+    the rows out of parse_matrix() on the real doc -- the rendered form case
+    grades the card mechanics against a stub payload and cannot see a new or
+    renamed real-site row."""
+    from .server import parse_matrix
+
+    page = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    block = page.split("const EXAMPLES = {", 1)[1].split("\n};", 1)[0]
+    examples = set(re.findall(r'^\s*"([^"]+)":\s*\{', block, re.M))
+    rows = {r["domain"] for r in parse_matrix()["rows"] if not r["domain"].endswith(" fixture")}
+    return {"passed": examples == rows,
+            "wrong": {"rows_without_example": sorted(rows - examples),
+                      "examples_without_row": sorted(examples - rows)},
+            "got": {"examples": sorted(examples), "rows": sorted(rows)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
+              "examples-cover-matrix": _check_examples_cover_matrix,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
               "mutation-metrics": _check_mutation_metrics,
               "plan-gap": _check_plan_gap,
+              "steps-adopt-only": _check_steps_adopt_only,
               "published-band": _check_published_band,
+              "published-band-slack": _check_published_band_slack,
+              "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
 
@@ -3451,6 +4022,7 @@ KINDS = {
     "stream": _run_stream_case,
     "ui-style": _run_ui_style_case,
     "ui-rendered": _run_ui_rendered_case,
+    "ui-form": _run_ui_form_case,
     "ui-progress": _run_ui_progress_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,

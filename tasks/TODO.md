@@ -12,48 +12,28 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M31 — Plan lint: a superlative task with no enumerating step is sent back before the browser moves            [status: pr]
-Depends: M10
-Origin: PR #25 finding 3 — correct-answer rate 2/8 (25%) at M5 → 1/7 (14%)
-at the M10 probe — and the discussion it triggered (`prompts/015`). PR #25
-closed the aggregate hole on the *verifier* side: `aggregate_needs_comparison`
-fails closed on every superlative question without ground truth, and its own
-comment says why — "the plan vocabulary has no comparison primitive to have
-gotten it right WITH" — with the false-refusal cost declared as D22. This
-block is the planner-side half: stop emitting the plan that guard exists to
-catch, and give the planner the primitive so the guard can relax.
-Spec: (1) one new step `extract_all` — every match of a target, answer is a
-list; rank/compare/count stays in code (answer assembly + verifier), never in
-the LLM. (2) A deterministic, site-agnostic (rule 6) plan lint between plan
-and first action: task matches the aggregate shape (reuse `_AGGREGATE` —
-one regex, two callers, same ceiling as T-R31) and the plan has no
-enumerating step → do not execute; replan once with a note naming the gap,
-through the existing replan budget and no-progress guard. Not an LLM critic:
-structural not behavioral, fast suite stays $0 — the ADR says why a
-debater was considered and rejected.
-Acceptance: a case where the first plan lacks an enumerating step is watched
-red first (rejected before any action — `actions` spent = pre-plan nav only);
-a fixture twin of probe #3 (most-quoted author) goes green against ground
-truth; D22 is re-measured and restated, not deleted; replan rate published
-per D7.
-Acceptance AMENDED at PR #29 R4 (reviewer finding, amend route chosen by the
-orchestrator): the original line also required `live-books-cheapest-travel` to
-go green. It does not, and the amendment records why rather than hiding it.
-That case is `full`-tagged — a real planner call against a real site — so
-running it spends money, and stubbing it is forbidden (hard rule 4); it has
-been declared unrun since M6 and still is. Worse for the milestone's own
-thesis, its wording ("In the Travel category, find the cheapest book and tell
-me its exact price") matches neither `_AGGREGATE` nor therefore the plan lint
-nor the code-side reduction, so M31's central mechanism provably cannot fire on
-it. What IS proven offline: the reduction gets that exact case right on its own
-ground truth (`rank-reduces-enumeration-in-code` row 1, the eleven hand-verified
-Travel prices reducing to £23.21), and the enumerate-then-rank path end to end
-on a superlative task (`probe3-quotes-most-quoted-author`), and — since PR #29
-R9 — the reduction itself on that exact wording end to end
-(`extract-all-cheapest-wording-still-reduces`). The residual is narrower than
-the first version of this amendment said: such a task IS reduced when the plan
-enumerates; what is missing is the lint that would make it enumerate, because
-`_AGGREGATE` needs BOTH halves to match — a `which|what|who` frame AND a word from {most, least, fewest, highest, lowest, greatest} — and the frame alone is not enough: `verifier-catches-listing-dump`'s own committed task, "Which product is the cheapest, and what is its price?", has the frame and still returns `is_aggregate(...) is False`, because `cheapest`-style price wording lives only in `_RANK`. That is T-CHEAPEST-WORDING below.
+### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: pr]
+Origin: PR #29 R24
+Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README
+no longer publishes a property the grader does not implement — it now states
+what `_check_published_band` actually checks (case count matches, published
+maximum derives the SAME ceiling as the ledger maximum, committed ceiling >=
+the rule applied to that maximum) — and both README's band table and ADR-019's
+band lines are now regenerated from `evals/report/history.jsonl` by script, so
+the published run lists are the ledger's own and the derivation sentences
+multiply the ledger maximum at the shipped case count.
+What remains is the judgement call R24 raised: property 2 is
+`rule(published) == rule(ledger max)` rather than `published >= ledger max`.
+The weaker form was chosen deliberately (the strict form reddens on ordinary
+0.2-0.5s run-to-run variance, which is rot-by-construction one level up), and
+it does catch the harmful direction — a band justifying a LOWER ceiling than
+the truth. It does not catch a published maximum that is up to ~1.0s below the
+ledger's at these magnitudes while still landing in the same band.
+Acceptance: either the tighter property is adopted with a regeneration step
+that keeps the doc honest without hand-editing (the script that now produces
+these lists is the obvious hook), or the trade-off is stated in ADR-019 as a
+declared ceiling with the ~1.0s slack named, and a case pins the miss so it is
+a decision rather than an artefact of what was convenient to grade.
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
@@ -95,32 +75,6 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
-### M36 — responsiveness is judged by an LLM, because four structural mechanisms have failed            [status: pr]
-Origin: PR #30 post-merge confirmation (2026-08-22, deployed build `2e94bed`); owner's call on the mechanism
-Spec: M34's `not_page_furniture` compares a 20-char context window on the
-assumption that site chrome carries its neighbours wherever it recurs. On
-books.toscrape.com the banner is preceded by page-specific text (a result
-count), so the windows differ and furniture passes. 6 wrong-answer-as-success
-in 9 deployed runs (`8ffc6fdc`, `4649a0c5`, `2f89cec2`, `81fe507f`, `8896c5ec`,
-`f2c00566`), zero clean correct answers on the defect task. That is the fourth
-mechanism falsified by real input and the third falsified at a shape its authors
-had declared acceptable (`log into`, `delete all`, `which...most`, now the
-context window). The owner's decision is to stop betting on structure and judge
-responsiveness with an LLM: does this answer actually answer this question.
-The deterministic checks stay and run first — the judge is the last rung of the
-escalation ladder, not a replacement for it.
-Acceptance: the real-site shape (chrome preceded by page-varying text) is an
-adversarial case watched red first; no terminal non-failure status can carry an
-answer the judge rejects; the judge fails CLOSED on error, timeout or missing
-key, and a case proves it; the `fast` suite still makes zero paid calls with the
-judge stubbed at its own injection boundary, and a case proves the boundary
-holds; a prompt-injection case proves page text cannot talk the judge into
-certifying a wrong answer; per-run judge cost and per-stage hit-rate land in the
-`evals/report/` entry; repeated runs on the deployed build show zero
-wrong-answer-as-success before criterion 5 moves.
-Out of scope: extraction quality (M28), planner-side lint (M31). Do not remove
-M34's deterministic checks — they are cheaper and they run first.
-
 ## Debt
 
 ### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
@@ -139,19 +93,83 @@ whose score supports it — the parse only has to be good enough to catch
 "9/9 ... <red report>", not to understand arbitrary prose — watched red against
 the ADR-020 sentence as it stood before this fix.
 
-### T-M32-11 — a fixture case with an empty `expect` crashes the adapter on a failing run            [status: todo]
-Origin: PR #34, found while reproducing R16 with the reviewer's own probe.
-Spec: `_run_fixture_case` ends with `v = audit["verdict"] if audit["layer"] > 1
-else result["verdict"]["verdict"]`. A run that fails before grading carries
-`result["verdict"] is None`, and with no `expect` the audit stays at layer 1, so
-the subscript raises `TypeError` and the case reports a traceback instead of the
-failure it just produced. Every committed case has a non-empty `expect`, so this
-only bites ad-hoc probes — which is precisely the tool people reach for when
-hunting defects, and it turns "the run failed loudly" into "the harness broke".
-Repro: `_run_fixture_case({... "expect": {}})` on any plan that ends
-`failure:task`, e.g. the R16 reproduction after its fix.
-Acceptance: a failing run with no expectations reports its status, not a
-traceback.
+### T-M32-11 — any `expect` that implies verdict PASS crashes the adapter on a run that fails before grading            [status: todo]
+Origin: PR #34, found while reproducing R16 with the reviewer's own probe;
+trigger restated per PR #34 R26 — the first version of this block said "an
+empty `expect`", which is narrower than the real condition and would have
+produced a half-fix.
+Spec: `_run_fixture_case` computes `want_verdict = exp.get("verdict") or ("PASS"
+if exp.get("status", "success") == "success" else None)`
+(`src/browser/eval_adapter.py:1382-1384`), which is truthy whenever `expect`
+OMITS `status`, or sets `status: success`, or names a verdict outright — i.e.
+for most cases, not only empty ones. Under that branch, `:1399` evaluates
+`result["verdict"]["verdict"]` whenever `audit["layer"] == 1` (no
+`expect.answer`/`expect.state` ground truth), and `result["verdict"]` is `None`
+for any run that ends BEFORE grading — every refusal path, and every
+`failure:*` exit. The subscript raises `TypeError: 'NoneType' object is not
+subscriptable` and the case reports a traceback instead of the failure it just
+produced. Every committed case happens to pair such an `expect` with either
+ground truth or a non-success status, so this only bites ad-hoc probes — which
+is precisely the tool people reach for when hunting defects, and it turns "the
+run failed loudly" into "the harness broke". Mitigated, not fixed:
+`evals/run.py:60-66` catches it and reports the case FAIL with the traceback,
+so no suite aborts.
+Repro: `_run_fixture_case({... "expect": {"status": "success"}})` — NON-empty —
+on any plan that ends `failure:task`, e.g. the R16 reproduction after its fix.
+An empty `expect` is just one instance of the same branch.
+Acceptance: a run whose `result["verdict"]` is `None` reports its status
+against the expectation instead of subscripting `None`, for EVERY `expect`
+shape that implies verdict PASS — empty, `{"status": "success"}`, and
+`{"verdict": "PASS"}` alike — with the fix watched red on a non-empty `expect`
+first, so it cannot be closed by special-casing the empty one.
+
+### T-M32-8 — ADR-002's Ruling and the CI band publish ceilings nothing derives from the ledger            [status: todo]
+Origin: PR #34 R18, extended by PR #34 R21. Routed to debt in round 4 and
+recorded in `tasks/reviews/pr34-r4-resolution.json`, but no block was ever
+written into this file — found while repairing R21 in round 5, which is itself
+the reason to keep the block: a debt id that exists only in a review artifact
+is not tracked.
+Spec: two halves, same class — a published wall-clock number that no longer
+matches what is derived from the committed ledger. (a) `specs/decisions/ADR-002`
+Decision 4's Ruling publishes "fast 80s local" and its Status line "60s locally,
+80s on CI", while `evals/run.py` commits `{"fast": 90, "invariant": 20}`;
+ADR-002's `Amended by` list ends at ADR-019 and does not name ADR-021. (b) the
+ADR-019 §5 CI band and the README paragraph beside it are hand-read off a
+workflow log, are in no ledger, and nothing grades them (that half overlaps
+T-R51). The LOCAL bands are now graded end to end by
+`published-band-matches-the-ledger` — ADR-019 §6 items 1-7 — which is what
+closed the original R18/R21 enumeration defect; these are the publications that
+sit outside its reach.
+Repro: `grep -n '80s local' specs/decisions/ADR-002-*.md` against
+`evals/run.py:91`; nothing goes red.
+Acceptance: ADR-002's Ruling, Status and `Amended by` name ADR-021 and the
+enforced local pair, or drop the numbers in favour of "the ceiling
+`evals/run.py` enforces"; the CI half is either graded or explicitly declared
+ungraded where it is published.
+
+### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: todo]
+Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
+routed to debt in round 4, never written into this file until round 5.
+Spec: `evals/run.py:91` commits `WALL_BUDGET_S = {"fast": 90, "invariant": 20}`
+locally. Publications that disagree: (1) **`CLAUDE.md`'s Gate and Commands
+blocks** — the repo's stated working contract — still say `invariant` "wall
+clock <= 15s" and `fast` "wall clock <= 75s", so every committed `fast` run on
+this tree (73.9-74.8s local, 88.39s on CI) reads as a breach against the
+contract while passing the gate it actually has; (2) `INDEX.md`'s ADR-017 line
+publishes "fast 75s local"; (3) `fast-wall-clock-budget.json`'s `expect.note`
+says the override "falls back to the committed 80 for everything else" while
+every `env_override` row in the same case now expects 90. (1) and (2) are
+byte-identical to `origin/main` and predate this branch; (3) was introduced
+with ADR-021. `evals/run.py:304` also still labels the ceiling's source
+"ADR-002 Decision 4" when ADR-019 and ADR-021 are the live rulings.
+Repro: `grep -n '75s\|15s' CLAUDE.md specs/decisions/INDEX.md` against
+`evals/run.py:91`; the suites stay green.
+Acceptance: all three publications state the enforced pair, or drop the
+literals for "the ceiling `evals/run.py` enforces" — CLAUDE.md's Gate and
+Commands blocks named explicitly, since that is the file a new contributor
+reads as the contract. Nothing graded changes; if it can be graded cheaply
+(one sweep over tracked markdown for a ceiling literal that is not the
+committed one), do that instead and watch it red on CLAUDE.md first.
 
 ### T-M32-3 — act-failure coverage costs 4.6s of a suite that already straddles its ceiling            [status: todo]
 Origin: PR #34 R1 (the fix, not the finding); cost model corrected per PR #34 R11.
@@ -273,28 +291,208 @@ Acceptance: `specs/001-browser-contract.md:145-150` states the null half and
 cites the third case, matching D25 and ADR-020 word for word on the predicate;
 ideally a grader covers the contract's case citations the way
 `support-matrix-cites-real-cases` covers the matrix's.
-### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: todo]
-Origin: PR #29 R24
-Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README
-no longer publishes a property the grader does not implement — it now states
-what `_check_published_band` actually checks (case count matches, published
-maximum derives the SAME ceiling as the ledger maximum, committed ceiling >=
-the rule applied to that maximum) — and both README's band table and ADR-019's
-band lines are now regenerated from `evals/report/history.jsonl` by script, so
-the published run lists are the ledger's own and the derivation sentences
-multiply the ledger maximum at the shipped case count.
-What remains is the judgement call R24 raised: property 2 is
-`rule(published) == rule(ledger max)` rather than `published >= ledger max`.
-The weaker form was chosen deliberately (the strict form reddens on ordinary
-0.2-0.5s run-to-run variance, which is rot-by-construction one level up), and
-it does catch the harmful direction — a band justifying a LOWER ceiling than
-the truth. It does not catch a published maximum that is up to ~1.0s below the
-ledger's at these magnitudes while still landing in the same band.
-Acceptance: either the tighter property is adopted with a regeneration step
-that keeps the doc honest without hand-editing (the script that now produces
-these lists is the obvious hook), or the trade-off is stated in ADR-019 as a
-declared ceiling with the ~1.0s slack named, and a case pins the miss so it is
-a decision rather than an artefact of what was convenient to grade.
+### T-R50 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
+Origin: T-R34, restated after PR #35 R4 (renumbered from T-R39 during the M35 merge — main had allocated that id independently)
+Spec: `_band_wrong` filters `history.jsonl` to rows whose `total` equals the CURRENT case
+count, so adding one 0.0s pure-code case discards every earlier run. Observed: `invariant`
+had 34 runs at 51 cases reaching 14.12s; the first two runs at 52 cases maxed at 12.78s,
+which derives **15** — the ceiling CI has been red against twice. PR #35 R4 correctly
+refused this as debt while ADR-019 §6 still claimed "no ceiling is ever justified by a
+maximum smaller than the truth"; that claim is gone, the residue is declared in §6 (a
+freshly republished band is a LOWER bound and a ceiling does not ratchet down on one), and
+the concrete failure — a derivation arguing 15 under a heading that says 20s — is now graded
+by `published-band-matches-the-ledger`.
+What remains here is only the option §6 names and does not take: widening the window (rows
+at nearby counts, or a floor at the previously published maximum) so a band re-measures from
+more than the two runs that happen to follow a case being added.
+Acceptance: a widened window with the reasoning recorded, watched red against the 52-case
+sample above — or an ADR line closing the option deliberately.
+
+### T-R51 — the CI half of ADR-019 publishes bands no committed artifact can reproduce            [status: todo]
+Origin: T-R34 (cold review) (renumbered from T-R40 during the M35 merge — main had allocated that id independently)
+Spec: ADR-019 §5 and README's CI paragraph publish four measured numbers (`invariant`
+14.80-16.47s, `fast` 69.37-74.06s) and derive 20/90 from them. None of those values is in
+`evals/report/history.jsonl`, and none can be: `.github/workflows/eval.yml` checks out, runs
+the two suites and stops — no step commits a history row, so a CI wall clock never reaches
+the ledger. `_BAND_LINE` has a group for the suite and none for the environment, so
+`published-band-matches-the-ledger` parses only the two local sentences. T-R34 scoped both
+blanket claims down to "every LOCAL band" rather than leave them false, but the CI band is
+still unfalsifiable prose deriving a live ceiling. Compounding: README publishes the CI band
+twice and incompatibly — `59.77 / 60.84 / 64.61 / 64.67s` in the M12 paragraph and
+`69.37-74.06s` in the ADR-019 paragraph, where 64.61 is in the ledger twice as a LOCAL run.
+Applying README's own rule to README's own first CI band gives 75, not the 90 it publishes.
+Acceptance: either CI's runs land in the ledger (a job step that appends and commits, or an
+artifact the check reads) and the band grader learns the environment dimension, or §5 and
+README's CI numbers are labelled as hand-read log values with the workflow run ids that
+produced them, and README's older CI band is struck. Watched red either way.
+
+### T-R52 — three files cite ADR-017 for the per-suite override that is ADR-019            [status: todo]
+Origin: T-R34 (cold review) (renumbered from T-R41 during the M35 merge — main had allocated that id independently)
+Spec: `specs/decisions/INDEX.md:11`, `evals/run.py:103` ("ADR-017 gives both suites the same
+treatment") and `.github/workflows/eval.yml:16` ("one variable per suite (ADR-017)") all
+attribute the one-variable-per-suite ruling to ADR-017. ADR-017 is the M36 judge ADR
+(INDEX.md:26); the ruling is ADR-019 §4. `adr-header-and-index` grades Ruling-block presence
+and INDEX numbering, so no citation body is checked, and `report-citations-resolve` covers
+report filenames, not ADR references.
+Acceptance: the three citations name ADR-019, and a graded row resolves `ADR-0NN` references
+in `src/`, `evals/`, `.github/` and `specs/` against the ADR that actually carries the
+ruling — or at minimum against the file existing and its Ruling mentioning the subject.
+Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
+
+### T-R53 — nothing requires the runs behind a band to be green or clean            [status: todo]
+Origin: T-R34, evidence from PR #35 R5 (renumbered from T-R42 during the M35 merge — main had allocated that id independently)
+Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone; `sha`, `dirty` and
+`passed` are recorded on every row and read by nothing. Round 1 shipped both bands off red,
+dirty runs: at (invariant, 52) the 13.22s maximum was ts 20260823-023204 with
+`passed: 50, total: 52, dirty: true` while the other nine runs maxed at 12.88s, and at
+(fast, 133) the 66.38s maximum was ts 20260823-023406 with `passed: 132, total: 133,
+dirty: true`. Round 2 republishes both from committed green, clean `--report` runs of the shipped tree
+(ts 20260823-033320, `fast` 133/133, and ts 20260823-033200, `invariant` 52/52, both
+`dirty: false`) and `published-band-matches-the-ledger` now requires the published number to
+BE a clean row at that count. The GREEN half is still ungraded and cannot be graded the same
+way: this check is in both suites, so at a new case count every run is red until the band is
+republished, and no green row could ever exist to republish it from. Round 2 also had to fix `evals/run.py` before a clean row was
+even possible: `dirty` was read AFTER the report file was written, so every `--report` run
+recorded `dirty: true` on account of its own untracked artifact.
+Admitting non-green rows is argued in `_band_wrong`'s comment (a wall clock is a wall clock,
+and requiring green deadlocks: this check is itself in both suites). Admitting DIRTY rows is
+argued nowhere, and it is the weaker half — a band can be justified by a tree that was never
+committed.
+Round 3 correction: that bootstrap claim was false, and PR #35 R11 proved it. A tree only
+reaches case count N+1 while the new case file is UNCOMMITTED, so every row at N+1 is dirty
+until the commit the check was blocking — requiring `dirty: false` outright deadlocked the
+one operation CLAUDE.md rule 2 makes routine. What ships instead: the band cites its run by
+ledger timestamp and cleanliness is judged as of that run, so a dirty row is refused only
+when a clean one was already available when the band was published.
+Acceptance: the remaining half is GREEN, which is neither required nor requirable the same
+way — this check is in both suites, so at a new count every run is red until the band is
+republished and no green row could exist to republish it from. Either a bootstrap that
+tolerates one red row and then requires green (the same as-of trick would work), or
+`_band_wrong`'s comment and ADR-019 §6 state that a band's source run may be red and say
+what that costs. Watched red with the two rows above.
+
+### T-R54 — `_band_step_s` measures the ceiling step once and publishes it as a bound for every band            [status: todo]
+Origin: PR #35 R8 (renumbered from T-R43 during the M35 merge — main had allocated that id independently)
+Spec: `_band_step_s` bisects two consecutive ceiling boundaries at x=60 and returns 4.35s,
+which `published-band-slack-is-declared` then asserts as the bound for both published bands,
+including `invariant`'s at 13.22s. The docstring justifies the bisection with "`_band_rule`
+is monotonic", but monotonicity only makes the bisection valid; what makes ONE measured step
+a bound for every band is that the rule is linear in x. Amend ADR-013's rule to anything
+scale-dependent — a percentage of the value, a floor at small magnitudes — and the published
+4.35s silently stops bounding the small band.
+Acceptance: name linearity as the assumption in the docstring, or measure the step at each
+published band and grade each against its own.
+
+### T-R55 — the `fast` band cites a red run without saying so; `invariant` discloses its result            [status: todo]
+Origin: PR #35 R17 (renumbered from T-R44 during the M35 merge — main had allocated that id independently)
+Spec: ADR-019 §2 cites ts `20260823-041419` and discloses `dirty: true` but not that the row
+is 132/134 — the run was red. §3's citation for ts `20260823-041729` discloses `53/53`. A
+reader comparing the two would reasonably read the silence as a pass. Nothing grades the
+parenthetical either way: `_BAND_LINE` captures suite, case count, ts and seconds, and the
+result is prose beside it. Green is deliberately not required of a band source (T-R42, and
+§6 says so), which is exactly why the result should be stated wherever a band is cited.
+Acceptance: the band citation carries `passed/total` from the row it names, derived rather
+than typed — the ledger row has both fields — or the parenthetical is dropped from both so
+there is nothing to be inconsistent about. Watched red by publishing a band whose citation
+claims a result the row does not have.
+
+### T-R45 — the slack sweep matches the rendered scalar, not the value            [status: todo]
+Origin: PR #35 R18
+Spec: `published-band-slack-is-declared` builds its bare-scalar regex from `f"{step_s:g}"`,
+so it sweeps for the exact string `4.35`. A document writing the same value as `4.350`, or
+`4.35 s`, or in a table cell as `4.4`, carries an ungraded copy that the sweep does not see
+and the marker check never reaches. The marked occurrences are parsed as floats and compared
+with a tolerance, so the marker half is rendering-independent; only the sweep half is not.
+Acceptance: the sweep matches any decimal rendering of the current value (a numeric scan of
+`[\d.]+s?` tokens compared as floats, rather than one string), or the limitation is stated
+in the check's docstring beside the existing `ponytail:` note. Watched red with `4.350`.
+
+### T-R46 — the "one list, one place" claim restates the properties it says it never restates            [status: todo]
+Origin: PR #35 R19
+Spec: ADR-019:167-168 says "One list, in one place; every other sentence in this
+file and in README refers to it instead of restating it"; :48-49 and
+`specs/decisions/INDEX.md`:28 say the same. In the same file, ADR-019:254-257
+restates §6 item 2's first clause in full with no reference to item 2, and
+:264-269 restates its second clause — the exact wording R15 found stale at
+§2:68-73, now living 80 lines below the list instead of 100 above it. README:107-109
+restates item 7 inside the sentence denying restatement, and README:121
+("Same ceiling, not `published >= ledger max`") restates item 3's parenthetical
+verbatim. The `ponytail:` limit at `src/browser/eval_adapter.py`:3398-3405 leans on
+the single-source list as the general defence against a newly invented false
+description, so the blacklist's stated backstop is not actually in place.
+Nothing can go red on this: `describes_a_deleted_rule` blacklists three retired
+phrases, and a correct-today restatement is by construction not on that list.
+Acceptance: either the two §6 paragraphs and README:107-109/:121 defer to the item
+numbers instead of restating their content (as :192-194 and :220 already do), or the
+single-source sentences at ADR-019:167-168, :48-49 and INDEX.md:28 are narrowed to
+what is true. Grepping §6 for a sentence that states an item's content without naming
+its number returns nothing, or the claim no longer says otherwise.
+
+### T-R47 — two emitted keys still use the retired `property N` numbering            [status: todo]
+Origin: PR #35 R20
+Spec: `src/browser/eval_adapter.py`:676 emits `r21_underpublished_band_green_on_property_2`
+and :680 emits `r21_underjustified_ceiling_green_on_property_3`. Under ADR-019 §6's
+list those are item 3 and item 4 (:173-186). The comments two lines above each were
+renumbered by PR #35 round 4 (:673-675), so the comment and the key it guards disagree,
+and a red report names §6 items off by one. The round-3 sweep claimed to cover "stale
+`property 2` / `property 3` numbering in three comments" — these are emitted strings,
+not comments, and were missed.
+Acceptance: the emitted keys name the same item numbers as §6's list (or no number at
+all), and no string in `_check_published_band_slack` uses the retired numbering.
+
+### T-R48 — ADR-019 says a band "was published" that no commit ever published            [status: todo]
+Origin: PR #35 R21
+Spec: ADR-019:101 ("that band was published, and the check was GREEN on it") and
+:236-237 ("that exact state was published in this round and the check accepted it").
+`git log --all -S'12.89 × 1.15' -- specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md`
+returns only `aeac0f7`, the round-4 repair itself quoting it as an example. The bands
+actually published across the branch were 13.22 -> 20, 13.08 -> 20 and 13.32 -> 20; the
+12.89 / -> 15 state existed only in an uncommitted working tree. The substantive half is
+true and verified — `_band_wrong` returns [] for that state, `round(12.89*1.15,2)` is
+14.82, `_band_rule(12.89)` is 15 <= 20 — only "published" is stronger than the record.
+Acceptance: the sentences say what is reproducible (the state was reachable and is green
+under the current check) rather than that a commit of this PR published it, or a commit
+sha is cited that did.
+
+### T-R49 — §6 says it lists "exactly" what the check requires, and omits two emitted shapes            [status: todo]
+Origin: PR #35 R22
+Spec: ADR-019:48-49 says "§6 lists exactly what it requires". `_band_wrong` also emits
+`adr_publishes_no_band_line` (`src/browser/eval_adapter.py`:440) and `no_recorded_run_at`
+(:461), neither of which appears in items 1-7 — nine distinct `wrong.append` shapes
+mapped onto seven items. Separately ADR-019:69 says "§6 items 2-4 are what the check
+requires **of it**" where "it" is the cited run; item 4 (:179-180) constrains the
+committed ceiling against the ledger maximum, not the cited run.
+Acceptance: either the two omitted shapes are folded into the list (or named as
+preconditions of items 1-2), or :48-49 drops "exactly"; and ADR-019:69 cites items 2-3
+for the cited run and item 4 for the ceiling.
+
+### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: todo]
+Origin: PR #32 CI run 32626835735 (M31's check)
+Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
+process can see. CI's eval-gate job runs `--suite invariant` first, which
+appends its row to the job's copy of the ledger (16.02s at 52 cases on run
+32626835735 — CI is slower than the machine the band was measured on), then
+`--suite fast`, whose band check now compares ADR-019's published invariant
+slowest (12.92s at 52 cases, 8 local runs → rule 15) against a ledger whose
+slowest at 52 cases is CI's 16.02s → rule 20 → FAIL (`fast 132/133`), while
+the same tree is green locally. Main passes only because at 51 cases the
+published slowest happens to be 14.12s → 20 == CI's 16s → 20. The fast band
+cannot trip this way (its row is written after the fast run), so the defect
+is: any PR that grows the invariant suite by one case and republishes the band
+from local runs is red on CI unless some committed local run happens to derive
+the same ceiling CI's machine does. ADR-019 itself rules that ceilings are per
+(suite, environment); the grader is not.
+Repro: on a tree whose invariant case count differs from ADR-019's published
+band count, run `--suite invariant` on a slower machine, then `--suite fast` on
+the same ledger: `published-band-matches-the-ledger` reports
+`{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
+"ledger_slowest": 16.02, "ledger_derives": 20}`.
+Acceptance: rows carry their environment (e.g. the effective
+`EVAL_WALL_BUDGET_S_*` or an env tag) and the check compares a published band
+only against rows from the same environment; a case pins that a slower
+foreign-environment row does not redden the band. Until then, M35 moved its
+one new invariant case to `fast` (it is a pure-code doc check) so the
+invariant band stays the 51-case band main measured.
 
 ### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: todo]
 Origin: PR #29 R25
@@ -471,6 +669,47 @@ already is (`ValueError` -> `failure:semantic`), watched red first. Deliberately
 NOT done in M31: no enumeration in this repo produces one — every `extract_all`
 in the eval set reads one column of one page — and the ponytail comment on
 `rank` names the ceiling and this upgrade path.
+### T-R42 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: todo]
+Origin: PR #32 R7 (LOW)
+Spec: `_check_examples_cover_matrix` finds keys with `^\s*"([^"]+)":\s*\{` over the `const EXAMPLES = {` block, so an entry written mid-line is silently dropped from the parsed set. Every consequence reproduced fails in the safe direction today (added/renamed doc row → red; `const EXAMPLES={` reformat → IndexError → passed=False; a mid-line real-site key → red as rows_without_example), so this is robustness, not a gap.
+Acceptance: the check parses the object (whole-block regex or a JSON export of EXAMPLES) so formatting cannot change what it sees; a case pins that a mid-line key is counted.
+
+### T-R39 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
+Origin: PR #32 R2 (LOW)
+Spec: the page's no-URL guard derives a start URL from any `label.tld` token in the task text. Measured false positives: "What version of node.js is listed?" → `https://node.js`, "Open README.md and read the title" → `https://README.md`, "Find setup.exe download link" → `https://setup.exe`, "email john@example.com about it" → `https://example.com`. The lifted URL is written to `#url` and POSTed in the same click, so the run is spent (ends `failure:nav`, $0, but a slot and a red result the visitor did not intend).
+Acceptance: common file extensions and e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the `ui-no-url-guard-and-example-chips` case gains one such input asserting no POST and the guidance shown.
+
+### T-R40 — two case provenances cite dangling pre-rebase shas            [status: todo]
+Origin: PR #32 R5 (LOW)
+Spec: `evals/adversarial/ui-no-url-guard.json` says "watched red against the pre-M35 page (main 2a11142)" and `ui-execution-progress.json` cites `e07ac07`; neither commit is on any branch after the rebase onto `2e94bed`, so the red-first evidence becomes unreachable after gc and "2a11142" is not main.
+Acceptance: provenance cites reachable shas (`b7daac4` as the pre-M35 page; the watched-red amendment against the branch's own prior commit or a described patch); `report-citations-resolve`-style check if one exists for shas.
+
+### T-R41 — the shared `_ui_page` render leaks the form case's state into `ui-rendered-narrow`            [status: todo]
+Origin: PR #32 R6 (LOW)
+Spec: `_run_ui_form_case` stubs `window.fetch` and never restores it, and leaves `#err` visible and `#task`/`#url` filled on the cached (390, dark) page that `ui-rendered-narrow` then reuses; the two cases are order-coupled through `sorted(rglob)`. Passes today; no failure reproduced.
+Acceptance: the form case restores `window.fetch` and resets `#err`/`#task`/`#url` at the end (or the rendered case asserts its own preconditions) so the two cases are order-independent in either order.
+
+### T-M35-WALL — the fast suite sits within 0.3s of its 60s wall-clock ceiling            [status: todo]
+Origin: M35 implementer
+Spec: `--suite fast` measured 59.01 / 59.06 s before M35 and 59.38 / 59.71 s
+with M35's one new rendered case (0.33 s on the shared browser). ADR-002
+Decision 4's ceiling is enforced by `evals.run` (`fast-wall-clock-budget`), so
+the next case — or ordinary machine noise — turns the gate red on timing, not
+on correctness, and the pre-commit hook with it — and it did: the orchestrator's
+gate on M35's first commit measured 60.31 / 60.73 s (`evals/report/
+20260822-170105-fast.json`, `-170218-fast.json`). M35 bought the margin back
+inside eval code only: `verifier-sparse-page-not-a-dump` moved from
+`slow-asset.html` to the equally sparse `sparse.html` (4.06 s → 0.44 s; it
+grades the page-size floor, not the hanging `load`), and the two rendered UI
+cases share one `_ui_page` render (no extra context). What remains is
+structural: ~45 s of the suite is product timeouts exercised on purpose (the
+2 s postcondition/`load` bounds, the 10 s click actionability bound in
+`l4-shop-overlay-modal`), so the next few cases will breach again.
+Repro: `.venv/bin/python -m evals.run --suite fast` twice and read `wall_s` in
+`evals/report/history.jsonl`; compare with the 60 s budget.
+Acceptance: a decision recorded in an ADR — either the suite sheds wall clock
+(shared contexts, fewer duplicate fixture loads, or the parallel runner M14) or
+the ceiling moves with a reason — and the suite runs with >= 5 s of headroom.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5

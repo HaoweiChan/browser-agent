@@ -1,0 +1,79 @@
+{
+  "pr": 35,
+  "round": 1,
+  "resolutions": [
+    {
+      "id": "R1",
+      "resolution": "fixed",
+      "case": "published-band-slack-is-declared",
+      "detail": "`_BAND_SLACK_LINE` replaced by `_SLACK_MARK` = `one ceiling step (**N.NNs**)`, searched in BOTH ADR-019 and README; every match in either document must equal `_band_step_s()`, and each document must carry at least one. All three prose sites use the marker.",
+      "watched_red": "editing README's copy alone to 8.70s -> [{readme: declares_wrong_slack, declared: 8.7, one_ceiling_step_is: 4.35}] (invisible under the old regex). The reviewer's own scenario — amend the rounding step 5->10, repair only one ADR sentence -> [{adr: declares_wrong_slack, ...}, {readme: declares_wrong_slack, ...}, {r21_underpublished_band_green_on_property_2: [12.96, 13.57]}].",
+      "declared_ceiling": "a figure written WITHOUT the marker is still invisible — marked `ponytail:` at the site."
+    },
+    {
+      "id": "R2",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "Both parses now go through one loop that reports every duplicated suite.",
+      "watched_red": "stale 132/66.33 + 51/14.12 rows inserted above README's live rows -> [{suite: fast, readme_publishes_two_bands: true}, {suite: invariant, readme_publishes_two_bands: true}]"
+    },
+    {
+      "id": "R3",
+      "resolution": "fixed",
+      "detail": "ADR-019 §6 + README: the next-commit argument is withdrawn by name — the append-after-grading lag is shared by both forms, and this section's own property reddens the next commit too when a band is crossed. The decision now rests on frequency: every new maximum versus once per 4.35s crossing."
+    },
+    {
+      "id": "R4",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "§6 no longer claims \"no ceiling is ever justified by a maximum smaller than the truth\"; it states what the case-count filter discards, that property 3 is `>=` so nothing goes red, and that a fresh band is a lower bound a ceiling must not ratchet down on. Graded half: `_BAND_DERIVATION` reads the ADR's own derivation sentence, which must multiply the published maximum, be arithmetically right, and land on `WALL_BUDGET_S[suite]`.",
+      "watched_red": "band re-measured down to 12.80s with §3 and README following -> [{suite: invariant, published_slowest: 12.8, derives_ceiling: 15, ledger_slowest: 13.22, ledger_derives: 20, runs: 13}, {suite: invariant, derivation: [12.8, 14.7, 15], arithmetic: 14.7, committed_ceiling: 20}]. Breaking only the arithmetic -> [{suite: fast, derivation: [66.38, 66.3, 80], arithmetic: 76.3, committed_ceiling: 80}]."
+    },
+    {
+      "id": "R5",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "Green clean runs committed: invariant ts 20260823-033200, 52/52, dirty false, 13.08s; fast ts 20260823-033320, 133/133, dirty false, 66.41s, both with --report artifacts. Bands republished from them: 13.08 x 1.15 = 15.0 -> 20; 66.41 x 1.15 = 76.4 -> 80. The band sentence is now \"Band source — `fast` at 133 cases, clean run at **66.41s**\" and cites its report; the grader requires the published number to BE a `dirty: false` row at that count. Green is deliberately not required (the check is in both suites, so at a new case count every run is red until the band is republished — T-R42 carries that half).",
+      "incidental_bug_found": "a one-line fix in evals/run.py: `dirty` was read AFTER the report file was written, so every `--report` run recorded itself dirty on account of its own untracked artifact — no clean `--report` row was producible at all.",
+      "watched_red": "republishing invariant from ts 20260823-023204 (13.22s, passed 50/52, dirty true) -> {suite: invariant, published: 13.22, is_not_a_clean_recorded_run_at: 52}",
+      "verified_by_orchestrator": "git show HEAD:evals/report/history.jsonl -> clean rows present at both counts, including 20260823-033200 invariant 52/52 13.08 and 20260823-033320 fast 133/133 66.41."
+    },
+    {
+      "id": "R6",
+      "resolution": "fixed",
+      "case": "docs-numbers-are-derived",
+      "deviation": true,
+      "detail": "A cited report must now hold as many results as the suite has cases. DEVIATION: did NOT auto-derive \"newest committed report per suite\" — green gate runs write no report (ADR-012), so the newest is whatever red run last wrote one; that would repoint README at a failing baseline and churn on every red run. The count check delivers the stated purpose (growing a suite reddens it) in three lines; reasoning is a `ponytail:` comment at the site. Status block and analysis.md's ratio repointed to the R5 run (71 of the 133, 62 remaining — the old line cited a 122-case report while claiming 132).",
+      "watched_red": "no mutation needed: {cites_a_report_of_a_different_tree: 20260823-000232-fast.json, report_cases: 132, suite_now: 133} and {...20260823-000031-invariant.json, report_cases: 51, suite_now: 52}"
+    },
+    {
+      "id": "R7",
+      "resolution": "fixed",
+      "detail": "Both spliced paragraphs rebuilt: README's grader description is one sentence again with the CI-scoping paragraph standing after it; ADR §2's \"It has to, because...\" has its antecedent back."
+    },
+    {
+      "id": "R8",
+      "resolution": "debt",
+      "tid": "T-R43",
+      "detail": "Linearity, not monotonicity, is what makes one measured step a bound for every band."
+    },
+    {
+      "id": "R9",
+      "resolution": "fixed",
+      "detail": "Fixed incidentally by R2's shared duplicate-guard loop, which reports every duplicated suite — the `break` is gone. No debt block logged for something already fixed."
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [
+    "T-R43"
+  ],
+  "debt_restated": {
+    "T-R39": "restated to the widened-window option only (R4 took the rest into this PR)",
+    "T-R42": "restated with the concrete ts/dirty evidence plus the evals/run.py ordering note"
+  },
+  "gate": {
+    "invariant": "52/52 = 1.000, wall 12.79s",
+    "fast": "133/133 = 1.000, wall 66.43s"
+  },
+  "note": "at (fast,133) the band source 66.41 is also the ledger maximum; at (invariant,52) the band source 13.08 sits below the ledger maximum 13.22 (round 1's red dirty row), same band — that is the declared slack, now with a stated reason rather than an accident."
+}

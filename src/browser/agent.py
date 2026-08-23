@@ -634,8 +634,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 product has the most reviews" (PR #34 R16, the seventh
                 occurrence of this class). The fix is not a third `plan_gap`
                 call — hand-placing the third is how the second was forgotten —
-                so all three adoption points come through here and a fourth
-                cannot be added without one.
+                so all three adoption points come through here. A fourth
+                cannot be added without one, and that is enforced rather than
+                promised: `plan-adoption-is-the-only-steps-rebind` parses this
+                file and reddens on any binding of `steps` after the first plan
+                that is not adopt-derived (PR #34 R25 — the promise stood on
+                convention for one round, which is exactly how ADR-018's
+                version of it failed).
 
                 Returns (steps, None) when the plan is adoptable, or
                 (None, gap) when the lint refuses it. The CALLER decides what a

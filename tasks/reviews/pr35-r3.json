@@ -1,0 +1,62 @@
+{
+  "pr": 35,
+  "round": 3,
+  "scope": "repair diff 5131e30..HEAD + standing round-2 findings",
+  "standing_round2": {
+    "R10": "closed for the instance and the literal-rendering class; trailing-zero gap -> R18",
+    "R11": "closed — as-of rule is stable both directions and the single-commit proof holds; but §2's prose was not updated with it -> R15",
+    "R12": "closed",
+    "R13": "closed mechanically; the deviation was judged sound, but the prose describing it is now false -> R16",
+    "R14": "closed"
+  },
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": {
+    "fired": true,
+    "reason": "3 review rounds without approval (pr-loop protocol)",
+    "blocker": "R15 — ADR-019 §2 publishes a clean-tree guarantee the grader no longer implements, five lines below a citation admitting its own band source is dirty and red",
+    "pattern": "R15 and R16 are the same species as each other and as the task itself: prose describing a rule the code does not implement. That is the exact defect class T-R34 was opened to close, reproduced by the repairs for it in two consecutive rounds."
+  },
+  "gate": {
+    "invariant": "53/53 = 1.000",
+    "fast": "134/134 = 1.000",
+    "pr": "see orchestrator"
+  },
+  "findings": [
+    {
+      "id": "R15",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "ADR-019 §2 still tells the reader that `published-band-matches-the-ledger` requires the band's source row to have nothing uncommitted in the tree — a rule this round deleted — five lines below a citation that admits the row it names is `dirty: true`, so the document publishes a guarantee it visibly does not have.",
+      "evidence": "ORCHESTRATOR-VERIFIED. ADR-019:68-73: \"the sentence above names the one the band is derived from, and `published-band-matches-the-ledger` requires it to be a row recorded with nothing uncommitted in the tree.\" Written by round 2 (4e7120d) against the `dirty: false` filter, NOT touched by 3a8bc61. The filter no longer exists: src/browser/eval_adapter.py:479-487 refuses a dirty row only when a clean one at the same count has `ts <= ts`. The band cited five lines above at ADR-019:64 is ts 20260823-041419, dirty AND red (132/134) — and ADR-019:66 says `dirty: true` outright. §6:229-241 and the code comment carry the correct as-of rule, so the ADR contradicts itself, and the implementer's own sweep (self_found in pr35-r2-resolution.json) caught §6's sentence and README's column header but not the one a reader meets first.",
+      "repro": "sed -n '62,73p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md against `_check_published_band()['passed']` -> True, while the cited row is dirty:true, 132/134.",
+      "acceptance": "ADR-019:68-73 describes what the check actually requires (a row with that ts, at that count, whose wall clock is the published number; cleanliness judged as of that run) or defers to §6, with no sentence in either document claiming a clean-tree requirement. Grepping README.md and ADR-019 for \"nothing uncommitted\" / clean-tree language returns nothing describing the deleted rule."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R13's declared deviation is reasonable but was not carried into the prose: ADR-019 §6 and the code comment introducing the very block that was weakened both still assert that a §3 derivation reading \"-> **15**\" under a committed 20s ceiling is red, and it is green.",
+      "evidence": "ORCHESTRATOR-VERIFIED. ADR-019:207-211: \"`published-band-matches-the-ledger` now reads it — the derivation sentence must multiply the published maximum and land on the ceiling `evals/run.py` commits — so that state is red.\" src/browser/eval_adapter.py:568-571 repeats it. But src/browser/eval_adapter.py:584-585 asserts `round(x*1.15,2) != product or _band_rule(x) != ceiling or ceiling > WALL_BUDGET_S[suite]` — `>` , i.e. `<=`, not the `== WALL_BUDGET_S` the sentence describes. The reviewer demonstrated the full mutation green: §3 republished as \"12.89 x 1.15 = 14.82 -> **15**\" with README's row following and a 53-case ledger of 12.87/12.89 returns {'passed': True, 'wrong': []} — exactly the state this round hit for real per ADR-019:99-104. That account presents as a mechanism what was a 13.32s run happening to land: nothing would have reddened the 15-deriving band had it not.",
+      "repro": "patch ADR-019 §3 to \"12.89 x 1.15 = 14.82 -> **15**\" and README's invariant row to match, point HISTORY at a 53-case ledger of 12.87/12.89 -> `_check_published_band()` returns {'passed': True, 'wrong': []}",
+      "acceptance": "Either the derivation is conjoined with the committed ceiling in a way that survives a fresh short sample (e.g. §3 states both the rule's value and the committed ceiling, with only the latter graded against WALL_BUDGET_S), or ADR-019 §6 and eval_adapter.py:568-571 stop claiming that state is red and say what the deviation actually buys and costs. Either way the mutation is red or the sentence matches the code."
+    },
+    {
+      "id": "R17",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The `fast` band's citation discloses that its source run was dirty but not that it was red (132/134), while the `invariant` citation gratuitously discloses \"53/53\" — the one ungraded property the ADR admits to (green) is disclosed asymmetrically at exactly the point a reader reads the number.",
+      "evidence": "ADR-019:64-66 cites ts 20260823-041419 as \"the run that measured the tree the 134th case was being added to, so `dirty: true`\"; the ledger row is passed 132, total 134. ADR-019:88-90 cites 20260823-041729 with \"(53/53; ...)\". §6:239-241 does say the green half is neither required nor requirable, and T-R42 honestly carries green as the open half — which is why this is LOW.",
+      "repro": "grep -n '20260823-041419' evals/report/history.jsonl; sed -n '62,66p;86,90p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "The `fast` band citation states its pass count the same way §3's does, so a reader sees the same disclosure for both bands."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new bare-scalar sweep closes the class for the literal rendering only: an equal-value copy written with a trailing zero evades it.",
+      "evidence": "src/browser/eval_adapter.py:632 — `re.compile(rf\"(?<![\\d.]){step_s:g}(?![\\d])\")` yields `(?<![\\d\\.])4\\.35(?![\\d])`. It catches `4.35` bare in prose, in a code fence, in a table cell and in parentheses, and correctly ignores `14.35` — but `once per 4.350s` returns []. End to end, replacing ADR-019's marked sentence with bare `once per 4.350s` leaves `_check_published_band_slack()['wrong'] == []`, while bare `once per 4.35s` correctly gives [{'adr': 'unmarked_copies_of_the_slack_scalar', ...}]. Not the observed failure mode (all four historical copies were `4.35`), hence LOW.",
+      "repro": "replace the marked sentence with `once per 4.350s` -> `_check_published_band_slack()['wrong']` == []",
+      "acceptance": "The sweep matches any decimal rendering of the same value (parse `\\d+\\.\\d+` and compare to `_band_step_s()` within 0.005 instead of string-matching `{step_s:g}`), and the `4.350` mutation goes red."
+    }
+  ]
+}
