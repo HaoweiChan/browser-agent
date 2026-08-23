@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M37 — The HN card's Try example no longer reproduces on the deployed build — swap it for one that does            [status: in-progress]
+### M37 — The HN card's Try example no longer reproduces on the deployed build — swap it for one that does            [status: pr]
 Spec: M35 shipped five per-site Try examples, each cited to a deployment run
 that answered correctly. After the merge the post-deploy receipt round found
 `news.ycombinator.com` "Who submitted this story?" (item?id=1) failing 5/5 —
