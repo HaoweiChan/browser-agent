@@ -46,7 +46,7 @@ names a mutation:
   citation claims a result the row does not have.
 Out of scope: T-R44, T-R50, T-R51, T-R53 — behaviour, not description.
 
-### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: in-progress]
+### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: pr]
 Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
 Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
 class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
@@ -1005,6 +1005,31 @@ Acceptance: the Ruling parse refuses a suite that matches twice (same shape as
 `adr_publishes_two_bands`), and item 5 (derivation) reads derivations only from the section that publishes
 the band. Watched red with a second ceiling phrase, and with a 12.89 band whose only
 derivation is §6's counterexample.
+
+### T-R68 — the `grounded` reason says a value is absent from the page when it only fell outside the evidence window            [status: todo]
+Origin: PR #38 R1 (LOW)
+Spec: The human-readable `reason` for the canonical M28 shape is still factually false: it says the value is 'absent from the page they were read from' when the value is on the page and only fell out of the 2000-char evidence window (value > PAGE_TEXT_KEEP/2). Evidence: src/browser/verifier.py:472-475 (`grounded` message, edited by this diff but wording kept); evals/report/20260823-200546-fast.json row extract-container-dump-is-not-the-answer got.reason = "verifier FAIL: extracted values absent from the page they were read from: ['Port Meridian…(1271 chars)']" while evidence_contains '1,482,317' is true.
+Acceptance: Pre-existing, out of M28's acceptance; the grounded message distinguishes 'longer than the evidence window' from 'absent'.
+
+### T-R69 — the contract's 'verifier-rejected run carries answer: null' is pinned by one fixture path only; `_check_inv2` does not assert it            [status: todo]
+Origin: PR #38 R2 (LOW)
+Spec: specs/001's new contract line ('a run the verifier rejected carries answer: null') is pinned only by one fixture path (grounded reject) in the fast suite; the pure-code INV-2 probe in the invariant suite still passes with any answer on the demoted result, so judge-reject / INCONCLUSIVE sources are unpinned. Evidence: src/browser/eval_adapter.py:217-227 `_check_inv2` asserts only `r['status'] != 'success'`; specs/001-browser-contract.md:49-52.
+Acceptance: `_check_inv2` also asserts `r['answer'] is None` for FAIL/INCONCLUSIVE (one line), or the spec bullet names the single case as its only guard.
+
+### T-R70 — `capture.py` reconstructs the executor's claim from extractions, which diverges from what verify() judged for extract_all + rank plans            [status: todo]
+Origin: PR #38 R3 (LOW)
+Spec: capture.py's reconstruction of the executor's claim from `extractions` diverges from what verify() actually judged for an `extract_all` + `rank: true` plan (verify saw the ranked scalar; the label would record the flat value list). Evidence: evals/labels/capture.py:250-253 (`vals[0] if len(vals)==1 else vals`) vs src/browser/agent.py:712-735 + rank() at agent.py:951-955. No current RECORDS entry uses extract_all, so not triggered today.
+Acceptance: A comment naming the ceiling (ponytail:) or reconstruct via the same rank() path.
+
+### T-R71 — browser-domain skill's fixture map still calls shop-lamp-spec.html the only fixture longer than PAGE_TEXT_KEEP            [status: todo]
+Origin: PR #38 R4 (LOW)
+Spec: browser-domain skill's fixture map now states a falsehood: shop-lamp-spec.html is no longer 'the only fixture whose rendered text passes agent.PAGE_TEXT_KEEP (2000 chars)' — city-infobox.html renders ~4.1k chars and depends on that fact by design. Evidence: .claude/skills/browser-domain/SKILL.md:85-86; src/browser/fixtures/city-infobox.html header comment; tag-stripped length 4095 vs 2484.
+Acceptance: Skill fixture map gains a city-infobox.html line (or drops 'the only').
+
+### T-R72 — the UI no longer shows a verifier-rejected extraction anywhere — the '(rejected by the verifier)' branch is dead and extractions are not rendered            [status: todo]
+Origin: PR #38 R5 (LOW)
+Spec: UI: the '(rejected by the verifier)' note and `.answer.failed` scroll box are now dead code — with answer null on every INV-2 demotion, the reviewer surface shows '(no answer)' plus an 80-char preview and no longer displays the rejected extraction anywhere (extractions are not rendered), a visible loss of the evidence the UI was built to show. Evidence: src/browser/server.py:694-703 (`none` is true for every non-success now; `kind !== success && !none` unreachable from run_task); no renderer for r.evidence.extractions.
+Acceptance: Either remove the dead branch or render `evidence.extractions` collapsed under the verdict.
 
 ### T-R66 — M28 half (b): isolate the asked cell before giving up on a container extraction            [status: todo]
 Origin: M28 implementer
