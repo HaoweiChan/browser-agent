@@ -339,8 +339,6 @@ PAGE = r"""<!doctype html>
   header, main, footer { width:min(100% - 2.5rem,78rem); margin-inline:auto }
   header { padding:2.6rem 0 1.35rem; border-bottom:1px solid var(--line) }
   .mast { display:flex; justify-content:space-between; gap:1.5rem; align-items:flex-start }
-  .eyebrow { color:var(--amber-ink); font-size:11px; font-weight:700;
-         letter-spacing:.14em; text-transform:uppercase }
   .signal { color:var(--accent); border:1px solid var(--accent); padding:.16rem .45rem;
          font-size:11px; letter-spacing:.09em; text-transform:uppercase; white-space:nowrap }
   h1 { font-size:clamp(1.7rem,4.4vw,2.48rem); line-height:1.1; margin:.35rem 0 .55rem;
@@ -404,7 +402,6 @@ PAGE = r"""<!doctype html>
        text-transform:uppercase; letter-spacing:.06em }
   details summary:hover { color:var(--accent) }
   img.shot { max-width:100%; border:1px solid var(--line); border-radius:var(--radius); margin-top:.65rem }
-  .table-wrap { overflow:auto; padding:0 }
   table { border-collapse:collapse; width:100%; min-width:42rem; font-size:13px }
   th, td { border:1px solid var(--line); padding:.55rem .65rem; text-align:left; vertical-align:top }
   th { color:var(--amber-ink); font-weight:700; background:var(--raised);
@@ -433,9 +430,23 @@ PAGE = r"""<!doctype html>
   .progress li[data-state="failed"]::before { content:"× "; color:var(--bad) }
   .limits-summary { margin:0; padding-left:1.2rem; color:var(--fg) }
   .limits-summary li + li { margin-top:.35rem }
-  .limit-details { margin-top:.9rem }
-  .limit-details > div { margin-top:.65rem }
   a { color:var(--accent) }
+  .chip { text-transform:none; letter-spacing:0; font-weight:600; font-size:12px; padding:.35rem .65rem }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(17rem,1fr)); gap:.6rem }
+  .card { border:1px solid var(--line); border-radius:var(--radius); padding:.8rem .9rem;
+       background:var(--panel); display:flex; flex-direction:column; gap:.45rem }
+  .caps { list-style:none; margin:0; padding:0; font-size:13px }
+  .caps li + li { margin-top:.15rem }
+  .caps .supported { color:var(--ok) } .caps .unreliable { color:var(--warn) }
+  .caps .unsupported { color:var(--bad) } .caps .none { color:var(--dim) }
+  .card .try { align-self:flex-start }
+  .summary { margin:0 0 .7rem; display:flex; gap:.6rem; align-items:center; flex-wrap:wrap }
+  .answer { font-size:17px; font-weight:700; white-space:pre-wrap; word-break:break-word;
+       margin:.3rem 0 .8rem; padding:.8rem; background:var(--bg);
+       border:1px solid var(--line); border-left:3px solid var(--ok) }
+  .answer.none { color:var(--dim); font-weight:500; border-left-color:var(--bad) }
+  .answer.failed { font-size:13px; font-weight:500; max-height:14rem; overflow:auto; border-left-color:var(--bad) }
+  .checks { display:flex; gap:.35rem; flex-wrap:wrap; margin-top:.45rem }
   footer { color:var(--dim); border-top:1px solid var(--line); padding:1rem 0 2.5rem;
        font-size:12px; display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap }
   @media (max-width:680px) {
@@ -455,11 +466,9 @@ PAGE = r"""<!doctype html>
 <header>
   <div class="mast">
     <div>
-      <div class="eyebrow">human-review console / browser runtime</div>
       <h1>Browser Agent</h1>
-      <p class="sub">Natural-language task &rarr; plan &rarr; execute in a real headless Chromium
-      &rarr; verified result. Every attempt is traced, including the ones a recovery
-      ladder replaced.</p>
+      <p class="sub">Ask a question about a web page &mdash; a real browser does the work
+      and every step is shown, failures included.</p>
     </div>
     <span class="signal">trace first</span>
   </div>
@@ -470,17 +479,18 @@ PAGE = r"""<!doctype html>
 
 <div class="panel command">
   <div class="row">
-    <div class="field"><label for="task">Task instruction</label>
-      <input id="task" placeholder="e.g. What is the price of the Aurora Desk Lamp?"></div>
-    <div class="field"><label for="url">Start URL / optional</label>
-      <input id="url" placeholder="http/https, public hosts only"></div>
+    <div class="field"><label for="task">What should it find?</label>
+      <input id="task" placeholder="e.g. Who submitted this story?"></div>
+    <div class="field"><label for="url">Start URL</label>
+      <input id="url" placeholder="https://… the page to start on"></div>
     <div class="actions">
       <button id="go" onclick="submitTask()">Run task</button>
-      <button class="ghost" onclick="smoke()">Smoke test</button>
+      <button class="ghost" onclick="smoke()"
+        title="Launches Chromium against example.com — proves the browser works, spends no tokens">Browser check</button>
     </div>
   </div>
-  <p class="note" id="guards">Guarded: public URLs only (private and loopback hosts blocked) ·
-    30 actions · 100k tokens · 2 replans · one active run.</p>
+  <p class="note" id="guards">Public http/https pages only · up to 30 actions and 2 replans per run ·
+    one run at a time · a run costs about $0.001 in model tokens.</p>
   <pre id="err" hidden></pre>
 </div>
 
@@ -499,14 +509,12 @@ PAGE = r"""<!doctype html>
   <div id="result"></div>
 </div>
 
-<h2><span class="section-no">03</span> Support matrix</h2>
-<p class="note">Report-assisted, human-declared: the eval report suggests a status, a human
-  declares it with a reason. A pass rate does not threshold itself into &ldquo;supported&rdquo;.
-  Served from <code>docs/support-matrix.md</code> — the same file the README renders.</p>
-<div id="matrix" class="panel table-wrap">loading&hellip;</div>
+<h2><span class="section-no">03</span> What works today</h2>
+<p class="note">Each status is declared by a human from eval evidence, never inferred from a
+  pass rate. &ldquo;Try&rdquo; buttons are examples that were run against this deployment.</p>
+<div id="matrix" class="cards">loading&hellip;</div>
 
-<h2><span class="section-no">04</span> Limitations</h2>
-<p class="note">Four headline limits; the full evidence remains below.</p>
+<h2><span class="section-no">04</span> Known limits</h2>
 <div id="limits" class="panel">loading&hellip;</div>
 </main>
 
@@ -522,6 +530,74 @@ const SUPPORT_LABELS = {
   TC1: "Read a page", TC2: "Search and read", TC3: "Navigate and read",
   TC4: "Compare or sort", TC5: "Submit a form"
 };
+// One per real-site support-matrix row — the cards are the only example
+// surface. Every entry was run against the deployment on 2026-08-22; the
+// run_id is the receipt (GET /tasks/<run_id>). A site declared supported/—
+// cites a run that answered correctly; a site declared unreliable/unsupported
+// may cite a run that demonstrates the declared status (fails loudly, never a
+// wrong answer) and says so in `note`. An example nobody can reproduce is
+// removed, not kept.
+const EXAMPLES = {
+  "books.toscrape.com (live)": {label: "Price of a book",
+    url: "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+    task: "What is the price of this book?"},                  // run ac69e850 → "£51.77"
+  "news.ycombinator.com (live)": {label: "Who posted this HN story?",
+    url: "https://news.ycombinator.com/item?id=1",
+    task: "Who submitted this story?"},                        // run bcdc8f8a → "pg"
+  "quotes.toscrape.com (live)": {label: "Who said this quote?",
+    url: "https://quotes.toscrape.com/",
+    task: "Who wrote the quote about the world we have created?",  // run 24820d4c → "Albert Einstein"
+    note: "This static page answered correctly once (run 24820d4c); the declared failure is the JS-rendered /js/ pages."},
+  "openlibrary.org (live)": {label: "Author of a book",
+    url: "https://openlibrary.org/books/OL7025919M",
+    task: "Who is the author of this book?",   // run f1ecf157 → failure:extract (015b6778, 65af344f too: loud, never wrong)
+    note: "Declared unreliable — this example fails loudly, so you can see what a failure looks like."},
+  "wikipedia.org": {label: "A university's motto",
+    url: "https://en.wikipedia.org/wiki/Harvard_University",
+    task: "What is the motto of this university?",            // run 6a828ddb → "Veritas (Latin)[3]"
+    note: "Not in the eval set yet — one verified run."},
+};
+// Short limits for visitors; the declared rows with evidence stay in
+// docs/support-matrix.md, linked below with their count from the payload.
+const LIMITS = [
+  "Needs a start URL or a site named in the task — no web search",
+  "One visible value per page; second-page tasks (open category → read price) unreliable",
+  "Large tables / infoboxes: often fails, returns the whole block",
+  "Can pass verification with a wrong answer — known defect, fix in progress",
+  "Login, payment, CAPTCHA, delete, download: refused",
+];
+const EXPLAIN = {
+  success: "Answer found and verified against the page.",
+  "failure:locate": "Couldn't find the element the plan was looking for on the page.",
+  "failure:extract": "Reached the page but didn't get an answer out of it.",
+  "failure:semantic": "Got an answer, but it failed verification — not a single value grounded on the page.",
+  "failure:nav": "The start page didn't load.",
+  "failure:task": "Rejected before running — blocked URL or an invalid plan.",
+  "failure:env": "A service problem (model or API), not the website.",
+  failure: "The run failed; the trace shows where.",
+  unsupported: "Refused on purpose: login, payment, CAPTCHA, deletion and download tasks are out of scope.",
+};
+
+// ponytail: the no-URL path is not a product. The planner plans blind without a
+// page observation and the run dies at extract (run 2ce3e5c8), so the form does
+// not spend a run on it: lift a site name out of the task if there is one, else
+// ask. The API keeps accepting url=null because gateway eval cases pin it.
+function siteInTask(task) {
+  const m = task.match(/https?:\/\/\S+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?/i);
+  if (!m) return null;
+  const u = m[0].replace(/[.,;:)]+$/, "");
+  return /^https?:/i.test(u) ? u : "https://" + u;
+}
+function useExample(key) {
+  const e = EXAMPLES[key];
+  $("task").value = e.task;
+  $("url").value = new URL(e.url, location.origin).href;
+  if (!$("go").disabled) submitTask();
+}
+document.addEventListener("click", (ev) => {
+  const hit = ev.target.closest("[data-example]");
+  if (hit) useExample(hit.dataset.example);
+});
 
 function progressItems() { return [...$("progress").children]; }
 function labelProgress() {
@@ -611,25 +687,40 @@ function renderResult(r) {
   // Re-render from the final trace: it is authoritative where the live stream is
   // provisional — a supersede lands after its attempt was already sent.
   if (r.evidence && r.evidence.trace) renderSteps(r.evidence.trace);
-  const v = r.verdict;
+  const v = r.verdict, none = r.answer === null || r.answer === undefined;
+  const checks = v ? Object.entries(v.checks || {}).map(([k, ok]) =>
+      badge((ok ? "✓ " : "✗ ") + k.replace(/_/g, " "), ok ? "ok" : "bad")).join("") : "";
   $("result").innerHTML = `<div class="panel" style="margin-top:1rem">
-    <div><b>Answer</b></div>
-    <pre>${esc(r.answer === null || r.answer === undefined
-        ? "(none)" : JSON.stringify(r.answer, null, 2))}</pre>
-    ${r.reason ? `<div style="margin-top:.8rem"><b>Reason</b></div><pre>${esc(r.reason)}</pre>` : ""}
+    <p class="summary"><span class="big ${esc(kind)}">${esc(r.status)}</span>
+      <span>${esc(EXPLAIN[r.status] || EXPLAIN[kind] || "")}</span></p>
+    <div><b>Answer</b>${kind === "success" || none ? "" : ' <span class="note">(rejected by the verifier)</span>'}</div>
+    <div class="answer${none ? " none" : kind === "success" ? "" : " failed"}">${none ? "(no answer)"
+        : esc(typeof r.answer === "string" ? r.answer : JSON.stringify(r.answer, null, 2))}</div>
+    ${r.reason ? `<div><b>Why</b></div><pre>${esc(r.reason)}</pre>` : ""}
     <div style="margin-top:.8rem"><b>Verifier</b> ${v
         ? badge(v.verdict, v.verdict === "PASS" ? "ok" : "bad") +
           badge("layer " + v.layer) +
           badge(v.ground_truth ? "external ground truth" : "runtime predicates only",
                 v.ground_truth ? "ok" : "warn")
         : badge("not reached", "warn")}</div>
-    ${v ? `<pre>${esc(JSON.stringify(v.checks, null, 2))}</pre>` : ""}
+    ${v ? `<div class="checks">${checks}</div>
+      <details><summary>raw verdict</summary><pre>${esc(JSON.stringify(v, null, 2))}</pre></details>` : ""}
   </div>`;
 }
 
 async function submitTask() {
   const task = $("task").value.trim();
   if (!task) return;
+  let url = $("url").value.trim();
+  if (!url) { url = siteInTask(task); if (url) $("url").value = url; }
+  if (!url) {
+    $("err").hidden = false;
+    $("err").textContent = "Add a start URL, or name the site in the task. This agent works " +
+      "on a page you point it at — it has no web search, so a question with no page to " +
+      "start on cannot be answered.";
+    $("url").focus();
+    return;
+  }
   $("go").disabled = true;
   $("err").hidden = true;
   $("live").hidden = false;
@@ -641,7 +732,7 @@ async function submitTask() {
   try {
     const r = await fetch("/tasks", {
       method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({task, url: $("url").value.trim() || null}),
+      body: JSON.stringify({task, url}),
     });
     const data = await r.json();
     if (!r.ok) {
@@ -703,22 +794,23 @@ fetch("/support-matrix").then(r => r.json()).then(m => {
   // The task-class columns come from the payload, not a second hardcoded list:
   // parse_matrix refuses to return zero rows, so rows[0] is always there.
   const TCS = Object.keys(m.rows[0].cells);
-  $("matrix").innerHTML = `<table><tr><th>Domain</th>${
-    TCS.map(t => `<th>${esc(SUPPORT_LABELS[t] || t)}</th>`).join("")}</tr>${
-    m.rows.map(row => `<tr><td>${esc(row.domain)}</td>${TCS.map(t => {
-      const v = row.cells[t] || "—";
-      const cls = ["supported","unreliable","unsupported"].includes(v) ? v : "none";
-      return `<td class="${cls}">${esc(v)}</td>`;
-    }).join("")}</tr>`).join("")}</table>`;
-  const summary = m.limitations.slice(0, 4);
-  const title = (text) => text.replace(/^\*\*D\d+\*\* — /, "").replace(/\s+/g, " ");
+  const MARK = {supported: "✓", unreliable: "△", unsupported: "×"};
+  const SUFFIX = {unreliable: " — unreliable", unsupported: " — doesn't work"};
+  // Real sites only: the fixture rows stay in the doc, not on the page.
+  $("matrix").innerHTML = m.rows.filter(row => !/ fixture$/.test(row.domain)).map(row => {
+    const caps = TCS.filter(t => MARK[row.cells[t]]).map(t => `<li class="${row.cells[t]}">${
+      MARK[row.cells[t]]} ${esc(SUPPORT_LABELS[t] || t)}${SUFFIX[row.cells[t]] || ""}</li>`);
+    const ex = EXAMPLES[row.domain];
+    return `<div class="card"><div><b>${esc(row.domain.replace(/ \(live\)$/, ""))}</b></div>
+      <ul class="caps">${caps.join("") || '<li class="none">Not evaluated yet</li>'}</ul>
+      ${ex ? `<button class="ghost chip try" data-example="${esc(row.domain)}">Try: ${esc(ex.label)}</button>` : ""}
+      ${ex && ex.note ? `<p class="note" style="margin:0">${esc(ex.note)}</p>` : ""}
+    </div>`;
+  }).join("");
   $("limits").innerHTML = `<ul class="limits-summary">${
-    summary.map(l => `<li>${esc(title(l.limitation))}</li>`).join("")}</ul>
-    <details class="limit-details"><summary>Full limitations and evidence (${m.limitations.length})</summary>
-      <div class="table-wrap"><table><tr><th>Limitation</th><th>Evidence</th><th>Status</th></tr>${
-        m.limitations.map(l => `<tr><td>${esc(l.limitation)}</td><td><code>${
-          esc(l.evidence)}</code></td><td>${esc(l.status)}</td></tr>`).join("")}</table></div>
-    </details>`;
+    LIMITS.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
+    <p class="note" style="margin:.8rem 0 0">${m.limitations.length} declared limitations, each with
+      its evidence and a case id: <a href="https://github.com/HaoweiChan/browser-agent/blob/main/docs/support-matrix.md">docs/support-matrix.md</a></p>`;
 }).catch(e => { $("matrix").textContent = "support matrix unavailable: " + e; });
 </script>
 """

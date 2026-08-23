@@ -1,0 +1,33 @@
+[
+  {
+    "id": "R1",
+    "resolution": "fixed",
+    "case": "ui-examples-cover-matrix",
+    "note": "Pure-code invariant check `examples-cover-matrix` (src/browser/eval_adapter.py, INVARIANTS): parses the EXAMPLES keys out of the PAGE source and requires them to equal the set of non-fixture domains from parse_matrix() on the real docs/support-matrix.md, both directions. Tagged `invariant` (gates at 100%).",
+    "red_watched": "wikipedia.org entry removed from EXAMPLES -> passed: False, rows_without_example ['wikipedia.org']; restored -> green."
+  },
+  {
+    "id": "R2",
+    "resolution": "debt",
+    "debt_id": "T-R39"
+  },
+  {
+    "id": "R3",
+    "resolution": "fixed",
+    "note": "promoted from debt by the owner before merge; note reworded to the receipt"
+  },
+  {
+    "id": "R4",
+    "resolution": "orchestrator"
+  },
+  {
+    "id": "R5",
+    "resolution": "debt",
+    "debt_id": "T-R40"
+  },
+  {
+    "id": "R6",
+    "resolution": "debt",
+    "debt_id": "T-R41"
+  }
+]

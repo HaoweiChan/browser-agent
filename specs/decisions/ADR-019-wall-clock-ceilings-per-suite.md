@@ -56,12 +56,12 @@ decision that amends it.
 
 §5's CI numbers are not in that ledger and cannot be (no CI run commits their
 wall clock); they are hand-read off the workflow log, ungraded, and logged as
-debt (T-R40).
+debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 134 cases, ts `20260823-041419`, **65.93s**
-  (`evals/report/20260823-041419-fast.json`; the run that measured the tree the
+- Band source — `fast` at 136 cases, ts `20260823-161401`, **62.44s**
+  (`evals/report/20260823-161401-fast.json`; the run that measured the tree the
   134th case was being added to, so `dirty: true` — see §6's last paragraph).
 
 Every run of this tree is in `evals/report/history.jsonl`, committed beside
@@ -76,7 +76,7 @@ the shipped case count, which is the R21 defect this ADR was amended over. What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 65.93 × 1.15 = 75.82 → **80**. The band published for the earlier
+five — gives 62.44 × 1.15 = 71.81 → **75**. The band published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of
@@ -185,7 +185,7 @@ PR #35 ended the same way — the repair correct, its own description left behin
 7. README's band row carries the same four values as this file, and neither
    document publishes two bands for one suite.
 
-Green is required nowhere in that list and cannot be (T-R42). Item 5 states the
+Green is required nowhere in that list and cannot be (T-R53). Item 5 states the
 rule's value and deliberately does NOT require it to equal the committed
 ceiling — the paragraph on what this does not cover, below, is why.
 
@@ -249,7 +249,7 @@ The residue is declared, not graded: a freshly republished band is a short
 sample and therefore a LOWER bound on what the tree costs. The rule is that a
 ceiling does not ratchet down on one. Republish the maximum, leave the ceiling
 where the longer record put it, and move it down only with a measurement that
-says so (T-R39 carries the widened-window option).
+says so (T-R50 carries the widened-window option).
 
 **What a reader should conclude.** The number beside each band is one named
 run: the sentence cites its ledger timestamp, and
@@ -272,7 +272,7 @@ same treadmill this section refuses for the strict form. Both bands above are
 live examples: each cites the run that measured its new case count, taken while
 the 134th case was still uncommitted, and the clean green runs of this tree that
 followed did not disturb them. The GREEN half is not required and not
-requirable the same way (T-R42): this check is in both suites, so at a new count
+requirable the same way (T-R53): this check is in both suites, so at a new count
 every run is red until the band is republished.
 
 If you want the exact current maximum, the ledger is the artefact — and the

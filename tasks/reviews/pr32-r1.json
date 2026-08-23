@@ -1,0 +1,69 @@
+{
+  "pr": 32,
+  "round": 1,
+  "task": "M35",
+  "head": "1f64445",
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 38/38 = 1.000 · fast 109/109 = 1.000 (wall 56.24s)",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "claim": "Acceptance 'Every card has a Try example' is graded only against the stub _UI_MATRIX; nothing ties EXAMPLES keys to the real-site rows of docs/support-matrix.md, so a new or renamed real-site row renders a card with no Try button while the gate stays green.",
+      "evidence": "src/browser/eval_adapter.py _run_ui_form_case: want_cards derived from _UI_MATRIX (3 real rows, all present in EXAMPLES by construction); src/browser/server.py EXAMPLES keyed by the exact domain string ('wikipedia.org' vs 'books.toscrape.com (live)'); only other reference to EXAMPLES is the 'const EXAMPLES' fragment in ui-execution-progress.json.",
+      "repro": "Scratch copy: append '| example.org (live) | — | — | — | — | — |' to the Current matrix table, render PAGE with parse_matrix() via route interception → card 'example.org' with buttons: 0; run_case on ui-no-url-guard.json and ui-execution-progress.json both return passed=True.",
+      "acceptance": "A fast/invariant check goes red when any non-fixture row of parse_matrix() lacks an EXAMPLES entry (e.g. the form case also drives the real payload, or a pure-code check parses EXAMPLES keys out of PAGE and compares to parse_matrix() rows).",
+      "route": "repair"
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "claim": "siteInTask() lifts file/extension tokens and e-mail domains into a start URL and submits immediately, spending a run that ends failure:nav (pre-plan navigate fails before planning, so $0 but a slot and a red result).",
+      "evidence": "src/browser/server.py siteInTask regex \\b(?:[a-z0-9-]+\\.)+[a-z]{2,}; measured: 'What version of node.js is listed?' → https://node.js, 'Open README.md and read the title' → https://README.md, 'Find setup.exe download link' → https://setup.exe, 'Open index.html' → https://index.html, 'email john@example.com about it' → https://example.com; URL is written to #url and POSTed in the same click (submitTask line ~705-735).",
+      "repro": "page.evaluate(\"siteInTask('What version of node.js is listed?')\") on the rendered PAGE → 'https://node.js'; with a live server this POSTs {url:'https://node.js'}.",
+      "acceptance": "Common file extensions / e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the form case gains one such input asserting no POST and the guidance shown.",
+      "route": "debt",
+      "debt_id": "T-R39"
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "claim": "quotes.toscrape.com card says 'Static pages work' — a domain-level capability claim the doc does not declare (row is TC1 unsupported; the only evidence is one run, 24820d4c, now 404 on the deployment).",
+      "evidence": "src/browser/server.py EXAMPLES['quotes.toscrape.com (live)'].note; docs/support-matrix.md rows: 'quotes.toscrape.com (live) | unsupported'; curl https://whaleforce-browser-agent.zeabur.app/tasks/24820d4c → {\"detail\":\"unknown run_id\"}.",
+      "repro": "Render the page; card reads '× Read a page — doesn't work' followed by 'Static pages work; …'.",
+      "acceptance": "Note phrased as the receipt, not a generalisation, e.g. 'This static page answered correctly once (run 24820d4c); the declared failure is the JS-rendered /js/ pages.'",
+      "route": "debt",
+      "debt_id": "T-R43"
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "claim": "PR #32 body carries no example run_id receipts although Acceptance requires them 'cited in the code and the PR evidence', and 6 of the 9 cited ids (ac69e850, bcdc8f8a, 24820d4c, 6a828ddb, 015b6778, 8b588f84) already 404 on the deployment, so the PR evidence is the only durable record.",
+      "evidence": "gh pr view 32 body: no run_id list; curl GET /tasks/<id> on the deployment returns unknown run_id for the six; only f1ecf157 and 65af344f still resolve (both failure:extract).",
+      "repro": "gh pr view 32 --json body; curl -s https://whaleforce-browser-agent.zeabur.app/tasks/ac69e850",
+      "acceptance": "PR evidence pack lists each EXAMPLES entry with its run_id, status and answer as observed.",
+      "route": "orchestrator",
+      "note": "PR body is the orchestrator's artifact — receipts added to the evidence pack in this round, from the orchestrator's own probe logs."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "claim": "Case provenance cites dangling commits: ui-no-url-guard.json says 'watched red against the pre-M35 page (main 2a11142)' and ui-execution-progress.json cites e07ac07 — neither is on any branch (pre-rebase objects), so the red-first evidence becomes unreachable after gc and '2a11142' is not main.",
+      "evidence": "git branch -a --contains 2a11142 / e07ac07 → empty; origin/main is 2e94bed, branch commits are b7daac4/1f64445.",
+      "repro": "cd worktree && git branch -a --contains 2a11142",
+      "acceptance": "Provenance cites reachable shas (b7daac4 as the pre-M35 page; the watched-red amendment against the branch's own prior commit or a described patch).",
+      "route": "debt",
+      "debt_id": "T-R40"
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "claim": "The shared _ui_page (390,dark) render carries the form case's state into ui-rendered-narrow: window.fetch stays stubbed, #err is visible with 'Error: stubbed: no run', #task/#url hold the last chip's values — order-coupled via sorted filenames; passes today, no failure reproduced.",
+      "evidence": "src/browser/eval_adapter.py _run_ui_form_case sets window.fetch and never restores it; evals/run.py sorted(rglob) runs ui-no-url-guard.json before ui-rendered-narrow.json; _UI_PAGES pages stay open until atexit _shutdown closes the browser.",
+      "repro": "Observation only — run fast suite, both pass; state is visible by evaluating document.getElementById('err').hidden on the cached page after the form case.",
+      "acceptance": "Form case restores window.fetch and resets #err/#task/#url at the end (or the rendered case asserts its own preconditions) so the two cases are order-independent.",
+      "route": "debt",
+      "debt_id": "T-R41"
+    }
+  ]
+}

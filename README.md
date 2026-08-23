@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 134 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 136 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260823-042421-fast.json`, with
-`evals/report/20260823-042306-invariant.json` and
-`evals/report/20260823-000337-live.json`:
+Latest offline baseline — `evals/report/20260823-161935-fast.json`, with
+`evals/report/20260823-161810-invariant.json` and
+`evals/report/20260823-161828-live.json`:
 
 ```
-fast  134/134    invariant  53/53    live  8/9    $0.0000    66.2s
+fast  136/136    invariant  53/53    live  9/9    $0.0000    62.3s
 recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 23/23 · 5 replans
 ```
@@ -115,7 +115,7 @@ same selective presentation ADR-013 Decision 4 was withdrawn over.
 
 CI's two numbers below are NOT in this ledger and cannot be: no CI run commits
 its wall clock, so they are measured by hand off the workflow log and recorded
-in ADR-019 §5. That half is unfalsifiable here and is logged as debt (T-R40),
+in ADR-019 §5. That half is unfalsifiable here and is logged as debt (T-R51),
 not graded.
 
 Same ceiling, not `published >= ledger max`: so the published number can be
@@ -137,7 +137,7 @@ is in the ledger; enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 134 | 65.93s | 75.82 | **80s** |
+| `fast` | 136 | 62.44s | 71.81 | **80s** |
 | `invariant` | 53 | 13.32s | 15.32 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
@@ -365,7 +365,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 145 cases (134 of them in the offline gate), it
+The eval set is not weak; it is 147 cases (136 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

@@ -1,26 +1,61 @@
 {
   "id": "ui-execution-progress-is-trace-derived",
   "task": "browser",
-  "suites": ["invariant"],
+  "suites": [
+    "invariant"
+  ],
   "input": {
     "kind": "ui-progress",
     "fragments": [
-      "id=\"progress\"", "aria-label=\"Run progress\"", "aria-live=\"polite\"",
-      "data-phase=\"planning\"", "data-phase=\"browser\"", "data-phase=\"action\"",
-      "data-phase=\"verification\"", "data-phase=\"complete\"", "data-state=\"upcoming\"",
-      "[data-state=\"current\"]", "[data-state=\"complete\"]", "[data-state=\"failed\"]",
-      "SUPPORT_LABELS", "Read a page", "Search and read", "Navigate and read",
-      "Compare or sort", "Submit a form", "slice(0, 4)", "Full limitations and evidence",
-      "Guarded: public URLs only"
+      "id=\"progress\"",
+      "aria-label=\"Run progress\"",
+      "aria-live=\"polite\"",
+      "data-phase=\"planning\"",
+      "data-phase=\"browser\"",
+      "data-phase=\"action\"",
+      "data-phase=\"verification\"",
+      "data-phase=\"complete\"",
+      "data-state=\"upcoming\"",
+      "[data-state=\"current\"]",
+      "[data-state=\"complete\"]",
+      "[data-state=\"failed\"]",
+      "SUPPORT_LABELS",
+      "Read a page",
+      "Search and read",
+      "Navigate and read",
+      "Compare or sort",
+      "Submit a form",
+      "const EXAMPLES",
+      "const LIMITS",
+      "const EXPLAIN",
+      "function siteInTask(task)",
+      "data-example",
+      "${m.limitations.length} declared limitations",
+      "docs/support-matrix.md",
+      "What works today",
+      "Known limits"
     ],
     "script_fragments": [
-      "function resetProgress()", "function phaseFor(s)", "function setPhase(name)",
-      "function setTerminal(status)", "resetProgress();", "setPhase(phaseFor(ev.step));",
+      "function resetProgress()",
+      "function phaseFor(s)",
+      "function setPhase(name)",
+      "function setTerminal(status)",
+      "resetProgress();",
+      "setPhase(phaseFor(ev.step));",
       "setTerminal(ev.result.status);"
     ],
-    "step_phases": {"navigate": "browser", "extract": "verification", "extract_all": "verification"},
-    "forbid": ["setInterval(", "setTimeout("]
+    "step_phases": {
+      "navigate": "browser",
+      "extract": "verification",
+      "extract_all": "verification"
+    },
+    "forbid": [
+      "setInterval(",
+      "setTimeout(",
+      "$(\"examples\")",
+      "built-in page"
+    ]
   },
   "expect": {},
-  "provenance": "M30 eval-first. Before the execution surface existed, this case failed with every required progress hook, accessible phase, reader-facing support label, concise four-item limitations summary, and compact guard copy missing. It rejects timer-based progression and pins the only permitted trace interpretation: navigate is browser/page work, extract moves into verification, and other executor actions remain action work. The existing stream-shows-every-step case continues to grade that the underlying trace itself is complete and honest. M31 added `extract_all`, which is verification work like `extract`; the adapter's mapping regex was widened to `[a-z_]+` in the same edit, because an action name with an underscore in it would otherwise have been invisible to this check."
+  "provenance": "M30 eval-first. Before the execution surface existed, this case failed with every required progress hook, accessible phase, reader-facing support label, concise four-item limitations summary, and compact guard copy missing. It rejects timer-based progression and pins the only permitted trace interpretation: navigate is browser/page work, extract moves into verification, and other executor actions remain action work. The existing stream-shows-every-step case continues to grade that the underlying trace itself is complete and honest. M35 owner amendment (2026-08-22): the `$(\"examples\")` chip row and the built-in/real-site card tag are forbidden in the script (the eyebrow line is HTML; the rendered `ui-form` case pins it gone) — the per-site cards are the only example surface. Watched red against the e07ac07 page, which still carried both: `\"forbidden\": [\"$(\\\"examples\\\")\", \"built-in page\"]`. M31 added `extract_all`, which is verification work like `extract`; the adapter's mapping regex was widened to `[a-z_]+` in the same edit, because an action name with an underscore in it would otherwise have been invisible to this check."
 }

@@ -22,6 +22,7 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 - M34 — an answer that is page furniture can no longer be reported as success (2026-08-22) — ADR-016, PR #30, trace in tasks/reviews/pr30-r*.json; closed the aggregate/furniture shape offline, but the post-merge confirmation refuted it on the real site (6 wrong-answer-as-success in 9 runs) — ADR-015 criterion 5 stays RED, follow-up is M36
 - M31 — Plan lint + `extract_all` (2026-08-22) — ADR-018, ADR-019, PR #29, trace in tasks/reviews/pr29-r*.json; 5 rounds, 2 circuit breakers
 - M36 — Responsiveness judged by an LLM, last rung of the ladder (2026-08-22) — ADR-017, PR #33, trace in tasks/reviews/pr33-r*.json
+- M35 — Visitor-facing console: verified example prompts, plain-language limits, no-URL guard (2026-08-23) — PR #32, trace in tasks/reviews/pr32-r*.json
 
 ## B-floor exit criteria — final status
 All 6 met: criterion 2 (coverage/live breadth) was partial at the M5 freeze

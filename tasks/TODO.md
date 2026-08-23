@@ -77,8 +77,25 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
-### T-R40 — the CI half of ADR-019 publishes bands no committed artifact can reproduce            [status: todo]
-Origin: T-R34 (cold review)
+### T-R50 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
+Origin: T-R34, restated after PR #35 R4 (renumbered from T-R39 during the M35 merge — main had allocated that id independently)
+Spec: `_band_wrong` filters `history.jsonl` to rows whose `total` equals the CURRENT case
+count, so adding one 0.0s pure-code case discards every earlier run. Observed: `invariant`
+had 34 runs at 51 cases reaching 14.12s; the first two runs at 52 cases maxed at 12.78s,
+which derives **15** — the ceiling CI has been red against twice. PR #35 R4 correctly
+refused this as debt while ADR-019 §6 still claimed "no ceiling is ever justified by a
+maximum smaller than the truth"; that claim is gone, the residue is declared in §6 (a
+freshly republished band is a LOWER bound and a ceiling does not ratchet down on one), and
+the concrete failure — a derivation arguing 15 under a heading that says 20s — is now graded
+by `published-band-matches-the-ledger`.
+What remains here is only the option §6 names and does not take: widening the window (rows
+at nearby counts, or a floor at the previously published maximum) so a band re-measures from
+more than the two runs that happen to follow a case being added.
+Acceptance: a widened window with the reasoning recorded, watched red against the 52-case
+sample above — or an ADR line closing the option deliberately.
+
+### T-R51 — the CI half of ADR-019 publishes bands no committed artifact can reproduce            [status: todo]
+Origin: T-R34 (cold review) (renumbered from T-R40 during the M35 merge — main had allocated that id independently)
 Spec: ADR-019 §5 and README's CI paragraph publish four measured numbers (`invariant`
 14.80-16.47s, `fast` 69.37-74.06s) and derive 20/90 from them. None of those values is in
 `evals/report/history.jsonl`, and none can be: `.github/workflows/eval.yml` checks out, runs
@@ -95,8 +112,8 @@ artifact the check reads) and the band grader learns the environment dimension, 
 README's CI numbers are labelled as hand-read log values with the workflow run ids that
 produced them, and README's older CI band is struck. Watched red either way.
 
-### T-R41 — three files cite ADR-017 for the per-suite override that is ADR-019            [status: todo]
-Origin: T-R34 (cold review)
+### T-R52 — three files cite ADR-017 for the per-suite override that is ADR-019            [status: todo]
+Origin: T-R34 (cold review) (renumbered from T-R41 during the M35 merge — main had allocated that id independently)
 Spec: `specs/decisions/INDEX.md:11`, `evals/run.py:103` ("ADR-017 gives both suites the same
 treatment") and `.github/workflows/eval.yml:16` ("one variable per suite (ADR-017)") all
 attribute the one-variable-per-suite ruling to ADR-017. ADR-017 is the M36 judge ADR
@@ -107,6 +124,74 @@ Acceptance: the three citations name ADR-019, and a graded row resolves `ADR-0NN
 in `src/`, `evals/`, `.github/` and `specs/` against the ADR that actually carries the
 ruling — or at minimum against the file existing and its Ruling mentioning the subject.
 Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
+
+### T-R53 — nothing requires the runs behind a band to be green or clean            [status: todo]
+Origin: T-R34, evidence from PR #35 R5 (renumbered from T-R42 during the M35 merge — main had allocated that id independently)
+Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone; `sha`, `dirty` and
+`passed` are recorded on every row and read by nothing. Round 1 shipped both bands off red,
+dirty runs: at (invariant, 52) the 13.22s maximum was ts 20260823-023204 with
+`passed: 50, total: 52, dirty: true` while the other nine runs maxed at 12.88s, and at
+(fast, 133) the 66.38s maximum was ts 20260823-023406 with `passed: 132, total: 133,
+dirty: true`. Round 2 republishes both from committed green, clean `--report` runs of the shipped tree
+(ts 20260823-033320, `fast` 133/133, and ts 20260823-033200, `invariant` 52/52, both
+`dirty: false`) and `published-band-matches-the-ledger` now requires the published number to
+BE a clean row at that count. The GREEN half is still ungraded and cannot be graded the same
+way: this check is in both suites, so at a new case count every run is red until the band is
+republished, and no green row could ever exist to republish it from. Round 2 also had to fix `evals/run.py` before a clean row was
+even possible: `dirty` was read AFTER the report file was written, so every `--report` run
+recorded `dirty: true` on account of its own untracked artifact.
+Admitting non-green rows is argued in `_band_wrong`'s comment (a wall clock is a wall clock,
+and requiring green deadlocks: this check is itself in both suites). Admitting DIRTY rows is
+argued nowhere, and it is the weaker half — a band can be justified by a tree that was never
+committed.
+Round 3 correction: that bootstrap claim was false, and PR #35 R11 proved it. A tree only
+reaches case count N+1 while the new case file is UNCOMMITTED, so every row at N+1 is dirty
+until the commit the check was blocking — requiring `dirty: false` outright deadlocked the
+one operation CLAUDE.md rule 2 makes routine. What ships instead: the band cites its run by
+ledger timestamp and cleanliness is judged as of that run, so a dirty row is refused only
+when a clean one was already available when the band was published.
+Acceptance: the remaining half is GREEN, which is neither required nor requirable the same
+way — this check is in both suites, so at a new count every run is red until the band is
+republished and no green row could exist to republish it from. Either a bootstrap that
+tolerates one red row and then requires green (the same as-of trick would work), or
+`_band_wrong`'s comment and ADR-019 §6 state that a band's source run may be red and say
+what that costs. Watched red with the two rows above.
+
+### T-R54 — `_band_step_s` measures the ceiling step once and publishes it as a bound for every band            [status: todo]
+Origin: PR #35 R8 (renumbered from T-R43 during the M35 merge — main had allocated that id independently)
+Spec: `_band_step_s` bisects two consecutive ceiling boundaries at x=60 and returns 4.35s,
+which `published-band-slack-is-declared` then asserts as the bound for both published bands,
+including `invariant`'s at 13.22s. The docstring justifies the bisection with "`_band_rule`
+is monotonic", but monotonicity only makes the bisection valid; what makes ONE measured step
+a bound for every band is that the rule is linear in x. Amend ADR-013's rule to anything
+scale-dependent — a percentage of the value, a floor at small magnitudes — and the published
+4.35s silently stops bounding the small band.
+Acceptance: name linearity as the assumption in the docstring, or measure the step at each
+published band and grade each against its own.
+
+### T-R55 — the `fast` band cites a red run without saying so; `invariant` discloses its result            [status: todo]
+Origin: PR #35 R17 (renumbered from T-R44 during the M35 merge — main had allocated that id independently)
+Spec: ADR-019 §2 cites ts `20260823-041419` and discloses `dirty: true` but not that the row
+is 132/134 — the run was red. §3's citation for ts `20260823-041729` discloses `53/53`. A
+reader comparing the two would reasonably read the silence as a pass. Nothing grades the
+parenthetical either way: `_BAND_LINE` captures suite, case count, ts and seconds, and the
+result is prose beside it. Green is deliberately not required of a band source (T-R42, and
+§6 says so), which is exactly why the result should be stated wherever a band is cited.
+Acceptance: the band citation carries `passed/total` from the row it names, derived rather
+than typed — the ledger row has both fields — or the parenthetical is dropped from both so
+there is nothing to be inconsistent about. Watched red by publishing a band whose citation
+claims a result the row does not have.
+
+### T-R45 — the slack sweep matches the rendered scalar, not the value            [status: todo]
+Origin: PR #35 R18
+Spec: `published-band-slack-is-declared` builds its bare-scalar regex from `f"{step_s:g}"`,
+so it sweeps for the exact string `4.35`. A document writing the same value as `4.350`, or
+`4.35 s`, or in a table cell as `4.4`, carries an ungraded copy that the sweep does not see
+and the marker check never reaches. The marked occurrences are parsed as floats and compared
+with a tolerance, so the marker half is rendering-independent; only the sweep half is not.
+Acceptance: the sweep matches any decimal rendering of the current value (a numeric scan of
+`[\d.]+s?` tokens compared as floats, rather than one string), or the limitation is stated
+in the check's docstring beside the existing `ponytail:` note. Watched red with `4.350`.
 
 ### T-R46 — the "one list, one place" claim restates the properties it says it never restates            [status: todo]
 Origin: PR #35 R19
@@ -167,90 +252,33 @@ Acceptance: either the two omitted shapes are folded into the list (or named as
 preconditions of items 1-2), or :48-49 drops "exactly"; and ADR-019:69 cites items 2-3
 for the cited run and item 4 for the ceiling.
 
-### T-R44 — the `fast` band cites a red run without saying so; `invariant` discloses its result            [status: todo]
-Origin: PR #35 R17
-Spec: ADR-019 §2 cites ts `20260823-041419` and discloses `dirty: true` but not that the row
-is 132/134 — the run was red. §3's citation for ts `20260823-041729` discloses `53/53`. A
-reader comparing the two would reasonably read the silence as a pass. Nothing grades the
-parenthetical either way: `_BAND_LINE` captures suite, case count, ts and seconds, and the
-result is prose beside it. Green is deliberately not required of a band source (T-R42, and
-§6 says so), which is exactly why the result should be stated wherever a band is cited.
-Acceptance: the band citation carries `passed/total` from the row it names, derived rather
-than typed — the ledger row has both fields — or the parenthetical is dropped from both so
-there is nothing to be inconsistent about. Watched red by publishing a band whose citation
-claims a result the row does not have.
-
-### T-R45 — the slack sweep matches the rendered scalar, not the value            [status: todo]
-Origin: PR #35 R18
-Spec: `published-band-slack-is-declared` builds its bare-scalar regex from `f"{step_s:g}"`,
-so it sweeps for the exact string `4.35`. A document writing the same value as `4.350`, or
-`4.35 s`, or in a table cell as `4.4`, carries an ungraded copy that the sweep does not see
-and the marker check never reaches. The marked occurrences are parsed as floats and compared
-with a tolerance, so the marker half is rendering-independent; only the sweep half is not.
-Acceptance: the sweep matches any decimal rendering of the current value (a numeric scan of
-`[\d.]+s?` tokens compared as floats, rather than one string), or the limitation is stated
-in the check's docstring beside the existing `ponytail:` note. Watched red with `4.350`.
-
-### T-R39 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
-Origin: T-R34, restated after PR #35 R4
-Spec: `_band_wrong` filters `history.jsonl` to rows whose `total` equals the CURRENT case
-count, so adding one 0.0s pure-code case discards every earlier run. Observed: `invariant`
-had 34 runs at 51 cases reaching 14.12s; the first two runs at 52 cases maxed at 12.78s,
-which derives **15** — the ceiling CI has been red against twice. PR #35 R4 correctly
-refused this as debt while ADR-019 §6 still claimed "no ceiling is ever justified by a
-maximum smaller than the truth"; that claim is gone, the residue is declared in §6 (a
-freshly republished band is a LOWER bound and a ceiling does not ratchet down on one), and
-the concrete failure — a derivation arguing 15 under a heading that says 20s — is now graded
-by `published-band-matches-the-ledger`.
-What remains here is only the option §6 names and does not take: widening the window (rows
-at nearby counts, or a floor at the previously published maximum) so a band re-measures from
-more than the two runs that happen to follow a case being added.
-Acceptance: a widened window with the reasoning recorded, watched red against the 52-case
-sample above — or an ADR line closing the option deliberately.
-
-### T-R42 — nothing requires the runs behind a band to be green or clean            [status: todo]
-Origin: T-R34, evidence from PR #35 R5
-Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone; `sha`, `dirty` and
-`passed` are recorded on every row and read by nothing. Round 1 shipped both bands off red,
-dirty runs: at (invariant, 52) the 13.22s maximum was ts 20260823-023204 with
-`passed: 50, total: 52, dirty: true` while the other nine runs maxed at 12.88s, and at
-(fast, 133) the 66.38s maximum was ts 20260823-023406 with `passed: 132, total: 133,
-dirty: true`. Round 2 republishes both from committed green, clean `--report` runs of the shipped tree
-(ts 20260823-033320, `fast` 133/133, and ts 20260823-033200, `invariant` 52/52, both
-`dirty: false`) and `published-band-matches-the-ledger` now requires the published number to
-BE a clean row at that count. The GREEN half is still ungraded and cannot be graded the same
-way: this check is in both suites, so at a new case count every run is red until the band is
-republished, and no green row could ever exist to republish it from. Round 2 also had to fix `evals/run.py` before a clean row was
-even possible: `dirty` was read AFTER the report file was written, so every `--report` run
-recorded `dirty: true` on account of its own untracked artifact.
-Admitting non-green rows is argued in `_band_wrong`'s comment (a wall clock is a wall clock,
-and requiring green deadlocks: this check is itself in both suites). Admitting DIRTY rows is
-argued nowhere, and it is the weaker half — a band can be justified by a tree that was never
-committed.
-Round 3 correction: that bootstrap claim was false, and PR #35 R11 proved it. A tree only
-reaches case count N+1 while the new case file is UNCOMMITTED, so every row at N+1 is dirty
-until the commit the check was blocking — requiring `dirty: false` outright deadlocked the
-one operation CLAUDE.md rule 2 makes routine. What ships instead: the band cites its run by
-ledger timestamp and cleanliness is judged as of that run, so a dirty row is refused only
-when a clean one was already available when the band was published.
-Acceptance: the remaining half is GREEN, which is neither required nor requirable the same
-way — this check is in both suites, so at a new count every run is red until the band is
-republished and no green row could exist to republish it from. Either a bootstrap that
-tolerates one red row and then requires green (the same as-of trick would work), or
-`_band_wrong`'s comment and ADR-019 §6 state that a band's source run may be red and say
-what that costs. Watched red with the two rows above.
-
-### T-R43 — `_band_step_s` measures the ceiling step once and publishes it as a bound for every band            [status: todo]
-Origin: PR #35 R8
-Spec: `_band_step_s` bisects two consecutive ceiling boundaries at x=60 and returns 4.35s,
-which `published-band-slack-is-declared` then asserts as the bound for both published bands,
-including `invariant`'s at 13.22s. The docstring justifies the bisection with "`_band_rule`
-is monotonic", but monotonicity only makes the bisection valid; what makes ONE measured step
-a bound for every band is that the rule is linear in x. Amend ADR-013's rule to anything
-scale-dependent — a percentage of the value, a floor at small magnitudes — and the published
-4.35s silently stops bounding the small band.
-Acceptance: name linearity as the assumption in the docstring, or measure the step at each
-published band and grade each against its own.
+### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: todo]
+Origin: PR #32 CI run 32626835735 (M31's check)
+Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
+process can see. CI's eval-gate job runs `--suite invariant` first, which
+appends its row to the job's copy of the ledger (16.02s at 52 cases on run
+32626835735 — CI is slower than the machine the band was measured on), then
+`--suite fast`, whose band check now compares ADR-019's published invariant
+slowest (12.92s at 52 cases, 8 local runs → rule 15) against a ledger whose
+slowest at 52 cases is CI's 16.02s → rule 20 → FAIL (`fast 132/133`), while
+the same tree is green locally. Main passes only because at 51 cases the
+published slowest happens to be 14.12s → 20 == CI's 16s → 20. The fast band
+cannot trip this way (its row is written after the fast run), so the defect
+is: any PR that grows the invariant suite by one case and republishes the band
+from local runs is red on CI unless some committed local run happens to derive
+the same ceiling CI's machine does. ADR-019 itself rules that ceilings are per
+(suite, environment); the grader is not.
+Repro: on a tree whose invariant case count differs from ADR-019's published
+band count, run `--suite invariant` on a slower machine, then `--suite fast` on
+the same ledger: `published-band-matches-the-ledger` reports
+`{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
+"ledger_slowest": 16.02, "ledger_derives": 20}`.
+Acceptance: rows carry their environment (e.g. the effective
+`EVAL_WALL_BUDGET_S_*` or an env tag) and the check compares a published band
+only against rows from the same environment; a case pins that a slower
+foreign-environment row does not redden the band. Until then, M35 moved its
+one new invariant case to `fast` (it is a pure-code doc check) so the
+invariant band stays the 51-case band main measured.
 
 ### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: todo]
 Origin: PR #29 R25
@@ -427,6 +455,47 @@ already is (`ValueError` -> `failure:semantic`), watched red first. Deliberately
 NOT done in M31: no enumeration in this repo produces one — every `extract_all`
 in the eval set reads one column of one page — and the ponytail comment on
 `rank` names the ceiling and this upgrade path.
+### T-R42 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: todo]
+Origin: PR #32 R7 (LOW)
+Spec: `_check_examples_cover_matrix` finds keys with `^\s*"([^"]+)":\s*\{` over the `const EXAMPLES = {` block, so an entry written mid-line is silently dropped from the parsed set. Every consequence reproduced fails in the safe direction today (added/renamed doc row → red; `const EXAMPLES={` reformat → IndexError → passed=False; a mid-line real-site key → red as rows_without_example), so this is robustness, not a gap.
+Acceptance: the check parses the object (whole-block regex or a JSON export of EXAMPLES) so formatting cannot change what it sees; a case pins that a mid-line key is counted.
+
+### T-R39 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
+Origin: PR #32 R2 (LOW)
+Spec: the page's no-URL guard derives a start URL from any `label.tld` token in the task text. Measured false positives: "What version of node.js is listed?" → `https://node.js`, "Open README.md and read the title" → `https://README.md`, "Find setup.exe download link" → `https://setup.exe`, "email john@example.com about it" → `https://example.com`. The lifted URL is written to `#url` and POSTed in the same click, so the run is spent (ends `failure:nav`, $0, but a slot and a red result the visitor did not intend).
+Acceptance: common file extensions and e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the `ui-no-url-guard-and-example-chips` case gains one such input asserting no POST and the guidance shown.
+
+### T-R40 — two case provenances cite dangling pre-rebase shas            [status: todo]
+Origin: PR #32 R5 (LOW)
+Spec: `evals/adversarial/ui-no-url-guard.json` says "watched red against the pre-M35 page (main 2a11142)" and `ui-execution-progress.json` cites `e07ac07`; neither commit is on any branch after the rebase onto `2e94bed`, so the red-first evidence becomes unreachable after gc and "2a11142" is not main.
+Acceptance: provenance cites reachable shas (`b7daac4` as the pre-M35 page; the watched-red amendment against the branch's own prior commit or a described patch); `report-citations-resolve`-style check if one exists for shas.
+
+### T-R41 — the shared `_ui_page` render leaks the form case's state into `ui-rendered-narrow`            [status: todo]
+Origin: PR #32 R6 (LOW)
+Spec: `_run_ui_form_case` stubs `window.fetch` and never restores it, and leaves `#err` visible and `#task`/`#url` filled on the cached (390, dark) page that `ui-rendered-narrow` then reuses; the two cases are order-coupled through `sorted(rglob)`. Passes today; no failure reproduced.
+Acceptance: the form case restores `window.fetch` and resets `#err`/`#task`/`#url` at the end (or the rendered case asserts its own preconditions) so the two cases are order-independent in either order.
+
+### T-M35-WALL — the fast suite sits within 0.3s of its 60s wall-clock ceiling            [status: todo]
+Origin: M35 implementer
+Spec: `--suite fast` measured 59.01 / 59.06 s before M35 and 59.38 / 59.71 s
+with M35's one new rendered case (0.33 s on the shared browser). ADR-002
+Decision 4's ceiling is enforced by `evals.run` (`fast-wall-clock-budget`), so
+the next case — or ordinary machine noise — turns the gate red on timing, not
+on correctness, and the pre-commit hook with it — and it did: the orchestrator's
+gate on M35's first commit measured 60.31 / 60.73 s (`evals/report/
+20260822-170105-fast.json`, `-170218-fast.json`). M35 bought the margin back
+inside eval code only: `verifier-sparse-page-not-a-dump` moved from
+`slow-asset.html` to the equally sparse `sparse.html` (4.06 s → 0.44 s; it
+grades the page-size floor, not the hanging `load`), and the two rendered UI
+cases share one `_ui_page` render (no extra context). What remains is
+structural: ~45 s of the suite is product timeouts exercised on purpose (the
+2 s postcondition/`load` bounds, the 10 s click actionability bound in
+`l4-shop-overlay-modal`), so the next few cases will breach again.
+Repro: `.venv/bin/python -m evals.run --suite fast` twice and read `wall_s` in
+`evals/report/history.jsonl`; compare with the 60 s budget.
+Acceptance: a decision recorded in an ADR — either the suite sheds wall clock
+(shared contexts, fewer duplicate fixture loads, or the parallel runner M14) or
+the ceiling moves with a reason — and the suite runs with >= 5 s of headroom.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5
