@@ -3405,6 +3405,76 @@ def _run_ui_form_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong, "got": got}
 
 
+def _run_view_proxy_case(case: dict) -> dict:
+    """The page-view proxy is an SSRF surface, so it is graded like one.
+
+    `/view` fetches a caller-supplied URL server-side and serves the bytes back
+    same-origin -- which is the only way to frame sites that send
+    X-Frame-Options, and also the classic shape of a hole that lets a stranger
+    read this container's neighbours. Four properties, all pure-code against the
+    real handler's own pieces, no network:
+
+      1. the submitted URL goes through the SAME `url_ok` the task gateway uses,
+         so loopback/private/link-local/IP-in-disguise are refused;
+      2. every REDIRECT hop is re-checked, in the handler, before the request is
+         made -- a proxy that validates only the first URL is an SSRF hole with
+         extra steps, and the redirect is the attack;
+      3. the response is capped, so an arbitrary host cannot stream this process
+         out of memory, and a truncated body says so rather than passing as whole;
+      4. the response carries `Content-Security-Policy: sandbox`, so the frame is
+         script-free even for a caller that did not set the sandbox attribute.
+    """
+    from urllib.error import HTTPError
+
+    from .server import (VIEW_MAX_BYTES, _GuardedRedirect, url_ok, view_page)
+
+    inp = case["input"]
+    wrong = {}
+
+    refused = [u for u in inp["must_refuse"] if url_ok(u)]
+    if refused:
+        wrong["accepted_a_blocked_url"] = refused
+    allowed = [u for u in inp["must_allow"] if not url_ok(u)]
+    if allowed:
+        wrong["refused_a_public_url"] = allowed
+
+    # Redirect hops, against the real handler rather than a description of it.
+    import urllib.request as _u
+
+    handler = _GuardedRedirect()
+    for hop in inp["must_refuse_redirect"]:
+        req = _u.Request(inp["start_url"])   # a real Request: the base handler
+        req.timeout = None                   # reads origin_req_host/unverifiable
+        try:
+            handler.redirect_request(req, None, 302, "Found", {}, hop)
+            wrong.setdefault("redirect_allowed", []).append(hop)
+        except HTTPError as e:
+            if e.code != 403:
+                wrong.setdefault("redirect_wrong_code", []).append([hop, e.code])
+        except Exception as e:
+            wrong.setdefault("redirect_raised", []).append([hop, f"{type(e).__name__}: {e}"])
+    if handler.max_redirections > inp["max_redirects"]:
+        wrong["redirect_budget"] = handler.max_redirections
+
+    if VIEW_MAX_BYTES > inp["max_bytes_ceiling"]:
+        wrong["cap_too_large"] = VIEW_MAX_BYTES
+
+    # The refusal is an HTTP error, not a blank frame with no reason.
+    for u in inp["must_refuse"][:1]:
+        try:
+            res = _await(view_page(u))
+            wrong["blocked_url_returned"] = str(res)[:120]
+        except Exception as e:
+            if getattr(e, "status_code", None) != 422:
+                wrong["blocked_url_wrong_status"] = f"{type(e).__name__}: {e}"
+
+    src = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    for frag in inp["source_fragments"]:
+        if frag not in src:
+            wrong.setdefault("missing_source", []).append(frag)
+    return {"passed": not wrong, "checks": {"view_proxy_is_guarded": not wrong}, "wrong": wrong}
+
+
 def _run_ui_terminal_state_case(case: dict) -> dict:
     """Every way a run can end must leave the surface terminal and usable.
 
@@ -4481,6 +4551,7 @@ KINDS = {
     "ui-form": _run_ui_form_case,
     "ui-progress": _run_ui_progress_case,
     "ui-terminal-state": _run_ui_terminal_state_case,
+    "view-proxy": _run_view_proxy_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
     "verifier-labels": _run_verifier_labels_case,

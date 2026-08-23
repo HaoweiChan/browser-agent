@@ -63,11 +63,12 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 154 cases, ts `20260823-223343`, **70.49s**, 151/154
-  (`dirty: true`. M40 adds `ui-terminal-state-on-every-ending`, so the count moved
-  to 154 and the band moved with it — and the dirty citation is the same forced
-  one the paragraph below describes, for the same reason: the tree only reaches
-  154 cases while the new case is uncommitted. The row is red because the count
+- Band source — `fast` at 155 cases, ts `20260823-235538`, **70.17s**, 153/155
+  (`dirty: true`. M40 adds `ui-terminal-state-on-every-ending` and
+  `view-proxy-refuses-private-and-redirects`, so the count moved to 155 and the
+  band moved with it — and the dirty citation is the same forced one the
+  paragraph below describes, for the same reason: the tree only reaches
+  155 cases while the new cases are uncommitted. The row is red because the count
   had just changed and the derived-number guards had not caught up; §6 requires
   green nowhere and item 2 (cited-run) requires a run that happened.)
 
@@ -85,8 +86,7 @@ landed. Two commits, by construction, for one case addition. That is the price
 row from the 152-case tree, because the count changed and a band has to describe
 the tree that ships.
 
-The `153/153` is the cited row's own result, graded against it, not prose beside
-The `151/153` is the cited row's own result, graded against it, not prose beside
+The `153/155` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -107,11 +107,11 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 70.49 × 1.15 = 81.06 → **85**, which is BELOW the committed 90 and
+five — gives 70.17 × 1.15 = 80.7 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
-run at 154 cases is exactly that short sample. Item 5 (derivation) grades the
+run at 155 cases is exactly that short sample. Item 5 (derivation) grades the
 arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
 that says 90 is green and declared rather than a contradiction. The band
 published for the earlier
@@ -127,16 +127,12 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 58 cases, ts `20260823-200456`, **13.78s**, 58/58
-  (`dirty: false`, ts-only for the same ADR-012 reason as §2. Four clean rows
-  were available at this count — 12.93 / 13.78 / 13.18 / 13.12s, taken as they
-  came rather than selected for their numbers. 12.93s is disqualified: it
-  derives **15** where the ledger's maximum derives 20 — item 3 (same-ceiling).
-  Of the three that qualify this is the slowest, chosen so the
-  published number sits as close to the ledger's own maximum as a real run
-  allows — §6 tolerates up to one ceiling step of slack, and R21's point was
-  that publishing below the maximum is how a band drifts, so take the least
-  slack on offer.)
+- Band source — `invariant` at 59 cases, ts `20260823-235214`, **13.64s**, 57/59
+  (`dirty: true`. M40's `view-proxy-refuses-private-and-redirects` is tagged
+  `invariant` as well as `fast` — it guards an SSRF surface, which is a
+  must-always-hold — so this band moved for the same forced reason §2's did, and
+  the same two-commit price applies. Taken as the slowest at this count rather
+  than selected: the ledger's other row here is faster.)
 
 Neither band quotes the ledger's maximum as a number any more, and that is the
 fix for a defect this file produced twice. §3 published **13.80s** and the final
@@ -152,7 +148,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.78 × 1.15 = 15.85 → **20**, which is the committed
+The same rule gives 13.64 × 1.15 = 15.69 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

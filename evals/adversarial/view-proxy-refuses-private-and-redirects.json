@@ -1,0 +1,37 @@
+{
+  "id": "view-proxy-refuses-private-and-redirects",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "input": {
+    "kind": "view-proxy",
+    "start_url": "https://example.com/",
+    "must_refuse": [
+      "http://127.0.0.1:8000/", "http://localhost/", "http://[::1]/",
+      "http://169.254.169.254/latest/meta-data/", "http://10.0.0.5/", "http://192.168.1.1/",
+      "http://172.16.0.1/", "http://2130706433/", "http://0x7f000001/", "http://127.1/",
+      "file:///etc/passwd", "gopher://example.com/", "ftp://example.com/"
+    ],
+    "must_allow": ["https://example.com/", "https://companiesmarketcap.com/apple/marketcap/"],
+    "must_refuse_redirect": [
+      "http://127.0.0.1/", "http://169.254.169.254/latest/meta-data/",
+      "http://10.1.2.3/", "file:///etc/passwd"
+    ],
+    "max_redirects": 5,
+    "max_bytes_ceiling": 5000000,
+    "source_fragments": [
+      "Content-Security-Policy\": \"sandbox\"",
+      "class _GuardedRedirect",
+      "if not url_ok(newurl):",
+      "if not url_ok(resp.url):",
+      "resp.read(VIEW_MAX_BYTES + 1)",
+      "sandbox referrerpolicy=\"no-referrer\""
+    ]
+  },
+  "expect": {},
+  "provenance": "M40 owner amendment: the page view showed a screenshot, and the owner asked for the real page, scrollable — 'right panel 我是要看到原生網站內容 不是 screenshot 而已 就是讓我能滑動'. The sites worth demoing refuse to be framed (X-Frame-Options / frame-ancestors), so the page is fetched server-side and served same-origin, which turns a read-only panel into an SSRF surface on a public unauthenticated endpoint. This case grades that surface against the real handler's own pieces — `url_ok`, `_GuardedRedirect.redirect_request`, `VIEW_MAX_BYTES`, and the response headers — with no network. The redirect half is the half that matters: `urllib` follows redirects INSIDE `urlopen`, so checking `resp.url` afterwards means the request to the private address has already been made, and the guard has to live in the handler. `169.254.169.254` is in the list by name because it is the cloud metadata endpoint every SSRF write-up starts with, and this service runs on a PaaS.",
+  "triage": {
+    "class": "security-boundary",
+    "watched_red": "each half against a deliberately weakened build. Dropping the `url_ok` call from `view_page`: accepted_a_blocked_url lists all 10 http(s) private/loopback/IP-literal forms (the three non-http schemes are refused by the scheme check that remains). Removing `_GuardedRedirect` from `build_opener` so redirects follow unchecked: redirect_allowed lists all four hops. Raising VIEW_MAX_BYTES past the ceiling: cap_too_large. Dropping the CSP header, or the iframe's `sandbox` attribute: missing_source.",
+    "note": "Ceilings, declared. (1) This is a pure-code check: no case fetches a real URL through this endpoint, so nothing here proves the fetch path behaves as described against a live server — same posture as `url-guard-literal-ips` for the task gateway. (2) DNS rebinding is NOT covered, exactly as `url_ok`'s own docstring already declares for the task path: a hostname that resolves to a public address at check time and a private one at connect time defeats both. The proxy inherits that hole rather than adding one. (3) The cap is on bytes read, not on time: a slow-loris host holds a worker for up to VIEW_TIMEOUT_S."
+  }
+}

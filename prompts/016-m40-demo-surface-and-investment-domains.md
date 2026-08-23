@@ -224,3 +224,19 @@ which is the exact complaint that started this milestone.
   status in one pass, and that number is now in ADR-022 as the measured decay
   rate of a live-declared row.
 
+- Assumed: "a right panel showing the page content, for debugging and for the
+  interviewer to check what we scraped" was answered by the executor's own
+  screenshot plus the extractions — the screenshot IS what the browser saw, and
+  it is per-step, which no live view can be.
+- Eval said: the owner looked at it and said no — 我是要看到原生網站內容 不是
+  screenshot 而已 就是讓我能滑動. A screenshot answers "what did the browser see
+  here"; it does not answer "what does this page say", cannot be scrolled, and
+  shows only whatever was above the fold.
+- Corrected: the panel became three tabs with the live page as the default,
+  loading as soon as there is a URL rather than waiting for a run. The sites
+  worth demoing refuse to be framed, so it goes through a `/view` proxy — which
+  is an SSRF surface on a public endpoint, and is now the one thing in this
+  milestone with a security case behind it (redirect hops re-checked inside the
+  handler, because `urllib` follows them inside `urlopen` and checking
+  afterwards means the request already went out). Both halves watched red.
+

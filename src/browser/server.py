@@ -12,7 +12,9 @@ import json
 import re
 import uuid
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+import urllib.error
+import urllib.request
+from urllib.parse import parse_qs, quote, urlparse
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
@@ -284,6 +286,94 @@ async def stream_task(run_id: str):
     return StreamingResponse(gen(), media_type="text/event-stream")
 
 
+# --- Live page view -------------------------------------------------------
+# The right-hand panel shows the real page, scrollable, not only a screenshot.
+# It cannot iframe the site directly: the sites worth demoing send
+# X-Frame-Options/CSP frame-ancestors and refuse to be framed. So the page is
+# fetched here and served same-origin.
+#
+# Three things make that safe enough to expose publicly, and none of them is
+# optional:
+#  1. `url_ok` on the submitted URL AND on every redirect hop. A proxy that
+#     validates only the first URL is an SSRF hole with extra steps -- the
+#     redirect is the attack (case view-proxy-refuses-redirect-to-private).
+#  2. The response is capped and never streamed unbounded: a demo endpoint that
+#     will read an arbitrary number of bytes from an arbitrary host is a way to
+#     fill this container's memory from outside it.
+#  3. The frontend frames it with `sandbox` and no `allow-scripts` /
+#     `allow-same-origin`, so the document lands in an opaque origin with
+#     scripting off. `Content-Security-Policy: sandbox` repeats that on the
+#     response, because the iframe attribute is the caller's promise and this
+#     header is ours -- anything that reaches the endpoint by another route
+#     (a pasted link, a fetch) gets the same treatment.
+# What it is NOT: the DOM the agent saw. It is a fresh, script-free fetch of the
+# same URL, so a page that builds itself with script renders emptier here than
+# the trace shows. That is stated on the panel rather than left to be discovered.
+
+VIEW_MAX_BYTES = 3_000_000
+VIEW_TIMEOUT_S = 10
+VIEW_MAX_REDIRECTS = 5
+VIEW_UA = "Mozilla/5.0 (compatible; browser-agent page view; +https://github.com/HaoweiChan/browser-agent)"
+
+
+class _GuardedRedirect(urllib.request.HTTPRedirectHandler):
+    """Every hop re-checked. urllib follows redirects inside `urlopen`, so the
+    guard has to live in the handler -- checking `resp.url` afterwards means the
+    request to the private address has already been made."""
+
+    max_redirections = VIEW_MAX_REDIRECTS
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not url_ok(newurl):
+            raise urllib.error.HTTPError(
+                newurl, 403, "redirect to a blocked host", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _fetch_page(url: str) -> tuple[bytes, str]:
+    opener = urllib.request.build_opener(_GuardedRedirect)
+    req = urllib.request.Request(url, headers={"User-Agent": VIEW_UA})
+    with opener.open(req, timeout=VIEW_TIMEOUT_S) as resp:
+        if not url_ok(resp.url):          # belt and braces: the final hop too
+            raise ValueError(f"final URL blocked: {resp.url}")
+        # read() one byte past the cap so a truncated body is detectable rather
+        # than silently served as if it were the whole page.
+        body = resp.read(VIEW_MAX_BYTES + 1)
+        return body, resp.url
+
+
+@app.get("/view")
+async def view_page(url: str):
+    """The submitted page, fetched server-side and served same-origin so the
+    panel can frame and scroll it. Read-only, no cookies, no credentials."""
+    if not url_ok(url):
+        raise HTTPException(422, "url blocked: http/https public hosts only")
+    try:
+        body, final = await asyncio.to_thread(_fetch_page, url)
+    except Exception as e:  # loud, and never a blank frame with no reason
+        raise HTTPException(502, f"could not fetch the page: {type(e).__name__}: {e}") from e
+    truncated = len(body) > VIEW_MAX_BYTES
+    text = body[:VIEW_MAX_BYTES].decode("utf-8", "replace")
+    # <base> so the page's own relative CSS/images resolve against ITS origin
+    # rather than ours. Injected after any <meta charset> so it cannot displace
+    # one; appended if the document has no <head> at all.
+    tag = f'<base href="{html.escape(final, quote=True)}">'
+    lower = text.lower()
+    cut = lower.find("<head")
+    if cut >= 0 and (close := lower.find(">", cut)) >= 0:
+        text = text[:close + 1] + tag + text[close + 1:]
+    else:
+        text = tag + text
+    if truncated:
+        text += ('<p style="font:14px system-ui;padding:1rem;background:#ffe;border-top:2px solid #ca0">'
+                 f'Page view truncated at {VIEW_MAX_BYTES:,} bytes. The run itself read the whole page.</p>')
+    return HTMLResponse(text, headers={
+        "Content-Security-Policy": "sandbox",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+    })
+
+
 @app.get("/runs/{run_id}/{shot}")
 async def run_screenshot(run_id: str, shot: str):
     """Per-step screenshots — the visual half of inspecting a failure. Both
@@ -446,6 +536,17 @@ PAGE = r"""<!doctype html>
        flex-wrap:wrap; margin-bottom:.5rem }
   .pv-shot img { display:block; width:100%; border:1px solid var(--line); border-radius:var(--radius) }
   .pv-text { margin-top:.7rem }
+  .pv-tabs { display:flex; gap:.3rem; margin:0 0 .55rem }
+  .pv-tab { background:transparent; border:1px solid var(--line); color:var(--dim);
+       padding:.3rem .55rem; font-size:11px; letter-spacing:.05em; flex:1 1 auto }
+  .pv-tab[aria-selected="true"] { border-color:var(--accent); color:var(--accent);
+       background:color-mix(in srgb,var(--accent) 10%,transparent) }
+  .pv-tab:hover:not(:disabled) { color:var(--fg) }
+  /* The frame is the point: it scrolls, so a reviewer can read the page the
+     task was about instead of squinting at a screenshot of the fold. */
+  #pvframe { display:block; width:100%; height:min(62vh,34rem); border:1px solid var(--line);
+       border-radius:var(--radius); background:#fff; color-scheme:light }
+  #pvframe[hidden] { display:none }
   .scrape { border-left:3px solid var(--accent); padding:.4rem .55rem; margin-top:.4rem;
        background:var(--bg); border-radius:var(--radius); overflow-wrap:anywhere }
   @media (max-width:900px) {
@@ -506,7 +607,7 @@ PAGE = r"""<!doctype html>
     <div class="field"><label for="task">What should it find?</label>
       <input id="task" placeholder="e.g. What is the market cap of this company?"></div>
     <div class="field"><label for="url">Start URL</label>
-      <input id="url" placeholder="https://… the page to start on"></div>
+      <input id="url" placeholder="https://… the page to start on" onchange="urlChanged()"></div>
     <div class="actions">
       <button id="go" onclick="submitTask()">Run task</button>
       <button id="check" class="ghost" onclick="smoke()"
@@ -520,7 +621,7 @@ PAGE = r"""<!doctype html>
 
 <div id="live" hidden>
   <h2><span class="section-no">02</span> Trace <span class="note" id="runid"></span></h2>
-  <div class="status-line"><span class="big running" id="status">running</span>
+  <div class="status-line" id="statusline"><span class="big running" id="status">running</span>
     <span class="note" id="budgets"></span></div>
   <ol class="progress" id="progress" aria-label="Run progress" aria-live="polite">
     <li data-phase="planning" data-state="upcoming">Planning</li>
@@ -537,10 +638,19 @@ PAGE = r"""<!doctype html>
     <aside class="panel pageview" id="pageview" aria-label="Page view">
       <div class="pv-hd"><b>Page view</b>
         <a class="note" id="pvlink" href="#" target="_blank" rel="noopener noreferrer" hidden>open the real page &#8599;</a></div>
-      <p class="note" id="pvcap">The browser&rsquo;s own view appears here, step by step. Click a
-        step on the left to pin it.</p>
-      <div id="pvshot" class="pv-shot"></div>
-      <div id="pvtext" class="pv-text"></div>
+      <div class="pv-tabs" role="tablist" aria-label="Page view mode">
+        <button class="pv-tab" id="tab-live" role="tab" aria-selected="true" onclick="pvTab('live')">Live page</button>
+        <button class="pv-tab" id="tab-shot" role="tab" aria-selected="false" onclick="pvTab('shot')">Screenshot</button>
+        <button class="pv-tab" id="tab-read" role="tab" aria-selected="false" onclick="pvTab('read')">What was read</button>
+      </div>
+      <p class="note" id="pvcap">Enter a URL, or pick an example below.</p>
+      <div id="pvlive" class="pv-pane">
+        <iframe id="pvframe" title="The page, fetched and rendered read-only"
+                sandbox referrerpolicy="no-referrer" loading="lazy"></iframe>
+        <p class="note" id="pvlivenote"></p>
+      </div>
+      <div id="pvshot" class="pv-shot pv-pane" hidden></div>
+      <div id="pvtext" class="pv-text pv-pane" hidden></div>
     </aside>
   </div>
 </div>
@@ -665,7 +775,25 @@ function useExample(key) {
   const e = EXAMPLES[key];
   $("task").value = e.task;
   $("url").value = new URL(e.url, location.origin).href;
+  urlChanged();
   if (!$("go").disabled) submitTask();
+}
+
+// Typing or pasting a URL is enough to see the page. The panel exists to let a
+// reviewer read what the task is about; making that wait for a run would hide
+// it behind the thing it is supposed to explain.
+function urlChanged() {
+  const url = $("url").value.trim();
+  $("live").hidden = false;
+  if (!runId) {                 // the panel is open to show a page, not a run
+    $("statusline").hidden = true;
+    $("progress").hidden = true;
+    $("steps").innerHTML = ""; $("result").innerHTML = "";
+  }
+  pvTab("live");
+  showLive(url);
+  if (url) { $("pvlink").href = url; $("pvlink").hidden = false; }
+  $("pvcap").textContent = url ? "the page, before anything runs" : "Enter a URL, or pick an example below.";
 }
 document.addEventListener("click", (ev) => {
   const hit = ev.target.closest("[data-example]");
@@ -775,11 +903,42 @@ function stepEl(s, idx) {
 // step without one is a real state, not an error.
 let LIVE = [], pinned = null;
 
+// The panel has three views of one page and they answer different questions:
+// the live frame is "what does this page say", the screenshot is "what did the
+// browser see at this step", and the read pane is "what did we take off it".
+// Only the first is useful before a run starts, so it is the default and it
+// loads as soon as there is a URL.
+let PV = "live";
+
+function pvTab(which) {
+  PV = which;
+  for (const [name, pane] of [["live", "pvlive"], ["shot", "pvshot"], ["read", "pvtext"]]) {
+    $(pane).hidden = name !== which;
+    $("tab-" + (name === "live" ? "live" : name === "shot" ? "shot" : "read"))
+      .setAttribute("aria-selected", String(name === which));
+  }
+}
+
+// Framed through our own /view, because the sites worth demoing refuse to be
+// framed directly (X-Frame-Options / frame-ancestors). Sandboxed with no
+// allow-scripts: the frame renders and scrolls, and cannot run the page's
+// script — which is also why a script-built page looks emptier here than the
+// trace shows, and the note says so rather than leaving it to be discovered.
+function showLive(url) {
+  const frame = $("pvframe"), note = $("pvlivenote");
+  if (!url) { frame.removeAttribute("src"); note.textContent = ""; return; }
+  frame.src = "/view?url=" + encodeURIComponent(url);
+  note.innerHTML = "Read-only copy, fetched server-side and rendered with scripting off — "
+    + "so a page that builds itself with script shows less here than the trace read. "
+    + "Scroll it like the real page.";
+}
+
 function showPage(idx) {
   const s = LIVE[idx];
   if (!s) return;
   $("pvcap").textContent = `step #${s.i} \u00b7 ${s.action}`
     + (pinned === idx ? " \u00b7 pinned" : "") + (s.screenshot ? "" : " \u00b7 no screenshot");
+  if (s.action === "navigate" && s.value) showLive(s.value);
   $("pvshot").innerHTML = s.screenshot && runId
     ? `<img src="/runs/${runId}/${esc(s.screenshot)}" alt="The page as the browser saw it at step ${s.i}">`
     : "";
@@ -819,7 +978,7 @@ function renderResult(r) {
   if (r.evidence && r.evidence.trace) renderSteps(r.evidence.trace);
   renderScraped(r);
   const fin = r.evidence && r.evidence.final_url;
-  if (fin) { $("pvlink").href = fin; $("pvlink").hidden = false; }
+  if (fin) { $("pvlink").href = fin; $("pvlink").hidden = false; showLive(fin); }
   const v = r.verdict, none = r.answer === null || r.answer === undefined;
   const checks = v ? Object.entries(v.checks || {}).map(([k, ok]) =>
       badge((ok ? "✓ " : "✗ ") + k.replace(/_/g, " "), ok ? "ok" : "bad")).join("") : "";
@@ -855,6 +1014,7 @@ async function submitTask() {
     return;
   }
   busy(true);
+  $("statusline").hidden = false;
   $("err").hidden = true;
   $("live").hidden = false;
   $("progress").hidden = true;
@@ -865,6 +1025,7 @@ async function submitTask() {
   $("pvshot").innerHTML = ""; $("pvtext").innerHTML = "";
   $("pvcap").textContent = "waiting for the browser\u2026";
   $("pvlink").href = url; $("pvlink").hidden = false;
+  showLive(url);
   try {
     const r = await fetch("/tasks", {
       method: "POST", headers: {"Content-Type": "application/json"},
@@ -946,6 +1107,7 @@ function smoke() {
   busy(true);
   runId = null;
   smokeStream = null;
+  $("statusline").hidden = false;
   $("live").hidden = false;
   $("progress").hidden = true;
   $("steps").innerHTML = ""; $("result").innerHTML = "";

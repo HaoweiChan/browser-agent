@@ -40,7 +40,11 @@
       "id=\"pvcap\"",
       "id=\"pvlink\"",
       "class=\"live-grid\"",
-      "data-step=\"${idx}\""
+      "data-step=\"${idx}\"",
+      "id=\"statusline\"",
+      "id=\"pvframe\"",
+      "class=\"pv-tabs\"",
+      "id=\"pvlive\""
     ],
     "script_fragments": [
       "function resetProgress()",
@@ -52,7 +56,10 @@
       "setTerminal(ev.result.status);",
       "function showPage(idx)",
       "function renderScraped(r)",
-      "renderScraped(r);"
+      "renderScraped(r);",
+      "function pvTab(which)",
+      "function showLive(url)",
+      "function urlChanged()"
     ],
     "step_phases": {
       "navigate": "browser",
@@ -67,5 +74,5 @@
     ]
   },
   "expect": {},
-  "provenance": "M30 eval-first. Before the execution surface existed, this case failed with every required progress hook, accessible phase, reader-facing support label, concise four-item limitations summary, and compact guard copy missing. It rejects timer-based progression and pins the only permitted trace interpretation: navigate is browser/page work, extract moves into verification, and other executor actions remain action work. The existing stream-shows-every-step case continues to grade that the underlying trace itself is complete and honest. M35 owner amendment (2026-08-22): the `$(\"examples\")` chip row and the built-in/real-site card tag are forbidden in the script (the eyebrow line is HTML; the rendered `ui-form` case pins it gone) — the per-site cards are the only example surface. Watched red against the e07ac07 page, which still carried both: `\"forbidden\": [\"$(\\\"examples\\\")\", \"built-in page\"]`. M31 added `extract_all`, which is verification work like `extract`; the adapter's mapping regex was widened to `[a-z_]+` in the same edit, because an action name with an underscore in it would otherwise have been invisible to this check. M40 owner amendment (2026-08-23): the trace gained a page view beside it — the screenshot the executor already took for the step being shown, and after the run the extractions with the page text each value was read from. It is pinned here rather than described because it is the surface a reviewer uses to check an answer against the page, and because the same `forbid` list already rules out the timer-driven version of it. Watched red by construction against the pre-M40 page: none of the seven new fragments or three new script fragments appear in `git show HEAD:src/browser/server.py`, verified by grep before the case was widened."
+  "provenance": "M30 eval-first. Before the execution surface existed, this case failed with every required progress hook, accessible phase, reader-facing support label, concise four-item limitations summary, and compact guard copy missing. It rejects timer-based progression and pins the only permitted trace interpretation: navigate is browser/page work, extract moves into verification, and other executor actions remain action work. The existing stream-shows-every-step case continues to grade that the underlying trace itself is complete and honest. M35 owner amendment (2026-08-22): the `$(\"examples\")` chip row and the built-in/real-site card tag are forbidden in the script (the eyebrow line is HTML; the rendered `ui-form` case pins it gone) — the per-site cards are the only example surface. Watched red against the e07ac07 page, which still carried both: `\"forbidden\": [\"$(\\\"examples\\\")\", \"built-in page\"]`. M31 added `extract_all`, which is verification work like `extract`; the adapter's mapping regex was widened to `[a-z_]+` in the same edit, because an action name with an underscore in it would otherwise have been invisible to this check. M40 owner amendment (2026-08-23): the trace gained a page view beside it — the screenshot the executor already took for the step being shown, and after the run the extractions with the page text each value was read from. It is pinned here rather than described because it is the surface a reviewer uses to check an answer against the page, and because the same `forbid` list already rules out the timer-driven version of it. Watched red by construction against the pre-M40 page: none of the seven new fragments or three new script fragments appear in `git show HEAD:src/browser/server.py`, verified by grep before the case was widened. M40 owner amendment 2 (2026-08-23): the panel gained a LIVE PAGE tab — the real page, fetched through `/view` and framed sandboxed so it renders and scrolls — because a screenshot answers 'what did the browser see' and not 'what does this page actually say'. It loads as soon as there is a URL, before any run, which is why `statusline` is pinned too: opening the panel to show a page used to leave the status chip reading `running` with the spinner going over an empty trace, which is the same class of lie this case's `forbid` list exists to prevent."
 }

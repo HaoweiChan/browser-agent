@@ -160,6 +160,9 @@ Acceptance:
 - Every Try example and every live-declared row is re-run against the build being
   shipped, immediately before merge (added mid-task — see ADR-022 Decision 1a; the
   first three rows declared here expired when the deployment was replaced).
+- The page view shows the page ITSELF, scrollable, not only a screenshot (owner
+  amendment mid-task) — and the proxy that requires is graded as the SSRF surface
+  it is, watched red per property.
 - No Try example cites a run shape that no longer reproduces. Each card's example is
   re-run against the deployment and its status matches what happened, including the one
   card that is deliberately a failure demo.

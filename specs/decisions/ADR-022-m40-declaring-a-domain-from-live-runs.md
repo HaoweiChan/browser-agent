@@ -103,6 +103,44 @@ needed a third. Three of eight cards changed task or status in that single pass.
 That is the decay rate of this evidence, measured rather than estimated, and it
 is the argument for the automatic version.
 
+## Decision 2a — the panel shows the page itself, and that costs a proxy
+
+Owner amendment, after seeing the first version: *"我是要看到原生網站內容 不是
+screenshot 而已 就是讓我能滑動."* Right. A screenshot answers "what did the
+browser see at this step"; it does not answer "what does this page actually
+say", which is the question a reviewer checking an answer is really asking, and
+it cannot be scrolled or searched.
+
+The panel now has three tabs — **Live page**, **Screenshot**, **What was read** —
+and the live page is the default, loading as soon as there is a URL, before any
+run. That last part matters more than it looks: the panel's job is to show what
+the task is about, and making it wait for a run hid it behind the thing it was
+supposed to explain.
+
+The sites worth demoing refuse to be framed (`X-Frame-Options`,
+`frame-ancestors`), so the page is fetched server-side by `GET /view` and served
+same-origin. **That turns a read-only panel into an SSRF surface on a public,
+unauthenticated endpoint**, and it is the most dangerous thing this milestone
+adds. Four properties, none optional, all graded by
+`view-proxy-refuses-private-and-redirects` and each watched red against a
+deliberately weakened build:
+
+1. the submitted URL goes through the same `url_ok` the task gateway uses;
+2. **every redirect hop is re-checked, inside the handler** — `urllib` follows
+   redirects within `urlopen`, so validating `resp.url` afterwards means the
+   request to the private address has already been made. The redirect is the
+   attack;
+3. the body is capped, and a truncated page says so rather than passing as whole;
+4. the response carries `Content-Security-Policy: sandbox` and the frame sets
+   `sandbox` with neither `allow-scripts` nor `allow-same-origin`, so the
+   document lands in an opaque origin with scripting off.
+
+What it is not, stated on the panel rather than left to be discovered: **it is
+not the DOM the agent saw.** It is a fresh, script-free fetch of the same URL, so
+a page that builds itself with script shows less here than the trace read — the
+`quotes.toscrape.com/js` case is exactly that shape. And it inherits `url_ok`'s
+own declared hole: DNS rebinding defeats both this and the task path.
+
 ## Consequences
 
 - Eight real-site cards, of which one is deliberately a failing example. A demo
