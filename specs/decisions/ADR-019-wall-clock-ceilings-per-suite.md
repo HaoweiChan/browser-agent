@@ -63,17 +63,19 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 156 cases, ts `20260823-232036`, **71.02s**, 156/156
-  (`dirty: true`, ts-only for the ADR-012 reason §3 gives. Every row at this
-  count is dirty, and necessarily so: M39 adds three cases, so the tree only
-  reaches 156 while they are uncommitted — the deadlock item 2 (cited-run)'s
-  as-of rule is written to avoid, and no clean row was available at this count
-  to prefer. The rows at this count were taken as they came while the
-  documentation this band belongs to was brought up to the new count; this is
-  the first green one. They are not enumerated here: the ledger grows on every
-  gate run, and a list of them is the snapshot §3 says drifted. What matters is
-  graded — the ledger's maximum at this count derives this same ceiling,
-  item 3 (same-ceiling).)
+- Band source — `fast` at 156 cases, ts `20260823-235409`, **70.78s**, 156/156
+  (`dirty: false`, green, ts-only for the ADR-012 reason §3 gives. The band was
+  first published against a dirty row, because the tree only reaches 156 cases
+  while M39's three new cases are uncommitted — the two-commit price the
+  paragraph below records — and is re-cited here to the clean receipt that
+  could not exist until that first commit had landed (PR #44 R3: the first
+  version of this line claimed no clean row was available at this count, which
+  the ledger committed beside it had already falsified). Nothing is claimed
+  here about where this row sits among the others: the ledger grows on every
+  gate run, so any ranking written into this sentence is false by the next one
+  — including the sentence PR #44 R2 caught. What holds is graded instead:
+  item 3 (same-ceiling) is the relationship between this number and the
+  ledger's maximum, and it is checked on every run rather than asserted here.)
 
 **This band was dirty for one commit, and the reason is worth keeping.** A case
 addition forces a dirty citation: the tree only reaches 153 cases while the new
@@ -89,9 +91,11 @@ landed. Two commits, by construction, for one case addition. That is the price
 row from the 152-case tree, because the count changed and a band has to describe
 the tree that ships.
 
-The `153/153` is the cited row's own result, graded against it, not prose beside
-The `151/153` is the cited row's own result, graded against it, not prose beside
-it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
+Each band line carries the cited row's own `passed/total`, graded against that
+row and not prose beside it (T-R55) — written as whatever the row says rather
+than re-typed here, because a number restated in this paragraph goes stale the
+next time a band moves, which is how the two superseded copies this sentence
+replaces came to disagree with the bands above them. It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
 
@@ -111,7 +115,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 71.02 × 1.15 = 81.67 → **85**, which is BELOW the committed 90 and
+five — gives 70.78 × 1.15 = 81.40 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. A
@@ -131,19 +135,19 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 59 cases, ts `20260823-232059`, **13.53s**, 59/59
-  (`dirty: true`, ts-only for the same ADR-012 reason as §2, and dirty for the
-  same reason §2's row is: M39's `judge-retry-only-on-unreadable-completion` is
-  the 59th case and the band cannot be republished before the case that moves
-  the count exists. The rows at this count were taken as they came rather than
-  selected for their numbers, and are not enumerated for the reason §2 gives;
-  the ledger's maximum at this count derives the same 20 — item 3
-  (same-ceiling).
-  Of the three that qualify this is the slowest, chosen so the
-  published number sits as close to the ledger's own maximum as a real run
-  allows — §6 tolerates up to one ceiling step of slack, and R21's point was
-  that publishing below the maximum is how a band drifts, so take the least
-  slack on offer.)
+- Band source — `invariant` at 59 cases, ts `20260823-235258`, **13.92s**, 59/59
+  (`dirty: false`, green, ts-only for the same ADR-012 reason as §2, and
+  re-cited from a dirty row for the same reason §2's was: M39's
+  `judge-retry-only-on-unreadable-completion` is the 59th case, and the band
+  cannot be republished before the case that moves the count exists. This
+  parenthetical used to say "of the three that qualify this is the slowest,
+  ... take the least slack on offer"; PR #44 R2 caught both halves of that
+  being false at once — the enumeration supplying "the three that qualify" had
+  been deleted two commits earlier, and four ledger rows recorded before the
+  cited one were slower. It is not replaced with a corrected ranking, because a
+  ranking is what went stale: the ledger grows on every gate run. §6 tolerates
+  up to one ceiling step of slack and item 3 (same-ceiling) grades what this
+  number's relationship to the ledger's maximum has to be, on every run.)
 
 Neither band quotes the ledger's maximum as a number any more, and that is the
 fix for a defect this file produced twice. §3 published **13.80s** and the final
@@ -159,7 +163,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.53 × 1.15 = 15.56 → **20**, which is the committed
+The same rule gives 13.92 × 1.15 = 16.01 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
@@ -412,9 +416,11 @@ count N+1 while the new case is uncommitted, so every row at N+1 is dirty until
 the commit the check was blocking (PR #35 R11). And judging as-of rather than
 as-of-now is what stops later clean runs from retroactively reddening a
 published band, which is the same treadmill this section refuses for the strict
-form. Both bands above are live examples: each cites the run that measured its
-new case count, taken while that count's newest case was still uncommitted, and
-the clean green runs of this tree that followed did not disturb them. The GREEN
+form. Both bands above are live examples of the as-of rule doing its job in the other
+direction: each was first published against a dirty row — the only kind that
+exists at a count whose newest case is still uncommitted — and each is re-cited
+here, in the same PR, to the clean green receipt that could not exist until
+that first commit had landed. The GREEN
 half is not required and not requirable the same way (T-R53): this check is in
 both suites, so at a new count every run is red until the band is republished —
 which is why item 2 (cited-run) requires the result to be disclosed instead.

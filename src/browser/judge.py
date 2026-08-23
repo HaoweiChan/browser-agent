@@ -26,7 +26,6 @@ import asyncio
 import hashlib
 import json
 import os
-import re
 import urllib.request
 from pathlib import Path
 
@@ -112,6 +111,33 @@ def _defang_fence(evidence: str) -> str:
     real occurrence in the built prompt is one this function added."""
     return (evidence.replace(FENCE_START, "\u2039\u2039\u2039EVIDENCE_START\u203a\u203a\u203a")
                      .replace(FENCE_END, "\u2039\u2039\u2039EVIDENCE_END\u203a\u203a\u203a"))
+
+
+def _json_objects(text: str) -> list:
+    """Every top-level JSON object in a completion body, in order.
+
+    Models wrap the verdict: a ``` fence, a lead-in sentence, a sign-off after
+    it. PR #44 R1: stripping a FENCE only handles the wrappers someone thought
+    of -- a `re.fullmatch` fence required the completion to be nothing BUT the
+    fence, so trailing prose left the fence in the text, and after ADR-023 the
+    resulting JSONDecodeError was classified retryable and a reasoned reject
+    was re-rolled into a certify. Scanning for the object is wrapper-agnostic:
+    bare, fenced, or commented, the verdict is the same bytes. `raw_decode`
+    reports where each object ended, so a nested object is skipped rather than
+    counted as a second candidate.
+    """
+    dec = json.JSONDecoder()
+    out, i = [], 0
+    while (j := text.find("{", i)) != -1:
+        try:
+            obj, end = dec.raw_decode(text, j)
+        except ValueError:
+            i = j + 1
+            continue
+        if isinstance(obj, dict):
+            out.append(obj)
+        i = end
+    return out
 
 
 def _prompt(task: str, answer, evidence: str) -> str:
@@ -274,22 +300,25 @@ def live_judge(model: str = JUDGE_MODEL):
                 # `content: null`, which would otherwise land in the
                 # unreadable-body branch below and buy a pointless second call.
                 raise JudgeError(f"judge refused: {message['refusal']}", usage)
-            text = (message["content"] or "").strip()
-            # A ``` fence, with or without a language tag, on one line or many.
-            # The previous form emptied a ONE-LINE fenced body -- and after
-            # ADR-023 an empty body buys a retry, so a complete, readable
-            # verdict was being re-rolled instead of read (cold review R4).
-            if (fenced := re.fullmatch(r"```(?:[a-zA-Z]+)?\s*(.*?)\s*```", text, re.S)):
-                text = fenced.group(1)
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError as e:
+            objects = _json_objects((message["content"] or "").strip())
+            if len(objects) > 1:
+                # Two candidate verdicts in one body ("the schema is {...},
+                # my answer is {...}") are not one readable verdict, and
+                # picking either by position is a coin flip inside a
+                # fail-closed path. Readable enough to be an answer, so it
+                # fails closed on the first attempt like every other answer.
+                raise JudgeError(
+                    f"ambiguous judge response: {len(objects)} JSON objects", usage)
+            if not objects:
                 # ADR-023: the ONE retryable failure -- run `7787f9c9`'s exact
-                # shape, an empty/unparseable body. Everything else raised in
-                # this block is a READABLE response of the wrong shape, which a
-                # second identical call would only reproduce.
-                raise JudgeError(f"malformed judge response: {type(e).__name__}: {e}",
-                                 usage, retryable=True) from e
+                # shape, a body with nothing verdict-shaped in it at all.
+                # Everything else raised in this block is a READABLE response
+                # of the wrong shape, which a second identical call would only
+                # reproduce.
+                raise JudgeError(
+                    "malformed judge response: JSONDecodeError: "
+                    "no JSON object in completion", usage, retryable=True)
+            parsed = objects[0]
             # PR #33 R1 (HIGH): `bool(parsed["certify"])` treated ANY
             # truthy JSON value -- including the strings "false"/"no"/"0" --
             # as certify=True, inverting fail-closed for the one failure

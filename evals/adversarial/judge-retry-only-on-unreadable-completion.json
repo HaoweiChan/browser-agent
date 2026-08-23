@@ -258,6 +258,116 @@
         }
       },
       {
+        "note": "a fenced reject with TRAILING prose is a readable verdict, not an unreadable body -- PR #44 R1: the fullmatch fence left the fence in the text, the JSONDecodeError was classified retryable, and the reject was re-rolled into a certify",
+        "attempts": [
+          {
+            "message": {
+              "content": "```json\n{\"certify\": false, \"reason\": \"the answer is the site masthead, not the story title\"}\n```\n\nLet me know if you need more."
+            }
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"never reached\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "FAIL",
+          "responsive": false,
+          "attempts": 1,
+          "calls": 1,
+          "judge_tokens": 7
+        }
+      },
+      {
+        "note": "a fenced reject with LEADING prose is the same verdict, read the same way",
+        "attempts": [
+          {
+            "message": {
+              "content": "Here is my assessment.\n\n```json\n{\"certify\": false, \"reason\": \"the answer is the site masthead, not the story title\"}\n```"
+            }
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"never reached\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "FAIL",
+          "responsive": false,
+          "attempts": 1,
+          "calls": 1,
+          "judge_tokens": 7
+        }
+      },
+      {
+        "note": "a BARE reject with trailing prose -- no fence at all -- is still a readable verdict",
+        "attempts": [
+          {
+            "message": {
+              "content": "{\"certify\": false, \"reason\": \"the answer is the site masthead, not the story title\"}\n\nLet me know if you need more."
+            }
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"never reached\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "FAIL",
+          "responsive": false,
+          "attempts": 1,
+          "calls": 1,
+          "judge_tokens": 7
+        }
+      },
+      {
+        "note": "TWO verdict objects in one body is not one readable verdict -- picking either by position is a coin flip in a fail-closed path, so it fails closed on attempt 1 rather than being re-rolled or guessed",
+        "attempts": [
+          {
+            "message": {
+              "content": "The schema is {\"certify\": true, \"reason\": \"example\"} and my answer is {\"certify\": false, \"reason\": \"the answer is the site masthead, not the story title\"}"
+            }
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"never reached\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "FAIL",
+          "available": false,
+          "attempts": 1,
+          "calls": 1,
+          "judge_tokens": 7
+        }
+      },
+      {
+        "note": "a NESTED object inside a reject is part of that verdict, not a second candidate: the scan skips to where each object ended, or this reads as ambiguous (available:false) instead of as the reject it is (responsive:false)",
+        "attempts": [
+          {
+            "message": {
+              "content": "{\"certify\": false, \"reason\": \"site chrome\", \"meta\": {\"rule\": \"furniture\"}}"
+            }
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"never reached\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "FAIL",
+          "responsive": false,
+          "attempts": 1,
+          "calls": 1,
+          "judge_tokens": 7
+        }
+      },
+      {
         "note": "BILLING CEILING: a provider that omits `usage` on the failed generation bills the retry at the successful attempt alone -- pinned so the published 'both attempts are billed' claim is read as 'both attempts' REPORTED usage', which is all any caller can see",
         "attempts": [
           {

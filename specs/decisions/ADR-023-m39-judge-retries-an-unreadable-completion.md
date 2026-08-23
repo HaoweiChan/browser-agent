@@ -79,9 +79,23 @@ by design: the first implementation retried it, and
 `judge-retry-only-on-unreadable-completion`'s truncated-reject scenario was
 watched turning a `{"certify": false}` into `verdict: PASS`, `status: success`
 — the inviolable property, reached through the one branch this ADR permits.
-The same review found the smaller form of it: the fence strip emptied a
-one-line ```-fenced body, so a complete readable verdict was being classified
-as unreadable and re-rolled. Both are pinned as scenarios.
+The same review found the smaller form of it — the fence strip emptied a
+one-line ```-fenced body, so a complete readable verdict was classified
+unreadable and re-rolled — and the fence-shaped fix for THAT was itself a
+fail-open, caught in PR review (#44 R1): `re.fullmatch` requires the completion
+to be nothing but the fence, so a reject carrying any trailing sign-off left
+the fence in the text and was re-rolled into a certify. Three rounds of one
+lesson, so the mechanism changed shape rather than taking a fourth patch:
+**the parser no longer strips a wrapper, it scans for the object.**
+`_json_objects` walks the body with `json.JSONDecoder.raw_decode` and returns
+every top-level JSON object in it, skipping to where each one ended so a
+nested object is not counted twice. Bare, fenced, one-line, leading prose,
+trailing prose — the verdict is the same bytes and is read the same way. Zero
+objects is the unreadable class, and the only retryable one; two or more is
+ambiguous ("the schema is {...}, my answer is {...}") — readable enough to be
+an answer, not readable enough to act on — so it fails closed on the first
+attempt instead of being guessed at by position. Every shape above is pinned
+as a scenario.
 
 **Bounded by a constant, not by a policy.** One retry, no backoff, no jitter,
 no model switch, no second provider. `["malformed"]` given to `stub_judge` —
