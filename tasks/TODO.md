@@ -208,6 +208,22 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M40-3 — the SSRF case for `/view` is `fast`-only because the invariant suite cannot carry it on CI            [status: todo]
+Origin: PR #43 (M40), CI run 32651052282
+Spec: `view-proxy-refuses-private-and-redirects` guards a public SSRF surface and belongs in
+`invariant` beside `url-guard-literal-ips`, which guards the task path's twin. Tagged that way it
+is ungreenable on CI: the invariant suite ran **17.58s at 59 cases** on CI against 13.12s locally,
+and 17.58 derives a ceiling of 25 where the committed one is 20, so item 3 (same-ceiling) reddens
+every CI run while every local run is green. That is T-M32-13's second symptom, which its own
+block already records at 17.39s — before this case existed. CI's invariant row was 14.88s at 58
+cases (ADR-021), so the gap was already there.
+Not a silent downgrade: the guard runs on every commit regardless, because `fast` is the
+pre-commit gate and CI runs it too. What is lost is the `invariant` suite's 100%-or-red rule.
+Acceptance: either T-M32-13 lands (so a locally-derived band is not structurally red against CI
+rows) and the tag is restored, or the CI invariant ceiling is re-derived from CI's own measurement
+under an ADR with an owner ruling — ADR-021's precedent, and its own text says the margin question
+is not closed. Restoring the tag without one of those puts the branch back to red-on-CI.
+
 ### T-M40-1 — `/smoke/stream`'s concurrency guard is a read, not an acquire            [status: todo]
 Origin: PR (M40) round 2, cold review finding "also noted"
 Spec: `smoke_events` (`src/browser/server.py`) checks `SEM.locked()` and returns early, but never

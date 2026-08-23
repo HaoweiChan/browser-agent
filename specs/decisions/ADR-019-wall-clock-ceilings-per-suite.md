@@ -126,11 +126,11 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 59 cases, ts `20260824-000935`, **13.12s**, 59/59
-  (`dirty: false`. M40's `view-proxy-refuses-private-and-redirects` is tagged
-  `invariant` as well as `fast` — it guards an SSRF surface, which is a
-  must-always-hold — so this band moved for the same forced reason §2's did, and
-  paid the same two-commit price. The only clean row at this count.)
+- Band source — `invariant` at 58 cases, ts `20260823-200456`, **13.78s**, 58/58
+  (`dirty: false`, ts-only for the same ADR-012 reason as §2. Unchanged by M40:
+  its SSRF case was tagged `invariant`, moved this band to 59 cases, and was
+  moved back to `fast`-only because CI's invariant suite runs 17.58s at that
+  count and derives a different ceiling — T-M40-3 and T-M32-13 carry it.)
 
 Neither band quotes the ledger's maximum as a number any more, and that is the
 fix for a defect this file produced twice. §3 published **13.80s** and the final
@@ -146,7 +146,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.12 × 1.15 = 15.09 → **20**, which is the committed
+The same rule gives 13.78 × 1.15 = 15.85 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
