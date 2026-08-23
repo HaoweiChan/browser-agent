@@ -172,7 +172,15 @@ not asserted blind either time.
    60.16 × 1.15 = 69.2 → **70s** locally (Decision 4). Unlike the first
    measurement, this band does **not** straddle its ceiling — 68.96s against 80s
    — where the first CI band straddled the old 60s on three of its four runs
-   (59.77/60.84/64.61/64.67). What each number rests on is a band, not a
+   (~~59.77/60.84/64.61/64.67~~ — superseded 2026-08-23, PR #41 R3: that band
+   measured a **95-case tree**, and ADR-019 §5 re-measured CI on `d173340` at
+   116 `fast` / 48 `invariant`. The case count is the honest ground. Its
+   provenance is *not* in doubt and is not the ground: :162-163 above names
+   commit `09b9740`, run `32455716866` and three re-runs, and all four values
+   reproduce from that run's attempts. Third instance today of the same shape —
+   a correct record struck because the striker could not see its provenance,
+   where "I could not find it" was written down as "it does not exist"). What
+   each number rests on is a band, not a
    distribution, and the CI band is not even one commit's worth: run
    `32465066308` (attempt 1) is `94f1a42`, `32465584897`'s three re-run
    attempts are all `7a2869a` — one run at the pre-merge sha plus three at the
