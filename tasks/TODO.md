@@ -67,6 +67,43 @@ Promoted from Debt 2026-08-23: today's post-deploy receipt rounds (PR #32/#37) s
 planner's output is the dominant source of flakiness on the five Try examples; M28 is the
 half that does not collide with M32 (PR #34, in flight in another session).
 
+### M38 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: in-review]
+Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
+two Try examples produce nothing, five cards should be eight, the running stage should
+show it is running, a right-hand panel should show what the browser saw so a reviewer can
+check the scraped content, and the covered domains should include the investment sites an
+investment firm actually uses.
+**Process note, recorded rather than tidied away:** this block was written AFTER the work
+started, at the owner's instruction mid-session ("make sure you update TODO before
+implementation"). CLAUDE.md's per-feature loop puts plan → ADR → cases first; on this task
+the probing came first and the block second. Written down because the ordering is exactly
+what this file exists to make visible, and because the probe results below are what a plan
+written first would have had to guess at.
+Spec: four frontend asks, one that is not. The four are `src/browser/server.py`'s inline
+PAGE — a CSS-only spinner on the current phase (the progress case forbids timers in the
+script, and a phase advancing on a clock is a progress bar that lies about the trace), a
+right-hand page view carrying the step screenshot the executor already takes plus, after
+the run, every extraction with the page text it was read from, and an EXAMPLES/matrix set
+that reaches eight real-site rows. The fifth — "support investment sites" — cannot be
+answered by writing code; it is answered by running the deployment and declaring what came
+back, under the same report-assisted/human-declared rule as every other row.
+Acceptance:
+- No Try example cites a run shape that no longer reproduces. Each card's example is
+  re-run against the deployment and its status matches what happened, including the one
+  card that is deliberately a failure demo.
+- Eight non-fixture rows in `docs/support-matrix.md`, each with an EXAMPLES entry
+  (`ui-examples-cover-matrix` already grades set equality in both directions).
+- The new live-declared rows carry their run ids, their repeat counts, and a declared
+  limitation naming the page shapes that failed — not a pass rate thresholded into a word.
+- Every new UI hook is pinned by the UI cases, watched red against the pre-M38 page.
+- Cold review and spec-drift both run before the commit; every finding either lands as a
+  fix with a case, or as a declared limitation. No finding is closed by rewording alone.
+Not in scope, and why: a plan-lint clause refusing container-role `extract` targets. It is
+the obvious fix for the dominant live failure shape and it would turn
+`extract-container-dump-is-not-the-answer` red by ending the run before anything is read —
+changing what that case can observe rather than fixing what it grades. Isolating the cell
+stays T-R66/M28.
+
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
 but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
@@ -109,7 +146,7 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
-### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
+### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: in-review]
 Origin: M37 implementer
 Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
 because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
@@ -120,6 +157,12 @@ who types the placeholder verbatim against the HN card's URL reproduces the reti
 Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
 "What is the title of this story?" is the obvious one), pinned by the ui-form case the way
 `expected_examples` pins a chip — or a note that placeholders are illustrative only.
+Closed by M38: the placeholder is now "What is the market cap of this company?" — the
+`companiesmarketcap.com` example's task, 7/7 on the deployment (D27), the strongest cited run
+in the set rather than the HN one. It sits two lines above the EXAMPLES map M38 rewrote, so
+fixing it there rather than in its own PR is the shorter diff. The acceptance's second half is
+NOT met and is not claimed to be: nothing grades placeholder text, so this can regress silently
+again — the `ui-form` pin stays open work.
 
 ### T-R50 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
 Origin: T-R34, restated after PR #35 R4 (renumbered from T-R39 during the M35 merge — main had allocated that id independently)

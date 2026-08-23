@@ -186,8 +186,21 @@ Two companion cases keep the finding narrow instead of sweeping:
   invented. This is the live twin of the render-delayed mutation, and it is
   what stops that fixture mutation from being a thought experiment.
 
-Nothing about this was softened to make a case green. The support matrix row
-for the domain is `unsupported` (TC1), citing the case.
+Nothing about this was softened to make a case green. ~~The support matrix row
+for the domain is `unsupported` (TC1), citing the case.~~
+
+**M38 amendment (2026-08-23).** The struck sentence was true when written and is
+not true now: the row reads `unreliable` (TC1). The reason the sentence it
+belongs to still stands is the whole point of recording this rather than editing
+it — nothing was softened. `live-quotes-js-role-tier-blind` fails today exactly
+as it did, on the same page, for the same reason; what changed is that the
+domain's static author pages were run end-to-end against the deployment with a
+real planner and answered 3/3 (`b973e350`, `93085a40`, `14833919`). A domain
+where one page shape works and another does not is `unreliable` by this repo's
+own vocabulary, and calling it `unsupported` on the strength of the worse half
+would be a different kind of dishonesty than the one this Decision was guarding
+against. The `/js` page is still what this ADR is about, and it is still
+unplannable. `docs/support-matrix.md` carries the runs.
 
 ## Decision 5 — two metrics were counting the wrong thing, and M8 is the first milestone that could see it
 

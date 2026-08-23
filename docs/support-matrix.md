@@ -22,22 +22,42 @@ Entry shape (also served as JSON to the frontend):
 
 Declared from the M6 baseline (`evals/report/20260817-124241-fast.json`, 65/65)
 plus the M6 live runs; the M8 rows (quotes.toscrape.com, and limitations D5–D11)
-rest on the M8 runs instead — `fast` 86/86 and `live` 9/9, 2026-08-20. Every status below rests on **stubbed plans** — the
-fixture rows on offline fixtures, the live rows on hand-written plans against
-real DOMs — so this table measures the resolver/executor/verifier path and
-says nothing about planning quality on any domain, live or not. Empty cells are
-shown, not hidden.
+rest on the M8 runs instead — `fast` 86/86 and `live` 9/9, 2026-08-20. Every
+status **except the four M38 ones** rests on **stubbed plans** — the fixture rows
+on offline fixtures, the live rows on hand-written plans against real DOMs — so
+for those rows this table measures the resolver/executor/verifier path and says
+nothing about planning quality on any domain. The four M38 rows
+(companiesmarketcap.com, x-rates.com, multpl.com, and the changed
+quotes.toscrape.com cell) are the exception and are marked as such below: they
+were run end-to-end against the deployment with the real planner, so they do
+measure planning quality on their domain, and they rest on no committed report
+at all. Empty cells are shown, not hidden.
 
 `books.toscrape.com` TC4 stays `—` rather than becoming a status: the case that
 would fill it (`live-books-cheapest-travel`) is the only one needing a real
 planner, and it has not been run.
 
-`quotes.toscrape.com` is the M8 hostile domain and its TC1 cell is `unsupported`
+`quotes.toscrape.com` is the M8 hostile domain and its TC1 cell was `unsupported`
 on the strength of `live-quotes-js-role-tier-blind`: the run answers, reports
 success, and answers with the pager. The page is not unreadable — the text tier
 reaches its content exactly (`live-quotes-js-text-tier-reaches`) — it is
 *unplannable*, because the observation the planner is given contains none of it.
-D7 below has the measurements.
+D7 below has the measurements. M38 moves that cell to `unreliable`, not to
+`supported`: the cited case still fails exactly as it did, and the domain's
+static author pages now answer 3/3 end-to-end against the deployment
+(run_ids b973e350, 93085a40, 14833919 — "When was this author born?" on
+/author/Albert-Einstein/, all three "Born: March 14, 1879 in Ulm, Germany").
+One page shape works and one does not, which is what `unreliable` means.
+
+The M38 rows are declared by a different method than every row above them, and
+the difference is stated rather than blended in. Every other row was declared
+report-assisted, from a committed `fast`/`live` report plus hand-written plans;
+the M38 rows rest on ad-hoc submissions to the deployment with the real planner,
+which produce no committed report and have no eval case behind them. That is
+weaker in one way — nothing in `evals/` re-checks them, and no CI run can
+reproduce them — and stronger in another: they are the only rows here that
+measure the planner. Both halves are why D27 carries every run id rather than a
+fraction, and why two of the three rows are `unreliable`.
 
 | Domain | TC1 | TC2 | TC3 | TC4 | TC5 |
 |--------|-----|-----|-----|-----|-----|
@@ -47,12 +67,30 @@ D7 below has the measurements.
 | books.toscrape.com (live) | — | — | unreliable | — | — |
 | news.ycombinator.com (live) | unreliable | — | — | — | — |
 | openlibrary.org (live) | unreliable | unsupported | — | — | — |
-| quotes.toscrape.com (live) | unsupported | — | — | — | — |
+| quotes.toscrape.com (live) | unreliable | — | — | — | — |
 | lamp-spec fixture | supported | — | — | — | — |
 | wikipedia.org | — | — | — | — | — |
+| companiesmarketcap.com (live) | supported | — | — | — | — |
+| x-rates.com (live) | unreliable | — | — | — | — |
+| multpl.com (live) | unreliable | — | — | — | — |
 
 Statuses: `supported` / `unreliable` / `unsupported` / `—` (not yet evaluated).
-Unsupported and unreliable rows must cite a concrete failing case id.
+Unsupported and unreliable rows must cite concrete failing evidence: a case id
+where one exists, and otherwise — for the M38 live-declared rows only — the run
+ids of the failures themselves, in D27. The distinction matters and is not a
+loosening dressed up as a rule: a case id is re-run by the gate on every commit,
+a run id is a receipt for something that happened once and cannot be replayed
+(`RUNS` is in-memory, D19). So `x-rates.com` and `multpl.com` carry the weaker
+form of evidence, deliberately and visibly, until a case exists for either. No
+check enforces this sentence — `support-matrix-cites-real-cases` verifies that
+backticked case ids RESOLVE, and cannot tell which row a citation belongs to
+(its own provenance says so). It is a rule this file keeps by hand.
+
+## Declared limitations (M38 investment-domain probe)
+
+| Limitation | Evidence | Status |
+|---|---|---|
+| **D27** — asked to cover the domains an investment reviewer actually uses, the agent covers exactly one shape of finance page and fails on the other, and the split is not about the site being "hard" — it is about whether the number the task asks for lives in an element of its own. **43 live runs across 22 finance domains** against the deployment on 2026-08-23, real planner, no stubbed plans: 13 answered, 30 failed. (A further 8 runs the same day re-tested the two broken example cards — quotes.toscrape.com and openlibrary.org — and are counted in neither figure; they are cited where those two rows are declared.) | **Answers — 13 runs, 3 domains, and only 3 of the 22 answered at all.** companiesmarketcap.com 7/7 across five pages: Apple market cap (44c6d2e3, 94c8cd6b, bfb33695 → "Market cap: $4.514 Trillion USD"), Apple P/E (25ebd8ad), Apple revenue (cea1b58a), NVIDIA market cap (e65bad4d), Microsoft market cap (3c18af43). x-rates.com 3/4, all three greens on one currency pair (570f4c04, 0909909e, d9ad84b7 → "1.168361 USD"). multpl.com 3/6, split by page: Shiller P/E 2/3 (97912676, 434335eb → "41.96"; e0b4a2e3 red) and S&P 500 P/E 1/3 (3ec2b4d5 → "Aug 21, 2026 † 29.58"; a9d565b2, 602d70be red). **Failures — 30 runs, 19 domains that never answered plus the 2 failing siblings on x-rates.com and multpl.com.** Three named shapes. (1) CONTAINER DUMP, 8 runs — the planner targets `main` or a whole table and the extraction returns the page: stockanalysis.com (ac1dd2f1, f17afbee, 9f624ba5), federalreserve.gov (993aede7), cnbc.com (ab3225a7), newyorkfed.org (68de8ff1), finance.yahoo.com (29279c32), plus multpl.com's e0b4a2e3. Every one was caught by the verifier and reported as `failure:semantic`, never as a wrong answer — the same defect `extract-container-dump-is-not-the-answer` pins offline, on live finance pages. (2) NOTHING RESOLVES, 18 runs — the planner names a role or a `near` string the resolver cannot reach on a JS-rendered or table-heavy page: coingecko.com (c80b1dd0), coinmarketcap.com (c57de7ef), stooq.com (8c1a3344), slickcharts.com (9d2d83f3, 7977cb1f), marketbeat.com (ef4d37c8), sec.gov EDGAR (7a5fed48, 17184671, 6c29c944), fred.stlouisfed.org (58699716), macrotrends.net (31bfb2d7), investor.gov (fb13acb4), berkshirehathaway.com (b5f84cde), 8marketcap.com (96d27bc6), google.com/finance (e492553a), tradingeconomics.com (3c1cec38), plus multpl.com's a9d565b2 and 602d70be. (3) INVENTED ANCHOR, 2 runs — the plan asserts an identity anchor that is not on the page, and the run fails closed rather than answering: tradingeconomics.com (8e9470c3), x-rates.com USD→JPY (0f8e532f). (4) The remaining 2 are one-offs and are named rather than folded into a shape they do not fit: federalreserve.gov's 088e7962 hit the M31 aggregate guard, not the dump check — "38 of 40 do not parse as numbers" on a superlative question over a rate table — and finviz.com's cb86c0d7 is the judge rejection below. 8 + 18 + 2 + 2 = 30. Two runs are their own evidence for something else. finviz.com (cb86c0d7) got past every L1 check with the label "PE Ratio" as its answer, and the M36 judge rejected it — "merely repeats the label ... without supplying the required numeric value (35.49)" — the first live evidence for the grading quality D25 declared unverified. And 088e7962 is the M31 plan lint's territory reached live: a rate table read as a superlative question, failing loudly on values that do not parse rather than answering with a row. | `unsupported` for the two shapes that dominate real finance sites — a value inside a dense table or grid (shape 1), and any page whose numbers are painted by script after load (shape 2). 19 of 22 domains never answered once. Declared, not guessed at: what distinguishes the three that do answer is that the asked value sits in its own labelled element, which is a property of the page, not of the task, and nothing in this pipeline detects or reports that property before spending a run. The container-dump half already has an owner — `extract-container-dump-is-not-the-answer` grades the SHAPE of the rejected run, and isolating the cell instead of giving up is debt T-R66 — so these runs widen that case's evidence to live finance pages rather than adding a fix nobody watched red. What is NOT claimed, in four parts. (a) That 43 runs measure these DOMAINS rather than these tasks on these pages: one task phrasing per page, one to three repeats, no held-out set. (b) That the three answering domains are stable — `unreliable` on x-rates.com and multpl.com is exactly that uncertainty declared, and both have an observed failing sibling above. (c) That the 19 failing domains are unreachable in principle; each failed on one phrasing of one task, and a differently-shaped plan may well answer. (d) That any of this is re-checked by anything: no eval case covers any of the 22 domains, so a regression here reddens nothing and would be found only by re-running the probe by hand |
 
 ## Declared limitations (M29 post-merge confirmation)
 

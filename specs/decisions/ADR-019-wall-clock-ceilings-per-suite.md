@@ -61,11 +61,14 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 137 cases, ts `20260823-200546`, **62.34s**, 137/137
-  (`evals/report/20260823-200546-fast.json`; the run that measured this tree
-  while its newest case was still uncommitted, so `dirty: true`).
+- Band source — `fast` at 138 cases, ts `20260823-220141`, **63.39s**, 138/138
+  (M38 added `ui-terminal-state-on-every-ending`, so the count moved and the
+  band moved with it. Taken as the slowest observed at this count, not chosen:
+  the ledger's earlier 138-case rows are faster, including the red ones this
+  branch produced while the derived-number guards were catching up to the new
+  count).
 
-The `137/137` is the cited row's own result, graded against it, not prose beside
+The `138/138` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -84,7 +87,7 @@ the shipped case count, which is the R21 defect this ADR was amended over. What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 62.34 × 1.15 = 71.69 → **75**. The band published for the earlier
+five — gives 63.39 × 1.15 = 72.90 → **75**. The band published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of

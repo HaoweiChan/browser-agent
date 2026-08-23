@@ -428,6 +428,30 @@ PAGE = r"""<!doctype html>
   .progress li[data-state="current"]::before { content:"› "; color:var(--accent) }
   .progress li[data-state="failed"] { border-left-color:var(--bad); color:var(--bad) }
   .progress li[data-state="failed"]::before { content:"× "; color:var(--bad) }
+  /* The running stage spins. CSS only: the progress case forbids timers in the
+     script, and a phase that advances on a clock would be a progress bar that
+     lies about the trace. */
+  @keyframes spin { to { transform:rotate(1turn) } }
+  .progress li[data-state="current"]::after, .big.running::after {
+       content:""; display:inline-block; width:.66em; height:.66em; margin-left:.45em;
+       vertical-align:-.05em; border:2px solid color-mix(in srgb,var(--accent) 26%,transparent);
+       border-top-color:var(--accent); border-radius:50%; animation:spin .75s linear infinite }
+  /* Trace on the left, what the browser actually saw on the right. */
+  .live-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,25rem);
+       gap:.7rem; align-items:start }
+  .live-main { min-width:0 }
+  .pageview { position:sticky; top:.7rem; max-height:calc(100vh - 1.4rem); overflow:auto;
+       padding:.75rem; min-width:0 }
+  .pv-hd { display:flex; gap:.5rem; align-items:baseline; justify-content:space-between;
+       flex-wrap:wrap; margin-bottom:.5rem }
+  .pv-shot img { display:block; width:100%; border:1px solid var(--line); border-radius:var(--radius) }
+  .pv-text { margin-top:.7rem }
+  .scrape { border-left:3px solid var(--accent); padding:.4rem .55rem; margin-top:.4rem;
+       background:var(--bg); border-radius:var(--radius); overflow-wrap:anywhere }
+  @media (max-width:900px) {
+    .live-grid { grid-template-columns:minmax(0,1fr) }
+    .pageview { position:static; max-height:none }
+  }
   .limits-summary { margin:0; padding-left:1.2rem; color:var(--fg) }
   .limits-summary li + li { margin-top:.35rem }
   a { color:var(--accent) }
@@ -480,12 +504,12 @@ PAGE = r"""<!doctype html>
 <div class="panel command">
   <div class="row">
     <div class="field"><label for="task">What should it find?</label>
-      <input id="task" placeholder="e.g. Who submitted this story?"></div>
+      <input id="task" placeholder="e.g. What is the market cap of this company?"></div>
     <div class="field"><label for="url">Start URL</label>
       <input id="url" placeholder="https://… the page to start on"></div>
     <div class="actions">
       <button id="go" onclick="submitTask()">Run task</button>
-      <button class="ghost" onclick="smoke()"
+      <button id="check" class="ghost" onclick="smoke()"
         title="Launches Chromium against example.com — proves the browser works, spends no tokens">Browser check</button>
     </div>
   </div>
@@ -505,8 +529,20 @@ PAGE = r"""<!doctype html>
     <li data-phase="verification" data-state="upcoming">Verify answer</li>
     <li data-phase="complete" data-state="upcoming">Complete</li>
   </ol>
-  <div id="steps"></div>
-  <div id="result"></div>
+  <div class="live-grid">
+    <div class="live-main">
+      <div id="steps"></div>
+      <div id="result"></div>
+    </div>
+    <aside class="panel pageview" id="pageview" aria-label="Page view">
+      <div class="pv-hd"><b>Page view</b>
+        <a class="note" id="pvlink" href="#" target="_blank" rel="noopener noreferrer" hidden>open the real page &#8599;</a></div>
+      <p class="note" id="pvcap">The browser&rsquo;s own view appears here, step by step. Click a
+        step on the left to pin it.</p>
+      <div id="pvshot" class="pv-shot"></div>
+      <div id="pvtext" class="pv-text"></div>
+    </aside>
+  </div>
 </div>
 
 <h2><span class="section-no">03</span> What works today</h2>
@@ -531,8 +567,11 @@ const SUPPORT_LABELS = {
   TC4: "Compare or sort", TC5: "Submit a form"
 };
 // One per real-site support-matrix row — the cards are the only example
-// surface. Every entry was run against the deployment on 2026-08-22; the
-// run_id is the receipt (GET /tasks/<run_id>). A site declared supported/—
+// surface. Every entry was run against the deployment: the M35 entries on
+// 2026-08-22, the four M38 ones (quotes, companiesmarketcap, x-rates, multpl)
+// on 2026-08-23. A run_id here is a receipt against docs/support-matrix.md and
+// the eval record, NOT against a live GET /tasks/<run_id> — RUNS is in-memory
+// and a redeploy destroys the history (support matrix D19). A site declared supported/—
 // cites a run that answered correctly; a site declared unreliable/unsupported
 // may cite a run that demonstrates the declared status (fails loudly, never a
 // wrong answer) and says so in `note`. An example nobody can reproduce is
@@ -548,14 +587,34 @@ const EXAMPLES = {
     // deployment — 349e4839, e08b7627, bcae4fe7, 63b9d944, failure:locate,
     // the planner targets link "pg" and the page has two.
     task: "What is the title of this story?"},
-  "quotes.toscrape.com (live)": {label: "Who said this quote?",
-    url: "https://quotes.toscrape.com/",
-    task: "Who wrote the quote about the world we have created?",  // run 24820d4c → "Albert Einstein"
-    note: "This static page answered correctly once (run 24820d4c); the declared failure is the JS-rendered /js/ pages."},
-  "openlibrary.org (live)": {label: "Author of a book",
+  "quotes.toscrape.com (live)": {label: "When was this author born?",
+    url: "https://quotes.toscrape.com/author/Albert-Einstein/",
+    // M38: 3/3 on the deployment (b973e350, 93085a40, 14833919) → "Born: March
+    // 14, 1879 in Ulm, Germany". Retired "Who wrote the quote about the world we
+    // have created?" (run 24820d4c → "Albert Einstein"): the listing page shows
+    // that author three times, so the extraction now dies at locate with "3
+    // matches at tier text" (run eefae1b8). Ambiguity is the resolver refusing to
+    // guess, which is correct — but it is not an example anyone should be shown.
+    task: "When was this author born?",
+    note: "An author page answers; the declared failure is the JS-rendered /js/ pages."},
+  "openlibrary.org (live)": {label: "See a failure: author of a book",
     url: "https://openlibrary.org/books/OL7025919M",
     task: "Who is the author of this book?",   // run f1ecf157 → failure:extract (015b6778, 65af344f too: loud, never wrong)
     note: "Declared unreliable — this example fails loudly, so you can see what a failure looks like."},
+  "companiesmarketcap.com (live)": {label: "Market cap of a company",
+    url: "https://companiesmarketcap.com/apple/marketcap/",
+    // M38 live probe, 7/7 across four pages and two repeats: 44c6d2e3, 94c8cd6b,
+    // bfb33695 (Apple market cap), 25ebd8ad (P/E), e65bad4d (NVIDIA), cea1b58a
+    // (revenue), 3c18af43 (Microsoft). Real planner, not a stubbed plan.
+    task: "What is the market cap of this company?"},
+  "x-rates.com (live)": {label: "An exchange rate",
+    url: "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+    task: "How many US dollars is one euro worth?",   // 3/3: 570f4c04, 0909909e, d9ad84b7
+    note: "3/3 on this pair; the USD→JPY page failed on an anchor the planner invented (run 0f8e532f)."},
+  "multpl.com (live)": {label: "S&P 500 valuation",
+    url: "https://www.multpl.com/shiller-pe",
+    task: "What is the current Shiller PE ratio?",   // 2/3: 97912676, 434335eb → "41.96"
+    note: "Declared unreliable: 2/3 on this page, 1/3 on the plain S&P 500 P/E page next door."},
   "wikipedia.org": {label: "A university's motto",
     url: "https://en.wikipedia.org/wiki/Harvard_University",
     task: "What is the motto of this university?",            // run 6a828ddb → "Veritas (Latin)[3]"
@@ -566,7 +625,8 @@ const EXAMPLES = {
 const LIMITS = [
   "Needs a start URL or a site named in the task — no web search",
   "One visible value per page; second-page tasks (open category → read price) unreliable",
-  "Large tables / infoboxes: often fails — reads the whole block, not the one cell",
+  "Large tables / infoboxes / stock-quote grids: often fails — reads the whole block, not the one cell",
+  "Numbers painted by script after the page loads are invisible to the planner",
   "Can pass verification with a wrong answer — known defect, fix in progress",
   "Login, payment, CAPTCHA, delete, download: refused",
 ];
@@ -601,7 +661,19 @@ function useExample(key) {
 document.addEventListener("click", (ev) => {
   const hit = ev.target.closest("[data-example]");
   if (hit) useExample(hit.dataset.example);
+  const step = ev.target.closest("[data-step]");
+  if (step) { pinned = Number(step.dataset.step); showPage(pinned); }
 });
+
+// Both buttons open a stream and both write #status, #steps and the page view.
+// Before this there was no shared owner: starting a browser check under a live
+// run overwrote the trace with smoke output and painted `chromium ok` in the
+// success colour over a run that was still executing (or had failed).
+function busy(on) {
+  $("go").disabled = on;
+  $("check").disabled = on;
+  if (on && es) { es.close(); es = null; }
+}
 
 function progressItems() { return [...$("progress").children]; }
 function labelProgress() {
@@ -645,6 +717,14 @@ function setTerminal(status) {
 
 function badge(text, cls) { return `<span class="badge ${cls||""}">${esc(text)}</span>`; }
 
+// A silently truncated value is the one thing this panel must never do: the
+// container dumps the verifier rejects are thousands of characters, and cutting
+// one to 300 with no marker renders a page dump as a tidy, well-scoped
+// extraction — hiding the defect the run was rejected for.
+function clip(t, n) {
+  return t.length > n ? esc(t.slice(0, n)) + `… <span class="note">(${t.length} chars)</span>` : esc(t);
+}
+
 // postcondition_ok is three-valued and null is NOT true: it means nothing was
 // asserted about this step. Collapsing null into "ok" here would show a green
 // tick on exactly the unverified action the contract calls a failure.
@@ -654,7 +734,7 @@ function postBadge(v) {
   return badge("unverified", "warn");
 }
 
-function stepEl(s) {
+function stepEl(s, idx) {
   const cls = [s.failure_class ? "failed" : "",
                s.retry_or_recovery === "recovery" ? "recovered" : "",
                s.superseded_by ? "superseded" : ""].join(" ");
@@ -668,7 +748,7 @@ function stepEl(s) {
   if (s.superseded_by) b += badge("superseded by #" + s.superseded_by);
   const shot = s.screenshot && runId
     ? `<img class="shot" loading="lazy" src="/runs/${runId}/${esc(s.screenshot)}">` : "";
-  return `<div class="step ${cls}">
+  return `<div class="step ${cls}" data-step="${idx}">
     <div class="hd"><span class="i">#${s.i}</span><span class="act">${esc(s.action)}</span>
       <code>${esc(t.length > 90 ? t.slice(0, 90) + "…" : t)}</code>
       ${b}<span class="ms">${s.ms}ms</span></div>
@@ -677,7 +757,40 @@ function stepEl(s) {
   </div>`;
 }
 
-function renderSteps(steps) { $("steps").innerHTML = steps.map(stepEl).join(""); }
+// The page view mirrors the trace: the latest step that produced a screenshot,
+// unless a step was clicked. Screenshots are best-effort in the executor, so a
+// step without one is a real state, not an error.
+let LIVE = [], pinned = null;
+
+function showPage(idx) {
+  const s = LIVE[idx];
+  if (!s) return;
+  $("pvcap").textContent = `step #${s.i} \u00b7 ${s.action}`
+    + (pinned === idx ? " \u00b7 pinned" : "") + (s.screenshot ? "" : " \u00b7 no screenshot");
+  $("pvshot").innerHTML = s.screenshot && runId
+    ? `<img src="/runs/${runId}/${esc(s.screenshot)}" alt="The page as the browser saw it at step ${s.i}">`
+    : "";
+}
+
+function renderSteps(steps) {
+  LIVE = steps;
+  $("steps").innerHTML = steps.map(stepEl).join("");
+  let latest = -1;
+  steps.forEach((s, i) => { if (s.screenshot) latest = i; });
+  showPage(pinned !== null && pinned < steps.length ? pinned : latest);
+}
+
+// What was actually read off the page, with the text it was read from — the
+// half of "is this answer right?" that a screenshot cannot settle.
+function renderScraped(r) {
+  const ex = (r.evidence && r.evidence.extractions) || [];
+  $("pvtext").innerHTML = ex.length
+    ? `<div class="note">Read from the page (${ex.length})</div>` + ex.map(e =>
+        `<div class="scrape"><b>${clip(String(e.value), 300)}</b>
+         <details><summary>surrounding page text</summary><pre>${esc(e.page_text || "")}</pre></details>
+         </div>`).join("")
+    : `<p class="note">Nothing was read off the page in this run.</p>`;
+}
 
 function renderResult(r) {
   setTerminal(r.status);
@@ -691,6 +804,9 @@ function renderResult(r) {
   // Re-render from the final trace: it is authoritative where the live stream is
   // provisional — a supersede lands after its attempt was already sent.
   if (r.evidence && r.evidence.trace) renderSteps(r.evidence.trace);
+  renderScraped(r);
+  const fin = r.evidence && r.evidence.final_url;
+  if (fin) { $("pvlink").href = fin; $("pvlink").hidden = false; }
   const v = r.verdict, none = r.answer === null || r.answer === undefined;
   const checks = v ? Object.entries(v.checks || {}).map(([k, ok]) =>
       badge((ok ? "✓ " : "✗ ") + k.replace(/_/g, " "), ok ? "ok" : "bad")).join("") : "";
@@ -725,14 +841,17 @@ async function submitTask() {
     $("url").focus();
     return;
   }
-  $("go").disabled = true;
+  busy(true);
   $("err").hidden = true;
   $("live").hidden = false;
   $("progress").hidden = true;
   $("steps").innerHTML = ""; $("result").innerHTML = "";
   $("status").className = "big running"; $("status").textContent = "running";
   $("budgets").textContent = ""; $("runid").textContent = "";
-  if (es) es.close();
+  runId = null; LIVE = []; pinned = null;
+  $("pvshot").innerHTML = ""; $("pvtext").innerHTML = "";
+  $("pvcap").textContent = "waiting for the browser\u2026";
+  $("pvlink").href = url; $("pvlink").hidden = false;
   try {
     const r = await fetch("/tasks", {
       method: "POST", headers: {"Content-Type": "application/json"},
@@ -742,7 +861,7 @@ async function submitTask() {
     if (!r.ok) {
       // A refusal is a terminal path too: without this the guard working once
       // disables the form for good, and the UI looks broken by its own success.
-      $("go").disabled = false;
+      busy(false);
       $("live").hidden = true;
       $("err").hidden = false;
       $("err").textContent = "rejected (" + r.status + "): " +
@@ -753,30 +872,56 @@ async function submitTask() {
     resetProgress();
     $("progress").hidden = false;
     $("runid").textContent = "run " + runId;
+    const mine = runId;  // this run's id, captured before any await
     es = new EventSource("/tasks/" + runId + "/stream");
     const live = [];
     es.onmessage = (e) => {
       const ev = JSON.parse(e.data);
       if (ev.event === "step") { live.push(ev.step); setPhase(phaseFor(ev.step)); renderSteps(live); }
-      else if (ev.event === "done") { es.close(); setTerminal(ev.result.status); renderResult(ev.result); $("go").disabled = false; }
+      else if (ev.event === "done") { setTerminal(ev.result.status); renderResult(ev.result); busy(false); }
     };
-    es.onerror = () => {  // stream dropped — the run record is still the truth
-      es.close();
-      fetch("/tasks/" + runId).then(x => x.json()).then(s => {
-        if (s.status !== "running") renderResult(s);
-        else { $("status").textContent = "stream lost — reload to poll"; }
-        $("go").disabled = false;
-      });
+    // Stream dropped. The run record is the truth — but the poll for it can
+    // fail too, and every way it failed used to end in the same place: the
+    // button disabled for good and #status still reading `running`, now with a
+    // spinner animating beside it. A page that asserts a run is in progress for
+    // a run that is dead is the UI lying quietly, which is the one thing this
+    // surface exists not to do. `mine` guards the other half: a late poll for
+    // run A must not render against run B's id, or A's step captions get B's
+    // screenshots with no error anywhere.
+    es.onerror = () => {
+      if (es) { es.close(); es = null; }
+      fetch("/tasks/" + mine)
+        .then(x => x.ok ? x.json() : Promise.reject(new Error("HTTP " + x.status)))
+        .then(r => {
+          if (runId !== mine) return;             // a newer run owns the surface
+          if (r && typeof r.status === "string" && r.status !== "running") renderResult(r);
+          else lost("stream lost — the run may still be executing; reload to poll");
+        })
+        .catch(err => { if (runId === mine) lost("stream lost, and the run record is unreachable: " + err); })
+        .finally(() => { if (runId === mine) busy(false); });
     };
   } catch (e) {
-    $("err").hidden = false; $("err").textContent = String(e); $("go").disabled = false;
+    $("err").hidden = false; $("err").textContent = String(e); busy(false);
   }
 }
 
+// Terminal, and honest about being terminal: no spinner, no claim of a verdict.
+function lost(message) {
+  setTerminal("failure:env");
+  $("status").className = "big failure"; $("status").textContent = "stream lost";
+  $("err").hidden = false; $("err").textContent = message;
+}
+
 function smoke() {
+  busy(true);
+  runId = null;
   $("live").hidden = false;
   $("progress").hidden = true;
   $("steps").innerHTML = ""; $("result").innerHTML = "";
+  LIVE = []; pinned = null;
+  $("pvshot").innerHTML = ""; $("pvtext").innerHTML = "";
+  $("pvcap").textContent = "the browser check takes no screenshots";
+  $("pvlink").hidden = true;
   $("runid").textContent = "platform smoke — real Chromium, no LLM spend";
   $("status").className = "big running"; $("status").textContent = "running";
   const s = new EventSource("/smoke/stream");
@@ -789,9 +934,10 @@ function smoke() {
       s.close();
       $("status").className = "big " + (ev.event === "done" ? "success" : "failure");
       $("status").textContent = ev.event === "done" ? "chromium ok" : "chromium failed";
+      busy(false);
     }
   };
-  s.onerror = () => s.close();
+  s.onerror = () => { s.close(); busy(false); };
 }
 
 fetch("/support-matrix").then(r => r.json()).then(m => {
@@ -938,6 +1084,13 @@ async def smoke_events():
         return f"data: {json.dumps({'event': event, **kw})}\n\n"
 
     yield ev("start", target=SMOKE_URL)
+    if SEM.locked():
+        # Concurrency is 1 by design (SEM, /readyz). Without this, two tabs --
+        # or one tab before the M38 button-locking -- launched a second browser
+        # outside the semaphore, so the property /readyz reports stopped holding
+        # while /readyz still reported it from SEM alone.
+        yield ev("error", error=f"a run is executing ({ACTIVE_RUN}); one browser at a time")
+        return
     try:
         from playwright.async_api import async_playwright
 

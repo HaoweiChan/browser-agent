@@ -3309,6 +3309,128 @@ def _run_ui_form_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong, "got": got}
 
 
+def _run_ui_terminal_state_case(case: dict) -> dict:
+    """Every way a run can end must leave the surface terminal and usable.
+
+    Three defects, all found by cold review of the M38 page view and all watched
+    red against the pre-fix page (`triage.watched_red`). They share one property
+    and that is why they share one case: each ends with the UI ASSERTING SOMETHING
+    THAT IS NOT TRUE, rather than erroring. A stream that drops and a run record
+    that cannot be fetched left `#status` reading `running` with the M38 spinner
+    animating beside it and `Run task` disabled for good; a browser check started
+    under a live run painted `chromium ok` in the success colour over it; and a
+    2k-character container dump -- the dominant live failure shape (D27) --
+    rendered in the page view as a tidy 300-character string with no mark.
+
+    Driven on the shared `_ui_page` render like `ui-form`, with `fetch` and
+    `EventSource` stubbed and restored. No server, no network, no run spent.
+    Ceiling: this grades the page's own handlers against a stubbed transport, not
+    a real dropped connection against the real gateway.
+    """
+    inp, expect = case["input"], case["expect"]
+
+    async def go():
+        page = await _ui_page(inp["viewport_width"], inp["scheme"])
+        return await page.evaluate("""async (inp) => {
+          const realFetch = window.fetch, realES = window.EventSource;
+          const errors = [];
+          const onerr = (e) => errors.push(String(e.message || e.error || e));
+          window.addEventListener("error", onerr);
+          window.addEventListener("unhandledrejection",
+            (e) => errors.push("unhandled: " + String(e.reason)));
+          const tick = (n) => new Promise(r => setTimeout(r, n || 0));
+          // Fires onerror as soon as the page attaches its handler, which is
+          // what a stream that dies on connect looks like to this code.
+          let opened = null;
+          window.EventSource = function (url) {
+            opened = url; this.close = () => {};
+            setTimeout(() => this.onerror && this.onerror(new Event("error")), 0);
+          };
+          const submit = async (record) => {
+            window.fetch = (u, o) => {
+              if (String(u).endsWith("/tasks") && o && o.method === "POST")
+                return Promise.resolve({ok: true, status: 200,
+                                        json: () => Promise.resolve({run_id: inp.run_id})});
+              if (record === null)
+                return Promise.resolve({ok: false, status: 404,
+                                        json: () => Promise.resolve({detail: "unknown run_id"})});
+              return Promise.resolve({ok: true, status: 200,
+                                      json: () => Promise.resolve(record)});
+            };
+            $("task").value = inp.task; $("url").value = inp.url;
+            $("go").click();
+            await tick(); await tick(); await tick(); await tick();
+          };
+          const surface = () => ({
+            status: $("status").textContent,
+            status_class: $("status").className,
+            spinning: getComputedStyle($("status"), "::after").animationName,
+            go_disabled: $("go").disabled, check_disabled: $("check").disabled,
+            terminal: $("progress").dataset.terminal || null,
+            err_hidden: $("err").hidden,
+          });
+          const out = {};
+          await submit(null);                       // record unreachable (404)
+          out.record_gone = surface();
+          out.record_gone.opened_stream = opened;
+          await submit(inp.record);                 // record readable and terminal
+          out.record_ok = surface();
+          // A readable terminal record must actually be RENDERED, not merely
+          // survive: the pre-fix bug threw inside renderResult, so "no error"
+          // alone would not distinguish a rendered verdict from a swallowed one.
+          out.record_ok.rendered = $("result").textContent.indexOf(inp.record.status) >= 0;
+          // A poll that resolves after a NEWER run took the surface must not
+          // render: its step captions would carry the newer run's screenshots.
+          await submit(null);
+          const stale = $("status").textContent;
+          runId = "zzzzzzzz";
+          await tick(); await tick();
+          out.stale_ignored = $("status").textContent === stale;
+          // Whoever owns the surface owns both buttons.
+          busy(true);
+          out.locked = {go: $("go").disabled, check: $("check").disabled};
+          busy(false);
+          // A truncated extraction must look truncated.
+          runId = inp.run_id;
+          renderScraped({evidence: {extractions:
+            [{value: "X".repeat(inp.long_value_chars), page_text: "context"}]}});
+          const pv = $("pvtext").textContent;
+          out.clipped = {marked: pv.indexOf("\u2026") >= 0,
+                         length_shown: pv.indexOf("(" + inp.long_value_chars + " chars)") >= 0,
+                         rendered_chars: pv.length};
+          out.errors = errors;
+          window.fetch = realFetch; window.EventSource = realES;
+          window.removeEventListener("error", onerr);
+          $("live").hidden = true; $("err").hidden = true;
+          $("steps").innerHTML = ""; $("result").innerHTML = "";
+          $("pvtext").innerHTML = ""; $("pvshot").innerHTML = "";
+          return out;
+        }""", inp)
+
+    got = _await(go())
+    wrong = {}
+    for key in ("record_gone", "record_ok"):
+        end = got[key]
+        if (end["go_disabled"] or end["check_disabled"] or end["spinning"] != "none"
+                or "running" in end["status"].lower() or not end["terminal"]):
+            wrong[key] = end
+    if not got["record_ok"]["rendered"]:
+        wrong["record_ok_not_rendered"] = got["record_ok"]
+    if not got["stale_ignored"]:
+        wrong["stale_poll_rendered"] = True
+    if not (got["locked"]["go"] and got["locked"]["check"]):
+        wrong["busy_locks_both"] = got["locked"]
+    clip = got["clipped"]
+    if not (clip["marked"] and clip["length_shown"]):
+        wrong["truncation_unmarked"] = clip
+    if got["errors"]:
+        wrong["uncaught"] = got["errors"]
+    if expect.get("guidance_contains") and expect["guidance_contains"] not in got["record_gone"]["status"]:
+        wrong["guidance"] = got["record_gone"]["status"]
+    return {"passed": not wrong, "checks": {"terminal_on_every_end": not wrong},
+            "wrong": wrong, "observed": got}
+
+
 def _run_ui_progress_case(case: dict) -> dict:
     """The execution strip is driven only by acknowledged run/trace/result events."""
     inp = case["input"]
@@ -4096,6 +4218,7 @@ KINDS = {
     "ui-rendered": _run_ui_rendered_case,
     "ui-form": _run_ui_form_case,
     "ui-progress": _run_ui_progress_case,
+    "ui-terminal-state": _run_ui_terminal_state_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
     "verifier-labels": _run_verifier_labels_case,

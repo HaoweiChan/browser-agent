@@ -26,6 +26,7 @@ The assignment reviewers read this folder. One layer:
 | [013](013-m8-mutation-hostility.md) | M8: mutation & hostility, and a counter that took two rounds to become true |
 | [014](014-a-freeze.md) | M10: A-freeze, and the probe that failed the milestone it was gating |
 | [015](015-agent-control-after-the-probe-regression.md) | After the probe regression: MCP, tool-calling loops, and what actually limits completion |
+| [016](016-m38-demo-surface-and-investment-domains.md) | M38: the demo surface, and what 27 live runs said about finance pages |
 
 ## Curated file format
 
