@@ -557,25 +557,39 @@ Acceptance: `specs/001-browser-contract.md:145-150` states the null half and
 cites the third case, matching D25 and ADR-020 word for word on the predicate;
 ideally a grader covers the contract's case citations the way
 `support-matrix-cites-real-cases` covers the matrix's.
-### T-R77 — 55 committed rows are `env`-tagged AND naive-local stamped, so the `ts` inversion is reachable inside one environment            [status: todo]
+### T-R77 — 51 committed rows are `env`-tagged AND naive-local stamped, so the `ts` inversion is reachable inside one environment            [status: todo]
 Origin: PR #41 R6 (T-R44)
 Spec: `env` and the UTC stamp landed in two different commits of this PR, so the committed
 ledger has a band of rows carrying `env: local` while still stamped in naive Asia/Taipei
-time. Inside `env: local`, `20260823-140957` (14:09:57Z, post-switch) sorts ABOVE
-`20260823-210938` (13:09:38Z, pre-switch) while being later in real time — the exact
+time. The direction is the opposite of the obvious one, which is what makes it easy to get
+wrong: a Taipei stamp sorts ABOVE a UTC stamp of the same day, not below. Inside
+`env: local`, `20260823-210938` (13:09:38Z, PRE-switch, Taipei) sorts above
+`20260823-140957` (14:09:57Z, POST-switch, UTC) while being EARLIER in real time — the exact
 T-M32-13 inversion, in the one place item 9 (environment) cannot help, because both rows are
 in the same environment and the filter has nothing to separate them by.
-Not reachable today, and the reason is narrow: those rows sit at `fast` 138 and `invariant`
-54, which are dead counts, and `_band_wrong` only reads rows at the CURRENT case count. That
-is the same assumption ADR-019 §7 states for the pre-`env` rows, and it holds for the same
-reason — counts only grow. What is new is that `env`-tagged no longer implies UTC-stamped,
-so a reader who uses the tag as a proxy for "post-switch" is wrong for these 55 rows.
-Repro: `[r for r in ledger if r.get("env") == "local" and r["ts"] < "20260823-140957"]`
-returns rows whose stamps are Taipei local; compare any of them against a post-switch row of
-the same suite and count and the ordering is inverted.
+Not reachable today, and the reason is narrow: those rows sit at `fast` 138 / 154 and
+`invariant` 54 / 59, which are dead counts, and `_band_wrong` only reads rows at the CURRENT
+case count. That is the same assumption ADR-019 §7 states for the pre-`env` rows, and it
+holds for the same reason — counts only grow. What is new is that `env`-tagged no longer
+implies UTC-stamped, so a reader who uses the tag as a proxy for "post-switch" is wrong for
+these 51 rows.
+Repro — note the `>`, and note that the first published version of this block used `<` and
+therefore selected NOTHING, which is worse than filing no block at all because the next
+reader concludes the residual is gone (PR #41 R10):
+
+    rows = [json.loads(l) for l in open("evals/report/history.jsonl") if l.strip()]
+    pre  = [r for r in rows if "env" in r and r["ts"] > "20260823-16"]
+    # -> 51 rows, ts 20260823-210938 .. 20260823-220602, all `env: local`,
+    #    shas 0efb0e9 / 9840e23 / f90b58d, at fast 138/154 and invariant 54/59.
+    # min(ts) over ALL env-tagged rows is 20260823-140957 — the first UTC one —
+    # so any `ts < that` filter is empty by construction.
+
+Compare any of those 51 against a post-switch row of the same suite and count and the
+ordering is inverted.
 Acceptance: either the ledger records the regime per row (an offset, or a marker field) so
 the two are distinguishable without inference, or a band cited at a count that holds rows
-from both regimes is refused — watched red by citing a band at `fast` 138. A third option is
+from both regimes is refused — watched red by citing a band at `fast` 138, where both
+regimes are present. A third option is
 to accept it permanently and have ADR-019 §7 say `env`-tagged does not imply UTC-stamped,
 which is what it says today.
 

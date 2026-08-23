@@ -1090,18 +1090,26 @@ def _check_ci_numbers_are_derived() -> dict:
         encoding="utf-8")
     wrong = []
 
+    # §5 alone, not the whole ADR: the run id and the table both have to come from
+    # the section that publishes them, or an id mentioned three sections away
+    # satisfies the citation (PR #41 R12).
+    five = adr[adr.index("### 5."):]
+    five = five[:five.index("\n### ")] if "\n### " in five else five
+
     # §5's table is the source: `| 1 | 16.47s | 69.54s |`, invariant then fast.
     rows = [(float(a), float(b)) for a, b in
-            _re.findall(r"^\| \d+ \| ([\d.]+)s \| ([\d.]+)s \|", adr, _re.M)]
+            _re.findall(r"^\| \d+ \| ([\d.]+)s \| ([\d.]+)s \|", five, _re.M)]
     if len(rows) != 4:
         return {"passed": False, "wrong": [{"adr_five_table_rows": len(rows)}]}
     by = {"invariant": [r[0] for r in rows], "fast": [r[1] for r in rows]}
 
     # The run id that makes them checkable, in both documents.
-    # The id may sit on the next line, inside a markdown link — these are prose
+    # The id may sit on the NEXT line, inside a markdown link — these are prose
     # documents and a citation near a line end is not a defect (same reasoning as
-    # `_SIX_REF`'s wrapped slugs).
-    run_id = _re.search(r"eval-gate run\s*\[?(\d{6,})", adr)
+    # `_SIX_REF`'s wrapped slugs). Bounded to exactly that: `\s*` spans blank
+    # lines, so "eval-gate run" and a bare number two paragraphs apart used to
+    # satisfy this (PR #41 R12).
+    run_id = _re.search(r"eval-gate run[ \t]*\n?[ \t]*\[?(\d{6,})", five)
     if not run_id:
         wrong.append({"adr": "names_no_workflow_run_for_the_ci_numbers"})
     elif run_id.group(1) not in readme:
@@ -1115,13 +1123,32 @@ def _check_ci_numbers_are_derived() -> dict:
         wrong.append({"readme": "fast_attempt_list_is_not_the_adr_table",
                       "expected": want})
 
-    # ...and both suites as a min-max range.
-    for suite in sorted(by):
-        lo, hi = min(by[suite]), max(by[suite])
-        rng = f"{lo:.2f}-{hi:.2f}s"
-        if rng not in readme:
-            wrong.append({"readme": "range_is_not_the_adr_table", "suite": suite,
-                          "expected": rng})
+    # ...and both ranges WITH the ceilings they derive, bound in one match so the
+    # mapping from suite to ceiling is read rather than assumed. The ceilings were
+    # unread until PR #41 R8: editing README's `90s` to `85s` left the gate green
+    # while the sentence claimed the rule gave it.
+    m = _re.search(r"gave `invariant` ([\d.]+)-([\d.]+)s and\s+`fast` "
+                   r"([\d.]+)-([\d.]+)s, so \*\*(\d+)s\*\* and \*\*(\d+)s\*\*", readme)
+    if not m:
+        wrong.append({"readme": "publishes_no_ci_range_and_ceiling_sentence"})
+    else:
+        got = {"invariant": (float(m[1]), float(m[2]), int(m[5])),
+               "fast": (float(m[3]), float(m[4]), int(m[6]))}
+        for suite in sorted(by):
+            want = (min(by[suite]), max(by[suite]), _band_rule(max(by[suite])))
+            if got[suite] != want:
+                wrong.append({"readme": "ci_range_or_ceiling_is_not_the_adr_table",
+                              "suite": suite, "readme_says": list(got[suite]),
+                              "adr_table_gives": list(want)})
+
+    # One CI band in README, not two. T-R51's "Compounding" clause was exactly
+    # this: README published the CI band twice, incompatibly, and one of the two
+    # values was a LOCAL ledger row. The graded FORM is the bolded four-value
+    # list; a superseded band written unbolded and labelled as superseded — which
+    # is how the 95-case one is written — is deliberately not read (PR #41 R8).
+    lists = _re.findall(r"\*\*[\d.]+ / [\d.]+ / [\d.]+ / [\d.]+s\*\*", readme)
+    if len(lists) > 1:
+        wrong.append({"readme": "publishes_more_than_one_ci_band", "found": lists})
 
     # The ceilings §5 derives from its own maxima are the ones the workflow
     # declares — the chain the four numbers exist to justify.

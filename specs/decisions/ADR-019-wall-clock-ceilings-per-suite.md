@@ -135,14 +135,19 @@ commit that changed nothing but JSON.
 
 Neither band quotes the ledger's maximum, or counts the rows behind it, and that
 is the fix for a defect this file has now produced three times. The third was
-this round: §2 called its citation "the only row this count has" when the ledger
-held six, and §3 said "two rows were available ... this is the slower, chosen so
-the published number sits as close to the ledger's own maximum as a real run
-allows" when the ledger held eighteen and a 13.94s row was both closer to the
-maximum and inside the same ceiling — a stated selection rule the band did not
-follow, beside a count that was wrong, neither of them graded (PR #41 R2). A
-band sentence carries what item 2 (cited-run) grades and nothing a reader has to
-take on trust: the run, its wall clock, its result, and its `dirty` flag. §3 published **13.80s** and the final
+this round: §2 called its citation "the only row this count has" and §3 claimed a
+specific number of rows were available and that the slower had been chosen "so the
+published number sits as close to the ledger's own maximum as a real run allows".
+Both counts were wrong against the ledger committed beside them, and §3's stated
+selection rule was not the one the band followed — none of it graded (PR #41 R2).
+The counts are not repeated here, and that is deliberate rather than coy: the
+first attempt at this paragraph quoted them, and they were stale against the very
+next commit's ledger, which is the same defect one paragraph after fixing it
+(PR #41 R13). Any row count in prose is a snapshot of a file that grows on every
+gate run. `published-band-matches-the-ledger` prints `ledger_slowest` with the
+case count whenever a band needs republishing; that is the artefact. A band
+sentence carries what item 2 (cited-run) grades and nothing a reader has to take
+on trust: the run, its wall clock, its result, and its `dirty` flag. §3 published **13.80s** and the final
 `origin/main` merge brought in a 13.92s row (ts `20260823-202223`, dirty, 57/58)
 that made the sentence false — while §2, two sections up, was hand-copying its
 own maximum by the same method, so the two halves of one decision disagreed on
@@ -232,11 +237,18 @@ measurement, smaller than the one this branch ships. `gh run view 32561162459
 | 4 | 15.60s | 74.04s |
 
 Each cell is one `[eval] cost … wall Ns` line of that attempt's log, with
-`invariant` 48/48 and `fast` 116/116 in all four. Nothing grades the four
-measurements: `published-band-matches-the-ledger` reads the committed ledger and
-no CI row is in it, and `fast-wall-clock-budget` grades only that the workflow
-declares the two ceilings they derive — not that anyone ever measured them. The
-run id is what a reader checks instead of the gate (§7).
+`invariant` 48/48 and `fast` 116/116 in all four. **This table is graded** — as of
+T-R44, by `ci-numbers-are-derived`: it is the single source, README's four values,
+its two ranges and the ceilings it derives are read back FROM it, the run id above
+must appear in both documents, and the ceilings this section derives must be the
+ones `.github/workflows/eval.yml` declares. Edit a cell and the gate reddens.
+`published-band-matches-the-ledger` still does not see these numbers — it reads
+the committed ledger and no CI row is in it — which is why a second case exists.
+
+What stays ungraded is exactly one thing, and it cannot be graded from here: that
+anyone ever ran those four attempts. The run id is what a reader checks
+(`gh run view … --log`); the gate only refuses the documents drifting apart, or a
+run id no document names (T-R73).
 
 Same rule: 16.47 × 1.15 = 18.9 → **20**; 74.06 × 1.15 = 85.2 → **90**.
 
@@ -516,8 +528,10 @@ against 20 on that run. Item 4 (committed-ceiling) compares the COMMITTED ceilin
 with `rule(ledger max)`, and 20 against 20 holds, so item 4 (committed-ceiling)
 stayed green. It would go red above 17.39s — the top of that band, 20 / 1.15 —
 where `rule(ledger max)` becomes 25, and it would be **ungreenable locally**,
-because a local ledger holds no CI row to reproduce it with. That was 1.36s of
-margin, 8.5%, against a runner spread §5 itself records at 6.8%. The filter below
+because a local ledger holds no CI row to reproduce it with. Against this run's
+own 16.02s that is 1.37s of margin, 8.55%, versus a runner spread §5 itself
+records at 6.8%. (The 1.36s / 8.5% figure this paragraph used to carry is the
+same arithmetic against 16.03s — run 32637648447's number, not this one's.) The filter below
 closes item 3 (same-ceiling) and item 4 (committed-ceiling) together, because
 `slowest` is computed from the environment's own rows.
 

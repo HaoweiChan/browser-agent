@@ -140,10 +140,14 @@ same selective presentation ADR-013 Decision 4 was withdrawn over.
 CI's two numbers below are NOT in this ledger and cannot be: no CI run commits
 its wall clock, so they are measured by hand off the log of eval-gate run
 32561162459 and recorded with that id in ADR-019 §5, where `gh run view
-32561162459 --attempt N --log` reprints them. What is graded is that the workflow
-declares the values `fast-wall-clock-budget` pins; that they were ever measured
-is not, and cannot be from here — the run id is what a reader checks instead, and
-ADR-019 §7 says why this repo does not make CI commit a row.
+32561162459 --attempt N --log` reprints them. §5's table is the one source and
+`ci-numbers-are-derived` grades it: the four values, both ranges and the ceilings
+below are read back from that table, the run id has to appear here as well as
+there, and the ceilings must be the ones the workflow declares — so these numbers
+can no longer drift from ADR-019's, in either direction. What is still not graded,
+and cannot be from here, is that anyone ever measured them; the run id is what a
+reader checks instead, and ADR-019 §7 says why this repo does not make CI commit
+a row.
 
 §6 item 3 (same-ceiling) is why the published number can sit below the ledger's
 maximum, by at most one ceiling step (**4.35s**). The table below carries the
