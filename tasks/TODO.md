@@ -12,28 +12,38 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: pr]
-Origin: PR #29 R24
-Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README
-no longer publishes a property the grader does not implement — it now states
-what `_check_published_band` actually checks (case count matches, published
-maximum derives the SAME ceiling as the ledger maximum, committed ceiling >=
-the rule applied to that maximum) — and both README's band table and ADR-019's
-band lines are now regenerated from `evals/report/history.jsonl` by script, so
-the published run lists are the ledger's own and the derivation sentences
-multiply the ledger maximum at the shipped case count.
-What remains is the judgement call R24 raised: property 2 is
-`rule(published) == rule(ledger max)` rather than `published >= ledger max`.
-The weaker form was chosen deliberately (the strict form reddens on ordinary
-0.2-0.5s run-to-run variance, which is rot-by-construction one level up), and
-it does catch the harmful direction — a band justifying a LOWER ceiling than
-the truth. It does not catch a published maximum that is up to ~1.0s below the
-ledger's at these magnitudes while still landing in the same band.
-Acceptance: either the tighter property is adopted with a regeneration step
-that keeps the doc honest without hand-editing (the script that now produces
-these lists is the obvious hook), or the trade-off is stated in ADR-019 as a
-declared ceiling with the ~1.0s slack named, and a case pins the miss so it is
-a decision rather than an artefact of what was convenient to grade.
+### T-R56 — the band subsystem's documents and its own strings say what the code does            [status: in-progress]
+Origin: bundles T-R45, T-R46, T-R47, T-R48, T-R49, T-R52, T-R54, T-R55 (PR #35 R8/R17/R18/R19/R20/R21/R22 + T-R34 cold review)
+Spec: Eight debt blocks from PR #35 are the same defect in the same two documents and one
+grader: a description that does not match the code it describes. They were bundled because
+each one edits `specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md`, `README.md` and
+`src/browser/eval_adapter.py`, so eight sequential PRs would conflict on every one. The
+mechanism changes from the same review (T-R44, T-R50, T-R51, T-R53) are deliberately NOT
+in this task — they change behaviour, these change what is claimed about it.
+Acceptance: every folded block's own acceptance is met, each watched red first where it
+names a mutation:
+- T-R45 — the slack sweep matches any decimal rendering of the current value, not the one
+  string `f"{step_s:g}"`; watched red with `4.350`. Or the limit is stated in the docstring
+  beside the existing `ponytail:` note.
+- T-R46 — either §6's two restating paragraphs and README:107-109/:121 defer to the item
+  numbers, or the "one list, one place / restated nowhere" claims at ADR-019:167-168, :48-49
+  and `specs/decisions/INDEX.md`:28 are narrowed to what is true.
+- T-R47 — the keys emitted by `_check_published_band_slack` name §6's item numbers (or no
+  number), and no string there uses the retired `property N` numbering.
+- T-R48 — ADR-019 §3/§6 say the 15-deriving band was reachable and is green under the
+  current check, not that a commit of PR #35 published it; or a sha is cited that did.
+- T-R49 — either `adr_publishes_no_band_line` and `no_recorded_run_at` are folded into §6's
+  list (or named as preconditions), or ADR-019:48-49 drops "exactly"; and :69 cites items
+  2-3 for the cited run and item 4 for the ceiling.
+- T-R52 — `specs/decisions/INDEX.md`, `evals/run.py` and `.github/workflows/eval.yml` cite
+  ADR-019 for the per-suite override, not ADR-017 (which is the M36 judge ADR), and a graded
+  row resolves `ADR-0NN` references in those files against the decision that actually rules.
+- T-R54 — linearity is named as the assumption in `_band_step_s`'s docstring, or the step is
+  measured at each published band and each graded against its own.
+- T-R55 — a band citation carries `passed/total` derived from the ledger row it names, or the
+  parenthetical is dropped from both citations; watched red by publishing a band whose
+  citation claims a result the row does not have.
+Out of scope: T-R44, T-R50, T-R51, T-R53 — behaviour, not description.
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
@@ -112,19 +122,6 @@ artifact the check reads) and the band grader learns the environment dimension, 
 README's CI numbers are labelled as hand-read log values with the workflow run ids that
 produced them, and README's older CI band is struck. Watched red either way.
 
-### T-R52 — three files cite ADR-017 for the per-suite override that is ADR-019            [status: todo]
-Origin: T-R34 (cold review) (renumbered from T-R41 during the M35 merge — main had allocated that id independently)
-Spec: `specs/decisions/INDEX.md:11`, `evals/run.py:103` ("ADR-017 gives both suites the same
-treatment") and `.github/workflows/eval.yml:16` ("one variable per suite (ADR-017)") all
-attribute the one-variable-per-suite ruling to ADR-017. ADR-017 is the M36 judge ADR
-(INDEX.md:26); the ruling is ADR-019 §4. `adr-header-and-index` grades Ruling-block presence
-and INDEX numbering, so no citation body is checked, and `report-citations-resolve` covers
-report filenames, not ADR references.
-Acceptance: the three citations name ADR-019, and a graded row resolves `ADR-0NN` references
-in `src/`, `evals/`, `.github/` and `specs/` against the ADR that actually carries the
-ruling — or at minimum against the file existing and its Ruling mentioning the subject.
-Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
-
 ### T-R53 — nothing requires the runs behind a band to be green or clean            [status: todo]
 Origin: T-R34, evidence from PR #35 R5 (renumbered from T-R42 during the M35 merge — main had allocated that id independently)
 Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone; `sha`, `dirty` and
@@ -156,101 +153,6 @@ republished and no green row could exist to republish it from. Either a bootstra
 tolerates one red row and then requires green (the same as-of trick would work), or
 `_band_wrong`'s comment and ADR-019 §6 state that a band's source run may be red and say
 what that costs. Watched red with the two rows above.
-
-### T-R54 — `_band_step_s` measures the ceiling step once and publishes it as a bound for every band            [status: todo]
-Origin: PR #35 R8 (renumbered from T-R43 during the M35 merge — main had allocated that id independently)
-Spec: `_band_step_s` bisects two consecutive ceiling boundaries at x=60 and returns 4.35s,
-which `published-band-slack-is-declared` then asserts as the bound for both published bands,
-including `invariant`'s at 13.22s. The docstring justifies the bisection with "`_band_rule`
-is monotonic", but monotonicity only makes the bisection valid; what makes ONE measured step
-a bound for every band is that the rule is linear in x. Amend ADR-013's rule to anything
-scale-dependent — a percentage of the value, a floor at small magnitudes — and the published
-4.35s silently stops bounding the small band.
-Acceptance: name linearity as the assumption in the docstring, or measure the step at each
-published band and grade each against its own.
-
-### T-R55 — the `fast` band cites a red run without saying so; `invariant` discloses its result            [status: todo]
-Origin: PR #35 R17 (renumbered from T-R44 during the M35 merge — main had allocated that id independently)
-Spec: ADR-019 §2 cites ts `20260823-041419` and discloses `dirty: true` but not that the row
-is 132/134 — the run was red. §3's citation for ts `20260823-041729` discloses `53/53`. A
-reader comparing the two would reasonably read the silence as a pass. Nothing grades the
-parenthetical either way: `_BAND_LINE` captures suite, case count, ts and seconds, and the
-result is prose beside it. Green is deliberately not required of a band source (T-R42, and
-§6 says so), which is exactly why the result should be stated wherever a band is cited.
-Acceptance: the band citation carries `passed/total` from the row it names, derived rather
-than typed — the ledger row has both fields — or the parenthetical is dropped from both so
-there is nothing to be inconsistent about. Watched red by publishing a band whose citation
-claims a result the row does not have.
-
-### T-R45 — the slack sweep matches the rendered scalar, not the value            [status: todo]
-Origin: PR #35 R18
-Spec: `published-band-slack-is-declared` builds its bare-scalar regex from `f"{step_s:g}"`,
-so it sweeps for the exact string `4.35`. A document writing the same value as `4.350`, or
-`4.35 s`, or in a table cell as `4.4`, carries an ungraded copy that the sweep does not see
-and the marker check never reaches. The marked occurrences are parsed as floats and compared
-with a tolerance, so the marker half is rendering-independent; only the sweep half is not.
-Acceptance: the sweep matches any decimal rendering of the current value (a numeric scan of
-`[\d.]+s?` tokens compared as floats, rather than one string), or the limitation is stated
-in the check's docstring beside the existing `ponytail:` note. Watched red with `4.350`.
-
-### T-R46 — the "one list, one place" claim restates the properties it says it never restates            [status: todo]
-Origin: PR #35 R19
-Spec: ADR-019:167-168 says "One list, in one place; every other sentence in this
-file and in README refers to it instead of restating it"; :48-49 and
-`specs/decisions/INDEX.md`:28 say the same. In the same file, ADR-019:254-257
-restates §6 item 2's first clause in full with no reference to item 2, and
-:264-269 restates its second clause — the exact wording R15 found stale at
-§2:68-73, now living 80 lines below the list instead of 100 above it. README:107-109
-restates item 7 inside the sentence denying restatement, and README:121
-("Same ceiling, not `published >= ledger max`") restates item 3's parenthetical
-verbatim. The `ponytail:` limit at `src/browser/eval_adapter.py`:3398-3405 leans on
-the single-source list as the general defence against a newly invented false
-description, so the blacklist's stated backstop is not actually in place.
-Nothing can go red on this: `describes_a_deleted_rule` blacklists three retired
-phrases, and a correct-today restatement is by construction not on that list.
-Acceptance: either the two §6 paragraphs and README:107-109/:121 defer to the item
-numbers instead of restating their content (as :192-194 and :220 already do), or the
-single-source sentences at ADR-019:167-168, :48-49 and INDEX.md:28 are narrowed to
-what is true. Grepping §6 for a sentence that states an item's content without naming
-its number returns nothing, or the claim no longer says otherwise.
-
-### T-R47 — two emitted keys still use the retired `property N` numbering            [status: todo]
-Origin: PR #35 R20
-Spec: `src/browser/eval_adapter.py`:676 emits `r21_underpublished_band_green_on_property_2`
-and :680 emits `r21_underjustified_ceiling_green_on_property_3`. Under ADR-019 §6's
-list those are item 3 and item 4 (:173-186). The comments two lines above each were
-renumbered by PR #35 round 4 (:673-675), so the comment and the key it guards disagree,
-and a red report names §6 items off by one. The round-3 sweep claimed to cover "stale
-`property 2` / `property 3` numbering in three comments" — these are emitted strings,
-not comments, and were missed.
-Acceptance: the emitted keys name the same item numbers as §6's list (or no number at
-all), and no string in `_check_published_band_slack` uses the retired numbering.
-
-### T-R48 — ADR-019 says a band "was published" that no commit ever published            [status: todo]
-Origin: PR #35 R21
-Spec: ADR-019:101 ("that band was published, and the check was GREEN on it") and
-:236-237 ("that exact state was published in this round and the check accepted it").
-`git log --all -S'12.89 × 1.15' -- specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md`
-returns only `aeac0f7`, the round-4 repair itself quoting it as an example. The bands
-actually published across the branch were 13.22 -> 20, 13.08 -> 20 and 13.32 -> 20; the
-12.89 / -> 15 state existed only in an uncommitted working tree. The substantive half is
-true and verified — `_band_wrong` returns [] for that state, `round(12.89*1.15,2)` is
-14.82, `_band_rule(12.89)` is 15 <= 20 — only "published" is stronger than the record.
-Acceptance: the sentences say what is reproducible (the state was reachable and is green
-under the current check) rather than that a commit of this PR published it, or a commit
-sha is cited that did.
-
-### T-R49 — §6 says it lists "exactly" what the check requires, and omits two emitted shapes            [status: todo]
-Origin: PR #35 R22
-Spec: ADR-019:48-49 says "§6 lists exactly what it requires". `_band_wrong` also emits
-`adr_publishes_no_band_line` (`src/browser/eval_adapter.py`:440) and `no_recorded_run_at`
-(:461), neither of which appears in items 1-7 — nine distinct `wrong.append` shapes
-mapped onto seven items. Separately ADR-019:69 says "§6 items 2-4 are what the check
-requires **of it**" where "it" is the cited run; item 4 (:179-180) constrains the
-committed ceiling against the ledger maximum, not the cited run.
-Acceptance: either the two omitted shapes are folded into the list (or named as
-preconditions of items 1-2), or :48-49 drops "exactly"; and ADR-019:69 cites items 2-3
-for the cited run and item 4 for the ceiling.
 
 ### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: todo]
 Origin: PR #32 CI run 32626835735 (M31's check)
