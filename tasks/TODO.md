@@ -33,9 +33,9 @@ names a mutation:
 - T-R48 — ADR-019 §3/§6 say the 15-deriving band was reachable and is green under the
   current check, not that a commit of PR #35 published it; or a sha is cited that did.
 - T-R49 — either `adr_publishes_no_band_line` and `no_recorded_run_at` are folded into §6's
-  list (or named as preconditions), or ADR-019:48-49 drops "exactly"; and :69 cites items
-  2 (cited-run) and 3 (same-ceiling) for the cited run and item 4 (committed-ceiling)
-  (committed-ceiling) for the ceiling.
+  list (or named as preconditions), or ADR-019:48-49 drops "exactly"; and :69 cites
+  item 2 (cited-run) and item 3 (same-ceiling) for the cited run and
+  item 4 (committed-ceiling) for the ceiling.
 - T-R52 — `specs/decisions/INDEX.md`, `evals/run.py` and `.github/workflows/eval.yml` cite
   ADR-019 for the per-suite override, not ADR-017 (which is the M36 judge ADR), and a graded
   row resolves `ADR-0NN` references in those files against the decision that actually rules.

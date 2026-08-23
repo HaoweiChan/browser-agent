@@ -687,25 +687,38 @@ def _check_published_band() -> dict:
     # (PR #36 R5): an `item N` written about something else entirely is not a
     # reference to this list. A region that stops covering the band code is the
     # dangerous direction — it takes the scan with it and stays green — and it
-    # has happened once already here, with the markers quoted in their own
-    # definition (458 lines -> 68, all green). So the region is checked before
-    # it is read: each marker occurs EXACTLY once in the file (a comment that
-    # quotes one truncates the region; deleting one removes it), and the three
-    # band functions are inside what the markers enclose (moving one below the
-    # end marker, or writing new band code after it, drops it from the scan).
+    # has happened twice here already: the markers quoted in their own
+    # definition (458 lines -> 68, green), and a fixed list of three names that
+    # said nothing about band code added later (PR #36 R16). So the region is
+    # checked before it is read, on three counts: each marker occurs EXACTLY
+    # once in the file, EVERY band definition in the file is inside it, and the
+    # closing marker sits at a top-level boundary rather than inside a body.
     here = Path(__file__).read_text(encoding="utf-8")
     marker_counts = [here.count(m) for m in _REGION]
     region = (here.split(_REGION[0], 1)[-1].split(_REGION[1], 1)[0]
               if marker_counts == [1, 1] else "")
-    # Matched at column 0, as a definition: these names appear as strings a few
-    # lines below too, and `in region` would find THOSE — a list of what must be
-    # inside satisfying itself is the same self-reference the markers had.
-    outside = [d for d in ("_band_wrong", "_check_published_band",
-                           "_check_published_band_slack")
-               if not re.search(rf"^def {d}\(", region, re.M)]
-    if marker_counts != [1, 1] or outside:
+    # Every band definition in the FILE, not three names written down here: a
+    # fixed list pins what it happens to know about and says nothing about band
+    # code added later, which is the hole the previous version's own comment
+    # advertised (PR #36 R16). Matched at column 0, and membership is tested
+    # with a name built at runtime — a literal `def _band_wrong(` written here
+    # would sit inside the region and satisfy the test from within, which is
+    # how the first attempt at this guard passed its own mutation.
+    strays = [m.group(1)
+              for m in re.finditer(r"^def (_band\w*|_check_published_band\w*)\(",
+                                   here, re.M)
+              if f"def {m.group(1)}(" not in region]
+    # ...and the closing marker sits at a top-level boundary. Moved up into a
+    # function's body it leaves every definition inside the region, keeps both
+    # marker counts at 1, and still drops the rest of that body — 111 lines and
+    # five references, green, masking a mis-pointed one (PR #36 R16). What says
+    # so is the first non-blank line after it: indented means mid-body.
+    after = here.split(_REGION[1], 1)[-1].lstrip("\n")
+    mid_body = bool(after[:1]) and after[:1].isspace()
+    if marker_counts != [1, 1] or strays or mid_body:
         wrong.append({"band_region_does_not_cover_the_band_code":
-                      {"marker_counts": marker_counts, "not_in_region": outside,
+                      {"marker_counts": marker_counts, "outside_the_region": strays,
+                       "end_marker_inside_a_body": mid_body,
                        "region_lines": region.count("\n")}})
     for where, text in (("adr", adr), ("readme", readme), ("eval_adapter", region)):
         for m in _SIX_REF.finditer(text):

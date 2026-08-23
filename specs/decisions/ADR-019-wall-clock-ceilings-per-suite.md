@@ -194,8 +194,10 @@ reference to it — here, in README, and in the marked band region of
 `src/browser/eval_adapter.py` — names a number this list HAS and spells that
 item's slug, so a bare name, a name for an item that does not exist, a name
 aimed at the wrong item, a plural range and the retired `property N` numbering
-are each red; and that region is checked to be the band code before it is read,
-so a scan that stops scanning is red rather than green. **Not graded:** a
+are each red; and that region is checked before it is read — one occurrence of
+each marker in the file, every band definition inside them, the closing marker
+at a top-level boundary — so the five ways this scan has been made to stop
+scanning are red rather than green. **Not graded:** a
 paragraph that paraphrases a rule and names no item at all, and references in
 `tasks/TODO.md`, which is outside the scanned set (T-R62 carries both). What
 keeps those rare is that there is one list to point at, and pointing is cheaper
@@ -208,10 +210,10 @@ is about this section itself:
    clock IS the published number and whose `passed/total` the sentence states as
    that row records it — and if the row is dirty, that no clean row at that count
    existed by then. Judged as of the cited run, not as of now;
-3. (same-ceiling) the published number derives the SAME ceiling as the ledger's maximum at that
-   count — `rule(published) == rule(ledger max)`, not `published >= ledger max`;
-4. (committed-ceiling) the committed ceiling is at least `rule(ledger max)`, read from the ledger
-   and never from the published number;
+3. (same-ceiling) the published number derives the SAME ceiling as the
+   ledger's maximum at that count — `rule(published) == rule(ledger max)`, not `published >= ledger max`;
+4. (committed-ceiling) the committed ceiling is at least `rule(ledger max)`,
+   read from the ledger and never from the published number;
 5. (derivation) the derivation sentence multiplies the published number, is right to two
    decimals, and states the ceiling **the rule gives** — `_band_rule(x)` — which
    must not exceed the committed ceiling;
@@ -278,8 +280,8 @@ real change in what the
 tree costs and worth a human writing a number down. A regeneration script
 changes who types the number, not how often the interruption arrives.
 
-**What the slack cannot hide — and what it does not cover.** Item 4 (committed-ceiling) is graded
-against `rule(ledger max)` directly, from the ledger, never from the published
+**What the slack cannot hide — and what it does not cover.**
+Item 4 (committed-ceiling) is graded against `rule(ledger max)` directly, from the ledger, never from the published
 number, so a tree that crosses its band reddens the gate. R21's direction
 (12.96s published where 13.57s was recorded: 15 where the rule said 20) is red
 on that and on item 3 (same-ceiling), and the case asserts both.
@@ -289,8 +291,8 @@ the truth", which is what this section claimed first (PR #35 R4). The ledger is
 filtered to rows at the CURRENT case count, so adding one 0.0s case discards
 every earlier run: `invariant`'s runs at 51 cases reached 14.12s, and the
 first two runs at 52 cases maxed at 12.78s, which derives **15** — the number CI
-has been red against twice. Item 4 (committed-ceiling) is `>=`, so a committed ceiling above the
-freshly-derived one is accepted and nothing goes red.
+has been red against twice. Item 4 (committed-ceiling) is `>=`, so a committed
+ceiling above the freshly-derived one is accepted and nothing goes red.
 
 **And item 5 (derivation) stops short of closing that**, deliberately. It requires the
 derivation to state what the RULE gives, not what `evals/run.py` commits, so
@@ -303,9 +305,9 @@ sample derives lower, and the commit that adds the case then cannot pass its own
 gate — R11's deadlock by another route (PR #35 R16). What the deviation buys is
 that adding a case stays one commit. What it costs is a reader meeting an arrow
 smaller than the ceiling printed beside it. What still holds is that the ceiling
-itself cannot be wrong: item 6 (ruling) grades the Ruling against `WALL_BUDGET_S` and
-item 4 (committed-ceiling) grades it against the ledger, so the residue is the arrow and nothing
-else.
+itself cannot be wrong: item 6 (ruling) grades the Ruling against
+`WALL_BUDGET_S` and item 4 (committed-ceiling) grades it against the ledger, so
+the residue is the arrow and nothing else.
 
 The residue is declared, not graded: a freshly republished band is a short
 sample and therefore a LOWER bound on what the tree costs. The rule is that a
@@ -317,8 +319,9 @@ says so (T-R50 carries the widened-window option).
 never a value nobody measured. It is not necessarily the slowest run in the
 ledger — red runs and runs taken mid-edit are in there too, and the maximum of
 all of them can sit up to one ceiling step above the band source without
-anything going red. The ceiling beside it is correct either way: item 4 (committed-ceiling) grades
-it against that maximum and never against the published number.
+anything going red. The ceiling beside it is correct either way:
+item 4 (committed-ceiling) grades it against that maximum and never against the
+published number.
 
 Item 2 (cited-run)'s as-of-the-cited-run reading of cleanliness is deliberate in both
 halves. Requiring clean outright deadlocked adding a case — a tree only reaches
