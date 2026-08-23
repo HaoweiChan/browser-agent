@@ -63,20 +63,36 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 165 cases, ts `20260823-231056`, **74.29s**, 162/165
-  (`dirty: true`, ts-only for the ADR-012 reason §3 gives. This is the ledger's
-  own maximum at this count and the published number is therefore exactly it,
-  with no slack at all. It is also a run of an ABLATED build: PR #42 R2 asked
-  for proof that a guard conjunct is pinned, which means running the whole
-  suite with that conjunct removed, and those probes append rows like any other
-  run. The workload is identical — same suite, same 165 cases, one comparator
-  changed — and its three reds were the two doc-derivation cases a case
-  addition reddens plus the ablated guard's own case. Citing it is the
-  conservative direction, and item 3 (same-ceiling) requires it: the shipped
-  tree's own runs sat at 71.9-72.6s, which derives 85 while this maximum
-  derives 90, and a published band must derive what the ledger's maximum
-  derives. That ablation probes are indistinguishable from gate runs in the
-  ledger is logged as debt, `T-M38-5`.)
+- Band source — `fast` at 165 cases, ts `20260823-233143`, **73.36s**, 165/165
+  (`dirty: false`, ts-only for the ADR-012 reason §3 gives. A clean, green gate
+  run of the committed tree — the reviewer's own verification of `fb71f37`,
+  not the author's. It is also the ledger's maximum at this count, so the
+  published number is exactly it and the band carries no slack at all.)
+
+**Ablation probes are not runs, and their rows are deleted rather than cited.**
+PR #42's repair had to prove that each narrowing conjunct is pinned, which
+means running the whole suite with that conjunct removed; `evals/run.py`
+appends a history row for every run, so five rows of deliberately broken code
+landed in the ledger, one of them (74.29s, 162/165) its maximum at this case
+count. Item 3 (same-ceiling) then FORCED the published band onto it: a band
+describing code that never existed as a commit. The five rows and their five
+report files were deleted, on the precedent this repo already set — PR #20 R18,
+where `_main_exit_code` injected fabricated rows and 52 of 241 committed lines
+were probe artifacts, redirected to a temp path and *"deleted by hand as part
+of the same repair"*, because *"it is a probe of the exit-code path, not a
+run"*. An ablation probe is not a run either, and ADR-012 keeps this ledger to
+preserve what the gate actually measured.
+
+What was NOT deleted: the two rows at this count with real reds, `20260823-232059`
+(163/165) and `20260823-232408` (164/165). Those are gate runs of the shipped
+resolver taken while the derived doc numbers were mid-refresh — the code is the
+code that ships, the reds are exactly the two doc-derivation cases a case
+addition reddens, and deleting a real red run to tidy a ledger is the worse
+error. The arithmetic, stated so a reader can check it: ten rows at 165 cases,
+five of them one-per-ablation at pass counts no shipped tree produces
+(162/162/162/157/161 against a tree that is 165/165 on two independent clean
+runs), five kept. That the isolation mechanism this repo built for one probe
+class does not cover ablation is `T-M38-5`.
 
 **This band was dirty for one commit, and the reason is worth keeping.** A case
 addition forces a dirty citation: the tree only reaches its new case count while
@@ -99,7 +115,7 @@ therefore still owed, and it is a receipt commit, not a fixup — the price
 than dodged by citing a stale clean row from the smaller tree, because the count
 changed and a band has to describe the tree that ships.
 
-The `162/165` is the cited row's own result, graded against it, not prose beside
+The `165/165` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -120,14 +136,13 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 74.29 × 1.15 = 85.43 → **90**, which is exactly the committed
-ceiling and does not move it. That the two now coincide is a fact about this
-band, not a new rule: ADR-021 set 90 from a longer record at 146 cases (ledger
-slowest 74.8s), and §6's no-ratchet-down rule is why a freshly republished band
-that derives LESS — as the 158-case one did, at 85 — still leaves 90 standing.
-Item 5 (derivation) grades the arrow against the RULE, not against the
-committed ceiling, so both readings are green; this one simply has no gap to
-declare. The band
+five — gives 73.36 × 1.15 = 84.36 → **85**, which is BELOW the committed 90
+and does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
+slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
+band is a short sample and therefore a lower bound on what the tree costs. Item
+5 (derivation) grades the arrow against the RULE, not against the committed
+ceiling, which is why 85 under a §2 heading that says 90 is green and declared
+rather than a contradiction. The band
 published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has

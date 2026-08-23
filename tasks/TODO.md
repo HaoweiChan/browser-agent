@@ -87,24 +87,38 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
-### T-M38-5 — a guard-ablation probe lands in the ledger and can become the band the ADR must publish            [status: todo]
-Origin: PR #42, R2/R3's acceptance.
-Spec: proving that a conjunct is pinned means running the whole suite with that
-conjunct removed, and `evals/run.py` appends a history row for every run — so a
-build that never shipped can be the ledger's maximum at a case count, and
-ADR-019 §6 item 3 (same-ceiling) then FORCES the published band to be that row.
-That is what happened here: the shipped tree's own runs sat at 71.9-72.6s and
-the band published is 74.29s from a `READS`-widened probe. The direction is
-conservative and the workload is identical, so this is not a wrong number; it is
-a number whose provenance the ledger cannot express, and the ADR has to explain
-it in prose every time.
-Repro: run `--suite fast` with any resolver conjunct ablated, then run
+### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
+Origin: PR #42, R2/R3's acceptance and the coordinator's round-1 disposition.
+Spec: this repo already ruled that a probe is not a run and must not reach the
+committed ledger. `wall-clock-probe-history-isolated` is that ruling in force:
+`_main_exit_code` (src/browser/eval_adapter.py) redirects `R.HISTORY` and
+`R.REPORT_DIR` to a temp path because without it the probe injected fabricated
+rows — 52 of 241 committed lines were probe artifacts at PR #20 R18, deleted by
+hand as part of that repair rather than caught by a check. **The mechanism
+covers exactly one probe class: the one that calls `evals.run.main()` in
+process.** An ablation probe — the whole suite run with one guard conjunct
+removed, which is how R2/R3 require a guard to be pinned — is a subprocess gate
+run, appends rows like any other, and is invisible to that isolation.
+The consequence is not theoretical: five ablation rows landed at 165 cases, one
+of them (74.29s, 162/165) became the ledger's maximum, and ADR-019 §6 item 3
+(same-ceiling) then forced the published band onto a run of code that never
+existed as a commit. It shipped that way for one round and a reviewer caught
+it, not a check. The rows and their reports were deleted on PR #20 R18's
+precedent; the mechanism is unchanged and the next ablation sweep re-creates
+the same hole.
+Repro: run `--suite fast` with any resolver conjunct ablated, then
 `published-band-matches-the-ledger` — the probe row is indistinguishable from a
-gate run.
-Acceptance: either the runner learns an opt-out (`--no-history`, used by
-probes), or the row carries a marker the band filter can exclude, watched red
-against a ledger containing a probe row that is the maximum. Cheapest honest
-version is the opt-out; the marker is the one a future reviewer can verify.
+gate run, and if it is the slowest it dictates the band.
+Acceptance: extend the isolation `wall-clock-probe-history-isolated` already
+pins rather than inventing a second mechanism — an opt-out the probe passes
+(`--no-history`, or `EVAL_HISTORY` pointed at a temp path) so a deliberately
+broken tree cannot append to the committed time series, plus a case in that
+same file's shape: run the suite through the opt-out, assert the committed
+ledger did not grow. Watched red against today's behaviour, where it does.
+Second, cheaper half worth doing either way: `_band_wrong` should refuse a row
+whose `sha` is not an ancestor of HEAD, which is a different hole (a row from a
+branch that never merged) but the same class — a band must describe a tree that
+exists.
 
 ### T-M38-1 — D28's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: todo]
 Origin: M38, ADR-022's accepted risk.
