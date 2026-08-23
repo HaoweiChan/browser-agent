@@ -1,0 +1,20 @@
+{
+  "pr": 37,
+  "round": 1,
+  "task": "M37",
+  "result": "REPAIRED",
+  "resolutions": [
+    {
+      "id": "R1",
+      "resolution": "fixed",
+      "case_id": "ui-no-url-guard-and-example-chips",
+      "note": "`expected_examples[\"news.ycombinator.com (live)\"]` now carries `label: \"Title of an HN story\"`; `_run_ui_form_case` records each chip's rendered text (`button: chip.textContent`) on the existing render (no new context) and grades it against `Try: <label>` beside task + url.",
+      "red_watched": "Reviewer's mutation applied (label reverted to \"Who posted this HN story?\" with the new task): passed: False, wrong.expected_examples[HN].button = \"Try: Who posted this HN story?\" (task \"What is the title of this story?\" still matched). Mutation reverted.",
+      "green_after": "Shipped text: passed: True, wrong {}."
+    },
+    {"id": "R2", "resolution": "debt", "debt_id": "T-R62"},
+    {"id": "R3", "resolution": "debt", "debt_id": "T-R61", "note": "already logged by the implementer"},
+    {"id": "R4", "resolution": "orchestrator", "note": "post-merge receipt round captures GET /tasks/<id> bodies into tasks/reviews/pr37-receipts.json"}
+  ],
+  "gate_after": {"invariant": "53/53", "fast": "136/136"}
+}
