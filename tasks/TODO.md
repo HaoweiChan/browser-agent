@@ -95,6 +95,50 @@ guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
 with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
+### M35 — Visitor-facing console: verified example prompts, plain-language capabilities and limits, no-URL guard            [status: pr]
+Spec: The page speaks to the reviewer, not to the person typing a task: a
+TC1..TC5 matrix of fixture names, four "headline" limits cut from D-row
+titles, and an optional start URL that invites the one task shape the planner
+cannot plan — blind, with no page observation, run `2ce3e5c8` died at extract
+after a single navigate to a Google search. Assignment T7/T8 want capabilities
+and limits listed clearly, and the rubric reads them from the frontend. Make
+the page usable by a visitor without changing what it claims: example prompts
+that were actually run against the deployment and answered correctly; per-site
+capability cards in plain words rendered from the same `/support-matrix`
+payload (`docs/support-matrix.md` stays the single source, replacing the TC
+table outright); five plain-language limits linking to the full declared list
+with its count; a result panel that explains the status in one sentence and
+shows the answer first; and a form that refuses to spend a run on a URL-less
+task, lifting a site name out of the task text when there is one.
+Owner amendment (2026-08-22): no separate example-chip row — the per-site
+cards are the only example surface; cards list real sites only (fixture rows
+stay in the doc, not on the page) and carry no built-in/real-site tag; every
+card carries a Try button; the eyebrow line above the title goes and the
+subtitle is one short sentence; Known limits are short phrases, not sentences.
+Acceptance: gate green (invariant 100%, fast >= baseline) with no change to
+`POST /tasks`, agent, planner, verifier, or `docs/support-matrix.md`
+semantics. A NEW rendered case in the fast suite (no network), watched red
+first: a task with no URL and no site name does not POST and shows the
+guidance; a task naming a site fills the URL field from it; each example chip
+fills task + URL. `ui-execution-progress` re-pinned to the new page (example
+chips, EXAMPLES/LIMITS/EXPLAIN, what-works cards, known-limits link carrying
+the declared count); `ui-tinboker-style` ids and tokens unchanged. Every
+example prompt shipped on the page has a deployment `run_id` that answered
+correctly, cited in the code and the PR evidence — an example that cannot be
+reproduced is removed, not kept. `docs/ui.png` regenerated from a real
+deployment run through the current page; `docs/README.md` row updated.
+Every card has a Try example. An example on a site whose declared status is
+`supported`/`—` must cite a deployment run that answered correctly; an example
+on a site declared `unreliable`/`unsupported` may instead cite a run that
+demonstrates the declared status (fails loudly, never a wrong answer) and the
+card says so in one short line.
+Out of scope: planner quality on multi-hop / table lookup (M28, M34);
+API-side refusal of `url=null` (gateway cases pin it); rewriting
+`docs/product/assignment-requirements.md`.
+Reference: branch `claude/ui-discussion-improvements-0d36e5` (`ba244e7`,
+PR #31) holds a first cut made outside the loop; it is re-delivered through
+this task and PR #31 is closed in favour of this task's PR.
+
 ### M36 — responsiveness is judged by an LLM, because four structural mechanisms have failed            [status: pr]
 Origin: PR #30 post-merge confirmation (2026-08-22, deployed build `2e94bed`); owner's call on the mechanism
 Spec: M34's `not_page_furniture` compares a 20-char context window on the
@@ -122,6 +166,34 @@ Out of scope: extraction quality (M28), planner-side lint (M31). Do not remove
 M34's deterministic checks — they are cheaper and they run first.
 
 ## Debt
+
+### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: todo]
+Origin: PR #32 CI run 32626835735 (M31's check)
+Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
+process can see. CI's eval-gate job runs `--suite invariant` first, which
+appends its row to the job's copy of the ledger (16.02s at 52 cases on run
+32626835735 — CI is slower than the machine the band was measured on), then
+`--suite fast`, whose band check now compares ADR-019's published invariant
+slowest (12.92s at 52 cases, 8 local runs → rule 15) against a ledger whose
+slowest at 52 cases is CI's 16.02s → rule 20 → FAIL (`fast 132/133`), while
+the same tree is green locally. Main passes only because at 51 cases the
+published slowest happens to be 14.12s → 20 == CI's 16s → 20. The fast band
+cannot trip this way (its row is written after the fast run), so the defect
+is: any PR that grows the invariant suite by one case and republishes the band
+from local runs is red on CI unless some committed local run happens to derive
+the same ceiling CI's machine does. ADR-019 itself rules that ceilings are per
+(suite, environment); the grader is not.
+Repro: on a tree whose invariant case count differs from ADR-019's published
+band count, run `--suite invariant` on a slower machine, then `--suite fast` on
+the same ledger: `published-band-matches-the-ledger` reports
+`{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
+"ledger_slowest": 16.02, "ledger_derives": 20}`.
+Acceptance: rows carry their environment (e.g. the effective
+`EVAL_WALL_BUDGET_S_*` or an env tag) and the check compares a published band
+only against rows from the same environment; a case pins that a slower
+foreign-environment row does not redden the band. Until then, M35 moved its
+one new invariant case to `fast` (it is a pure-code doc check) so the
+invariant band stays the 51-case band main measured.
 
 ### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: todo]
 Origin: PR #29 R24
@@ -321,6 +393,47 @@ already is (`ValueError` -> `failure:semantic`), watched red first. Deliberately
 NOT done in M31: no enumeration in this repo produces one — every `extract_all`
 in the eval set reads one column of one page — and the ponytail comment on
 `rank` names the ceiling and this upgrade path.
+### T-R42 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: todo]
+Origin: PR #32 R7 (LOW)
+Spec: `_check_examples_cover_matrix` finds keys with `^\s*"([^"]+)":\s*\{` over the `const EXAMPLES = {` block, so an entry written mid-line is silently dropped from the parsed set. Every consequence reproduced fails in the safe direction today (added/renamed doc row → red; `const EXAMPLES={` reformat → IndexError → passed=False; a mid-line real-site key → red as rows_without_example), so this is robustness, not a gap.
+Acceptance: the check parses the object (whole-block regex or a JSON export of EXAMPLES) so formatting cannot change what it sees; a case pins that a mid-line key is counted.
+
+### T-R39 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
+Origin: PR #32 R2 (LOW)
+Spec: the page's no-URL guard derives a start URL from any `label.tld` token in the task text. Measured false positives: "What version of node.js is listed?" → `https://node.js`, "Open README.md and read the title" → `https://README.md`, "Find setup.exe download link" → `https://setup.exe`, "email john@example.com about it" → `https://example.com`. The lifted URL is written to `#url` and POSTed in the same click, so the run is spent (ends `failure:nav`, $0, but a slot and a red result the visitor did not intend).
+Acceptance: common file extensions and e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the `ui-no-url-guard-and-example-chips` case gains one such input asserting no POST and the guidance shown.
+
+### T-R40 — two case provenances cite dangling pre-rebase shas            [status: todo]
+Origin: PR #32 R5 (LOW)
+Spec: `evals/adversarial/ui-no-url-guard.json` says "watched red against the pre-M35 page (main 2a11142)" and `ui-execution-progress.json` cites `e07ac07`; neither commit is on any branch after the rebase onto `2e94bed`, so the red-first evidence becomes unreachable after gc and "2a11142" is not main.
+Acceptance: provenance cites reachable shas (`b7daac4` as the pre-M35 page; the watched-red amendment against the branch's own prior commit or a described patch); `report-citations-resolve`-style check if one exists for shas.
+
+### T-R41 — the shared `_ui_page` render leaks the form case's state into `ui-rendered-narrow`            [status: todo]
+Origin: PR #32 R6 (LOW)
+Spec: `_run_ui_form_case` stubs `window.fetch` and never restores it, and leaves `#err` visible and `#task`/`#url` filled on the cached (390, dark) page that `ui-rendered-narrow` then reuses; the two cases are order-coupled through `sorted(rglob)`. Passes today; no failure reproduced.
+Acceptance: the form case restores `window.fetch` and resets `#err`/`#task`/`#url` at the end (or the rendered case asserts its own preconditions) so the two cases are order-independent in either order.
+
+### T-M35-WALL — the fast suite sits within 0.3s of its 60s wall-clock ceiling            [status: todo]
+Origin: M35 implementer
+Spec: `--suite fast` measured 59.01 / 59.06 s before M35 and 59.38 / 59.71 s
+with M35's one new rendered case (0.33 s on the shared browser). ADR-002
+Decision 4's ceiling is enforced by `evals.run` (`fast-wall-clock-budget`), so
+the next case — or ordinary machine noise — turns the gate red on timing, not
+on correctness, and the pre-commit hook with it — and it did: the orchestrator's
+gate on M35's first commit measured 60.31 / 60.73 s (`evals/report/
+20260822-170105-fast.json`, `-170218-fast.json`). M35 bought the margin back
+inside eval code only: `verifier-sparse-page-not-a-dump` moved from
+`slow-asset.html` to the equally sparse `sparse.html` (4.06 s → 0.44 s; it
+grades the page-size floor, not the hanging `load`), and the two rendered UI
+cases share one `_ui_page` render (no extra context). What remains is
+structural: ~45 s of the suite is product timeouts exercised on purpose (the
+2 s postcondition/`load` bounds, the 10 s click actionability bound in
+`l4-shop-overlay-modal`), so the next few cases will breach again.
+Repro: `.venv/bin/python -m evals.run --suite fast` twice and read `wall_s` in
+`evals/report/history.jsonl`; compare with the 60 s budget.
+Acceptance: a decision recorded in an ADR — either the suite sheds wall clock
+(shared contexts, fewer duplicate fixture loads, or the parallel runner M14) or
+the ceiling moves with a reason — and the suite runs with >= 5 s of headroom.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5

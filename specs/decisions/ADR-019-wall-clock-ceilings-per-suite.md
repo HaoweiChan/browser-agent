@@ -55,7 +55,14 @@ decision that amends it.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Slowest recorded `fast` run at 132 cases: **66.33s** — 6 runs:
+- Slowest recorded `fast` run at 134 cases: **62.45s** — 2 runs:
+  62.41 / 62.45s. (M35 ships two more `fast` cases than the
+  132-case tree below; the band is re-measured at the new count as rule 1 of the
+  grader requires. 62.45 × 1.15 = 71.8 → 75; the committed ceiling stays **80**,
+  which the rule treats as a floor — the 132-case tree measured 76.3 on the
+  same machine.)
+- Superseded band, 133 cases: **62.25s** — 2 runs: 62.03 / 62.25s.
+- Superseded band, 132 cases: **66.33s** — 6 runs:
   65.72 / 65.83 / 65.84 / 66.13 / 66.25 / 66.33s.
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
