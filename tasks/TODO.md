@@ -184,6 +184,18 @@ than typed — the ledger row has both fields — or the parenthetical is droppe
 there is nothing to be inconsistent about. Watched red by publishing a band whose citation
 claims a result the row does not have.
 
+### T-R56 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
+Origin: M37 implementer
+Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
+because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
+failure:locate, two "pg" links). The form's `#task` placeholder in `src/browser/server.py`
+(`placeholder="e.g. Who submitted this story?"`) is the same prompt, unchanged because M37's
+acceptance reads "No other page text changes" and nothing grades placeholder text. A visitor
+who types the placeholder verbatim against the HN card's URL reproduces the retired failure.
+Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
+"What is the title of this story?" is the obvious one), pinned by the ui-form case the way
+`expected_examples` pins a chip — or a note that placeholders are illustrative only.
+
 ### T-R45 — the slack sweep matches the rendered scalar, not the value            [status: todo]
 Origin: PR #35 R18
 Spec: `published-band-slack-is-declared` builds its bare-scalar regex from `f"{step_s:g}"`,
