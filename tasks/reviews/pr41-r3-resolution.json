@@ -1,0 +1,41 @@
+{
+  "pr": 41,
+  "round": 3,
+  "resolutions": [
+    {
+      "id": "R14",
+      "resolution": "fixed",
+      "route_taken": "wider — the second source already existed",
+      "detail": "Reproduced first: `| 2 | 15.85s |` -> 15.90 and `| 4 | 15.60s |` -> 15.99 both returned passed True. Rows 1 and 3 were pinned only by accident of being min and max. Rather than take the narrow statement, found a cheaper rung: `.github/workflows/eval.yml`'s comment block already carries all eight cells in attempt order and NOTHING READ IT — a third copy free to drift. `ci-numbers-are-derived` now compares §5's table to it cell-by-cell, closing R14 and a live drift risk in ~8 lines without inventing README content to grade.",
+      "watched_red": "all eight cells mutated one at a time, each red, each reporting both copies side by side. The two that were green: inv a2 15.85->15.90 and inv a4 15.60->15.99. The workflow copy is graded in the other direction too; deleting its block gives workflow_comment: null.",
+      "verified_by_orchestrator": "both previously-green mutations now return passed False with {suite: invariant, adr_five_table: [...], workflow_comment: [...]}"
+    },
+    {
+      "id": "R15",
+      "resolution": "fixed",
+      "detail": "§7 rewritten to list what actually holds at HEAD and keep only the ungraded half. The paragraph also names itself as the third site of the same claim, so the pattern is in the record rather than quietly repaired.",
+      "verified_by_orchestrator": "`grep -c 'graded stays what was graded'` -> 0"
+    },
+    {
+      "id": "R16",
+      "resolution": "fixed, plus a second defect found while verifying it",
+      "detail": "Confirmed fast/138 is 10 rows, all Taipei, no mixed bucket anywhere. Clause dropped, real grouping stated, watched-red redirected to a constructed ledger.",
+      "second_defect": "the round-2 selector `ts > \"20260823-16\"` returned 51 when written and 52 at repair time — it had picked up a UTC row stamped 20260823-160006. Third wrong selector this block has carried, and each was the mistake the block is about. Now bounded on both sides (`\"20260823-2000\" <= ts <= \"20260823-2359\"` -> 51, stable). Also found `f90b58d` appears on BOTH sides of the switch — it was HEAD while the change sat uncommitted — so sha is not a discriminator either. Both facts are in the block.",
+      "verified_by_orchestrator": "the old selector now returns 60 and is still drifting; the bounded selector returns 51"
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [],
+  "human_decision": "option A after the round-3 circuit breaker — one bounded round on R14/R15/R16, then close out",
+  "method_change": "every grading claim was mutated BEFORE commit rather than swept afterwards, per the orchestrator's instruction: eight ADR cells; the workflow copy edited and deleted; README's four fast values, fast range, invariant range, run id; the workflow ceiling against what §5 derives (red in both cases that read it, which is why both exist); item 9's filter; stamp() reverted to local; a band relabelled ci; the marked-region guard.",
+  "stated_narrowly_rather_than_widened": [
+    "all three copies could be wrong together and this stays green — the check refuses drift BETWEEN copies, not error SHARED by them. No mutation can demonstrate the difference, so it is named as unpinned rather than implied away. T-R73 carries it.",
+    "CI figures outside §5, README and the workflow comment are unread — ADR-013's superseded 95-case band in particular, owned by `task/T-M32-9`.",
+    "the one-band rule's bolded-form limit from round 2 stands unchanged and still stated."
+  ],
+  "gate": {
+    "invariant": "61/61 = 1.000",
+    "fast": "156/156 = 1.000"
+  },
+  "provisional_unchanged": "band citations, README's table row, case-count strings and 'Where it stands' await the post-#40/#42 pass"
+}
