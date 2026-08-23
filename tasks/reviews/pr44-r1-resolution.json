@@ -1,0 +1,48 @@
+{
+  "pr": 44,
+  "round": 1,
+  "task": "M39",
+  "commit": "aac4766",
+  "gate_after_repair": {"invariant": "59/59 = 1.000, 13.92s / 20", "fast": "156/156 = 1.000, 70.69s / 90", "cost_usd": 0.0},
+  "orchestrator_verification": "Ran the reviewer's own repro (scratchpad/repro.py, mocking urllib.request.urlopen over the real live_judge and _apply_judge) against the repaired tree. All four shapes now return verdict=FAIL attempts=1 calls=1 with the reject's reason intact, where three of them returned verdict=PASS attempts=2 calls=2 at review time.",
+  "resolutions": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "outcome": "fixed",
+      "covered_by": "evals/adversarial/judge-retry-only-on-unreadable-completion.json — 12 scenarios grown to 17: the three R1 shapes plus one per new guard",
+      "watched_red": "Before any fix, on the reviewed HEAD: 'fenced reject + trailing prose' want {verdict: FAIL, responsive: false, attempts: 1, calls: 1, judge_tokens: 7} / got {verdict: PASS, attempts: 2, calls: 2, judge_tokens: 14, responsive: true}; 'leading prose + fenced reject' and 'bare reject + trailing prose' identically PASS/2/2.",
+      "fix": "Replaced wrapper-stripping with a scan. `_json_objects` walks the body with json.JSONDecoder.raw_decode and returns every top-level JSON object, skipping to each object's end index so a nested object is not counted twice. Bare, fenced, one-line, leading prose, trailing prose all read the same bytes the same way. Zero objects is the unreadable class and the ONLY retryable one; two or more is ambiguous ('the schema is {...}, my answer is {...}') and fails closed on attempt 1 rather than being picked by position. The fence strip and the now-unused `re` import are deleted.",
+      "rationale": "Three rounds of the same defect (one-line fence, then fullmatch fence, then this) is a signal that predicting wrapper shapes is the wrong mechanism, not that the prediction needed another patch.",
+      "ablations": "Both new guards ablated to prove they can go red: removing the ambiguity check and removing the nested-skip each redden the case to 58/59. The implementer reported that its FIRST nested-skip ablation was a silent no-op (wrong indentation in the patch string, matched nothing, reported green), caught and redone. Recorded because a green ablation is exactly what must not be taken on trust."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "covered_by": "published-band-matches-the-ledger, published-band-slack-is-declared (both green)",
+      "fix": "invariant band re-cited to ts 20260823-235258, 13.92s, 59/59, dirty:false (x1.15 = 16.01 -> 20). README table follows.",
+      "deviation_from_instruction": "The orchestrator asked for a corrected ranking. The implementer deliberately shipped NO ranking claim in either parenthetical, and flagged it rather than burying it: it first wrote 'both the slowest and the ledger's own maximum as of publication', then its own gate runs pushed the invariant maximum to 14.12s — which would have shipped that sentence falsified by the same commit that wrote it, i.e. R2/R3 again one round later. Both parentheticals now state only what stays true (the row is clean and green) and defer the maximum relationship to item 3 (same-ceiling), which is graded on every run rather than asserted in prose. R2's acceptance explicitly permits dropping the clause. The orchestrator accepts this as better than the instruction given."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "covered_by": "published-band-matches-the-ledger (green)",
+      "fix": "fast band re-cited to ts 20260823-235409, 70.78s, 156/156, dirty:false (x1.15 = 81.40 -> 85). The false universal 'every row at this count is dirty ... no clean row was available' is gone, because the citation is now itself a clean row. Verified both bands still hold against this commit's own rows: fast published 70.78 -> 85, ledger max 71.69 -> 85; invariant published 13.92 -> 20, ledger max 14.12 -> 20. Also collapsed two retyped copies of a band's passed/total (153/153 and an orphaned duplicate 151/153, pre-existing) into one number-free sentence, same drift reason."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "outcome": "debt",
+      "became": "T-M39-5",
+      "note": "docs/analysis.md coverage section publishes 89 of 153 fast cases and 244 actions citing a superseded report, where the report this PR commits records 91 of 156 and 248. Out of scope per the pr-loop scope boundary; not touched this round."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "outcome": "rejected",
+      "reason": "Not a defect. The pr-loop protocol sets a task block to [status: in-progress] at IMPLEMENT and to [status: pr] at EVIDENCE. The orchestrator sets it, and this PR had not reached EVIDENCE at review time. tasks/TODO.md was not touched this round."
+    }
+  ]
+}

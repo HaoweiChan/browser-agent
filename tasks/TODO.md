@@ -238,6 +238,22 @@ Acceptance: a decision (retry, or refuse and say why) recorded as an ADR
 amendment, with the probe widened to express an envelope-level failure and the
 chosen behaviour watched red first.
 
+### T-M39-5 — `docs/analysis.md`'s coverage counts are stale under a preamble that says they are current            [status: todo]
+Origin: PR #44 R1 review, finding R4 (LOW, out of scope for M39's spec).
+Spec: `docs/analysis.md:57-63` opens "Every count in the rest of this section
+is the current one" and then publishes "244 browser actions in a `fast` run;
+**89 of the 153** `fast` cases drive a real Chromium end to end", read out of
+`evals/report/20260823-211825-fast.json`. The report M39 commits and cites
+everywhere else, `evals/report/20260823-232036-fast.json`, records
+`actions: 248` and `cases_with_budgets: 91` at 156 cases. The line three lines
+above it was updated in the same PR, so the section contradicts itself.
+`docs-numbers-are-derived` grades only the `{total} distinct cases` split
+quote, so nothing recomputes this pair — which is why it drifted.
+Repro: `python3 -c "import json;d=json.load(open('evals/report/20260823-232036-fast.json'));print(d['totals']['actions'], d['totals']['cases_with_budgets'])"` prints `248 91`; compare with `docs/analysis.md:61`.
+Acceptance: the sentence reads against the report the tree actually publishes,
+and `docs-numbers-are-derived` is widened to grade this pair too — a number no
+check recomputes is a number that goes stale again. Gate green.
+
 ### T-M39-4 — truncation without `finish_reason` is indistinguishable from an empty body            [status: todo]
 Origin: M39 cold review, finding 1 — the residue of the fix, declared in
 ADR-023's Consequences.
