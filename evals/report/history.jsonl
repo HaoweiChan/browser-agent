@@ -1059,3 +1059,11 @@
 {"ts": "20260823-193416", "suite": "fast", "sha": "3a00e87", "dirty": true, "passed": 152, "total": 152, "score": 1.0, "wall_s": 71.01, "cost_usd": 0.0, "report": null, "p95_s": 2.35, "recovery": "8/8", "mutation": "9/11"}
 {"ts": "20260823-194524", "suite": "invariant", "sha": "b50c7b1", "dirty": true, "passed": 58, "total": 58, "score": 1.0, "wall_s": 13.46, "cost_usd": 0.0, "report": null, "p95_s": 2.32}
 {"ts": "20260823-194642", "suite": "fast", "sha": "b50c7b1", "dirty": true, "passed": 152, "total": 152, "score": 1.0, "wall_s": 70.83, "cost_usd": 0.0, "report": null, "p95_s": 2.33, "recovery": "8/8", "mutation": "9/11"}
+{"ts": "20260823-194847", "suite": "fast", "sha": "b50c7b1", "dirty": true, "passed": 152, "total": 152, "score": 1.0, "wall_s": 70.87, "cost_usd": 0.0, "report": null, "p95_s": 2.3, "recovery": "8/8", "mutation": "9/11"}
+{"ts": "20260823-195818", "suite": "invariant", "sha": "11545a1", "dirty": false, "passed": 58, "total": 58, "score": 1.0, "wall_s": 12.93, "cost_usd": 0.0, "report": null, "p95_s": 2.23}
+{"ts": "20260823-200456", "suite": "invariant", "sha": "11545a1", "dirty": false, "passed": 58, "total": 58, "score": 1.0, "wall_s": 13.78, "cost_usd": 0.0, "report": null, "p95_s": 2.28}
+{"ts": "20260823-200509", "suite": "invariant", "sha": "11545a1", "dirty": false, "passed": 58, "total": 58, "score": 1.0, "wall_s": 13.18, "cost_usd": 0.0, "report": null, "p95_s": 2.29}
+{"ts": "20260823-200523", "suite": "invariant", "sha": "11545a1", "dirty": false, "passed": 58, "total": 58, "score": 1.0, "wall_s": 13.12, "cost_usd": 0.0, "report": null, "p95_s": 2.29}
+{"ts": "20260823-200925", "suite": "fast", "sha": "11545a1", "dirty": false, "passed": 152, "total": 152, "score": 1.0, "wall_s": 70.64, "cost_usd": 0.0, "report": null, "p95_s": 2.34, "recovery": "8/8", "mutation": "9/11"}
+{"ts": "20260823-201146", "suite": "invariant", "sha": "11545a1", "dirty": true, "passed": 58, "total": 58, "score": 1.0, "wall_s": 13.15, "cost_usd": 0.0, "report": null, "p95_s": 2.31}
+{"ts": "20260823-201303", "suite": "fast", "sha": "11545a1", "dirty": true, "passed": 152, "total": 152, "score": 1.0, "wall_s": 70.61, "cost_usd": 0.0, "report": null, "p95_s": 2.33, "recovery": "8/8", "mutation": "9/11"}

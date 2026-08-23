@@ -62,15 +62,15 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 152 cases, ts `20260823-192648`, **70.22s**
-  (`evals/report/20260823-192648-fast.json`, 152/152 — GREEN, and said so
-  deliberately: PR #34 R21's finding was that the enumeration this section used
-  to carry published only the three RED runs at the shipped case count. `dirty:
-  true`, because the tree it measured is the `origin/main` merge before the
-  merge commit exists; §6's last two paragraphs are why that is allowed — dirty
-  is refused only against a clean row that existed by then, and there are none
-  at this count. The ledger's own maximum here is 70.38s, from the first run of
-  this tree, and derives the same ceiling.)
+- Band source — `fast` at 152 cases, ts `20260823-200925`, **70.64s**
+  (152/152, and `dirty: false` — a green run writes no per-case report under
+  ADR-012's policy, so the ledger row is the whole artifact, which is why this
+  sentence cites the ts and not a file. Both halves are deliberate. GREEN,
+  because PR #34 R21's finding was that the enumeration this section used to
+  carry published only the RED runs at the shipped case count. CLEAN, because a
+  dirty citation is what made this band red on CI and green locally — see the
+  CI paragraph at the end of §6. The ledger's own maximum here is 71.01s and
+  derives the same ceiling.)
 
 Every run of this tree is in `evals/report/history.jsonl`, committed beside
 this file; the sentence above names the one the band is derived from by its
@@ -86,7 +86,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 70.22 × 1.15 = 80.75 → **85**, which is BELOW the committed 90 and
+five — gives 70.64 × 1.15 = 81.24 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
@@ -106,13 +106,17 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 58 cases, ts `20260823-192533`, **13.15s**
-  (`evals/report/20260823-192533-invariant.json`, 58/58 — green, same reasoning
-  as §2. The ledger's maximum at this count is 13.80s, from the first run of
-  this tree while the docs were still mid-edit; it derives the same ceiling,
-  which is what item 3 grades).
+- Band source — `invariant` at 58 cases, ts `20260823-200456`, **13.78s**
+  (58/58, `dirty: false`, ts-only for the same ADR-012 reason as §2. Four clean
+  rows were available at this count — 12.93 / 13.78 / 13.18 / 13.12s, taken as
+  they came, not selected for their numbers. 12.93s is disqualified: it derives
+  **15** where the ledger's maximum derives 20, which is item 3. Of the three
+  that qualify, this is the slowest, chosen so the published number sits as
+  close to the ledger's own maximum of 13.80s as a real run allows — §6 tolerates
+  up to one ceiling step of slack, and the point of R21 was that publishing
+  below the maximum is how a band drifts, so take the least slack on offer.)
 
-The same rule gives 13.15 × 1.15 = 15.12 → **20**, which is the committed
+The same rule gives 13.78 × 1.15 = 15.85 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.4" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

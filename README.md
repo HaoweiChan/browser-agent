@@ -141,8 +141,8 @@ is in the ledger; enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 152 | 70.22s | 80.75 | **90s** |
-| `invariant` | 58 | 13.15s | 15.12 | **20s** |
+| `fast` | 152 | 70.64s | 81.24 | **90s** |
+| `invariant` | 58 | 13.78s | 15.85 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of the shipped tree gave `invariant` 14.80-16.47s and `fast`

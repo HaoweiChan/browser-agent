@@ -125,6 +125,96 @@ shape that implies verdict PASS — empty, `{"status": "success"}`, and
 `{"verdict": "PASS"}` alike — with the fix watched red on a non-empty `expect`
 first, so it cannot be closed by special-casing the empty one.
 
+### T-M32-13 — the band ledger's `ts` is not a valid ordering key across environments, so a locally-derived band is structurally red on CI            [status: todo]
+Origin: PR #34 round 5 CI diagnosis.
+**Latent defect in main's property. This PR triggered it; this PR did not
+introduce it; it is deliberately NOT repaired here.** Repairing it means
+changing `published-band-matches-the-ledger`, a graded property that arrived
+with PR #35, in a PR that needs it green — which is the exact move CLAUDE.md
+hard rule 1 exists to prevent. Goes to the human as a finding.
+
+Spec: `evals/run.py` stamps every ledger row with a naive
+`time.strftime("%Y%m%d-%H%M%S")` — no zone, no offset — and
+`_band_wrong` compares those strings lexicographically (`r["ts"] <= ts`) as if
+they were a total order on real time. The committed ledger mixes two zones:
+local rows are Asia/Taipei (UTC+8), CI rows are UTC. Across two zones the
+comparison is simply wrong.
+
+Where it bites is ADR-019 §6 item 2's dirty clause: a dirty cited row is
+refused if any CLEAN row at that count has `ts <= cited ts`. On CI the checkout
+is clean, so every CI row is `dirty: false` and becomes a disqualifier for any
+locally-cited dirty band.
+
+The concrete pair, from run 32637648447 on `11545a1`:
+
+| row | stamped | real time (UTC) |
+|---|---|---|
+| our cited invariant band | `20260823-192533` | 11:25:33Z |
+| CI's invariant row | `20260823-115044` | 11:50:44Z (`gh` confirms the step ran 11:50:28-11:50:45Z) |
+
+CI's row is **25 minutes LATER in real time and 8 hours EARLIER as a string**,
+so the check reads it as having existed "by then" and retroactively reddens a
+published band — which is precisely the treadmill §6's as-of rule was written
+to refuse (PR #35 R11). The rule is sound; its ordering key is not.
+
+Not a wall-clock effect. Control: hold the CI row's wall clock (16.03s) and
+`dirty: false` fixed and move only its `ts` later — the case goes GREEN. The
+16.03-vs-13.15 gap does nothing.
+
+**Why main is green, and why that does not generalise.** Main cites
+`20260823-041729` for its invariant band: 04:17 local = 2026-08-22 20:17Z, so
+any same-day CI stamp sorts after it and nothing trips. Replaying the real CI
+row against main's published band, counts and ceilings through `_band_wrong`
+returns GREEN. But main's first CLEAN row at 53 invariant cases is
+`20260823-042306` — **six minutes after** the row it cites. Main is green by six
+minutes, and only because it happened to republish its band in the small hours.
+Any band republished during Taipei daytime lands in the vulnerable window, which
+is essentially every future one.
+
+**Second symptom, same blindness.** CI's own row also enters `ledger max`
+mid-job. CI's `invariant` measured 16.03s, which derives 20 and is fine today;
+the next band starts at **17.39s**, above which `rule(ledger max)` = 25 > the
+committed 20, item 4 goes red, and it is **ungreenable locally** because the
+local ledger has no CI rows to reproduce it. 1.36s of margin, **8.5%**, against
+a runner spread ADR-019 §5 itself records as **6.8%**. The `fast` side already
+shows the gap concretely: CI measured 77.65s, which derives **90**, while the
+band published from local runs derives **85**. That pair is red on item 3 the
+moment both rows sit in one ledger. It does not fire today only because a run's
+own row is appended AFTER its cases are graded (`evals/run.py:210` grades,
+`:289` appends), so CI's `fast` row never exists while the `fast` step is being
+graded, and CI never pushes.
+
+**The structural asymmetry, stated plainly.** CI never pushes, so no CI row is
+ever committed, so every local gate run is green BY CONSTRUCTION on exactly the
+rows that redden CI. This whole failure class is invisible from a local gate —
+which is why it survived to be found by a CI run rather than by the check.
+
+Repro: append `{"ts": "20260823-115044", "suite": "invariant", "sha":
+"11545a1", "dirty": false, "passed": 58, "total": 58, "score": 1.0, "wall_s":
+16.03, ...}` to a scratch copy of the ledger, point `evals.run.HISTORY` at it,
+and run `published-band-matches-the-ledger` against a band citing a dirty local
+row stamped later in the day. Payload:
+`{"cited_a_dirty_run": "<ts>", "clean_runs_available_by_then": ["20260823-115044"]}`.
+
+Acceptance: two candidate fixes, neither applied here.
+1. **Stamp `ts` in UTC**, or record the offset beside it, so the comparison is
+   valid. Smallest change; fixes the ordering symptom only.
+2. **Record the environment on each row and scope the ledger by it.** Fixes both
+   symptoms, and is arguably what ADR-019 §5 already ASSUMES when it says CI's
+   numbers "are not in that ledger and cannot be" — they are, mid-job, just
+   never committed.
+Whichever is chosen, watch it red first against the repro above.
+
+**What the round-5 repair did NOT solve.** PR #34 re-cited both bands to CLEAN
+rows, which makes item 2's dirty clause unreachable for THESE bands under any
+clock. That is a fix for this branch's documents, not for the property. Adding a
+case still forces a dirty cited row, because the tree only reaches count N+1
+while the new case is uncommitted — which is the entire reason the dirty
+allowance exists. So the next case added from a daytime session re-triggers this
+on CI and needs a SECOND commit to re-cite a clean row once the first has
+landed. The PR #35 R11 deadlock is not solved, it is relocated from local into
+CI, where it is invisible until push and costs a full push/CI cycle to discover.
+
 ### T-M32-12 — T-R34 left the Queue when it merged but never got its DONE.md line            [status: todo]
 Origin: PR #34, found during the fourth `origin/main` merge of round 5 while
 reading the auto-merged `tasks/TODO.md`.
