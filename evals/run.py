@@ -172,18 +172,25 @@ def git_sha():
 
 # Which machine measured a row. A ceiling is per (suite, environment) — ADR-019's
 # own Ruling — but until T-R44 the ledger had no environment dimension at all, so
-# `published-band-matches-the-ledger` compared a locally-measured band against
-# whatever rows the process could see. On CI that includes CI's own `invariant`
-# row, appended by the step before: red on CI, green locally, same tree.
+# `published-band-matches-the-ledger` read whatever rows the process could see,
+# and on CI that includes CI's own `invariant` row, appended by the step before.
+#
+# What that row did was NOT "be slower": it was CLEAN and its `ts` sorted early.
+# `stamp` below is naive local time, and the band check treats those strings as an
+# ordering on real time, so a CI row written 25 minutes after the band row lands
+# eight hours before it and answers yes to "was a clean row already available?"
+# ADR-019 §7 has the mechanism and the control; T-R77 carries the `ts` half, which
+# this tag makes unreachable across environments without repairing it.
 #
 # NOT derived from the effective `EVAL_WALL_BUDGET_S_*`, which is the obvious
 # guess and is wrong in exactly the case that produced the defect: CI's
 # `invariant` ceiling is 20 and so is this laptop's, so the two environments
 # would share a tag on the suite that broke.
 #
-# `CI` is set by GitHub Actions (and by essentially every other runner), so the
-# fallback tags a runner correctly without the workflow having to remember; the
-# explicit variable is there for a third environment that wants a name of its own.
+# The `CI` fallback is what actually tags a runner — GitHub Actions sets `CI`
+# unconditionally, as does essentially every other runner, so no workflow has to
+# remember. `EVAL_ENV` is for a third environment that wants a name of its own,
+# and for saying it out loud where a reader of the workflow will see it.
 EVAL_ENV = "EVAL_ENV"
 
 

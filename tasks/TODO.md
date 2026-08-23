@@ -33,6 +33,17 @@ band count, run `--suite invariant` on a slower machine, then `--suite fast` on
 the same ledger: `published-band-matches-the-ledger` reports
 `{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
 "ledger_slowest": 16.02, "ledger_derives": 20}`.
+Correction (2026-08-23, implementer): the Repro and the sentence above about
+slower hardware name the wrong clause. Wall clock is not what fired on run
+32626835735. `ts` is naive local time compared as a string, CI's row is clean,
+and it sorted eight hours before a band row it followed by 25 minutes — so item 2
+(cited-run)'s dirty allowance, not item 3 (same-ceiling), reddened the band.
+Root-caused on `task/M32` as T-M32-13, replayed before the fix was described;
+ADR-019 §7 carries the mechanism and the control. The `slowest` symptom this
+block describes is real but was latent (16.03s derives the committed 20; it only
+bites above 17.39s). The acceptance below is unchanged and is met either way —
+the environment tag closes both clauses — and the `ts` ordering itself is carried
+as T-R77 rather than treated as fixed.
 Acceptance: rows carry their environment (e.g. the effective
 `EVAL_WALL_BUDGET_S_*` or an env tag) and the check compares a published band
 only against rows from the same environment; a case pins that a slower
@@ -106,6 +117,46 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-R77 — `ts` is naive local time and the band check reads it as an ordering on real time            [status: todo]
+Origin: T-R44 (root-caused on `task/M32` as T-M32-13)
+Spec: `evals/run.py:284` stamps `time.strftime("%Y%m%d-%H%M%S")` — local wall time, no zone
+— and `_band_wrong` compares those strings as a total order on real time in item 2
+(cited-run)'s dirty allowance: `src["dirty"] and [r for r in at if not r["dirty"] and
+r["ts"] <= ts]`, "was a clean row already available when this band was published?". A row
+written on this laptop at `20260823-192533` is 11:25:33 UTC; a row written 25 minutes LATER
+at 11:50:44 UTC stamps `20260823-115044` and sorts eight hours EARLIER. That is how PR #32
+went red: CI's `invariant` row is clean (fresh checkout), so it claimed to predate a band it
+followed, and reddened the band the allowance exists to permit.
+Repro (the control is what isolates it — same row, same wall clock, same `dirty: false`,
+only the `ts` moved): call `_band_wrong` with a band and a foreign row that derive the SAME
+ceiling, so item 3 (same-ceiling) is silent:
+
+    band = {"suite": "i", "total": 53, "passed": 53, "ts": "20260823-192533",
+            "wall_s": 13.32, "dirty": True}          # 19:25 Asia/Taipei = 11:25Z
+    other = {"suite": "i", "total": 53, "passed": 53, "ts": "20260823-115044",
+             "wall_s": 16.03, "dirty": False}        # 11:50Z — 25 minutes later
+    _band_wrong({"i": ("local", 53, "20260823-192533", 13.32, 53, 53)},
+                {"i": 53}, {"i": 20}, [band, other])
+    # -> [{'suite': 'i', 'cited_a_dirty_run': '20260823-192533',
+    #      'clean_runs_available_by_then': ['20260823-115044']}]
+    # move `other`'s ts to 20260823-195044, change nothing else -> []
+
+Why it is NOT closed by T-R44: item 9 (environment) filters a foreign row out before this
+clause reads it, so the CI/local split can no longer reach it — but `ts` is still not an
+ordering on real time WITHIN one environment. A laptop that changes zone between two runs, a
+DST shift, or a `history.jsonl` merged by unioning on `ts` (how PR #29 R3 resolved that
+conflict) reproduces it with no CI involved. ADR-019 §7 says this in those words rather than
+letting env scoping stand in for the fix.
+Acceptance: either (a) stamp UTC (`time.gmtime()`), which is one line plus the consequences
+that make it not one line — the committed ledger keeps its local-stamped prefix so the
+ordering stays invalid across that seam, ADR-012's schema paragraph and every `ts` a reader
+parses as local time have to say which, and both bands must be republished from
+UTC-stamped rows or the gate reddens on the next run; or (b) drop the `ts` ordering from the
+clause entirely and use the ledger's own append order, which IS real-time order for a file
+only ever opened with "a" — no stamp change, no republish, and it holds inside one
+environment too, but it needs an answer for merge-resorted rows. Watched red from the repro
+above either way, and the control kept as the case's isolation.
+
 ### T-R73 — no CI wall clock reaches the committed ledger, so ADR-019 §5's four numbers are checkable only by a reader            [status: todo]
 Origin: T-R44
 Spec: T-R51 was closed on the labelling route, not the ledger route (ADR-019 §7): §5's four
@@ -123,10 +174,12 @@ a recorded decision that CI's numbers stay reader-verified and §5/§7 say so pe
 ### T-R74 — nothing grades that CI actually tags its rows `ci`            [status: todo]
 Origin: T-R44
 Spec: `evals/run.py` `env_tag()` returns `EVAL_ENV` if set, else `ci` when the runner sets
-`CI`, else `local`; `.github/workflows/eval.yml` sets `EVAL_ENV: ci`. The `local` branch is
-exercised by every gate run and the `ci` branch is reproducible on a laptop with `CI=1`, but
-that GitHub Actions sets `CI`, that the workflow's variable survives into the row, and that
-CI's `invariant` row is therefore excluded from a `local` band are all asserted rather than
+`CI`, else `local`. The operative mechanism on CI is the `CI` fallback — GitHub Actions sets
+`CI` unconditionally — and `.github/workflows/eval.yml`'s `EVAL_ENV: ci` is a second, louder
+belt that the fallback does not need. The `local` branch is exercised by every gate run and
+the other two are reproducible on a laptop (`CI=1` -> `ci`, `EVAL_ENV=staging` -> `staging`),
+but that Actions sets `CI`, that either declaration survives into the row, and that CI's
+`invariant` row is therefore excluded from a `local` band are all asserted rather than
 demonstrated — the same shape T-R51 was about, one level down. If the tag silently came out
 `local` on CI, T-R44's defect would return with every check green.
 Acceptance: `fast-wall-clock-budget` (which already parses the workflow for its two ceiling

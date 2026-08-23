@@ -117,9 +117,13 @@ the wrong rule are all red. A paragraph that paraphrases a rule and names no
 item is caught by nothing, which is why §6 says so in those words.
 Every row written since T-R44 carries the environment
 that measured it — a row older than that reads as `local`, which all of them are
-— and item 9 (environment) grades a band only against its own environment, so
-CI's `invariant` row, appended to the job's copy of the file by the step before,
-can no longer redden a band measured here. It is a property, not a
+— and item 9 (environment) grades a band only against its own environment. CI's
+`invariant` row, appended to the job's copy of the file by the step before, used
+to redden a band measured here: `ts` is naive local time compared as a string, so
+that row followed the band row by 25 minutes and sorted eight hours before it,
+and being clean it answered "a clean row was already available by then". The
+ordering bug itself is untouched and carried as T-R77; ADR-019 §7 has the
+mechanism, the control, and what the filter does and does not repair. It is a property, not a
 snapshot, because the ledger grows on every gate
 run; a list of times would go red on the next run instead of on a regression. It
 exists because three bands in PR #29 did not match the ledger beside them, and

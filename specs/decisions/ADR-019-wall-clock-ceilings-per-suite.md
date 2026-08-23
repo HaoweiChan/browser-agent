@@ -379,23 +379,81 @@ grader prints it, with the case count, whenever the band needs republishing.
 
 ### 7. (2026-08-23) A band belongs to an environment, and the ledger records which
 
+**What this buys, first, because it is the part that decides whether the change
+earns its keep:** adding a case becomes one commit again instead of two.
+CLAUDE.md hard rule 2 makes adding a case this repo's most common operation, and
+every one of them republishes a band — a tree only reaches count N+1 while the
+new case is still uncommitted, so the row the band cites is dirty by
+construction. That is precisely what item 2 (cited-run)'s allowance exists to
+permit, and it permitted it locally while refusing it on CI: the commit lands
+green, CI runs the committed tree, CI's clean row claims to predate a band it
+followed, and the author has to re-run on a clean tree, re-cite, and commit
+again. PR #34 paid that tax. It is structural, not bad luck. Replayed at the
+state a case-adding commit actually lands in — the dirty citation, CI's clean
+row, and a clean local re-run — the untagged ledger gives
+`[{'cited_a_dirty_run': '20260823-192533', 'clean_runs_available_by_then':
+['20260823-115044']}]` and the tagged one gives `[]`. The red CI run below is the
+symptom that exposed this; the second commit is what it cost.
+
 The Ruling above has said "one per (suite, environment)" since this ADR was
 written. The grader had not: `published-band-matches-the-ledger` read every
 `history.jsonl` row the process could see. On CI that is a strictly larger set
 than the committed ledger, because `.github/workflows/eval.yml` runs
-`--suite invariant` first and that run appends its own row — on slower hardware —
-to the job's copy of the file before `--suite fast` grades §3's band against it.
-Red on CI, green locally, on the same tree (PR #32, CI run 32626835735). `main`
-passes today by coincidence: at the shipped case count CI's number and this
-laptop's happen to derive the same ceiling. It has already cost something —
-M35 moved a new invariant case into `fast` to keep §3's band on the count `main`
-measured — and it is the trap every case-adding PR walks into (T-R44).
+`--suite invariant` first and that run appends its own row to the job's copy of
+the file before `--suite fast` grades §3's band against it. Red on CI, green
+locally, on the same tree (PR #32, CI run 32626835735; diagnosed to root cause on
+`task/M32` as T-M32-13 and replayed here before this section was written).
+
+**The firing clause is item 2 (cited-run)'s dirty allowance, and the mechanism is
+the timestamp, not the wall clock.** `evals/run.py` stamps `ts` with
+`time.strftime("%Y%m%d-%H%M%S")` — naive local time, no zone — and the dirty
+clause compares those strings as if they were a total order on real time
+(`r["ts"] <= ts`, "was a clean row already available when the band was
+published?"). The ledger mixes zones. A band row written on this laptop at
+`20260823-192533` is 19:25:33 Asia/Taipei, 11:25:33 UTC; CI's `invariant` row
+`20260823-115044` was written **25 minutes later in real time** and sorts **eight
+hours earlier as a string**. CI's row is clean — a fresh checkout makes
+`git_dirty()` false — so it answers yes to a question about a moment it had not
+happened in, and retroactively reddens a band the allowance exists to permit.
+That allowance is PR #35 R11's: a tree only reaches count N+1 while the new case
+is uncommitted, so the band's own row is dirty by construction.
+
+The control is what isolates it, and it is decisive: same CI row, same 16.03s,
+same `dirty: false`, only the `ts` moved to sort after the band row — green.
+Replayed through `_band_wrong` at a band and a CI row that derive the SAME
+ceiling, so item 3 (same-ceiling) is silent and only the dirty clause can speak:
+`[{'suite': 'invariant', 'cited_a_dirty_run': '20260823-192533',
+'clean_runs_available_by_then': ['20260823-115044']}]` before, `[]` after moving
+the stamp, `[]` with the rows env-tagged. Speed does nothing.
+
+`main` is green for a reason no better than the bug: its band cites
+`20260823-041729`, 04:17 local — 2026-08-22 20:17 UTC — and a CI stamp sorts
+before that string only if the run happened between 00:00 and 04:17 UTC, which
+none did. A band republished during Taipei daytime lands in the window. It has
+already cost something: M35 moved a new invariant case into `fast` to keep §3's
+band on the count `main` measured (T-R44).
+
+**A second, separate symptom, latent rather than live.** CI's row also enters
+`ledger max`, which item 3 (same-ceiling) and item 4 (committed-ceiling) both
+read. CI
+measured `invariant` at 16.03s, and the rule gives 20 — the committed ceiling —
+so neither fires today. 17.39s is the top of that band — 20 / 1.15 — and above
+it `rule(ledger max)` is 25 against a committed 20, item 4 (committed-ceiling)
+reddens, and it is
+**ungreenable locally**, because a local ledger holds no CI row to reproduce it
+with. That is 1.36s of margin, 8.5%, against a runner spread §5 itself records at
+6.8%. The filter below removes this one too — `slowest` is computed from the
+environment's own rows — so it is recorded here as a thing that was closed before
+it fired, not as a thing that fired.
 
 **Every history row written from here on carries an `env` tag** (`evals/run.py`
 `env_tag()`) — the rows already committed do not, which is the next paragraph — and §6
 item 9 (environment) filters the ledger to the band's own environment before any
 other item reads it. The tag is `EVAL_ENV` when set, otherwise `ci` when the
-runner sets `CI`, otherwise `local`. It is deliberately NOT derived from the
+runner sets `CI`, otherwise `local`. The `CI` fallback is what actually tags a
+runner — Actions sets `CI` unconditionally — so the workflow's `EVAL_ENV: ci` is
+a louder second belt rather than the mechanism. It is deliberately NOT derived
+from the
 effective `EVAL_WALL_BUDGET_S_*`, the obvious candidate: CI's `invariant` ceiling
 is 20 and so is this laptop's, so that reading would have given both environments
 one tag on the very suite the defect appeared in.
@@ -428,8 +486,24 @@ still not graded and cannot be from here — the run id makes it checkable by a
 reader, not by the gate (T-R51 closed on that reading; T-R73 carries the ledger
 route if it is ever wanted).
 
-**What this does not reach.** No CI band is published, so §6 item 9
-(environment) has exactly one environment to grade in this repo today —
+**What this does not reach, and it is the important paragraph. These are two
+different claims, and only one of them is delivered here.** "A band is graded
+against its own environment" is a property about *which rows* an item reads;
+"`ts` is a valid total order on real time" is a property about *how those rows
+are ordered*. This section delivers the first. It makes the second's failure
+unreachable across the CI/local split — a foreign row never reaches the clause
+that misreads the ordering — and it repairs nothing about the ordering itself.
+`ts` is still naive local time compared as a string, so a laptop that changes
+zone between two runs, a DST shift, or a `history.jsonl` merged by unioning on
+`ts` — which is how PR #29 R3 resolved that conflict — reproduces the identical
+failure with no CI involved. Read the two as one property and the ordering bug
+becomes a mystery the next person inherits, which is the whole reason this
+paragraph is here: the defect is carried as T-R77, with the control above as its
+repro and the two candidate closures named there, and it is NOT fixed by this
+section.
+
+**And what is asserted rather than demonstrated.** No CI band is published, so §6
+item 9 (environment) has exactly one environment to grade in this repo today —
 `local` — and the CI half of the mechanism is asserted rather than demonstrated
 here. `env_tag()` was exercised on all three branches from a laptop (`CI=1` → `ci`,
 unset → `local`, `EVAL_ENV=staging` → `staging`), but that GitHub Actions sets

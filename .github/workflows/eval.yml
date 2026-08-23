@@ -32,10 +32,13 @@ jobs:
       EVAL_WALL_BUDGET_S_INVARIANT: "20"
       # Which environment measured a history row (ADR-019 §7). The `invariant`
       # step below appends its row to this job's copy of the ledger before the
-      # `fast` step grades ADR-019 §3's locally-measured band against it, so
-      # without a tag CI's own number reddened a band it never measured — red on
-      # CI, green locally, same tree (T-R44). `evals/run.py` would fall back to
-      # `ci` here anyway, since Actions sets `CI`; this says it out loud.
+      # `fast` step grades ADR-019 §3's band against it. Untagged, that row is
+      # read as this laptop's: it is clean (fresh checkout) and its UTC `ts`
+      # sorts hours before a Taipei-stamped band row written earlier in real
+      # time, so it satisfied "a clean row was already available" and reddened a
+      # band it had nothing to do with — red on CI, green locally, same tree
+      # (T-R44). `evals/run.py`'s `CI` fallback is what does the tagging, since
+      # Actions sets `CI` unconditionally; this line only says it out loud.
       EVAL_ENV: ci
     steps:
       - uses: actions/checkout@v4

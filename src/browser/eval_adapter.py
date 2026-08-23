@@ -378,8 +378,9 @@ def _check_planner_prompt() -> dict:
 # snapshot and `history.jsonl` grows on every gate run, so a grader that
 # string-matched it would go red on the next run rather than on a regression.
 # The environment group is T-R44: a band is a claim about one machine, and until
-# it said which, the check compared this laptop's number against whatever rows the
-# process could see — on CI, including CI's own. Named groups, not positional:
+# it said which, the check read whatever rows the process could see — on CI,
+# including CI's own, whose naive-local `ts` sorts hours away from a row written
+# on a laptop at the same moment (ADR-019 §7). Named groups, not positional:
 # inserting a group at the front of a six-group pattern re-points every reader of
 # it, which is the same shape as re-numbering §6's list under its references.
 _BAND_LINE = re.compile(
@@ -523,6 +524,11 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         # row, because every item below is about "the ledger at this count" and a
         # foreign row is not this band's ledger. A ceiling is per (suite,
         # environment) by ADR-019's own Ruling; this is where the grader learns it.
+        # It reaches TWO clauses below, not one: the dirty allowance, where a
+        # clean CI row with an early naive-local `ts` claimed to predate a band it
+        # followed (ADR-019 §7), and `slowest`, where CI's wall clock would enter
+        # a maximum no local ledger can reproduce. It does not repair `ts`, which
+        # is still not an ordering on real time inside one environment (T-R77).
         # A local name: rebinding `rows` here would hand the NEXT suite in this
         # loop the previous suite's already-filtered ledger, which is invisible
         # while every published band names the same environment.
@@ -900,13 +906,23 @@ def _check_published_band_environment() -> dict:
 
     T-R44, live and not theoretical: `.github/workflows/eval.yml` runs
     `--suite invariant` first, which appends CI's row to the job's copy of the
-    ledger, then `--suite fast`, whose band check compared ADR-019's
-    locally-measured `invariant` band against a ledger whose slowest row at that
-    count was now CI's — red on CI, green locally, on the same tree. The numbers
-    below are that run's (PR #32, CI run 32626835735).
+    ledger, then `--suite fast`, whose band check read that row as though this
+    laptop had written it — red on CI, green locally, on the same tree (PR #32,
+    CI run 32626835735; root-caused on `task/M32` as T-M32-13).
+
+    What CI's row did was not "be slower". It was CLEAN, and `ts` is naive local
+    time compared as a string: CI's row followed the band row by 25 minutes and
+    sorted eight hours before it, so item 2 (cited-run)'s dirty allowance saw a
+    clean row "already available" when the band was published. ADR-019 §7 carries
+    the mechanism, the control that isolates it, and the second symptom (CI's wall
+    clock entering `slowest`, latent at 1.36s of margin). The tag closes both
+    across environments and repairs neither `ts` nor the allowance — T-R77.
 
     Driven with a synthetic ledger because the defect cannot be reproduced from
-    the committed one: no CI run's wall clock ever reaches it (T-R51).
+    the committed one: no CI run's row ever reaches it (T-R51). The wall clocks
+    below are the ones PR #32 measured, and assertions 1-2 use them because a
+    filter has to be shown excluding something that WOULD have spoken; the
+    `ts`-ordered clause is graded where it lives, in the sibling check.
     """
     wrong = []
 
