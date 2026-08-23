@@ -36,7 +36,7 @@
       "'the one form of membership a comment cannot spell its way into' -> 'a form ... (PR #36 R19, where a substring test was satisfied by the comment warning against it)'",
       "the key name `end_marker_inside_a_body`, which had silently grown to cover both markers, renamed rather than left describing half of what it tests"
     ],
-    "verified": "the excluded-names claim is exact (`_ADR019`, `_README`, `_INDEX`, `_DECIMAL_TOKEN`, `_README_BAND_ROW`, `_ADR_CEILING` do not match `_BAND_DEF`), and none carries an `item N` reference today — so T-R63's residue is currently empty, which is what §6 says"
+    "verified": "the excluded-names claim is exact (`_ADR019`, `_README`, `_INDEX`, `_DECIMAL_TOKEN`, `_README_BAND_ROW`, `_ADR_CEILING` do not match `_BAND_DEF`), and none carries an `item N` reference today. NOTE (corrected after PR #36's confirming review, R22): the derived claim that T-R63's residue is therefore empty was WRONG — the unpinned header comment between the begin marker and the first pinned name carries two graded references, so the region can still lose content with every predicate green. T-R63 is corrected in place."
   },
   "debt": {
     "T-R63": "the guard pins a named set, not everything band-shaped; band code added later under an unmatched name, or one of the six excluded constants growing a §6 reference, would be unpinned. Acceptance names the two ways to close it."

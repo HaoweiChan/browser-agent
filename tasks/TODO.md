@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-R56 — the band subsystem's documents and its own strings say what the code does            [status: in-progress]
+### T-R56 — the band subsystem's documents and its own strings say what the code does            [status: pr]
 Origin: bundles T-R45, T-R46, T-R47, T-R48, T-R49, T-R52, T-R54, T-R55 (PR #35 R8/R17/R18/R19/R20/R21/R22 + T-R34 cold review)
 Spec: Eight debt blocks from PR #35 are the same defect in the same two documents and one
 grader: a description that does not match the code it describes. They were bundled because
@@ -926,6 +926,31 @@ section that contains an item's own distinctive token (the backticked expression
 uses) to carry a reference, since those tokens are derived from the list rather than
 blacklisted. Watched red by adding a paraphrase of one item with no reference beside it.
 
+### T-R64 — `_BAND_DEF` matches prose at column 0, so a docstring can raise a false stray            [status: todo]
+Origin: PR #36 R23
+Spec: `src/browser/eval_adapter.py:439-441` is `^(?:def )?(_band\w*|...|_REGION)\b` with
+`re.M`, so `def ` is optional and the anchor is column 0 only. A column-0 line inside a
+triple-quoted string that begins with a pinned name is reported as a stray definition, with
+a message naming a constant that never moved. The shape is not hypothetical: the file already
+carries column-0 lines inside docstrings. Adding `_BAND_LINE is what ADR-019 publishes; see
+the band section.` at column 0 inside `_check_history_dirty_before_report`'s docstring
+yields `{outside_the_region: ['_BAND_LINE'], passed: False}`.
+Direction is fail-closed only — a spurious match inside the region cannot mask a real
+definition outside it, because every match is offset-tested independently — so this is noise
+in a gate suite, not a hole.
+Acceptance: the pattern requires an assignment or def form (e.g.
+`^(?:def )?(_band...|...)\s*(?:\(|[:=,])`), or the residue is named where the pattern is
+defined: prose at column 0 naming a pinned constant reddens the invariant suite.
+
+### T-R65 — the adapter's self-described line count is stale            [status: todo]
+Origin: PR #36 R24
+Spec: `src/browser/eval_adapter.py:363`, reflowed by `ed23223`, still reads "not the whole
+3,900-line adapter"; `wc -l` is 4,079. Rhetorical rather than a graded scalar — nothing reads
+it — but it is a stale number in a line that commit touched, and the same class this task
+was opened for.
+Acceptance: drop the figure ("the whole adapter") rather than round it, since any figure
+here goes stale by construction.
+
 ### T-R63 — the band region's guard pins a named set, not everything band-shaped            [status: todo]
 Origin: T-R56 round 4 (PR #36 R19/R20)
 Spec: `published-band-matches-the-ledger` requires every name matching `_band…`,
@@ -936,7 +961,16 @@ band code appended after the end marker, either marker moved into a body, either
 inward). What it does not pin is the module-level names outside that set — `_ADR019`,
 `_README`, `_INDEX`, `_DECIMAL_TOKEN`, `_README_BAND_ROW`, `_ADR_CEILING` — and any band code
 added later under a name the pattern does not match. None of those carries a §6 reference
-today, so the residue is currently empty; it stops being empty the moment one does.
+today. The residue is NOT empty, though, and PR #36's confirming review found why
+(R22): the 19 lines between the begin marker and the first pinned name are unpinned
+comment carrying two graded references (`§6 item 8 (references)` and
+`item 2 (cited-run)`). Moving the begin marker to sit immediately above `_BAND_LINE`
+leaves `marker_counts == [1, 1]`, `outside_the_region == []` and
+`markers_off_a_top_level_boundary == False` — green — while the region loses those
+19 lines, and a reference corrupted inside them goes from red to green.
+Acceptance also covers that: the guard pins the region's lower edge to something the
+header comment cannot be moved out of, watched red by the marker-move-plus-corrupted-
+reference mutation above.
 Acceptance: either the region's contents are pinned positively (the band block is delimited by
 what it contains rather than by markers — e.g. the check reads its own `__code__` sources), or
 the pattern is derived from the module namespace rather than written out. Watched red by
