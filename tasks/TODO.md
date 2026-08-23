@@ -34,7 +34,8 @@ names a mutation:
   current check, not that a commit of PR #35 published it; or a sha is cited that did.
 - T-R49 — either `adr_publishes_no_band_line` and `no_recorded_run_at` are folded into §6's
   list (or named as preconditions), or ADR-019:48-49 drops "exactly"; and :69 cites items
-  2-3 for the cited run and item 4 for the ceiling.
+  2 (cited-run) and 3 (same-ceiling) for the cited run and item 4 (committed-ceiling)
+  (committed-ceiling) for the ceiling.
 - T-R52 — `specs/decisions/INDEX.md`, `evals/run.py` and `.github/workflows/eval.yml` cite
   ADR-019 for the per-suite override, not ADR-017 (which is the M36 judge ADR), and a graded
   row resolves `ADR-0NN` references in those files against the decision that actually rules.
@@ -876,7 +877,7 @@ Origin: T-R56 (the T-R52 half)
 Spec: `adr-header-and-index` now resolves every `ADR-0NN` reference — canonical or in an
 identifier spelling like `adr019` — to a committed decision, and every sectioned reference to a
 section that decision actually has, across README.md, CLAUDE.md, tasks/TODO.md, tasks/DONE.md
-and `src/ evals/ specs/ .github/ docs/ prompts/`: 592 citations in 218 files on this tree. What it cannot say is whether the cited section RULES on
+and `src/ evals/ specs/ .github/ docs/ prompts/`. What it cannot say is whether the cited section RULES on
 the subject of the citing sentence — the T-R52 defect was catchable only because the judge
 ADR has no numbered sections, so the repaired citations carry a section and a re-miscitation
 is red. A citation written without a section, to an ADR that happens to have one, still
@@ -899,13 +900,13 @@ had 116 `fast` and 48 `invariant` cases; this branch ships 136 and 53. The descr
 repaired (both now name the commit and say it is the smaller tree), so what is left is the
 measurement gap: CI's 90/20 derive from a band 20 `fast` cases old, and nothing reddens when
 the local tree grows past the tree CI's ceiling was measured on. The local half has exactly
-this guard — §6 item 1, published case count == current case count — and the CI half has no
+this guard — §6 item 1 (count), published case count == current case count — and the CI half has no
 equivalent because no CI wall clock reaches the ledger (T-R51).
 Acceptance: CI's band carries the case count it was measured at, and something reddens when
 the current count leaves it behind — the natural form is T-R51's environment dimension on
-`_BAND_LINE` plus item 1 applied to it. Watched red by growing the suite against a stale count.
+`_BAND_LINE` plus item 1 (count) applied to it. Watched red by growing the suite against a stale count.
 
-### T-R62 — a paraphrase that names no item is invisible to item 8            [status: todo]
+### T-R62 — a paraphrase that names no item is invisible to item 8 (references)            [status: todo]
 Origin: T-R56 round 1 (PR #36 R1/R2)
 Spec: §6 item 8 (references) binds a reference to content — number plus slug, both agreeing
 with the list — so a deferral pointed at the wrong rule, or a list renumbered under its
@@ -914,8 +915,13 @@ invisible: nothing counts copies. Five review rounds have produced exactly that 
 the current defence is that pointing is cheaper than restating, plus a blacklist of three
 retired phrases in `docs-numbers-are-derived`. ADR-019 §6, README and the check's docstring
 now say this in those terms rather than claiming the copies are caught (PR #36 R1).
+`tasks/TODO.md` is the other unbound surface: it carries §6 references (they spell their
+slugs, but nothing checks that) and is outside item 8 (references)'s scanned set, deliberately —
+it is hand-edited every milestone and its prose says "item N" about things that are not this
+list, which is the false-red shape PR #36 R5 filed against the source scan.
 Acceptance: a graded property that is red on a fresh unmarked restatement and green on this
-tree — the shape worth trying is requiring every sentence in §6's prose and README's band
+tree, and a decision on `tasks/TODO.md` — scanned with a marked region of its own, or left
+unbound and said so here — the shape worth trying is requiring every sentence in §6's prose and README's band
 section that contains an item's own distinctive token (the backticked expressions the list
 uses) to carry a reference, since those tokens are derived from the list rather than
 blacklisted. Watched red by adding a paraphrase of one item with no reference beside it.
@@ -925,13 +931,13 @@ Origin: T-R56 cold review (secondary findings)
 Spec: two holes the T-R56 sweep found and left, both in `_check_published_band`, both the
 shadowing class already guarded for band lines and README rows (PR #29 R24, PR #35 R2):
 (1) `_ADR_CEILING` builds a last-wins dict, so a second bolded ``local `fast` … **Ns**``
-phrase anywhere in ADR-019 silently overrides the Ruling line that item 6 grades and INDEX
+phrase anywhere in ADR-019 silently overrides the Ruling line that item 6 (ruling) grades and INDEX
 digests; (2) `_BAND_DERIVATION.findall(adr)` searches the WHOLE file, so §6's counterexample
 `12.89 × 1.15 = 14.82 → **15**` — a paragraph that exists to call that state a residue — can
-satisfy item 5 for a band republished at 12.89 with no derivation in §3 at all. §5's CI
+satisfy item 5 (derivation) for a band republished at 12.89 with no derivation in §3 at all. §5's CI
 sentences sit in the same pool and are only kept out by their multiplicands.
 Acceptance: the Ruling parse refuses a suite that matches twice (same shape as
-`adr_publishes_two_bands`), and item 5 reads derivations only from the section that publishes
+`adr_publishes_two_bands`), and item 5 (derivation) reads derivations only from the section that publishes
 the band. Watched red with a second ceiling phrase, and with a 12.89 band whose only
 derivation is §6's counterexample.
 

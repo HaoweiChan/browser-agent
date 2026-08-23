@@ -106,9 +106,10 @@ ledger committed in this repo, and `published-band-matches-the-ledger` grades
 that on every run. What it requires is listed in
 [ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md); the
 sentences here name its items rather than re-state them, and item 8 (references)
-grades that each name points at the item it claims — slug included, so a
-deferral aimed at the wrong rule is red. A paragraph that paraphrases a rule
-without naming it is not caught by anything, which is why §6 says so.
+grades those names: a reference spells a number the list has and that item's
+slug, so a bare name, a name for an item that does not exist and a name aimed at
+the wrong rule are all red. A paragraph that paraphrases a rule and names no
+item is caught by nothing, which is why §6 says so in those words.
 It is a property, not a snapshot, because the
 ledger grows on every gate
 run; a list of times would go red on the next run instead of on a regression. It

@@ -186,13 +186,20 @@ repair correct, its own description left behind (PR #35 R15/R16/R19/R20, PR #36
 R1) — and a second copy of a rule is the thing that goes stale.
 
 Be exact about how much of that is mechanism, because the claim that it was all
-of it is what R1 falsified. **Graded:** every reference to this list — here, in
-README, and in the marked band region of `src/browser/eval_adapter.py` — names
-an item that exists AND spells its slug, so a sentence pointed at the wrong item
-is red, and so is every reference to a list that has been renumbered under them
-— that is item 8 (references). **Not graded:** a paragraph that paraphrases a rule
-without naming it at all. Nothing here catches that; what keeps it rare is that
-there is one list to point at, and pointing is cheaper than restating.
+of it is what PR #36 R1 falsified, and the first attempt at being exact
+overstated in turn (R10/R11). **Graded**, each clause with a mutation behind it
+in `published-band-matches-the-ledger`: every item of this list is numbered and
+slugged, with no gap and no slugless item, appended ones included; every
+reference to it — here, in README, and in the marked band region of
+`src/browser/eval_adapter.py` — names a number this list HAS and spells that
+item's slug, so a bare name, a name for an item that does not exist, a name
+aimed at the wrong item, a plural range and the retired `property N` numbering
+are each red; and that region is checked to be the band code before it is read,
+so a scan that stops scanning is red rather than green. **Not graded:** a
+paragraph that paraphrases a rule and names no item at all, and references in
+`tasks/TODO.md`, which is outside the scanned set (T-R62 carries both). What
+keeps those rare is that there is one list to point at, and pointing is cheaper
+than restating.
 `published-band-matches-the-ledger` requires, per suite — except the last, which
 is about this section itself:
 
@@ -211,14 +218,17 @@ is about this section itself:
 6. (ruling) the Ruling's own local ceilings are the ones `evals/run.py` commits;
 7. (readme-row) README's band row carries the same four values as this file, and neither
    document publishes two bands for one suite;
-8. (references) this list is numbered 1..N with no gaps and each item opens with
-   its slug, and every reference to it — in this file, in README, and in the
-   marked band region of `src/browser/eval_adapter.py` — spells the number AND
-   the slug, both agreeing with the list: `item 3 (same-ceiling)`. The number
-   alone is a position, and a position stays valid when it is re-pointed at
-   another rule (PR #36 R2) or when the list is renumbered under it; the slug is
-   what a reference is bound to. Written under the `property N` numbering PR #35
-   round 4 retired, or as a plural range no single slug can carry, it is red.
+8. (references) every line of this list is numbered and opens with its slug,
+   the numbering runs 1..N without a gap, and every reference to the list — in
+   this file, in README, and in the marked band region of
+   `src/browser/eval_adapter.py`, which is itself checked to still contain that
+   code — spells a number the list HAS and that item's slug:
+   `item 3 (same-ceiling)`. The number alone is a position, and a position
+   stays valid when it is re-pointed at another rule (PR #36 R2) or when the
+   list is renumbered under it; the slug is what a reference is bound to. A
+   bare name, a name the list has no item for, the `property N` numbering
+   PR #35 round 4 retired, and a plural range no single slug can carry are each
+   red.
 
 Green is required nowhere in that list and cannot be (T-R53); item 2 (cited-run) requires
 the result to be *stated*, not to be a pass. Item 5 (derivation) states the rule's value and

@@ -420,7 +420,7 @@ _README_BAND_ROW = re.compile(
 # POSITION, and a position survives being re-pointed at a different rule
 # (PR #36 R2) or the list being renumbered under it; the slug is the
 # content half, so the two disagreeing is red.
-_SIX_ITEM = re.compile(r"^(\d+)\. \(([a-z][a-z-]*)\) ", re.M)
+_SIX_ITEM = re.compile(r"^(\d+)\. (?:\(([a-z][a-z-]*)\) )?", re.M)
 # The slug may wrap onto the next line, behind a comment marker if the reference
 # is in source — these are prose documents and a reference near a line end is not
 # a defect.
@@ -674,22 +674,49 @@ def _check_published_band() -> dict:
     # restatement carrying no reference at all is still invisible here (T-R62),
     # which is why nothing in these documents claims otherwise.
     six = adr[adr.index("### 6."):adr.index("## Consequences")]
-    slugs = dict(_SIX_ITEM.findall(six))
-    if sorted(int(n) for n in slugs) != list(range(1, len(slugs) + 1)):
-        wrong.append({"adr_six_list_is_not_1_to_n": sorted(slugs)})
+    # Every numbered line, THEN its slug — reading the list through a
+    # slug-bearing pattern made a slugless item simply absent, and an absent
+    # LAST item left `1..N` intact, so a rule could be appended with no slug and
+    # then referred to bare (PR #36 R11).
+    listed = _SIX_ITEM.findall(six)
+    slugs = {n: s for n, s in listed if s}
+    if ([n for n, _ in listed] != [str(i) for i in range(1, len(listed) + 1)]
+            or len(slugs) != len(listed)):
+        wrong.append({"adr_six_list_is_not_1_to_n_with_slugs": listed})
     # This file's own share is the marked band region, not all 3,900 lines
     # (PR #36 R5): an `item N` written about something else entirely is not a
-    # reference to this list. Deleting the opening marker is an `IndexError` and
-    # deleting the closing one widens the region to the rest of the file — both
-    # loud, neither silently empty.
+    # reference to this list. A region that stops covering the band code is the
+    # dangerous direction — it takes the scan with it and stays green — and it
+    # has happened once already here, with the markers quoted in their own
+    # definition (458 lines -> 68, all green). So the region is checked before
+    # it is read: each marker occurs EXACTLY once in the file (a comment that
+    # quotes one truncates the region; deleting one removes it), and the three
+    # band functions are inside what the markers enclose (moving one below the
+    # end marker, or writing new band code after it, drops it from the scan).
     here = Path(__file__).read_text(encoding="utf-8")
-    region = here.split(_REGION[0], 1)[1].split(_REGION[1], 1)[0]
+    marker_counts = [here.count(m) for m in _REGION]
+    region = (here.split(_REGION[0], 1)[-1].split(_REGION[1], 1)[0]
+              if marker_counts == [1, 1] else "")
+    # Matched at column 0, as a definition: these names appear as strings a few
+    # lines below too, and `in region` would find THOSE — a list of what must be
+    # inside satisfying itself is the same self-reference the markers had.
+    outside = [d for d in ("_band_wrong", "_check_published_band",
+                           "_check_published_band_slack")
+               if not re.search(rf"^def {d}\(", region, re.M)]
+    if marker_counts != [1, 1] or outside:
+        wrong.append({"band_region_does_not_cover_the_band_code":
+                      {"marker_counts": marker_counts, "not_in_region": outside,
+                       "region_lines": region.count("\n")}})
     for where, text in (("adr", adr), ("readme", readme), ("eval_adapter", region)):
         for m in _SIX_REF.finditer(text):
             word, n, slug = m.group(1).lower(), m.group(2), m.group(3)
             # A plural range cannot carry one item's slug, so it
             # is not a form this convention allows: name each item.
-            if word == "items" or slugs.get(n) != slug:
+            # `n not in slugs` FIRST: `slugs.get(n) != slug` is `None != None`
+            # for a bare reference to an item that does not exist, which is how
+            # the round-1 guard against exactly that got deleted by the round-1
+            # repair (PR #36 R10).
+            if word == "items" or n not in slugs or slugs[n] != slug:
                 wrong.append({where: "reference_does_not_name_its_item",
                               "wrote": m.group(0).strip(),
                               f"item_{n}_is": slugs.get(n)})
@@ -3735,7 +3762,7 @@ def _run_doc_counts_case(case: dict) -> dict:
             # phrase no document may carry again (R15, R16). ponytail: a
             # blacklist catches re-assertion of THESE rules, not the general
             # class; the general defence is one description in one place, which
-            # is what ADR-019 §6 is. What §6 item 8 (references) adds, graded
+            # is what ADR-019 §6 is. What §6's references item adds, graded
             # by `published-band-matches-the-ledger`, is narrower than this
             # comment used to claim (PR #36 R2): it grades that a sentence
             # deferring to the list names an item that exists and spells its
