@@ -208,3 +208,19 @@ which is the exact complaint that started this milestone.
   rule that fell out of it — a live-declared row expires when its build does.
   What is NOT corrected: nothing detects that expiry. The next build can do this
   again and no gate will notice.
+
+- Assumed: after re-declaring the rows against the post-merge build, the eight
+  cards were confirmed — the three replaced ones had just been probed, and the
+  five inherited ones had been working for milestones.
+- Eval said: the owner asked for one more pass over every card before merge, and
+  it found two failures in the five nobody had re-checked. `wikipedia.org`'s
+  motto task failed (7547e580, 3/4 once re-probed) after sitting at "one
+  verified run" since M6; `quotes.toscrape.com` was 1/6 across both tasks this
+  milestone had already given it.
+- Corrected: `wikipedia.org` declared `unreliable` — its first status ever, and
+  more informative than the `—` it replaced; `quotes.toscrape.com` moved to a
+  third task, "Which tag is listed first under Top Ten tags?" (3/3), which asks
+  for a value that is unique on the page. Three of eight cards changed task or
+  status in one pass, and that number is now in ADR-022 as the measured decay
+  rate of a live-declared row.
+

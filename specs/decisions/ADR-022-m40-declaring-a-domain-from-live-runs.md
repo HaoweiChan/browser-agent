@@ -94,6 +94,15 @@ check, and it is manual. Making it automatic — a case per declared live domain
 or a scheduled re-probe against the deployment — is the open work, and it is
 what would turn D28's rows from a snapshot into coverage.
 
+The obligation earned its place the first time it ran. The pre-merge pass over
+all eight cards found two more failures nothing else had: `wikipedia.org`'s motto
+task, which had passed earlier and failed here (3/4 once re-probed, and now
+declared `unreliable` rather than left at `—`), and `quotes.toscrape.com`, which
+was 1/6 across both of the tasks this milestone had already put on its card and
+needed a third. Three of eight cards changed task or status in that single pass.
+That is the decay rate of this evidence, measured rather than estimated, and it
+is the argument for the automatic version.
+
 ## Consequences
 
 - Eight real-site cards, of which one is deliberately a failing example. A demo

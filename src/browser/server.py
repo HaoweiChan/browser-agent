@@ -587,18 +587,19 @@ const EXAMPLES = {
     // deployment — 349e4839, e08b7627, bcae4fe7, 63b9d944, failure:locate,
     // the planner targets link "pg" and the page has two.
     task: "What is the title of this story?"},
-  "quotes.toscrape.com (live)": {label: "Who said this quote?",
+  "quotes.toscrape.com (live)": {label: "First of the top ten tags",
     url: "https://quotes.toscrape.com/",
-    // This example moved twice in one milestone and both moves are the same
-    // lesson. It failed pre-M32 at locate — "3 matches at tier text" for
-    // "Albert Einstein", three of that author's quotes on one page (eefae1b8) —
-    // so it was swapped for an author page that answered 3/3 (b973e350, 93085a40,
-    // 14833919). Post-M32 the author page answers 0/1 (6811f8bf: extracted the
-    // site title, judge rejected) while THIS task answers again (63d8a48f), and
-    // then not (7d752e64). 1/3 across the current build: the card says unreliable
-    // and means it. Resolver disambiguation is main's M38.
-    task: "Who wrote the quote about the world we have created?",
-    note: "Flaky on this build: 1/3. Kept because an unreliable card that says so is honest; the declared failure is the JS-rendered /js/ pages."},
+    // Third task on this card in one milestone, and the first that survives a
+    // pre-merge re-run: 3/3 (51bc4a0a, eb5ed750, b131ac78 → "love"). The two it
+    // replaces are both the resolver-ambiguity shape main's M38 exists to fix —
+    // "Who wrote the quote about the world we have created?" is 1/6 on this build
+    // ("3 matches at tier text" for "Albert Einstein", three of his quotes on the
+    // page: f7dd7f52, 7d05d5e2), and the /author/ page answers with the site
+    // title and is rejected by the judge (6811f8bf, 79572b33, a8fe1b01). This
+    // task asks for a value that is unique on the page, which is the property
+    // this agent needs and the page cannot always offer.
+    task: "Which tag is listed first under Top Ten tags?",
+    note: "3/3 on this task. The author-name tasks are 1/6 — the same value appears three times and the resolver will not guess; the declared failure is the JS-rendered /js/ pages."},
   "openlibrary.org (live)": {label: "See a failure: author of a book",
     url: "https://openlibrary.org/books/OL7025919M",
     task: "Who is the author of this book?",   // run f1ecf157 → failure:extract (015b6778, 65af344f too: loud, never wrong)
@@ -621,8 +622,12 @@ const EXAMPLES = {
     note: "2/3 — the third run read the historical table instead of the current rate, and the judge rejected it."},
   "wikipedia.org": {label: "A university's motto",
     url: "https://en.wikipedia.org/wiki/Harvard_University",
-    task: "What is the motto of this university?",            // run 6a828ddb → "Veritas (Latin)[3]"
-    note: "Not in the eval set yet — one verified run."},
+    // 3/4 on the current build (4bdbd12f, f31a05c8, a51a772f → "Veritas
+    // (Latin)[3]"; 7547e580 failed at locate). The pre-merge re-run is what
+    // found the failure — the earlier note said "one verified run", which was
+    // true and told a reader nothing about how often it holds.
+    task: "What is the motto of this university?",
+    note: "3/4 on this build; still no eval case, so nothing re-checks it."},
 };
 // Short limits for visitors; the declared rows with evidence stay in
 // docs/support-matrix.md, linked below with their count from the payload.
