@@ -154,6 +154,14 @@ PAGE_CONTEXT_WINDOW = 20
 # many clean characters, `not_a_dump` does not apply at all.
 MIN_PAGE_CHARS = 100
 
+# M28: how much of an offending VALUE a check's reason quotes. A reason that
+# repeats a 1.5k-char dump verbatim -- once per check that rejected it -- is
+# the dump wearing a different field name (run 4bade630's `reason` was the
+# whole infobox it had just refused as the answer). The full value is in
+# `extractions` beside it; the reason only has to identify it. 80 is a
+# terminal line, not a tuning.
+CITE_CHARS = 80
+
 # M10 probe #2 (docs/analysis.md, second held-out probe): "which author has
 # the most quotes on this page?" against quotes.toscrape.com came back
 # `status: success, verdict: PASS` twice, with two different WRONG answers
@@ -295,6 +303,12 @@ def is_aggregate(task: str) -> bool:
     runs than it was.
     """
     return bool(_AGGREGATE.search(task or ""))
+
+
+def _cite(values: list) -> list[str]:
+    """Bounded preview of each value for a reason string (CITE_CHARS)."""
+    return [s if len(s) <= CITE_CHARS else f"{s[:CITE_CHARS]}… ({len(s)} chars)"
+            for s in map(str, values)]
 
 
 def _clean(value) -> str:
@@ -458,7 +472,7 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     check(
         "grounded",
         not ungrounded,
-        f"extracted values absent from the page they were read from: {ungrounded}",
+        f"extracted values absent from the page they were read from: {_cite(ungrounded)}",
     )
 
     # A value that reproduces most of its own evidence window is a dump, not an
@@ -487,7 +501,8 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
              if (pt_len := e.get("body_len") or len(_clean(e.get("page_text", ""))))
              and pt_len >= MIN_PAGE_CHARS
              and len(_clean(e["value"])) / pt_len >= DUMP_RATIO]
-    check("not_a_dump", not dumps, f"value reproduces most of its own evidence window: {dumps}")
+    check("not_a_dump", not dumps,
+          f"value reproduces most of its own evidence window: {_cite(dumps)}")
 
     # M34: a value whose local NEIGHBOURHOOD on the page it was read from is
     # ALSO verbatim on a different page this run visited is very likely site
@@ -510,7 +525,7 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     check("not_page_furniture", not furniture,
           f"value's surrounding text also appears verbatim on a different "
           f"page this run visited, which is page chrome, not a "
-          f"page-specific answer: {furniture}")
+          f"page-specific answer: {_cite(furniture)}")
 
     # Page evidence ONLY. Including the answer would let an anchor equal to the
     # expected answer certify itself, which is a green check that cannot go red

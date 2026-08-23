@@ -241,9 +241,19 @@ def main():
         if result["verdict"] is None:
             skipped.append((spec["id"], result["status"], result["reason"]))
             continue
+        # M28: a run the verifier rejected carries `answer: null` (agent.py's
+        # INV-2 branch). The thing a human labels here is what the EXECUTOR
+        # claimed, which is what the verifier judged -- so on a rejection,
+        # recover that claim from the extractions (one value -> scalar, else
+        # the list), never leave it null and let `answer_nonempty` grade the
+        # demotion instead of the predicates.
+        claimed = result["answer"]
+        if claimed is None and result["evidence"]["extractions"]:
+            vals = [e["value"] for e in result["evidence"]["extractions"]]
+            claimed = vals[0] if len(vals) == 1 else vals
         kept.append({
             "id": spec["id"], "source": spec["source"], "url": url, "task": spec["task"],
-            "stub_plan": spec["stub_plan"], "answer": result["answer"],
+            "stub_plan": spec["stub_plan"], "answer": claimed,
             "reported_status": result["status"], "runtime_verdict_at_capture": result["verdict"],
             "trace": result["evidence"]["trace"], "extractions": result["evidence"]["extractions"],
             "captured_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

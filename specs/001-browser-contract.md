@@ -46,7 +46,13 @@ contract-drift (spec-drift audits field-by-field).
   task). `unsupported` comes from pre-flight screening or mid-run discovery.
 - `answer` — the user-facing result. **INV-0: `status` = `success` requires a
   non-empty `answer` AND a non-empty `evidence.trace`.** An empty extraction is
-  `failure:extract`, never a quiet success.
+  `failure:extract`, never a quiet success. The converse holds too (M28): a run
+  the verifier rejected (`failure:semantic` through INV-2) carries `answer:
+  null` — what was read is in `evidence.extractions`, in full, and the L1
+  evidence checks (`grounded`, `not_a_dump`, `not_page_furniture`) cite it in
+  `reason` by a bounded preview (`verifier.CITE_CHARS`) rather than quoting the
+  page dump back (`extract-container-dump-is-not-the-answer`). Other reason
+  sources (judge prose, `rank` ties, L2 `answer_matches`) are not bounded.
 - `reason` — human-readable cause for non-success statuses; null on success.
 - `verdict` — the OutcomeVerifier's finding (`src/browser/verifier.py`), null
   when the run stopped before anything could be verified (screened out,

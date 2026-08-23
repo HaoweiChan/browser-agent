@@ -57,7 +57,7 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-147 distinct cases (20 golden + 127 adversarial).
+148 distinct cases (20 golden + 128 adversarial).
 209 browser actions in a `fast` run; **71 of the
 134** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
@@ -457,7 +457,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-147 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
+148 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -465,7 +465,7 @@ Empty cells are shown, not hidden.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 31 | | L1 | 35 |
+| TC1 extract-on-page | 32 | | L1 | 36 |
 | TC2 search-then-extract | 8 | | L2 | 26 |
 | TC3 navigate-then-extract | 13 | | **L3** | **13 — 4 live (one of them unrun) + 9 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`, R20's `plan-lint-refuses-a-declared-non-comparison`, and M34's own page-furniture case** |
 | TC4 interact-then-extract | 28 | | L4 (mutation/recovery) | 16 |
@@ -792,7 +792,12 @@ attribute/second-hop tasks) is a distinct, real extraction gap, logged as
 debt (`tasks/TODO.md`) rather than fixed in this pass: it produces a
 *failure*, not a wrong success, so it does not implicate the inviolable
 property, and fixing it is out of the two-defect scope this repair was
-bounded to. The live re-confirmation of both fixes against the deployed URL
+bounded to. *M28 (2026-08-23) closed the result-shape half of it: a
+verifier-rejected run now carries `answer: null`, the rejected extraction stays
+in `evidence.extractions` in full, and `reason` cites it by a bounded preview
+(`verifier.CITE_CHARS`) instead of quoting the dump back — case
+`extract-container-dump-is-not-the-answer`, offline twin of deployed run
+`4bade630`; the isolate-before-giving-up half is debt T-R66.* The live re-confirmation of both fixes against the deployed URL
 happens after this PR merges and Zeabur redeploys — the same sequence the M5
 probe's fix followed — and is not claimed here.
 

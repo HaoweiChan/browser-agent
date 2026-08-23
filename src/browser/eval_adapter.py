@@ -1560,6 +1560,24 @@ def _run_fixture_case(case: dict) -> dict:
     if "budgets" in exp:
         got_budgets = {k: result["budgets_spent"].get(k) for k in exp["budgets"]}
         checks["budgets"] = got_budgets == exp["budgets"]
+    # M28: the SHAPE of a verifier-rejected run, not its verdict. INV-2 already
+    # demoted run 4bade630 to failure:semantic; what it then presented as
+    # `answer` was the rejected extraction itself -- a whole infobox -- and the
+    # `reason` quoted it back in full (case extract-container-dump-is-not-the-
+    # answer). `evidence_contains` is the other half of the same honesty claim:
+    # null'ing the answer must not hide what was read -- the extraction's VALUE
+    # stays in evidence, in full. Graded on `value` alone, not `page_text`: the
+    # asked string also sits in the page window by construction, so a check
+    # over both would stay green if a later edit truncated or dropped the
+    # rejected value from `extractions` (cold review, M28).
+    if "answer_null" in exp:
+        checks["answer_null"] = (result["answer"] is None) == exp["answer_null"]
+    if "reason_max_chars" in exp:
+        checks["reason_max_chars"] = len(result["reason"] or "") <= exp["reason_max_chars"]
+    if "evidence_contains" in exp:
+        checks["evidence_contains"] = any(
+            exp["evidence_contains"] in e.get("value", "")
+            for e in result["evidence"]["extractions"])
     # A "recovery" label claims a strategy CHANGED. An attempt identical to the
     # one it replaced is a retry, and specs/001 keeps retries out of the
     # recovery metric by construction, not by intention.

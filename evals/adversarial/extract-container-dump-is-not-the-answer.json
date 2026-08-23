@@ -1,0 +1,27 @@
+{
+  "id": "extract-container-dump-is-not-the-answer",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the population of Port Meridian?",
+    "fixture": "city-infobox.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "table" }, "anchor": "Port Meridian" }
+    ]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "verdict": "FAIL",
+    "answer_null": true,
+    "reason_max_chars": 600,
+    "evidence_contains": "1,482,317"
+  },
+  "provenance": "M28 (docs/analysis.md §8a-2, finding 3; promoted from Debt 2026-08-23). Offline twin of deployed run 4bade630: 'What is the population of Tokyo?' on en.wikipedia.org/wiki/Tokyo, plan navigate -> extract {role: table, near: 'Tokyo 東京都'}, came back `failure:semantic` with the ENTIRE infobox (~1.5k chars, containing the correct '14,254,039') as the `answer` field, and a `reason` that quoted the same dump back in full. The fixture is an encyclopaedia page with a 32-row infobox whose rendered text is longer than half of agent.PAGE_TEXT_KEEP, so the container's text can never sit inside the evidence window centred on its own start and verify()'s `grounded` fails exactly as it did live (`not_a_dump` sits just under its ratio on this page, as it did on Wikipedia's far longer one). The plan targets the container, as the live planner did; the asked value is one cell of it. What is forbidden is precise: the run may fail (the planner's targeting is M32's problem, not this case's), but it must fail CLEANLY — `answer` is null (answer_null), the human-readable `reason` does not smuggle the dump back in (reason_max_chars: 600, against a 1.4k-char reason before the fix — verify() now cites an offending value by a bounded preview, verifier.CITE_CHARS, so the full 1,271-char dump cannot reach the reason even once, let alone once per check that rejects it), and the captured evidence still carries the full extraction with the value in it (evidence_contains: '1,482,317', graded on the extraction's `value` field alone — the string is also in the page window by construction, so grading both would not go red if a later edit dropped the rejected value from evidence), so nothing is hidden from a reader of the run record. The fix is in `assemble_result` (INV-2 branch) and verify()'s reason strings, not in the verifier's checks: the verdict was already right, only the result shape was dishonest.",
+  "triage": {
+    "class": "silent-failure",
+    "watched_red": "before the fix: status failure:semantic, verdict FAIL, checks {status: true, verdict: true, answer_null: false, reason_max_chars: false, evidence_contains: true} — answer was the 1,271-char table text (`grounded` false, the live verdict), reason 1,413 chars quoting it in full. Watched green after the fix: answer null, reason 178 chars, extraction still in evidence.",
+    "what_this_grades": "the SHAPE of a verifier-rejected run, not the verdict. INV-2 already demoted it to failure:semantic; the defect was that the demoted run still presented the rejected extraction as its `answer`. Half (a) of the M28 acceptance; half (b) — isolating the cell before giving up — is logged as debt (tasks/TODO.md T-R66): the live plan's `near` was the table caption, not the value's label, so no site-agnostic isolation step can pick the cell without reading the task text, and a keyword heuristic over the task is the regex-over-English ceiling this repo has already hit three times (SCOPE_BLOCK, _AGGREGATE, D23)."
+  }
+}
