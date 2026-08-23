@@ -63,26 +63,27 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 153 cases, ts `20260823-211340`, **70.46s**, 151/153
-  (`evals/report/20260823-211340-fast.json`; the run that measured this tree
-  while M28's `extract-container-dump-is-not-the-answer` was still uncommitted,
-  so `dirty: true` — and the two cases it fails are this check and the
-  `docs-numbers-are-derived` cascade off it, both of them the doc edit this band
-  IS. The ledger's own maximum at this count derives the same ceiling; it is not
-  copied here — see §3's note on why this file stopped quoting that scalar.)
+- Band source — `fast` at 153 cases, ts `20260823-212240`, **70.20s**, 153/153
+  (`dirty: false`, ts-only for the ADR-012 reason §3 gives. Two clean rows were
+  available at this count — 70.20 / 70.19s, taken as they came — and this is the
+  slower, on §3's least-slack rule. The ledger's own maximum at this count
+  derives the same ceiling; it is not copied here, see §3.)
 
-**This citation is dirty, it is red on CI, and that is a known price rather than
-an oversight.** `T-M32-13` is the diagnosis: the ledger's `ts` is a naive local
-timestamp compared lexicographically against CI's UTC ones, so item 2
-(cited-run) refuses a dirty row against any clean row stamped earlier, and every
-CI row is clean and stamped eight hours behind ours. A count change FORCES a
-dirty citation — the tree only reaches 153 cases while the new case is
-uncommitted, which is the entire reason the dirty allowance exists — so the only
-route to a clean citation at a new count is a SECOND commit after this one. That
-commit is the first live instance of the cost `T-M32-13` records. It is paid
-deliberately rather than dodged by citing the stale clean row at 152 cases: the
-count changed, and a band has to describe the tree that ships.
+**This band was dirty for one commit, and the reason is worth keeping.** A case
+addition forces a dirty citation: the tree only reaches 153 cases while the new
+case is uncommitted, which is the entire reason the dirty allowance exists. But
+a dirty citation is red on CI and green locally — `T-M32-13` is the diagnosis,
+the ledger's `ts` being a naive local stamp compared lexicographically against
+CI's UTC ones, so item 2 (cited-run) refuses a dirty row against any clean row
+stamped earlier and every CI row is clean and stamped eight hours behind ours.
+So M28's merge commit published `ts 20260823-211340`, 70.46s, 151/153, dirty,
+and this commit re-cites the clean run that could not exist until that one had
+landed. Two commits, by construction, for one case addition. That is the price
+`T-M32-13` records; it is paid here rather than dodged by citing a stale clean
+row from the 152-case tree, because the count changed and a band has to describe
+the tree that ships.
 
+The `153/153` is the cited row's own result, graded against it, not prose beside
 The `151/153` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
@@ -104,7 +105,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 70.46 × 1.15 = 81.03 → **85**, which is BELOW the committed 90 and
+five — gives 70.20 × 1.15 = 80.73 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
