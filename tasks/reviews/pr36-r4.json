@@ -1,0 +1,52 @@
+{
+  "pr": 36,
+  "round": 4,
+  "scope": "round-3 repair diff d91207b..HEAD + standing R16/R17/R18",
+  "standing": {
+    "R16": "NOT closed — the bounding predicate is self-satisfied by the comment warning about self-satisfaction, see R19; and only the closing edge is graded, see R20",
+    "R17": "closed — `_SIX_REF.finditer('§6 items 2-3 ...')` yields ('items','2',None), the `word == 'items'` branch fires, and the clause plus output are back in watched_red",
+    "R18": "closed — tasks/TODO.md:36-38 reads item 2 (cited-run) and item 3 (same-ceiling) ... item 4 (committed-ceiling), no duplication"
+  },
+  "reviewer_checked_clean": [
+    ".eval-baseline.json untouched by d91207b..HEAD",
+    "the uncommitted history.jsonl rows are the orchestrator's own verification runs at $0.0000 and do not redden the band check",
+    "the fourth --no-verify ledger commit is the same shape as the prior three and is flagged in the resolution artifact — no new finding",
+    "the closing sweep's absolutes grep is accurate as far as it went, but did not cover the absolute b8e585b itself added — that is R19"
+  ],
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R19",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The new `strays` predicate is satisfied by its own comment text: `_band_wrong` can be moved entirely below the end marker and the region guard stays green, so \"every band definition inside them\", \"no literal in the region can satisfy it from within\", and the counted claim \"the five ways this scan has been made to stop scanning are red rather than green\" are all false as shipped.",
+      "evidence": "ORCHESTRATOR-VERIFIED. src/browser/eval_adapter.py:710 tests membership as `f\"def {m.group(1)}(\" not in region` — a plain substring test. Line 704, INSIDE the region (markers at 361 and 859), contains the literal ``a literal `def _band_wrong(` written here``. So `def _band_wrong(` is present in `region` regardless of where the real definition lives. I moved the 84-line `_band_wrong` body below the end marker: region_lines 498 -> 414 and `_check_published_band()` returns {'passed': True, 'wrong': []}. Deleting only the backticked literal from line 704, with the same move in place, immediately reddens with outside_the_region: ['_band_wrong']. The comment at 703-706 names this exact hazard and then creates it in the same sentence. This also falsifies ADR-019:197-199's counted claim and the case's watched_red sentence (\"now naming all five band definitions rather than three\"): round-2 mutation (3) is red for 4 of the 5 and green for `_band_wrong`. tasks/reviews/pr36-r3-resolution.json repeats the false claim.",
+      "repro": "move `_band_wrong`'s body below the end marker -> `_check_published_band()` returns passed True, wrong []",
+      "acceptance": "That mutation, and the same move applied to each of the five band definitions in turn, reports `outside_the_region: [name]` and passed False. Membership must be tested against something no comment or string in the region can spell — `^def NAME\\(` in `region` with `re.M` (as the round-2 version did), or the definition's byte offset compared against the marker offsets. The mutation goes into watched_red only after it has been seen red, and ADR-019's \"five ways ... are red\" is re-counted against what actually reddens."
+    },
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Only the closing edge of the region is graded; moving the OPENING marker down silently shrinks the scan and masks a mis-pointed reference with every predicate green.",
+      "evidence": "src/browser/eval_adapter.py:716-717 checks a top-level boundary for `_REGION[1]` only; nothing constrains where `_REGION[0]` sits. Moving the begin marker down 74 lines to just above `_BAND_RATE` drops the leading comment block — which carries three `§6 item N (slug)` references — from the scan: marker_counts stays [1,1], no def leaves the region, end_marker_inside_a_body stays False. With `§6 item 8 (references)` on line 362 re-pointed to `§6 item 3 (references)` inside the dropped block, the check returns {'passed': True, 'wrong': []}. Same 'region loses content and stays green' direction the guard exists for, reached from the other edge.",
+      "repro": "move the begin marker down to just above `_BAND_RATE` with a mis-pointed reference in the dropped block -> passed True",
+      "acceptance": "The same predicate applied symmetrically — the line before the opening marker is blank or unindented, or the opening marker's offset pinned relative to the first band definition — so the mutation reports band_region_does_not_cover_the_band_code and passed False, watched red first. If the opening edge is deliberately left ungraded, ADR-019 §6 says so in the same sentence that lists the counts, and it becomes named debt."
+    },
+    {
+      "id": "R21",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "R18's duplicated-parenthetical defect is fixed in tasks/TODO.md but the same stutter still stands, ungraded, in the region's own header comment.",
+      "evidence": "src/browser/eval_adapter.py:362-363 reads `... and §6 item 8 (references)` / `# (references) reads THIS REGION of this file`. `_SIX_REF` consumes `item 8 (references)` via the same-line branch and the second `(references)` is left as dangling prose, so the check is green — the reference is correct, the sentence stutters. Pre-existing since 3dbbc85, not introduced by b8e585b; R18 named only the tasks/TODO.md instance, which is genuinely fixed.",
+      "repro": "sed -n '362,363p' src/browser/eval_adapter.py",
+      "acceptance": "One `(references)` on lines 362-363. Purely editorial.",
+      "route_note": "LOW, one word, in the block this round rewrote."
+    }
+  ],
+  "gate": {
+    "invariant": "53/53 = 1.000",
+    "fast": "136/136 = 1.000"
+  },
+  "note": "Seventh consecutive round of this subsystem's defect class, and the sharpest instance: the comment warning that no literal should satisfy the membership test contains the literal that satisfies it."
+}

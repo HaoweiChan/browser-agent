@@ -1,0 +1,50 @@
+{
+  "pr": 36,
+  "round": 5,
+  "scope": "confirming pass — round-4 repair diff 1fad180..HEAD + standing R19/R20/R21",
+  "standing": {
+    "R19": "CLOSED — membership is a byte offset; the orchestrator's own repro now reddens with outside_the_region ['_band_wrong']",
+    "R20": "CLOSED for the pinned set and both markers; the header-comment edge survives -> R22",
+    "R21": "CLOSED"
+  },
+  "reviewer_verified": "all eleven mutations enumerated in ADR-019 §6 redden — each of the five function definitions moved below the end marker, band code appended after it, either marker deleted, a second quoted marker, a marker sharing a line with code, the closing marker moved into a body, the opening marker moved inward past the module-level block; begin-marker-into-a-body is red both indented and at column 0; no masking direction exists in the offset test",
+  "result": "REQUEST_CHANGES (0 HIGH) — routed entirely to debt under the human's ruling",
+  "disposition": "Human ruled: one tight pass on R19/R20/R21, then merge. R19 (the round-4 HIGH) is closed and no HIGH remains, so R22/R23/R24 ship as named debt — T-R63 corrected in place, T-R64 and T-R65 new — and the PR merges.",
+  "gate": {
+    "invariant": "53/53 = 1.000",
+    "fast": "136/136 = 1.000"
+  },
+  "findings": [
+    {
+      "id": "R22",
+      "severity": "MEDIUM",
+      "route": "debt",
+      "tid": "T-R63 (corrected in place)",
+      "claim": "The region can still lose graded content with every predicate green: the opening marker moved down past the header comment drops two live `item N (slug)` references, so T-R63's and the resolution artifact's claim that \"the residue is currently empty\" is false today.",
+      "evidence": "src/browser/eval_adapter.py:361-365 — the 19 lines between the begin marker (361) and the first pinned name `_BAND_LINE` (380) are unpinned comment carrying two graded references: `§6 item 8 (references)` (:363) and `item 2 (cited-run)` (:374). Moving the begin marker immediately above `_BAND_LINE` leaves marker_counts [1,1], outside_the_region [], markers_off_a_top_level_boundary False — green — while the region shrinks 19 lines. Corrupting `item 8 (references)` to `item 3 (references)` is red with the marker in place and green once moved. ADR-019 §6's own sentence is correctly scoped to the six named constants and is NOT false; only the derived \"residue is currently empty\" was.",
+      "repro": "move the begin marker to immediately above `_BAND_LINE` and rewrite :363's `item 8 (references)` to `item 3 (references)` -> passed True",
+      "acceptance": "Either the guard pins the region's lower edge to something the header comment cannot be moved out of, or T-R63 states the comment-drop hole explicitly with the marker-move-plus-corrupted-reference mutation named as the case that must go red when it is closed.",
+      "route_note": "Routed debt and T-R63 CORRECTED IN PLACE by the orchestrator rather than left shipping a false line — debt blocks and review artifacts are orchestrator-owned. The mechanism half is genuine future work."
+    },
+    {
+      "id": "R23",
+      "severity": "LOW",
+      "route": "debt",
+      "tid": "T-R64",
+      "claim": "`_BAND_DEF` makes `def ` optional and anchors only at column 0, so prose in a triple-quoted string that begins a line with a pinned name is reported as a stray definition — a false red naming a constant that never moved.",
+      "evidence": "src/browser/eval_adapter.py:439-441. The file already contains column-0 lines inside docstrings. Adding `_BAND_LINE is what ADR-019 publishes; ...` at column 0 inside `_check_history_dirty_before_report` yields {outside_the_region: ['_BAND_LINE'], passed: False}. Fail-closed only — a spurious in-region match cannot mask a real out-of-region definition, since every match is offset-tested independently.",
+      "repro": "insert that line at column 0 in a docstring outside the region -> published-band-matches-the-ledger red",
+      "acceptance": "The pattern requires an assignment/def form, or the residue is named where the pattern is defined."
+    },
+    {
+      "id": "R24",
+      "severity": "LOW",
+      "route": "debt",
+      "tid": "T-R65",
+      "claim": "The line the repair rewrote still calls the adapter \"the whole 3,900-line adapter\"; the file is 4,079 lines.",
+      "evidence": "src/browser/eval_adapter.py:363, reflowed by ed23223. `wc -l` is 4079. Rhetorical, not a graded scalar, but stale in a line that commit touched.",
+      "repro": "wc -l src/browser/eval_adapter.py; sed -n '363p' src/browser/eval_adapter.py",
+      "acceptance": "Drop the figure rather than round it, since any figure here goes stale by construction."
+    }
+  ]
+}

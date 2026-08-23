@@ -60,15 +60,11 @@ recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 b
 diagnosis 32/32 · 13 replans
 ```
 
-openlibrary.org is the flaky one of the four live sites, and
-`live-ol-search-a11y-invisible` is the case that shows it: on a bad day the
-site answers the bare home page in ~9.5s to `curl` and the search page exceeds
-the 20s navigation budget, which takes `live` to 8/9. That is a real recorded
-outcome on other runs, not the run cited above — this sentence used to say
-"8/9 in that run" beside a block that says 9/9, which was the same
-claim-versus-artifact defect the block itself exists to prevent (PR #34 R24).
-An unreachable live dependency fails loudly rather than being stubbed
-(CLAUDE.md rule 4); `live` is not part of the gate.
+`live` is not part of the gate, and it goes red when a site is having a bad
+day rather than being stubbed around it (CLAUDE.md rule 4) — an earlier run of
+this block was 8/9 because `live-ol-search-a11y-invisible` exceeded the 20s
+navigation budget while openlibrary.org was answering its bare home page in
+~9.5s to `curl`.
 
 Every number in that block is recomputed from those three report files by
 `docs-numbers-are-derived`, so it can only go stale by citing a stale report —
@@ -88,8 +84,8 @@ suite straddles its ceiling rather than clears it. The same suite on CI (ubuntu-
 **59.77 / 60.84 / 64.61 / 64.67s** across four runs of one commit — an 8% spread
 on byte-identical code, which is why the wall-clock ceiling is per-environment
 rather than one number pretending to be portable. CI's ceiling is the slowest
-observed run plus 15% (90s since ADR-019 §5, measured on CI at the shipped case
-count); the local ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
+observed run plus 15% (90s since ADR-019 §5, measured on CI — at the case count
+of the commit named there, not this one); the local ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
 58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
@@ -107,11 +103,15 @@ ADR-013's own rule: slowest observed run +15%, rounded up to a multiple of five.
 
 **Every LOCAL band below is computed from `evals/report/history.jsonl`**, the
 ledger committed in this repo, and `published-band-matches-the-ledger` grades
-that on every run. What it requires — seven properties, including that this
-table's row and ADR-019's sentence carry the same four values — is listed once,
-in [ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md), and
-restated nowhere: a second copy of a rule is what goes stale while the rule
-moves. It is a property, not a snapshot, because the ledger grows on every gate
+that on every run. What it requires is listed in
+[ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md); the
+sentences here name its items rather than re-state them, and item 8 (references)
+grades those names: a reference spells a number the list has and that item's
+slug, so a bare name, a name for an item that does not exist and a name aimed at
+the wrong rule are all red. A paragraph that paraphrases a rule and names no
+item is caught by nothing, which is why §6 says so in those words.
+It is a property, not a snapshot, because the
+ledger grows on every gate
 run; a list of times would go red on the next run instead of on a regression. It
 exists because three bands in PR #29 did not match the ledger beside them, and
 one ceiling was derived from a maximum that was never measured (R18, R21) — the
@@ -119,14 +119,16 @@ same selective presentation ADR-013 Decision 4 was withdrawn over.
 
 CI's two numbers below are NOT in this ledger and cannot be: no CI run commits
 its wall clock, so they are measured by hand off the workflow log and recorded
-in ADR-019 §5. That half is unfalsifiable here and is logged as debt (T-R51),
-not graded.
+in ADR-019 §5. What is graded is that the workflow declares the values
+`fast-wall-clock-budget` pins; that they were ever measured is not, and cannot
+be from here — that half is logged as debt (T-R51).
 
-Same ceiling, not `published >= ledger max`: so the published number can be
-below the ledger's maximum, by at most one ceiling step (**4.35s**). The table
-below states one named run of this tree — the one ADR-019 §2/§3 cites by ledger
-timestamp — and not the slowest run in the ledger today. That is a declared limitation, not an
-oversight — the reasoning is
+§6 item 3 (same-ceiling) is why the published number can sit below the ledger's
+maximum, by at most one ceiling step (**4.35s**). The table below carries the
+four values item 7 (readme-row) grades; the run behind them is named in
+ADR-019 §2/§3, which cite it by ledger timestamp and state what it scored — and
+that run is not necessarily the slowest in the ledger today. That is a declared
+limitation, not an oversight — the reasoning is
 [ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) and
 `published-band-slack-is-declared` pins it. Both forms lag identically (the
 history line is appended after the run's cases are graded, so no run sees its
@@ -135,9 +137,10 @@ maximum under the strict form, once per band crossing under this one — and the
 ceiling is graded against the ledger directly, so the slack costs a reader
 precision and never costs the gate its teeth.
 
-At the case count this branch ships. Each band names one run of this tree by its
-ledger timestamp — the graded citation is in ADR-019 §2/§3, and every other run
-is in the ledger; enumerating them here is the snapshot that drifted:
+At the case count this branch ships. The run behind each band is named — by
+ledger timestamp, with its result — in ADR-019 §2/§3, which is where item 2
+(cited-run) grades the citation; every other run is in the ledger, and
+enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
@@ -145,14 +148,15 @@ is in the ledger; enumerating them here is the snapshot that drifted:
 | `invariant` | 58 | 13.78s | 15.85 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
-attempts of the shipped tree gave `invariant` 14.80-16.47s and `fast`
+attempts of one commit (`d173340`, 116 `fast` / 48 `invariant` cases, a smaller
+tree than this one) gave `invariant` 14.80-16.47s and `fast`
 69.37-74.06s, so **20s** and **90s** by the same rule. The old CI `fast` ceiling
 of 80 was the next coin flip: 74.06s against it is 8% of margin on a runner
 whose own spread is 6.8% (ADR-019 §5). One variable per suite
 (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`) carries them, so
 raising one environment's ceiling for one suite cannot silently raise another's.
 
-Margin against the observed local band is ~14s where before M31 it was ~0.2s.
+Margin against the observed local band is ~18s where before M31 it was ~0.2s.
 That is a real loosening and ADR-019 says so in those words: a ceiling whose job
 is to catch drift cannot also be the thing that fails on drift-free commits.
 

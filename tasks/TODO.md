@@ -12,30 +12,39 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M37 — The HN card's Try example no longer reproduces on the deployed build — swap it for one that does            [status: pr]
-Spec: M35 shipped five per-site Try examples, each cited to a deployment run
-that answered correctly. After the merge the post-deploy receipt round found
-`news.ycombinator.com` "Who submitted this story?" (item?id=1) failing 5/5 —
-`349e4839`, `e08b7627`, `bcae4fe7`, `63b9d944` and one more, all
-`failure:locate`: the planner now targets link "pg", the page has two "pg"
-links, and relocation by text hits the same ambiguity. The card is declared
-`unreliable`, so the page is not lying, but M35's acceptance says an example
-that cannot be reproduced is removed, not kept. The same page answers "What is
-the title of this story?" correctly on every try seen (`97f2157d`, `4453fae6`
-→ "Y Combinator", the item's real title) and "Which site was this story
-submitted from?" (`a1470b64` → ycombinator.com).
-Acceptance: `EXAMPLES["news.ycombinator.com (live)"]` becomes task "What is
-the title of this story?" with the same start URL, label "Title of an HN
-story", and its code comment cites `97f2157d` / `4453fae6` and the retired
-example's failing runs; `ui-no-url-guard-and-example-chips` and
-`ui-examples-cover-matrix` stay green with no stub change beyond what the new
-text needs; gate green (invariant 100%, fast >= baseline, under the ADR-019
-ceiling); after merge and redeploy the orchestrator runs the five Try
-examples once more and the HN card answers "Y Combinator" — the receipt goes
-in the PR evidence pack. No other page text changes.
-Out of scope: why the planner's "pg" targeting regressed (planner quality —
-M28/M32 territory; note it in the PR if a cause is obvious, do not fix it);
-the openlibrary card, which fails as its note declares.
+### T-R56 — the band subsystem's documents and its own strings say what the code does            [status: pr]
+Origin: bundles T-R45, T-R46, T-R47, T-R48, T-R49, T-R52, T-R54, T-R55 (PR #35 R8/R17/R18/R19/R20/R21/R22 + T-R34 cold review)
+Spec: Eight debt blocks from PR #35 are the same defect in the same two documents and one
+grader: a description that does not match the code it describes. They were bundled because
+each one edits `specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md`, `README.md` and
+`src/browser/eval_adapter.py`, so eight sequential PRs would conflict on every one. The
+mechanism changes from the same review (T-R44, T-R50, T-R51, T-R53) are deliberately NOT
+in this task — they change behaviour, these change what is claimed about it.
+Acceptance: every folded block's own acceptance is met, each watched red first where it
+names a mutation:
+- T-R45 — the slack sweep matches any decimal rendering of the current value, not the one
+  string `f"{step_s:g}"`; watched red with `4.350`. Or the limit is stated in the docstring
+  beside the existing `ponytail:` note.
+- T-R46 — either §6's two restating paragraphs and README:107-109/:121 defer to the item
+  numbers, or the "one list, one place / restated nowhere" claims at ADR-019:167-168, :48-49
+  and `specs/decisions/INDEX.md`:28 are narrowed to what is true.
+- T-R47 — the keys emitted by `_check_published_band_slack` name §6's item numbers (or no
+  number), and no string there uses the retired `property N` numbering.
+- T-R48 — ADR-019 §3/§6 say the 15-deriving band was reachable and is green under the
+  current check, not that a commit of PR #35 published it; or a sha is cited that did.
+- T-R49 — either `adr_publishes_no_band_line` and `no_recorded_run_at` are folded into §6's
+  list (or named as preconditions), or ADR-019:48-49 drops "exactly"; and :69 cites
+  item 2 (cited-run) and item 3 (same-ceiling) for the cited run and
+  item 4 (committed-ceiling) for the ceiling.
+- T-R52 — `specs/decisions/INDEX.md`, `evals/run.py` and `.github/workflows/eval.yml` cite
+  ADR-019 for the per-suite override, not ADR-017 (which is the M36 judge ADR), and a graded
+  row resolves `ADR-0NN` references in those files against the decision that actually rules.
+- T-R54 — linearity is named as the assumption in `_band_step_s`'s docstring, or the step is
+  measured at each published band and each graded against its own.
+- T-R55 — a band citation carries `passed/total` derived from the ledger row it names, or the
+  parenthetical is dropped from both citations; watched red by publishing a band whose
+  citation claims a result the row does not have.
+Out of scope: T-R44, T-R50, T-R51, T-R53 — behaviour, not description.
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
@@ -406,11 +415,23 @@ Acceptance: `specs/001-browser-contract.md:145-150` states the null half and
 cites the third case, matching D25 and ADR-020 word for word on the predicate;
 ideally a grader covers the contract's case citations the way
 `support-matrix-cites-real-cases` covers the matrix's.
+### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
+Origin: M37 implementer
+Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
+because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
+failure:locate, two "pg" links). The form's `#task` placeholder in `src/browser/server.py`
+(`placeholder="e.g. Who submitted this story?"`) is the same prompt, unchanged because M37's
+acceptance reads "No other page text changes" and nothing grades placeholder text. A visitor
+who types the placeholder verbatim against the HN card's URL reproduces the retired failure.
+Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
+"What is the title of this story?" is the obvious one), pinned by the ui-form case the way
+`expected_examples` pins a chip — or a note that placeholders are illustrative only.
+
 ### T-R50 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
 Origin: T-R34, restated after PR #35 R4 (renumbered from T-R39 during the M35 merge — main had allocated that id independently)
 Spec: `_band_wrong` filters `history.jsonl` to rows whose `total` equals the CURRENT case
-count, so adding one 0.0s pure-code case discards every earlier run. Observed: `invariant`
-had 34 runs at 51 cases reaching 14.12s; the first two runs at 52 cases maxed at 12.78s,
+count, so adding one 0.0s pure-code case discards every earlier run. Observed: `invariant`'s
+runs at 51 cases reached 14.12s; the first two runs at 52 cases maxed at 12.78s,
 which derives **15** — the ceiling CI has been red against twice. PR #35 R4 correctly
 refused this as debt while ADR-019 §6 still claimed "no ceiling is ever justified by a
 maximum smaller than the truth"; that claim is gone, the residue is declared in §6 (a
@@ -441,23 +462,12 @@ artifact the check reads) and the band grader learns the environment dimension, 
 README's CI numbers are labelled as hand-read log values with the workflow run ids that
 produced them, and README's older CI band is struck. Watched red either way.
 
-### T-R52 — three files cite ADR-017 for the per-suite override that is ADR-019            [status: todo]
-Origin: T-R34 (cold review) (renumbered from T-R41 during the M35 merge — main had allocated that id independently)
-Spec: `specs/decisions/INDEX.md:11`, `evals/run.py:103` ("ADR-017 gives both suites the same
-treatment") and `.github/workflows/eval.yml:16` ("one variable per suite (ADR-017)") all
-attribute the one-variable-per-suite ruling to ADR-017. ADR-017 is the M36 judge ADR
-(INDEX.md:26); the ruling is ADR-019 §4. `adr-header-and-index` grades Ruling-block presence
-and INDEX numbering, so no citation body is checked, and `report-citations-resolve` covers
-report filenames, not ADR references.
-Acceptance: the three citations name ADR-019, and a graded row resolves `ADR-0NN` references
-in `src/`, `evals/`, `.github/` and `specs/` against the ADR that actually carries the
-ruling — or at minimum against the file existing and its Ruling mentioning the subject.
-Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
-
 ### T-R53 — nothing requires the runs behind a band to be green or clean            [status: todo]
 Origin: T-R34, evidence from PR #35 R5 (renumbered from T-R42 during the M35 merge — main had allocated that id independently)
 Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone; `sha`, `dirty` and
-`passed` are recorded on every row and read by nothing. Round 1 shipped both bands off red,
+`passed` are recorded on every row and were read by nothing when this was filed. `dirty` is
+read now (as-of-the-cited-run cleanliness) and so is `passed` (T-R56: the citation states the
+row's result); `sha` is still read by nothing, and GREEN is still not required. Round 1 shipped both bands off red,
 dirty runs: at (invariant, 52) the 13.22s maximum was ts 20260823-023204 with
 `passed: 50, total: 52, dirty: true` while the other nine runs maxed at 12.88s, and at
 (fast, 133) the 66.38s maximum was ts 20260823-023406 with `passed: 132, total: 133,
@@ -485,118 +495,6 @@ republished and no green row could exist to republish it from. Either a bootstra
 tolerates one red row and then requires green (the same as-of trick would work), or
 `_band_wrong`'s comment and ADR-019 §6 state that a band's source run may be red and say
 what that costs. Watched red with the two rows above.
-
-### T-R54 — `_band_step_s` measures the ceiling step once and publishes it as a bound for every band            [status: todo]
-Origin: PR #35 R8 (renumbered from T-R43 during the M35 merge — main had allocated that id independently)
-Spec: `_band_step_s` bisects two consecutive ceiling boundaries at x=60 and returns 4.35s,
-which `published-band-slack-is-declared` then asserts as the bound for both published bands,
-including `invariant`'s at 13.22s. The docstring justifies the bisection with "`_band_rule`
-is monotonic", but monotonicity only makes the bisection valid; what makes ONE measured step
-a bound for every band is that the rule is linear in x. Amend ADR-013's rule to anything
-scale-dependent — a percentage of the value, a floor at small magnitudes — and the published
-4.35s silently stops bounding the small band.
-Acceptance: name linearity as the assumption in the docstring, or measure the step at each
-published band and grade each against its own.
-
-### T-R55 — the `fast` band cites a red run without saying so; `invariant` discloses its result            [status: todo]
-Origin: PR #35 R17 (renumbered from T-R44 during the M35 merge — main had allocated that id independently)
-Spec: ADR-019 §2 cites ts `20260823-041419` and discloses `dirty: true` but not that the row
-is 132/134 — the run was red. §3's citation for ts `20260823-041729` discloses `53/53`. A
-reader comparing the two would reasonably read the silence as a pass. Nothing grades the
-parenthetical either way: `_BAND_LINE` captures suite, case count, ts and seconds, and the
-result is prose beside it. Green is deliberately not required of a band source (T-R42, and
-§6 says so), which is exactly why the result should be stated wherever a band is cited.
-Acceptance: the band citation carries `passed/total` from the row it names, derived rather
-than typed — the ledger row has both fields — or the parenthetical is dropped from both so
-there is nothing to be inconsistent about. Watched red by publishing a band whose citation
-claims a result the row does not have.
-
-### T-R62 — the EXAMPLES header comment dates every receipt 2026-08-22, but the HN entry's receipts are 2026-08-23            [status: todo]
-Origin: PR #37 R2 (LOW)
-Spec: `src/browser/server.py` EXAMPLES header comment says "Every entry was run against the deployment on 2026-08-22"; M37 swapped the HN entry for one whose receipts (`97f2157d`, `4453fae6`) are dated 2026-08-23. A JS comment, not rendered, but a reader of the source takes it as the receipt date.
-Acceptance: the comment states the date per entry or "on or after 2026-08-22"; nothing grades comments, so this is a doc fix with no case.
-
-### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
-Origin: M37 implementer
-Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
-because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
-failure:locate, two "pg" links). The form's `#task` placeholder in `src/browser/server.py`
-(`placeholder="e.g. Who submitted this story?"`) is the same prompt, unchanged because M37's
-acceptance reads "No other page text changes" and nothing grades placeholder text. A visitor
-who types the placeholder verbatim against the HN card's URL reproduces the retired failure.
-Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
-"What is the title of this story?" is the obvious one), pinned by the ui-form case the way
-`expected_examples` pins a chip — or a note that placeholders are illustrative only.
-
-### T-R45 — the slack sweep matches the rendered scalar, not the value            [status: todo]
-Origin: PR #35 R18
-Spec: `published-band-slack-is-declared` builds its bare-scalar regex from `f"{step_s:g}"`,
-so it sweeps for the exact string `4.35`. A document writing the same value as `4.350`, or
-`4.35 s`, or in a table cell as `4.4`, carries an ungraded copy that the sweep does not see
-and the marker check never reaches. The marked occurrences are parsed as floats and compared
-with a tolerance, so the marker half is rendering-independent; only the sweep half is not.
-Acceptance: the sweep matches any decimal rendering of the current value (a numeric scan of
-`[\d.]+s?` tokens compared as floats, rather than one string), or the limitation is stated
-in the check's docstring beside the existing `ponytail:` note. Watched red with `4.350`.
-
-### T-R46 — the "one list, one place" claim restates the properties it says it never restates            [status: todo]
-Origin: PR #35 R19
-Spec: ADR-019:167-168 says "One list, in one place; every other sentence in this
-file and in README refers to it instead of restating it"; :48-49 and
-`specs/decisions/INDEX.md`:28 say the same. In the same file, ADR-019:254-257
-restates §6 item 2's first clause in full with no reference to item 2, and
-:264-269 restates its second clause — the exact wording R15 found stale at
-§2:68-73, now living 80 lines below the list instead of 100 above it. README:107-109
-restates item 7 inside the sentence denying restatement, and README:121
-("Same ceiling, not `published >= ledger max`") restates item 3's parenthetical
-verbatim. The `ponytail:` limit at `src/browser/eval_adapter.py`:3398-3405 leans on
-the single-source list as the general defence against a newly invented false
-description, so the blacklist's stated backstop is not actually in place.
-Nothing can go red on this: `describes_a_deleted_rule` blacklists three retired
-phrases, and a correct-today restatement is by construction not on that list.
-Acceptance: either the two §6 paragraphs and README:107-109/:121 defer to the item
-numbers instead of restating their content (as :192-194 and :220 already do), or the
-single-source sentences at ADR-019:167-168, :48-49 and INDEX.md:28 are narrowed to
-what is true. Grepping §6 for a sentence that states an item's content without naming
-its number returns nothing, or the claim no longer says otherwise.
-
-### T-R47 — two emitted keys still use the retired `property N` numbering            [status: todo]
-Origin: PR #35 R20
-Spec: `src/browser/eval_adapter.py`:676 emits `r21_underpublished_band_green_on_property_2`
-and :680 emits `r21_underjustified_ceiling_green_on_property_3`. Under ADR-019 §6's
-list those are item 3 and item 4 (:173-186). The comments two lines above each were
-renumbered by PR #35 round 4 (:673-675), so the comment and the key it guards disagree,
-and a red report names §6 items off by one. The round-3 sweep claimed to cover "stale
-`property 2` / `property 3` numbering in three comments" — these are emitted strings,
-not comments, and were missed.
-Acceptance: the emitted keys name the same item numbers as §6's list (or no number at
-all), and no string in `_check_published_band_slack` uses the retired numbering.
-
-### T-R48 — ADR-019 says a band "was published" that no commit ever published            [status: todo]
-Origin: PR #35 R21
-Spec: ADR-019:101 ("that band was published, and the check was GREEN on it") and
-:236-237 ("that exact state was published in this round and the check accepted it").
-`git log --all -S'12.89 × 1.15' -- specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md`
-returns only `aeac0f7`, the round-4 repair itself quoting it as an example. The bands
-actually published across the branch were 13.22 -> 20, 13.08 -> 20 and 13.32 -> 20; the
-12.89 / -> 15 state existed only in an uncommitted working tree. The substantive half is
-true and verified — `_band_wrong` returns [] for that state, `round(12.89*1.15,2)` is
-14.82, `_band_rule(12.89)` is 15 <= 20 — only "published" is stronger than the record.
-Acceptance: the sentences say what is reproducible (the state was reachable and is green
-under the current check) rather than that a commit of this PR published it, or a commit
-sha is cited that did.
-
-### T-R49 — §6 says it lists "exactly" what the check requires, and omits two emitted shapes            [status: todo]
-Origin: PR #35 R22
-Spec: ADR-019:48-49 says "§6 lists exactly what it requires". `_band_wrong` also emits
-`adr_publishes_no_band_line` (`src/browser/eval_adapter.py`:440) and `no_recorded_run_at`
-(:461), neither of which appears in items 1-7 — nine distinct `wrong.append` shapes
-mapped onto seven items. Separately ADR-019:69 says "§6 items 2-4 are what the check
-requires **of it**" where "it" is the cited run; item 4 (:179-180) constrains the
-committed ceiling against the ledger maximum, not the cited run.
-Acceptance: either the two omitted shapes are folded into the list (or named as
-preconditions of items 1-2), or :48-49 drops "exactly"; and ADR-019:69 cites items 2-3
-for the cited run and item 4 for the ceiling.
 
 ### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: todo]
 Origin: PR #32 CI run 32626835735 (M31's check)
@@ -1312,6 +1210,125 @@ still green — the same class of drift R4 was filed for, one step removed.
 Acceptance: the check pins the block's content rather than the presence of
 strings within it — parse the fenced block and compare it whole, or assert that
 no other line in it parses as a competing figure for the same field.
+
+### T-R57 — an ADR citation resolves to a file and a section, never to the ruling it claims            [status: todo]
+Origin: T-R56 (the T-R52 half)
+Spec: `adr-header-and-index` now resolves every `ADR-0NN` reference — canonical or in an
+identifier spelling like `adr019` — to a committed decision, and every sectioned reference to a
+section that decision actually has, across README.md, CLAUDE.md, tasks/TODO.md, tasks/DONE.md
+and `src/ evals/ specs/ .github/ docs/ prompts/`. What it cannot say is whether the cited section RULES on
+the subject of the citing sentence — the T-R52 defect was catchable only because the judge
+ADR has no numbered sections, so the repaired citations carry a section and a re-miscitation
+is red. A citation written without a section, to an ADR that happens to have one, still
+resolves. Three mechanisms for the semantic half were measured against this tree and each was
+unusable as a gate: rare-word overlap between the citing line and the cited Ruling (70 false
+positives), the cited ADR having to enforce a mechanism named on the same line (40 — INDEX
+lines legitimately name one ADR's enforcers beside references to others), and a file having
+to cite every ADR that uniquely owns an identifier it uses (8 files, every one legitimate —
+implementation files use ADR-ruled identifiers without citing them).
+Acceptance: either citations carry a section reference by convention and the check requires
+one (so the resolution above is the whole property), or a subject test is found that is red
+on the five T-R52 citations and green on every other citation this tree carries. Watched red on both.
+Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
+
+### T-R58 — CI's ceilings were measured on a tree two milestones smaller than the one that ships            [status: todo]
+Origin: T-R56 (sweep, beyond the eight folded blocks)
+Spec: ADR-019 §5 and README both introduced their CI numbers as "four attempts of the shipped
+tree" / "measured on CI at the shipped case count". The four attempts are of `d173340`, which
+had 116 `fast` and 48 `invariant` cases; this branch ships 136 and 53. The description is
+repaired (both now name the commit and say it is the smaller tree), so what is left is the
+measurement gap: CI's 90/20 derive from a band 20 `fast` cases old, and nothing reddens when
+the local tree grows past the tree CI's ceiling was measured on. The local half has exactly
+this guard — §6 item 1 (count), published case count == current case count — and the CI half has no
+equivalent because no CI wall clock reaches the ledger (T-R51).
+Acceptance: CI's band carries the case count it was measured at, and something reddens when
+the current count leaves it behind — the natural form is T-R51's environment dimension on
+`_BAND_LINE` plus item 1 (count) applied to it. Watched red by growing the suite against a stale count.
+
+### T-R62 — a paraphrase that names no item is invisible to item 8 (references)            [status: todo]
+Origin: T-R56 round 1 (PR #36 R1/R2)
+Spec: §6 item 8 (references) binds a reference to content — number plus slug, both agreeing
+with the list — so a deferral pointed at the wrong rule, or a list renumbered under its
+references, is red. A paragraph that restates a rule and names no item at all is still
+invisible: nothing counts copies. Five review rounds have produced exactly that shape, and
+the current defence is that pointing is cheaper than restating, plus a blacklist of three
+retired phrases in `docs-numbers-are-derived`. ADR-019 §6, README and the check's docstring
+now say this in those terms rather than claiming the copies are caught (PR #36 R1).
+`tasks/TODO.md` is the other unbound surface: it carries §6 references (they spell their
+slugs, but nothing checks that) and is outside item 8 (references)'s scanned set, deliberately —
+it is hand-edited every milestone and its prose says "item N" about things that are not this
+list, which is the false-red shape PR #36 R5 filed against the source scan.
+Acceptance: a graded property that is red on a fresh unmarked restatement and green on this
+tree, and a decision on `tasks/TODO.md` — scanned with a marked region of its own, or left
+unbound and said so here — the shape worth trying is requiring every sentence in §6's prose and README's band
+section that contains an item's own distinctive token (the backticked expressions the list
+uses) to carry a reference, since those tokens are derived from the list rather than
+blacklisted. Watched red by adding a paraphrase of one item with no reference beside it.
+
+### T-R64 — `_BAND_DEF` matches prose at column 0, so a docstring can raise a false stray            [status: todo]
+Origin: PR #36 R23
+Spec: `src/browser/eval_adapter.py:439-441` is `^(?:def )?(_band\w*|...|_REGION)\b` with
+`re.M`, so `def ` is optional and the anchor is column 0 only. A column-0 line inside a
+triple-quoted string that begins with a pinned name is reported as a stray definition, with
+a message naming a constant that never moved. The shape is not hypothetical: the file already
+carries column-0 lines inside docstrings. Adding `_BAND_LINE is what ADR-019 publishes; see
+the band section.` at column 0 inside `_check_history_dirty_before_report`'s docstring
+yields `{outside_the_region: ['_BAND_LINE'], passed: False}`.
+Direction is fail-closed only — a spurious match inside the region cannot mask a real
+definition outside it, because every match is offset-tested independently — so this is noise
+in a gate suite, not a hole.
+Acceptance: the pattern requires an assignment or def form (e.g.
+`^(?:def )?(_band...|...)\s*(?:\(|[:=,])`), or the residue is named where the pattern is
+defined: prose at column 0 naming a pinned constant reddens the invariant suite.
+
+### T-R65 — the adapter's self-described line count is stale            [status: todo]
+Origin: PR #36 R24
+Spec: `src/browser/eval_adapter.py:363`, reflowed by `ed23223`, still reads "not the whole
+3,900-line adapter"; `wc -l` is 4,079. Rhetorical rather than a graded scalar — nothing reads
+it — but it is a stale number in a line that commit touched, and the same class this task
+was opened for.
+Acceptance: drop the figure ("the whole adapter") rather than round it, since any figure
+here goes stale by construction.
+
+### T-R63 — the band region's guard pins a named set, not everything band-shaped            [status: todo]
+Origin: T-R56 round 4 (PR #36 R19/R20)
+Spec: `published-band-matches-the-ledger` requires every name matching `_band…`,
+`_check_published_band…`, `_BAND…`, `_SIX…`, `_SLACK_MARK` or `_REGION` to sit between the two
+region markers, by byte offset, and both markers to start their own line with the closing one
+outside any body. Eight mutations are red against it (each of the five definitions moved out,
+band code appended after the end marker, either marker moved into a body, either edge moved
+inward). What it does not pin is the module-level names outside that set — `_ADR019`,
+`_README`, `_INDEX`, `_DECIMAL_TOKEN`, `_README_BAND_ROW`, `_ADR_CEILING` — and any band code
+added later under a name the pattern does not match. None of those carries a §6 reference
+today. The residue is NOT empty, though, and PR #36's confirming review found why
+(R22): the 19 lines between the begin marker and the first pinned name are unpinned
+comment carrying two graded references (`§6 item 8 (references)` and
+`item 2 (cited-run)`). Moving the begin marker to sit immediately above `_BAND_LINE`
+leaves `marker_counts == [1, 1]`, `outside_the_region == []` and
+`markers_off_a_top_level_boundary == False` — green — while the region loses those
+19 lines, and a reference corrupted inside them goes from red to green.
+Acceptance also covers that: the guard pins the region's lower edge to something the
+header comment cannot be moved out of, watched red by the marker-move-plus-corrupted-
+reference mutation above.
+Acceptance: either the region's contents are pinned positively (the band block is delimited by
+what it contains rather than by markers — e.g. the check reads its own `__code__` sources), or
+the pattern is derived from the module namespace rather than written out. Watched red by
+moving an unpinned constant that carries a §6 reference out of the region.
+
+### T-R60 — two band parses are still last-wins, and derivations are matched document-wide            [status: todo]
+Origin: T-R56 cold review (secondary findings)
+Spec: two holes the T-R56 sweep found and left, both in `_check_published_band`, both the
+shadowing class already guarded for band lines and README rows (PR #29 R24, PR #35 R2):
+(1) `_ADR_CEILING` builds a last-wins dict, so a second bolded ``local `fast` … **Ns**``
+phrase anywhere in ADR-019 silently overrides the Ruling line that item 6 (ruling) grades and INDEX
+digests; (2) `_BAND_DERIVATION.findall(adr)` searches the WHOLE file, so §6's counterexample
+`12.89 × 1.15 = 14.82 → **15**` — a paragraph that exists to call that state a residue — can
+satisfy item 5 (derivation) for a band republished at 12.89 with no derivation in §3 at all. §5's CI
+sentences sit in the same pool and are only kept out by their multiplicands.
+Acceptance: the Ruling parse refuses a suite that matches twice (same shape as
+`adr_publishes_two_bands`), and item 5 (derivation) reads derivations only from the section that publishes
+the band. Watched red with a second ceiling phrase, and with a 12.89 band whose only
+derivation is §6's counterexample.
 
 ## Notes
 

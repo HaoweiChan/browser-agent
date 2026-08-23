@@ -1,0 +1,56 @@
+{
+  "pr": 36,
+  "round": 3,
+  "scope": "repair diff 5bdcdd1..HEAD + standing round-2 findings",
+  "standing_round2": {
+    "R10": "closed",
+    "R11": "closed",
+    "R12": "guard is NOT self-satisfying (^def anchored at column 0, the tuple literal is indented) but the surrounding prose overreaches -> R16",
+    "R13": "closed — no citation count survives",
+    "R14": "closed",
+    "R15": "closed"
+  },
+  "reviewer_verified_closed_by_direct_mutation": "all five §6 Graded clauses redden; no citation count survives; no `item N` reference to §6 remains outside the marked region; tasks/TODO.md slugs are correct and named as ungraded in both §6 and T-R62",
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": {
+    "fired": true,
+    "reason": "3 review rounds without approval (pr-loop protocol)",
+    "blocker": "R16 — the region guard pins three definitions inside the markers and nothing bounds the region's edges; band code written after the end marker is unscanned and green, which is the exact case the guard's own comment cites as its reason to exist",
+    "note": "no HIGH this round. R16's acceptance offers a cheap honest option (state the residue) as well as a mechanism option."
+  },
+  "gate": {
+    "invariant": "53/53 = 1.000",
+    "fast": "136/136 = 1.000"
+  },
+  "findings": [
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §6 and the case's watched_red assert the region guard makes \"a scan that stops scanning ... red rather than green\" and that \"all three ways of losing it are red\", but the region can still lose 111 lines and 5 references and stay green — and that truncation masks a mis-pointed reference exactly as R12 described.",
+      "evidence": "src/browser/eval_adapter.py:696-709 asserts only marker_counts == [1,1] plus `^def` for three fixed names. Moving the end marker (:846) up to immediately after `def _check_published_band_slack() -> dict:` (:734) leaves all three defs inside, marker_counts [1,1], and drops the slack docstring (:735-757, carrying `item 3 (same-ceiling)` and `item 4 (committed-ceiling)` twice) out of the scan: passed True. With that truncation, rewriting :737 `item 3 (same-ceiling)` to `item 6 (same-ceiling)` is still green; with the marker restored the same edit reddens. ORCHESTRATOR-VERIFIED INDEPENDENTLY: appending a new band helper AFTER the end marker whose docstring carries `ADR-019 §6 item 4 (derivation)` — a deliberately wrong slug — returns passed True, wrong []. That is the exact case the comment at :694-695 names (\"or writing new band code after it, drops it from the scan\") as a reason the guard exists, while nothing detects it. Overstating text: ADR-019:194-196 and published-band-matches-the-ledger.json triage.watched_red (\"all three ways of losing it are red\").",
+      "repro": "append a `def _band_helper_probe()` after the end marker with `ADR-019 §6 item 4 (derivation)` in its docstring -> `_check_published_band()` returns passed True, wrong []",
+      "acceptance": "Either the guard bounds the region so a shrink is caught (e.g. the region must end at the last `^def _` in the file, or the file must contain no `^def _band|^def _check_published_band` outside it), or ADR-019:194-196 and the case's watched_red drop \"a scan that stops scanning is red rather than green\" / \"all three ways\" and state the residue: the guard pins three named definitions inside the markers and nothing bounds the region's edges beyond them. If the guard route is taken, watched red by moving the end marker above a band function's body and by writing new band code after it."
+    },
+    {
+      "id": "R17",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "ADR-019 §6's new Graded paragraph asserts \"each clause with a mutation behind it in `published-band-matches-the-ledger`\", but the repair deleted the only recorded plural-range mutation from that case, so one enumerated clause now has no record in the case it names.",
+      "evidence": "ADR-019:191-197 lists \"a plural range\" among the clauses each claimed to have a mutation behind it. The old watched_red carried it; the round-2 rewrite of the case removed that sentence — grepping the current watched_red for `plural`, `range`, `items 1-8` returns nothing. The behaviour IS red (reviewer reproduced: `§6 items 2-3` gives {adr: reference_does_not_name_its_item, wrote: 'items 2', item_2_is: 'cited-run'}), so this is an evidence-record gap, not a behaviour defect.",
+      "repro": "`'plural' in json.load(open('evals/adversarial/published-band-matches-the-ledger.json'))['triage']['watched_red']` -> False, against ADR-019:191-197",
+      "acceptance": "watched_red carries the plural-range mutation and its output again, or the ADR drops the \"each clause with a mutation behind it\" promise.",
+      "route_note": "LOW, but it is the same claim-exceeds-evidence shape and the fix is one sentence restored."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The slug-insertion pass into tasks/TODO.md garbled T-R49's acceptance line, duplicating the slug parenthetical.",
+      "evidence": "ORCHESTRATOR-VERIFIED. tasks/TODO.md:36-38 reads \"... and :69 cites items 2 (cited-run) and 3 (same-ceiling) for the cited run and item 4 (committed-ceiling) (committed-ceiling) for the ceiling.\" The parenthetical appears twice. The line is a debt-block acceptance criterion, read by whoever closes T-R49.",
+      "repro": "sed -n '36,38p' tasks/TODO.md",
+      "acceptance": "One `(committed-ceiling)`.",
+      "route_note": "LOW, one-word fix in a line this round edited."
+    }
+  ]
+}
