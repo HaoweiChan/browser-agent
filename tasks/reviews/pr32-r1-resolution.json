@@ -9,7 +9,7 @@
   {
     "id": "R2",
     "resolution": "debt",
-    "debt_id": "T-R34"
+    "debt_id": "T-R39"
   },
   {
     "id": "R3",
@@ -23,11 +23,11 @@
   {
     "id": "R5",
     "resolution": "debt",
-    "debt_id": "T-R36"
+    "debt_id": "T-R40"
   },
   {
     "id": "R6",
     "resolution": "debt",
-    "debt_id": "T-R37"
+    "debt_id": "T-R41"
   }
 ]

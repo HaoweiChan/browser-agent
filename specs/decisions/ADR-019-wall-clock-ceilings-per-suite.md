@@ -55,7 +55,12 @@ decision that amends it.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Slowest recorded `fast` run at 132 cases: **66.33s** — 6 runs:
+- Slowest recorded `fast` run at 133 cases: **62.25s** — 2 runs:
+  62.03 / 62.25s. (M35 added one `fast` case on top of the 132-case tree below;
+  the band is re-measured at the new count as rule 1 of the grader requires.
+  62.25 × 1.15 = 71.6 → 75; the committed ceiling stays **80**, which the rule
+  treats as a floor — the 132-case tree measured 76.3 on the same machine.)
+- Superseded band, 132 cases: **66.33s** — 6 runs:
   65.72 / 65.83 / 65.84 / 66.13 / 66.25 / 66.33s.
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
@@ -72,7 +77,11 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Slowest recorded `invariant` run at 51 cases: **14.12s** — 32 runs:
+- Slowest recorded `invariant` run at 52 cases: **12.92s** — 8 runs:
+  12.85 / 12.88 / 12.89 / 12.91 / 12.91 / 12.91 / 12.91 / 12.92s (M35 added one
+  `invariant` case; 12.92 × 1.15 = 14.9 → 15, and the committed ceiling stays
+  **20** as a floor, per the 51-case band below).
+- Superseded band, 51 cases: **14.12s** — 32 runs:
   11.17 / 12.4 / 12.67 / 12.68 / 12.72 / 12.73 / 12.74 / 12.74 / 12.75 / 12.79 / 12.79 / 12.85 / 12.85 / 12.87 / 12.87 / 12.87 / 12.9 / 12.93 / 12.95 / 12.98 / 12.99 / 13 / 13.01 / 13.02 / 13.05 / 13.18 / 13.21 / 13.25 / 13.28 / 13.45 / 13.73 / 14.12s.
 
 The same rule gives 14.12 × 1.15 = 16.2 → **20**.

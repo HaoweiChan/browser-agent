@@ -15,7 +15,7 @@
       "repro": "Scratch copy; append ', \"zz.example\": {label: \"a\"' to the books line of EXAMPLES; run_case(ui-examples-cover-matrix) → passed True (zz.example unseen); put a real row's key mid-line → passed False.",
       "acceptance": "No action required for M35; if the EXAMPLES block is ever reformatted, the check should parse the object rather than line starts.",
       "route": "debt",
-      "debt_id": "T-R38"
+      "debt_id": "T-R42"
     }
   ]
 }

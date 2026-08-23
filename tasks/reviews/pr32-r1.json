@@ -23,7 +23,7 @@
       "repro": "page.evaluate(\"siteInTask('What version of node.js is listed?')\") on the rendered PAGE → 'https://node.js'; with a live server this POSTs {url:'https://node.js'}.",
       "acceptance": "Common file extensions / e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the form case gains one such input asserting no POST and the guidance shown.",
       "route": "debt",
-      "debt_id": "T-R34"
+      "debt_id": "T-R39"
     },
     {
       "id": "R3",
@@ -33,7 +33,7 @@
       "repro": "Render the page; card reads '× Read a page — doesn't work' followed by 'Static pages work; …'.",
       "acceptance": "Note phrased as the receipt, not a generalisation, e.g. 'This static page answered correctly once (run 24820d4c); the declared failure is the JS-rendered /js/ pages.'",
       "route": "debt",
-      "debt_id": "T-R35"
+      "debt_id": "T-R43"
     },
     {
       "id": "R4",
@@ -53,7 +53,7 @@
       "repro": "cd worktree && git branch -a --contains 2a11142",
       "acceptance": "Provenance cites reachable shas (b7daac4 as the pre-M35 page; the watched-red amendment against the branch's own prior commit or a described patch).",
       "route": "debt",
-      "debt_id": "T-R36"
+      "debt_id": "T-R40"
     },
     {
       "id": "R6",
@@ -63,7 +63,7 @@
       "repro": "Observation only — run fast suite, both pass; state is visible by evaluating document.getElementById('err').hidden on the cached page after the form case.",
       "acceptance": "Form case restores window.fetch and resets #err/#task/#url at the end (or the rendered case asserts its own preconditions) so the two cases are order-independent.",
       "route": "debt",
-      "debt_id": "T-R37"
+      "debt_id": "T-R41"
     }
   ]
 }

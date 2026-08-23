@@ -365,22 +365,22 @@ already is (`ValueError` -> `failure:semantic`), watched red first. Deliberately
 NOT done in M31: no enumeration in this repo produces one — every `extract_all`
 in the eval set reads one column of one page — and the ponytail comment on
 `rank` names the ceiling and this upgrade path.
-### T-R38 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: todo]
+### T-R42 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: todo]
 Origin: PR #32 R7 (LOW)
 Spec: `_check_examples_cover_matrix` finds keys with `^\s*"([^"]+)":\s*\{` over the `const EXAMPLES = {` block, so an entry written mid-line is silently dropped from the parsed set. Every consequence reproduced fails in the safe direction today (added/renamed doc row → red; `const EXAMPLES={` reformat → IndexError → passed=False; a mid-line real-site key → red as rows_without_example), so this is robustness, not a gap.
 Acceptance: the check parses the object (whole-block regex or a JSON export of EXAMPLES) so formatting cannot change what it sees; a case pins that a mid-line key is counted.
 
-### T-R34 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
+### T-R39 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
 Origin: PR #32 R2 (LOW)
 Spec: the page's no-URL guard derives a start URL from any `label.tld` token in the task text. Measured false positives: "What version of node.js is listed?" → `https://node.js`, "Open README.md and read the title" → `https://README.md`, "Find setup.exe download link" → `https://setup.exe`, "email john@example.com about it" → `https://example.com`. The lifted URL is written to `#url` and POSTed in the same click, so the run is spent (ends `failure:nav`, $0, but a slot and a red result the visitor did not intend).
 Acceptance: common file extensions and e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the `ui-no-url-guard-and-example-chips` case gains one such input asserting no POST and the guidance shown.
 
-### T-R36 — two case provenances cite dangling pre-rebase shas            [status: todo]
+### T-R40 — two case provenances cite dangling pre-rebase shas            [status: todo]
 Origin: PR #32 R5 (LOW)
 Spec: `evals/adversarial/ui-no-url-guard.json` says "watched red against the pre-M35 page (main 2a11142)" and `ui-execution-progress.json` cites `e07ac07`; neither commit is on any branch after the rebase onto `2e94bed`, so the red-first evidence becomes unreachable after gc and "2a11142" is not main.
 Acceptance: provenance cites reachable shas (`b7daac4` as the pre-M35 page; the watched-red amendment against the branch's own prior commit or a described patch); `report-citations-resolve`-style check if one exists for shas.
 
-### T-R37 — the shared `_ui_page` render leaks the form case's state into `ui-rendered-narrow`            [status: todo]
+### T-R41 — the shared `_ui_page` render leaks the form case's state into `ui-rendered-narrow`            [status: todo]
 Origin: PR #32 R6 (LOW)
 Spec: `_run_ui_form_case` stubs `window.fetch` and never restores it, and leaves `#err` visible and `#task`/`#url` filled on the cached (390, dark) page that `ui-rendered-narrow` then reuses; the two cases are order-coupled through `sorted(rglob)`. Passes today; no failure reproduced.
 Acceptance: the form case restores `window.fetch` and resets `#err`/`#task`/`#url` at the end (or the rendered case asserts its own preconditions) so the two cases are order-independent in either order.
