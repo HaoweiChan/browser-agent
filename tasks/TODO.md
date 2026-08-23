@@ -94,7 +94,7 @@ after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
 
-### M39 — A malformed judge response is retried once before failing closed            [status: todo]
+### M39 — A malformed judge response is retried once before failing closed            [status: in-progress]
 Origin: post-deploy receipt round for PR #38 (2026-08-23). Run `7787f9c9`
 (HN item 1, "What is the title of this story?"): extraction `"Y Combinator"`
 was correct, every L1 predicate passed, and the run ended `failure:semantic`
@@ -159,6 +159,105 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M39-1 — `stub_judge` certifies on any verdict token it does not recognise            [status: todo]
+Origin: M39, found while watching `judge-two-malformed-completions-fail-closed`
+go red before the fix.
+Spec: `src/browser/judge.py`'s `stub_judge` reads a verdict entry as
+`certify, reason = v if isinstance(v, (tuple, list)) else (v, "stub")` after
+its two string branches (`"error"`, `"malformed"`), so ANY other string is
+coerced by `bool()` and CERTIFIES. A case that mistypes its token —
+`"maformed"`, `"reject"`, `"fail"` — gets a certifying judge and, if it expects
+a failure, reports the failure it was written to catch as the code's fault
+rather than the case's. This is PR #33 R1's exact defect (truthiness inverting
+fail-closed) one level up, in the stub the whole `fast` suite runs on: R1 was
+fixed in `live_judge`'s parser and the stub was not looked at. Not fixed in M39
+because M39's own two stub cases pass through the recognised branches and
+nothing in the milestone's scope touches the coercion.
+Repro: give any judge case `"judge_verdicts": ["reject"]` and watch the run
+succeed.
+Acceptance: an unrecognised string verdict raises rather than certifying,
+watched red with a mistyped token on a case that expects `failure:semantic`;
+the four recognised forms (`True`, `False`, `(bool, reason)`, `"error"`,
+`"malformed"`) are unchanged and every existing judge case stays green.
+
+### T-M39-2 — the per-suite judge cost line counts boundary calls, not provider calls            [status: todo]
+Origin: M39 (ADR-023), consequence of the retry, noted in-PR and deliberately
+left out of scope.
+Spec: `evals/run.py:227-228` prints `judge $X · N tok · M calls`, where `M` is
+the `budgets_spent.judge_calls` rollup — and ADR-023 keeps that field meaning
+one judge BOUNDARY call per run, with `verdict.checks.judge_attempts` carrying
+whether that call took one provider attempt or two. So the printed call count
+is now a lower bound on the calls actually made: a suite where every run
+retried would print the same `M` while having made `2M` requests. The dollar
+and token columns stay correct (both attempts are billed into
+`judge_tokens`/`judge_usd`), so nothing under-reports SPEND — what
+under-reports is request volume, which is what a provider rate limit is
+denominated in. Adding `judge_attempts` to `budgets_spent` would fix it for
+free through the runner's existing `sum_numeric` rollup, but it grows the
+RunResult shape, which `contract-trace-schema` pins and
+`specs/001-browser-contract.md` documents — a deliberate edit, not a
+side effect of a retry PR (CLAUDE.md rule 7).
+Repro: run `--suite fast` with any case whose judge retries; the cost line's
+call count is unchanged by the retry.
+Acceptance: the printed judge line distinguishes boundary calls from provider
+attempts (or names which one it counts), with `contract-trace-schema` watched
+red on the new key first if the count travels through `budgets_spent`.
+Second symptom, same root and same PR (M39 cold review): judge spend is
+invisible OUTSIDE the eval runner entirely — `evals/run.py:279` writes
+`cost_usd` into the committed history line from `llm_usd` alone, and
+`src/browser/server.py:689` renders only `llm_tokens`/`llm_usd` in the
+gateway's per-run cost string, so `judge_usd` never reaches either the ledger
+or the operator. Fixing the printed count without those two leaves the number
+right in one place and absent in the two that a human reads.
+
+### T-M39-3 — an unreadable ENVELOPE is not retried, though an unreadable BODY is            [status: todo]
+Origin: M39 cold review, finding 2. Named in ADR-023's Consequences as a
+deliberate scope line, not a disagreement.
+Spec: ADR-023 retries a completion whose `content` cannot be parsed. It does
+NOT retry the shapes one layer out, which are at least as literally "a
+completion that could not be read": a 200 whose body is an edge/CDN HTML error
+page (`json.load(resp)` raises, caught at `src/browser/judge.py`'s
+`except Exception` → `judge call failed: ...`, `retryable=False`), or a
+well-formed envelope with `choices: []` / `choices: null` (raises `IndexError`
+/ `TypeError` into the non-retryable branch). Both are real transient
+OpenRouter/upstream shapes. `src/browser/planner.py` draws the boundary the
+judge inverts: an unreadable envelope is the provider's fault, unreadable
+content is the model's. The reason string a run gets from the envelope path —
+`judge unavailable, failing closed: JudgeError: judge call failed:
+JSONDecodeError: ...` — is near-identical to the one M39 exists to eliminate,
+so a reader of `docs/analysis.md` will reasonably believe it was covered.
+Left out of M39 because widening a retry onto the transport path has its own
+failure mode (a retry storm against a provider already failing) and needs its
+own decision. The eval probe cannot even express it today: `_run_judge_case`'s
+`retry_classification` builds a well-formed envelope around every scenario, so
+a case for this class needs the probe widened first.
+Repro: point the probe's fake transport at a body that is not JSON, or at
+`{"choices": []}`; the run fails closed on attempt 1.
+Acceptance: a decision (retry, or refuse and say why) recorded as an ADR
+amendment, with the probe widened to express an envelope-level failure and the
+chosen behaviour watched red first.
+
+### T-M39-4 — truncation without `finish_reason` is indistinguishable from an empty body            [status: todo]
+Origin: M39 cold review, finding 1 — the residue of the fix, declared in
+ADR-023's Consequences.
+Spec: `src/browser/judge.py` refuses to retry a completion carrying
+`finish_reason: "length"`, because a truncated verdict is a verdict and
+truncation destroys rejects (long, they must explain) far more often than
+certifies (short, "fits") — so resampling that class shops runs toward
+success. The guard can only key on a signal that arrives. A provider that
+truncates WITHOUT setting `finish_reason` produces a body byte-identical to an
+empty one and WILL be resampled, which is the wrong-answer direction rather
+than the merely-expensive one. No `max_tokens` is set on the judge payload
+either, so the ceiling is the provider's default rather than one this
+deployment chose; M39 put prompt/model changes out of scope.
+Repro: feed the probe a truncated body with no `finish_reason`; it is
+classified retryable and re-rolled.
+Acceptance: either a second, signal-free truncation test (e.g. a body that is a
+strict PREFIX of valid JSON is treated as truncated rather than empty), or an
+explicit `max_tokens` on the judge call plus a support-matrix row declaring the
+residue; watched red on a truncated-reject scenario carrying no
+`finish_reason`.
 
 ### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
 Origin: PR #34 R17.

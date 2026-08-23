@@ -57,7 +57,7 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-164 distinct cases (20 golden + 144 adversarial).
+167 distinct cases (20 golden + 147 adversarial).
 244 browser actions in a `fast` run; **89 of the 153** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
 `evals/report/20260823-211825-fast.json` rather than tallied by hand (the
@@ -158,7 +158,30 @@ What bounds cost rather than measures it:
 | Actions per run | 30 | same |
 | Replans per task | 2 | ladder budget, exhausts as `failure:act` |
 | Relocation rungs per step | 2 | ladder budget, exhausts as `failure:locate` |
+| Judge calls per run | 1 boundary call, worst case **2 provider attempts** | `RUN_JUDGE_BUDGET` / `JUDGE_ATTEMPTS`, `src/browser/judge.py` |
 | Account-level spend cap | OpenRouter key limit | provider side, outside this repo |
+
+The judge row is the only one of these that can spend MORE than its headline
+number, and by exactly one call: ADR-023 lets a judge whose completion body
+could not be read at all — empty, or not JSON — be asked the same question once
+more, because an unreadable completion is a failed read rather than a verdict.
+So the worst case is **one extra judge call per run**, never two, never a
+backoff loop, and only on runs that already passed every free L1 check. It is
+the cheapest call the system makes (`deepseek/deepseek-v4-flash-0731`, one
+grounded yes/no over evidence already captured), and both attempts' REPORTED
+usage is billed into `budgets_spent.judge_tokens`/`judge_usd` — including the
+failed attempt's, which before M39 burned provider tokens and recorded nothing
+— so the extra call shows up in the cost line instead of hiding inside it. That
+figure is a floor, not a measurement, for one reason worth stating: a provider
+that omits the `usage` block on a generation that returned nothing bills the
+retried run at the successful attempt alone, and nothing here can see what was
+not reported. A truncated verdict (`finish_reason: "length"`), a refusal, a
+response that parsed but carries no `certify`, a missing key, a transport
+failure and a reasoned FAIL are all answers — or non-calls — that an identical
+second attempt would only reproduce, and none of them retry.
+No live judge call has ever been measured here (no `OPENROUTER_API_KEY` in this
+environment), so this is a bound, not a measurement — the same status as every
+other row in this table except the two observed planner runs above.
 
 The ladder budgets are the ones that matter for cost, because recovery is what
 makes a run able to spend more than it planned to. Note one honest wrinkle from

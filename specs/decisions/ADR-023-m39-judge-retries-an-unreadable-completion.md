@@ -1,0 +1,157 @@
+# ADR-023: M39 — an unreadable completion is not a verdict, so there is nothing yet to fail closed on
+
+Date: 2026-08-23
+Status: accepted
+
+**Ruling**: ADR-017's fail-closed rule is unchanged; what changes is WHEN it fires. A `JudgeError` whose cause is a completion body that cannot be read at all — empty, or not JSON — buys exactly one more attempt at the same call with the same prompt (`JUDGE_ATTEMPTS = 2`, `src/browser/judge.py`), and the second failure ends the run exactly as the first used to. Nothing else is retryable: not a TRUNCATED verdict (`finish_reason: "length"` — the model answered and was cut off), not a refusal, not a response that parsed but has no `certify`, not a missing API key, not a provider or transport error, not a reasoned FAIL. Both attempts are billed into `judge_tokens`/`judge_usd`, the retry stays inside `RUN_JUDGE_BUDGET`'s single boundary call, and the verdict records `checks.judge_attempts`.
+**Because**: deployed run `7787f9c9` lost a correct answer — extraction `"Y Combinator"`, every L1 predicate green — to one empty completion, while the next two runs of the identical task passed. A judge that cannot be read has not certified and has not rejected; it has not answered, and asking a question twice is not the same act as accepting an answer you did not get.
+**Enforced by**: `judge-retries-one-malformed-completion`, `judge-two-malformed-completions-fail-closed`, `judge-retry-only-on-unreadable-completion`, `judge-fail-closed-on-error`, `judge-fail-closed-on-any-exception`, `judge-parse-response-strict-boolean`
+
+---
+
+## Context
+
+`tasks/TODO.md` M39, from the post-deploy receipt round for PR #38. Run
+`7787f9c9` (Hacker News item 1, "What is the title of this story?") extracted
+`"Y Combinator"` — correct — passed every one of `verify()`'s L1 predicates,
+reached M36's terminal-verdict boundary, and ended `failure:semantic` with:
+
+```
+judge unavailable, failing closed: JudgeError: malformed judge response:
+JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+```
+
+`Expecting value: line 1 column 1 (char 0)` is `json.loads("")`: the completion
+body was empty by the time the parser saw it. The next two runs of the same
+task (`833bd511`, `6c66bdd4`) passed, so nothing about the task, the page, the
+prompt, the model or the evidence was wrong — one call came back with nothing
+readable in it.
+
+**What that reason string does NOT say, and this ADR will not pretend it
+does**: an empty body is also exactly what a completion truncated at the
+provider's token ceiling looks like. `src/browser/planner.py` already
+classifies the identical shape on its own side — `content: null` with
+`finish_reason: "length"` — as "it answered; the answer does not fit". Run
+`7787f9c9`'s recorded reason does not carry `finish_reason`, so which of the
+two it was is UNKNOWN and is not recoverable from what was logged. That
+ambiguity is the whole reason the Decision below splits them: the two look the
+same to a parser and must be treated differently, and this ADR therefore does
+not claim that M39 would have saved `7787f9c9` — it claims that the class the
+evidence is consistent with, and only that class, is worth one more call.
+
+ADR-017's ruling is not in question and is not amended: a judge that cannot be
+read must never certify. The question this ADR answers is narrower and was not
+asked at M36, because nothing had yet shown that the malformed case behaves
+differently from the others in the fail-closed list. It does. `reject`,
+`timeout`, `missing key` and `budget exhausted` are all states that an
+identical second call reproduces. An empty body is not.
+
+## Decision
+
+**An unreadable completion is a failed READ, not a verdict.** `_apply_judge`
+(`src/browser/agent.py`) loops the one judge call up to `JUDGE_ATTEMPTS` (2)
+times, and takes the second attempt only when the exception carries
+`retryable=True`. Everything about the terminal state is otherwise byte-for-byte
+what it was: `checks.judge_available: false`, `verdict: FAIL`, the same
+`judge unavailable, failing closed: ...` reason, and `assemble_result`'s INV-2
+rule turning that into `failure:semantic`.
+
+**`retryable` is set in exactly one place** — `live_judge`'s `json.loads` of the
+completion body raising `JSONDecodeError` (`src/browser/judge.py`). Not on the
+`KeyError` from a body that parsed but carries no `certify`; not on a provider
+error; not on the missing-key guard; not on a network failure; and explicitly
+not on a refusal, which is read from the OpenAI-shaped `message.refusal` field
+BEFORE the body is parsed, because a refusal also arrives with `content: null`
+and would otherwise land in the unreadable-body branch and buy a pointless
+second call. A reasoned FAIL never raises at all — it is a verdict, and
+re-rolling a verdict you dislike is not a retry, it is shopping.
+
+**And explicitly not on `finish_reason: "length"`, which is the one that would
+have made this feature a wrong-answer generator.** A truncated completion is
+unreadable but not unread: the model produced a verdict and the provider cut
+it off. The bias is directional and it runs the wrong way — a reject has to
+explain itself ("the answer is the site masthead, not the story title") where a
+certify can be one word ("fits"), so truncation destroys rejects far more often
+than certifies, and resampling that class would shop runs toward success. The
+guard is read from the choice, before the body is parsed, and fails closed on
+the first attempt like every other verdict. This was found by cold review, not
+by design: the first implementation retried it, and
+`judge-retry-only-on-unreadable-completion`'s truncated-reject scenario was
+watched turning a `{"certify": false}` into `verdict: PASS`, `status: success`
+— the inviolable property, reached through the one branch this ADR permits.
+The same review found the smaller form of it: the fence strip emptied a
+one-line ```-fenced body, so a complete readable verdict was being classified
+as unreadable and re-rolled. Both are pinned as scenarios.
+
+**Bounded by a constant, not by a policy.** One retry, no backoff, no jitter,
+no model switch, no second provider. `["malformed"]` given to `stub_judge` —
+whose last entry repeats forever — is a judge that can never be read, and
+`judge-two-malformed-completions-fail-closed` pins that this run stops at two
+attempts and fails closed rather than spinning until the token budget trips and
+reports the wrong failure class.
+
+**The extra call is visible, never absorbed.** Both attempts' usage is added to
+`budgets_spent.judge_tokens`/`judge_usd` — including the failed attempt's,
+which `_apply_judge` previously discarded, so a call that burned provider
+tokens and then failed to parse used to cost the run nothing on paper. The
+run's own token/USD budget is what bounds this; no new budget was added.
+`RUN_JUDGE_BUDGET` stays 1 and keeps its original meaning — one judge BOUNDARY
+call per run — with `checks.judge_attempts` carrying how many provider attempts
+that one boundary call took. `docs/analysis.md` §2 publishes the worst case:
+2 judge calls per run instead of 1.
+
+**Graded through the real parser, not only the stub.** `stub_judge` decides for
+itself what is retryable, so the two stub cases can only prove that the retry
+fires and that it stops. Which REAL provider responses earn a second call is
+graded by `judge-retry-only-on-unreadable-completion`, which mocks only
+`urllib.request.urlopen` and runs `live_judge`'s own parser under the real
+`_apply_judge` — the technique PR #33 R1 established after finding that every
+judge case written at M36 stubbed past the code that actually runs in
+production. It grades the transport call COUNT, not just the verdict, so a
+retry that fires on the wrong class is red even when the eventual verdict
+happens to match.
+
+## Consequences
+
+- Worst case per run: 2 judge calls instead of 1. At the judge model's price
+  (`deepseek/deepseek-v4-flash-0731`, ADR-010's own cheapest priced cell) on
+  one grounded yes/no over already-captured evidence, this is the cheapest
+  call the system makes, and it is spent only on runs that already passed
+  every free L1 check. The fast suite still spends $0.0000.
+- A provider that signals refusal only in prose — no `message.refusal` field —
+  is indistinguishable here from an unreadable body and will buy one extra
+  call. Declared, not solved: the cost is one cheap call, not a wrong answer,
+  and this environment has no key with which to observe what any provider
+  actually emits.
+- A provider that truncates without setting `finish_reason: "length"` is
+  likewise indistinguishable from an empty body, and WILL be resampled — the
+  wrong-answer direction, not the cheap one. The guard can only key on a
+  signal that arrives; what does not arrive cannot be guarded here. Tracked as
+  T-M39-4, and the reason no `max_tokens` was added in this PR is that the
+  milestone puts prompt/model changes out of scope.
+- "Both attempts are billed" means both attempts' REPORTED usage. A provider
+  that omits the `usage` block on a generation that returned nothing bills the
+  retried run at the successful attempt alone, and no caller can see what was
+  not reported. Pinned as a scenario rather than papered over, so the published
+  cost figure is read as the floor it is.
+- An unreadable ENVELOPE — a 200 whose body is not JSON at all, or
+  `choices: []` — is NOT retried, though it is at least as literally a failed
+  read as an empty `content`. That is a deliberate scope line, not a finding
+  this ADR disagrees with: the origin incident is the content path, and
+  widening the retry to the transport path is a decision with its own failure
+  modes (a retry storm against a provider already failing). Tracked as T-M39-3.
+- The fail-closed surface is unchanged, which is the point: `judge-fail-closed-
+  on-error`, `judge-fail-closed-on-any-exception`, `judge-missing-key-fails-
+  closed`, `judge-run-budget-enforced` and `judge-parse-response-strict-boolean`
+  are green with no edits.
+
+## What this PR could not verify
+
+The same M36 constraint applies unchanged: this environment has no
+`OPENROUTER_API_KEY`, so no live call was made and the empty-completion failure
+itself was not reproduced against a real provider — the origin evidence is the
+deployed run's recorded reason, and the offline cases reproduce that shape
+through the real parser with the transport mocked. Whether ONE retry is
+empirically enough (rather than two, or a backoff) is not measured: n=1
+observed incident, and the milestone spec's own bound is one. ADR-015
+criterion 5 is untouched by this ADR and stays RED on the deployed build.

@@ -70,6 +70,18 @@ contract-drift (spec-drift audits field-by-field).
   run, at this boundary, never per extraction. `judge_tokens`/`judge_usd` are
   0 for every stub (fast/live suites) and for a cache hit; only a live,
   uncached call spends either.
+- `verdict.checks.judge_attempts` (M39, ADR-023) — present alongside
+  `judge_responsive`/`judge_available` whenever the judge boundary was reached:
+  how many provider attempts that ONE boundary call took: 0, 1 or 2. It is 2
+  only when the first attempt's completion body could not be read at all (empty
+  or non-JSON) AND was not truncated — a truncated verdict
+  (`finish_reason: "length"`), a refusal, a parsed body with no `certify`, a
+  missing key, a transport failure and a reasoned FAIL are answers or non-calls,
+  not failed reads, and are never retried. It is 0 when the per-run judge budget
+  was already spent, so no provider attempt was made. Both attempts' reported
+  usage is added to `judge_tokens`/`judge_usd`, so a retry is visible in the
+  cost line rather than absorbed; `judge_calls` counts boundary calls and
+  stays 1.
 - `evidence.extractions` — what was read and what the page said where it was
   read, captured at extraction time. This is the verifier's input; it exists so
   verification consumes raw evidence rather than the executor's conclusion.

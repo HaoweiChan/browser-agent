@@ -1174,7 +1174,8 @@ def _run_judge_case(case: dict) -> dict:
     wrong = []
     unknown = set(inp) - {"kind", "missing_key", "cache_hit_needs_no_key",
                           "budget_enforced", "fail_closed_on_exception", "injection",
-                          "parse_responses", "injection_marker_forge"}
+                          "parse_responses", "injection_marker_forge",
+                          "retry_classification"}
     if unknown:
         return {"passed": False, "error": f"unknown judge probe(s): {sorted(unknown)}"}
 
@@ -1383,6 +1384,82 @@ def _run_judge_case(case: dict) -> dict:
                     got = "error"
                 if got != sc["expect"]:
                     wrong.append({"parse_responses": sc["note"], "want": sc["expect"], "got": got})
+        finally:
+            _urlreq.urlopen = orig_urlopen
+            if had_key is None:
+                os.environ.pop("OPENROUTER_API_KEY", None)
+            else:
+                os.environ["OPENROUTER_API_KEY"] = had_key
+
+    # --- ADR-023: WHICH provider responses buy the one retry ---------------
+    # The two stub cases prove the retry fires and stops; `stub_judge` decides
+    # for itself what is retryable, so only this probe can grade the
+    # production question -- which REAL completion earns a second call. Mocks
+    # ONLY the transport (`urllib.request.urlopen`), the same technique
+    # `parse_responses` above established: live_judge's real parser and
+    # agent.py's real `_apply_judge` both run unmodified. A uuid4 nonce per
+    # scenario keeps the content-hash cache from answering instead of the
+    # parser.
+    if inp.get("retry_classification"):
+        had_key = os.environ.get("OPENROUTER_API_KEY")
+        os.environ["OPENROUTER_API_KEY"] = "sk-or-v1-test-fake-not-a-real-key"
+        orig_urlopen = _urlreq.urlopen
+        try:
+            for sc in inp["retry_classification"]:
+                # One entry per provider attempt: the `message` dict, plus the
+                # two things outside it that decide classification -- the
+                # choice's `finish_reason` (a truncated verdict is a verdict)
+                # and the envelope's `usage` (which a real provider omits on a
+                # generation that returned nothing). `"usage": null` omits the
+                # block entirely, which is the honest worst case for billing.
+                bodies = []
+                for a in sc["attempts"]:
+                    choice = {"message": a["message"]}
+                    if "finish_reason" in a:
+                        choice["finish_reason"] = a["finish_reason"]
+                    env = {"choices": [choice]}
+                    usage = a.get("usage", {"total_tokens": 7, "cost": 0.0})
+                    if usage is not None:
+                        env["usage"] = usage
+                    bodies.append(_json.dumps(env).encode())
+                calls = []
+
+                def _fake(req, timeout=30, _bodies=bodies, _calls=calls):
+                    body = _bodies[min(len(_calls), len(_bodies) - 1)]
+                    _calls.append(1)
+
+                    class _FakeResp:
+                        def __enter__(self):
+                            return self
+
+                        def __exit__(self, *a):
+                            return False
+
+                        def read(self):
+                            return body
+
+                    return _FakeResp()
+
+                _urlreq.urlopen = _fake
+                nonce = uuid.uuid4().hex
+                budgets = {"judge_calls": 0, "judge_tokens": 0, "judge_usd": 0.0}
+                pass_verdict = {"verdict": "PASS", "layer": 1, "ground_truth": False,
+                                "checks": {}, "reason": None}
+                got = _await(_apply_judge(
+                    live_judge("fake/retry-probe-model"), "Q?", "A",
+                    [{"page_text": f"irrelevant evidence {nonce}"}], pass_verdict, budgets))
+                want = sc["expect"]
+                actual = {"verdict": got["verdict"],
+                          "attempts": got["checks"].get("judge_attempts"),
+                          "calls": len(calls),
+                          "judge_tokens": budgets["judge_tokens"]}
+                if "available" in want:
+                    actual["available"] = got["checks"].get("judge_available")
+                if "responsive" in want:
+                    actual["responsive"] = got["checks"].get("judge_responsive")
+                if actual != want:
+                    wrong.append({"retry_classification": sc["note"],
+                                  "want": want, "got": actual})
         finally:
             _urlreq.urlopen = orig_urlopen
             if had_key is None:
@@ -1656,6 +1733,16 @@ def _run_fixture_case(case: dict) -> dict:
     if "budgets" in exp:
         got_budgets = {k: result["budgets_spent"].get(k) for k in exp["budgets"]}
         checks["budgets"] = got_budgets == exp["budgets"]
+    # Generic verdict-checks probe (M39/ADR-023), same shape as `budgets`
+    # above: a case names the `verdict.checks` fields it cares about and their
+    # exact values. `judge_attempts` lives here and nowhere else — a status
+    # says a run failed closed, and a budget says how many times the judge
+    # BOUNDARY was entered; neither can say whether the one boundary call read
+    # its completion first time or needed the retry.
+    if "verdict_checks" in exp:
+        got_vchecks = {k: ((result.get("verdict") or {}).get("checks") or {}).get(k)
+                       for k in exp["verdict_checks"]}
+        checks["verdict_checks"] = got_vchecks == exp["verdict_checks"]
     # M28: the SHAPE of a verifier-rejected run, not its verdict. INV-2 already
     # demoted run 4bade630 to failure:semantic; what it then presented as
     # `answer` was the rejected extraction itself -- a whole infobox -- and the

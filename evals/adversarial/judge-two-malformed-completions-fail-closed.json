@@ -1,0 +1,27 @@
+{
+  "id": "judge-two-malformed-completions-fail-closed",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L3",
+  "tc": "TC1",
+  "trap": "the retry becomes a way to eventually certify -- a judge that never returns a readable verdict must still fail CLOSED, and the retry must not loop",
+  "input": {
+    "fixture": "shop-lamp-std.html",
+    "task": "What is the price of the Aurora Desk Lamp on this page?",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "group", "name": "Price" }, "anchor": "LAMP-STD" }
+    ],
+    "judge_verdicts": ["malformed"]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "verdict": "FAIL",
+    "verdict_checks": { "judge_attempts": 2, "judge_available": false },
+    "budgets": { "judge_calls": 1 }
+  },
+  "provenance": "M39's negative half, and the reason the retry is bounded at one. `stub_judge` repeats its LAST verdict entry forever, so `[\"malformed\"]` is a judge that can never be read: an unbounded or backoff-looping retry would spin here (or, worse, keep spending until the token budget tripped and reported the wrong failure class), and a retry that swallowed the second failure would leave a run certified by nothing at all. The committed behaviour is ADR-017's, unchanged: `status: failure:semantic`, `verdict: FAIL`, `checks.judge_available: false` (the judge never ANSWERED -- distinct from `judge_responsive: false`, which is a judge that answered and rejected), and the existing `judge unavailable, failing closed: JudgeError: ...` reason. `judge_attempts: 2` is the only thing that differs from the pre-M39 tree, and it is what makes the bound auditable after the fact: a run that failed closed says how many times it tried. WATCHED RED FIRST -- on the pre-M39 tree `\"malformed\"` was not a stub verdict the harness knew, and once it was, the un-retried tree recorded no `judge_attempts` at all.",
+  "triage": {
+    "class": "inviolable-property",
+    "note": "pins that ADR-023 narrows WHEN fail-closed fires, never WHETHER it does. Paired with `judge-fail-closed-on-error` (a non-retryable JudgeError, one attempt) so the two directions of the same guard are both graded."
+  }
+}

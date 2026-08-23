@@ -1,0 +1,27 @@
+{
+  "id": "judge-retries-one-malformed-completion",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L3",
+  "tc": "TC1",
+  "trap": "one transient unreadable judge completion costs a correct run outright -- the same call, retried once, reads fine",
+  "input": {
+    "fixture": "shop-lamp-std.html",
+    "task": "What is the price of the Aurora Desk Lamp on this page?",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "group", "name": "Price" }, "anchor": "LAMP-STD" }
+    ],
+    "judge_verdicts": ["malformed", true]
+  },
+  "expect": {
+    "status": "success",
+    "verdict": "PASS",
+    "verdict_checks": { "judge_attempts": 2, "judge_responsive": true },
+    "budgets": { "judge_calls": 1, "judge_usd": 0.0 }
+  },
+  "provenance": "M39, origin: deployed run `7787f9c9` (HN item 1, \"What is the title of this story?\"). Extraction `\"Y Combinator\"` was correct, every L1 predicate passed, and the run ended `failure:semantic` with reason `judge unavailable, failing closed: JudgeError: malformed judge response: JSONDecodeError: Expecting value: line 1 column 1 (char 0)` -- an EMPTY completion body. The next two runs of the same task (`833bd511`, `6c66bdd4`) passed, so nothing about the task, the page or the prompt was wrong; one completion came back unreadable. ADR-017's fail-closed rule is right and is unchanged -- a judge that cannot be READ must never certify -- but ADR-023 draws the line one step earlier: an unreadable completion is not a verdict at all, so there is nothing yet to fail closed ON. `judge_verdicts: [\"malformed\", true]` scripts exactly the observed sequence at $0.00: the first call raises the retryable JudgeError shape `live_judge` raises on a JSONDecodeError, the second returns a clean certify. This is the same genuinely L1-PASSING fixture and plan `judge-fail-closed-on-error` uses (and its non-judge sibling `tc1-shop-price`), so the only variable is what the judge did. `judge_attempts: 2` is what separates this from a run whose judge simply worked -- the verdict records the retry rather than hiding it -- and `judge_calls: 1` pins that the retry is one extra ATTEMPT inside the run's single judge boundary call, not a second trip through `_apply_judge` (RUN_JUDGE_BUDGET is untouched at 1). WATCHED RED FIRST against the pre-M39 tree, which had no `\"malformed\"` stub verdict at all and no retry.",
+  "triage": {
+    "class": "transient-dependency",
+    "note": "the positive half of the retry, proven end to end through the real pipeline (agent.py's actual `_apply_judge`), not against a mock of the verdict. The classification half -- that ONLY an unreadable completion is retried -- is `judge-retry-only-on-unreadable-completion`, which runs live_judge's real parser."
+  }
+}
