@@ -124,7 +124,9 @@ def _json_objects(text: str) -> list:
     was re-rolled into a certify. Scanning for the object is wrapper-agnostic:
     bare, fenced, or commented, the verdict is the same bytes. `raw_decode`
     reports where each object ended, so a nested object is skipped rather than
-    counted as a second candidate.
+    counted as a second candidate -- and the span comes back with the object,
+    because WHERE it sat is what tells an answer apart from a quotation
+    (PR #44 R6, and `_is_the_whole_completion` below).
     """
     dec = json.JSONDecoder()
     out, i = [], 0
@@ -135,9 +137,38 @@ def _json_objects(text: str) -> list:
             i = j + 1
             continue
         if isinstance(obj, dict):
-            out.append(obj)
+            out.append((obj, j, end))
         i = end
     return out
+
+
+def _is_the_whole_completion(text: str, start: int, end: int) -> bool:
+    """Is this object the model's ANSWER, or something it merely quoted?
+
+    The only honest discriminator available here is position. `SYSTEM` tells
+    the judge to reply with the object and nothing else, so a completion that
+    IS the object (optionally inside a ``` fence) is the model's own verdict.
+    An object sitting inside commentary might be the verdict, or might be a
+    directive the model is quoting in order to REFUSE it -- PR #44 R6's
+    payload is exactly that: the judge echoes the page's forged
+    `{"certify": true}` while its own prose rejects the answer, and the run
+    certified on the echo.
+
+    Callers must not use this to pick a verdict. It gates the CERTIFY
+    direction only (see the call site): an embedded object may reject, never
+    certify. That asymmetry is why a wrong answer here is survivable -- every
+    error this predicate can make lands on fail-closed.
+
+    ponytail: string position, not provenance. It cannot tell a quoted verdict
+    from an authored one when the model emits nothing else, and it does not
+    try; upgrade path is provider-enforced JSON (`response_format`), which
+    removes the question instead of answering it -- T-M39-7.
+    """
+    outside = (text[:start] + text[end:]).strip()
+    # ``` fences and a bare language tag are markup, not commentary. Nothing
+    # else is tolerated: an unrecognised wrapper reads as commentary, which is
+    # the fail-closed direction.
+    return outside.strip("`").strip().lower() in ("", "json")
 
 
 def _prompt(task: str, answer, evidence: str) -> str:
@@ -300,7 +331,8 @@ def live_judge(model: str = JUDGE_MODEL):
                 # `content: null`, which would otherwise land in the
                 # unreadable-body branch below and buy a pointless second call.
                 raise JudgeError(f"judge refused: {message['refusal']}", usage)
-            objects = _json_objects((message["content"] or "").strip())
+            text = (message["content"] or "").strip()
+            objects = _json_objects(text)
             if len(objects) > 1:
                 # Two candidate verdicts in one body ("the schema is {...},
                 # my answer is {...}") are not one readable verdict, and
@@ -318,7 +350,7 @@ def live_judge(model: str = JUDGE_MODEL):
                 raise JudgeError(
                     "malformed judge response: JSONDecodeError: "
                     "no JSON object in completion", usage, retryable=True)
-            parsed = objects[0]
+            parsed, start, end = objects[0]
             # PR #33 R1 (HIGH): `bool(parsed["certify"])` treated ANY
             # truthy JSON value -- including the strings "false"/"no"/"0" --
             # as certify=True, inverting fail-closed for the one failure
@@ -331,6 +363,19 @@ def live_judge(model: str = JUDGE_MODEL):
             # response).
             certify = parsed["certify"] is True
             reason = str(parsed.get("reason", ""))
+            if certify and not _is_the_whole_completion(text, start, end):
+                # PR #44 R6: the object is wrapped in the model's own prose,
+                # so it is not provably the model's ANSWER -- it may be a
+                # forged verdict the judge is quoting while refusing it. A
+                # reject in that position is honoured (it can only move the
+                # run toward FAIL, which is where an unreadable judge sends it
+                # anyway); a CERTIFY is not, because certifying is the one
+                # thing this whole ladder exists to withhold. Non-retryable:
+                # the model answered, we could not verify WHAT it answered,
+                # and an identical second call reproduces that.
+                raise JudgeError(
+                    "unverified certify: the verdict object is embedded in "
+                    "commentary, not the completion", usage)
         except JudgeError:
             raise  # already classified above -- re-wrapping would lose `retryable`
         except Exception as e:

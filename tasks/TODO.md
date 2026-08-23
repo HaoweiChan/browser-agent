@@ -160,6 +160,64 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M39-6 — the ambiguity guard fires on two objects that AGREE            [status: todo]
+Origin: PR #44 R7.
+Spec (reviewer's evidence, carried verbatim): "`src/browser/judge.py:304-311`
+justifies the guard as 'picking either by position is a coin flip', which is
+only true when the objects differ. Body
+```json\n{"certify": true, "reason": "the answer gives the price"}\n```\n\nIn
+summary: {"certify": true, "reason": "the answer gives the price"} through the
+real `_apply_judge` -> verdict=FAIL, judge_attempts=1, judge_available=False,
+reason='judge unavailable, failing closed: JudgeError: ambiguous judge
+response: 2 JSON objects'. The committed 'TWO verdict objects' scenario only
+pins the disagreeing pair, so nothing grades the agreeing one either way."
+So a judge that restates its own verdict in a summary line loses a correct run
+to fail-closed with no retry available — the exact "one correct run lost to a
+formatting quirk" class M39 exists to fix.
+Not fixed in PR #44 because the current direction is fail-closed, which is the
+safe one: this is a cost/availability defect, not an honesty or correctness one
+(orchestrator's routing note on the same finding).
+Repro: `python3 -c "import sys;sys.path.insert(0,'src');from browser.judge
+import _json_objects;b='{\"certify\": true, \"reason\": \"x\"} In summary:
+{\"certify\": true, \"reason\": \"x\"}';print(len(_json_objects(b)))"` -> 2,
+which takes the >1 branch.
+Acceptance: either identical objects collapse to one verdict
+(`len({json.dumps(o, sort_keys=True) for o in objects}) == 1`) with a scenario
+pinning the restated-verdict body as the verdict it states, or ADR-023 says
+plainly that agreeing duplicates also fail closed and a scenario pins that
+choice. Note for whoever takes it: the collapse must compare the OBJECTS, not
+their source spans, and the surviving object still has to clear the
+embedded-certify rule (PR #44 R6) — a restated certify is still two quotations
+as far as `_is_the_whole_completion` can tell.
+
+### T-M39-7 — the judge parses free text where it could demand a schema            [status: todo]
+Origin: PR #44, raised by the implementer while fixing R6; the orchestrator's
+round-2 note asked for this to be said plainly rather than patched again.
+Spec: the judge asks for `{"certify": ..., "reason": ...}` in `SYSTEM` prose and
+then reads whatever comes back out of free text. That boundary has now produced
+four defects in three rounds — a one-line fence emptied by the strip, a
+`re.fullmatch` fence broken by trailing prose, a wrapper-agnostic scan that read
+a QUOTED verdict as the answer, and R7's agreeing-duplicates — and each fix has
+been a better guess about what a completion looks like. OpenRouter supports
+`response_format: {"type": "json_schema", ...}`, which makes the provider
+enforce the shape: the completion IS the object, there is nothing to locate, and
+`_json_objects` / `_is_the_whole_completion` both delete. That is the fix that
+ends the class rather than narrowing it.
+Not done in M39 because it changes the request shape (M39 puts judge prompt and
+model changes out of scope), because support is per-model and
+`deepseek/deepseek-v4-flash-0731` is pinned by ADR-010's frozen price snapshot,
+and because this environment has no `OPENROUTER_API_KEY` — nobody here can
+observe whether the provider honours it, and a fallback path that silently
+re-enters the free-text parser would reintroduce everything above while looking
+fixed.
+Repro: read `SYSTEM` in `src/browser/judge.py` beside the `payload` dict — the
+schema is stated to the model and asserted nowhere in the request.
+Acceptance: an ADR deciding for or against provider-enforced JSON with the
+model-support question answered from a live call rather than from the docs; if
+for, the free-text parser is deleted rather than kept as a fallback, and the
+no-key environment's inability to verify it is declared the way ADR-017 declared
+its own.
+
 ### T-M39-1 — `stub_judge` certifies on any verdict token it does not recognise            [status: todo]
 Origin: M39, found while watching `judge-two-malformed-completions-fail-closed`
 go red before the fix.
