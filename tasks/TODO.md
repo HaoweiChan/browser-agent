@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: in-progress]
+### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: pr]
 Origin: PR #29 R24
 Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README
 no longer publishes a property the grader does not implement — it now states
@@ -107,6 +107,65 @@ Acceptance: the three citations name ADR-019, and a graded row resolves `ADR-0NN
 in `src/`, `evals/`, `.github/` and `specs/` against the ADR that actually carries the
 ruling — or at minimum against the file existing and its Ruling mentioning the subject.
 Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
+
+### T-R46 — the "one list, one place" claim restates the properties it says it never restates            [status: todo]
+Origin: PR #35 R19
+Spec: ADR-019:167-168 says "One list, in one place; every other sentence in this
+file and in README refers to it instead of restating it"; :48-49 and
+`specs/decisions/INDEX.md`:28 say the same. In the same file, ADR-019:254-257
+restates §6 item 2's first clause in full with no reference to item 2, and
+:264-269 restates its second clause — the exact wording R15 found stale at
+§2:68-73, now living 80 lines below the list instead of 100 above it. README:107-109
+restates item 7 inside the sentence denying restatement, and README:121
+("Same ceiling, not `published >= ledger max`") restates item 3's parenthetical
+verbatim. The `ponytail:` limit at `src/browser/eval_adapter.py`:3398-3405 leans on
+the single-source list as the general defence against a newly invented false
+description, so the blacklist's stated backstop is not actually in place.
+Nothing can go red on this: `describes_a_deleted_rule` blacklists three retired
+phrases, and a correct-today restatement is by construction not on that list.
+Acceptance: either the two §6 paragraphs and README:107-109/:121 defer to the item
+numbers instead of restating their content (as :192-194 and :220 already do), or the
+single-source sentences at ADR-019:167-168, :48-49 and INDEX.md:28 are narrowed to
+what is true. Grepping §6 for a sentence that states an item's content without naming
+its number returns nothing, or the claim no longer says otherwise.
+
+### T-R47 — two emitted keys still use the retired `property N` numbering            [status: todo]
+Origin: PR #35 R20
+Spec: `src/browser/eval_adapter.py`:676 emits `r21_underpublished_band_green_on_property_2`
+and :680 emits `r21_underjustified_ceiling_green_on_property_3`. Under ADR-019 §6's
+list those are item 3 and item 4 (:173-186). The comments two lines above each were
+renumbered by PR #35 round 4 (:673-675), so the comment and the key it guards disagree,
+and a red report names §6 items off by one. The round-3 sweep claimed to cover "stale
+`property 2` / `property 3` numbering in three comments" — these are emitted strings,
+not comments, and were missed.
+Acceptance: the emitted keys name the same item numbers as §6's list (or no number at
+all), and no string in `_check_published_band_slack` uses the retired numbering.
+
+### T-R48 — ADR-019 says a band "was published" that no commit ever published            [status: todo]
+Origin: PR #35 R21
+Spec: ADR-019:101 ("that band was published, and the check was GREEN on it") and
+:236-237 ("that exact state was published in this round and the check accepted it").
+`git log --all -S'12.89 × 1.15' -- specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md`
+returns only `aeac0f7`, the round-4 repair itself quoting it as an example. The bands
+actually published across the branch were 13.22 -> 20, 13.08 -> 20 and 13.32 -> 20; the
+12.89 / -> 15 state existed only in an uncommitted working tree. The substantive half is
+true and verified — `_band_wrong` returns [] for that state, `round(12.89*1.15,2)` is
+14.82, `_band_rule(12.89)` is 15 <= 20 — only "published" is stronger than the record.
+Acceptance: the sentences say what is reproducible (the state was reachable and is green
+under the current check) rather than that a commit of this PR published it, or a commit
+sha is cited that did.
+
+### T-R49 — §6 says it lists "exactly" what the check requires, and omits two emitted shapes            [status: todo]
+Origin: PR #35 R22
+Spec: ADR-019:48-49 says "§6 lists exactly what it requires". `_band_wrong` also emits
+`adr_publishes_no_band_line` (`src/browser/eval_adapter.py`:440) and `no_recorded_run_at`
+(:461), neither of which appears in items 1-7 — nine distinct `wrong.append` shapes
+mapped onto seven items. Separately ADR-019:69 says "§6 items 2-4 are what the check
+requires **of it**" where "it" is the cited run; item 4 (:179-180) constrains the
+committed ceiling against the ledger maximum, not the cited run.
+Acceptance: either the two omitted shapes are folded into the list (or named as
+preconditions of items 1-2), or :48-49 drops "exactly"; and ADR-019:69 cites items 2-3
+for the cited run and item 4 for the ceiling.
 
 ### T-R44 — the `fast` band cites a red run without saying so; `invariant` discloses its result            [status: todo]
 Origin: PR #35 R17
