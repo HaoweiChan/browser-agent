@@ -1,0 +1,59 @@
+{
+  "pr": 41,
+  "round": 4,
+  "scope": "confirming pass — round-3 repair diff f982707..HEAD + standing R14/R15/R16",
+  "standing": {
+    "R14": "CLOSED — both previously-green cells redden; the wider route also closed a live drift risk in a third copy nothing read",
+    "R15": "CLOSED — the stale sentence is gone",
+    "R16": "CLOSED — clause dropped, selector bounded and stable at 51 where the old one now returns 60 and still drifts"
+  },
+  "result": "REQUEST_CHANGES (0 HIGH) — routed entirely to debt under the standing ruling",
+  "disposition": "Human ruled option A at the round-3 breaker: one bounded round on R14/R15/R16, then close out. All three are closed. R17 is the fifth instance of this PR's defect class — a description claiming more than its check does — and the orchestrator's stated criterion at that breaker was that a fifth instance is evidence the pairing needs a structural answer rather than another round. So R17-R20 ship as named debt (T-R78..T-R81) and the PR goes to the human.",
+  "gate": {
+    "invariant": "61/61 = 1.000",
+    "fast": "156/156 = 1.000"
+  },
+  "findings": [
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "route": "debt",
+      "tid": "T-R78",
+      "claim": "ADR-019 §7's new closing sentence tells the reader that §5 names the demonstrating mutation for every graded item, but §5 names a mutation only for the eight cells and the workflow copy — nothing for README's four `fast` values, the two ranges, the two derived ceilings, or the run id.",
+      "evidence": "ADR-019:586-590 enumerates seven graded items then asserts '§5 states which mutation demonstrates each.' §5 is lines 228-268; the only mutation language in it is at 241-245, covering the eight cells and the workflow copy. `grep -n mutation` over the ADR returns 290, 309, 590 — no hit inside §5. The paragraph at 250-255 introducing README's four values, both ranges, both ceilings and the run id says only that they are 'read back'. The per-item mutation list exists, but in `ci-numbers-are-derived`'s watched_red, which §7 does not point at. Introduced by 062ec13, the R15 repair.",
+      "repro": "`sed -n '228,268p' ADR-019 | grep -c mutation` -> 0, against §7:590's claim",
+      "acceptance": "Either §5 names the mutation for each item it claims is graded, or §7:590 points at the case file's watched_red, which is where the per-item mutations actually are.",
+      "route_note": "MEDIUM and it is the fifth instance of this PR's defect class. Routed to debt rather than repair under the orchestrator's stated criterion at the round-3 breaker: a fifth instance is evidence the prose-and-check pairing needs a structural answer, not another round."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "debt",
+      "tid": "T-R79",
+      "claim": "The new workflow parse is not anchored to the comment block §5 says it reads — it matches any `#` comment line anywhere in eval.yml, so the two measurement lines can be moved out of the ceilings comment and the gate stays green.",
+      "evidence": "eval_adapter.py:1114-1117 uses `finditer(r\"^\\s*#\\s+(invariant|fast) ...\", wf, re.M)` over the whole file, while ADR-019 §5:242-243 says the comparison is against the copy in eval.yml's comment block. Deleting eval.yml:24-25 and re-inserting them verbatim after the last `- run:` step returns passed True. Same shape as the §5-scoping defect R12 closed for the run id; the workflow side got no equivalent scope. No wrong value escapes — only the stated location does.",
+      "repro": "move the two measurement comment lines to the end of eval.yml -> `_check_ci_numbers_are_derived()['passed']` True",
+      "acceptance": "Either the parse is scoped to the comment region preceding the `EVAL_WALL_BUDGET_S_*` env block, or §5 stops saying 'comment block' and says 'a comment in .github/workflows/eval.yml'."
+    },
+    {
+      "id": "R19",
+      "severity": "LOW",
+      "route": "debt",
+      "tid": "T-R80",
+      "claim": "The newly load-bearing third copy has no one-band rule: a second, contradictory `# invariant ...` comment placed BEFORE the real one in eval.yml leaves the gate green, because the dict comprehension keeps the last match.",
+      "evidence": "eval_adapter.py:1114-1117 — `wf_cells = {m[1]: [...] for m in finditer(...)}`. Inserting a contradictory line immediately ABOVE eval.yml:24 gives passed True; inserting the same line immediately BELOW gives red with `{workflow_comment: [11.11, 22.22, 33.33, 44.44]}`. This is exactly T-R51's 'Compounding' clause — one document publishing the CI band twice, incompatibly — which `publishes_more_than_one_ci_band` refuses in README, now reproducible in the workflow, the document round 3 promoted to a graded source. Neither §5 nor the triage note claims the workflow is one-band-only, so this is an unstated gap rather than a false claim.",
+      "repro": "insert a contradictory `# invariant ...` line above eval.yml:24 -> passed True",
+      "acceptance": "Either duplicate suite lines in the workflow are refused, matching README's one-band rule, or the triage note names 'a second contradictory band inside the workflow' in its NOT-covered list."
+    },
+    {
+      "id": "R20",
+      "severity": "LOW",
+      "route": "debt",
+      "tid": "T-R81",
+      "claim": "The eval case's triage note still describes the read set as two documents, one behind its own item (1) and behind ADR §5, which both now name three.",
+      "evidence": "ci-numbers-are-derived.json triage.note item (2): 'Any CI figure published outside ADR-019 §5 and README' — while item (1) of the same note, added in the same commit, reads 'All three copies — §5's table, README's values, the workflow comment'. ADR-019 §5:263-266 states it correctly. The understatement is in the SAFE direction (it claims less coverage than exists), so no reader is misled about correctness, but the note is the artifact this loop keeps auditing for exactly this drift.",
+      "repro": "`'three copies' in triage.note` and `'outside ADR-019 §5 and README' in triage.note` -> both True",
+      "acceptance": "triage.note item (2) reads '§5, README and the workflow comment', matching item (1) and ADR §5."
+    }
+  ]
+}

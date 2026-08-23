@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: in-progress]
+### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: pr]
 Origin: PR #32 CI run 32626835735 (M31's check)
 Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
 process can see. CI's eval-gate job runs `--suite invariant` first, which
@@ -176,6 +176,64 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-R78 — §7 claims §5 names a demonstrating mutation for every graded item; §5 names two of seven            [status: todo]
+Origin: PR #41 R17
+Spec: ADR-019:586-590 enumerates seven graded items and asserts "§5 states which mutation
+demonstrates each." §5 (lines 228-268) carries mutation language only at 241-245, for the
+eight table cells and the workflow copy. `grep -n mutation` over the ADR returns 290, 309,
+590 — no hit inside §5. The paragraph at 250-255 that introduces README's four `fast`
+values, both ranges, both derived ceilings and the run id says only that they are "read
+back". The per-item mutations do exist — in `ci-numbers-are-derived`'s `watched_red`, which
+§7 does not point at.
+This is the FIFTH instance in PR #41 of the same class: a description claiming more than its
+check does, each introduced by the repair for the previous one (R1 misattribution, R7's
+half-fix, R8's scope statement, R14's "edit a cell and the gate reddens", now R17). It was
+routed to debt rather than a fifth repair round on the orchestrator's stated criterion at
+the round-3 circuit breaker: a fifth instance is evidence the prose-and-check pairing needs
+a structural answer, not another round.
+Acceptance: either §5 names the mutation for each item it claims is graded, or §7:590 points
+at the case file's `watched_red`. **The structural question is the more valuable half** — five
+instances in one PR, all caught only by re-deriving the claim against the code, suggests the
+answer is not more careful prose but a form that cannot drift from what it describes.
+T-R76 is the adjacent decision; whoever takes either should read both.
+
+### T-R79 — the workflow parse is not anchored to the block §5 says it reads            [status: todo]
+Origin: PR #41 R18
+Spec: `src/browser/eval_adapter.py`:1114-1117 matches `^\s*#\s+(invariant|fast) ...` over the
+whole of `.github/workflows/eval.yml`, while ADR-019 §5:242-243 says the comparison is against
+the copy in that file's **comment block**. Moving the two measurement lines out of the env
+comment block to the end of the file leaves the check green. Same shape as the §5-scoping
+defect PR #41 R12 closed for the run id (`five = adr[adr.index("### 5."):]`); the workflow side
+got no equivalent scope. No wrong value escapes — only the stated location does.
+Acceptance: either the parse is scoped to the comment region preceding the
+`EVAL_WALL_BUDGET_S_*` env block, watched red by relocating the copy, or §5 says "a comment in
+`.github/workflows/eval.yml`" rather than "comment block".
+
+### T-R80 — the third copy has no one-band rule, so a contradictory band above the real one is invisible            [status: todo]
+Origin: PR #41 R19
+Spec: `src/browser/eval_adapter.py`:1114-1117 builds `wf_cells` as a dict comprehension, which
+keeps the LAST match. Inserting a contradictory `#   invariant  11.11 / 22.22 / 33.33 / 44.44s`
+immediately ABOVE the real line in `eval.yml` leaves the gate green; the same line BELOW it
+reddens with `{workflow_comment: [11.11, 22.22, 33.33, 44.44]}`.
+This is exactly T-R51's "Compounding" clause — one document publishing the CI band twice,
+incompatibly — which `publishes_more_than_one_ci_band` refuses in README, now reproducible in
+the workflow, the document PR #41 round 3 promoted to a graded source. Neither §5 nor the
+case's triage note claims the workflow is one-band-only, so this is an unstated gap rather
+than a false claim.
+Acceptance: either duplicate suite lines in the workflow redden, matching README's one-band
+rule, or the triage note names "a second contradictory band inside the workflow" in its
+NOT-covered list alongside the unbolded-README limit.
+
+### T-R81 — the case's triage note names two read sources where its own item (1) names three            [status: todo]
+Origin: PR #41 R20
+Spec: `evals/adversarial/ci-numbers-are-derived.json` `triage.note` item (2) reads "Any CI
+figure published outside ADR-019 §5 and README", while item (1) of the same note, added in the
+same commit, reads "All three copies — §5's table, README's values, the workflow comment", and
+ADR-019 §5:263-266 states it correctly. The understatement is in the safe direction — it claims
+less coverage than exists, so no reader is misled about correctness — but this note is the
+artifact the loop keeps auditing for exactly this drift.
+Acceptance: item (2) reads "§5, README and the workflow comment", matching item (1) and §5.
 
 ### T-R76 — a strike must name what it looked at, because three correct records were removed as unevidenced in one day            [status: todo]
 Origin: PR #41 R1, plus two instances found cross-session on `task/M32`
