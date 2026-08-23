@@ -1,0 +1,97 @@
+{
+  "pr": 36,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The \"one list, one place — this file states those requirements nowhere else\" claim is re-asserted in three documents by this PR and is falsified by sentences in the same documents, several of which this PR added; item 8 is structurally incapable of seeing a restatement, so the claim is unbacked by any grader.",
+      "evidence": "ADR-019:48-49 (new): \"§6's numbered list is what it requires, and this file states those requirements nowhere else.\" The same file then states them: :75-77 (new, tagged T-R49), :264-266, :227, :278-280, :289-290. Same claim two more sites: INDEX.md:28 and eval_adapter.py:554-555 — while the same commit ADDS two verbatim restatements 27 lines above it, eval_adapter.py:527-528 and :535-536. eval_adapter.py:638-640 states the absolute form outright. This is the R15/R16/R19/R20 defect class recurring inside its own repair.",
+      "repro": "grep -n 'states those requirements nowhere else' ADR-019; sed -n '264,266p;75,77p' ADR-019; sed -n '527,536p;554,555p' eval_adapter.py — both gate cases stay green.",
+      "acceptance": "Either the restating clauses are reduced to bare references (\"§6 item 4\", no paraphrase), or the three absolute sentences (ADR-019:48-49, INDEX.md:28, eval_adapter.py:554-555 and :638-640) are narrowed to what is graded — \"every reference to §6 resolves to an item the list has\" — and nothing stronger. Either way a mutation that would have gone red is recorded in the case provenance."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "eval_adapter.py:3687-3690 claims §6 item 8 \"is what keeps the sentences around it referring to that list instead of copying it (T-R46)\" — item 8 grades nothing about copying and nothing about a reference pointing at the right item.",
+      "evidence": "ORCHESTRATOR-VERIFIED. Item 8 (eval_adapter.py:645-670) checks the list is 1..N, that every `item N` token names a number in 1..N, and that no `property N` token survives. A copy is invisible to it, and a reference resolving to the WRONG item is green: rewriting README.md:123 \"§6 item 3 is why the published number can sit below the ledger's maximum\" to \"§6 item 6\" (an unrelated item) leaves `_check_published_band()` passing — I reproduced this, it returns True. §6:186-190 admits the residue (T-R59); the comments at :3690 and :639-640 do not.",
+      "repro": "rewrite README's `§6 item 3 is why the published number` to `§6 item 6` -> `_check_published_band()['passed']` is True",
+      "acceptance": "The :3690 sentence is corrected to what item 8 does (\"grades that every deferral names an item the list has\"), or item 8 binds references to content rather than position (T-R59's slug option) and the sentence becomes true. Watched red with the item-3 -> item-6 mutation."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The new ADR-citation resolver excludes all of `tasks/` and `CLAUDE.md`, but the case that documents it says only \"`tasks/reviews/` is deliberately out of scope\" — 94 citations in the hand-edited tasks/TODO.md + tasks/DONE.md and 3 in CLAUDE.md are ungraded under a description that implies only the verbatim record is.",
+      "evidence": "eval_adapter.py:1767-1780 builds `citing` from README.md plus src, evals, specs, .github, docs, prompts — `tasks` never appears, so the `tasks/reviews/` rationale in the comment and in adr-header-and-index.json's provenance describes an exclusion narrower than the code's. tasks/TODO.md carries 71 ADR citations and tasks/DONE.md 23; both are edited every milestone (this PR alone changed 229 lines of TODO.md). CLAUDE.md carries 3 and is unscanned while README.md is explicitly scanned. All 97 resolve today, so the gate cannot tell.",
+      "repro": "count ADR-NNN in tasks/TODO.md, tasks/DONE.md, CLAUDE.md -> 97; grep the `for d in (\"src\", \"evals\"` line",
+      "acceptance": "Either `tasks/*.md` (excluding `tasks/reviews/`) and CLAUDE.md join `citing` — watched red by pointing one TODO.md citation at a nonexistent ADR — or the comment and the case provenance name the real exclusion and say why each is out."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "A fifth instance of the T-R52 miscitation survives, in a file this PR edited, and the new resolver is spelling-sensitive so it cannot see it: fast-wall-clock-budget.json's key `watched_red_adr017` attributes the per-suite override mutations (ADR-019 §4) to ADR-017, the M36 judge decision.",
+      "evidence": "ORCHESTRATOR-VERIFIED: `grep -rn adr017 evals/adversarial/fast-wall-clock-budget.json` -> :159 `\"watched_red_adr017\"`, whose body records mutations of `wall_budget`'s per-suite scoping and `WALL_BUDGET_S['invariant']` — ADR-019 §4 and §3. This PR edited line 158 of the same file and left 159. The resolver matches only `r\"ADR-(\\d{3})\"`, so `adr017` is invisible: the case reports 477 citations resolving while the one remaining wrong attribution is outside its regex. The claimed T-R52 fix names four sites; there were five.",
+      "repro": "grep -rEni 'adr[-_ ]?0[0-9]{2}' src evals specs docs prompts .github README.md | grep -v 'ADR-0' | grep -v 'evals/report/' -> the single hit is fast-wall-clock-budget.json:159",
+      "acceptance": "The key is renamed to the decision that actually rules (or explicitly marked as written under the pre-renumber id), and either the resolver accepts the non-canonical spellings present in the tree or the case's `not_covered` states that it only reads the canonical form. Watched red by re-introducing a lowercase miscitation."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "Item 8's reference regex treats `_` as a word separator, so any identifier of the form `*_item_N` with N > 8 anywhere in the 3,900-line shared eval_adapter.py falsely reddens `published-band-matches-the-ledger` — a case in both `fast` and `invariant`, i.e. the pre-commit gate.",
+      "evidence": "eval_adapter.py:652-653 runs `re.finditer(r\"(?<![A-Za-z])items?[ _](\\d+)...\")` over `Path(__file__).read_text()` — the whole file, not the band functions. Confirmed matches: `missing_item_9` -> ['9'], `line_item_12` -> ['12'], `my_items_4` -> ['4']. eval_adapter.py is the single adapter for every task in the repo, so an unrelated grader emitting an `item_N` key blocks the gate on the band case.",
+      "repro": "re.compile(r'(?<![A-Za-z])items?[ _](\\d+)').findall('wrong.append({\"missing_item_9\": x})') -> ['9']",
+      "acceptance": "Either the scan is scoped to the band functions' source (or a marked region), or the separator is a space only, with the trade-off stated in the comment.",
+      "route_note": "LOW, but it can redden the pre-commit gate for unrelated work in a shared file, and the fix is one regex."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The sweep repaired the \"34 runs\" miscount in ADR-019 but left the identical wrong number in tasks/TODO.md — the ledger has 36 rows at (invariant, 51), not 34.",
+      "evidence": "ORCHESTRATOR-VERIFIED: ADR-019:271 was changed by this PR to drop the count; tasks/TODO.md:94 (T-R50's spec) still reads \"had 34 runs at 51 cases reaching 14.12s\". The committed ledger has 36 rows with suite=invariant, total=51. T-R50 is out of scope for behaviour, but this is the sweep's own number.",
+      "repro": "grep -n '34 runs' tasks/TODO.md; count invariant/51 rows in git show HEAD:evals/report/history.jsonl -> 36",
+      "acceptance": "tasks/TODO.md:94 carries 36 or drops the count, matching the repair already made in ADR-019:271.",
+      "route_note": "LOW, but it is the class sweep's own miss, one file over, and a one-word fix."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "README:125-127, new in this PR, says the table below states \"one named run of this tree — the one ADR-019 §2/§3 cites by ledger timestamp, with the result that run scored\" — the table states neither a timestamp nor a result.",
+      "evidence": "README.md:125-127 (the clause \"with the result that run scored\" is new) against the table at :141-144, whose columns are `suite | cases | band source | x 1.15 | ceiling`. No ts, no 134/136. The same overstatement sits at README.md:137, unchanged from main.",
+      "repro": "sed -n '123,144p' README.md",
+      "acceptance": "The sentence attributes the timestamp and the result to ADR-019 §2/§3 unambiguously, or README's row carries them and item 7 grades the extra fields.",
+      "route_note": "LOW, but it is a false description added by this PR, in the class the PR exists to close."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The logged debt block T-R57 describes the shipped resolver with the wrong scope and the wrong count.",
+      "evidence": "tasks/TODO.md:876-890 says \"under `src/`, `evals/`, `specs/`, `.github/` and README\" and \"green on the 347 committed ones\", against eval_adapter.py:1768 which also scans `docs/` and `prompts/`, and a check whose own `got` reports 477 citations across 215 files. Even under T-R57's narrower stated scope the count is 354.",
+      "repro": "_run_adr_header_index_case(...)['got'] -> {'adr_citations_seen': 477, 'files_scanned': 215}",
+      "acceptance": "T-R57's spec names the six directories the check actually reads and the 477 figure it reports, or drops the count.",
+      "route_note": "LOW, but a debt block that misdescribes what shipped is the same class."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "none",
+      "claim": "The disclosed `--no-verify` commit is within CLAUDE.md hard rule 5 — noted for the record, not a defect.",
+      "evidence": "b4b9231 touches exactly one file, evals/report/history.jsonl (+3 rows, 0 deletions), and its message explains the chicken-and-egg. `.eval-baseline.json` untouched by the branch. \"Emergency\" is a stretch for a routine ledger append, but rule 5's operative requirement — explained in the commit message — is met.",
+      "repro": "git show --stat b4b9231; git log -1 --format=%B b4b9231",
+      "acceptance": "No change required. If it recurs often enough to become a pattern, rule 5 gains a named exception for hook-generated ledger rows."
+    }
+  ],
+  "gate": {
+    "invariant": "53/53 = 1.000",
+    "fast": "136/136 = 1.000"
+  },
+  "note": "R1 is the fifth consecutive occurrence of this subsystem's defect class — a description that does not match the code — and this time it is inside the repair written to close that class. R2 shows the structural defence (item 8) does not cover the thing its own comment says it covers."
+}
