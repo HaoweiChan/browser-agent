@@ -7,6 +7,8 @@ Status: accepted
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `evals/run.py` `over_budget()`
 
+**Amended by**: ADR-021 (Decision 2's local `fast` number re-derived 80 -> 90 after the M32 merge grew the suite to 146 cases; the other three ceilings unchanged)
+
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 75) and ADR-002 Decision 4 (a second suite now has a ceiling)
 
 ---
@@ -55,22 +57,22 @@ decision that amends it.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Slowest recorded `fast` run at 146 cases: **74.59s** — 3 runs:
-  73.55 / 74.35 / 74.59s.
+- Slowest recorded `fast` run at 146 cases: **74.81s** — 12 runs:
+  73.26 / 73.55 / 73.78 / 73.81 / 74.14 / 74.27 / 74.3 / 74.35 / 74.55 / 74.59 / 74.77 / 74.81s.
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 74.59 × 1.15 = 85.8 → **90**, which is ABOVE the 80 committed in
-`WALL_BUDGET_S`. Republished at the case count the tree actually ships after
-M32 merged in (132 → 146); the 132-case reading below it, 66.33 × 1.15 = 76.3
-→ **80**, was correct for that tree and is superseded rather than corrected.
+five — gives 74.8 × 1.15 = 86.0 → **90**, which was ABOVE the 80 this ADR
+committed. Republished at the case count the tree actually ships after M32
+merged in (132 → 146); the 132-case reading below it, 66.33 × 1.15 = 76.3 →
+**80**, was correct for that tree and is superseded rather than corrected.
 
-**That gap is an open decision, not something this merge settled.** Every run
-above is comfortably inside the committed 80 — the ceiling is not being
-breached — but the +15% rule applied to the new maximum asks for 90, and
-`published-band-matches-the-ledger` is red on exactly that, which is the check
-doing its job. Raising a ceiling is a human decision with an ADR behind it
-(ADR-013 Decision 3, and PR #34's own reverted attempt to do it unilaterally),
-so the number stays at 80 and the red stands until someone decides. The band published for the earlier
+**The gap was surfaced, not fixed, and then decided: `WALL_BUDGET_S["fast"]`
+is 90 as of ADR-021.** Every run above is comfortably inside the old 80 — no
+ceiling was ever breached — but the +15% rule applied to the new maximum asks
+for 90, and `published-band-matches-the-ledger` was red on exactly that, which
+is the check doing its job. Raising a ceiling is a human decision with an ADR
+behind it (ADR-013 Decision 3, and PR #34's own reverted attempt to do it
+unilaterally), so it stayed at 80 until one existed. The band published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of
@@ -83,10 +85,10 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Slowest recorded `invariant` run at 54 cases: **13.43s** — 5 runs:
-  12.27 / 12.92 / 12.96 / 12.97 / 13.43s.
+- Slowest recorded `invariant` run at 54 cases: **13.85s** — 14 runs:
+  12.27 / 12.71 / 12.8 / 12.9 / 12.92 / 12.93 / 12.96 / 12.97 / 12.97 / 13.36 / 13.41 / 13.43 / 13.56 / 13.85s.
 
-The same rule gives 13.43 × 1.15 = 15.4 → **20**, which is the committed
+The same rule gives 13.56 × 1.15 = 15.6 → **20**, which is the committed
 number: `invariant` grew 51 → 54 cases with the M32 merge and still derives the
 same ceiling.
 

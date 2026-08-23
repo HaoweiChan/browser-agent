@@ -3313,7 +3313,7 @@ def _run_wall_clock_case(case: dict) -> dict:
                 wrong.append({"env": r["value"], "expected_ceiling": r["budget"], "got": got,
                               "note": r["note"]})
         # The override is the FAST gate's alone (ADR-019). If it raised every
-        # suite's ceiling, CI's 80 would apply to `invariant` too — five times
+        # suite's ceiling, CI's `fast` number would apply to `invariant` too — five times
         # what that suite costs — and the tag valve ADR-019 closed locally would
         # still be open there.
         for r in case["input"].get("invariant_override", []):

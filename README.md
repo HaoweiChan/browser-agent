@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260823-025332-fast.json`, with
-`evals/report/20260823-025402-invariant.json` and
-`evals/report/20260823-025349-live.json`:
+Latest offline baseline — `evals/report/20260823-155414-fast.json`, with
+`evals/report/20260823-155427-invariant.json` and
+`evals/report/20260823-155452-live.json`:
 
 ```
-fast  144/146    invariant  52/54    live  9/9    $0.0000    73.3s
+fast  146/146    invariant  54/54    live  9/9    $0.0000    74.8s
 recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 31/31 · 13 replans
 ```
