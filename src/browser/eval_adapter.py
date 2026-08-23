@@ -3732,7 +3732,45 @@ def _run_soak_accounting_case(case: dict) -> dict:
 # as the record of what was decided then — so this grades the command form and
 # says nothing about the prose. See `_run_doc_counts_case`.
 _SUITE_CMD = re.compile(r"--suite (\w+)[^\n#]*#([^\n]*)")
-_CEILING_LITERAL = re.compile(r"(\d+(?:\.\d+)?)\s*(?:s|secs?|seconds)\b")
+
+# The number must be a CEILING, not just a duration. Anchored to the words that
+# make it one, because the first version matched any `Ns` anywhere in the
+# comment and reddened the gate on "# ~71s on an M-series laptop" and
+# "# p95 2.2s per case" (PR #40 R1) — both TRUE sentences, and this repo's
+# documents are full of them. A gate that refuses a commit over a true timing
+# note is a gate someone switches off, which costs more than the drift it
+# catches. The 24-character window is the gap these forms actually leave
+# ("wall clock <= 15s", "ceiling 15s", "wall clock <= 90 seconds").
+_CEILING_LITERAL = re.compile(
+    r"(?:<=|≤|ceiling|budget|wall[- ]?clock)[^0-9\n]{0,24}"
+    r"(\d+(?:\.\d+)?)\s*(?:s|secs?|seconds)\b", re.I)
+
+
+def _ceiling_drift(text: str, budgets: dict) -> list:
+    """Gate commands in `text` publishing a ceiling that is not the committed one.
+
+    One function, two callers: the file sweep and the case's own value-level
+    rows. The rows exist because the first version of this check was exercised
+    only against ceiling-shaped payloads, so the over-fire R1 found had no way
+    to show up — an exercise set that only tries the cases the code was written
+    for proves nothing (PR #40 R1). Keeping both callers on this one function
+    is what makes a row a real probe of the sweep rather than of a copy of it.
+    """
+    # Struck spans first, the same convention `_live` applies below and for the
+    # same reason: `prompts/` is append-only and records the gate block as it
+    # stood on its date, so a superseded ceiling there is struck with a dated
+    # pointer, never rewritten — and a guard that reddens on preserved history
+    # is a guard someone turns off.
+    unstruck = re.sub(r"~~.*?~~", "", text, flags=re.DOTALL)
+    out = []
+    for suite, comment in _SUITE_CMD.findall(unstruck):
+        # Only suites that HAVE a committed ceiling: `live`/`full`/`all` have
+        # none, so a duration in their comments is prose, not a gate.
+        if suite not in budgets:
+            continue
+        out.extend((suite, lit) for lit in _CEILING_LITERAL.findall(comment)
+                   if float(lit) != budgets[suite])
+    return out
 
 
 def _run_doc_counts_case(case: dict) -> dict:
@@ -3892,6 +3930,39 @@ def _run_doc_counts_case(case: dict) -> dict:
             if missing:
                 wrong.append({"coverage_missing_domains": missing})
 
+    if inp.get("commands_publish_the_committed_ceiling"):
+        # EVERY markdown file in the tree, not the criterion-5 subset. That
+        # subset excludes `tasks/` because a tracker quotes forbidden phrases
+        # as the thing that must NOT be true, which a literal phrase scan reads
+        # backwards — reasoning that does not transfer here: a ceiling in a
+        # gate command is the same claim wherever it is written, and there is
+        # no `tasks/` false positive (PR #40 R5). Dot-directories were the
+        # costlier half of that inherited scope: `.claude/skills/finish-task/`
+        # publishes the gate commands a SECOND time, so a ceiling re-typed
+        # there was green forever. `.git`/`.venv` are machinery, not documents;
+        # rglob does not follow the `.venv` symlink, so only `.git` is pruned
+        # in practice.
+        skip = {".git", ".venv"}
+        for path in sorted(p for p in RUN_ROOT.rglob("*.md")
+                           if not skip & set(p.relative_to(RUN_ROOT).parts)):
+            docrel = path.relative_to(RUN_ROOT).as_posix()
+            for suite, lit in _ceiling_drift(path.read_text(encoding="utf-8"),
+                                             WALL_BUDGET_S):
+                wrong.append({"publishes_a_ceiling_nothing_enforces":
+                              f"--suite {suite} ... {lit}s",
+                              "committed": WALL_BUDGET_S[suite], "doc": docrel})
+        # Value-level rows: the payloads no file in this repo has to carry, and
+        # the half that would have caught R1's over-fire. A row states the line
+        # and whether the sweep must flag it; both directions are listed,
+        # because the dangerous one is a sweep that goes quiet, and the
+        # expensive one is a sweep that reddens on a true sentence.
+        for row in inp.get("ceiling_sweep_rows", []):
+            got = bool(_ceiling_drift(row["line"], WALL_BUDGET_S))
+            if got != row["flags"]:
+                wrong.append({"ceiling_row": row["line"],
+                              "should_flag": row["flags"], "got": got,
+                              "why": row.get("note")})
+
     c5 = inp.get("criterion5")
     if c5:
         # Every tracked-looking markdown file, not a hardcoded allowlist
@@ -3946,38 +4017,8 @@ def _run_doc_counts_case(case: dict) -> dict:
         required_in = c5.get("required_in", {})
         for path in md_files:
             docrel = path.relative_to(RUN_ROOT).as_posix()
-            raw = path.read_text(encoding="utf-8")
-            live_text = _live(raw)
-            # A gate command that publishes its own ceiling must publish the one
-            # `evals/run.py` commits. Four documents drifted off `WALL_BUDGET_S`
-            # at once (T-M32-9) because each of them re-typed the number and
-            # nothing read it back; the ceiling has moved twice in two days, so
-            # a fix that only corrects today's literals buys one milestone. Raw
-            # text, not `live_text`: these live in fenced code blocks, where the
-            # markdown unwrapping above has nothing to do and the newline the
-            # per-command match needs has been normalised away. Only suites that
-            # HAVE a committed ceiling are graded — `live`/`full`/`all` have
-            # none, and a duration mentioned in their comments is prose, not a
-            # gate. Struck spans come out first, the same convention `_live`
-            # applies below and for the same reason: `prompts/` is append-only
-            # and records the gate block as it stood on its date, so a
-            # superseded ceiling there is struck with a dated pointer, never
-            # rewritten — and a guard that reddens on preserved history is a
-            # guard someone turns off. The residual, stated rather than
-            # implied: a ceiling published anywhere OTHER than a `--suite`
-            # comment is invisible here, and deliberately so.
-            if inp.get("commands_publish_the_committed_ceiling"):
-                unstruck = re.sub(r"~~.*?~~", "", raw, flags=re.DOTALL)
-                for suite, comment in _SUITE_CMD.findall(unstruck):
-                    if suite not in WALL_BUDGET_S:
-                        continue
-                    for lit in _CEILING_LITERAL.findall(comment):
-                        if float(lit) != WALL_BUDGET_S[suite]:
-                            wrong.append({
-                                "publishes_a_ceiling_nothing_enforces":
-                                    f"--suite {suite} ... {lit}s",
-                                "committed": WALL_BUDGET_S[suite],
-                                "doc": docrel})
+            live_text = _live(path.read_text(encoding="utf-8"))
+            live_text = _live(path.read_text(encoding="utf-8"))
             for bad in c5.get("forbidden", []):
                 if _live(bad) in live_text:
                     wrong.append({"asserts_criterion5_green": bad, "doc": docrel})
