@@ -12,6 +12,31 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
+### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: in-progress]
+Promoted from Debt to Queue 2026-08-23 by the owner.
+Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
+routed to debt in round 4, never written into this file until round 5.
+Spec: `evals/run.py:91` commits `WALL_BUDGET_S = {"fast": 90, "invariant": 20}`
+locally. Publications that disagree: (1) **`CLAUDE.md`'s Gate and Commands
+blocks** — the repo's stated working contract — still say `invariant` "wall
+clock <= 15s" and `fast` "wall clock <= 75s", so every committed `fast` run on
+this tree (73.9-74.8s local, 88.39s on CI) reads as a breach against the
+contract while passing the gate it actually has; (2) `INDEX.md`'s ADR-017 line
+publishes "fast 75s local"; (3) `fast-wall-clock-budget.json`'s `expect.note`
+says the override "falls back to the committed 80 for everything else" while
+every `env_override` row in the same case now expects 90. (1) and (2) are
+byte-identical to `origin/main` and predate this branch; (3) was introduced
+with ADR-021. `evals/run.py:304` also still labels the ceiling's source
+"ADR-002 Decision 4" when ADR-019 and ADR-021 are the live rulings.
+Repro: `grep -n '75s\|15s' CLAUDE.md specs/decisions/INDEX.md` against
+`evals/run.py:91`; the suites stay green.
+Acceptance: all three publications state the enforced pair, or drop the
+literals for "the ceiling `evals/run.py` enforces" — CLAUDE.md's Gate and
+Commands blocks named explicitly, since that is the file a new contributor
+reads as the contract. Nothing graded changes; if it can be graded cheaply
+(one sweep over tracked markdown for a ceiling literal that is not the
+committed one), do that instead and watch it red on CLAUDE.md first.
+
 ### T-R56 — the band subsystem's documents and its own strings say what the code does            [status: pr]
 Origin: bundles T-R45, T-R46, T-R47, T-R48, T-R49, T-R52, T-R54, T-R55 (PR #35 R8/R17/R18/R19/R20/R21/R22 + T-R34 cold review)
 Spec: Eight debt blocks from PR #35 are the same defect in the same two documents and one
@@ -421,30 +446,6 @@ Acceptance: ADR-002's Ruling, Status and `Amended by` name ADR-021 and the
 enforced local pair, or drop the numbers in favour of "the ceiling
 `evals/run.py` enforces"; the CI half is either graded or explicitly declared
 ungraded where it is published.
-
-### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: todo]
-Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
-routed to debt in round 4, never written into this file until round 5.
-Spec: `evals/run.py:91` commits `WALL_BUDGET_S = {"fast": 90, "invariant": 20}`
-locally. Publications that disagree: (1) **`CLAUDE.md`'s Gate and Commands
-blocks** — the repo's stated working contract — still say `invariant` "wall
-clock <= 15s" and `fast` "wall clock <= 75s", so every committed `fast` run on
-this tree (73.9-74.8s local, 88.39s on CI) reads as a breach against the
-contract while passing the gate it actually has; (2) `INDEX.md`'s ADR-017 line
-publishes "fast 75s local"; (3) `fast-wall-clock-budget.json`'s `expect.note`
-says the override "falls back to the committed 80 for everything else" while
-every `env_override` row in the same case now expects 90. (1) and (2) are
-byte-identical to `origin/main` and predate this branch; (3) was introduced
-with ADR-021. `evals/run.py:304` also still labels the ceiling's source
-"ADR-002 Decision 4" when ADR-019 and ADR-021 are the live rulings.
-Repro: `grep -n '75s\|15s' CLAUDE.md specs/decisions/INDEX.md` against
-`evals/run.py:91`; the suites stay green.
-Acceptance: all three publications state the enforced pair, or drop the
-literals for "the ceiling `evals/run.py` enforces" — CLAUDE.md's Gate and
-Commands blocks named explicitly, since that is the file a new contributor
-reads as the contract. Nothing graded changes; if it can be graded cheaply
-(one sweep over tracked markdown for a ceiling literal that is not the
-committed one), do that instead and watch it red on CLAUDE.md first.
 
 ### T-M32-3 — act-failure coverage costs 4.6s of a suite that already straddles its ceiling            [status: todo]
 Origin: PR #34 R1 (the fix, not the finding); cost model corrected per PR #34 R11.
