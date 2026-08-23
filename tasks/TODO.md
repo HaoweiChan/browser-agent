@@ -167,6 +167,34 @@ M34's deterministic checks — they are cheaper and they run first.
 
 ## Debt
 
+### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: todo]
+Origin: PR #32 CI run 32626835735 (M31's check)
+Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
+process can see. CI's eval-gate job runs `--suite invariant` first, which
+appends its row to the job's copy of the ledger (16.02s at 52 cases on run
+32626835735 — CI is slower than the machine the band was measured on), then
+`--suite fast`, whose band check now compares ADR-019's published invariant
+slowest (12.92s at 52 cases, 8 local runs → rule 15) against a ledger whose
+slowest at 52 cases is CI's 16.02s → rule 20 → FAIL (`fast 132/133`), while
+the same tree is green locally. Main passes only because at 51 cases the
+published slowest happens to be 14.12s → 20 == CI's 16s → 20. The fast band
+cannot trip this way (its row is written after the fast run), so the defect
+is: any PR that grows the invariant suite by one case and republishes the band
+from local runs is red on CI unless some committed local run happens to derive
+the same ceiling CI's machine does. ADR-019 itself rules that ceilings are per
+(suite, environment); the grader is not.
+Repro: on a tree whose invariant case count differs from ADR-019's published
+band count, run `--suite invariant` on a slower machine, then `--suite fast` on
+the same ledger: `published-band-matches-the-ledger` reports
+`{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
+"ledger_slowest": 16.02, "ledger_derives": 20}`.
+Acceptance: rows carry their environment (e.g. the effective
+`EVAL_WALL_BUDGET_S_*` or an env tag) and the check compares a published band
+only against rows from the same environment; a case pins that a slower
+foreign-environment row does not redden the band. Until then, M35 moved its
+one new invariant case to `fast` (it is a pure-code doc check) so the
+invariant band stays the 51-case band main measured.
+
 ### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: todo]
 Origin: PR #29 R24
 Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README

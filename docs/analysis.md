@@ -457,7 +457,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-143 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
+145 distinct cases (M31, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
