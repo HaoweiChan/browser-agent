@@ -908,17 +908,21 @@ def _check_published_band_environment() -> dict:
     T-R44, live and not theoretical: `.github/workflows/eval.yml` runs
     `--suite invariant` first, which appends CI's row to the job's copy of the
     ledger, then `--suite fast`, whose band check read that row as though this
-    laptop had written it — red on CI, green locally, on the same tree (PR #32,
-    CI run 32626835735; root-caused on `task/M32` as T-M32-13).
+    laptop had written it — red on CI, green locally, on the same tree.
 
-    What CI's row did was not "be slower". It was CLEAN, and `ts` is naive local
-    time compared as a string: CI's row followed the band row by 25 minutes and
-    sorted eight hours before it, so item 2 (cited-run)'s dirty allowance saw a
-    clean row "already available" when the band was published. ADR-019 §7 carries
-    the mechanism, the control that isolates it, and the second symptom (CI's wall
-    clock entering `slowest`, latent at 1.36s of margin). The tag closes both
-    across environments; `ts` itself is repaired separately, by stamping UTC —
-    two properties, ADR-019 §7 (T-M32-13 closed on the pair).
+    TWO RUNS, TWO CLAUSES, and this filter is the shared cause of both; an earlier
+    version of this docstring named only the second and attached it to the first.
+    On run 32626835735 (sha `434a98d`, T-R44's origin) CI's row was SLOWER —
+    16.02s against a published 12.92s, `rule` 20 against 15 — and item 3
+    (same-ceiling) fired. Nothing else in that tree could have: it has no
+    `_band_wrong`, no `cited_a_dirty_run`, and no timestamp group in `_BAND_LINE`.
+    On run 32637648447 (sha `11545a1`, `task/M32`, T-M32-13) CI's row was CLEAN
+    and its naive-local `ts` sorted eight hours before a band row it followed by
+    25 minutes, so item 2 (cited-run)'s dirty allowance fired. ADR-019 §7 keeps
+    the runs and the clauses apart, and carries the control that isolates the
+    second. `ts` is stamped UTC now, which repairs the second's ordering key; this
+    filter keeps a foreign row out of the ledger, which is the only thing that
+    reaches the first.
 
     Driven with a synthetic ledger because the defect cannot be reproduced from
     the committed one: no CI run's row ever reaches it (T-R51). The wall clocks
@@ -1048,6 +1052,88 @@ def _check_published_band_ts_orders_real_time() -> dict:
 
 
 # ==== ADR-019 §6 band section: end ====
+
+
+
+def _check_ci_numbers_are_derived() -> dict:
+    """ADR-019 §5's four CI measurements are one source, and README derives from it.
+
+    T-R51 was closed on the labelling route — CI's wall clocks are hand-read off
+    the log of a named workflow run rather than committed to the ledger — and its
+    acceptance said "watched red either way". The labelling route shipped with
+    nothing that could go red: ADR-019 §5 said so itself ("Nothing grades the four
+    measurements"), and editing README's `74.04` to `99.99` left `--suite
+    invariant` at 60/60 (PR #41 R4). T-R51's own "Compounding" clause was exactly
+    this defect one version earlier — README published the CI band twice, in two
+    incompatible forms.
+
+    So the same contract `published-band-matches-the-ledger` item 7 (readme-row)
+    gives README's LOCAL band row now covers the CI numbers: §5's table is the one
+    source, README's four values and its two ranges are read back from it, and the
+    ceilings §5 derives are the ones the workflow declares.
+
+    What is still NOT graded, and cannot be from here: that anyone ever measured
+    those four numbers. The run id is what a reader checks (`gh run view … --log`);
+    this only refuses two documents drifting apart, and a run id that no document
+    mentions. Both halves are ungradeable locally for the same reason no CI row
+    reaches the ledger (T-R51, T-R73).
+
+    Regexes are local rather than module-level on purpose: ADR-019 §6 enumerates
+    the module-level names its band region does not pin, and a new constant up
+    there would silently make that enumeration stale.
+    """
+    import re as _re
+
+    adr = _ADR019.read_text(encoding="utf-8")
+    readme = _README.read_text(encoding="utf-8")
+    wf = (Path(__file__).parents[2] / ".github" / "workflows" / "eval.yml").read_text(
+        encoding="utf-8")
+    wrong = []
+
+    # §5's table is the source: `| 1 | 16.47s | 69.54s |`, invariant then fast.
+    rows = [(float(a), float(b)) for a, b in
+            _re.findall(r"^\| \d+ \| ([\d.]+)s \| ([\d.]+)s \|", adr, _re.M)]
+    if len(rows) != 4:
+        return {"passed": False, "wrong": [{"adr_five_table_rows": len(rows)}]}
+    by = {"invariant": [r[0] for r in rows], "fast": [r[1] for r in rows]}
+
+    # The run id that makes them checkable, in both documents.
+    # The id may sit on the next line, inside a markdown link — these are prose
+    # documents and a citation near a line end is not a defect (same reasoning as
+    # `_SIX_REF`'s wrapped slugs).
+    run_id = _re.search(r"eval-gate run\s*\[?(\d{6,})", adr)
+    if not run_id:
+        wrong.append({"adr": "names_no_workflow_run_for_the_ci_numbers"})
+    elif run_id.group(1) not in readme:
+        wrong.append({"readme": "does_not_name_the_run_the_adr_cites",
+                      "adr_cites": run_id.group(1)})
+
+    # README republishes the four `fast` values as a sorted list. Read back from
+    # the table, not compared to a literal typed here.
+    want = " / ".join(f"{v:g}" for v in sorted(by["fast"])) + "s"
+    if want not in readme:
+        wrong.append({"readme": "fast_attempt_list_is_not_the_adr_table",
+                      "expected": want})
+
+    # ...and both suites as a min-max range.
+    for suite in sorted(by):
+        lo, hi = min(by[suite]), max(by[suite])
+        rng = f"{lo:.2f}-{hi:.2f}s"
+        if rng not in readme:
+            wrong.append({"readme": "range_is_not_the_adr_table", "suite": suite,
+                          "expected": rng})
+
+    # The ceilings §5 derives from its own maxima are the ones the workflow
+    # declares — the chain the four numbers exist to justify.
+    for suite in sorted(by):
+        declared = _re.search(rf'EVAL_WALL_BUDGET_S_{suite.upper()}: "(\d+)"', wf)
+        got = int(declared.group(1)) if declared else None
+        if got != _band_rule(max(by[suite])):
+            wrong.append({"suite": suite, "workflow_declares": got,
+                          "adr_five_max": max(by[suite]),
+                          "rule_gives": _band_rule(max(by[suite]))})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"adr_five": by, "run": run_id.group(1) if run_id else None}}
 
 
 def _check_history_dirty_before_report() -> dict:
@@ -4253,6 +4339,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "published-band-slack": _check_published_band_slack,
               "published-band-environment": _check_published_band_environment,
               "published-band-ts": _check_published_band_ts_orders_real_time,
+              "ci-numbers-derived": _check_ci_numbers_are_derived,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}

@@ -65,14 +65,14 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 155 cases, ts `20260823-141120`, **70.34s**, 153/155
-  (`evals/report/20260823-141120-fast.json`; `dirty: true` — the only row this
-  count has, for the reason the next paragraph gives. The stamp is UTC, as every
-  row written since §7 is. The ledger's own maximum at this count derives the
-  same ceiling; it is not copied here, see §3.)
+- Band source — local `fast` at 156 cases, ts `20260823-150057`, **71.61s**, 154/156
+  (`evals/report/20260823-150057-fast.json`; `dirty: true`, for the reason the
+  next paragraph gives. The stamp is UTC, as every row written since §7 is. How
+  many rows the ledger holds at this count, and what its maximum is, are
+  deliberately not written here — see §3.)
 
 **This band was dirty for one commit, and that price is what §7 removed.** A case
-addition forces a dirty citation: the tree only reaches 155 cases while the new
+addition forces a dirty citation: the tree only reaches 156 cases while the new
 case is uncommitted, which is the entire reason the dirty allowance exists. A
 dirty citation used to be green locally and red on CI — `T-M32-13` is the
 diagnosis, the ledger's `ts` being a naive local stamp compared
@@ -86,7 +86,7 @@ environment and item 9 (environment) keeps CI's out of a `local` band's ledger,
 so this band cites its dirty row once and stays green on both sides. That is the
 concrete thing §7 buys, and this sentence is the first band to spend it.
 
-The `153/155` is the cited row's own result, graded against it, not prose beside
+The `154/156` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -107,7 +107,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 70.34 × 1.15 = 80.89 → **85**, which is BELOW the committed 90 and
+five — gives 71.61 × 1.15 = 82.35 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
@@ -127,17 +127,22 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 60 cases, ts `20260823-140957`, **13.48s**, 58/60
-  (`evals/report/20260823-140957-invariant.json`; `dirty: true`, for the reason
-  §2 gives — and green on both sides now, which is §7's doing. Two rows were
-  available at this count, 13.48 / 13.46s, taken as they came rather than
-  selected for their numbers; this is the slower, chosen so the published number
-  sits as close to the ledger's own maximum as a real run allows — §6 tolerates
-  up to one ceiling step of slack, and R21's point was that publishing below the
-  maximum is how a band drifts, so take the least slack on offer.)
+- Band source — local `invariant` at 61 cases, ts `20260823-150113`, **13.20s**, 59/61
+  (`evals/report/20260823-150113-invariant.json`; `dirty: true`, for the reason
+  §2 gives — and green on both sides now, which is §7's doing. As in §2, nothing
+  about how many rows sit at this count, or which of them is slowest, is written
+  here.)
 
-Neither band quotes the ledger's maximum as a number any more, and that is the
-fix for a defect this file produced twice. §3 published **13.80s** and the final
+Neither band quotes the ledger's maximum, or counts the rows behind it, and that
+is the fix for a defect this file has now produced three times. The third was
+this round: §2 called its citation "the only row this count has" when the ledger
+held six, and §3 said "two rows were available ... this is the slower, chosen so
+the published number sits as close to the ledger's own maximum as a real run
+allows" when the ledger held eighteen and a 13.94s row was both closer to the
+maximum and inside the same ceiling — a stated selection rule the band did not
+follow, beside a count that was wrong, neither of them graded (PR #41 R2). A
+band sentence carries what item 2 (cited-run) grades and nothing a reader has to
+take on trust: the run, its wall clock, its result, and its `dirty` flag. §3 published **13.80s** and the final
 `origin/main` merge brought in a 13.92s row (ts `20260823-202223`, dirty, 57/58)
 that made the sentence false — while §2, two sections up, was hand-copying its
 own maximum by the same method, so the two halves of one decision disagreed on
@@ -150,14 +155,14 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.48 × 1.15 = 15.50 → **20**, which is the committed
+The same rule gives 13.20 × 1.15 = 15.18 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
 
 Both bands above are republished at the case count this branch ships after five
-`origin/main` merges and two rounds' own cases: `fast` 136 → 155, `invariant`
-53 → 60. Neither is the enumeration this file used to carry. PR #34 R21 found
+`origin/main` merges and three rounds' own cases: `fast` 136 → 156, `invariant`
+53 → 61. Neither is the enumeration this file used to carry. PR #34 R21 found
 that enumeration publishing three runs where the ledger held six and calling the
 smallest of them the maximum — the same defect PR #35 had already fixed here by
 deleting the list and citing one graded row instead, which is the resolution
@@ -274,10 +279,12 @@ not inside a body, and every name in the band set (`_band…`,
 them by byte offset, a form of membership no comment can spell its way into
 (PR #36 R19, where a substring test was satisfied by the comment warning
 against it). Every way found so far of making this scan stop scanning has been
-watched red — the count that used to stand here went stale the first time the
-band set grew, which is the lesson two paragraphs up:
-each of the seven definitions and the `_LEGACY_ENV` constant moved out of the
-region one at a time, band
+watched red — and this sentence carries no count of them, having twice carried a
+wrong one: first a total that went stale when the band set grew, then a
+"seven definitions and the `_LEGACY_ENV` constant" that counted eight members of
+a set of seven, `_LEGACY_ENV` being one of the seven (PR #41 R5). The set is
+`_BAND_DEF`'s alternatives, listed above; the mutations are: every name in it
+moved out of the region one at a time, band
 code added after the end marker, either marker deleted, a comment quoting a
 marker a second time, a marker sharing a line with code, the closing marker
 moved into a body, and the opening one moved inward past the module-level
@@ -434,72 +441,85 @@ grader prints it, with the case count, whenever the band needs republishing.
 
 ### 7. (2026-08-23) A band belongs to an environment, and the ledger records which
 
-**What this buys, first, because it is the part that decides whether the change
-earns its keep:** adding a case becomes one commit again instead of two.
-CLAUDE.md hard rule 2 makes adding a case this repo's most common operation, and
-every one of them republishes a band — a tree only reaches count N+1 while the
-new case is still uncommitted, so the row the band cites is dirty by
-construction. That is precisely what item 2 (cited-run)'s allowance exists to
-permit, and it permitted it locally while refusing it on CI: the commit lands
-green, CI runs the committed tree, CI's clean row claims to predate a band it
-followed, and the author has to re-run on a clean tree, re-cite, and commit
-again. PR #34 paid that tax. It is structural, not bad luck. Replayed at the
-state a case-adding commit actually lands in — the dirty citation, CI's clean
-row, and a clean local re-run — the untagged ledger gives
-`[{'cited_a_dirty_run': '20260823-192533', 'clean_runs_available_by_then':
-['20260823-115044']}]` and the tagged one gives `[]`. The red CI run below is the
-symptom that exposed this; the second commit is what it cost.
-
-The Ruling above has said "one per (suite, environment)" since this ADR was
-written. The grader had not: `published-band-matches-the-ledger` read every
+**One missing dimension, two runs, two clauses — and both of them fired.** The
+Ruling above has said "one per (suite, environment)" since this ADR was written.
+The grader had not: `published-band-matches-the-ledger` read every
 `history.jsonl` row the process could see. On CI that is a strictly larger set
 than the committed ledger, because `.github/workflows/eval.yml` runs
 `--suite invariant` first and that run appends its own row to the job's copy of
-the file before `--suite fast` grades §3's band against it. Red on CI, green
-locally, on the same tree (PR #32, CI run 32626835735; diagnosed to root cause on
-`task/M32` as T-M32-13 and replayed here before this section was written).
+the file before `--suite fast` grades §3's band against it. What that extra row
+then broke depended on which clauses existed in the tree, and the two red CI runs
+behind this section are not the same failure. Getting that wrong once already
+cost a round: this section's first version generalised the second run's mechanism
+onto the first, where the clause it names had not been written yet.
 
-**The firing clause is item 2 (cited-run)'s dirty allowance, and the mechanism is
-the timestamp, not the wall clock.** `evals/run.py` stamps `ts` with
+**Run 32626835735 — sha `434a98d`, T-R44's own origin — fired item 3
+(same-ceiling), on the wall clock.** That tree publishes `invariant` 12.92s at 52
+cases; CI measured 16.02s at 52/52 on the same count. `rule(12.92)` is 15,
+`rule(16.02)` is 20, so the published band and the ledger's maximum derive
+different ceilings and the check reports `{published_slowest: 12.92,
+derives_ceiling: 15, ledger_slowest: 16.02, ledger_derives: 20}` — red on CI at
+`fast 132/133`, green locally on the same tree. Item 2 (cited-run) cannot be the
+explanation there and the tree proves it rather than the argument:
+`git show 434a98d:src/browser/eval_adapter.py` has no `_band_wrong` and no
+`cited_a_dirty_run` at all, and its `_BAND_LINE` is the pre-`ts` form
+`r"Slowest recorded \`(fast|invariant)\` run at (\d+) cases: \*\*([\d.]+)s\*\*"` —
+no timestamp group, so nothing in it could read a `ts` or a `dirty` flag.
+
+**Run 32637648447 — sha `11545a1`, on `task/M32` — fired item 2 (cited-run)'s
+dirty allowance, on the timestamp.** That is T-M32-13, diagnosed there and
+replayed here. `evals/run.py` stamped `ts` with
 `time.strftime("%Y%m%d-%H%M%S")` — naive local time, no zone — and the dirty
 clause compares those strings as if they were a total order on real time
 (`r["ts"] <= ts`, "was a clean row already available when the band was
-published?"). The ledger mixes zones. A band row written on this laptop at
+published?"). The ledger mixes zones. A band row written on that laptop at
 `20260823-192533` is 19:25:33 Asia/Taipei, 11:25:33 UTC; CI's `invariant` row
 `20260823-115044` was written **25 minutes later in real time** and sorts **eight
 hours earlier as a string**. CI's row is clean — a fresh checkout makes
 `git_dirty()` false — so it answers yes to a question about a moment it had not
-happened in, and retroactively reddens a band the allowance exists to permit.
-That allowance is PR #35 R11's: a tree only reaches count N+1 while the new case
-is uncommitted, so the band's own row is dirty by construction.
+happened in, and reddens a band the allowance exists to permit. That allowance is
+PR #35 R11's: a tree only reaches count N+1 while the new case is uncommitted, so
+the band's own row is dirty by construction.
 
-The control is what isolates it, and it is decisive: same CI row, same 16.03s,
-same `dirty: false`, only the `ts` moved to sort after the band row — green.
-Replayed through `_band_wrong` at a band and a CI row that derive the SAME
+The control isolates the second mechanism and is decisive: same CI row, same
+16.03s, same `dirty: false`, only the `ts` moved to sort after the band row —
+green. Replayed through `_band_wrong` at a band and a CI row that derive the SAME
 ceiling, so item 3 (same-ceiling) is silent and only the dirty clause can speak:
 `[{'suite': 'invariant', 'cited_a_dirty_run': '20260823-192533',
 'clean_runs_available_by_then': ['20260823-115044']}]` before, `[]` after moving
-the stamp, `[]` with the rows env-tagged. Speed does nothing.
+the stamp, `[]` with the rows env-tagged. Speed does nothing **there**. On
+`434a98d` speed did all of it — which is why both are written down.
 
-`main` is green for a reason no better than the bug: its band cites
-`20260823-041729`, 04:17 local — 2026-08-22 20:17 UTC — and a CI stamp sorts
-before that string only if the run happened between 00:00 and 04:17 UTC, which
-none did. A band republished during Taipei daytime lands in the window. It has
-already cost something: M35 moved a new invariant case into `fast` to keep §3's
-band on the count `main` measured (T-R44).
+**What the second one cost, beyond the red run:** adding a case became two
+commits instead of one. CLAUDE.md hard rule 2 makes adding a case this repo's
+most common operation and every one republishes a band, so the cited row is dirty
+by construction; the commit lands green, CI runs the committed tree, CI's clean
+row claims to predate a band it followed, and the author re-runs on a clean tree,
+re-cites, and commits again. PR #34 paid that tax. Replayed at the state a
+case-adding commit actually lands in — the dirty citation, CI's clean row, and a
+clean local re-run — the untagged ledger gives the payload above and the tagged
+one gives `[]`.
 
-**A second, separate symptom, latent rather than live.** CI's row also enters
-`ledger max`, which item 3 (same-ceiling) and item 4 (committed-ceiling) both
-read. CI
-measured `invariant` at 16.03s, and the rule gives 20 — the committed ceiling —
-so neither fires today. 17.39s is the top of that band — 20 / 1.15 — and above
-it `rule(ledger max)` is 25 against a committed 20, item 4 (committed-ceiling)
-reddens, and it is
-**ungreenable locally**, because a local ledger holds no CI row to reproduce it
-with. That is 1.36s of margin, 8.5%, against a runner spread §5 itself records at
-6.8%. The filter below removes this one too — `slowest` is computed from the
-environment's own rows — so it is recorded here as a thing that was closed before
-it fired, not as a thing that fired.
+`main` was green on the second mechanism for a reason no better than the bug: its
+band cites `20260823-041729`, 04:17 local — 2026-08-22 20:17 UTC — and a CI stamp
+sorts before that string only if the run happened between 00:00 and 04:17 UTC,
+which none did. A band republished during Taipei daytime lands in the window. The
+first mechanism had already cost something too: M35 moved a new invariant case
+into `fast` to keep §3's band on the count `main` measured (T-R44).
+
+**Item 4 (committed-ceiling) is the one that has not fired, and only it.** The
+paragraph this replaces called the whole wall-clock symptom latent, which is
+wrong twice over — item 3 (same-ceiling) fired on `434a98d`, and item 3
+(same-ceiling) and item 4 (committed-ceiling) do not test the same thing. Item 3
+(same-ceiling) compares `rule(published)` with `rule(ledger max)`, which is 15
+against 20 on that run. Item 4 (committed-ceiling) compares the COMMITTED ceiling
+with `rule(ledger max)`, and 20 against 20 holds, so item 4 (committed-ceiling)
+stayed green. It would go red above 17.39s — the top of that band, 20 / 1.15 —
+where `rule(ledger max)` becomes 25, and it would be **ungreenable locally**,
+because a local ledger holds no CI row to reproduce it with. That was 1.36s of
+margin, 8.5%, against a runner spread §5 itself records at 6.8%. The filter below
+closes item 3 (same-ceiling) and item 4 (committed-ceiling) together, because
+`slowest` is computed from the environment's own rows.
 
 **Every history row written from here on carries an `env` tag** (`evals/run.py`
 `env_tag()`) — the rows already committed do not, which is the next paragraph — and §6
@@ -575,7 +595,7 @@ it did not disappear.
 What makes that safe is narrow and worth stating exactly, because it is an
 assumption and not a mechanism: `_band_wrong` only ever reads rows at the CURRENT
 case count, and both live counts contain only post-switch rows — this commit's
-own two cases moved `fast` to 155 and `invariant` to 60, and every row at those
+own cases moved `fast` to 156 and `invariant` to 61, and every row at those
 counts was written after the switch. Case counts only grow, so a live count only
 ever gains post-switch rows. The thing that would break it is re-citing a band at
 an older count, where the two stamp regimes coexist.

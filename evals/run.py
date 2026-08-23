@@ -175,14 +175,16 @@ def git_sha():
 # `published-band-matches-the-ledger` read whatever rows the process could see,
 # and on CI that includes CI's own `invariant` row, appended by the step before.
 #
-# What that row did was NOT "be slower": it was CLEAN and its `ts` sorted early.
-# `stamp` below was naive local time then, and the band check treats those strings
-# as an ordering on real time, so a CI row written 25 minutes after the band row
-# landed eight hours before it and answered yes to "was a clean row already
-# available?" ADR-019 §7 has the mechanism and the control. `stamp` is UTC now,
-# which fixes the ordering key; this tag is the OTHER property and neither
-# substitutes for the other — a foreign row is the wrong row to derive a ceiling
-# from whatever its stamp says.
+# Two CI runs fired two different clauses, and this tag is the shared cause of
+# both. On run 32626835735 (sha 434a98d, T-R44's origin) the row was SLOWER: 16.02s
+# against a published 12.92s, deriving 20 against 15, red on item 3 (same-ceiling)
+# — that tree had no dirty clause to fire, and no `ts` group in `_BAND_LINE`. On
+# run 32637648447 (sha 11545a1, task/M32) the row was CLEAN and its naive-local
+# `ts` sorted early, red on item 2 (cited-run)'s dirty allowance. ADR-019 §7 keeps
+# the two apart. `stamp` is UTC now, which fixes the ordering key of the second;
+# this tag keeps a foreign row out of the ledger entirely, which is the only thing
+# that reaches the first — a foreign row is the wrong row to derive a ceiling from
+# however it is stamped.
 #
 # NOT derived from the effective `EVAL_WALL_BUDGET_S_*`, which is the obvious
 # guess and is wrong in exactly the case that produced the defect: CI's

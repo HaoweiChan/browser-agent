@@ -57,7 +57,7 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-166 distinct cases (20 golden + 146 adversarial).
+167 distinct cases (20 golden + 147 adversarial).
 244 browser actions in a `fast` run; **89 of the 153** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
 `evals/report/20260823-211825-fast.json` rather than tallied by hand (the

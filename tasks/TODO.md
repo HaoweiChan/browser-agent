@@ -33,9 +33,15 @@ band count, run `--suite invariant` on a slower machine, then `--suite fast` on
 the same ledger: `published-band-matches-the-ledger` reports
 `{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
 "ledger_slowest": 16.02, "ledger_derives": 20}`.
-Note (2026-08-23, implementer): **the Repro above is correct and stands.** An
-earlier revision of this block struck it, on the argument that item 2
-(cited-run)'s dirty allowance and a naive-local `ts` were what reddened run
+Note (2026-08-23, implementer): **the Repro above is correct and stands.** It was
+struck by an earlier revision of this block and then restored, and the reason it
+was struck is worth more than the strike: a correct record removed as
+unevidenced, because the person checking could not see the evidence. "This record
+does not observe X" is not "X did not happen." The evidence for this Repro lives
+on a CI run nobody had opened at the time, so a second run's mechanism — real,
+correctly diagnosed, on a different sha — was generalised onto this one and the
+Repro was struck for disagreeing with it. Concretely, the strike argued that item
+2 (cited-run)'s dirty allowance and a naive-local `ts` were what reddened run
 32626835735. That was a different run's mechanism transplanted onto this one:
 PR #32's head is `434a98d`, and `git show 434a98d:src/browser/eval_adapter.py`
 has no `_band_wrong` and no `cited_a_dirty_run` — its `_BAND_LINE` carries no
@@ -205,6 +211,30 @@ Acceptance: an ADR recording the ruling with these three instances as its eviden
 and a graded consequence if one can be found that does not itself cost more than it
 saves — the honest fallback is a stated convention with the instances as its record.
 Not gateable as prose alone; the ADR must say which half it is.
+
+**Try the form, not the claim, before falling back.** PR #40 learned this shape at
+the cost of a round: its `docs-numbers-are-derived` sweep failed while it graded a
+*number* — it reddened on true sentences, flagging `# ~71s on an M-series laptop` as
+publishing an unenforced ceiling — and worked once it graded a **form**: a runnable
+`--suite X` command whose own trailing comment publishes a ceiling, which can only
+mean the live one, so it has no true-sentence false positives and widened to the
+whole tree without one.
+The analogue: do not grade "strikes must be justified" over all prose. Grade the one
+form where the failure occurred — **a struck span in a document of record that removes
+a number or a citation must name what was searched** (a run id, a sha, a file and
+line). A strike removing a measurement is not ordinary prose and has no innocent
+version lacking provenance. Cheap if it works; the fallback is already written if not.
+Why the fallback is not a concession: a prose grader's false-positive rate is paid by
+every contributor on every commit while its true positives are rare by construction,
+so the realistic end state of a bad one is that it is disabled permanently. A stated
+convention occasionally violated beats a check people learn to route around.
+
+**The ADR must say which of the three instances its consequence would have caught.**
+All three are above, so this is nearly free, and it is the difference between a check
+that addresses the class and one that addresses the example someone had in mind.
+Known already: instance 2 is a *sentence* — an over-scoped claim presented as general
+— not a strike, so no strike-grader catches it. A partial guard honestly scoped is
+fine. A partial guard described as covering the class is the defect this ADR is about.
 Out of scope for T-R44: this is a decision about review practice, not about wall-clock
 bands. Deliberately NOT folded into T-R44's ADR — that PR's subject is the ledger's
 environment dimension and its timestamp, and bolting an unrelated ruling onto it is
@@ -527,6 +557,28 @@ Acceptance: `specs/001-browser-contract.md:145-150` states the null half and
 cites the third case, matching D25 and ADR-020 word for word on the predicate;
 ideally a grader covers the contract's case citations the way
 `support-matrix-cites-real-cases` covers the matrix's.
+### T-R77 — 55 committed rows are `env`-tagged AND naive-local stamped, so the `ts` inversion is reachable inside one environment            [status: todo]
+Origin: PR #41 R6 (T-R44)
+Spec: `env` and the UTC stamp landed in two different commits of this PR, so the committed
+ledger has a band of rows carrying `env: local` while still stamped in naive Asia/Taipei
+time. Inside `env: local`, `20260823-140957` (14:09:57Z, post-switch) sorts ABOVE
+`20260823-210938` (13:09:38Z, pre-switch) while being later in real time — the exact
+T-M32-13 inversion, in the one place item 9 (environment) cannot help, because both rows are
+in the same environment and the filter has nothing to separate them by.
+Not reachable today, and the reason is narrow: those rows sit at `fast` 138 and `invariant`
+54, which are dead counts, and `_band_wrong` only reads rows at the CURRENT case count. That
+is the same assumption ADR-019 §7 states for the pre-`env` rows, and it holds for the same
+reason — counts only grow. What is new is that `env`-tagged no longer implies UTC-stamped,
+so a reader who uses the tag as a proxy for "post-switch" is wrong for these 55 rows.
+Repro: `[r for r in ledger if r.get("env") == "local" and r["ts"] < "20260823-140957"]`
+returns rows whose stamps are Taipei local; compare any of them against a post-switch row of
+the same suite and count and the ordering is inverted.
+Acceptance: either the ledger records the regime per row (an offset, or a marker field) so
+the two are distinguishable without inference, or a band cited at a count that holds rows
+from both regimes is refused — watched red by citing a band at `fast` 138. A third option is
+to accept it permanently and have ADR-019 §7 say `env`-tagged does not imply UTC-stamped,
+which is what it says today.
+
 ### T-R73 — no CI wall clock reaches the committed ledger, so ADR-019 §5's four numbers are checkable only by a reader            [status: todo]
 Origin: T-R44
 Spec: T-R51 was closed on the labelling route, not the ledger route (ADR-019 §7): §5's four

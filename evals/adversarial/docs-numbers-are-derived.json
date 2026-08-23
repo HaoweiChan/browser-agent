@@ -15,8 +15,8 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260823-141536-fast.json",
-        "invariant": "20260823-141415-invariant.json",
+        "fast": "20260823-150548-fast.json",
+        "invariant": "20260823-150427-invariant.json",
         "live": "20260823-164737-live.json"
       }
     },

@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 155 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 156 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260823-141536-fast.json`, with
-`evals/report/20260823-141415-invariant.json` and
+Latest offline baseline — `evals/report/20260823-150548-fast.json`, with
+`evals/report/20260823-150427-invariant.json` and
 `evals/report/20260823-164737-live.json`:
 
 ```
-fast  155/155    invariant  60/60    live  9/9    $0.0000    70.4s
+fast  156/156    invariant  61/61    live  9/9    $0.0000    70.3s
 recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 33/33 · 13 replans
 ```
@@ -85,10 +85,15 @@ suite straddles its ceiling rather than clears it. The same suite on CI
 of one commit — a 6.8% spread on byte-identical code, which is why the wall-clock
 ceiling is per-environment rather than one number pretending to be portable.
 Those four are eval-gate run 32561162459 attempts 1-4, hand-read off the log and
-recorded with that id in ADR-019 §5; an earlier CI band published here —
-59.77 / 60.84 / 64.61 / 64.67s — is struck, because nothing named the run it came
-from, one of its values is in this repo's ledger twice as a LOCAL run, and
-applying the rule below to it gives a ceiling this file does not publish (T-R51).
+recorded with that id in ADR-019 §5. They supersede an earlier CI band published
+here — 59.77 / 60.84 / 64.61 / 64.67s — which was measured on a 95-case tree and
+so cannot describe this one. That band is NOT unevidenced, and an earlier
+revision of this paragraph struck it on that ground: ADR-013 names its run
+(commit `09b9740`, run `32455716866` and three re-runs) and all four numbers
+reproduce verbatim from that run's attempts. It is superseded by a later
+measurement, which is a different thing from being unsupported, and this file no
+longer says otherwise (PR #41 R3; ADR-013's own copy of the band is scoped on
+`task/T-M32-9`, which owns that file).
 CI's ceiling is the slowest observed run plus 15% (90s since ADR-019 §5, measured
 on CI — at the case count of the commit named there, not this one); the local ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
@@ -161,8 +166,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 155 | 70.34s | 80.89 | **90s** |
-| `invariant` | 60 | 13.48s | 15.5 | **20s** |
+| `fast` | 156 | 71.61s | 82.35 | **90s** |
+| `invariant` | 61 | 13.2s | 15.18 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of one commit (`d173340`, 116 `fast` / 48 `invariant` cases, a smaller
@@ -390,7 +395,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 166 cases (155 of them in the offline gate), it
+The eval set is not weak; it is 167 cases (156 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

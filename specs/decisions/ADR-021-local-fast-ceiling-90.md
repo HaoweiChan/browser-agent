@@ -147,8 +147,11 @@ enter `ledger max` mid-job — the `invariant` step appends before the `fast` st
 grades — so a slow CI `invariant` run could demand a ceiling no local run
 justifies, **ungreenable locally** because the local ledger holds no CI rows.
 CI's `invariant` measured 16.03s in run 32637648447 and 14.88s here; the next
-band starts at **17.39s**. **That is no longer the number to watch, and this
-paragraph is amended rather than left standing** — see below. This ADR's CI
+band starts at **17.39s**. That bound is item 4 (committed-ceiling)'s alone —
+item 3 (same-ceiling) compares `rule(published)` with `rule(ledger max)` and had
+already fired on a 16.02s CI row in run 32626835735, nowhere near 17.39s
+(ADR-019 §7). **Neither is the number to watch any more, and this paragraph is
+amended rather than left standing** — see below. This ADR's CI
 figures are still hand-read off the workflow log and ungraded; they carry the
 run ids that make them checkable by a reader (T-R51's resolution), and the
 ledger route stays open as `T-R73`.
@@ -163,8 +166,9 @@ The paragraph above named CI's rows entering `ledger max` as this ADR's live
 margin risk. T-R44 removed the mechanism: every history row now carries an `env`
 tag and ADR-019 §6 item 9 (environment) filters the ledger to the band's own
 environment before any item reads a row, so CI's `invariant` row is not in a
-`local` band's ledger at all. The 17.39s threshold and the ungreenable-locally
-property are both unreachable from a mixed ledger, and the paragraph is corrected
+`local` band's ledger at all. Item 3 (same-ceiling), which fired at 16.02s, and
+item 4 (committed-ceiling)'s 17.39s threshold with its ungreenable-locally
+property, are all unreachable from a mixed ledger, and the paragraph is corrected
 above rather than deleted, because the reasoning is why the ceiling is watched at
 all.
 
