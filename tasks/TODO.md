@@ -184,7 +184,7 @@ than typed — the ledger row has both fields — or the parenthetical is droppe
 there is nothing to be inconsistent about. Watched red by publishing a band whose citation
 claims a result the row does not have.
 
-### T-R56 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
+### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
 Origin: M37 implementer
 Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
 because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
