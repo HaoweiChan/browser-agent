@@ -125,7 +125,9 @@ produced them, and README's older CI band is struck. Watched red either way.
 ### T-R53 — nothing requires the runs behind a band to be green or clean            [status: todo]
 Origin: T-R34, evidence from PR #35 R5 (renumbered from T-R42 during the M35 merge — main had allocated that id independently)
 Spec: `_band_wrong` filters `history.jsonl` on `suite` and `total` alone; `sha`, `dirty` and
-`passed` are recorded on every row and read by nothing. Round 1 shipped both bands off red,
+`passed` are recorded on every row and were read by nothing when this was filed. `dirty` is
+read now (as-of-the-cited-run cleanliness) and so is `passed` (T-R56: the citation states the
+row's result); `sha` is still read by nothing, and GREEN is still not required. Round 1 shipped both bands off red,
 dirty runs: at (invariant, 52) the 13.22s maximum was ts 20260823-023204 with
 `passed: 50, total: 52, dirty: true` while the other nine runs maxed at 12.88s, and at
 (fast, 133) the 66.38s maximum was ts 20260823-023406 with `passed: 132, total: 133,
@@ -868,6 +870,69 @@ still green — the same class of drift R4 was filed for, one step removed.
 Acceptance: the check pins the block's content rather than the presence of
 strings within it — parse the fenced block and compare it whole, or assert that
 no other line in it parses as a competing figure for the same field.
+
+### T-R57 — an ADR citation resolves to a file and a section, never to the ruling it claims            [status: todo]
+Origin: T-R56 (the T-R52 half)
+Spec: `adr-header-and-index` now resolves every `ADR-0NN` reference under `src/`, `evals/`,
+`specs/`, `.github/` and README to a committed decision, and every sectioned reference to a
+section that decision actually has. What it cannot say is whether the cited section RULES on
+the subject of the citing sentence — the T-R52 defect was catchable only because the judge
+ADR has no numbered sections, so the repaired citations carry a section and a re-miscitation
+is red. A citation written without a section, to an ADR that happens to have one, still
+resolves. Three mechanisms for the semantic half were measured against this tree and each was
+unusable as a gate: rare-word overlap between the citing line and the cited Ruling (70 false
+positives), the cited ADR having to enforce a mechanism named on the same line (40 — INDEX
+lines legitimately name one ADR's enforcers beside references to others), and a file having
+to cite every ADR that uniquely owns an identifier it uses (8 files, every one legitimate —
+implementation files use ADR-ruled identifiers without citing them).
+Acceptance: either citations carry a section reference by convention and the check requires
+one (so the resolution above is the whole property), or a subject test is found that is red
+on the four T-R52 citations and green on the 347 committed ones. Watched red on both.
+Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
+
+### T-R58 — CI's ceilings were measured on a tree two milestones smaller than the one that ships            [status: todo]
+Origin: T-R56 (sweep, beyond the eight folded blocks)
+Spec: ADR-019 §5 and README both introduced their CI numbers as "four attempts of the shipped
+tree" / "measured on CI at the shipped case count". The four attempts are of `d173340`, which
+had 116 `fast` and 48 `invariant` cases; this branch ships 136 and 53. The description is
+repaired (both now name the commit and say it is the smaller tree), so what is left is the
+measurement gap: CI's 90/20 derive from a band 20 `fast` cases old, and nothing reddens when
+the local tree grows past the tree CI's ceiling was measured on. The local half has exactly
+this guard — §6 item 1, published case count == current case count — and the CI half has no
+equivalent because no CI wall clock reaches the ledger (T-R51).
+Acceptance: CI's band carries the case count it was measured at, and something reddens when
+the current count leaves it behind — the natural form is T-R51's environment dimension on
+`_BAND_LINE` plus item 1 applied to it. Watched red by growing the suite against a stale count.
+
+### T-R59 — §6's item numbers are positions, so renumbering the list re-points every reference to it            [status: todo]
+Origin: T-R56 cold review (F2)
+Spec: §6 item 8 checks that an `item N` reference names a number the list has. Insert a new
+item in the MIDDLE of §6 — the natural next one is T-R53's green requirement or T-R44's
+environment dimension — and every one of the ~26 references in ADR-019, README and
+`src/browser/eval_adapter.py` still resolves while naming a different rule. Removing an item
+IS caught (the 1..N gap check, and any reference to the now-missing top), and appending is
+safe; only insertion is silent. §6 now says so and says "append, never insert", which is a
+convention, not a mechanism.
+Acceptance: a reference binds to content, not to a position — e.g. each item carries a short
+stable slug (`item 3 (same-ceiling)`) that references must spell, so a renumber that moves an
+item under a slug is red — or the list is declared append-only and something grades that the
+existing items' text has not moved under its number (a committed hash of `N -> first clause`).
+Watched red by inserting an item at position 3 and leaving every reference untouched.
+
+### T-R60 — two band parses are still last-wins, and derivations are matched document-wide            [status: todo]
+Origin: T-R56 cold review (secondary findings)
+Spec: two holes the T-R56 sweep found and left, both in `_check_published_band`, both the
+shadowing class already guarded for band lines and README rows (PR #29 R24, PR #35 R2):
+(1) `_ADR_CEILING` builds a last-wins dict, so a second bolded ``local `fast` … **Ns**``
+phrase anywhere in ADR-019 silently overrides the Ruling line that item 6 grades and INDEX
+digests; (2) `_BAND_DERIVATION.findall(adr)` searches the WHOLE file, so §6's counterexample
+`12.89 × 1.15 = 14.82 → **15**` — a paragraph that exists to call that state a residue — can
+satisfy item 5 for a band republished at 12.89 with no derivation in §3 at all. §5's CI
+sentences sit in the same pool and are only kept out by their multiplicands.
+Acceptance: the Ruling parse refuses a suite that matches twice (same shape as
+`adr_publishes_two_bands`), and item 5 reads derivations only from the section that publishes
+the band. Watched red with a second ceiling phrase, and with a 12.89 band whose only
+derivation is §6's counterexample.
 
 ## Notes
 

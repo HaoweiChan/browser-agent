@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # CI's own wall-clock ceilings, one variable per suite (ADR-017). One
+      # CI's own wall-clock ceilings, one variable per suite (ADR-019 §4). One
       # number cannot be tight locally and true on a runner ~1.6x slower, and
       # `invariant` needs the same treatment `fast` already had: it was
       # enforcing a locally-measured 15s that CI had never run, and CI went red
