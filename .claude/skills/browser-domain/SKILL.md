@@ -16,7 +16,8 @@ Plans carry `SemanticTarget{role, name, text?, near?, index?}` — NEVER concret
 selectors (CLAUDE.md hard rule 6). `docs/evals/failure-taxonomy.md` describes
 ranking by uniqueness × visibility × tier prior × cached history — **none of
 that is built**: tiers are tried in order, a tier wins by resolving to exactly
-one element (or by `index`/`near` naming which one), and there is no cache.
+one element (or by `index`/`near` naming which one, or by an M38 narrowing
+rung), and there is no cache.
 Those five keys are the whole schema; a sixth stops the run as `failure:task`
 rather than being dropped (`resolver-unknown-target-key`).
 
@@ -57,6 +58,31 @@ Known holes, both declared in the support matrix: `near` degenerates inside
 shadow DOM (`querySelectorAll('*')` doesn't pierce open shadow roots, so
 `indexOf` is -1 and everything ties), and no fixture has one.
 
+**Narrowing (M38, ADR-022) is where an ambiguity goes before it fails.** Same
+warning as `near:` — three rungs, each bought with a deployment run, and the
+guards are the whole thing. They run AFTER the tier loop, never inside it: a
+clean single match at the text tier outranks a narrowed one at the role tier.
+
+- **Rung 1, `anchor-proximity`.** The step's identity anchor reused as a `near`.
+  Opportunistic, so unlike `near` an anchor that names two places falls through
+  to rung 2 instead of raising — loudness belongs to what the plan asked for
+  (`resolver-narrows-by-anchor-proximity`).
+- **Rung 2, `document-order`.** The first match, under four conjuncts: no
+  `index` (structural), a task that asks for one thing, a READING step, and
+  matches interchangeable in role AND rendered text. The two halves of
+  "interchangeable" are not redundant — role is vacuous on the role tier and
+  text is vacuous on the text tier (`exact=True`), so each is the whole guard
+  on the other's tier (`resolver-refuses-mixed-roles`,
+  `resolver-refuses-plural-wording`, and `l4-shop-duplicate-labels` for the
+  reading half: two same-named BUTTONS must still fail and relocate).
+- **Rung 3, `near-normalised` / `near-prefix`.** Two more anchor passes after
+  exact and substring: typographic quote/dash variants with whitespace runs
+  collapsed, then the anchor's first 40 characters
+  (`resolver-near-normalises-typography`).
+- **The rung is named in the trace `note`, and wears no `recovery` label** —
+  nothing failed and no ladder ran (the ADR-020 ruling). Graded through the
+  existing `trace_note_contains` expect key.
+
 ## Fixture map
 
 Served by the same FastAPI app (`GET /fixtures/{name}`); the eval adapter
@@ -91,6 +117,15 @@ path. `src/browser/mutate.py` is the transform layer.
   past the evidence window from the table. Lengthening or reordering that page
   silently disarms `near-excludes-its-own-anchor` and
   `evidence-window-keeps-the-anchor`.
+- `/fixtures/forum-thread.html` (M38) — the ambiguity page: two links sharing
+  an `aria-label` and reading differently, three identical `<small>` author
+  matches, a featured quote rendered with typographic quotes and truncated
+  before the plan's `near` string ends, and one string ("4.7") in a `<strong>`
+  and an `<em>` — same reading, different roles, the shape rung 2 must refuse.
+  Layout is load-bearing twice: rung 1 and `near` both decide by DOCUMENT-ORDER
+  distance, so inserting an element between a byline and its subline, or
+  between the featured quote and its credit line, moves which candidate is
+  nearest and silently disarms two cases.
 - `?mut=<name>` applies deterministic HTML transforms (`src/browser/mutate.py`
   has the full table). B-floor, one locator tier each: `ids-renamed`,
   `button-text-renamed`, `wrapper-nesting`. B-strong (M8), admitted on "breaks

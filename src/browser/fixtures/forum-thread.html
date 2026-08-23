@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nimbus Forum — thread 4417</title>
+
+<!-- M38. Four ambiguity shapes no other fixture has, all of them taken from
+     deployment runs where the page held the answer, the plan named it, and the
+     resolver failed the run for having more than one match (tasks/TODO.md M38).
+
+     1. TWO LINKS SHARING AN ACCESSIBLE NAME, different readings. Both bylines
+        below carry aria-label="user profile", so {role: link, name: "user
+        profile"} matches two elements whose visible text differs — which is
+        why "take the first one" is NOT safe here and a proximity signal has to
+        do the narrowing (case resolver-narrows-by-anchor-proximity).
+     2. THREE IDENTICAL TEXT MATCHES. "Marisol Vance" is the author of three of
+        the four quotes, so {text: "Marisol Vance"} matches three <small>
+        elements with the same role and the same reading. The identity anchor
+        for such a task IS the author name, so proximity cannot narrow it
+        (the anchor matches the candidates themselves) and document order is
+        the only rung left (case resolver-narrows-identical-matches).
+     3. A `near` STRING THE PAGE DOES NOT CONTAIN VERBATIM. The featured quote
+        renders with typographic quotes and stops at "thinking."; a planner
+        that quotes it back with straight quotes and the full sentence matches
+        nothing at all, and the step dies as "no tier resolved" with the anchor
+        one element away (case resolver-near-normalises-typography).
+     4. TWO MATCHES THAT DIFFER IN ROLE. "4.7" is the thread score in a
+        <strong> and the site-wide median in a footer <em> — same string, two
+        different things. Neither element is nameable (observe() blanks names
+        on strong/emphasis), so no relocation rung exists either: this shape
+        must stay a loud locate failure (case resolver-refuses-mixed-roles).
+
+     Layout is load-bearing for 1 and 3: both are decided by DOCUMENT-ORDER
+     distance (resolver.NEAREST_JS), so inserting elements between a byline and
+     its subline, or between the featured quote and its credit line, changes
+     which candidate is nearest. -->
+
+<h1>Nimbus Forum</h1>
+
+<article>
+  <h2>Aurora Desk Lamp teardown</h2>
+  <p class="subline">128 points by <a href="#u-arden" aria-label="user profile">arden</a> on Oct 9, 2006</p>
+  <p class="reply">reply from <a href="#u-bellweather" aria-label="user profile">bellweather</a> on Oct 10, 2006</p>
+  <p class="stats">Score <strong>4.7</strong> from 30 raters</p>
+</article>
+
+<section class="quotes">
+  <h2>Quoted in this thread</h2>
+  <p class="quote">Placeholder quote one. <small class="author">Marisol Vance</small></p>
+  <p class="quote">Placeholder quote two. <small class="author">Idris Kwan</small></p>
+  <p class="quote">Placeholder quote three. <small class="author">Marisol Vance</small></p>
+  <p class="quote">Placeholder quote four. <small class="author">Marisol Vance</small></p>
+</section>
+
+<section class="featured">
+  <h2>Featured quote</h2>
+  <p class="text">“The lamp as we have built it is a process of our thinking.”</p>
+  <p class="credit">submitted by <a href="#u-corvin">corvin</a></p>
+</section>
+
+<footer><p>Nimbus Forum — median score today <em>4.7</em></p></footer>

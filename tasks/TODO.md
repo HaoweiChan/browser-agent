@@ -87,6 +87,43 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M38-1 — D28's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: todo]
+Origin: M38, ADR-022's accepted risk.
+Spec: rung 1 reuses the step's identity `anchor` as a proximity anchor whenever
+it identifies exactly one place on the page. Where the anchor sits nearer the
+WRONG candidate, the run now answers confidently where it used to fail loudly —
+`success`, grounded, anchored, and wrong. `docs/support-matrix.md` D28 declares
+it and no case shows it, which is this repo's most-falsified kind of claim
+(memory: "declared limitations get demonstrated"). Not built here because it is
+a sixth case in a PR whose case count already forced the two-commit band dance
+(T-M32-13), and because the shape is a wrong-answer pin, not a fix.
+Repro/acceptance: on `forum-thread.html`, an extract whose `anchor` is the
+thread title (`Aurora Desk Lamp teardown`, in the `<h2>`) against
+`{role: link, name: "user profile"}` — the h2 is one element from the FIRST
+byline, so the anchor happens to be right there; invert it by moving the target
+to a page where the anchor's nearest same-named candidate is not the task's
+(e.g. a second article whose byline sits closer to the h2 than the first
+article's). Pin it the way `l4-shop-element-reordered` pins its wrong answer:
+`expect.answer` = what the build really returns, plus
+`answer_is_known_wrong: true` (and its entry in `opt-in-expect-keys-declared`),
+so the report cannot be read as "verified correct".
+
+### T-M38-2 — which narrowing rung fired is prose in `note`, not a field, and the reviewer UI has no badge for it            [status: todo]
+Origin: M38.
+Spec: `agent.py` appends `narrowed: <rung>` to the trace step's `note`, and
+that string is the whole record — graded by substring through
+`trace_note_contains`, rendered by `src/browser/server.py` only as the note
+text. A consumer that wants "which runs answered from one of several matches"
+has to grep English. `resolved` is the structured home for it
+(`{"tier": ..., "description": ..., "narrowed": ...}`), and the reviewer UI
+already badges `tier:` beside it. Deliberately not done in M38: adding a key to
+`resolved` widens the TraceStep shape `contract-trace-schema` mirrors, and the
+narrowing is legible in the trace either way — this is a consumer-ergonomics
+debt, not a correctness one. Same family as T-M32-1 (no UI phase for `observe`).
+Acceptance: `resolved.narrowed` carried through the contract, the schema case
+and the UI badge in one change; the note string stays or goes with the badge,
+not before it.
+
 ### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
 Origin: PR #34 R17.
 Spec: ADR-020 claimed "`live` suite 9/9 after this change" and cited a report

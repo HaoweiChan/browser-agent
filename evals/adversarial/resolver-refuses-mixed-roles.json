@@ -1,0 +1,21 @@
+{
+  "id": "resolver-refuses-mixed-roles",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "What score does this thread have?",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "text": "4.7" }, "anchor": null }
+    ]
+  },
+  "expect": { "status": "failure:locate" },
+  "provenance": "M38, the negative. The narrowing rungs added here are the machinery that turns an ambiguous locate into an answer, and the whole risk of that machinery is the shape where the several matches are several DIFFERENT THINGS that happen to say the same words. '4.7' is this thread's score in a <strong> and the site-wide median in the footer's <em>: identical reading, different roles, and a run that answers either one with equal confidence is right by coin flip. The step carries no anchor, so rung 1 cannot narrow it; the role test is the only thing standing between this page and a confident answer. Watched red by ablation, the way ADR-009 watched l4-shop-duplicate-labels: with the role half of the interchangeability test removed, this case reports `status success, answer '4.7'` — graded PASS, grounded, tier text — for a question the page never settled.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "that `resolve` refuses to pick when the matches differ in role, however identical their text. Also that nothing downstream rescues it: neither element is nameable (observe() blanks names on `strong`/`emphasis`, case observe-name-prohibited-roles) so the role+name relocation rung finds nothing, and the text tier is already spent — the run ends `failure:locate`, which is the correct outcome and the one this case exists to keep.",
+    "ceiling": "the role test reads `getAttribute('role') || tagName`, not the computed ARIA role — two elements with the same tag and different computed roles (a scope-less <th>, an <a> with no href) read as interchangeable here. Declared in docs/support-matrix.md D28; the upgrade is a computed-role probe per candidate, which costs an evaluate per match and has no case asking for it yet."
+  }
+}

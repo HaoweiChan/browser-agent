@@ -1430,7 +1430,7 @@ def _run_observe_case(case: dict) -> dict:
                 # that would grade something the executor never runs.
                 from .resolver import resolve
 
-                loc, _tier = await resolve(page, drill)
+                loc, _tier, _narrowed = await resolve(page, drill)
                 return await observe(page, root=loc, text_head=DRILL_TEXT_HEAD)
             return await observe(page)
         finally:

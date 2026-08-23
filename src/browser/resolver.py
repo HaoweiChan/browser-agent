@@ -8,13 +8,29 @@ assumed it would arrive with; `attrs` is still unimplemented.
 The taxonomy also describes candidate ranking by "uniqueness × visibility ×
 tier prior × cached history". None of that exists here: tiers are tried in
 order, a tier wins by resolving to exactly one element (or by `index`/`near`
-naming which one), and nothing is scored, cached or checked for visibility.
+naming which one, or by a narrowing rung below), and nothing is scored, cached
+or checked for visibility.
 
 `relocation_candidates` is the self-maintenance half: given the target that
 just failed and a FRESH accessibility snapshot, it proposes the same semantic
 intent expressed at a *different* tier. Pure function — the agent owns the
 re-observe and the retry, this owns the rule about which rungs are legitimate.
+
+M38 adds NARROWING: N>1 matches is a question the page can often settle, and
+six deployment runs died on ambiguity with the answer on screen. Three rungs,
+tried only after every tier has been given its chance to resolve uniquely
+(a clean single match at a later tier still beats any narrowing at an earlier
+one), each one recorded in the trace by name:
+  1. `anchor-proximity` — the plan's identity anchor reused as a `near`;
+  2. `document-order` — the first match, and ONLY where the choice cannot
+     change the answer (see INTERCHANGEABLE_JS);
+  3. `near-normalised` / `near-prefix` — the anchor string matched through
+     typographic variants, then by its prefix.
+None of them is labelled `retry_or_recovery`: nothing failed and no ladder ran,
+which is the same ruling the plan lint and M32's drill-down got (specs/001).
 """
+
+import re
 
 from .verifier import normalize
 
@@ -68,6 +84,64 @@ NEAREST_JS = """([anchors, cands]) => {
 }"""
 AMBIGUOUS = -2
 
+# Are these candidates interchangeable — can the choice between them change the
+# answer? Only if it cannot may the document-order rung pick one. Two halves,
+# and each is the whole guard on one tier: a role-tier ambiguity has identical
+# roles by construction and is separated by TEXT ({role: link, name: "user
+# profile"} over two bylines — resolver-narrows-by-anchor-proximity), a
+# text-tier ambiguity has identical text by construction (exact=True) and is
+# separated by ROLE (the same "4.7" as a thread score and a footer median —
+# resolver-refuses-mixed-roles).
+#
+# ponytail: `getAttribute('role') || tagName` is not the computed ARIA role —
+# a scope-less <th> and a <td> read alike here (support-matrix D28). Upgrade
+# path is a computed-role probe per candidate; no case asks for one yet.
+INTERCHANGEABLE_JS = """cands => {
+  const role = el => el.getAttribute('role') || el.tagName;
+  const text = el => (el.innerText === undefined ? (el.textContent || '') : el.innerText)
+                       .trim().replace(/\\s+/g, ' ');
+  return cands.every(c => role(c) === role(cands[0]) && text(c) === text(cands[0]));
+}"""
+
+# Typographic variants of characters a model reliably normalises away when it
+# quotes a page back at you. The page is matched, never rewritten: the pattern
+# built from these accepts either form on either side (case
+# resolver-near-normalises-typography).
+_VARIANTS = {'"': '"“”', '“': '"“”', '”': '"“”',
+             "'": "'‘’", '‘': "'‘’", '’': "'‘’",
+             '-': '-–—', '–': '-–—', '—': '-–—'}
+# How much of a long anchor has to survive for the prefix fallback to try it.
+# Long enough that a prefix still names one place on a page (and when it does
+# not, NEAREST_JS refuses the two matches loudly, as it does for any anchor).
+NEAR_PREFIX = 40
+
+# Actions that only READ the page. The narrowing rungs are theirs alone —
+# reading one of several matches returns a value, acting on one of them presses
+# a control nobody named. See the guard in `resolve` for the whole argument.
+READS = {"extract"}
+
+# Does the task ask for MORE THAN ONE thing? Then one of several matches is an
+# answer by omission, and the plan should have used `extract_all`.
+#
+# ponytail: a regex over English, the same ceiling as agent.SCOPE_BLOCK and
+# verifier._AGGREGATE — only wording this repo has actually seen, widened when
+# a probe finds the next phrasing rather than by guessing at synonyms (D21).
+_PLURAL_ASK = re.compile(
+    r"\b(all|every|each|both|list|how many|which ones|names of)\b", re.IGNORECASE)
+
+
+def _loose(s: str):
+    """`near` string -> a regex that tolerates typography and whitespace."""
+    out = []
+    for ch in s.strip():
+        if ch.isspace():
+            out.append(r"\s+")
+        elif ch in _VARIANTS:
+            out.append("[" + re.escape(_VARIANTS[ch]) + "]")
+        else:
+            out.append(re.escape(ch))
+    return re.compile("".join(out), re.IGNORECASE)
+
 
 class ResolveError(Exception):
     def __init__(self, kind: str, note: str):
@@ -75,30 +149,47 @@ class ResolveError(Exception):
         super().__init__(note)
 
 
-async def _nearest(page, loc, near: str) -> int | None:
-    """Index of the match closest to the text `near`, None if there is no anchor
-    or no candidate, or AMBIGUOUS. Proximity to a visible string is a browsing
-    primitive ("the price next to this product"), not site knowledge: no
-    selector, no DOM path, nothing the page could not tell any reader.
+async def _nearest(page, loc, near: str) -> tuple[int | None, str | None]:
+    """(index of the match closest to the text `near`, how the anchor matched).
 
-    Exact before substring, for the reason the role tier already uses exact=True
+    The index is None if there is no anchor or no candidate, or AMBIGUOUS.
+    Proximity to a visible string is a browsing primitive ("the price next to
+    this product"), not site knowledge: no selector, no DOM path, nothing the
+    page could not tell any reader.
+
+    Four passes, strictest first, and the looser two are M38's rung 3. Exact
+    before substring, for the reason the role tier already uses exact=True
     (resolver-substring-name): a sloppy anchor lands on a superstring sibling
     and the run reports the neighbour of the wrong label as its answer. The
     substring fallback stays because a `near` anchor is usually a fragment of a
     longer line — "points by" inside "57 points by pg on Oct 9, 2006".
+
+    Both of those are LITERAL matches, so an anchor the page holds in substance
+    but not byte-for-byte misses entirely and reads as "this page does not have
+    it" (run e6768ee0: typographic quotes, and a sentence quoted back longer
+    than the page renders it). Hence `normalised` — quote/dash variants and
+    whitespace runs — and then `prefix`, the head of a long anchor. Order is
+    the honesty: the loosest match is only reached when every stricter one
+    found nothing, and an ambiguous loose match is still refused by NEAREST_JS.
     """
-    anchors = page.get_by_text(near, exact=True)
-    if not await anchors.count():
-        anchors = page.get_by_text(near)
-    handles = await anchors.element_handles()
+    passes = [("exact", lambda: page.get_by_text(near, exact=True)),
+              ("substring", lambda: page.get_by_text(near)),
+              ("normalised", lambda: page.get_by_text(_loose(near)))]
+    if len(near.strip()) > NEAR_PREFIX:
+        passes.append(("prefix", lambda: page.get_by_text(_loose(near.strip()[:NEAR_PREFIX]))))
     cands = await loc.element_handles()
-    if not handles or not cands:
-        return None
-    return await page.evaluate(NEAREST_JS, [handles, cands])
+    if not cands:
+        return None, None
+    for how, build in passes:
+        handles = await build().element_handles()
+        if handles:
+            return await page.evaluate(NEAREST_JS, [handles, cands]), how
+    return None, None
 
 
-async def resolve(page, target: dict, many: bool = False):
-    """Return (locator, tier). Raises ResolveError with a locate subclass.
+async def resolve(page, target: dict, many: bool = False,
+                  anchor: str | None = None, task: str = "", action: str = ""):
+    """Return (locator, tier, narrowing rung or None). Raises ResolveError.
 
     `many` is `extract_all`'s resolution: the first tier with ANY match wins and
     the whole match set is returned, because "every author on this page" is a
@@ -113,6 +204,10 @@ async def resolve(page, target: dict, many: bool = False):
     the one closest to a visible anchor string. It resolves the ambiguity a
     positional index resolves by counting, so tables and sublines — where the
     interesting element has no name of its own — stop needing an index.
+
+    `anchor`, `task` and `action` are what the NARROWING rungs read (M38), and
+    the policy that reads them lives here rather than in the caller so there is
+    one place where "may this ambiguity be settled without asking?" is decided.
     """
     tiers = []
     role, name, text = target.get("role"), target.get("name"), target.get("text")
@@ -133,31 +228,72 @@ async def resolve(page, target: dict, many: bool = False):
             # so the winning tier is `structural` however the candidates were
             # gathered — the taxonomy's last-resort rung (failure-taxonomy.md),
             # and the first one any run has ever emitted.
-            i = await _nearest(page, loc, near)
+            i, how = await _nearest(page, loc, near)
             if i == AMBIGUOUS:
                 raise ResolveError(
                     "ambiguous-match", f"proximity to {near!r} does not identify one element for {target}")
             if i is not None and i >= 0:
-                return loc.nth(i), "structural"
+                # A `near` that matched literally is the plan working as
+                # written; one that needed loosening is a narrowing and says so.
+                return loc.nth(i), "structural", (f"near-{how}" if how in
+                                                  ("normalised", "prefix") else None)
             continue
         n = await loc.count()
         if many:
             if n:
-                return loc, tier
+                return loc, tier, None
             continue
         if index is not None:
             if n > index:
-                return loc.nth(index), tier
+                return loc.nth(index), tier, None
             continue
         if n == 1:
-            return loc, tier
+            return loc, tier, None
         if n > 1 and ambiguous is None:
-            ambiguous = (tier, n)
+            ambiguous = (tier, loc, n)
 
+    # --- Narrowing (M38) ----------------------------------------------------
+    # Only here, after EVERY tier has been given its chance: a clean single
+    # match at a later tier is stronger evidence than a narrowed one at an
+    # earlier tier, and narrowing inside the loop would pre-empt it.
     if ambiguous:
-        raise ResolveError(
-            "ambiguous-match", f"{ambiguous[1]} matches at tier {ambiguous[0]} for {target}"
-        )
+        tier, loc, n = ambiguous
+        # Both rungs are for READING steps only. Narrowing turns a loud failure
+        # into an answer; on a click or a fill it would turn one into an ACT on
+        # a control the plan did not uniquely name, and every ruling this file
+        # carries says that stays loud (near-equidistant-is-ambiguous,
+        # l4-shop-duplicate-labels, which the act ladder rescues instead).
+        # `near` is exempt above because the plan asked for proximity there;
+        # nothing here was asked for. `observe` is excluded with the acting
+        # verbs: drilling into the wrong container feeds the planner a subtree
+        # nobody asked about, and it has its own ladder (ADR-020).
+        if action not in READS:
+            raise ResolveError("ambiguous-match", f"{n} matches at tier {tier} for {target}")
+        # Rung 1. The identity anchor is a string from the part of the page the
+        # task is about, so it is a proximity anchor the plan already carries
+        # (runs 349e4839/e08b7627/bcae4fe7/63b9d944: two links named "pg", one
+        # of them in the subline the anchor names). Unlike `near` it is not a
+        # request for proximity, so an anchor that identifies no single place
+        # (AMBIGUOUS) falls through to the next rung instead of raising —
+        # loudness belongs to what the plan actually asked for.
+        if anchor:
+            i, _ = await _nearest(page, loc, anchor)
+            if i is not None and i >= 0:
+                return loc.nth(i), "structural", "anchor-proximity"
+        # Rung 2. The first match in document order, and ONLY where that choice
+        # cannot change the answer. Four conjuncts, each with a case, because a
+        # loose guard here is a silent-wrong-answer generator:
+        #   - the plan carried no `index` — true by construction at this point
+        #     (an `index` returns above, or moves to the next tier), so it is
+        #     not re-tested here;
+        #   - the task asks for ONE thing (resolver-refuses-plural-wording);
+        #   - the step READS — enforced for both rungs above;
+        #   - the matches are interchangeable: same role, same reading
+        #     (resolver-refuses-mixed-roles, resolver-narrows-by-anchor-proximity).
+        if (not _PLURAL_ASK.search(task or "")
+                and await page.evaluate(INTERCHANGEABLE_JS, await loc.element_handles())):
+            return loc.first, tier, "document-order"
+        raise ResolveError("ambiguous-match", f"{n} matches at tier {tier} for {target}")
     raise ResolveError("element-not-found", f"no tier resolved {target}")
 
 
