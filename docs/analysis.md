@@ -57,10 +57,10 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-163 distinct cases (20 golden + 143 adversarial).
-242 browser actions in a `fast` run; **88 of the 152** `fast` cases drive a real Chromium end to end — counted here as
+164 distinct cases (20 golden + 144 adversarial).
+244 browser actions in a `fast` run; **89 of the 153** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260823-192648-fast.json` rather than tallied by hand (the
+`evals/report/20260823-211825-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
@@ -456,7 +456,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-163 distinct cases (M32, refreshed from the case files' own `tc`/`level`/`domain`
+164 distinct cases (M32, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -464,12 +464,12 @@ Empty cells are shown, not hidden.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 37 | | L1 | 49 |
+| TC1 extract-on-page | 38 | | L1 | 53 |
 | TC2 search-then-extract | 8 | | L2 | 32 |
-| TC3 navigate-then-extract | 13 | | **L3** | **15 — 4 live (one of them unrun) + 9 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`, R20's `plan-lint-refuses-a-declared-non-comparison`, and M34's own page-furniture case** |
+| TC3 navigate-then-extract | 13 | | **L3** | **15 — 4 live (one of them unrun) + 11 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint `verifier-aggregate-superlative-fails-loud`, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`, R20's `plan-lint-refuses-a-declared-non-comparison`, M34's own page-furniture case `verifier-responsive-not-page-furniture`, and M36's judge pair `judge-catches-varying-context-furniture` / `judge-fail-closed-on-error`** |
 | TC4 interact-then-extract | 34 | | L4 (mutation/recovery) | 16 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
-| mechanism/unit probes | 60 | | untagged (unit probes) | 38 |
+| mechanism/unit probes | 65 | | untagged (unit probes) | 40 |
 
 | Domain | Kind | Cases |
 |---|---|---|
@@ -793,7 +793,12 @@ attribute/second-hop tasks) is a distinct, real extraction gap, logged as
 debt (`tasks/TODO.md`) rather than fixed in this pass: it produces a
 *failure*, not a wrong success, so it does not implicate the inviolable
 property, and fixing it is out of the two-defect scope this repair was
-bounded to. The live re-confirmation of both fixes against the deployed URL
+bounded to. *M28 (2026-08-23) closed the result-shape half of it: a
+verifier-rejected run now carries `answer: null`, the rejected extraction stays
+in `evidence.extractions` in full, and `reason` cites it by a bounded preview
+(`verifier.CITE_CHARS`) instead of quoting the dump back — case
+`extract-container-dump-is-not-the-answer`, offline twin of deployed run
+`4bade630`; the isolate-before-giving-up half is debt T-R66.* The live re-confirmation of both fixes against the deployed URL
 happens after this PR merges and Zeabur redeploys — the same sequence the M5
 probe's fix followed — and is not claimed here.
 

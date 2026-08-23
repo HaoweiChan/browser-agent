@@ -46,6 +46,27 @@ names a mutation:
   citation claims a result the row does not have.
 Out of scope: T-R44, T-R50, T-R51, T-R53 — behaviour, not description.
 
+### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: pr]
+Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
+Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
+class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
+Open Library's first publication year for a search result), the correct
+value was present verbatim inside the page text the agent itself captured —
+`star-rating Three`, the infobox population figure, "First published in
+1965" — but the run returned `failure:semantic` with a multi-hundred/
+multi-thousand-character raw page dump as the `answer` field instead of
+either isolating the value or failing with `answer: null`. This is graded a
+failure, not a wrong success, so it does not implicate the inviolable
+property (`not_a_dump` never sees it: the check only fires on `success`), and
+it is out of the two-defect scope M10's repair was bounded to.
+Acceptance: a case pins the "data was captured but answer is a page-text
+dump on failure" shape red first, then either the extraction step tries a
+narrower isolation before giving up, or `failure:semantic`'s `answer` field
+is null'd rather than carrying the dump — reviewer's call which is correct.
+Promoted from Debt 2026-08-23: today's post-deploy receipt rounds (PR #32/#37) showed the
+planner's output is the dominant source of flakiness on the five Try examples; M28 is the
+half that does not collide with M32 (PR #34, in flight in another session).
+
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
 but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
@@ -133,6 +154,48 @@ against the expectation instead of subscripting `None`, for EVERY `expect`
 shape that implies verdict PASS — empty, `{"status": "success"}`, and
 `{"verdict": "PASS"}` alike — with the fix watched red on a non-empty `expect`
 first, so it cannot be closed by special-casing the empty one.
+
+### T-M32-15 — `assemble_result` trusts its caller for the verdict, and would emit an uncertified success if one ever forgot            [status: todo]
+Origin: PR #34 round 7, the M28 merge hunt. Latent, not reachable today.
+Spec: `src/browser/agent.py:assemble_result` enforces INV-2 as
+`if status == "success" and verdict and verdict.get("verdict") != "PASS"`. The
+`and verdict` short-circuits: a falsy verdict (`None`, `{}`) skips the branch
+entirely, so a caller passing an answer with no verdict gets `status: success`
+carrying an answer nothing certified — the silent-success shape this repo has
+now hit seven times. Symmetrically, `answer` is only nulled inside that branch,
+so any `failure:*` built with an `answer=` would carry it; M28 nulls the answer
+for the DEMOTED-success path only.
+Probed directly on the merged tree, both shapes reproduce as a pure function:
+`assemble_result(trace, "an answer", B, verdict=None)` -> `status: success,
+answer: "an answer"`; `assemble_result(trace, "an answer", B, failure="task")`
+-> `failure:task` still carrying the answer.
+Why it is NOT live, established by enumeration rather than assumed:
+  * `run_task` has exactly one `done()` call without `failure=` (agent.py:1183),
+    and it always passes `verdict=` computed at :1176 by `verify()`, which
+    returns `{"verdict": "PASS"|"FAIL", ...}` on every path (verifier.py:598) —
+    never `None`, never `{}`. `_apply_judge` only ever returns `{**verdict, ...}`,
+    so it cannot empty it either, and a `verify()` exception exits at :1174 as
+    `failure:semantic` with no answer.
+  * No `done()` call anywhere passes BOTH `answer=` and `failure=` — checked
+    across all 20 call sites, so no refusal path (M32's drill-down and plan-lint
+    refusals included) can carry an answer.
+  * The only non-`run_task` production caller is `server.py:_env_failure`, which
+    passes `answer=None, failure="env"`.
+So the specific combination the round-7 brief asked about — M28's rejected-run
+path plus M32's drill-down/lint refusals producing a non-failure status with an
+unearned answer — cannot occur. This block exists because "no caller does that"
+is exactly the kind of guarantee this repo keeps watching fail: it is convention,
+not enforcement, and it guards the one property specs/000 calls inviolable.
+Repro: the two calls above, or delete `verdict=verdict` from agent.py:1183 and
+watch `inv2-verifier-outranks-executor` stay GREEN — it constructs its own
+verdict and never exercises the absent-verdict branch.
+Acceptance: `assemble_result` treats a missing verdict on the success path as a
+failure rather than a pass (`failure:semantic`, or `failure:extract` with a
+reason naming the missing verdict), and never returns an answer alongside a
+non-success status. One guard in the shared function, not in each caller. Watch
+it red first with a case that calls `assemble_result` with an answer and no
+verdict and asserts the status is not `success` — the existing `inv2` case
+cannot see this branch.
 
 ### T-M32-14 — `plan-adoption-is-the-only-steps-rebind` has three binding forms it cannot see, and does not say so            [status: todo]
 Origin: PR #34 R30. Routed to debt by the reviewer, not repaired here.
@@ -851,24 +914,6 @@ Orchestrator note: LOW and already acknowledged in-code. Debt — and the honest
 name for the ceiling this PR ships.
 
 
-### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: todo]
-Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
-Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
-class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
-Open Library's first publication year for a search result), the correct
-value was present verbatim inside the page text the agent itself captured —
-`star-rating Three`, the infobox population figure, "First published in
-1965" — but the run returned `failure:semantic` with a multi-hundred/
-multi-thousand-character raw page dump as the `answer` field instead of
-either isolating the value or failing with `answer: null`. This is graded a
-failure, not a wrong success, so it does not implicate the inviolable
-property (`not_a_dump` never sees it: the check only fires on `success`), and
-it is out of the two-defect scope M10's repair was bounded to.
-Acceptance: a case pins the "data was captured but answer is a page-text
-dump on failure" shape red first, then either the extraction step tries a
-narrower isolation before giving up, or `failure:semantic`'s `answer` field
-is null'd rather than carrying the dump — reviewer's call which is correct.
-
 ### M11 — Live-drift snapshot replay            [status: todo]
 Origin: M8's SHOULD item, left open at the M8 merge (PR #12)
 Spec: replay committed live-page snapshots so live-site drift is detected
@@ -1366,6 +1411,62 @@ Acceptance: the Ruling parse refuses a suite that matches twice (same shape as
 `adr_publishes_two_bands`), and item 5 (derivation) reads derivations only from the section that publishes
 the band. Watched red with a second ceiling phrase, and with a 12.89 band whose only
 derivation is §6's counterexample.
+
+### T-R68 — the `grounded` reason says a value is absent from the page when it only fell outside the evidence window            [status: todo]
+Origin: PR #38 R1 (LOW)
+Spec: The human-readable `reason` for the canonical M28 shape is still factually false: it says the value is 'absent from the page they were read from' when the value is on the page and only fell out of the 2000-char evidence window (value > PAGE_TEXT_KEEP/2). Evidence: src/browser/verifier.py:472-475 (`grounded` message, edited by this diff but wording kept); evals/report/20260823-200546-fast.json row extract-container-dump-is-not-the-answer got.reason = "verifier FAIL: extracted values absent from the page they were read from: ['Port Meridian…(1271 chars)']" while evidence_contains '1,482,317' is true.
+Acceptance: Pre-existing, out of M28's acceptance; the grounded message distinguishes 'longer than the evidence window' from 'absent'.
+
+### T-R69 — the contract's 'verifier-rejected run carries answer: null' is pinned by one fixture path only; `_check_inv2` does not assert it            [status: todo]
+Origin: PR #38 R2 (LOW)
+Spec: specs/001's new contract line ('a run the verifier rejected carries answer: null') is pinned only by one fixture path (grounded reject) in the fast suite; the pure-code INV-2 probe in the invariant suite still passes with any answer on the demoted result, so judge-reject / INCONCLUSIVE sources are unpinned. Evidence: src/browser/eval_adapter.py:217-227 `_check_inv2` asserts only `r['status'] != 'success'`; specs/001-browser-contract.md:49-52.
+Acceptance: `_check_inv2` also asserts `r['answer'] is None` for FAIL/INCONCLUSIVE (one line), or the spec bullet names the single case as its only guard.
+
+### T-R70 — `capture.py` reconstructs the executor's claim from extractions, which diverges from what verify() judged for extract_all + rank plans            [status: todo]
+Origin: PR #38 R3 (LOW)
+Spec: capture.py's reconstruction of the executor's claim from `extractions` diverges from what verify() actually judged for an `extract_all` + `rank: true` plan (verify saw the ranked scalar; the label would record the flat value list). Evidence: evals/labels/capture.py:250-253 (`vals[0] if len(vals)==1 else vals`) vs src/browser/agent.py:712-735 + rank() at agent.py:951-955. No current RECORDS entry uses extract_all, so not triggered today.
+Acceptance: A comment naming the ceiling (ponytail:) or reconstruct via the same rank() path.
+
+### T-R71 — browser-domain skill's fixture map still calls shop-lamp-spec.html the only fixture longer than PAGE_TEXT_KEEP            [status: todo]
+Origin: PR #38 R4 (LOW)
+Spec: browser-domain skill's fixture map now states a falsehood: shop-lamp-spec.html is no longer 'the only fixture whose rendered text passes agent.PAGE_TEXT_KEEP (2000 chars)' — city-infobox.html renders ~4.1k chars and depends on that fact by design. Evidence: .claude/skills/browser-domain/SKILL.md:85-86; src/browser/fixtures/city-infobox.html header comment; tag-stripped length 4095 vs 2484.
+Acceptance: Skill fixture map gains a city-infobox.html line (or drops 'the only').
+
+### T-R72 — the UI no longer shows a verifier-rejected extraction anywhere — the '(rejected by the verifier)' branch is dead and extractions are not rendered            [status: todo]
+Origin: PR #38 R5 (LOW)
+Spec: UI: the '(rejected by the verifier)' note and `.answer.failed` scroll box are now dead code — with answer null on every INV-2 demotion, the reviewer surface shows '(no answer)' plus an 80-char preview and no longer displays the rejected extraction anywhere (extractions are not rendered), a visible loss of the evidence the UI was built to show. Evidence: src/browser/server.py:694-703 (`none` is true for every non-success now; `kind !== success && !none` unreachable from run_task); no renderer for r.evidence.extractions.
+Acceptance: Either remove the dead branch or render `evidence.extractions` collapsed under the verdict.
+
+### T-R66 — M28 half (b): isolate the asked cell before giving up on a container extraction            [status: todo]
+Origin: M28 implementer
+Spec: M28 shipped half (a) — a verifier-rejected run now carries `answer: null`, the
+rejected extraction stays in `evidence.extractions`, and `verify()` cites offending values
+by a bounded preview (`CITE_CHARS`) rather than quoting the dump back into `reason`
+(`extract-container-dump-is-not-the-answer`). Half (b), trying ONE narrower isolation
+before failing, was not built: on the live run (4bade630) the plan's `near` was the table
+CAPTION ("Tokyo 東京都"), not the label of the asked value, so re-resolving descendant cells
+near that anchor cannot pick "Population" — any site-agnostic isolation has to read the
+TASK text for a label word, and a keyword heuristic over the task is the regex-over-English
+ceiling this repo has already paid for three times (SCOPE_BLOCK, `_AGGREGATE`, D23). The
+cell-targeted plan already works on the same page shape (`{role: cell, near: "Motto"}`,
+runs 735cf2da / a5b9b065), so the honest upgrade is planner targeting (M32's half) or a
+replan note that names the shape ("the container you extracted holds N cells; target the
+one the question asks for") — not an executor heuristic.
+Acceptance: a replan-after-dump path or a planner prompt rule, pinned by the same fixture
+(`city-infobox.html`) with the container plan as the FIRST stub plan and the cell plan as
+the second; plus a negative twin where the label is absent and the run must still end
+`answer: null`, never a guessed cell.
+
+### T-R67 — docs/analysis.md §6 task-class / difficulty table is ungraded and has drifted            [status: todo]
+Origin: M28 implementer
+Spec: the §6 table says it is "refreshed from the case files' own `tc`/`level`/`domain`
+tags", but only the golden/adversarial split and the domain rows are graded
+(`docs-numbers-are-derived`, `analysis_coverage`). Tallying the tags at 148 cases gives
+TC1 35 / TC4 28 / TC3 13 / TC2 8 / TC5 6 and L1 46 / L2 26 / L4 16 / L3 15 / L5 8; the
+table carries TC1 32 and L1 36 (M28 bumped each by one for its own case; the rest of the
+gap predates it). The L3 cell is prose naming cases, which is why nobody regenerated it.
+Acceptance: the TC/level counts join `analysis_coverage`'s graded set (derived from the
+tags, same as the split), or the table is cut down to the graded rows and says so.
 
 ## Notes
 

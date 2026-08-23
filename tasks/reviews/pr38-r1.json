@@ -1,0 +1,60 @@
+{
+  "pr": 38,
+  "round": 1,
+  "task": "M28",
+  "head": "d90ceb4",
+  "result": "APPROVED",
+  "gate": "invariant 53/53 = 1.000 · fast 137/137 = 1.000 (wall 62.1s)",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "LOW",
+      "claim": "The human-readable `reason` for the canonical M28 shape is still factually false: it says the value is 'absent from the page they were read from' when the value is on the page and only fell out of the 2000-char evidence window (value > PAGE_TEXT_KEEP/2).",
+      "evidence": "src/browser/verifier.py:472-475 (`grounded` message, edited by this diff but wording kept); evals/report/20260823-200546-fast.json row extract-container-dump-is-not-the-answer got.reason = \"verifier FAIL: extracted values absent from the page they were read from: ['Port Meridian…(1271 chars)']\" while evidence_contains '1,482,317' is true.",
+      "repro": ".venv/bin/python -m evals.run --suite fast; jq '.results[]|select(.id==\"extract-container-dump-is-not-the-answer\").got.reason' evals/report/<ts>-fast.json",
+      "acceptance": "Pre-existing, out of M28's acceptance; the grounded message distinguishes 'longer than the evidence window' from 'absent'.",
+      "route": "debt",
+      "debt_id": "T-R68"
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "claim": "specs/001's new contract line ('a run the verifier rejected carries answer: null') is pinned only by one fixture path (grounded reject) in the fast suite; the pure-code INV-2 probe in the invariant suite still passes with any answer on the demoted result, so judge-reject / INCONCLUSIVE sources are unpinned.",
+      "evidence": "src/browser/eval_adapter.py:217-227 `_check_inv2` asserts only `r['status'] != 'success'`; specs/001-browser-contract.md:49-52.",
+      "repro": "Revert agent.py:384 `answer = None` → invariant suite stays 53/53; only fast goes 136/137.",
+      "acceptance": "`_check_inv2` also asserts `r['answer'] is None` for FAIL/INCONCLUSIVE (one line), or the spec bullet names the single case as its only guard.",
+      "route": "debt",
+      "debt_id": "T-R69"
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "claim": "capture.py's reconstruction of the executor's claim from `extractions` diverges from what verify() actually judged for an `extract_all` + `rank: true` plan (verify saw the ranked scalar; the label would record the flat value list).",
+      "evidence": "evals/labels/capture.py:250-253 (`vals[0] if len(vals)==1 else vals`) vs src/browser/agent.py:712-735 + rank() at agent.py:951-955. No current RECORDS entry uses extract_all, so not triggered today.",
+      "repro": "Add an extract_all/rank record to RECORDS that the verifier rejects; the JSONL `answer` is a list, the runtime verdict was computed on a scalar.",
+      "acceptance": "A comment naming the ceiling (ponytail:) or reconstruct via the same rank() path.",
+      "route": "debt",
+      "debt_id": "T-R70"
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "claim": "browser-domain skill's fixture map now states a falsehood: shop-lamp-spec.html is no longer 'the only fixture whose rendered text passes agent.PAGE_TEXT_KEEP (2000 chars)' — city-infobox.html renders ~4.1k chars and depends on that fact by design.",
+      "evidence": ".claude/skills/browser-domain/SKILL.md:85-86; src/browser/fixtures/city-infobox.html header comment; tag-stripped length 4095 vs 2484.",
+      "repro": "python: strip tags from both fixtures and len() them.",
+      "acceptance": "Skill fixture map gains a city-infobox.html line (or drops 'the only').",
+      "route": "debt",
+      "debt_id": "T-R71"
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "claim": "UI: the '(rejected by the verifier)' note and `.answer.failed` scroll box are now dead code — with answer null on every INV-2 demotion, the reviewer surface shows '(no answer)' plus an 80-char preview and no longer displays the rejected extraction anywhere (extractions are not rendered), a visible loss of the evidence the UI was built to show.",
+      "evidence": "src/browser/server.py:694-703 (`none` is true for every non-success now; `kind !== success && !none` unreachable from run_task); no renderer for r.evidence.extractions.",
+      "repro": "Run 'What is the population of Port Meridian?' against /fixtures/city-infobox.html through the UI; result panel shows (no answer) and a truncated Why.",
+      "acceptance": "Either remove the dead branch or render `evidence.extractions` collapsed under the verdict.",
+      "route": "debt",
+      "debt_id": "T-R72"
+    }
+  ]
+}

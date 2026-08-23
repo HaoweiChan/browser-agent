@@ -1,0 +1,112 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Port Meridian — Encyclopaedia</title>
+<!-- Site chrome BEFORE the article, as every encyclopaedia renders it: a
+     reader skips it, `page.inner_text("body")` does not. It puts the infobox
+     more than half of agent.PAGE_TEXT_KEEP into the body text, which is what
+     makes the extracted container fall out of the evidence window centred on
+     its own start (see the infobox comment below). Remove it and only
+     `not_a_dump` fires; the live run failed `grounded` as well. -->
+<nav aria-label="Site">
+  <a href="#">Jump to content</a> · <a href="#">Main page</a> · <a href="#">Contents</a> ·
+  <a href="#">Current events</a> · <a href="#">Random article</a> · <a href="#">About</a> ·
+  <a href="#">Contact us</a> · <a href="#">Donate</a> · <a href="#">Help</a> ·
+  <a href="#">Learn to edit</a> · <a href="#">Community portal</a> · <a href="#">Recent changes</a> ·
+  <a href="#">Upload file</a> · <a href="#">Create account</a> · <a href="#">Sign in</a>
+</nav>
+<nav aria-label="Article">
+  <a href="#">Article</a> · <a href="#">Talk</a> · <a href="#">Read</a> · <a href="#">View source</a> ·
+  <a href="#">View history</a> · <a href="#">Tools</a> · <a href="#">What links here</a> ·
+  <a href="#">Related changes</a> · <a href="#">Special pages</a> · <a href="#">Permanent link</a> ·
+  <a href="#">Page information</a> · <a href="#">Cite this page</a> · <a href="#">Download as PDF</a> ·
+  <a href="#">Printable version</a>
+</nav>
+<h1>Port Meridian</h1>
+<p>From the Encyclopaedia, the free encyclopaedia nobody wrote. Port Meridian is
+a fictional harbour city used by this repo's eval suite. Every figure on this
+page is invented; the PAGE SHAPE is the real thing: site chrome, a lead
+paragraph, a contents list, and a label/value infobox that holds the one cell
+the question asks for among thirty-one it does not.</p>
+<ul aria-label="Contents">
+  <li>(Top)</li><li>1 Geography</li><li>2 Demographics</li><li>3 History</li><li>4 Economy</li>
+</ul>
+<p>Port Meridian (Alderic: Havn Meridian) is the capital and largest city of
+the Eastern Littoral province of the Republic of Alder, on the western shore
+of Meridian Bay. With 1,482,317 residents at the 2020 census it is the
+republic's second-largest city, and its metropolitan area of just under four
+million is the second-largest conurbation in the country. The city is the
+republic's principal port and a centre of marine engineering and finance.</p>
+<!-- M28 (docs/analysis.md §8a-2, finding 3): the encyclopaedia infobox — the
+     one page shape on which the deployed planner targets the whole container
+     ({role: table}) rather than the one cell the question asks for, and the
+     executor then hands the verifier the container's entire text as "the
+     answer" (run 4bade630: "What is the population of Tokyo?" answered with
+     the full ~1.5k-char infobox). The table below is deliberately LONGER than
+     half of agent.PAGE_TEXT_KEEP (1000 chars of rendered text), which is what
+     reproduces that run's exact verdict: a value that long can never sit
+     inside the evidence window centred on its own start, so `grounded` fails
+     -- the live reason, word for word. (`not_a_dump` sits just under its
+     ratio on this page, as it did on the far longer Wikipedia one; the dump
+     is caught either way.) Shorten the table and the case grades a smaller
+     dump through a different check. The asked value is ONE cell, and the label
+     beside it is reachable by `near` — so the same page also shows that the
+     cell-targeted plan works (the Harvard "Motto" runs 735cf2da / a5b9b065). -->
+<table>
+  <caption>Port Meridian</caption>
+  <tr><th>Country</th><td>Republic of Alder</td></tr>
+  <tr><th>Province</th><td>Eastern Littoral</td></tr>
+  <tr><th>District</th><td>Meridian Bay</td></tr>
+  <tr><th>Founded</th><td>14 March 1611</td></tr>
+  <tr><th>Incorporated (city)</th><td>2 August 1798</td></tr>
+  <tr><th>Named for</th><td>The Meridian Light, a stone beacon on Harrow Point</td></tr>
+  <tr><th>Government</th><td>Mayor–council</td></tr>
+  <tr><th>Mayor</th><td>Ilse Varga (Harbour Independents)</td></tr>
+  <tr><th>City council</th><td>27 seats, elected by ward</td></tr>
+  <tr><th>Area (city proper)</th><td>412.6 km² (159.3 sq mi)</td></tr>
+  <tr><th>Area (metropolitan)</th><td>3,118 km² (1,204 sq mi)</td></tr>
+  <tr><th>Elevation</th><td>3 m (10 ft)</td></tr>
+  <tr><th>Highest elevation</th><td>219 m (719 ft), Harrow Point</td></tr>
+  <tr><th>Population (2020 census)</th><td>1,482,317</td></tr>
+  <tr><th>Population density</th><td>3,592/km² (9,303/sq mi)</td></tr>
+  <tr><th>Metropolitan population</th><td>3,947,105</td></tr>
+  <tr><th>Demonym</th><td>Meridian, Meridianer</td></tr>
+  <tr><th>Time zone</th><td>UTC+01:00 (Alder Standard Time)</td></tr>
+  <tr><th>Summer time (DST)</th><td>UTC+02:00 (Alder Summer Time)</td></tr>
+  <tr><th>Postal codes</th><td>MB 1000 – MB 1499</td></tr>
+  <tr><th>Area code</th><td>+43 (0)61</td></tr>
+  <tr><th>Vehicle registration</th><td>PM</td></tr>
+  <tr><th>GDP (metropolitan, 2023)</th><td>ALD 184.2 billion</td></tr>
+  <tr><th>Airports</th><td>Harrow Point International (HRW), Meridian Bay Regional (MBY)</td></tr>
+  <tr><th>Rapid transit</th><td>Meridian Metro (4 lines, 61 stations)</td></tr>
+  <tr><th>Twin towns</th><td>Lindmark, Saltholm, Vey-sur-Mer, Cape Orrin</td></tr>
+  <tr><th>Official language</th><td>Alderic; Littoral Frisk has co-official status in the old town</td></tr>
+  <tr><th>Climate</th><td>Oceanic (Köppen Cfb)</td></tr>
+  <tr><th>HDI (2022)</th><td>0.931 — very high</td></tr>
+  <tr><th>University</th><td>University of Port Meridian (est. 1844)</td></tr>
+  <tr><th>Major sports club</th><td>Meridian Harbour FC (Alder Premier League)</td></tr>
+  <tr><th>Website</th><td>portmeridian.example</td></tr>
+</table>
+<h2>Geography</h2>
+<p>The city occupies the western shore of Meridian Bay, a drowned river valley
+that opens onto the Alder Sea. The old town sits on a low spit between the bay
+and the harbour basin; the nineteenth-century grid climbs the slope behind it
+towards Harrow Point, the headland that shelters the bay from the prevailing
+north-westerlies and carries the beacon the city is named for.</p>
+<h2>Demographics</h2>
+<p>At the 2020 census the city proper recorded 1,482,317 residents, up from
+1,391,004 in 2010. The metropolitan area, which takes in the bay's eastern
+shore and the three river towns upstream, is home to just under four million
+people and is the second-largest conurbation in the Republic of Alder.</p>
+<h2>History</h2>
+<p>A fishing settlement on the spit is recorded from the fourteenth century;
+the town charter dates from 1611, when the Meridian Light was raised on Harrow
+Point and the bay became the safe anchorage on an otherwise open coast. The
+harbour basin was cut in the 1790s, the railway arrived in 1852, and the city
+more than tripled in the half-century that followed. Much of the old town was
+rebuilt after the 1911 fire, in the brick-and-tile style the waterfront keeps.</p>
+<h2>Economy</h2>
+<p>The port remains the largest employer. Container traffic moved to the outer
+harbour at Harrow Point in the 1990s, and the inner basin was redeveloped for
+ferries, fishing and the cruise trade. Financial services, marine engineering
+and a cluster of instrument makers around the university make up most of the
+rest of the metropolitan economy.</p>
