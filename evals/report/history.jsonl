@@ -1281,3 +1281,4 @@
 {"ts": "20260823-235941", "suite": "invariant", "sha": "6b4ca65", "dirty": true, "passed": 59, "total": 59, "score": 1.0, "wall_s": 13.23, "cost_usd": 0.0, "report": null, "p95_s": 2.25}
 {"ts": "20260824-000051", "suite": "fast", "sha": "6b4ca65", "dirty": true, "passed": 155, "total": 155, "score": 1.0, "wall_s": 70.32, "cost_usd": 0.0, "report": null, "p95_s": 2.23, "recovery": "8/8", "mutation": "9/11"}
 {"ts": "20260824-000233", "suite": "fast", "sha": "6b4ca65", "dirty": true, "passed": 155, "total": 155, "score": 1.0, "wall_s": 70.53, "cost_usd": 0.0, "report": null, "p95_s": 2.29, "recovery": "8/8", "mutation": "9/11"}
+{"ts": "20260824-000403", "suite": "fast", "sha": "6b4ca65", "dirty": true, "passed": 155, "total": 155, "score": 1.0, "wall_s": 71.5, "cost_usd": 0.0, "report": null, "p95_s": 2.3, "recovery": "8/8", "mutation": "9/11"}
