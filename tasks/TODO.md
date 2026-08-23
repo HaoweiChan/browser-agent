@@ -12,28 +12,30 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-R34 — the band grader checks equal-derived-ceiling, not `published >= ledger max`            [status: pr]
-Origin: PR #29 R24
-Spec: R24 found three things. Two are fixed in the M36 merge (`b578b15`): README
-no longer publishes a property the grader does not implement — it now states
-what `_check_published_band` actually checks (case count matches, published
-maximum derives the SAME ceiling as the ledger maximum, committed ceiling >=
-the rule applied to that maximum) — and both README's band table and ADR-019's
-band lines are now regenerated from `evals/report/history.jsonl` by script, so
-the published run lists are the ledger's own and the derivation sentences
-multiply the ledger maximum at the shipped case count.
-What remains is the judgement call R24 raised: property 2 is
-`rule(published) == rule(ledger max)` rather than `published >= ledger max`.
-The weaker form was chosen deliberately (the strict form reddens on ordinary
-0.2-0.5s run-to-run variance, which is rot-by-construction one level up), and
-it does catch the harmful direction — a band justifying a LOWER ceiling than
-the truth. It does not catch a published maximum that is up to ~1.0s below the
-ledger's at these magnitudes while still landing in the same band.
-Acceptance: either the tighter property is adopted with a regeneration step
-that keeps the doc honest without hand-editing (the script that now produces
-these lists is the obvious hook), or the trade-off is stated in ADR-019 as a
-declared ceiling with the ~1.0s slack named, and a case pins the miss so it is
-a decision rather than an artefact of what was convenient to grade.
+### M37 — The HN card's Try example no longer reproduces on the deployed build — swap it for one that does            [status: in-progress]
+Spec: M35 shipped five per-site Try examples, each cited to a deployment run
+that answered correctly. After the merge the post-deploy receipt round found
+`news.ycombinator.com` "Who submitted this story?" (item?id=1) failing 5/5 —
+`349e4839`, `e08b7627`, `bcae4fe7`, `63b9d944` and one more, all
+`failure:locate`: the planner now targets link "pg", the page has two "pg"
+links, and relocation by text hits the same ambiguity. The card is declared
+`unreliable`, so the page is not lying, but M35's acceptance says an example
+that cannot be reproduced is removed, not kept. The same page answers "What is
+the title of this story?" correctly on every try seen (`97f2157d`, `4453fae6`
+→ "Y Combinator", the item's real title) and "Which site was this story
+submitted from?" (`a1470b64` → ycombinator.com).
+Acceptance: `EXAMPLES["news.ycombinator.com (live)"]` becomes task "What is
+the title of this story?" with the same start URL, label "Title of an HN
+story", and its code comment cites `97f2157d` / `4453fae6` and the retired
+example's failing runs; `ui-no-url-guard-and-example-chips` and
+`ui-examples-cover-matrix` stay green with no stub change beyond what the new
+text needs; gate green (invariant 100%, fast >= baseline, under the ADR-019
+ceiling); after merge and redeploy the orchestrator runs the five Try
+examples once more and the HN card answers "Y Combinator" — the receipt goes
+in the PR evidence pack. No other page text changes.
+Out of scope: why the planner's "pg" targeting regressed (planner quality —
+M28/M32 territory; note it in the PR if a cause is obvious, do not fix it);
+the openlibrary card, which fails as its note declares.
 
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
