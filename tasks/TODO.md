@@ -46,6 +46,27 @@ names a mutation:
   citation claims a result the row does not have.
 Out of scope: T-R44, T-R50, T-R51, T-R53 — behaviour, not description.
 
+### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: in-progress]
+Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
+Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
+class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
+Open Library's first publication year for a search result), the correct
+value was present verbatim inside the page text the agent itself captured —
+`star-rating Three`, the infobox population figure, "First published in
+1965" — but the run returned `failure:semantic` with a multi-hundred/
+multi-thousand-character raw page dump as the `answer` field instead of
+either isolating the value or failing with `answer: null`. This is graded a
+failure, not a wrong success, so it does not implicate the inviolable
+property (`not_a_dump` never sees it: the check only fires on `success`), and
+it is out of the two-defect scope M10's repair was bounded to.
+Acceptance: a case pins the "data was captured but answer is a page-text
+dump on failure" shape red first, then either the extraction step tries a
+narrower isolation before giving up, or `failure:semantic`'s `answer` field
+is null'd rather than carrying the dump — reviewer's call which is correct.
+Promoted from Debt 2026-08-23: today's post-deploy receipt rounds (PR #32/#37) showed the
+planner's output is the dominant source of flakiness on the five Try examples; M28 is the
+half that does not collide with M32 (PR #34, in flight in another session).
+
 ### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
 Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
 but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
@@ -486,24 +507,6 @@ completeness, not blocking.
 Orchestrator note: LOW and already acknowledged in-code. Debt — and the honest
 name for the ceiling this PR ships.
 
-
-### M28 — extraction gives up and dumps the whole page instead of failing cleanly or isolating the value            [status: todo]
-Origin: M10 second held-out probe, finding 3 (`docs/analysis.md` §8a-2)
-Spec: on three of the probe's canonical-round tasks (#4 star rating in a CSS
-class attribute, #5 Tokyo 2020 population on a real Wikipedia infobox, #7
-Open Library's first publication year for a search result), the correct
-value was present verbatim inside the page text the agent itself captured —
-`star-rating Three`, the infobox population figure, "First published in
-1965" — but the run returned `failure:semantic` with a multi-hundred/
-multi-thousand-character raw page dump as the `answer` field instead of
-either isolating the value or failing with `answer: null`. This is graded a
-failure, not a wrong success, so it does not implicate the inviolable
-property (`not_a_dump` never sees it: the check only fires on `success`), and
-it is out of the two-defect scope M10's repair was bounded to.
-Acceptance: a case pins the "data was captured but answer is a page-text
-dump on failure" shape red first, then either the extraction step tries a
-narrower isolation before giving up, or `failure:semantic`'s `answer` field
-is null'd rather than carrying the dump — reviewer's call which is correct.
 
 ### M11 — Live-drift snapshot replay            [status: todo]
 Origin: M8's SHOULD item, left open at the M8 merge (PR #12)
