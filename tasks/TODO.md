@@ -136,7 +136,7 @@ first; `quotes.toscrape.com/js` keeps its honest marker if it is still
 unplannable; tokens-per-task measured before/after from committed reports
 and stated (must stay inside the 100k run budget).
 
-### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: in-review]
+### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: pr]
 Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
 two Try examples produce nothing, five cards should be eight, the running stage should
 show it is running, a right-hand panel should show what the browser saw so a reviewer can
@@ -647,7 +647,7 @@ Acceptance: `specs/001-browser-contract.md:145-150` states the null half and
 cites the third case, matching D25 and ADR-020 word for word on the predicate;
 ideally a grader covers the contract's case citations the way
 `support-matrix-cites-real-cases` covers the matrix's.
-### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: in-review]
+### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: pr]
 Origin: M37 implementer
 Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
 because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
