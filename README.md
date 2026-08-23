@@ -103,11 +103,13 @@ ADR-013's own rule: slowest observed run +15%, rounded up to a multiple of five.
 
 **Every LOCAL band below is computed from `evals/report/history.jsonl`**, the
 ledger committed in this repo, and `published-band-matches-the-ledger` grades
-that on every run. What it requires is listed once, in
-[ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md), and
-referred to by item number everywhere else, this file included: a second copy
-of a rule is what goes stale while the rule moves, and §6's item 8 grades that
-those references still resolve. It is a property, not a snapshot, because the
+that on every run. What it requires is listed in
+[ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md); the
+sentences here name its items rather than re-state them, and item 8 (references)
+grades that each name points at the item it claims — slug included, so a
+deferral aimed at the wrong rule is red. A paragraph that paraphrases a rule
+without naming it is not caught by anything, which is why §6 says so.
+It is a property, not a snapshot, because the
 ledger grows on every gate
 run; a list of times would go red on the next run instead of on a regression. It
 exists because three bands in PR #29 did not match the ledger beside them, and
@@ -120,12 +122,12 @@ in ADR-019 §5. What is graded is that the workflow declares the values
 `fast-wall-clock-budget` pins; that they were ever measured is not, and cannot
 be from here — that half is logged as debt (T-R51).
 
-§6 item 3 is why the published number can sit below the ledger's maximum, by at
-most one ceiling step (**4.35s**). The table
-below states one named run of this tree — the one ADR-019 §2/§3 cites by ledger
-timestamp, with the result that run scored — and not the slowest run in the
-ledger today. That is a declared limitation, not an
-oversight — the reasoning is
+§6 item 3 (same-ceiling) is why the published number can sit below the ledger's
+maximum, by at most one ceiling step (**4.35s**). The table below carries the
+four values item 7 (readme-row) grades; the run behind them is named in
+ADR-019 §2/§3, which cite it by ledger timestamp and state what it scored — and
+that run is not necessarily the slowest in the ledger today. That is a declared
+limitation, not an oversight — the reasoning is
 [ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) and
 `published-band-slack-is-declared` pins it. Both forms lag identically (the
 history line is appended after the run's cases are graded, so no run sees its
@@ -134,9 +136,10 @@ maximum under the strict form, once per band crossing under this one — and the
 ceiling is graded against the ledger directly, so the slack costs a reader
 precision and never costs the gate its teeth.
 
-At the case count this branch ships. Each band names one run of this tree by its
-ledger timestamp — the graded citation is in ADR-019 §2/§3, and every other run
-is in the ledger; enumerating them here is the snapshot that drifted:
+At the case count this branch ships. The run behind each band is named — by
+ledger timestamp, with its result — in ADR-019 §2/§3, which is where item 2
+(cited-run) grades the citation; every other run is in the ledger, and
+enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|

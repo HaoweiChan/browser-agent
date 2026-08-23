@@ -90,8 +90,8 @@ with the fast-suite/inspectability cost of A stated either way.
 ### T-R50 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
 Origin: T-R34, restated after PR #35 R4 (renumbered from T-R39 during the M35 merge — main had allocated that id independently)
 Spec: `_band_wrong` filters `history.jsonl` to rows whose `total` equals the CURRENT case
-count, so adding one 0.0s pure-code case discards every earlier run. Observed: `invariant`
-had 34 runs at 51 cases reaching 14.12s; the first two runs at 52 cases maxed at 12.78s,
+count, so adding one 0.0s pure-code case discards every earlier run. Observed: `invariant`'s
+runs at 51 cases reached 14.12s; the first two runs at 52 cases maxed at 12.78s,
 which derives **15** — the ceiling CI has been red against twice. PR #35 R4 correctly
 refused this as debt while ADR-019 §6 still claimed "no ceiling is ever justified by a
 maximum smaller than the truth"; that claim is gone, the residue is declared in §6 (a
@@ -873,9 +873,10 @@ no other line in it parses as a competing figure for the same field.
 
 ### T-R57 — an ADR citation resolves to a file and a section, never to the ruling it claims            [status: todo]
 Origin: T-R56 (the T-R52 half)
-Spec: `adr-header-and-index` now resolves every `ADR-0NN` reference under `src/`, `evals/`,
-`specs/`, `.github/` and README to a committed decision, and every sectioned reference to a
-section that decision actually has. What it cannot say is whether the cited section RULES on
+Spec: `adr-header-and-index` now resolves every `ADR-0NN` reference — canonical or in an
+identifier spelling like `adr019` — to a committed decision, and every sectioned reference to a
+section that decision actually has, across README.md, CLAUDE.md, tasks/TODO.md, tasks/DONE.md
+and `src/ evals/ specs/ .github/ docs/ prompts/`: 592 citations in 218 files on this tree. What it cannot say is whether the cited section RULES on
 the subject of the citing sentence — the T-R52 defect was catchable only because the judge
 ADR has no numbered sections, so the repaired citations carry a section and a re-miscitation
 is red. A citation written without a section, to an ADR that happens to have one, still
@@ -887,7 +888,7 @@ to cite every ADR that uniquely owns an identifier it uses (8 files, every one l
 implementation files use ADR-ruled identifiers without citing them).
 Acceptance: either citations carry a section reference by convention and the check requires
 one (so the resolution above is the whole property), or a subject test is found that is red
-on the four T-R52 citations and green on the 347 committed ones. Watched red on both.
+on the five T-R52 citations and green on every other citation this tree carries. Watched red on both.
 Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
 
 ### T-R58 — CI's ceilings were measured on a tree two milestones smaller than the one that ships            [status: todo]
@@ -904,20 +905,20 @@ Acceptance: CI's band carries the case count it was measured at, and something r
 the current count leaves it behind — the natural form is T-R51's environment dimension on
 `_BAND_LINE` plus item 1 applied to it. Watched red by growing the suite against a stale count.
 
-### T-R59 — §6's item numbers are positions, so renumbering the list re-points every reference to it            [status: todo]
-Origin: T-R56 cold review (F2)
-Spec: §6 item 8 checks that an `item N` reference names a number the list has. Insert a new
-item in the MIDDLE of §6 — the natural next one is T-R53's green requirement or T-R44's
-environment dimension — and every one of the ~26 references in ADR-019, README and
-`src/browser/eval_adapter.py` still resolves while naming a different rule. Removing an item
-IS caught (the 1..N gap check, and any reference to the now-missing top), and appending is
-safe; only insertion is silent. §6 now says so and says "append, never insert", which is a
-convention, not a mechanism.
-Acceptance: a reference binds to content, not to a position — e.g. each item carries a short
-stable slug (`item 3 (same-ceiling)`) that references must spell, so a renumber that moves an
-item under a slug is red — or the list is declared append-only and something grades that the
-existing items' text has not moved under its number (a committed hash of `N -> first clause`).
-Watched red by inserting an item at position 3 and leaving every reference untouched.
+### T-R62 — a paraphrase that names no item is invisible to item 8            [status: todo]
+Origin: T-R56 round 1 (PR #36 R1/R2)
+Spec: §6 item 8 (references) binds a reference to content — number plus slug, both agreeing
+with the list — so a deferral pointed at the wrong rule, or a list renumbered under its
+references, is red. A paragraph that restates a rule and names no item at all is still
+invisible: nothing counts copies. Five review rounds have produced exactly that shape, and
+the current defence is that pointing is cheaper than restating, plus a blacklist of three
+retired phrases in `docs-numbers-are-derived`. ADR-019 §6, README and the check's docstring
+now say this in those terms rather than claiming the copies are caught (PR #36 R1).
+Acceptance: a graded property that is red on a fresh unmarked restatement and green on this
+tree — the shape worth trying is requiring every sentence in §6's prose and README's band
+section that contains an item's own distinctive token (the backticked expressions the list
+uses) to carry a reference, since those tokens are derived from the list rather than
+blacklisted. Watched red by adding a paraphrase of one item with no reference beside it.
 
 ### T-R60 — two band parses are still last-wins, and derivations are matched document-wide            [status: todo]
 Origin: T-R56 cold review (secondary findings)
