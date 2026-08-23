@@ -1,0 +1,63 @@
+{
+  "pr": 35,
+  "round": 3,
+  "resolutions": [
+    {
+      "id": "R15",
+      "resolution": "fixed",
+      "case": "docs-numbers-are-derived",
+      "detail": "ADR-019 §2 no longer publishes the clean-tree requirement round 3 deleted; it names the cited run by ts and defers to §6 items 2-4.",
+      "watched_red": "red against the tree as round 3 shipped it, no mutation needed: {describes_a_deleted_rule: 'nothing uncommitted in the tree', doc: specs/decisions/ADR-019-...md}",
+      "verified_by_orchestrator": "grep for clean-tree / 'nothing uncommitted' across README.md and ADR-019 returns only §6's correct as-of wording at :270."
+    },
+    {
+      "id": "R16",
+      "resolution": "fixed",
+      "case": "docs-numbers-are-derived",
+      "detail": "Second option taken: the deviation stands, the description changed. §6, README and the code comment now say the derivation states THE RULE's value (`_band_rule(x)`), that `12.89 x 1.15 = 14.82 -> **15**` under a heading saying 20s IS GREEN, what that buys (adding a case stays one commit — R11's deadlock by another route), what it costs (a reader can meet an arrow smaller than the ceiling beside it), and what still holds (items 4 and 6 grade the ceiling itself). §3 now says plainly that the 15-deriving band was green and stood until a 13.32s run happened to land — nothing would have caught it otherwise.",
+      "watched_red": "{describes_a_deleted_rule: 'must multiply the published maximum and land on the ceiling', doc: ADR-019} and {describes_a_deleted_rule: 'the ceiling that maximum derives in the ADR's prose must be the ceiling', doc: README.md} — the README instance was NOT in the review's evidence; it came out of the sweep."
+    },
+    {
+      "id": "R17",
+      "resolution": "debt",
+      "tid": "T-R44"
+    },
+    {
+      "id": "R18",
+      "resolution": "debt",
+      "tid": "T-R45",
+      "detail": "The sweep regex is built from f\"{step_s:g}\", so it matches the string 4.35; 4.350 is invisible. The marker half is rendering-independent (floats + tolerance); only the sweep half is not."
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [
+    "T-R44",
+    "T-R45"
+  ],
+  "human_decision": "option A — one bounded round, R15 + R16 only; standing terms: same species again -> merge with debt",
+  "class_level_sweep": {
+    "covered": [
+      "every sentence in README.md and ADR-019 describing what a check enforces",
+      "specs/decisions/INDEX.md's two lines naming these checks",
+      "docstrings and comments of _check_published_band, _check_published_band_slack and _band_wrong",
+      "a repo-wide markdown grep for the deleted-rule language"
+    ],
+    "found_beyond_r15_r16": [
+      "README's own copy of R16's false sentence — 'the ceiling that maximum derives in the ADR's prose must be the ceiling evals/run.py commits'",
+      "README claiming the table shows 'the slowest run recorded when the band was last republished' — it shows the cited run, which need not be a maximum",
+      "_check_published_band's docstring listing THREE properties for a seven-property check, and still carrying the next-commit argument retracted in round 3",
+      "INDEX.md publishing that same retracted argument",
+      "stale `property 2` / `property 3` numbering in three comments, now §6's item numbers",
+      "_band_wrong's README comment saying 'same two numbers' after the whole row became graded, and one 'published maximum' no longer required to be a maximum"
+    ],
+    "defences": {
+      "single_source": "§6 now carries the single list of seven properties; README, §2, §3, INDEX and the docstrings refer to it and restate nothing — the R10 move.",
+      "regression_guard": "a `describes_a_deleted_rule` sweep over all markdown, reusing the existing forbidden-phrase machinery (one line of new code).",
+      "declared_limit": "the guard catches re-assertion of THESE rules, not a newly invented false description; the `ponytail:` note at the site says so and points at the single-source list as the general defence."
+    }
+  },
+  "gate": {
+    "invariant": "53/53 = 1.000, wall 12.87s",
+    "fast": "134/134 = 1.000, wall 65.95s"
+  }
+}
