@@ -1,0 +1,47 @@
+{
+  "pr": 36,
+  "round": 3,
+  "resolutions": [
+    {
+      "id": "R16",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "route_taken": "bounding",
+      "detail": "Two predicates over text already read: (1) every `^def _band...` / `^def _check_published_band...` IN THE FILE must be inside the region — not a fixed list of three names, which said nothing about band code added later; (2) the closing marker must sit at a top-level boundary (first non-blank line after it is not indented). Membership is tested with a name built at runtime, so no literal in the region can satisfy it from within.",
+      "watched_red": "both falsifications reproduced green first. After: band code after the end marker -> {marker_counts: [1,1], outside_the_region: ['_band_helper_probe'], end_marker_inside_a_body: false, region_lines: 498}; end marker moved below `def _check_published_band_slack() -> dict:` -> {marker_counts: [1,1], outside_the_region: [], end_marker_inside_a_body: true, region_lines: 387}. Round-2's three re-watched and still red, now naming all five band definitions.",
+      "prose": "ADR-019 §6: 'that region is checked before it is read — one occurrence of each marker in the file, every band definition inside them, the closing marker at a top-level boundary — so the five ways this scan has been made to stop scanning are red rather than green.' The code comment says the same three counts and drops 'the three band functions'.",
+      "verified_by_orchestrator": "the orchestrator's own R16 repro (appending `_band_helper_probe` after the end marker with a wrong slug) now returns passed False with outside_the_region: ['_band_helper_probe']"
+    },
+    {
+      "id": "R17",
+      "resolution": "fixed",
+      "case": "published-band-matches-the-ledger",
+      "detail": "The plural-range mutation and its output are back in watched_red, with why the form is refused (a range cannot carry one item's slug).",
+      "watched_red": "`§6 items 2-3 are what the check requires` -> {adr: reference_does_not_name_its_item, wrote: 'items 2', item_2_is: 'cited-run'}",
+      "verified_by_orchestrator": "the case's triage now records the plural-range mutation"
+    },
+    {
+      "id": "R18",
+      "resolution": "fixed",
+      "detail": "tasks/TODO.md T-R49 acceptance line: one `(committed-ceiling)`, and the line rewrapped so both references read as references.",
+      "verified_by_orchestrator": "tasks/TODO.md:36-38 now reads `item 2 (cited-run) and item 3 (same-ceiling) ... item 4 (committed-ceiling)` with no duplication"
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [],
+  "human_decision": "option A — one bounded round on R16/R17/R18, then merge",
+  "closing_sweep": {
+    "covered": [
+      "every sentence naming a grader in ADR-019, README, INDEX and the three case files, read against the check as it now stands",
+      "re-ran ADR-019 §3's one reproducible claim (`_band_wrong` with the band at 12.89s citing ts 20260823-041431 against the two rows recorded at 53 cases) against the current five-tuple signature -> []",
+      "grepped for absolutes (`nowhere else`, `only place`, `every sentence`, `all three ways`, `never restat...`, `cannot be wrong`) — four hits, all read in context, all true as scoped",
+      "re-checked fast-wall-clock-budget, docs-numbers-are-derived, published-band-slack-is-declared, adr-header-and-index descriptions and INDEX lines 11 and 28"
+    ],
+    "found": "nothing further beyond R16-R18; six ADR lines the slug pass had pushed past the margin were rewrapped"
+  },
+  "gate": {
+    "invariant": "53/53 = 1.000, wall 12.95s",
+    "fast": "136/136 = 1.000, wall 62.4s"
+  },
+  "flagged_to_human": "a fourth `--no-verify` ledger-row commit (8f9eedf), same shape as the previous three. Flagged for the rule-5 call at merge, not acted on."
+}
