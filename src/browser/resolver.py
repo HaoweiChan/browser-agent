@@ -126,8 +126,15 @@ READS = {"extract"}
 # Three shapes, because a quantifier is only one of the ways English asks for a
 # set (PR #42 R4, which walked around the first version with three ordinary
 # phrasings): a quantifier, an imperative or request naming a PLURAL NOUN
-# ("name the authors" — and not "name the author", which is why the trailing s
-# is required), and the plural copula ("who are the authors"). CJK alternatives
+# ("name the authors", and not "name the author"), and the plural copula ("who
+# are the authors"). A trailing `s` is not by itself what separates those two —
+# `\w+s` read every singular noun ending in s as plural and refused to narrow
+# for "show me the address / the business / the status / the class" (PR #42 R8,
+# case resolver-narrows-singular-noun-ending-in-s). The character BEFORE the
+# final s does more of the work: no English plural has `ss`, `us` or `is` there,
+# and those four nouns all do. It is a spelling rule and not a grammar, so
+# `the lens` and `the news` still read as plural — a refused narrowing, never a
+# wrong answer, declared in docs/support-matrix.md D28. CJK alternatives
 # carry NO `\b`: the boundary never matches inside a CJK run, so the whole
 # English list was structurally inert on the six ZH cases this repo ships —
 # the lesson agent.SCOPE_BLOCK already carries (case screening-word-boundary).
@@ -138,7 +145,7 @@ READS = {"extract"}
 # is declared in docs/support-matrix.md D28, not left to be discovered.
 _PLURAL_ASK = re.compile(
     r"\b(all|every|each|both|list|how many|which ones|names of|who are|what are)\b"
-    r"|\b(?:name|list|give|show)(?: me)? the \w+s\b"
+    r"|\b(?:name|list|give|show)(?: me)? the \w*[^\Wsui]s\b"
     r"|所有|全部|列出|哪些|每一?[個个]|各[個个]",
     re.IGNORECASE)
 
@@ -162,7 +169,7 @@ class ResolveError(Exception):
         super().__init__(note)
 
 
-async def _nearest(page, loc, near: str) -> tuple[int | None, str | None]:
+async def _nearest(page, loc, near: str, loose: bool = True) -> tuple[int | None, str | None]:
     """(index of the match closest to the text `near`, how the anchor matched).
 
     The index is None if there is no anchor or no candidate, or AMBIGUOUS.
@@ -184,12 +191,26 @@ async def _nearest(page, loc, near: str) -> tuple[int | None, str | None]:
     whitespace runs — and then `prefix`, the head of a long anchor. Order is
     the honesty: the loosest match is only reached when every stricter one
     found nothing, and an ambiguous loose match is still refused by NEAREST_JS.
+
+    `loose=False` withholds the two M38 passes, leaving `near` exactly as M6
+    shipped it. The caller sets it from the same two refusals that gate the
+    narrowing rungs, because these passes ARE a narrowing: they resolve anchors
+    that used to resolve to nothing, so they turn a loud `locate` failure into
+    an element — and the element then answers a plural ask from one of several
+    matches, or gets clicked (PR #42 R7, cases
+    resolver-refuses-plural-on-a-loose-anchor and
+    resolver-refuses-a-click-on-a-loose-anchor). Exact and substring stay
+    available to every step: an anchor the page contains is the proximity the
+    plan asked for, and Playwright normalises whitespace inside those two by
+    itself, which is why an anchor that differs only in spacing is M6 behaviour
+    and not this milestone's to gate.
     """
     passes = [("exact", lambda: page.get_by_text(near, exact=True)),
-              ("substring", lambda: page.get_by_text(near)),
-              ("normalised", lambda: page.get_by_text(_loose(near)))]
-    if len(near.strip()) > NEAR_PREFIX:
-        passes.append(("prefix", lambda: page.get_by_text(_loose(near.strip()[:NEAR_PREFIX]))))
+              ("substring", lambda: page.get_by_text(near))]
+    if loose:
+        passes.append(("normalised", lambda: page.get_by_text(_loose(near))))
+        if len(near.strip()) > NEAR_PREFIX:
+            passes.append(("prefix", lambda: page.get_by_text(_loose(near.strip()[:NEAR_PREFIX]))))
     cands = await loc.element_handles()
     if not cands:
         return None, None
@@ -225,6 +246,12 @@ async def resolve(page, target: dict, many: bool = False,
     tiers = []
     role, name, text = target.get("role"), target.get("name"), target.get("text")
     index, near = target.get("index"), target.get("near")
+    # May this run settle an ambiguity the plan left open? Two refusals, and
+    # they gate EVERY rung M38 added — the two below and the loosened anchor
+    # passes inside `_nearest`, which sit above them in the `near` branch and
+    # were ungated for a round (PR #42 R7). The argument for each is at the
+    # `if ambiguous:` block below.
+    may_narrow = action in READS and not _PLURAL_ASK.search(task or "")
     # exact=True: planner names come from the observation verbatim; substring
     # matching resolved absent targets to superstring siblings and extracted
     # the wrong element as a success (case resolver-substring-name).
@@ -241,7 +268,7 @@ async def resolve(page, target: dict, many: bool = False,
             # so the winning tier is `structural` however the candidates were
             # gathered — the taxonomy's last-resort rung (failure-taxonomy.md),
             # and the first one any run has ever emitted.
-            i, how = await _nearest(page, loc, near)
+            i, how = await _nearest(page, loc, near, loose=may_narrow)
             if i == AMBIGUOUS:
                 raise ResolveError(
                     "ambiguous-match", f"proximity to {near!r} does not identify one element for {target}")
@@ -289,8 +316,9 @@ async def resolve(page, target: dict, many: bool = False,
         #    which meant a plural ask whose step carried an identity anchor was
         #    answered from the first rung with nothing checking the shape of the
         #    question at all (PR #42 R1, the milestone's own defect:
-        #    resolver-refuses-plural-with-anchor).
-        if action not in READS or _PLURAL_ASK.search(task or ""):
+        #    resolver-refuses-plural-with-anchor). Both are computed once, as
+        #    `may_narrow` above, because rung 3 needs them too.
+        if not may_narrow:
             raise ResolveError("ambiguous-match", f"{n} matches at tier {tier} for {target}")
         # Rung 1. The identity anchor is a string from the part of the page the
         # task is about, so it is a proximity anchor the plan already carries

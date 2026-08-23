@@ -1,0 +1,36 @@
+{
+  "id": "resolver-narrows-singular-noun-ending-in-s",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "Show me the genius who wrote the quote about thinking.",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "text": "Marisol Vance"
+        },
+        "anchor": "Marisol Vance"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Marisol Vance",
+    "anchors": [
+      "Marisol Vance"
+    ],
+    "trace_note_contains": "narrowed: document-order"
+  },
+  "provenance": "PR #42 R8 (MEDIUM). R4's widening added `(?:name|list|give|show)(?: me)? the \\w+s`, and the comment beside it plus ADR-022's regex section both claimed the required trailing `s` is what separates 'the authors' from 'the author'. It does not: `\\w+s` reads ANY singular noun ending in s as plural, so 'Show me the address of...', 'Name the business that...', 'Give me the status of...' and 'Show me the class of...' all began refusing a narrowing that used to work — a capability regression in the safe direction, undeclared, and pinned by nothing in either direction. Watched red first on this task, whose singular noun ends in `us`: `status failure:locate`, `3 matches at tier text`. The fix requires the character before the final `s` not to be `s`, `u` or `i`, which is what the four demonstrated nouns have in common (addre-ss, busine-ss, stat-us, cla-ss) and what no English plural has.",
+  "triage": {
+    "class": "capability-gap",
+    "what_this_grades": "the OVER-firing direction of the plural test, which had no case at all — every other plural case grades under-firing. Red when the exclusion is removed, green with it, and the plural family stays green either way, so the two directions are pinned independently.",
+    "ceiling": "still a spelling rule, not a grammar: a singular noun ending in any other letter plus s (`the lens`, `the news`, `the gas`) is still read as plural and still refuses to narrow. Declared as a fourth shape in docs/support-matrix.md D28 — the cost is a loud failure, never a wrong answer, which is why it is declared rather than chased."
+  }
+}

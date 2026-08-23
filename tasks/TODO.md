@@ -104,8 +104,10 @@ of them (74.29s, 162/165) became the ledger's maximum, and ADR-019 §6 item 3
 (same-ceiling) then forced the published band onto a run of code that never
 existed as a commit. It shipped that way for one round and a reviewer caught
 it, not a check. The rows and their reports were deleted on PR #20 R18's
-precedent; the mechanism is unchanged and the next ablation sweep re-creates
-the same hole.
+precedent — and then it happened AGAIN in round 2, two more probe rows at 168
+cases with one of them (75.02s) once more the ledger's maximum, caught only
+because the author now knew to look. Two occurrences, two hand deletions, one
+unchanged mechanism: the next ablation sweep re-creates it.
 Repro: run `--suite fast` with any resolver conjunct ablated, then
 `published-band-matches-the-ledger` — the probe row is indistinguishable from a
 gate run, and if it is the slowest it dictates the band.

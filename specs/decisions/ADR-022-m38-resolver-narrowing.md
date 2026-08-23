@@ -3,9 +3,9 @@
 Date: 2026-08-23
 Status: accepted
 
-**Ruling**: when a semantic target resolves to N>1 elements at every tier, `resolve()` tries three site-agnostic narrowing rungs before raising `ambiguous-match`: on a READING step whose task asks for ONE thing, (1) the step's identity `anchor` reused as a proximity anchor and (2) the first match in document order, the latter only when the matches are interchangeable (same role AND same reading); and on any step, (3) inside proximity matching, an anchor string matched through typographic variants and then by its first 40 characters. The rung that fired is named in the trace step's `note` (`narrowed: <rung>`); none of them is labelled `retry_or_recovery`.
+**Ruling**: when a semantic target resolves to N>1 elements at every tier, `resolve()` tries three site-agnostic narrowing rungs before raising `ambiguous-match`: on a READING step whose task asks for ONE thing, (1) the step's identity `anchor` reused as a proximity anchor and (2) the first match in document order, the latter only when the matches are interchangeable (same role AND same reading); and (3) inside proximity matching, on the same terms, an anchor string matched through typographic variants and then by its first 40 characters. `near`'s own exact and substring matching is unchanged and stays available to every step, as M6 shipped it. The rung that fired is named in the trace step's `note` (`narrowed: <rung>`); none of them is labelled `retry_or_recovery`.
 **Because**: six deployment runs died `failure:locate` on pages that held the answer and plans that named it — two `pg` links on an HN item (`349e4839`, `e08b7627`, `bcae4fe7`, `63b9d944`), three `Albert Einstein` matches on quotes.toscrape.com (`e985e048`), and a `near` anchor the page rendered with typographic quotes (`e6768ee0`). In each, the ambiguity was one the page itself settles.
-**Enforced by**: the rungs — `resolver-narrows-by-anchor-proximity`, `resolver-narrows-identical-matches`, `resolver-near-normalises-typography`; the guards, each red when and only when its own conjunct is removed — `resolver-refuses-narrowing-a-click` (reading steps), `resolver-refuses-plural-with-anchor` + `resolver-refuses-plural-wording` (singular task, both rungs) + `resolver-refuses-plural-name-the` / `-who-are` / `-give-me` / `-zh` (the wording), `resolver-refuses-mixed-roles` (role half) and `resolver-refuses-different-readings` (text half); and unchanged: `l4-shop-duplicate-labels`, `near-equidistant-is-ambiguous`, `near-anchor-substring`, `relocation-preserves-near`
+**Enforced by**: the rungs — `resolver-narrows-by-anchor-proximity`, `resolver-narrows-identical-matches`, `resolver-near-normalises-typography`; the guards, each red when and only when its own conjunct is removed — `resolver-refuses-narrowing-a-click` (reading steps), `resolver-refuses-plural-with-anchor` + `resolver-refuses-plural-wording` (singular task, both rungs) + `resolver-refuses-plural-name-the` / `-who-are` / `-give-me` / `-zh` (the wording), `resolver-refuses-mixed-roles` (role half), `resolver-refuses-different-readings` (text half), `resolver-refuses-plural-on-a-loose-anchor` + `resolver-refuses-a-click-on-a-loose-anchor` (both refusals reaching rung 3) and `resolver-narrows-singular-noun-ending-in-s` (the plural test's over-firing direction); and verified UNCHANGED by this milestone, pinning nothing in it: `l4-shop-duplicate-labels` (PR #42 R2 — it does not pin the acting refusal), `near-equidistant-is-ambiguous`, `near-anchor-substring`, `relocation-preserves-near`
 
 ---
 
@@ -43,7 +43,7 @@ given its chance to resolve uniquely** — a clean single match at the text tier
 still beats a narrowed one at the role tier, so narrowing sits after the loop
 rather than inside it.
 
-**Two refusals gate BOTH rungs** (amended, PR #42 R1), because both answer
+**Two refusals gate ALL THREE rungs** (amended, PR #42 R1 and R7), because both answer
 "may this ambiguity be settled without asking?" rather than "which candidate
 wins":
 
@@ -57,13 +57,33 @@ wins":
   plural ask — it is an answer to a different question, wrong by omission and
   silently so.
 
-The second of those shipped INSIDE rung 2, which left rung 1 answering plural
-asks: `List all the users who posted in this thread.` with an identity anchor
+They were reached in two steps, and each step is a case. The singular test
+shipped INSIDE rung 2, which left rung 1 answering plural asks: `List all the users who posted in this thread.` with an identity anchor
 returned one of two users, `success`, verdict PASS. That is the defect this ADR
 exists to prevent, in the rung nobody guarded, and the committed negative case
 did not catch it because its anchor was the candidate text itself, so it never
 reached rung 1 at all (PR #42 R1, `resolver-refuses-plural-with-anchor`, and
 `resolver-refuses-plural-wording` re-anchored to reach rung 1).
+
+Then both refusals were hoisted above rungs 1 and 2 — and rung 3 sits above
+BOTH, in the `near` branch, which returns before that guard is reached. So the
+same plural ask was still answered one rung up, through an anchor only M38's
+prefix pass can resolve, and an acting step could be narrowed the same way (PR
+#42 R7, `resolver-refuses-plural-on-a-loose-anchor`,
+`resolver-refuses-a-click-on-a-loose-anchor`). The refusals are now computed
+once, as `may_narrow`, and every rung reads that one value.
+
+**What rung 3 gates is the two passes M38 ADDED, not `near`.** Exact and
+substring matching stay available to every step, plural or singular, reading or
+acting: an anchor the page actually contains is the proximity the plan asked
+for, and M6 shipped it that way. Only `normalised` and `prefix` — which resolve
+anchors that previously resolved to nothing, and so turn a loud failure into an
+element — are withheld. R7's acting-half repro (`near: "to  arden"`, two
+spaces) is NOT one of them and was not a regression: Playwright's substring
+matching normalises whitespace itself, measured at 1 match with no M38 code
+involved, so that input presses the same button on `main`. The case that
+replaced it anchors on an ASCII hyphen against the fixture's em dash, which
+only the normalising pass can resolve.
 
 tasks/TODO.md M38 did not scope the rungs by action; that is the second place
 the guard is narrower than the spec, for the same reason as the first.
@@ -85,11 +105,19 @@ the guard is narrower than the spec, for the same reason as the first.
      all, and gating it that way would delete it along with its own case. That
      half of PR #42 R1's acceptance is declined for that reason; the plural half
      is fixed above.
-2b. **What `_PLURAL_ASK` reads** (amended, PR #42 R4). Three shapes, because a
-   quantifier is only one of the ways English asks for a set: a quantifier
-   (`all`, `every`, `both`, `how many`…), an imperative or request naming a
-   PLURAL NOUN (`name the authors` — the trailing `s` is required, so `name the
-   author` still narrows), and the plural copula (`who are the authors`). The
+2b. **What `_PLURAL_ASK` reads** (amended, PR #42 R4 and R8). Three shapes,
+   because a quantifier is only one of the ways English asks for a set: a
+   quantifier (`all`, `every`, `both`, `how many`…), an imperative or request
+   naming a PLURAL NOUN (`name the authors`, and not `name the author`), and
+   the plural copula (`who are the authors`). A trailing `s` is not by itself
+   what separates those two, which this section claimed for a round: `\w+s`
+   read every singular noun ending in s as plural, so `show me the address`,
+   `the business`, `the status` and `the class` all stopped narrowing (R8,
+   `resolver-narrows-singular-noun-ending-in-s`). The character BEFORE the
+   final s carries the rule — no English plural has `ss`, `us` or `is` there,
+   and all four of those nouns do. It is a spelling rule and not a grammar, so
+   `the lens` and `the news` still read as plural; the cost is a refused
+   narrowing, never a wrong answer, and D28 declares it. The
    CJK alternatives carry no `\b`, because the boundary never matches inside a
    CJK run and the English list was therefore structurally inert on the six ZH
    cases this repo ships — the lesson `agent.SCOPE_BLOCK` already carried

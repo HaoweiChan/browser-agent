@@ -1,0 +1,23 @@
+{
+  "id": "resolver-refuses-plural-on-a-loose-anchor",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "List all the users who submitted quotes.",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      { "action": "extract",
+        "target": { "role": "link", "near": "\"The lamp as we have built it is a process of our thinking, and it cannot be changed without changing our thinking.\"" },
+        "anchor": "Featured quote" }
+    ]
+  },
+  "expect": { "status": "failure:locate" },
+  "provenance": "PR #42 R7 (HIGH). The singular-task and reading-step refusals were hoisted above rungs 1 and 2 in the round-1 repair — and rung 3, the loosened anchor passes, sits ABOVE both, in the `near` branch that returns before the shared guard is ever reached. So the same plural ask the round-1 repair closed stayed open one rung up: `{role: link}` matches three links, the task asks for the set, and M38's prefix pass resolves an anchor that `main`'s exact+substring matching does not, so a run that was `failure:locate` before this milestone became `success` with one of three users. Watched red first, on the reviewer's own repro: `status success, answer 'corvin'`. The fix gates the two passes M38 ADDED — `normalised` and `prefix` — on the same two refusals, and leaves `near`'s exact and substring matching untouched for every step, which is what M6 shipped and what this milestone never had licence to change.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "that the shared refusals reach every rung M38 added, not just the two below the `near` branch. The anchor here matches nothing literally — straight quotes against the fixture's typographic ones, and a sentence longer than the page renders — so ONLY the loosened passes can resolve it, which is what makes this case red when and only when they are ungated.",
+    "not_covered": "a plural ask whose `near` anchor matches EXACTLY. That resolves as it did at M6, and answering one element from an explicit proximity request is a plan defect (the plan said `near`, which means 'one of these'), not a narrowing this milestone invented. Declared in docs/support-matrix.md D28."
+  }
+}

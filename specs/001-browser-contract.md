@@ -220,14 +220,23 @@ appears, in order — no post-hoc reconstruction).
   `click`, a `fill` or an `observe` the ambiguity stays loud, because narrowing
   there would act on a control the plan did not uniquely name rather than read
   one of several identical values; on a plural ask it stays loud because one of
-  several matches answers a different question — wrong by omission, and that
-  test gates BOTH rungs, not just the second (`resolver-refuses-plural-with-
-  anchor`). The second rung is refused further unless the plan carried no
-  `index` and the matches are interchangeable — same role and same rendered
-  text, so the choice cannot change the answer. Removing any one of those turns a case red
-  (`resolver-refuses-mixed-roles`, `resolver-refuses-plural-wording`,
-  `l4-shop-duplicate-labels`), and everything not covered by the rungs stays
-  the loud `locate` failure it was.
+  several matches answers a different question — wrong by omission. Both tests
+  gate all three rungs, including the loosened anchor passes inside `near`
+  matching, which sit above the other two and were ungated for a round
+  (`resolver-refuses-plural-with-anchor`,
+  `resolver-refuses-plural-on-a-loose-anchor`,
+  `resolver-refuses-a-click-on-a-loose-anchor`). `near`'s own exact and
+  substring matching is NOT gated: an anchor the page contains is the proximity
+  the plan asked for, and M6 shipped it available to every step. The
+  document-order rung is refused further unless the plan carried no `index` and
+  the matches are interchangeable — same role and same rendered text, so the
+  choice cannot change the answer. Removing any one of those conjuncts turns
+  exactly one case red, verified by ablating each over the whole suite
+  (`resolver-refuses-mixed-roles` for the role half,
+  `resolver-refuses-different-readings` for the text half,
+  `resolver-refuses-narrowing-a-click` for the acting refusal, the plural
+  family for the other), and everything not covered by the rungs stays the loud
+  `locate` failure it was.
   The rung that fired is recorded in the step's `note` as
   `narrowed: <rung>` — a run that answered from one of several matches has to
   say which one it picked and why. It is NOT `retry_or_recovery: "recovery"`:
