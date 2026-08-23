@@ -1,9 +1,9 @@
-# 016 — M38: the demo surface, and what 27 live runs said about finance pages
+# 016 — M40: the demo surface, and what 43 live runs said about finance pages
 
-**Date**: 2026-08-23 · **Milestone**: M38 · **Outcome**: the reviewer UI gained a
+**Date**: 2026-08-23 · **Milestone**: M40 · **Outcome**: the reviewer UI gained a
 page view and a running-stage spinner, the example set went from 5 cards to 8,
 and three finance domains were declared from live evidence — one `supported`,
-two `unreliable` — with the 17 failing runs written up as D27 rather than
+two `unreliable` — with the 30 failing runs written up as D28 rather than
 tuned away. `docs/support-matrix.md`, `src/browser/server.py`.
 
 ## Context
@@ -50,11 +50,11 @@ against the deployment. Thirteen answered, thirty failed, and **nineteen of the
 twenty-two domains never answered once**. The split was not the one we expected.
 
 (The first version of this record said "fourteen domains, ten answered,
-seventeen failed", and D27 published the same wrong arithmetic. Both were caught
+seventeen failed", and D28 published the same wrong arithmetic. Both were caught
 by review, not by a check: nothing in this repo recomputes a hand-written count
 against the run ids beside it, which is the same defect
 `docs-numbers-are-derived` exists to prevent one document over. The figures here
-and in D27 were re-derived from the raw probe logs and now agree.)
+and in D28 were re-derived from the raw probe logs and now agree.)
 
 **It answered** on `companiesmarketcap.com` (7/7 across four pages),
 `x-rates.com` (3/3 on one currency pair) and `multpl.com` (3/6, split by page).
@@ -93,8 +93,39 @@ what a run looks like *after* the verifier rejects a container dump, and a lint
 that rejects the plan first would end that run as `failure:task` with nothing
 in evidence — turning a committed case red by changing what it can observe,
 not by fixing what it grades. Isolating the cell instead of giving up is
-already debt (T-R66). Widening D27 with live evidence is the honest move;
+already debt (T-R66). Widening D28 with live evidence is the honest move;
 shipping an unwatched guard on the way past is not.
+
+## The rows expired before they merged
+
+The branch had been green for a while when a merge with `main` turned up two
+PRs that had landed in the meantime — M32's observation drill-down among them.
+Merging meant the deployment this work had been measured against no longer
+existed, so the probes were re-run.
+
+Three of the four examples this milestone had just declared stopped answering.
+`x-rates.com` went 3/3 → 0/3. `multpl.com` went 3/6 → 0/2. The
+`quotes.toscrape.com` author page went 3/3 → 0/1 — it extracted the site title
+and the judge rejected it. Only `companiesmarketcap.com` was unaffected, and the
+reason is legible: its answer *is* the accessible name of a heading, so no plan
+it produces ever needs a container. The failures share a shape none of the three
+pre-M32 shapes covers — `extract {role: WebArea, name: "<page title>"}`, the
+document root named by `<title>`, degrading into a `{text: "<page title>"}`
+relocation that resolves nothing.
+
+Two rows were withdrawn rather than shipped, `bankofcanada.ca` (3/3) and
+`ecb.europa.eu` (2/3) were probed and declared in their place, and the whole
+episode went into D28. It is not attributed to M32: the deployment moved
+model-side as well as code-side, one task phrasing per page was tested, and two
+pre-M32 runs already showed `WebArea` targets. T-M40-2 carries the confounds.
+
+The generalisable part is smaller and worse than any of the individual results:
+**a support-matrix row declared from live runs is a claim about one deployed
+build, and it expires when the build does.** Nothing in this repo detects that
+expiry — no gate, no case, no CI job re-runs any of it. It was caught by hand,
+once, because a merge conflict happened to prompt a re-probe. Had the branch
+merged an hour earlier it would have shipped three cards that no longer worked,
+which is the exact complaint that started this milestone.
 
 ## Assumption → Eval contradiction → Correction
 
@@ -114,7 +145,7 @@ shipping an unwatched guard on the way past is not.
   fred.stlouisfed.org all failed, while `companiesmarketcap.com` — a site
   nobody would name first — answered 7/7.
 - Corrected: the three rows declared are the three that ran, not the three that
-  would look best on a card, and D27 names the shape that decides it (a value
+  would look best on a card, and D28 names the shape that decides it (a value
   in its own labelled element) rather than the domains.
 
 - Assumed: one green run per domain is enough to declare a row, since each
@@ -123,7 +154,7 @@ shipping an unwatched guard on the way past is not.
   next door (`3ec2b4d5` green, `a9d565b2` and `602d70be` red), on identical
   task text. D23's lesson, again, on a new domain.
 - Corrected: every candidate row was repeated before being declared, and the
-  two that split are `unreliable` with the failing sibling run cited in D27.
+  two that split are `unreliable` with the failing sibling run cited in D28.
 
 - Assumed: the page view is a read-only panel over evidence the run already
   produced, so it could not introduce a failure of its own — the risky code was
@@ -140,17 +171,17 @@ shipping an unwatched guard on the way past is not.
   ends terminal, and `clip()` marks a truncated extraction with its true length.
   All four are pinned by `ui-terminal-state-on-every-ending`.
 
-- Assumed: writing the counts into D27 straight from the probe session was safe —
+- Assumed: writing the counts into D28 straight from the probe session was safe —
   the run ids were right there in the same cell.
 - Eval said: both reviewers recomputed them and both got different numbers than
   the prose. "27 live runs / 10 answered / 17 failed" against 40 enumerated ids;
   the true figures are 43 runs, 22 domains, 13 answered, 30 failed, 19 domains
-  that never answered. `docs-numbers-are-derived` cannot see D27 — it recomputes
-  README's block from a report, and D27 has no report.
+  that never answered. `docs-numbers-are-derived` cannot see D28 — it recomputes
+  README's block from a report, and D28 has no report.
 - Corrected: every figure re-derived from the raw probe logs and cross-checked
-  by re-running the count, in D27 and in this record. The underlying gap — a
+  by re-running the count, in D28 and in this record. The underlying gap — a
   hand-typed count beside the ids it summarises, graded by nothing — is stated
-  in D27 rather than closed.
+  in D28 rather than closed.
 
 - Assumed: adding rows and a limitation to the support matrix was a local edit
   to one document.
@@ -160,7 +191,20 @@ shipping an unwatched guard on the way past is not.
   row for the domain is `unsupported`", in the sentence whose job is "nothing
   was softened"), and `specs/decisions/INDEX.md` — none of them graded by
   anything, because no check reads a status word out of the matrix.
-- Corrected: each amended in place with a dated M38 note rather than reworded,
+- Corrected: each amended in place with a dated M40 note rather than reworded,
   ADR-009 struck-not-deleted per the ADR-015 convention. The absence of a guard
   over the matrix's status words is now written down in three of those places
   instead of being rediscovered by the next audit.
+
+- Assumed: a run id is durable evidence — a row declared from repeated live runs
+  stays true, so the probe could be done once and written up.
+- Eval said: merging `main` brought in two merged PRs, the deployment was
+  replaced, and a re-probe of the same tasks put `x-rates.com` at 0/3,
+  `multpl.com` at 0/2 and the `quotes.toscrape.com` author page at 0/1 —
+  three of the four examples this milestone had declared.
+- Corrected: those rows were withdrawn before merge and replaced with
+  `bankofcanada.ca` (3/3) and `ecb.europa.eu` (2/3), every remaining example was
+  re-run against the current build, and D28 now carries both probes plus the
+  rule that fell out of it — a live-declared row expires when its build does.
+  What is NOT corrected: nothing detects that expiry. The next build can do this
+  again and no gate will notice.

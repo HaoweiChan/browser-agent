@@ -45,7 +45,7 @@ What is conceded, and written into the table rather than left implicit:
 - **Nothing grades the rule.** `support-matrix-cites-real-cases` checks that
   backticked case ids resolve; it cannot associate a citation with a row, and
   says so in its own provenance. This is a rule the file keeps by hand.
-- **Nothing grades D27's arithmetic either.** Its first version published four
+- **Nothing grades D28's arithmetic either.** Its first version published four
   wrong counts beside the run ids they summarised, and both reviewers caught it
   by recomputing. `docs-numbers-are-derived` cannot help: it recomputes README's
   block out of a committed report, and a hand-run probe has no report.
@@ -72,6 +72,27 @@ leave the page claiming a dead run was still executing, with the submit button
 disabled for good. `ui-terminal-state-on-every-ending` pins that, the
 cross-run screenshot mix-up beside it, and the truncation marker that stops a
 rejected page dump from rendering as a tidy 300-character answer.
+
+## Decision 1a — and the row expires when the build does
+
+Added after the fact, because the milestone demonstrated it on itself. The three
+rows first declared under Decision 1 were measured against the build deployed
+before PR #34 (M32). That build was replaced mid-branch; a re-probe put two of
+the three at 0/3 and 0/2, and both were withdrawn before merge.
+
+So the concession in Decision 1 — "no gate re-checks these rows" — is not a
+theoretical weakness. It is a defect that fired once inside the milestone that
+introduced it, and it was caught by hand rather than by anything in this repo.
+A row declared this way carries an implicit "as of build X" that nothing
+records, nothing checks, and nothing invalidates.
+
+That does not reverse Decision 1: leaving a measured domain at `—` would still
+be less accurate than declaring it. It adds one obligation, which this branch
+met: **every live-declared row and every Try example is re-run against the build
+being shipped, immediately before merge.** The re-probe is the row's expiry
+check, and it is manual. Making it automatic — a case per declared live domain,
+or a scheduled re-probe against the deployment — is the open work, and it is
+what would turn D28's rows from a snapshot into coverage.
 
 ## Consequences
 

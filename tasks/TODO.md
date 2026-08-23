@@ -67,7 +67,76 @@ Promoted from Debt 2026-08-23: today's post-deploy receipt rounds (PR #32/#37) s
 planner's output is the dominant source of flakiness on the five Try examples; M28 is the
 half that does not collide with M32 (PR #34, in flight in another session).
 
-### M38 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: in-review]
+### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: todo]
+Origin: post-deploy receipt rounds for PR #32/#37/#38 (2026-08-23). `349e4839`,
+`e08b7627`, `bcae4fe7`, `63b9d944` (HN item 1, "Who submitted this story?"):
+`extract {role: link, name: "pg"}` → `ResolveError: 2 matches`; the relocation
+rung retargets as `{text: "pg"}` and hits the same two. `e985e048`
+(quotes.toscrape.com): `{text: "Albert Einstein"}` → 3 matches. `e6768ee0`:
+`{near: "“The world as we have created it …”"}` → no tier resolved (curly
+quotes / long near string). In every case the page held the answer and the
+plan named it; the resolver gave up on ambiguity the page itself could settle.
+Spec: when a semantic target resolves to N>1 elements, the resolver tries
+site-agnostic narrowing before failing: (1) the planner's `near`/`anchor`
+string as a proximity tiebreaker; (2) the first match in document order ONLY
+when the plan carried `index: null` and the task wording is singular — never
+silently when the matches differ in role; (3) `near` matching normalises
+typographic quotes/whitespace and falls back to a prefix of the string. The
+trace records which narrowing rung fired (`retry_or_recovery` semantics of
+specs/001 apply: a narrowing that changed strategy is a recovery, a re-run of
+the same locator is a retry). No site knowledge (CLAUDE.md rule 6).
+Acceptance: fixture cases pin each shape red first — two same-role links
+sharing a name with a distinguishing `near`; three text matches with an
+anchor; a `near` string with curly quotes — and go green; a negative case
+pins that matches differing in role are NOT auto-picked; `ui-no-url-guard`/
+`ui-examples-cover-matrix` unchanged; gate green under the ADR-019 ceiling;
+after merge the HN/quotes examples are re-run 3× each on the deployment and
+the receipts go in the PR evidence pack.
+Out of scope: planner quality (M32), judge availability (M39).
+
+### M39 — A malformed judge response is retried once before failing closed            [status: todo]
+Origin: post-deploy receipt round for PR #38 (2026-08-23). Run `7787f9c9`
+(HN item 1, "What is the title of this story?"): extraction `"Y Combinator"`
+was correct, every L1 predicate passed, and the run ended `failure:semantic`
+with reason `judge unavailable, failing closed: JudgeError: malformed judge
+response: JSONDecodeError: Expecting value: line 1 column 1 (char 0)`. The
+next two runs of the same task (`833bd511`, `6c66bdd4`) passed. ADR-017's
+fail-closed rule is right — a judge that cannot be read must not certify —
+but one transient malformed completion currently costs a correct run outright.
+Spec: on `JudgeError` caused by an unparseable/empty completion (NOT on a
+missing key, NOT on a refusal, NOT on a reasoned FAIL), `judge()` retries the
+same call exactly once with the same prompt; the second failure fails closed
+exactly as today. Both attempts' usage is billed and recorded; the verdict
+records `judge_attempts`. Bounded: one retry, no backoff loop, no model
+switch; the retry stays inside the run's token/USD budget and ADR-017's
+fail-closed semantics are otherwise unchanged.
+Acceptance: a stub-judge case pins the shape red first (first completion
+malformed, second well-formed → PASS with `judge_attempts: 2`); a negative
+case pins that two malformed completions still fail closed with the existing
+reason and `judge_attempts: 2`; `judge-fail-closed-on-*` cases stay green;
+`docs/analysis.md` cost section states the worst-case extra judge call per
+run; gate green under the ADR-019 ceiling.
+Out of scope: judge prompt/model changes; retrying a reasoned FAIL.
+
+### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
+Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
+but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
+page text the agent captured and absent from the a11y elements the planner
+was shown (`docs/analysis.md` §8a-2).
+Spec: progressive disclosure of the *page*, not the tool set — the whole
+vocabulary is ~524 tokens of system prompt and disclosing it lazily saves
+nothing while breaking the closed-world guarantee. One new action `observe`
+with a `target` subtree: the executor re-runs `observe()` scoped to that
+subtree with the full `MAX_ELEMS` budget and a longer text head, and the
+result reaches the replanner through the existing observation+note path.
+Costs one planning call, bounded by `MAX_REPLANS`. No site knowledge.
+Acceptance: an offline fixture case where the answer element sits past
+`MAX_ELEMS` in document order goes from `failure:locate`/dump to correct, red
+first; `quotes.toscrape.com/js` keeps its honest marker if it is still
+unplannable; tokens-per-task measured before/after from committed reports
+and stated (must stay inside the 100k run budget).
+
+### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: in-review]
 Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
 two Try examples produce nothing, five cards should be eight, the running stage should
 show it is running, a right-hand panel should show what the browser saw so a reviewer can
@@ -88,6 +157,9 @@ that reaches eight real-site rows. The fifth — "support investment sites" — 
 answered by writing code; it is answered by running the deployment and declaring what came
 back, under the same report-assisted/human-declared rule as every other row.
 Acceptance:
+- Every Try example and every live-declared row is re-run against the build being
+  shipped, immediately before merge (added mid-task — see ADR-022 Decision 1a; the
+  first three rows declared here expired when the deployment was replaced).
 - No Try example cites a run shape that no longer reproduces. Each card's example is
   re-run against the deployment and its status matches what happened, including the one
   card that is deliberately a failure demo.
@@ -95,32 +167,19 @@ Acceptance:
   (`ui-examples-cover-matrix` already grades set equality in both directions).
 - The new live-declared rows carry their run ids, their repeat counts, and a declared
   limitation naming the page shapes that failed — not a pass rate thresholded into a word.
-- Every new UI hook is pinned by the UI cases, watched red against the pre-M38 page.
+- Every new UI hook is pinned by the UI cases, watched red against the pre-M40 page.
 - Cold review and spec-drift both run before the commit; every finding either lands as a
   fix with a case, or as a declared limitation. No finding is closed by rewording alone.
+Rebased onto main 2026-08-23 after PR #34/#39 merged: this block was written as M38 and
+renamed to M40 — main had already queued M38 (resolver disambiguation) and M39. The
+collision is worth noting rather than silently renumbering, because main's M38 is the fix
+for one of the two broken Try examples this task found by hand: `e985e048`/`e6768ee0` in
+its Origin are the same quotes.toscrape.com ambiguity this task hit as `eefae1b8`.
 Not in scope, and why: a plan-lint clause refusing container-role `extract` targets. It is
 the obvious fix for the dominant live failure shape and it would turn
 `extract-container-dump-is-not-the-answer` red by ending the run before anything is read —
 changing what that case can observe rather than fixing what it grades. Isolating the cell
 stays T-R66/M28.
-
-### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: todo]
-Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
-but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
-page text the agent captured and absent from the a11y elements the planner
-was shown (`docs/analysis.md` §8a-2).
-Spec: progressive disclosure of the *page*, not the tool set — the whole
-vocabulary is ~524 tokens of system prompt and disclosing it lazily saves
-nothing while breaking the closed-world guarantee. One new action `observe`
-with a `target` subtree: the executor re-runs `observe()` scoped to that
-subtree with the full `MAX_ELEMS` budget and a longer text head, and the
-result reaches the replanner through the existing observation+note path.
-Costs one planning call, bounded by `MAX_REPLANS`. No site knowledge.
-Acceptance: an offline fixture case where the answer element sits past
-`MAX_ELEMS` in document order goes from `failure:locate`/dump to correct, red
-first; `quotes.toscrape.com/js` keeps its honest marker if it is still
-unplannable; tokens-per-task measured before/after from committed reports
-and stated (must stay inside the 100k run budget).
 
 ### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
 Origin: `prompts/015` — "would an MCP / tool-calling loop raise completion?"
@@ -146,6 +205,448 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M40-1 — `/smoke/stream`'s concurrency guard is a read, not an acquire            [status: todo]
+Origin: PR (M40) round 2, cold review finding "also noted"
+Spec: `smoke_events` (`src/browser/server.py`) checks `SEM.locked()` and returns early, but never
+takes `SEM`. The guard is therefore one-directional: it stops a browser check starting under a
+RUN, and stops nothing else. Two tabs both clicking Browser check launch two Chromiums; a check
+followed within its ~15s window by `POST /tasks` does the same; and `/readyz` reports
+`{"ready": true, "busy": false, "active_run_id": null}` throughout, because it reads `SEM` too.
+On a small PaaS container the second Chromium is the OOM the guard exists to prevent, and it gets
+attributed to the agent.
+Repro: two concurrent `curl -N https://<host>/smoke/stream` — both reach `launching`.
+Acceptance: the smoke path takes the same semaphore the run path does (or a documented
+non-blocking `try-acquire`), and a case pins that two concurrent smoke streams cannot both reach
+`launching` — watched red against the current early-return.
+
+### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: todo]
+Origin: PR (M40) post-merge re-probe of the deployment, 2026-08-23
+Spec: M40 declared three live rows from 43 runs against the build deployed BEFORE PR #34 (M32).
+After M32 deployed, a re-probe of the same tasks shows a new dominant failure shape that none of
+D28's three shapes covers: the planner emits `extract {"role": "WebArea", "name": "<the page
+title>"}` — the document root, named by `<title>` — and the relocation rung then retargets as
+`{text: "<the page title>"}` and resolves nothing. Measured: x-rates.com 0/2 (`b8b95067`,
+`133264ee`, was 3/3 pre-M32), multpl.com 0/2 (`bdc38f65` container dump via a Table link,
+`c7fa2623` three `observe` steps then a click and no extraction; was 2/3), quotes.toscrape.com's
+author page 0/1 (`6811f8bf` — extracted "Quotes to Scrape", the site title, and the M36 judge
+rejected it; was 3/3), openlibrary.org 0/1 (`a6797fbe`, same WebArea shape). companiesmarketcap.com
+is unaffected (2/2, `d0b63c7e`, `f2c8c624`) — its answer is the accessible NAME of a heading, so
+the plan never needs a container.
+Not claimed: that M32 CAUSED this. The probe is one task phrasing per page against a deployment
+that also moved model-side; `WebArea` targets appear in two pre-M32 runs too (`8c1a3344` stooq,
+`c80b1dd0` coingecko). What is measured is that four of five re-probed tasks that answered before
+do not answer now, and that the shape they share is a container target the resolver cannot use.
+Acceptance: an offline fixture case pinning `extract {role: WebArea}` (and the `{text: <title>}`
+relocation it degrades into) as a refused plan rather than a locate failure — the plan lint is the
+natural home, next to the container-dump clause M28/T-R66 already owns — watched red first; then
+the D28 rows re-declared from a post-fix probe of the same tasks.
+
+### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
+Origin: PR #34 R17.
+Spec: ADR-020 claimed "`live` suite 9/9 after this change" and cited a report
+whose `score` is 0.889 — 8/9, with `live-ol-edition-title` failing. The claim
+and the artifact disagreed and nothing could see it, because
+`report-citations-resolve` grades that `evals/report/<id>.json` EXISTS. That is
+the repo's standing one-direction gap (T-R19 is the same shape for the reverse
+direction), and it is what let a green claim hang on a red artifact inside a
+review's own surface. The citation is corrected; the mechanism is not.
+Repro: point any "N/N" prose at a report whose `score < 1.0` and run
+`--suite invariant` — nothing goes red.
+Acceptance: a citation adjacent to a pass-rate claim must resolve to a report
+whose score supports it — the parse only has to be good enough to catch
+"9/9 ... <red report>", not to understand arbitrary prose — watched red against
+the ADR-020 sentence as it stood before this fix.
+
+### T-M32-11 — any `expect` that implies verdict PASS crashes the adapter on a run that fails before grading            [status: todo]
+Origin: PR #34, found while reproducing R16 with the reviewer's own probe;
+trigger restated per PR #34 R26 — the first version of this block said "an
+empty `expect`", which is narrower than the real condition and would have
+produced a half-fix.
+Spec: `_run_fixture_case` computes `want_verdict = exp.get("verdict") or ("PASS"
+if exp.get("status", "success") == "success" else None)`
+(`src/browser/eval_adapter.py:1382-1384`), which is truthy whenever `expect`
+OMITS `status`, or sets `status: success`, or names a verdict outright — i.e.
+for most cases, not only empty ones. Under that branch, `:1399` evaluates
+`result["verdict"]["verdict"]` whenever `audit["layer"] == 1` (no
+`expect.answer`/`expect.state` ground truth), and `result["verdict"]` is `None`
+for any run that ends BEFORE grading — every refusal path, and every
+`failure:*` exit. The subscript raises `TypeError: 'NoneType' object is not
+subscriptable` and the case reports a traceback instead of the failure it just
+produced. Every committed case happens to pair such an `expect` with either
+ground truth or a non-success status, so this only bites ad-hoc probes — which
+is precisely the tool people reach for when hunting defects, and it turns "the
+run failed loudly" into "the harness broke". Mitigated, not fixed:
+`evals/run.py:60-66` catches it and reports the case FAIL with the traceback,
+so no suite aborts.
+Repro: `_run_fixture_case({... "expect": {"status": "success"}})` — NON-empty —
+on any plan that ends `failure:task`, e.g. the R16 reproduction after its fix.
+An empty `expect` is just one instance of the same branch.
+Acceptance: a run whose `result["verdict"]` is `None` reports its status
+against the expectation instead of subscripting `None`, for EVERY `expect`
+shape that implies verdict PASS — empty, `{"status": "success"}`, and
+`{"verdict": "PASS"}` alike — with the fix watched red on a non-empty `expect`
+first, so it cannot be closed by special-casing the empty one.
+
+### T-M32-15 — `assemble_result` trusts its caller for the verdict, and would emit an uncertified success if one ever forgot            [status: todo]
+Origin: PR #34 round 7, the M28 merge hunt. Latent, not reachable today.
+Spec: `src/browser/agent.py:assemble_result` enforces INV-2 as
+`if status == "success" and verdict and verdict.get("verdict") != "PASS"`. The
+`and verdict` short-circuits: a falsy verdict (`None`, `{}`) skips the branch
+entirely, so a caller passing an answer with no verdict gets `status: success`
+carrying an answer nothing certified — the silent-success shape this repo has
+now hit seven times. Symmetrically, `answer` is only nulled inside that branch,
+so any `failure:*` built with an `answer=` would carry it; M28 nulls the answer
+for the DEMOTED-success path only.
+Probed directly on the merged tree, both shapes reproduce as a pure function:
+`assemble_result(trace, "an answer", B, verdict=None)` -> `status: success,
+answer: "an answer"`; `assemble_result(trace, "an answer", B, failure="task")`
+-> `failure:task` still carrying the answer.
+Why it is NOT live, established by enumeration rather than assumed:
+  * `run_task` has exactly one `done()` call without `failure=` (agent.py:1183),
+    and it always passes `verdict=` computed at :1176 by `verify()`, which
+    returns `{"verdict": "PASS"|"FAIL", ...}` on every path (verifier.py:598) —
+    never `None`, never `{}`. `_apply_judge` only ever returns `{**verdict, ...}`,
+    so it cannot empty it either, and a `verify()` exception exits at :1174 as
+    `failure:semantic` with no answer.
+  * No `done()` call anywhere passes BOTH `answer=` and `failure=` — checked
+    across all 20 call sites, so no refusal path (M32's drill-down and plan-lint
+    refusals included) can carry an answer.
+  * The only non-`run_task` production caller is `server.py:_env_failure`, which
+    passes `answer=None, failure="env"`.
+So the specific combination the round-7 brief asked about — M28's rejected-run
+path plus M32's drill-down/lint refusals producing a non-failure status with an
+unearned answer — cannot occur. This block exists because "no caller does that"
+is exactly the kind of guarantee this repo keeps watching fail: it is convention,
+not enforcement, and it guards the one property specs/000 calls inviolable.
+Repro: the two calls above, or delete `verdict=verdict` from agent.py:1183 and
+watch `inv2-verifier-outranks-executor` stay GREEN — it constructs its own
+verdict and never exercises the absent-verdict branch.
+Acceptance: `assemble_result` treats a missing verdict on the success path as a
+failure rather than a pass (`failure:semantic`, or `failure:extract` with a
+reason naming the missing verdict), and never returns an answer alongside a
+non-success status. One guard in the shared function, not in each caller. Watch
+it red first with a case that calls `assemble_result` with an answer and no
+verdict and asserts the status is not `success` — the existing `inv2` case
+cannot see this branch.
+
+### T-M32-14 — `plan-adoption-is-the-only-steps-rebind` has three binding forms it cannot see, and does not say so            [status: todo]
+Origin: PR #34 R30. Routed to debt by the reviewer, not repaired here.
+Spec: `_check_steps_adopt_only` enumerates `ast.Assign`, `ast.AugAssign`,
+`ast.AnnAssign` and `ast.NamedExpr` targets plus in-place mutation of `steps`.
+Three forms bind the name and are invisible to it:
+1. `for steps in ...` — `ast.For.target` is never inspected;
+2. `with ... as steps` — `ast.withitem.optional_vars` likewise;
+3. any callable literally named `adopt` shadowing the real nested one — the
+   check matches `adopt` by NAME, not by resolving which `adopt` is in scope, so
+   a local helper of that name satisfies `adopt_derived()` while doing anything
+   it likes.
+Mitigation, confirmed by the reviewer rather than assumed: the only one of the
+three that actually REMOVES a lint is caught at runtime —
+`observe-drilldown-replan-is-linted` goes red — so the property holds in the
+layered sense (source-shape here, behaviour there). That is why this is LOW and
+why it is debt rather than a hole in the M32 acceptance.
+What makes it worth logging anyway is the disclosure gap, which is the same
+class the enforcing case was written to close. The case's `triage.note` already
+declares the adopt()-BEHAVIOUR exclusion ("adopt() itself could stop calling
+plan_gap, which is a different assertion") and a known false positive (a helper
+returning adopt()'s value), but says nothing about BINDING FORMS — so a reader
+reasonably concludes the binding enumeration is exhaustive when it is not. This
+PR spent five rounds on claims that were true only by convention (R25) and on
+absolute statements a later fact falsified (R22, R28); an undeclared exclusion
+in the case that fixed R25 is the same shape one level down.
+Repro: add `for steps in [steps[:si] + new_steps]: break` at any adoption point
+in `src/browser/agent.py` and run `--suite invariant` — the case stays green.
+Acceptance, in preference order. The honest MINIMUM is disclosure: name these
+three forms in the case's "what it does NOT cover" list, beside the runtime
+cases that do cover them, so the layered argument is stated rather than left to
+be discovered. Better, and cheap: also inspect `ast.For.target` and
+`withitem.optional_vars` — two more node types in the same walk, no new
+machinery. The shadowing hole is the one NOT worth closing by hand (resolving
+scope means a symbol table, which is a real static analyser and far past what
+this case is for); declare it and lean on the runtime case. Watch any code fix
+red against the repro above first.
+
+### T-M32-13 — the band ledger's `ts` is not a valid ordering key across environments, so a locally-derived band is structurally red on CI            [status: todo]
+Origin: PR #34 round 5 CI diagnosis.
+**Latent defect in main's property. This PR triggered it; this PR did not
+introduce it; it is deliberately NOT repaired here.** Repairing it means
+changing `published-band-matches-the-ledger`, a graded property that arrived
+with PR #35, in a PR that needs it green — which is the exact move CLAUDE.md
+hard rule 1 exists to prevent. Goes to the human as a finding.
+
+Spec: `evals/run.py` stamps every ledger row with a naive
+`time.strftime("%Y%m%d-%H%M%S")` — no zone, no offset — and
+`_band_wrong` compares those strings lexicographically (`r["ts"] <= ts`) as if
+they were a total order on real time. The committed ledger mixes two zones:
+local rows are Asia/Taipei (UTC+8), CI rows are UTC. Across two zones the
+comparison is simply wrong.
+
+Where it bites is ADR-019 §6 item 2's dirty clause: a dirty cited row is
+refused if any CLEAN row at that count has `ts <= cited ts`. On CI the checkout
+is clean, so every CI row is `dirty: false` and becomes a disqualifier for any
+locally-cited dirty band.
+
+The concrete pair, from run 32637648447 on `11545a1`:
+
+| row | stamped | real time (UTC) |
+|---|---|---|
+| our cited invariant band | `20260823-192533` | 11:25:33Z |
+| CI's invariant row | `20260823-115044` | 11:50:44Z (`gh` confirms the step ran 11:50:28-11:50:45Z) |
+
+CI's row is **25 minutes LATER in real time and 8 hours EARLIER as a string**,
+so the check reads it as having existed "by then" and retroactively reddens a
+published band — which is precisely the treadmill §6's as-of rule was written
+to refuse (PR #35 R11). The rule is sound; its ordering key is not.
+
+Not a wall-clock effect. Control: hold the CI row's wall clock (16.03s) and
+`dirty: false` fixed and move only its `ts` later — the case goes GREEN. The
+16.03-vs-13.15 gap does nothing.
+
+**Why main is green, and why that does not generalise.** Main cites
+`20260823-041729` for its invariant band: 04:17 local = 2026-08-22 20:17Z, so
+any same-day CI stamp sorts after it and nothing trips. Replaying the real CI
+row against main's published band, counts and ceilings through `_band_wrong`
+returns GREEN. But main's first CLEAN row at 53 invariant cases is
+`20260823-042306` — **six minutes after** the row it cites. Main is green by six
+minutes, and only because it happened to republish its band in the small hours.
+Any band republished during Taipei daytime lands in the vulnerable window, which
+is essentially every future one.
+
+**Second symptom, same blindness.** CI's own row also enters `ledger max`
+mid-job. CI's `invariant` measured 16.03s, which derives 20 and is fine today;
+the next band starts at **17.39s**, above which `rule(ledger max)` = 25 > the
+committed 20, item 4 goes red, and it is **ungreenable locally** because the
+local ledger has no CI rows to reproduce it. 1.36s of margin, **8.5%**, against
+a runner spread ADR-019 §5 itself records as **6.8%**. The `fast` side already
+shows the gap concretely: CI measured 77.65s, which derives **90**, while the
+band published from local runs derives **85**. That pair is red on item 3 the
+moment both rows sit in one ledger. It does not fire today only because a run's
+own row is appended AFTER its cases are graded (`evals/run.py:210` grades,
+`:289` appends), so CI's `fast` row never exists while the `fast` step is being
+graded, and CI never pushes.
+
+**The structural asymmetry, stated plainly.** CI never pushes, so no CI row is
+ever committed, so every local gate run is green BY CONSTRUCTION on exactly the
+rows that redden CI. This whole failure class is invisible from a local gate —
+which is why it survived to be found by a CI run rather than by the check.
+
+Repro: append `{"ts": "20260823-115044", "suite": "invariant", "sha":
+"11545a1", "dirty": false, "passed": 58, "total": 58, "score": 1.0, "wall_s":
+16.03, ...}` to a scratch copy of the ledger, point `evals.run.HISTORY` at it,
+and run `published-band-matches-the-ledger` against a band citing a dirty local
+row stamped later in the day. Payload:
+`{"cited_a_dirty_run": "<ts>", "clean_runs_available_by_then": ["20260823-115044"]}`.
+
+Acceptance: two candidate fixes, neither applied here.
+1. **Stamp `ts` in UTC**, or record the offset beside it, so the comparison is
+   valid. Smallest change; fixes the ordering symptom only.
+2. **Record the environment on each row and scope the ledger by it.** Fixes both
+   symptoms, and is arguably what ADR-019 §5 already ASSUMES when it says CI's
+   numbers "are not in that ledger and cannot be" — they are, mid-job, just
+   never committed.
+Whichever is chosen, watch it red first against the repro above.
+
+**What the round-5 repair did NOT solve.** PR #34 re-cited both bands to CLEAN
+rows, which makes item 2's dirty clause unreachable for THESE bands under any
+clock. That is a fix for this branch's documents, not for the property. Adding a
+case still forces a dirty cited row, because the tree only reaches count N+1
+while the new case is uncommitted — which is the entire reason the dirty
+allowance exists. So the next case added from a daytime session re-triggers this
+on CI and needs a SECOND commit to re-cite a clean row once the first has
+landed. The PR #35 R11 deadlock is not solved, it is relocated from local into
+CI, where it is invisible until push and costs a full push/CI cycle to discover.
+
+### T-M32-12 — T-R34 left the Queue when it merged but never got its DONE.md line            [status: todo]
+Origin: PR #34, found during the fourth `origin/main` merge of round 5 while
+reading the auto-merged `tasks/TODO.md`.
+Spec: `tasks/DONE.md` is the append-only "one line per merged task" index.
+T-R34 merged as PR #35 (`3eac663`); `efb2711` then removed its `### T-R34`
+Queue block from `tasks/TODO.md`, leaving only four `Origin: T-R34`
+cross-references and no DONE.md line. So a merged task vanished from both
+trackers, and the only record that it shipped is the pr-loop ledger row and git
+history. M37 is in the same state one step earlier — merged as PR #37 while
+`tasks/TODO.md` still carries it at `[status: pr]` and DONE.md does not list it
+— which suggests the closing bookkeeping step is being skipped, not that T-R34
+was a one-off. Pre-existing on `origin/main`; not this branch's doing, and not
+repaired here because editing another task's completion record from inside an
+unrelated PR is how two trackers end up disagreeing.
+Repro: `grep -c 'T-R34' tasks/DONE.md` -> 0, while `tasks/pr-loop-ledger.jsonl`
+holds a T-R34 row dated 2026-08-23 and `git log --oneline origin/main` shows
+PR #35 merged.
+Acceptance: DONE.md gains its T-R34 line (and M37's when that closes), or the
+pr-loop close step is what writes it so the gap cannot recur — the latter is
+the better fix, since this is the second instance in two milestones. Cheap
+guard if one is wanted: every task id that has a `pr-loop-ledger.jsonl` row and
+no `### <id>` heading in TODO.md must have a DONE.md line.
+
+### T-M32-8 — ADR-002's Ruling and the CI band publish ceilings nothing derives from the ledger            [status: todo]
+Origin: PR #34 R18, extended by PR #34 R21. Routed to debt in round 4 and
+recorded in `tasks/reviews/pr34-r4-resolution.json`, but no block was ever
+written into this file — found while repairing R21 in round 5, which is itself
+the reason to keep the block: a debt id that exists only in a review artifact
+is not tracked.
+Spec: two halves, same class — a published wall-clock number that no longer
+matches what is derived from the committed ledger. (a) `specs/decisions/ADR-002`
+Decision 4's Ruling publishes "fast 80s local" and its Status line "60s locally,
+80s on CI", while `evals/run.py` commits `{"fast": 90, "invariant": 20}`;
+ADR-002's `Amended by` list ends at ADR-019 and does not name ADR-021. (b) the
+ADR-019 §5 CI band and the README paragraph beside it are hand-read off a
+workflow log, are in no ledger, and nothing grades them (that half overlaps
+T-R51). The LOCAL bands are now graded end to end by
+`published-band-matches-the-ledger` — ADR-019 §6 items 1-7 — which is what
+closed the original R18/R21 enumeration defect; these are the publications that
+sit outside its reach.
+Repro: `grep -n '80s local' specs/decisions/ADR-002-*.md` against
+`evals/run.py:91`; nothing goes red.
+Acceptance: ADR-002's Ruling, Status and `Amended by` name ADR-021 and the
+enforced local pair, or drop the numbers in favour of "the ceiling
+`evals/run.py` enforces"; the CI half is either graded or explicitly declared
+ungraded where it is published.
+
+### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: todo]
+Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
+routed to debt in round 4, never written into this file until round 5.
+Spec: `evals/run.py:91` commits `WALL_BUDGET_S = {"fast": 90, "invariant": 20}`
+locally. Publications that disagree: (1) **`CLAUDE.md`'s Gate and Commands
+blocks** — the repo's stated working contract — still say `invariant` "wall
+clock <= 15s" and `fast` "wall clock <= 75s", so every committed `fast` run on
+this tree (73.9-74.8s local, 88.39s on CI) reads as a breach against the
+contract while passing the gate it actually has; (2) `INDEX.md`'s ADR-017 line
+publishes "fast 75s local"; (3) `fast-wall-clock-budget.json`'s `expect.note`
+says the override "falls back to the committed 80 for everything else" while
+every `env_override` row in the same case now expects 90. (1) and (2) are
+byte-identical to `origin/main` and predate this branch; (3) was introduced
+with ADR-021. `evals/run.py:304` also still labels the ceiling's source
+"ADR-002 Decision 4" when ADR-019 and ADR-021 are the live rulings.
+Repro: `grep -n '75s\|15s' CLAUDE.md specs/decisions/INDEX.md` against
+`evals/run.py:91`; the suites stay green.
+Acceptance: all three publications state the enforced pair, or drop the
+literals for "the ceiling `evals/run.py` enforces" — CLAUDE.md's Gate and
+Commands blocks named explicitly, since that is the file a new contributor
+reads as the contract. Nothing graded changes; if it can be graded cheaply
+(one sweep over tracked markdown for a ceiling literal that is not the
+committed one), do that instead and watch it red on CLAUDE.md first.
+
+### T-M32-3 — act-failure coverage costs 4.6s of a suite that already straddles its ceiling            [status: todo]
+Origin: PR #34 R1 (the fix, not the finding); cost model corrected per PR #34 R11.
+Spec: an act failure is only expensive when it is a POSTCONDITION failure. Those
+run `check_state`'s whole settle loop (10 x 200ms) before returning False, so
+they cost a full `SETTLE_BUDGET_MS` each: `observe-cannot-launder-noop-action`
+2.29s, `observe-drilldown-cannot-launder-noop-action` 2.35s, and the three that
+predate this PR (`recovery-replan-postcondition` 2.33s,
+`recovery-label-requires-strategy-change` 2.32s,
+`replan-cannot-launder-noop-action` 2.29s). An act failure raised INSIDE
+`execute` never reaches `check_state` at all and is free — a fill readback
+mismatch is instant, a click timeout is 10s for a different reason. The first
+version of this block claimed the settle loop was the price of every act
+failure; that was wrong, and `observe-drilldown-cannot-launder-unchecked-action`
+now uses the cheap shape (~0.15s, a fill past the search box's `maxlength`).
+The two 2.3s cases keep the postcondition shape because it is the only one that
+produces `page_changed: false` — the cheap shape produces `null`, and PR #34 R8
+is precisely what happens when those two values are not both pinned.
+Repro: `evals/report/20260822-185625-fast.json`, sort `results` by `seconds`.
+Acceptance: either a cheaper way for a case to declare "this postcondition will
+not hold" (a per-case settle bound is the obvious one, and it must not weaken
+the production budget), or an explicit ruling that act-failure coverage is worth
+its share of the ceiling — recorded wherever the open wall-clock decision lands
+(PR #29 R21). Do NOT fix it by shortening SETTLE_TRIES: that is a production
+budget with `nav-load-event-never-fires` behind it.
+
+### T-M32-1 — the reviewer UI has no phase for an `observe` step            [status: todo]
+Origin: M32 (ADR-020), found while adding the drill-down.
+Spec: `phaseFor(s)` in `src/browser/server.py` maps `navigate` -> "browser" and
+`extract` -> "verification" and everything else to "action". An `observe` step
+reads the page and changes nothing, so showing it as "action" tells a watcher
+the agent is acting when it is looking. One line, but that file is M35's
+(the visitor-facing console) and this PR must not collide with it.
+Repro: run a task whose plan starts with an `observe` step and watch the SSE
+progress bar — the "action" phase lights up before anything is done.
+Acceptance: `observe` maps to a reading phase, and `ui-execution-progress`
+covers the mapping.
+
+### T-M32-2 — the post-edit invariant hook runs in the wrong worktree            [status: todo]
+Origin: M32, found while implementing.
+Spec: `.claude/hooks/post-edit-invariant.sh` cds to `$CLAUDE_PROJECT_DIR` and
+prefers `.venv/bin/python` there. When the session is working inside a
+`.claude/worktrees/` sibling, that variable still points at the ORIGINATING
+worktree, so the hook grades a different checkout than the one being edited,
+and with a bare `python3` if that checkout has no `.venv` — which reports
+`ModuleNotFoundError: No module named 'fastapi'` for 14 of 38 invariant cases
+on every single edit under `src/`. Loud, so nothing was silently wrong, but the
+feedback it gives is about neither the edit nor the tree.
+Repro: edit any file under `src/` from a worktree whose parent checkout has no
+`.venv` and read the hook's output.
+Acceptance: the hook resolves the tree from the edited file's path (or from
+`git rev-parse --show-toplevel` on it) rather than from `$CLAUDE_PROJECT_DIR`.
+
+### T-M32-4 — the `analysis_section1` grader asserts presence, not absence of contradiction            [status: todo]
+Origin: PR #34 R10
+Spec: `docs-numbers-are-derived`'s new `analysis_section1` block reads the whole
+of `docs/analysis.md` and asserts each derived string is `in text`, with no
+section scoping (unlike `analysis_coverage`, which slices `## 6. Coverage`..`## 7.`)
+and no uniqueness check — so a contradicting sentence beside the correct one
+stays green. Verified: inserting "Actually only 170 browser actions run, and 12
+of the 119 cases open a browser." above the correct "202 browser actions in a
+`fast` run" leaves the case PASSING. Strictly a narrower instance of `T-R29`,
+which already owns this weakness for the same case's other halves — fix it once,
+for every half, there.
+Repro: insert the contradicting line into `docs/analysis.md` §1 and run
+`_run_doc_counts_case(json.load(open('evals/adversarial/docs-numbers-are-derived.json')))`
+-> `passed: True, wrong: []`.
+Acceptance: the §1 block scans only §1, and/or asserts no other
+`\d+ browser actions` / `\*\*\d+ of the \d+\*\* cases` string appears in the
+section; the contradicting-line probe above reddens.
+
+### T-M32-5 — README publishes 28 wall clocks no committed report backs            [status: todo]
+Origin: PR #34 R12
+Spec: `README.md:68`, `:71-73`, `:78`, `:85`, `:90`, `:96` and `:99` publish
+wall-clock numbers that `docs-numbers-are-derived` does not recompute — its
+`readme_quotes` are only the three case-count strings, and `where_it_stands`
+only recomputes the fenced baseline block. All of these predate PR #34 (the M32
+band that round-1 finding R4 named IS deleted), so they are not M32's to fix,
+but they are the same class of published-number drift R4 and R5 were about and
+the repo has now hit that class three times in one PR.
+Repro: `grep -n '59.62\|58.96\|59.77\|68.1s\|89.62s\|63.3s' README.md` and
+try to resolve any of them to a report in `evals/report/`.
+Acceptance: each remaining README wall clock names the report it came from and
+is recomputed by `docs-numbers-are-derived`, or is deleted.
+
+### T-M32-6 — the recovery-label clause credits the drill-down path with a label it never sets            [status: todo]
+Origin: PR #34 R14
+Spec: `specs/001-browser-contract.md:130-135` says the `recovery` label and the
+`superseded_by` pointer "skip past an `observe` and land on the next attempt of
+any other kind, which is usually the `extract` the drill-down was asked for",
+and cites `recovery-replan-postcondition` as the shape where that extract is
+the only step. Both halves conflate two paths: `pending_recovery` is assigned
+at `src/browser/agent.py:833` only, inside family 2's act->replan branch — the
+drill-down branch (`agent.py:743-791`) sets only the note — and
+`recovery-replan-postcondition`'s stub plans contain no `observe` at all, so
+nothing skips past anything there. ADR-020 §2 carries the same conflation.
+The code is correct and graded; only the prose is imprecise.
+Repro: `grep -n 'pending_recovery' src/browser/agent.py` -> 682, 694, 697, 833;
+only 833 assigns `"recovery"`, and it is unreachable from the drill-down branch.
+Acceptance: the clause separates the two statements — the label defers past an
+`observe` and lands on the next non-`observe` attempt, which in
+`recovery-replan-postcondition` is a bare `extract` with no drill-down involved
+and in `recovery-label-lands-on-the-extract` is the `extract` the drill-down's
+replan returned while a family-2 recovery is in flight.
+
+### T-M32-7 — the contract's laundering clause omits the `page_changed: null` half            [status: todo]
+Origin: PR #34 R15
+Spec: `docs/support-matrix.md` D25 and `specs/decisions/ADR-020` were both
+rewritten to say that "changed nothing" covers an attempt that ran and moved
+nothing AND one that never got far enough to be compared, citing all three
+laundering cases. `specs/001-browser-contract.md:145-150` was left at the
+earlier wording: no null half, and no
+`observe-drilldown-cannot-launder-unchecked-action`. Three documents state the
+same rule and one of them is now behind. Nothing grades the contract's case
+citations — `support-matrix-cites-real-cases` covers the matrix, not
+`specs/001` — so they can drift silently, which is how this happened.
+Repro: `git diff 5a88b9c..HEAD -- specs/001-browser-contract.md docs/support-matrix.md`.
+Acceptance: `specs/001-browser-contract.md:145-150` states the null half and
+cites the third case, matching D25 and ADR-020 word for word on the predicate;
+ideally a grader covers the contract's case citations the way
+`support-matrix-cites-real-cases` covers the matrix's.
 ### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: in-review]
 Origin: M37 implementer
 Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
@@ -157,9 +658,9 @@ who types the placeholder verbatim against the HN card's URL reproduces the reti
 Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
 "What is the title of this story?" is the obvious one), pinned by the ui-form case the way
 `expected_examples` pins a chip — or a note that placeholders are illustrative only.
-Closed by M38: the placeholder is now "What is the market cap of this company?" — the
-`companiesmarketcap.com` example's task, 7/7 on the deployment (D27), the strongest cited run
-in the set rather than the HN one. It sits two lines above the EXAMPLES map M38 rewrote, so
+Closed by M40: the placeholder is now "What is the market cap of this company?" — the
+`companiesmarketcap.com` example's task, 7/7 on the deployment (D28), the strongest cited run
+in the set rather than the HN one. It sits two lines above the EXAMPLES map M40 rewrote, so
 fixing it there rather than in its own PR is the shorter diff. The acceptance's second half is
 NOT met and is not claimed to be: nothing grades placeholder text, so this can regress silently
 again — the `ui-form` pin stays open work.

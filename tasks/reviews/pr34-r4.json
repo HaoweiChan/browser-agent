@@ -1,0 +1,84 @@
+{
+  "pr": 34,
+  "round": 4,
+  "task": "M32",
+  "result": "REQUEST_CHANGES",
+  "scope": "git diff 5a88b9c..HEAD \u2014 R13's fix, the reverted ceiling commit, both origin/main merges (M36 PR #33, M31 PR #29), the ADR renumber, and ADR-021. Not a fresh sweep.",
+  "standing_findings": {
+    "R13": {
+      "verdict": "CLOSED",
+      "evidence": "Both mutations re-run by the reviewer on the current tree. (D) reads_without_acting reverted to the pre-R1 one-liner -> fast 143/146 = 0.979 with observe-cannot-launder-noop-action among the failures. (C) family 2's guard -> `elif False:` -> fast 142/146 = 0.973, same case failing. The trace_actions + replans:0 choice verified red on WHICH STEPS RAN, not on got.reason, so a reworded refusal stays green."
+    },
+    "merge_laundering_hole": {
+      "verdict": "CORRECT IN EVERY PART",
+      "evidence": "M32's predicate alone -> replan-cannot-launder-noop-action-extract-all and observe-cannot-launder-extract-all both fail. M31's one-liner alone -> observe-cannot-launder-noop-action and observe-cannot-launder-extract-all both fail. The new intersection case is red under BOTH halves, so it is not a third copy of either parent's test. No false positives: [observe, click, extract] still accepted, full look-then-act run reaches success/'Cobalt Floor Rug'. Further hunting on the union predicate found nothing."
+    },
+    "merged_parents_intact": {
+      "verdict": "CONFIRMED",
+      "evidence": "getattr(planner,'notes',[]) reads the stub, not M32's recording wrapper. Mutating _apply_judge so a rejecting judge cannot downgrade -> judge-catches-varying-context-furniture red. Mutating plan_gap to always return None -> 5 red including plan-lint-holds-across-a-midrun-replan. Zero case files lost across 145 -> 159."
+    },
+    "ADR-021_honesty": {
+      "verdict": "HONEST",
+      "evidence": "The local fast gate was NOT red on wall clock at 80 \u2014 every 146-case run is 73-77s. What was red is published-band-matches-the-ledger check 3 (80 < 90), so 90 is the number the grader derives. 74.81 x 1.15 = 86.03 -> 90 checks out. Growth is case count, not per-case cost: median per-case 0.5375s @122 -> 0.4998s @132 -> 0.5084s @146, flat-to-down. ADR-020 revert complete (net effect of d25918a^..744b7a6 is two history.jsonl lines). .github/workflows/eval.yml byte-identical to origin/main. .eval-baseline.json untouched across the whole PR. ADR numbers 000-021 unique, INDEX matches disk."
+    }
+  },
+  "findings": [
+    {
+      "id": "R16",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "M32's drill-down replan adopts a plan without running M31's plan_gap lint, so a mid-run drill-down can add a second enumeration and the run reports success / verdict PASS with an unranked list of lists \u2014 the exact defect ADR-018 Decision 3 names, re-opened through the adoption point that same ADR names by hand as the one that must lint.",
+      "evidence": "src/browser/agent.py:1006 `steps = steps[:si] + new_steps` in the drill-down branch has no plan_gap call, while the family-2 branch at agent.py:1078 does. ADR-018:157-158: 'A future adoption point (M32's observe replan) has to lint too; that is the invariant, not the two call sites.' specs/001-browser-contract.md:222-224 and agent.py:1109-1111 both assert the lint runs at every adoption point; agent.py:1110-1111 additionally asserts 'More than one enumeration never reaches here for an aggregate task' \u2014 false on the merged tree. Task 'Which product on this page has the most customer reviews?' (matches is_aggregate), fixture shop.html, stub_plans [[{extract_all, role:link, rank:true}, {observe, role:list, name:Catalogue}], [{extract_all, role:listitem, rank:true}]]. First plan passes the lint; the observe triggers the drill-down replan; the replan is adopted unlinted; two enumerations execute. verifier.aggregate_needs_comparison (verifier.py:553-556) is satisfied because a ranked extract_all is in the graded trace, so the backstop does not fire, and the judge is never reached as a rejector because L1 passed. Observed: status success, replans 1, verdict PASS, answer [[4 names],[4 name+price strings]].",
+      "repro": "reviewer's probe scratchpad/hunt.py. Proof of missing coverage: adding the lint at that adoption point makes the probe end non-success AND leaves the committed suite at 146/146 = 1.000 \u2014 no existing case can see that adoption point at all.",
+      "acceptance": "plan_gap(task, steps[:si] + new_steps) runs at the drill-down adoption point; a new adversarial case with those stub plans is watched red first, then asserts a non-success terminal status plus trace_actions / replans pinning the refusal at replan time; agent.py:1109-1111 and specs/001-browser-contract.md:223 updated to say three adoption points, not two.",
+      "class_note": "Seventh occurrence of this repo's silent-success class (PR #29 R9 -> R16 -> R20, the M34 furniture check refuted on the real site, PR #34 R8, the M31 merge half-fix, this). Arrived through the merge exactly as the sixth did, and against a contract that names M32's adoption point in advance."
+    },
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-020 cites a RED live report as the evidence for a 'live suite 9/9 after this change' claim, and the citation was re-pointed onto that red report inside this review's surface.",
+      "evidence": "specs/decisions/ADR-020-m32-observation-drill-down.md:243-244 reads '(live suite 9/9 after this change, evals/report/20260822-234757-live.json)'. That report is score 0.888... = 8/9 with live-ol-edition-title failing. The next sentence excuses a different run with a different failing case. git diff 5a88b9c HEAD shows the citation moved in this window: -20260822-185648-live.json / +20260822-234757-live.json. The report 185648 was renamed to, 20260822-192844-live.json, IS 9/9, as is 20260823-155452-live.json. Seven red live reports sit on this branch; the ADR describes one. report-citations-resolve cannot catch this \u2014 its own docstring says it checks the citation RESOLVES, not that the number attached is an honest measurement.",
+      "repro": ".venv/bin/python -c \"import json;d=json.load(open('evals/report/20260822-234757-live.json'));print(d['score'],[r['id'] for r in d['results'] if not r['passed']])\" -> 0.888... ['live-ol-edition-title']",
+      "acceptance": "The 9/9 claim cites a report whose score is 1.0, or the sentence states the real score of the report it names. Optionally extend report-citations-resolve so a citation attached to a green claim must resolve to a green report."
+    },
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "severity_note": "Raised from the reviewer's LOW by the orchestrator: the reviewer extrapolated a CI band, and CI then measured this tree at 88.39s against 90 \u2014 1.8% margin against a runner spread the repo records as 6.8%. The prediction became a measurement, which makes it a published-honesty item rather than a speculation.",
+      "claim": "ADR-021 leaves CI's fast ceiling at 90 un-re-derived while the tree grew from the 116-case tree CI's 90 was measured on to 146 cases, putting CI at roughly the same margin the repo twice ruled a coin flip.",
+      "evidence": "ADR-021 states CI's EVAL_WALL_BUDGET_S_FAST stays 90 'because CI has produced no fast run on this tree' \u2014 accurate when written, and .github/workflows/eval.yml is byte-identical to origin/main. CI has since run: run 32627229208, fast 146/146 = 1.000 at 88.39s, invariant 54/54 at 16.79s / 20. fast-wall-clock-budget's provenance item (9) calls the previous CI number 'the next coin flip at 8% margin against a 6.8% runner spread'; 88.39 against 90 is 1.8%.",
+      "repro": "gh run view 32627229208 --log | grep -oE \"suite 'fast': [0-9/]+ = [0-9.]+|wall [0-9.]+s\"",
+      "acceptance": "ADR-021 records the real CI measurement and its margin explicitly, so a red CI run on the next case added is a predicted event rather than a surprise. Raising CI's number is a separate human decision and is NOT in scope here."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M32-8",
+      "claim": "ADR-019's republished bands each drop one recorded run and the invariant derivation sentence applies the +15% rule to the second-slowest run rather than the slowest it just published.",
+      "evidence": "ADR-019:88-90 publishes 'Slowest recorded invariant run at 54 cases: 13.85s' then says 'The same rule gives 13.56 x 1.15 = 15.6 -> 20' \u2014 13.56 is the second-slowest. At HEAD the ledger holds 15 invariant runs at 54 cases (13.16 missing from the ADR list) and 13 fast runs at 146 cases (74.45 missing from the ADR's 12-run list). Both derived ceilings are unaffected (13.85 x 1.15 -> 20; 74.81 x 1.15 = 86.03 -> 90), and published-band-matches-the-ledger passes because eval_adapter.py:428-437 only compares the published maximum, never the run list.",
+      "acceptance": "The derivation sentence applies the rule to the slowest run it publishes, and each band lists every run the ledger holds at that case count, or says explicitly that it is a snapshot taken before the commit's own gate runs.",
+      "route_note": "LOW; neither half changes a derived or enforced ceiling. Same band-vs-ledger drift class as PR #29 R21."
+    },
+    {
+      "id": "R19",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M32-9",
+      "claim": "ADR-021 moved WALL_BUDGET_S['fast'] 80 -> 90 without updating the ADR that states the ruling, so ADR-002's Ruling now publishes a local fast ceiling that is not the enforced one.",
+      "evidence": "ADR-002:10 Ruling says 'fast 80s local / 90s CI, invariant 20s local / 20s CI, since ADR-019' while evals/run.py:91 is now {'fast': 90, 'invariant': 20}. ADR-002's Amended by list (line 12) ends at ADR-019 and does not name ADR-021. Pre-existing on main and not this PR's doing: INDEX.md:11 publishes 'fast 75s local' attributed to ADR-017, and ADR-002:8 Status says '60s locally, 80s on CI'. Related stale prose introduced here: fast-wall-clock-budget.json:154 expect.note still says the override 'falls back to the committed 80 for everything else' while every env_override row now expects 90; and evals/run.py:299 still labels the ceiling's source 'ADR-002 Decision 4'.",
+      "acceptance": "ADR-002's Ruling and Amended by name ADR-021 and the enforced 90/20 local pair; fast-wall-clock-budget's expect.note says 90; nothing graded changes.",
+      "route_note": "LOW, prose-only, and two of the three stale publications predate this branch."
+    }
+  ],
+  "gate": {
+    "invariant": "54/54 = 1.000 (12.94s / 20)",
+    "fast": "146/146 = 1.000 (74.05s / 90)",
+    "live": "9/9 = 1.000",
+    "cost": "$0.0000",
+    "reviewer_reran": "bash .githooks/pre-commit exits 0 with fast 146/146 at 76.97s",
+    "ci": "run 32627229208 green \u2014 invariant 54/54 (16.79s / 20), fast 146/146 (88.39s / 90)"
+  }
+}

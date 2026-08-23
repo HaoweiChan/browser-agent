@@ -1,0 +1,97 @@
+{
+  "pr": 34,
+  "round": 5,
+  "task": "M32",
+  "result": "REQUEST_CHANGES",
+  "scope": "git diff 920218e..HEAD \u2014 commit 8d38c52 (the R16/R17/R20 repair) plus two artifact-only commits. Not a fresh sweep. The implementer session was torn down before reporting, so every claim in 8d38c52's commit message was treated as unverified.",
+  "standing_findings": {
+    "R16": {
+      "verdict": "CLOSED",
+      "caveat": "R25",
+      "evidence": "Enumeration verified independently: `steps` is bound at agent.py:592 (first plan, linted where it lands) and at 675 / 1043 / 1119, all three through adopt(); no steps.append/insert/[i]=/+= anywhere; run_task is the only executor (server.py:203, cli.py:27, eval_adapter.py:180 all pass a planner, never a plan). Three fresh mutations distinct from the orchestrator's: (1) raw splice restored at the drill-down site only -> status success with the list-of-lists answer, so the case is red for exactly the defect it names; (2) budgets['replans'] += 1 before the refusal -> red with IDENTICAL status and reason, so replans:0 is load-bearing; (3) unconditional done(failure='task') before execution -> red on trace_actions alone with the same status, so trace_actions pins the stopping point. Refusal-semantics hunt found no silent success: two-level drill-down, drill-down after a pre-execution plan-lint replan, and a drill-down replan carrying a click plus a second enumeration all end failure:task. Legit single-enumeration drill-down still reaches success and the 12 pre-existing observe-* cases stay green \u2014 no false positive. plan_gap returns None for non-aggregate tasks, so no non-aggregate run can be killed. The new return done(...) at 1031 is inside the try whose finally closes the context (1129-1130) \u2014 no leak. No site knowledge added."
+    },
+    "R17": {
+      "verdict": "CLOSED",
+      "caveat": "R24",
+      "evidence": "20260823-155452-live.json is score 1.0, 9/9; 20260822-192844-live.json is score 1.0, 9/9; both resolve. The prose states what happened rather than swapping quietly. Narrating the swap inside the ADR does NOT cross the no-repair-narrative line \u2014 ADRs here routinely carry PR #29 R3-style provenance, and a citation that was wrong is a fact about the decision record, not review chatter. Caveat for the record: the second of the two 8/9 runs (20260822-234637) has no committed report, so only one of the two is checkable from the repo. Full sweep of every evals/report citation in README, ADR-006/009/010/013/015/019/020/021, docs/analysis.md, docs/support-matrix.md and specs/001 found one remaining same-class defect: R24. The two pruned reports are cited nowhere but their own history lines."
+    },
+    "R20": {
+      "verdict": "CLOSED on the numbers, NOT on the framing",
+      "successor": "R22",
+      "evidence": "Run 32627229208 verifies (fast 88.39s, 146/146; invariant 16.79s, 54/54). .github/workflows/eval.yml byte-identical to origin/main. EVAL_WALL_BUDGET_S_FAST stays 90. .eval-baseline.json untouched across the whole PR (git diff 34c71f7..HEAD empty for it, hooks and workflow too). No EVAL_* variable set in the reviewer's environment."
+    },
+    "reconstructed_resolution_artifact": {
+      "verdict": "ACCURATE except one carried claim",
+      "evidence": "Correctly marked reconstructed; its gate block reproduced exactly \u2014 invariant 55/55 = 1.000 (13.27s), fast 147/147 = 1.000 (74.66s), bash .githooks/pre-commit exits 0 at 74.55s with 242 actions and $0.0000, no --no-verify. It overstates in one place: it carries the implementer's 'a fourth adoption point cannot be added without a lint' as fact (R25). The commit message additionally claims 'published bands and every derived number re-derived from fully green merged-tree reports', which is false for the six runs ADR-019 now lists (R21) \u2014 that claim is not in the artifact."
+    }
+  },
+  "findings": [
+    {
+      "id": "R25",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "'A fourth adoption point cannot now be added without a lint' is published in the output contract and the production docstring but is true only by convention \u2014 `steps` is a plain local and a raw splice at a new site compiles, passes 147/147, and reproduces the R16 defect.",
+      "evidence": "specs/001-browser-contract.md:225-228 and src/browser/agent.py:637 make the modal claim. Nothing enforces it: agent.py binds `steps` at 592, 675, 1043, 1119 with no in-place mutation, but there is no wrapper type, no source-scan case, and no grep of agent.py anywhere in eval_adapter.py. Demonstrated: replacing agent.py:1025 `adopted, gap = adopt(si, new_steps)` with `adopted, gap = (steps[:si] + new_steps, None)` \u2014 a raw splice, exactly what a fourth site would look like \u2014 makes the run report status success with the list-of-lists answer again. This is the same modal promise ADR-018:157 made ('that is the invariant, not the two call sites') that failed and produced R16.",
+      "acceptance": "Either an invariant case that reads src/browser/agent.py and asserts every binding of `steps` after the first plan is `= adopt(...)` (watched red by adding a raw splice), or the contract/docstring is reworded to the descriptive true statement without the modal claim."
+    },
+    {
+      "id": "R21",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019's republished wall-clock bands list only the three RED runs at the new case count and understate the ledger's slowest run, so the commit message's claim that bands were 're-derived from fully green merged-tree reports' is false and the published maximum is not the ledger's.",
+      "evidence": "ADR-019:60-61 'Slowest recorded fast run at 147 cases: 74.46s \u2014 3 runs: 74.38 / 74.39 / 74.46s'. The committed ledger at HEAD holds SIX fast runs with total=147: 74.46/74.39/74.38 (score 0.993197 \u2014 the watched-red runs) and 73.93/74.50/74.69 (score 1.0). Published max 74.46 < ledger's 74.69, and all three listed are red. Same at ADR-019:88-89 for invariant at 55 cases: ledger holds seven, the three listed score 0.98/0.96/0.98, and the slowest is 13.73 (green). Derived ceilings unaffected (74.69x1.15->90, 13.73x1.15->20) and published-band-matches-the-ledger passes by design (eval_adapter.py:430 grades rule(published)==rule(ledger max); :417-422 deliberately counts red runs), so nothing can go red on this.",
+      "acceptance": "Each band lists every run the ledger holds at that case count with its slowest as the published maximum, or states in the ADR that it is a snapshot taken before the commit's own gate runs; the commit/PR text drops the 'fully green' characterisation. Same class as T-M32-8 but NEW \u2014 before this edit the published maximum was correct."
+    },
+    {
+      "id": "R22",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-021 and INDEX.md assert that 'CI has now measured this tree' when CI's only run is on the parent commit at 146 cases, and the INDEX entry now contradicts itself inside one sentence.",
+      "evidence": "ADR-021:87 heading 'CI has now measured this tree, and the margin is thin' and :96 table row 'CI fast 88.39s, 146/146'. gh run view 32627229208 -> headSha 920218e (the parent). gh run list --commit 8d38c52 and --commit d60da88 both return []. HEAD ships 147 fast cases, so CI has never measured this tree. ADR-021:102 says 'a red CI fast run on the next case anyone adds is a predicted event' \u2014 the case it predicts against (observe-drilldown-replan-is-linted) is added by the same commit, so the prediction is already due rather than future. INDEX.md:30 states both 'CI has produced no fast run on this tree' and 'CI has since measured this tree at 88.39s' in one sentence.",
+      "acceptance": "The ADR says which tree CI measured (920218e, 146 cases) and that HEAD's 147-case tree is unmeasured on CI; INDEX.md's ADR-021 line stops asserting both halves. The numbers themselves all verify."
+    },
+    {
+      "id": "R24",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "README's 'Where it stands' section says live is 8/9 in the run it cites, while the cited report and the block two lines above it both say 9/9 \u2014 the exact R17 defect class, left standing in the commit that swept for it.",
+      "evidence": "README.md:52-63: the block cites evals/report/20260823-164737-live.json and prints 'fast 147/147 invariant 55/55 live 9/9', then line 63 reads 'live is 8/9 in that run because live-ol-search-a11y-invisible timed out'. 20260823-164737-live.json has score 1.0, 9/9, no failing results. The block is regenerated by docs-numbers-are-derived; the sentence beneath it is ungraded \u2014 T-M32-10's mechanism gap in the reverse direction. Pre-existing on origin/main, but this commit re-pointed the three citations directly above it.",
+      "acceptance": "The sentence either states the cited run's real live score, or is rewritten as a standing note about openlibrary.org flakiness that does not claim a score for 'that run'."
+    },
+    {
+      "id": "R23",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "PR #34 is CONFLICTING with main, which means GitHub has run no checks at all on the repair commit \u2014 the R16 fix has zero CI verification and the PR cannot be merged as-is.",
+      "evidence": "gh pr view 34 -> mergeable CONFLICTING, mergeStateStatus DIRTY, statusCheckRollup [] on headRefOid d60da88. origin/main has moved to 3eac663 (PR #35). git merge-tree HEAD origin/main reports content conflicts in README.md, docs/analysis.md, evals/adversarial/docs-numbers-are-derived.json, evals/report/history.jsonl, specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md, specs/decisions/INDEX.md, tasks/TODO.md, tasks/pr-loop-ledger.jsonl. src/browser/agent.py and eval_adapter.py auto-merge clean and no ADR number collides (main tops out at ADR-019).",
+      "acceptance": "The branch is merged onto origin/main, the eight conflicts resolved (ADR-019's band and README/analysis counts re-derived against the merged tree \u2014 see R21), and a green CI run exists on the PR head before merge."
+    },
+    {
+      "id": "R26",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M32-11 (amend)",
+      "claim": "T-M32-11 is logged with a narrower trigger than the real one \u2014 the crash needs only an `expect` that implies verdict PASS, not an empty one \u2014 so its acceptance criterion as written would produce a half-fix.",
+      "evidence": "eval_adapter.py:1073-1090: want_verdict is truthy whenever expect omits status OR sets status: success OR names a verdict, and :1090 subscripts result['verdict'], which is None for any run that ends before grading. TODO.md T-M32-11 says 'a fixture case with an empty expect'. Reproduced with a NON-empty expect ({'status':'success'}) -> TypeError: 'NoneType' object is not subscriptable. Mitigated: evals/run.py:60-66 catches it and reports the case FAIL with the traceback, so no suite aborts.",
+      "acceptance": "T-M32-11's spec and acceptance name the real condition (any expect implying verdict PASS on a run whose verdict is None).",
+      "route_note": "LOW; amends an existing debt block rather than adding work to this PR."
+    },
+    {
+      "id": "R27",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M32-9 (extend)",
+      "claim": "CLAUDE.md's Gate section \u2014 the repo's stated working contract \u2014 still publishes invariant <= 15s and fast <= 75s while the enforced local ceilings are 20 and 90, and T-M32-9 does not name this file.",
+      "evidence": "CLAUDE.md:43-44 versus evals/run.py:91 WALL_BUDGET_S = {'fast': 90, 'invariant': 20}. Byte-identical to origin/main, so pre-existing \u2014 but this PR is what moved fast 80->90, and every committed fast run on this tree (73.9-74.7s local, 88.39s CI) would read as a breach against CLAUDE.md's 75. T-M32-9's acceptance names ADR-002, INDEX.md and fast-wall-clock-budget's expect.note only.",
+      "acceptance": "T-M32-9 is extended to name CLAUDE.md's Gate/Commands block, or the two numbers are dropped in favour of 'the ceiling evals/run.py enforces'.",
+      "route_note": "LOW and pre-existing on main; extends an existing debt block."
+    }
+  ],
+  "gate": {
+    "invariant": "55/55 = 1.000 (13.27s / 20)",
+    "fast": "147/147 = 1.000 (74.66s / 90)",
+    "precommit": "bash .githooks/pre-commit exits 0 at 74.55s, 242 actions, $0.0000, no --no-verify",
+    "reviewer_reran": "yes, independently"
+  },
+  "summary": "No HIGH findings. The R16 fix itself is sound; everything above is documents-of-record accuracy plus the merge/CI state."
+}

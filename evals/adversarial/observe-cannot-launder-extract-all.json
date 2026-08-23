@@ -1,0 +1,36 @@
+{
+  "id": "observe-cannot-launder-extract-all",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "Sort the catalogue by price, low to high, and list the product names.",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        { "action": "fill", "target": { "role": "searchbox", "name": "Search products" },
+          "value": "a query far longer than this box will hold" },
+        { "action": "extract_all", "target": { "role": "link" }, "rank": false }
+      ],
+      [
+        { "action": "observe", "target": { "role": "list", "name": "Catalogue" } },
+        { "action": "extract_all", "target": { "role": "link" }, "rank": false }
+      ],
+      [
+        { "action": "extract_all", "target": { "role": "link" }, "rank": false }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "recovery": false,
+    "replans": 0,
+    "trace_actions": ["navigate", "fill"]
+  },
+  "provenance": "the shape the MERGE of M31 and M32 created, which neither parent's suite could see. Both branches independently found and fixed the same laundering class in the same guard, each for its own half: M31 (PR #29 R1) made the test span every extraction verb, because `extract_all` laundered exactly as `extract` did while the test named the literal string; M32 (PR #34 R1) made it transparent to a leading `observe`, because an observation changes nothing and `[observe, extract]` dropped the failed action just as surely. Neither fix is sufficient alone, and merging by taking one side silently reverts the other — watched red both ways on the merged tree before the union landed: with M32's `reads_without_acting` taken wholesale, M31's own `replan-cannot-launder-noop-action-extract-all` returns `status: success` with a list answer; with M31's `startswith(\"extract\")` one-liner taken wholesale, `observe-cannot-launder-noop-action` returns `success` / \"Aurora Desk Lamp\". This case is the intersection neither had: `[observe, extract_all]`, which passes BOTH parents' pre-merge tests and is laundering under either. The failed action is a fill past the search box's `maxlength`, so it raises inside `execute` and leaves `page_changed: null` — the cheap act failure, ~0.15s, and the value `changed_nothing` exists to treat the same as `false`.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "a merge is an edit, and this is the sixth occurrence of this repo's silent-success class arriving through one. `trace_actions: [navigate, fill]` and `replans: 0` are what make it specific: the refusal has to happen at REPLAN time, before the observation is taken, so it cannot be satisfied by the drill-down guard one step later reaching the same terminal status (PR #34 R13's lesson, applied to the new case rather than learned again)."
+  }
+}

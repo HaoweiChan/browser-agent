@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 138 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 154 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,14 +50,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260823-220328-fast.json`, with
-`evals/report/20260823-161810-invariant.json` and
-`evals/report/20260823-161828-live.json`:
+Latest offline baseline — `evals/report/20260823-224323-fast.json`, with
+`evals/report/20260823-211839-invariant.json` and
+`evals/report/20260823-164737-live.json`:
 
 ```
-fast  138/138    invariant  53/53    live  9/9    $0.0000    62.0s
-recovery 7/7 verified (13 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 24/24 · 5 replans
+fast  153/154    invariant  58/58    live  9/9    $0.0000    70.8s
+recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
+diagnosis 33/33 · 13 replans
 ```
 
 `live` is not part of the gate, and it goes red when a site is having a bad
@@ -144,8 +144,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 138 | 63.39s | 72.90 | **80s** |
-| `invariant` | 53 | 13.32s | 15.32 | **20s** |
+| `fast` | 154 | 70.49s | 81.06 | **90s** |
+| `invariant` | 58 | 13.78s | 15.85 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of one commit (`d173340`, 116 `fast` / 48 `invariant` cases, a smaller
@@ -181,7 +181,7 @@ case went green immediately while the other kept failing, because the outage had
 been hiding a defect of ours: navigation waited for `load`, so one hanging
 subresource made a fully readable page `failure:nav` ([ADR-007](specs/decisions/ADR-007-navigation-wait-condition.md)).
 
-**The fourth live site is there to fail.** (M38: on its *static* pages it now
+**The fourth live site is there to fail.** (M40: on its *static* pages it now
 succeeds — the domain row moved to `unreliable` on 3/3 author-page runs, and the
 site's Try example is one of them. The paragraph below is about `/js`, which
 still fails exactly as described. Both halves are the site: that is why the row
@@ -333,12 +333,14 @@ The biggest ones, stated plainly:
   `live` suite is 9 cases across four domains and three task classes
   (TC1/TC2/TC3), and every green live case runs a *hand-written* plan. The live
   TC2 cell is a correctly diagnosed unreachable control, not a working search.
-  Fixtures remain self-authored and therefore friendly. M38 measured live
+  Fixtures remain self-authored and therefore friendly. M40 measured live
   planning for the first time — 43 runs across 22 finance domains, real planner,
-  [D27](docs/support-matrix.md) — but by hand against the deployment, not by any
+  [D28](docs/support-matrix.md) — but by hand against the deployment, not by any
   suite: no case covers those domains, nothing re-checks them, and 19 of the 22
-  never answered. That is a measurement, not coverage, and the gap this bullet
-  names is coverage.
+  never answered. Then the deployed build changed mid-milestone and three
+  domains that had answered stopped; two declared rows were withdrawn before
+  merge. That is a measurement, not coverage, and the gap this bullet names is
+  coverage.
 - **Responsiveness is checked by shape, not by meaning.** `not_a_dump` catches
   a page dump returned as the answer (M7); `aggregate_needs_comparison` refuses
   a superlative question the vocabulary cannot answer (M10). A short, focused,
@@ -382,7 +384,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 149 cases (138 of them in the offline gate), it
+The eval set is not weak; it is 165 cases (154 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

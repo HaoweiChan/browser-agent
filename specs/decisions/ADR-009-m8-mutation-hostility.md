@@ -189,7 +189,7 @@ Two companion cases keep the finding narrow instead of sweeping:
 Nothing about this was softened to make a case green. ~~The support matrix row
 for the domain is `unsupported` (TC1), citing the case.~~
 
-**M38 amendment (2026-08-23).** The struck sentence was true when written and is
+**M40 amendment (2026-08-23).** The struck sentence was true when written and is
 not true now: the row reads `unreliable` (TC1). The reason the sentence it
 belongs to still stands is the whole point of recording this rather than editing
 it — nothing was softened. `live-quotes-js-role-tier-blind` fails today exactly

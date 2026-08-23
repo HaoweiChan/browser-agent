@@ -568,7 +568,7 @@ const SUPPORT_LABELS = {
 };
 // One per real-site support-matrix row — the cards are the only example
 // surface. Every entry was run against the deployment: the M35 entries on
-// 2026-08-22, the four M38 ones (quotes, companiesmarketcap, x-rates, multpl)
+// 2026-08-22, the four M40 ones (quotes, companiesmarketcap, x-rates, multpl)
 // on 2026-08-23. A run_id here is a receipt against docs/support-matrix.md and
 // the eval record, NOT against a live GET /tasks/<run_id> — RUNS is in-memory
 // and a redeploy destroys the history (support matrix D19). A site declared supported/—
@@ -587,34 +587,38 @@ const EXAMPLES = {
     // deployment — 349e4839, e08b7627, bcae4fe7, 63b9d944, failure:locate,
     // the planner targets link "pg" and the page has two.
     task: "What is the title of this story?"},
-  "quotes.toscrape.com (live)": {label: "When was this author born?",
-    url: "https://quotes.toscrape.com/author/Albert-Einstein/",
-    // M38: 3/3 on the deployment (b973e350, 93085a40, 14833919) → "Born: March
-    // 14, 1879 in Ulm, Germany". Retired "Who wrote the quote about the world we
-    // have created?" (run 24820d4c → "Albert Einstein"): the listing page shows
-    // that author three times, so the extraction now dies at locate with "3
-    // matches at tier text" (run eefae1b8). Ambiguity is the resolver refusing to
-    // guess, which is correct — but it is not an example anyone should be shown.
-    task: "When was this author born?",
-    note: "An author page answers; the declared failure is the JS-rendered /js/ pages."},
+  "quotes.toscrape.com (live)": {label: "Who said this quote?",
+    url: "https://quotes.toscrape.com/",
+    // This example moved twice in one milestone and both moves are the same
+    // lesson. It failed pre-M32 at locate — "3 matches at tier text" for
+    // "Albert Einstein", three of that author's quotes on one page (eefae1b8) —
+    // so it was swapped for an author page that answered 3/3 (b973e350, 93085a40,
+    // 14833919). Post-M32 the author page answers 0/1 (6811f8bf: extracted the
+    // site title, judge rejected) while THIS task answers again (63d8a48f), and
+    // then not (7d752e64). 1/3 across the current build: the card says unreliable
+    // and means it. Resolver disambiguation is main's M38.
+    task: "Who wrote the quote about the world we have created?",
+    note: "Flaky on this build: 1/3. Kept because an unreliable card that says so is honest; the declared failure is the JS-rendered /js/ pages."},
   "openlibrary.org (live)": {label: "See a failure: author of a book",
     url: "https://openlibrary.org/books/OL7025919M",
     task: "Who is the author of this book?",   // run f1ecf157 → failure:extract (015b6778, 65af344f too: loud, never wrong)
     note: "Declared unreliable — this example fails loudly, so you can see what a failure looks like."},
   "companiesmarketcap.com (live)": {label: "Market cap of a company",
     url: "https://companiesmarketcap.com/apple/marketcap/",
-    // M38 live probe, 7/7 across four pages and two repeats: 44c6d2e3, 94c8cd6b,
-    // bfb33695 (Apple market cap), 25ebd8ad (P/E), e65bad4d (NVIDIA), cea1b58a
-    // (revenue), 3c18af43 (Microsoft). Real planner, not a stubbed plan.
+    // The only row here with a real repeat count behind it: 7/7 on the pre-M32
+    // build and 8/8 on the current one (d0b63c7e, f2c8c624, 65bb1028, 03eedb79,
+    // 2a058974, 4cec8304, 215e511a, f8925a42) across six pages. It survives a
+    // build change because the answer IS a heading's accessible name, so no plan
+    // ever needs a container — D28 has the shape.
     task: "What is the market cap of this company?"},
-  "x-rates.com (live)": {label: "An exchange rate",
-    url: "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
-    task: "How many US dollars is one euro worth?",   // 3/3: 570f4c04, 0909909e, d9ad84b7
-    note: "3/3 on this pair; the USD→JPY page failed on an anchor the planner invented (run 0f8e532f)."},
-  "multpl.com (live)": {label: "S&P 500 valuation",
-    url: "https://www.multpl.com/shiller-pe",
-    task: "What is the current Shiller PE ratio?",   // 2/3: 97912676, 434335eb → "41.96"
-    note: "Declared unreliable: 2/3 on this page, 1/3 on the plain S&P 500 P/E page next door."},
+  "bankofcanada.ca (live)": {label: "A central bank's policy rate",
+    url: "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+    task: "What is the current policy interest rate?",   // 3/3: e36edcc1, 93fc8e6f, 5125b503 → "2.25"
+    },
+  "ecb.europa.eu (live)": {label: "An ECB key rate",
+    url: "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
+    task: "What is the deposit facility rate?",   // 2/3: c8f04424, 9597fab9 → "2.25"
+    note: "2/3 — the third run read the historical table instead of the current rate, and the judge rejected it."},
   "wikipedia.org": {label: "A university's motto",
     url: "https://en.wikipedia.org/wiki/Harvard_University",
     task: "What is the motto of this university?",            // run 6a828ddb → "Veritas (Latin)[3]"
@@ -669,10 +673,14 @@ document.addEventListener("click", (ev) => {
 // Before this there was no shared owner: starting a browser check under a live
 // run overwrote the trace with smoke output and painted `chromium ok` in the
 // success colour over a run that was still executing (or had failed).
+let smokeStream = null;
+
 function busy(on) {
   $("go").disabled = on;
   $("check").disabled = on;
-  if (on && es) { es.close(); es = null; }
+  if (!on) return;
+  if (es) { es.close(); es = null; }
+  if (smokeStream) { smokeStream.close(); smokeStream = null; }
 }
 
 function progressItems() { return [...$("progress").children]; }
@@ -894,8 +902,9 @@ async function submitTask() {
         .then(x => x.ok ? x.json() : Promise.reject(new Error("HTTP " + x.status)))
         .then(r => {
           if (runId !== mine) return;             // a newer run owns the surface
-          if (r && typeof r.status === "string" && r.status !== "running") renderResult(r);
-          else lost("stream lost — the run may still be executing; reload to poll");
+          if (r && typeof r.status === "string" && r.status === "running") detached(mine);
+          else if (r && typeof r.status === "string") renderResult(r);
+          else lost("stream lost, and the run record does not say what happened");
         })
         .catch(err => { if (runId === mine) lost("stream lost, and the run record is unreachable: " + err); })
         .finally(() => { if (runId === mine) busy(false); });
@@ -912,9 +921,26 @@ function lost(message) {
   $("err").hidden = false; $("err").textContent = message;
 }
 
+// NOT terminal. The stream dropped — a proxy idle timeout, a sleeping laptop, a
+// throttled background tab — and the run record says the run is still going. The
+// first version of this path called `lost()` here, which painted a healthy run as
+// `failure:env` with the progress rail marked failed: the same defect as the
+// spinner over a dead run, pointed the other way, and worse because a run that
+// then succeeds is never shown. So: no verdict, no `data-terminal`, no spinner,
+// and the run id stays on screen because it is the only way back to the record.
+function detached(id) {
+  $("progress").removeAttribute("data-terminal");
+  progressItems().forEach(item => item.removeAttribute("aria-current"));
+  $("status").className = "big unsupported"; $("status").textContent = "detached";
+  $("err").hidden = false;
+  $("err").textContent = "The live stream dropped, but the run record says this run is still "
+    + "executing. Nothing here is a verdict. Reload, or read the record directly at /tasks/" + id;
+}
+
 function smoke() {
   busy(true);
   runId = null;
+  smokeStream = null;
   $("live").hidden = false;
   $("progress").hidden = true;
   $("steps").innerHTML = ""; $("result").innerHTML = "";
@@ -924,20 +950,27 @@ function smoke() {
   $("pvlink").hidden = true;
   $("runid").textContent = "platform smoke — real Chromium, no LLM spend";
   $("status").className = "big running"; $("status").textContent = "running";
-  const s = new EventSource("/smoke/stream");
+  const s = smokeStream = new EventSource("/smoke/stream");
   const lines = [];
   s.onmessage = (e) => {
     const ev = JSON.parse(e.data);
     lines.push(e.data);
     $("steps").innerHTML = `<pre>${esc(lines.join("\n"))}</pre>`;
     if (ev.event === "done" || ev.event === "error") {
-      s.close();
+      s.close(); smokeStream = null;
       $("status").className = "big " + (ev.event === "done" ? "success" : "failure");
       $("status").textContent = ev.event === "done" ? "chromium ok" : "chromium failed";
       busy(false);
     }
   };
-  s.onerror = () => { s.close(); busy(false); };
+  // Same treatment as the task stream, because it is the same failure: without
+  // it a check whose stream dies before `done` left #status reading `running`
+  // with the spinner going, forever.
+  s.onerror = () => {
+    s.close(); smokeStream = null;
+    lost("the browser check's stream dropped before it reported a result");
+    busy(false);
+  };
 }
 
 fetch("/support-matrix").then(r => r.json()).then(m => {
@@ -1086,7 +1119,7 @@ async def smoke_events():
     yield ev("start", target=SMOKE_URL)
     if SEM.locked():
         # Concurrency is 1 by design (SEM, /readyz). Without this, two tabs --
-        # or one tab before the M38 button-locking -- launched a second browser
+        # or one tab before the M40 button-locking -- launched a second browser
         # outside the semaphore, so the property /readyz reports stopped holding
         # while /readyz still reported it from SEM alone.
         yield ev("error", error=f"a run is executing ({ACTIVE_RUN}); one browser at a time")

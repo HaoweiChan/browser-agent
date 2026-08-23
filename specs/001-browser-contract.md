@@ -97,7 +97,7 @@ appears, in order — no post-hoc reconstruction).
 ```json
 {
   "i": 1,
-  "action": "navigate | click | fill | extract | extract_all",
+  "action": "navigate | click | fill | extract | extract_all | observe",
   "target": {"role": "...", "name": "...", "text": "...", "near": "...", "index": 0} ,
   "value": "string | null",
   "anchor": "string | null",
@@ -136,6 +136,38 @@ appears, in order — no post-hoc reconstruction).
   to be dropped, and the step ran against whatever was left of the target —
   a plan quietly reinterpreted and a result reported for the weaker task that
   actually ran (`resolver-unknown-target-key`).
+- `observe` (M32, `ADR-020`) is the drill-down: its `target` names a container
+  the planner was already shown, and the executor re-runs the observation
+  scoped to that element — the whole `MAX_ELEMS` budget spent inside the
+  subtree, and a 1,500-character text head instead of 300. The result reaches
+  the planner as the `observation` argument of the next planning call, with a
+  `note` saying which target was drilled; there is no second channel and no
+  second observation format. It reads the page and changes nothing, so like
+  `extract` it carries no `expected_state`, records `page_changed: null`, and
+  never wears `retry_or_recovery: "recovery"` and never consumes a pending
+  `superseded_by` pointer — it replaces nothing and recovers nothing, and it
+  produces no answer either, so counting it as a rung inflates a published
+  metric with an attempt that could not have saved anything. Both skip PAST an
+  `observe` and land on the next attempt of any other kind, which is usually
+  the `extract` the drill-down was asked for: an `extract` is read-only too,
+  but it is the attempt that completes a recovery, and `recovery-replan-
+  postcondition` is the shape where it is the ONLY step the new plan has
+  (`recovery-label-lands-on-the-extract` pins where the label lands). An
+  `expected_state` on an `observe` step is refused as `failure:task`: there is
+  nothing for it to assert (`observe-step-cannot-carry-expected-state`). It
+  spends one call from the existing `MAX_REPLANS` budget and adds no budget of
+  its own, so the per-run call ceiling is unchanged. A refused drill-down —
+  budget exhausted, or a replan that returned nothing usable — ends the run as
+  `failure:env` naming the target that was asked for; it never falls through to
+  the steps the plan put after the `observe`, because those were written
+  against the observation the drill-down asked to replace
+  (`observe-refused-drilldown-stops-the-run`,
+  `observe-drilldown-no-progress-stops-the-run`). A plan that reaches an
+  `extract` with no page-changing step before it — leading `observe` steps do
+  not count as one — is refused by both replan paths while a failed action that
+  changed nothing is outstanding, and the run ends as that action's failure
+  (`observe-cannot-launder-noop-action`,
+  `observe-drilldown-cannot-launder-noop-action`).
 - `target.index` (0-based) selects the k-th match instead of requiring
   uniqueness — "the first search result" is a browsing primitive, not site
   knowledge. Without it, several matches remain a loud `locate` failure.
@@ -195,7 +227,16 @@ appears, in order — no post-hoc reconstruction).
   - **a plan that should have enumerated and did not is rejected before the
     first action.** `agent.plan_gap` is a deterministic, site-agnostic lint
     that runs at every point the executor adopts a plan — the first plan, and
-    again on the plan of record when the `act` ladder replans mid-run: an aggregate-shaped task (shared with
+    again on the plan of record when either mid-run replanner returns one: the
+    `act` ladder, and M32's drill-down. There are three, not two, and the third
+    was adopted unlinted until `observe-drilldown-replan-is-linted` (PR #34
+    R16); they now splice through a single `adopt()`, and
+    `plan-adoption-is-the-only-steps-rebind` reads `agent.py` structurally and
+    fails if any binding of `steps` after the first plan is not adopt-derived,
+    so a fourth adoption point is red before it can run. That sentence was a
+    modal promise resting on convention for one round (PR #34 R25) — the same
+    shape as ADR-018's "that is the invariant, not the two call sites", which
+    is what R16 falsified — and it is now enforced instead. An aggregate-shaped task (shared with
     the verifier's own guard through `verifier.is_aggregate` — one regex, two
     callers) whose extraction steps are not exactly one `extract_all` and
     nothing else is replanned once with a note naming the gap and stopped by
@@ -229,10 +270,14 @@ appears, in order — no post-hoc reconstruction).
   relocated at a different tier, and an `act` failure replanned from a fresh
   observation — on a replan the flag sits on the FIRST step of the new plan,
   the one that differs from what failed. No `"retry"` rung exists yet; when a
-  re-observe or wait rung is added it logs as `retry` and stays out of the
-  recovery metric by construction, not by intention.
+  wait rung is added it logs as `retry` and stays out of the recovery metric by
+  construction, not by intention. M32's re-observe rung (`observe`, `ADR-020`)
+  logs as neither: it is not a second attempt at anything, so it carries a note
+  and no label at all — this sentence used to promise it would log as `retry`,
+  and the drill-down falsified that in the same file that shipped it.
 - `page_changed` — did this action change the page's text at all? `null` on
-  `extract`/`extract_all` (which change nothing by definition) and on the
+  `extract`/`extract_all` and `observe` (none of which change anything by
+  definition) and on the
   pre-plan navigate.
   It exists for one decision: a replan may drop the step it replaces only when
   that step actually moved the page. Two runs can be identical in plan, trace

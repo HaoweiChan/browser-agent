@@ -3,9 +3,11 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → **80s**, local `invariant` **20s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → **90s** (ADR-021), local `invariant` **20s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `evals/run.py` `over_budget()`
+
+**Amended by**: ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 80) and ADR-002 Decision 4 (a second suite now has a ceiling)
 
@@ -41,7 +43,7 @@ They are regression guards for three silent-success defects (PR #29 R1, R2, R3)
 and the local pre-commit hook runs `fast` alone. A guard the hook does not run
 is worth less than the 4.9s it costs.
 
-### 2. The local `fast` ceiling is 80s, computed from the ledger
+### 2. The local `fast` ceiling is 90s, computed from the ledger
 
 Every LOCAL band here — this section's and §3's — is computed from
 `evals/report/history.jsonl`, the ledger committed in this repo, and
@@ -61,14 +63,30 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 138 cases, ts `20260823-220141`, **63.39s**, 138/138
-  (M38 added `ui-terminal-state-on-every-ending`, so the count moved and the
-  band moved with it. Taken as the slowest observed at this count, not chosen:
-  the ledger's earlier 138-case rows are faster, including the red ones this
-  branch produced while the derived-number guards were catching up to the new
-  count).
+- Band source — `fast` at 154 cases, ts `20260823-223343`, **70.49s**, 151/154
+  (`dirty: true`. M40 adds `ui-terminal-state-on-every-ending`, so the count moved
+  to 154 and the band moved with it — and the dirty citation is the same forced
+  one the paragraph below describes, for the same reason: the tree only reaches
+  154 cases while the new case is uncommitted. The row is red because the count
+  had just changed and the derived-number guards had not caught up; §6 requires
+  green nowhere and item 2 (cited-run) requires a run that happened.)
 
-The `138/138` is the cited row's own result, graded against it, not prose beside
+**This band was dirty for one commit, and the reason is worth keeping.** A case
+addition forces a dirty citation: the tree only reaches its new count while the new
+case is uncommitted, which is the entire reason the dirty allowance exists. But
+a dirty citation is red on CI and green locally — `T-M32-13` is the diagnosis,
+the ledger's `ts` being a naive local stamp compared lexicographically against
+CI's UTC ones, so item 2 (cited-run) refuses a dirty row against any clean row
+stamped earlier and every CI row is clean and stamped eight hours behind ours.
+So M28's merge commit published `ts 20260823-211340`, 70.46s, 151/153, dirty,
+and this commit re-cites the clean run that could not exist until that one had
+landed. Two commits, by construction, for one case addition. That is the price
+`T-M32-13` records; it is paid here rather than dodged by citing a stale clean
+row from the 152-case tree, because the count changed and a band has to describe
+the tree that ships.
+
+The `153/153` is the cited row's own result, graded against it, not prose beside
+The `151/153` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -83,44 +101,88 @@ because it includes red runs and runs taken mid-edit; §6 is why that is allowed
 and by how much. The enumeration that used to stand here — and the one in §3 —
 is gone: it was a snapshot of a file that grows on every gate run, nothing
 graded it, and it had drifted to publishing six of the eight runs recorded at
-the shipped case count, which is the R21 defect this ADR was amended over. What
+the shipped case count, which is the R21 defect this ADR was amended over
+(PR #35 R21; PR #34 R21 is the same defect found independently on the M32
+branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 63.39 × 1.15 = 72.90 → **75**. The band published for the earlier
+five — gives 70.49 × 1.15 = 81.06 → **85**, which is BELOW the committed 90 and
+does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
+slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
+band is a short sample and therefore a lower bound on what the tree costs. One
+run at 154 cases is exactly that short sample. Item 5 (derivation) grades the
+arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
+that says 90 is green and declared rather than a contradiction. The band
+published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
 to trust a hand-derived band again. The rule is unchanged; only the reading of
 it was wrong.
 
-Margin against the observed band is ~18s where before M31 it was ~0.2s. That is
+Margin against the observed band is ~19s where before M31 it was ~0.2s. That is
 a real loosening, and it is the point: a ceiling whose job is to catch drift
 cannot also be the thing that fails on drift-free commits — this one refused a
 commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 53 cases, ts `20260823-041729`, **13.32s**, 53/53
-  (ADR-012 writes no per-case report for a green run, so the ledger row is the
-  whole artifact — which is why the sentence cites the ts and not a file).
+- Band source — `invariant` at 58 cases, ts `20260823-200456`, **13.78s**, 58/58
+  (`dirty: false`, ts-only for the same ADR-012 reason as §2. Four clean rows
+  were available at this count — 12.93 / 13.78 / 13.18 / 13.12s, taken as they
+  came rather than selected for their numbers. 12.93s is disqualified: it
+  derives **15** where the ledger's maximum derives 20 — item 3 (same-ceiling).
+  Of the three that qualify this is the slowest, chosen so the
+  published number sits as close to the ledger's own maximum as a real run
+  allows — §6 tolerates up to one ceiling step of slack, and R21's point was
+  that publishing below the maximum is how a band drifts, so take the least
+  slack on offer.)
 
-The same rule gives 13.32 × 1.15 = 15.32 → **20**. Two decimals on the product
-because one is not enough to re-derive it: "15.3" and "15.0" both round up to a
-multiple of five differently depending on how a reader reads them, and the
-committed ceiling is 20 (PR #35 R13). Note the band moved within this round, and be
-precise about why. The first two runs at 53 cases measured 12.87 and 12.89s,
-which derive **15**; a band published from them was reachable and is green under
-the check as it now stands — §6 item 5 (derivation) does not require the rule's value to
-equal the committed ceiling. No commit of this branch ever published it
-(`git log -S` on this file finds that figure only in the round-4 repair, quoting
-it as an example), so the claim is reproducible rather than historical: call
-`_band_wrong` with the band at 12.89s citing ts `20260823-041431` (51/53) and a
-ledger holding only the two rows recorded at 53 cases by then, and it returns
-`[]` (T-R48). What took the state out of reach was item 3 (same-ceiling), when a 13.32s run
-landed and the ledger's maximum
-crossed into the next band. Had that run not landed, the 15-deriving band would
-have stood. This is the declared deviation in §6, not a mechanism catching
-something.
+Neither band quotes the ledger's maximum as a number any more, and that is the
+fix for a defect this file produced twice. §3 published **13.80s** and the final
+`origin/main` merge brought in a 13.92s row (ts `20260823-202223`, dirty, 57/58)
+that made the sentence false — while §2, two sections up, was hand-copying its
+own maximum by the same method, so the two halves of one decision disagreed on
+method (PR #34 R29). A hand-copied scalar sitting beside a computed one is
+exactly the drift class R21 and `T-M32-8` both name. The maximum is whatever
+`published-band-matches-the-ledger` reports as `ledger_slowest`, computed over
+every row at the current case count — red and mid-edit runs included, which is
+why it can exceed the band source (§6, and the paragraph above) — and the
+grader prints it, with the case count, whenever a band needs republishing.
+Nothing here went red on either scalar: both derived 20, which is precisely why
+this had to be caught by reading rather than by the gate.
+
+The same rule gives 13.78 × 1.15 = 15.85 → **20**, which is the committed
+ceiling. Two decimals on the product because one is not enough to re-derive it:
+"15.8" and "15.0" round up to a multiple of five differently depending on how a
+reader reads them (PR #35 R13).
+
+Both bands above are republished at the case count this branch ships after four
+`origin/main` merges and this round's own case: `fast` 136 → 152, `invariant`
+53 → 58. Neither is the enumeration this file used to carry. PR #34 R21 found
+that enumeration publishing three runs where the ledger held six and calling the
+smallest of them the maximum — the same defect PR #35 had already fixed here by
+deleting the list and citing one graded row instead, which is the resolution
+both findings get.
+
+The paragraph below records the 53-case band this file carried before those
+merges. It is kept because its reasoning about §6 item 5 (derivation) is general
+and its evidence is reproducible; the numbers in it are that superseded band's,
+not the one published above.
+
+The rule gave 13.32 × 1.15 = 15.32 → **20** there. Note the band moved within
+that round, and be precise about why. The first two runs at 53 cases measured
+12.87 and 12.89s, which derive **15**; a band published from them was reachable
+and is green under the check as it now stands — §6 item 5 (derivation) does not
+require the rule's value to equal the committed ceiling. No commit ever
+published it (`git log -S` on this file finds that figure only in the round-4
+repair, quoting it as an example), so the claim is reproducible rather than
+historical: call `_band_wrong` with the band at 12.89s citing ts
+`20260823-041431` (51/53) and a ledger holding only the two rows recorded at 53
+cases by then, and it returns `[]` (T-R48). What took the state out of reach was
+item 3 (same-ceiling), when a 13.32s run landed and the ledger's maximum crossed
+into the next band. Had that run not landed, the 15-deriving band would have
+stood. This is the declared deviation in §6, not a mechanism catching something.
 
 This number was **15** until PR #29 R21, and that was a reading error, not a
 rule change: the band behind it published five runs of a ledger holding

@@ -91,7 +91,7 @@ def run_case(case):
 # published as the band when the committed ledger held sixteen, the slowest at
 # 13.57s — 13.57 x 1.15 = 15.6, so the rule had always said 20. Both bands are
 # now graded against the ledger by `published-band-matches-the-ledger`.
-WALL_BUDGET_S = {"fast": 80, "invariant": 20}
+WALL_BUDGET_S = {"fast": 90, "invariant": 20}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its
