@@ -1,0 +1,63 @@
+{
+  "pr": 35,
+  "round": 4,
+  "scope": "round-3 repair diff fd9363b..HEAD + standing R15/R16",
+  "standing": {
+    "R15": "CLOSED — no clean-tree language survives outside §6's as-of wording",
+    "R16": "CLOSED — the substantive claim is true of the current code and nothing contradicts it",
+    "R17": "debt T-R44 (verified present)",
+    "R18": "debt T-R45 (verified present)"
+  },
+  "reviewer_could_not_falsify": [
+    "the `describes_a_deleted_rule` guard is non-vacuous — all three phrases absent today, and a scratch markdown file reintroducing them (including the bold-split form) turns the case red on all three",
+    "the `ponytail:` limit statement is accurate about the blacklist half",
+    "§6 items 1-7 each map onto real assertions in `_band_wrong`/`_check_published_band`",
+    "the published numbers re-derive (65.93->75.82->80, 13.32->15.32->20), both citations resolve to real ledger rows",
+    ".eval-baseline.json identical to origin/main; no --no-verify in branch history"
+  ],
+  "result": "REQUEST_CHANGES (routed to debt by standing human ruling)",
+  "disposition": "Human ruled at the round-3 breaker: option A, one bounded round on R15+R16, and the same species recurring ships the PR with the remainder as named debt rather than a fifth round. R15 and R16 are closed. R19 is the same species, so all four route to debt (T-R46..T-R49) and the PR goes to the human for the merge decision.",
+  "gate": {
+    "invariant": "53/53 = 1.000",
+    "fast": "134/134 = 1.000"
+  },
+  "findings": [
+    {
+      "id": "R19",
+      "severity": "MEDIUM",
+      "route": "debt",
+      "claim": "The repair's central new claim — that the seven properties are stated once and referred to everywhere else — is false in its own text: ADR-019 §6 restates item 2 twice in full, and README restates items 3 and 7, one of them inside the sentence asserting \"restated nowhere\".",
+      "evidence": "The claim: ADR-019:167-168 \"One list, in one place; every other sentence in this file and in README refers to it instead of restating it\"; same at :48-49 and INDEX.md:28. Counter-evidence in the same file: ADR-019:254-257 restates item 2's first clause in full with no reference to item 2; :264-269 restates item 2's second clause, also unreferenced — the exact wording R15 found stale at §2:68-73 last round, now living 80 lines below the list instead of 100 lines above it. In README: :107-109 restates item 7 inside the sentence denying restatement; :121 \"Same ceiling, not `published >= ledger max`\" restates item 3's parenthetical verbatim. The `ponytail:` limit at src/browser/eval_adapter.py:3398-3405 leans on this defence explicitly, so the blacklist's stated backstop is not in place.",
+      "repro": "sed -n '167,171p;254,276p' specs/decisions/ADR-019-...md; sed -n '104,122p' README.md — compare against §6 items 2, 3 and 7 at :173-186. No eval case can go red on this: `describes_a_deleted_rule` blacklists three retired phrases, and a correct-today restatement is by construction not on that list.",
+      "acceptance": "Either the two §6 paragraphs (:254-262, :264-276) and README:107-109/:121 defer to the item numbers instead of restating their content (\"item 2 is why\", as :192-194 and :220 already do), or the single-source sentences at ADR-019:167-168, :48-49 and INDEX.md:28 are narrowed to what is true. Grepping §6 for a sentence that states an item's content without naming its number returns nothing, or the claim no longer says otherwise.",
+      "route_note": "MEDIUM and it makes a published claim false, so the normal scope rule would block. Routed to debt by the human's standing ruling at the round-3 circuit breaker: option A was one bounded round on R15+R16, and the same species recurring means the PR ships with the remainder as named debt rather than a fifth round."
+    },
+    {
+      "id": "R20",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The renumbering from `property N` to `§6 item N` stopped at comments and missed the two strings that reach a reader, so a red `published-band-slack-is-declared` report names §6 items that are off by one.",
+      "evidence": "src/browser/eval_adapter.py:676 emits `r21_underpublished_band_green_on_property_2` and :680 emits `r21_underjustified_ceiling_green_on_property_3`. Under §6's list these are item 3 and item 4 (ADR-019:173-186). The comments two lines above each were renumbered by this diff (:673-675), so the comment and the key it guards disagree. The round-3 resolution artifact claims the sweep covered \"stale `property 2` / `property 3` numbering in three comments\" — the emitted keys were not comments and were not swept.",
+      "repro": "grep -n 'on_property_' src/browser/eval_adapter.py, then read ADR-019:173-186",
+      "acceptance": "The emitted keys name the same item numbers as §6's list (or no number at all), and no string in `_check_published_band_slack` uses the retired `property N` numbering."
+    },
+    {
+      "id": "R21",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ADR-019 §3 and §6 assert that the 15-deriving band \"was published\" in this round, and no commit on the branch ever published it; only the greenness half is reproducible.",
+      "evidence": "ADR-019:101 \"that band was published, and the check was GREEN on it\" and :236-237 \"that exact state was published in this round and the check accepted it\". `git log --all -S'12.89 × 1.15'` returns only aeac0f7, the round-4 repair itself quoting it as an example. The bands actually published were 13.22->20, 13.08->20 and 13.32->20; the 12.89/->15 state existed only in an uncommitted working tree. The substantive half IS true and the reviewer verified it: `_band_wrong` returns [] for that state, `round(12.89*1.15,2) == 14.82`, `_band_rule(12.89) == 15 <= 20`.",
+      "repro": "git log --all --format=%h -S'12.89 × 1.15' -- specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md -> aeac0f7 only",
+      "acceptance": "The sentences say what is reproducible — the state was reachable and is green under the current check — rather than that a commit of this PR published it; or a commit sha is cited that did."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "§6's list is presented as \"exactly what it requires\" but omits two properties the code emits, and §2's pointer mis-scopes item 4.",
+      "evidence": "ADR-019:48-49 \"§6 lists exactly what it requires\". `_band_wrong` also emits `adr_publishes_no_band_line` (eval_adapter.py:440) and `no_recorded_run_at` (:461), neither in items 1-7. Separately ADR-019:69 says \"§6 items 2-4 are what the check requires of it\" where \"it\" is the cited run; item 4 (:179-180) constrains the committed ceiling against the ledger maximum, not the cited run.",
+      "repro": "walk eval_adapter.py:430-497 and :530-591 against ADR-019:173-186 — nine distinct `wrong.append` shapes mapped onto seven items, two unmapped",
+      "acceptance": "Either the two omitted shapes are folded into the list (or named as preconditions), or :48-49 drops \"exactly\"; and ADR-019:69 cites items 2-3 for the cited run, item 4 for the ceiling."
+    }
+  ]
+}

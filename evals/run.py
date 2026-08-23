@@ -258,6 +258,11 @@ def main():
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S")
+    # Read the tree BEFORE writing the report: the report is an untracked file
+    # in the tree it is describing, so asking afterwards made every `--report`
+    # run record `dirty: true` on account of its own artifact — and the bands
+    # ADR-019 publishes are filtered out of exactly this field (PR #35 R5).
+    sha, dirty = git_sha(), git_dirty()
     report_name = None
     if write_report:
         report_name = f"{stamp}-{args.suite}.json"
@@ -266,7 +271,7 @@ def main():
              "results": results}, indent=2))
 
     history_line = {
-        "ts": stamp, "suite": args.suite, "sha": git_sha(), "dirty": git_dirty(),
+        "ts": stamp, "suite": args.suite, "sha": sha, "dirty": dirty,
         "passed": passed, "total": len(results), "score": round(score, 6),
         "wall_s": totals.get("wall_seconds", 0.0), "cost_usd": totals.get("llm_usd"),
         "report": report_name,
