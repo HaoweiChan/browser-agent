@@ -63,11 +63,16 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 153 cases, ts `20260823-212240`, **70.20s**, 153/153
-  (`dirty: false`, ts-only for the ADR-012 reason §3 gives. Two clean rows were
-  available at this count — 70.20 / 70.19s, taken as they came — and this is the
-  slower, on §3's least-slack rule. The ledger's own maximum at this count
-  derives the same ceiling; it is not copied here, see §3.)
+- Band source — `fast` at 154 cases, ts `20260824-002536`, **71.42s**, 152/154
+  (`dirty: true`, ts-only for the ADR-012 reason §3 gives, and dirty and RED for
+  the same structural reason: T-M40-1 adds one case, so the tree only reaches
+  154 while that case is uncommitted, and the two cases red in that row —
+  `docs-numbers-are-derived` and `published-band-matches-the-ledger` — are
+  precisely the ones this republish clears. Item 2 (cited-run) grades the
+  citation against the row's own `passed/total`, not against greenness, because
+  requiring green here has no fixed point: this check is in both suites, so at a
+  fresh count every run is red until the band is republished. The ledger's own
+  maximum at this count derives the same ceiling; it is not copied here, see §3.)
 
 **This band was dirty for one commit, and the reason is worth keeping.** A case
 addition forces a dirty citation: the tree only reaches 153 cases while the new
@@ -105,11 +110,11 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 70.20 × 1.15 = 80.73 → **85**, which is BELOW the committed 90 and
+five — gives 71.42 × 1.15 = 82.13 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
-run at 153 cases is exactly that short sample. Item 5 (derivation) grades the
+run at 154 cases is exactly that short sample. Item 5 (derivation) grades the
 arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
 that says 90 is green and declared rather than a contradiction. The band
 published for the earlier
@@ -125,16 +130,13 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 58 cases, ts `20260823-200456`, **13.78s**, 58/58
-  (`dirty: false`, ts-only for the same ADR-012 reason as §2. Four clean rows
-  were available at this count — 12.93 / 13.78 / 13.18 / 13.12s, taken as they
-  came rather than selected for their numbers. 12.93s is disqualified: it
-  derives **15** where the ledger's maximum derives 20 — item 3 (same-ceiling).
-  Of the three that qualify this is the slowest, chosen so the
-  published number sits as close to the ledger's own maximum as a real run
-  allows — §6 tolerates up to one ceiling step of slack, and R21's point was
-  that publishing below the maximum is how a band drifts, so take the least
-  slack on offer.)
+- Band source — `invariant` at 59 cases, ts `20260824-002424`, **14.08s**, 57/59
+  (`dirty: true`, ts-only for the same ADR-012 reason as §2, and dirty and red
+  for the reason §2 states at length: one case added, so 59 exists only while it
+  is uncommitted, and the row's two failures are the two documents this
+  republish repairs. It is the only row at this count, so there is nothing to
+  select and no least-slack choice to make; §6's tolerance and R21's rule are
+  what the next rows at 59 will be judged against.)
 
 Neither band quotes the ledger's maximum as a number any more, and that is the
 fix for a defect this file produced twice. §3 published **13.80s** and the final
@@ -150,7 +152,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.78 × 1.15 = 15.85 → **20**, which is the committed
+The same rule gives 14.08 × 1.15 = 16.19 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

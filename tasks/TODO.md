@@ -1531,6 +1531,34 @@ gap predates it). The L3 cell is prose naming cases, which is why nobody regener
 Acceptance: the TC/level counts join `analysis_coverage`'s graded set (derived from the
 tags, same as the split), or the table is cut down to the graded rows and says so.
 
+### T-R73 — the client-disconnect release is graded in-process, never through a real disconnect            [status: todo]
+Origin: T-M40-1
+Spec: `smoke_events` now holds `SEM` for the length of a browser check and releases it
+in a `finally`, which covers the `GeneratorExit` a closed tab produces. What
+`smoke-stream-takes-the-run-slot` grades is that generator contract directly — drive to
+`launching`, `aclose()`, assert the slot came back. What it does NOT grade is the layer
+that produces the `GeneratorExit`: Starlette's `StreamingResponse` cancels its stream
+task when it sees `http.disconnect`, and if that ever stops happening (a Starlette
+change, a proxy that holds the socket open) the slot stays held until the 15s navigation
+timeout or forever, with every assertion in the case still green. A leaked slot bricks
+the service — `/readyz` says busy and every run queues behind a browser that is gone.
+Repro: `curl -N https://<host>/smoke/stream`, ^C during `launching`, then poll `/readyz`.
+Acceptance: one case that disconnects a real HTTP client mid-stream and requires the slot
+back within a bound, watched red against a `finally` that is removed — cheaply enough to
+stay in the offline gate, which is the part that needs thought, since the honest version
+of this test waits for a real cancellation.
+
+### T-R74 — `KINDS` registers `readyz-transitions` twice            [status: todo]
+Origin: T-M40-1, found while registering a new kind
+Spec: `src/browser/eval_adapter.py`'s `KINDS` dict has `"readyz-transitions": _run_readyz_case`
+at two lines. Both name the same handler, so nothing misbehaves today — but a duplicate
+key is silently last-wins, and the next one will be two entries pointing at different
+handlers with the losing case running the wrong grader and no error anywhere. Nothing in
+the tree lints for it.
+Repro: `grep -c '"readyz-transitions"' src/browser/eval_adapter.py` -> 2.
+Acceptance: the duplicate is gone and a check refuses the shape — a one-line invariant
+over the literal keys is enough, and it should be watched red against the current tree.
+
 ## Notes
 
 ### Reopen — A-phase (2026-08-17)

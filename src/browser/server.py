@@ -788,7 +788,11 @@ function smoke() {
     if (ev.event === "done" || ev.event === "error") {
       s.close();
       $("status").className = "big " + (ev.event === "done" ? "success" : "failure");
-      $("status").textContent = ev.event === "done" ? "chromium ok" : "chromium failed";
+      // A refusal for a busy slot is not a browser failure: no Chromium was
+      // ever launched, and reporting one sends the reader after a bug.
+      $("status").textContent = ev.event === "done" ? "chromium ok"
+        : String(ev.error || "").startsWith("busy") ? "busy — one browser at a time"
+        : "chromium failed";
     }
   };
   s.onerror = () => s.close();
@@ -860,7 +864,11 @@ async def readyz():
         "busy": busy,
         "active_run_id": ACTIVE_RUN,
         "running": sum(1 for r in RUNS.values() if r.get("status") == "running"),
-        "reason": f"a run is executing ({ACTIVE_RUN})" if busy else None,
+        # `busy` without a run id is the browser check holding the slot; naming a
+        # run that does not exist ("a run is executing (None)") is the shape an
+        # operator would chase.
+        "reason": (f"a run is executing ({ACTIVE_RUN})" if ACTIVE_RUN
+                   else "a browser check is running") if busy else None,
     }
 
 
@@ -938,6 +946,23 @@ async def smoke_events():
         return f"data: {json.dumps({'event': event, **kw})}\n\n"
 
     yield ev("start", target=SMOKE_URL)
+    # A browser check launches the same Chromium a run does, on a container
+    # sized for exactly one — so it TAKES the run slot instead of reading it.
+    # Reading it (`if SEM.locked(): return`) is one-directional and lets two
+    # concurrent checks, or a run submitted during a check, open the second
+    # browser: the OOM the slot exists to prevent. Refusing rather than queueing
+    # on purpose — a check that waits out a 60s run and then opens a browser
+    # after the visitor has navigated away is worse than one that says busy now.
+    # ponytail: check-then-acquire, because asyncio has no try_acquire and the
+    # uncontended path of Semaphore.acquire() never suspends, so nothing can
+    # take the slot between these two lines on a single-threaded loop. A real
+    # non-blocking primitive is the upgrade if this ever runs threaded.
+    if SEM.locked():
+        yield ev("error", error="busy: the single run slot is taken — "
+                 + ("a run is executing" if ACTIVE_RUN else "a browser check is running")
+                 + ". No browser was launched; try again in a moment.")
+        return
+    await SEM.acquire()
     try:
         from playwright.async_api import async_playwright
 
@@ -955,6 +980,11 @@ async def smoke_events():
         yield ev("done", title=title)
     except Exception as e:  # loud failure is the contract (CLAUDE.md rule 4)
         yield ev("error", error=f"{type(e).__name__}: {e}")
+    finally:
+        # Every exit path, including the GeneratorExit Starlette throws in when
+        # the client closes the tab mid-check. A slot taken and never returned
+        # bricks the service for good — worse than the bug above.
+        SEM.release()
 
 
 @app.get("/smoke/stream")
