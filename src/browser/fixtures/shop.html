@@ -5,7 +5,15 @@
 
 <form id="search-form" onsubmit="return doSearch(event)">
   <label for="q">Search products</label>
-  <input id="q" type="search">
+  <!-- maxlength is what every real search box has, and here it is also the
+       repo's only CHEAP act failure: a fill longer than 24 characters is
+       truncated by the browser, so the readback check in agent.execute raises
+       StepError("act") immediately, leaving `page_changed` null because the
+       before/after comparison is never reached. Every other act failure costs
+       either a 2s postcondition settle or a 10s click timeout. Used by
+       `observe-drilldown-cannot-launder-unchecked-action`; the longest value
+       any other case fills here is 8 characters, so nothing else sees it. -->
+  <input id="q" type="search" maxlength="24">
   <button id="search-btn" type="submit">Search</button>
 </form>
 

@@ -140,8 +140,10 @@ not asserted blind either time.
 3. **The ceiling is per-environment, and both numbers are measured.**
    `WALL_BUDGET_S = {"fast": 60}` is the local ruling at the time this
    decision was written — Decision 4 below re-measures it to 70, then withdraws
-   that on round-5 review, so 60 is also the number enforced today. `EVAL_WALL_BUDGET_S`
-   overrides it, `.github/workflows/eval.yml` sets it to **80**, and anything
+   that on round-5 review, so 60 is also the number enforced today. `EVAL_WALL_BUDGET_S_FAST`
+   overrides it (one variable per suite since ADR-019),
+   `.github/workflows/eval.yml` sets it to **90** for `fast` and **20** for
+   `invariant`, the local numbers are **90** and **20** since ADR-021, and anything
    that is not a positive number — unset, empty, `banana`, `60s`, `0`, `-5` —
    falls back to the committed local number (60 today). `fast-wall-clock-budget` grades all of that,
    including the value the workflow declares, because an override nothing reads

@@ -1,0 +1,31 @@
+{
+  "id": "observe-drilldown-replan-is-linted",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "Which product on this page has the most customer reviews?",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        { "action": "extract_all", "target": { "role": "link" }, "rank": true },
+        { "action": "observe", "target": { "role": "list", "name": "Catalogue" } }
+      ],
+      [
+        { "action": "extract_all", "target": { "role": "listitem" }, "rank": true }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "replans": 0,
+    "recovery": false,
+    "trace_actions": ["navigate", "extract_all", "observe"]
+  },
+  "provenance": "PR #34 R16, the seventh occurrence of this repo's silent-success class and the first to violate a contract that names the offending code by name: `specs/decisions/ADR-018-m31-plan-lint.md` says outright that 'a future adoption point (M32's `observe` replan) has to lint too; that is the invariant, not the two call sites', and M32's drill-down adopted its replan without one. Watched red first with the plans above: `status: success`, `verdict: PASS`, `replans: 1`, and an answer that is a LIST OF LISTS — `[[\"Aurora Desk Lamp\", ...], [\"Aurora Desk Lamp $39.00\", ...]]` — offered as the answer to which product has the most reviews. Every backstop is satisfied by construction: the first plan passes the lint (exactly one `extract_all`, `rank: true`), `verifier.aggregate_needs_comparison` sees a ranked enumeration in the graded trace and is content, and the judge is never reached as a rejector because L1 passed. Proof the suite could not see it: adding the lint at that adoption point left the committed suite at 146/146 = 1.000, so no existing case reaches it at all.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "the fix is not a third hand-placed `plan_gap` call — that is how this recurred. All three places the executor rebinds `steps` now go through one nested `adopt()` that lints and splices together, so a fourth adoption point cannot be added without one. Asserted structurally per PR #34 R13: `trace_actions` pins that the run got as far as the `observe` and stopped there, and `replans: 0` that the refused plan was never counted as progress — a reason-string assertion would pass on any of the drill-down's four refusal exits."
+  }
+}

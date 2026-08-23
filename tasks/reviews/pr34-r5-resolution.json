@@ -1,0 +1,171 @@
+{
+  "pr": 34,
+  "round": 5,
+  "task": "M32",
+  "note": "Written by the implementer session that performed the repair, not reconstructed. Round 4's artifact had to be reconstructed after a teardown; this one is committed with the work.",
+  "resolutions": [
+    {
+      "id": "R23",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "origin/main (3eac663, PR #35) merged into task/M32. All eight predicted conflicts resolved. Append-only logs unioned with no line lost from either parent: history.jsonl 889 (ours) + 914 (theirs) - 768 (base) = 1035, plus the round-5 reviewer's own uncommitted gate line, = 1036 rows, re-sorted by ts; pr-loop-ledger.jsonl kept theirs' order (which preserves base) and appended the M32 row, 14 rows, ours-only M32 and theirs-only T-R34/M35 all present. ADR-019 took main's side wholesale -- main had already replaced the enumeration with a single graded band-source citation and a seven-item spec in a new section 6, which is strictly stronger and is also R21's acceptance -- plus our Amended-by ADR-021 line and the Ruling's local fast ceiling corrected 80 -> 90. INDEX.md's ADR-019 line took main's text with our amended-by clause appended. TODO.md was reconstructed as a union: main's file (which moved M31/M36 to DONE.md and added T-R39..T-R55 and T-M35-WALL) plus our nine T-M32-* blocks re-inserted at the head of Debt and M32's status set to pr. README, docs/analysis.md and docs-numbers-are-derived.json took our side for the numbers and then had EVERY published number re-derived from reports of the merged tree, not reconciled between the two parents. No duplicate ADR or D numbers (main tops out at ADR-019; ours are 020/021).",
+      "auto_merged_files_read": "src/browser/agent.py is byte-identical to origin/main's -- main touched it not at all (`git diff HEAD...origin/main -- src/browser/agent.py` is empty), so the region where adopt() lives took no merge at all this time. src/browser/eval_adapter.py auto-merged with 621 lines of main's changes; a line-level diff of our side against the merged file shows exactly ONE thing lost, the old _check_published_band and its _BAND_LINE regex, superseded by main's stronger version of both. Nothing in the M32 observe/laundering paths was removed; all 15 observe-* cases are present and green.",
+      "cross_parent_reds": "None. No case from either parent went red on the merged tree once the doc numbers were republished. Two graded reds appeared during the merge and are documented as real cross-parent findings rather than resolved away: main's `published-band-matches-the-ledger` item 6 grades ADR-019's Ruling against WALL_BUDGET_S, and our ADR-021 had moved that to 90 while both parents' Ruling still said 80 -- fixed by correcting the Ruling and the README band row, not by reverting either parent."
+    },
+    {
+      "id": "R25",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "branch": "enforcing",
+      "cases": [
+        "plan-adoption-is-the-only-steps-rebind"
+      ],
+      "red_first": "Watched red on three mutations before it was allowed to be green. (1) The reviewer's own: agent.py `adopted, gap = adopt(si, new_steps)` -> `adopted, gap = (steps[:si] + new_steps, None)` -- red at BOTH `steps = adopted` sites (lines 675 and 1043), because the check follows the alias and `adopted` stops being adopt-derived. (2) A genuine fourth site: `steps = adopt(si, new_steps)[0]` -> `steps = steps[:si] + new_steps` -- red at 1119. (3) In-place: `steps.extend(new_steps)` -- red at 1119 as mutates_steps_in_place. agent.py restored byte-identical after each.",
+      "fix": "`_check_steps_adopt_only` parses src/browser/agent.py with ast and asserts: every Assign whose target is `steps` is either the single first-plan binding (an Await) or adopt-derived -- adopt(...), adopt(...)[i], or a local every one of whose bindings is adopt-derived; no AugAssign/AnnAssign/NamedExpr binds `steps`; no subscript assignment or list-mutating method call on `steps`; and exactly one first-plan binding exists. Read structurally rather than by regex on purpose: the mutation that produced R16 leaves the visible line `steps = adopted` untouched, so a grep for `steps =` sees a linted rebind. Tagged invariant + fast. specs/001-browser-contract.md:225-228 and agent.py's adopt() docstring now name the case instead of asserting the property on convention, and both say plainly that the modal claim stood unenforced for one round (R25) and that this is the same shape as ADR-018's version that R16 falsified.",
+      "not_covered": "adopt() itself could stop calling plan_gap -- a different assertion, graded by observe-drilldown-replan-is-linted, plan-lint-holds-across-a-midrun-replan and plan-gap-truth-table. A future binding through a helper that merely returns adopt()'s value would be red here even though it is safe; deliberate, because a new adoption path should be a human decision."
+    },
+    {
+      "id": "R21",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "Resolved by taking main's ADR-019 rather than by editing our enumeration: main had independently hit the same defect (its own R21) and fixed it by DELETING both enumerations and publishing one band-source sentence per suite that cites a ledger row by timestamp, graded end to end by published-band-matches-the-ledger's seven items -- including item 3, rule(published) == rule(ledger max), which is exactly what our enumeration violated. Both bands were then re-derived from the merged tree: `fast` 152 cases, ts 20260823-192648, 70.22s, 70.22 x 1.15 = 80.75 -> 85; `invariant` 58 cases, ts 20260823-192533, 13.15s, 13.15 x 1.15 = 15.12 -> 20. Both cited runs are GREEN (152/152 and 58/58) and the ADR says so explicitly, because R21's finding was that the old enumeration published only the red runs. Each band also names the ledger's own maximum at that count (70.38s and 13.80s) and says it derives the same ceiling. The derived 85 is BELOW the committed 90 and does not move it -- section 6's no-ratchet-down rule -- and the ADR states that rather than leaving a reader to reconcile an arrow with the ceiling above it.",
+      "commit_message_claim": "The round-4 commit's 'bands re-derived from fully green merged-tree reports' was false and is not repeated. This round's bands ARE from green runs, and the ADR names the run and its score so the claim is checkable rather than asserted."
+    },
+    {
+      "id": "R22",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "ADR-021's section is retitled 'What CI has measured -- and which tree it was' and now states that run 32627229208 measured commit 920218e, the PARENT, at 146 fast / 54 invariant; that `gh run list --commit 8d38c52` and `--commit d60da88` both return nothing because a CONFLICTING PR silently gets no checks; and that CI has never measured the tree this PR ships. The numbers (88.39s / 146/146, 16.79s / 54/54) all verify and are kept, now labelled with the sha they belong to. The 'red CI fast run on the next case anyone adds' prediction is corrected to already due rather than pending, because the case it predicted against shipped in the same commit and this round adds another. The Decision bullet that said 'CI has not yet produced a fast measurement on this tree' was contradicting the same file and is rewritten. INDEX.md's ADR-021 line no longer asserts both halves: it names 920218e as the only measured tree and states that CI has never measured this one.",
+      "left_open": "Raising CI's ceiling is deliberately NOT done in this commit. .github/workflows/eval.yml and .eval-baseline.json are untouched (git diff against HEAD is empty for both, and for .githooks/)."
+    },
+    {
+      "id": "R24",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "README's sentence no longer claims a score for the run cited above it. Rewritten as a standing note about openlibrary.org's flakiness -- the ~9.5s home page, the 20s navigation budget, and that live-ol-search-a11y-invisible takes live to 8/9 on a bad day -- explicitly labelled as a real outcome on OTHER runs and not on the cited one, with the defect itself recorded (a claim-versus-artifact contradiction two lines under the block that exists to prevent exactly that). The cited report 20260823-164737-live.json is score 1.0, 9/9, and the block above says 9/9. Mechanism gap unchanged: the sentence is still ungraded, which is T-M32-10's gap in the reverse direction and stays logged there."
+    },
+    {
+      "id": "R26",
+      "severity": "LOW",
+      "outcome": "debt",
+      "debt_id": "T-M32-11 (amended)",
+      "note": "Trigger restated: the crash needs any `expect` that implies verdict PASS, not an empty one. The block now cites eval_adapter.py's want_verdict expression (truthy when expect omits status, or sets status: success, or names a verdict) and the `result['verdict']['verdict']` subscript that is None for any run ending before grading, names the run.py catch that keeps the suite from aborting, gives the repro with a NON-empty expect, and states an acceptance covering all three expect shapes with the fix watched red on a non-empty one first so it cannot be closed by special-casing the empty case."
+    },
+    {
+      "id": "R27",
+      "severity": "LOW",
+      "outcome": "debt",
+      "debt_id": "T-M32-9 (created and extended)",
+      "note": "T-M32-9 did NOT exist. It and T-M32-8 were routed to debt in round 4 and recorded in pr34-r4-resolution.json, but no block was ever written into tasks/TODO.md -- found while acting on R27. Both blocks are now written. T-M32-9 names CLAUDE.md's Gate and Commands blocks first (invariant <= 15s, fast <= 75s against the enforced 20 and 90), then INDEX.md's ADR-017 line and fast-wall-clock-budget's expect.note, and marks which are pre-existing on main. T-M32-8 carries R18/R21's residue: ADR-002's Ruling/Status/Amended-by and the ungraded CI band."
+    }
+  ],
+  "found_beyond_the_brief": [
+    {
+      "what": "T-M32-8 and T-M32-9 were routed to debt in round 4 but never written into tasks/TODO.md.",
+      "action": "Both blocks written this round rather than logged as new debt -- a debt id that lives only in a review artifact is not tracked, and R27's acceptance required T-M32-9 to exist."
+    },
+    {
+      "what": "The merged tree's ADR-019 Ruling published local `fast` 80 while evals/run.py commits 90 -- red under main's new item 6, which our parent did not have and main's parent did not need.",
+      "action": "Fixed in the merge (Ruling reads 60 -> 80 -> **90s** (ADR-021)), not resolved by reverting either parent."
+    },
+    {
+      "what": "tasks/pr-loop-ledger.jsonl's M32 row still reads rounds: 3 with round-3 counters, while this is round 5.",
+      "action": "NOT edited. The row is the orchestrator's closing artifact and its counters are contestable (R6 is 'debt' in the round-1 findings and 'no_change_needed' in the resolution); writing a guessed tally would be worse than leaving a row everyone can see is open. Flagged for the orchestrator to close at merge."
+    }
+  ],
+  "gate": {
+    "invariant": "58/58 = 1.000, wall 13.35s against the 20s ceiling (evals/run.py WALL_BUDGET_S), $0.0000",
+    "fast": "152/152 = 1.000, wall 69.94s against the 90s ceiling, $0.0000, 242 actions",
+    "live": "9/9 = 1.000, wall 24.82s, $0.0000, 21 actions",
+    "untouched": [
+      ".eval-baseline.json",
+      ".github/workflows/eval.yml",
+      ".githooks/",
+      "EVAL_WALL_BUDGET_S* (never set)"
+    ],
+    "no_update_baseline": true
+  },
+  "second_merge": {
+    "why": "origin/main moved again to efb2711 (M37, PR #37) while b50c7b1 was landing, so PR #34 went CONFLICTING a second time and GitHub ran no checks on b50c7b1 either. This is the fourth mid-flight move of main during PR #34.",
+    "conflicts": "Two, both append-only logs, resolved by union with nothing lost. history.jsonl: 1047 ours + 11 theirs-only + 1 restored row (below) = 1059, re-sorted by ts. pr-loop-ledger.jsonl: theirs' order plus our M32 row = 15 rows; theirs-only M37 and ours-only M32 both present.",
+    "auto_merged_files_read": "src/browser/eval_adapter.py: zero lines lost from our side, and all three of main's M37 additions are present (the news.ycombinator.com _UI_MATRIX row, the `button: chip.textContent` capture, and the expected_examples assertion block); our _check_steps_adopt_only and its INVARIANTS entry are intact. tasks/TODO.md: one heading is gone from our side, `### T-R34`, and that is main's own deliberate removal (T-R34 merged as PR #35) rather than a merge loss -- its four `Origin: T-R34` cross-references survive. All 11 T-M32-* blocks intact, M32 still `[status: pr]`.",
+    "case_counts": "Unchanged by M37 -- fast 152, invariant 58, all 163 -- because M37 edited an existing case (ui-no-url-guard.json) rather than adding one. So no published count moved, and the ADR-019 bands, README table and docs/analysis figures were re-verified rather than re-derived: published-band-matches-the-ledger, published-band-slack-is-declared, docs-numbers-are-derived and adr-header-and-index all pass unchanged. The ledger's maximum at fast 152 did move (70.38 -> 71.01s) and still derives 85, which is what item 3 grades.",
+    "ledger_rows_lost_and_partially_restored": "Between the b50c7b1 commit and this merge, two rows appended to evals/report/history.jsonl after the commit were no longer in the worktree, which was clean against HEAD. One is the pre-commit hook's own gate row for b50c7b1 -- `ts 20260823-193416, fast, 152/152, 71.01s` -- quoted verbatim from this session's own tool output and RESTORED into the union. The other was an invariant verification run (58/58, 13.46s reported by the runner, but its exact ts and full row were not captured verbatim) and is NOT reconstructed: writing a ledger line from memory would be fabricating evidence in the one file this PR has spent two rounds insisting is append-only. Cause not established from inside this worktree; the file's mtime is later than the commit, so it was appended to and then reverted to HEAD by something outside this session.",
+    "new_debt": "T-M32-12 -- T-R34 merged as PR #35 and efb2711 removed its Queue block from tasks/TODO.md, but tasks/DONE.md never got its one-line entry. M37 is one step behind in the same state. Pre-existing on origin/main, logged rather than repaired.",
+    "gate_on_the_merged_tree": {
+      "invariant": "58/58 = 1.000, wall 13.46s against the 20s ceiling, $0.0000",
+      "fast": "152/152 = 1.000, wall 70.83s against the 90s ceiling, $0.0000, 242 actions",
+      "live": "not re-run -- nothing in the M37 merge touches a live path, and the previous run of this branch was 9/9 = 1.000 at $0.0000"
+    }
+  },
+  "ci_diagnosis_and_fix_a": {
+    "trigger": "CI run 32637648447 on 11545a1: published-band-matches-the-ledger PASSED in the invariant step (58/58) and FAILED in the fast step minutes later (151/152), same job.",
+    "ci_ceiling_premise_withdrawn": "CI measured fast 77.65s / invariant 16.03s on the shipped tree, not the parent's 88.39s. 77.65 x 1.15 = 89.3 -> 90, exactly the committed CI ceiling, so ADR-013's rule derives NO change. The CI-ceiling ADR is stood down by the coordinator and .github/workflows/eval.yml is untouched.",
+    "which_item_failed": "ADR-019 section 6 item 2's dirty clause, NOT item 3. Reproduced locally with the payload {'suite':'invariant','cited_a_dirty_run':'20260823-192533','clean_runs_available_by_then':['20260823-115044']}. Item 3 passed as predicted: 13.15 and 16.03 both derive 20.",
+    "root_cause": "`ts` is a naive time.strftime with no zone, compared lexicographically as a total order on real time, over a ledger mixing Asia/Taipei (local) and UTC (CI) rows. Our cited row 20260823-192533 is 11:25:33Z; CI's row 20260823-115044 is 11:50:44Z -- 25 minutes LATER in real time, 8 hours EARLIER as a string, so it retroactively reddens a published band, which is the treadmill section 6's as-of rule exists to refuse.",
+    "not_wall_clock": "Control: hold the CI row's 16.03s and dirty:false fixed, move only its ts later -> GREEN. The wall-clock gap is irrelevant.",
+    "why_main_is_green": "Main cites 20260823-041729 (04:17 local = 2026-08-22 20:17Z), before any same-day CI stamp. Replaying the real CI row against main's band/counts/ceilings via _band_wrong returns GREEN. It does NOT generalise: main's first CLEAN row at 53 invariant cases is 20260823-042306, six minutes after the row it cites. Main is green by six minutes and by having republished in the small hours.",
+    "fix_applied": "(a) only. Both bands re-cited to CLEAN rows taken on the committed tree (git_dirty() excludes history.jsonl, so a run on 11545a1 stamps dirty:false). fast: ts 20260823-200925, 70.64s, 152/152 -- the only clean fast candidate. invariant: ts 20260823-200456, 13.78s, 58/58 -- four clean rows existed (12.93/13.78/13.18/13.12, taken as they came); 12.93 is disqualified because it derives 15 against a ledger max deriving 20 (item 3), and of the three qualifying the SLOWEST was chosen so the published number sits closest to the ledger's own maximum of 13.80s. No graded property was touched; no ceiling moved.",
+    "verified": "Against the real CI row (11:50:44Z) -> GREEN; against a worst-case CI stamp of 00:00:01Z -> GREEN; and locally with no CI rows -> GREEN. Citing a clean row makes item 2's dirty clause unreachable under any clock. A ledger containing BOTH CI rows is red on item 3 (CI fast 77.65 -> 90 vs published 70.64 -> 85), but that state is unreachable in a CI job: evals/run.py:210 grades every case and :289 appends the row afterwards, so a run's own row never exists during its own grading, and CI never pushes.",
+    "debt_logged": "T-M32-13 -- the full diagnosis, both symptoms with their real margins, both candidate fixes, the structural asymmetry, and the explicit statement that (a) does not solve it because adding a case still forces a dirty citation. Marked a latent defect in main's property that this PR triggered but did not introduce, and deliberately not repaired here.",
+    "incident": "Three invariant runs were accidentally executed against the MAIN checkout (/Users/willy/Documents/browser-agent) rather than the worktree, after the agent harness reset cwd between bash calls. They appended three rows (ts 20260823-200103/200111/200118, sha 2e94bed, 38/38) to that checkout's uncommitted evals/report/history.jsonl. The diff there was exactly those three rows and nothing else, so they were removed by content and the main checkout was verified clean again; no report files were written and no tracked content was altered. Reported rather than quietly corrected. All work resumed in the worktree with absolute paths."
+  },
+  "gate_final": {
+    "invariant": "58/58 = 1.000, wall 13.15s against the 20s ceiling, $0.0000",
+    "fast": "152/152 = 1.000, wall 70.61s against the 90s ceiling, $0.0000, 242 actions"
+  },
+  "sixth_merge": {
+    "why": "origin/main moved to 6765e00 (PR #36, T-R56) while c799da7 was landing. Coordinator confirmed `gh pr list --state open` returns only #34, so the queue is drained and this lap has no live sibling to invalidate it.",
+    "conflicts": "Five: README.md, evals/report/history.jsonl, ADR-019, INDEX.md, tasks/TODO.md. history.jsonl unioned 1069 ours + 109 theirs-only + 1 restored hook row = 1179, re-sorted by ts. INDEX: main's rewritten ADR-019 line plus our amended-by-ADR-021 clause; our ADR-020/021 lines kept. TODO: theirs as base (it retires T-R45..T-R49, T-R52, T-R54, T-R55 and M37, all fixed by PR #36) plus our 13 T-M32-* blocks re-inserted at the head of Debt, and M32's status restored to `pr` (main had it back at `todo`). README: took MAIN's wording -- PR #36 fixed the same R24 defect independently and more briefly. ADR-019: took main's reworked structure and its general paragraphs, our numbers.",
+    "band_format_change": "PR #36's _BAND_LINE now requires a trailing `, N/N` on each band sentence. Confirmed it is DISCLOSURE, not a green requirement -- the code comment states green is deliberately not required of a band source (T-R55: `fast` had cited a 134/136 run in silence beside `invariant`'s 53/53, and a reader reads silence as a pass). Our two rows are 152/152 and 58/58, so they satisfy both the regex and the stricter reading. _band_wrong now also asserts the citation's claimed passed/total equals the cited ledger row's.",
+    "one_red_watched": "published-band-matches-the-ledger failed once on the merged tree with {'adr':'reference_does_not_name_its_item','wrote':'Item 5','item_5_is':'derivation'} -- PR #36 added a check that every item reference names its item, and two references in OUR prose were bare. Fixed by naming them (`Item 5 (derivation)`, `item 3 (same-ceiling)`). No numbers moved.",
+    "auto_merged_files_read": "eval_adapter.py: 63 lines lost from our side, all of them the OLD band subsystem that PR #36 replaced -- correct. 5 lines lost from MAIN's side, each checked individually and each our own strict superset: `from .observe import observe` -> `... import DRILL_TEXT_HEAD, observe`; the observe case's `passed` gaining `not leaked and not text_missing`; `_run_agent(..., planner ...)` -> `recording_planner` (PR #34 R13's trace_actions); and a comment reworded from the stale literal `CI's 80` to `CI's fast number`. No genuine loss. pr-loop-ledger.jsonl auto-merged to 16 rows with our M32 and main's T-R56/M37 all present. .github/workflows/eval.yml now matches origin/main byte for byte, taking main's ADR-017 -> ADR-019 §4 comment correction.",
+    "case_counts": "Unchanged: fast 152, invariant 58, all 163. PR #36 modified four case files and added none, so no published count moved and no README/analysis figure needed re-deriving.",
+    "bands": "NOT re-derived -- re-formatted only. The clean rows cited since c799da7 (fast ts 20260823-200925, 70.64s, 152/152; invariant ts 20260823-200456, 13.78s, 58/58) are still in the ledger, still clean, still at the shipped case counts, and still derive 85 and 20 against a ledger max of 71.01s and 13.92s. The ADR now discloses that they measured this branch pre-merge, that post-merge runs at the same counts measure 70.89s and 13.35s and derive the same ceilings, and that citing a post-merge row would need a second commit because an uncommitted merge is dirty -- which is the cost T-M32-13 records and this commit deliberately does not pay.",
+    "ci_scenarios_reverified": "Committed ledger only: GREEN. Plus CI's real invariant row (11:50:44Z): GREEN. Plus a worst-case CI stamp of 00:00:01Z: GREEN.",
+    "gate": {
+      "invariant": "58/58 = 1.000, wall 13.35s / 20, $0.0000",
+      "fast": "152/152 = 1.000, wall 70.89s / 90, $0.0000, 242 actions"
+    }
+  },
+  "round6_repairs": {
+    "R28": {
+      "outcome": "fixed",
+      "severity": "MEDIUM",
+      "note": "ADR-021 published two absolute claims about what CI had not measured -- ':106' \"No CI run exists for any later commit on this branch\" and ':136' \"CI has never measured the tree this PR ships\" -- both true when written and both falsified within the hour by run 32639577041 on 07e3d34 (success: invariant 58/58 at 14.88s, fast 152/152 at 74.25s). Verified independently with gh: headSha 07e3d34, steps 12:30:54-12:31:09Z and 12:31:09-12:32:23Z. The section is rewritten to lead with the shipped-tree measurement, keeps the 920218e/88.39s data point beside it because it is real and is why the LOCAL ceiling moved, and scopes both former absolutes to the commits that made them. The '1.8% is a coin flip / prediction already due' paragraph is gone: it rested on the parent's number, and the shipped tree came in FASTER on a LARGER suite (88.39s at 146 cases -> 74.25s at 152), so the premise is gone rather than merely stale. Real margins now published: 17.5% for fast, 25.6% for invariant. INDEX.md's ADR-021 line rewritten to match. Note for the record: 88.39 x 1.15 derives 105, so had the parent's figure been used as a band it would have asked for a much larger raise than the one requested -- which is the clearest statement of why the shipped tree's measurement mattered."
+    },
+    "ci_ceiling_ruling": {
+      "outcome": "recorded",
+      "note": "The human ruled to leave CI's ceiling at 90. ADR-021 now records the ruling on its actual basis rather than on absence of evidence: (1) CI has measured the shipped tree at 74.25s; (2) ADR-013's rule applied to it gives 74.25 x 1.15 = 85.39 -> 90, exactly the committed number, so the rule derives no change; (3) the human was asked and answered. A new 'What this does NOT claim' subsection states that the margin question is NOT closed and points at T-M32-13's second symptom as its live form (CI rows entering ledger max mid-job, ungreenable locally, next band at 17.39s, CI invariant seen at 16.03s and 14.88s), and that ADR-021's CI figures remain hand-read and ungraded (T-R51). EVAL_WALL_BUDGET_S_FAST 90 and _INVARIANT 20 untouched; .github/workflows/eval.yml byte-identical to origin/main -- now the RULED state rather than the default."
+    },
+    "R29": {
+      "outcome": "fixed",
+      "severity": "MEDIUM",
+      "note": "ADR-019 section 3 said the invariant band sits as close to 'the ledger's own maximum of 13.80s' as a real run allows. The committed ledger at HEAD holds 13.92s at 58 cases (ts 20260823-202223, sha c799da7, dirty, 57/58) -- a row the final merge brought in, so the merge is what made the sentence false. Fixed the way the coordinator preferred: BOTH hand-copied maxima are gone, section 3's and section 2's (which published 71.01s by the same method and happened to still be right), and the prose now defers to what published-band-matches-the-ledger computes as ledger_slowest. A short note records why, naming R21 and T-M32-8 as the same drift class and stating that nothing went red on either scalar -- both derive 20 -- which is why it had to be caught by reading. Immediately validated: the gate run for this commit measured invariant at 14.16s, so a hand-copied 13.92 would have been stale again within one run."
+    },
+    "R30": {
+      "outcome": "debt",
+      "severity": "LOW",
+      "debt_id": "T-M32-14",
+      "note": "Logged, not fixed. Three binding forms the enforcing case cannot see: `for steps in ...` (ast.For.target never inspected), `with ... as steps` (withitem.optional_vars), and any callable literally named `adopt` shadowing the real nested one (the check matches by NAME, not by resolving scope). Repro CONFIRMED rather than taken on trust: inserting `for steps in [steps[:si] + new_steps]: break` at an adoption point leaves the case GREEN; agent.py restored byte-identical afterwards. The block records the reviewer's mitigation (the only evasion that actually removes a lint is caught at runtime by observe-drilldown-replan-is-linted, so the property holds in the layered sense), states that the case's triage.note declares the adopt()-BEHAVIOUR exclusion but not the BINDING-FORM one, and sets the honest minimum as naming the three forms in the case's 'what it does NOT cover' list. Acceptance is ordered: disclosure first, then the two cheap node types, and explicitly NOT the shadowing hole, which would mean a symbol table."
+    }
+  },
+  "gate_round6": {
+    "invariant": "58/58 = 1.000, wall 14.16s / 20, $0.0000",
+    "fast": "152/152 = 1.000, wall 70.68s / 90, $0.0000, 242 actions",
+    "movement": "none -- both suites green before and after, no case changed state, no code touched"
+  },
+  "seventh_merge_M28": {
+    "why": "origin/main 6bd4692 (PR #38, M28). The owner ruled to HOLD main for this merge — the first stable tree of the round. M28 adds a case, so this is the first merge forcing a real re-derivation.",
+    "two_commits": "Deliberate and authorised, not a fixup chain. A case addition forces a DIRTY band citation (the tree only reaches 153 cases while the new case is uncommitted, which is why the dirty allowance exists), and a dirty citation is red on CI and green locally per T-M32-13. Commit 1 (44180f7) publishes the dirty citation ts 20260823-211340, 70.46s, 151/153 and says so in its message and in the ADR. Commit 2 re-cites ts 20260823-212240, 70.20s, 153/153, dirty:false — a run that could not exist until commit 1 had landed. Two clean candidates existed (70.20 / 70.19s, taken as they came); the slower was chosen on the same least-slack rule as before. Not dodged by citing the stale clean row at 152 cases: the count changed and a band must describe the tree that ships.",
+    "conflicts": "Seven. history.jsonl 1184 ours + 19 theirs-only + 1 restored hook row = 1204, re-sorted by ts. pr-loop-ledger.jsonl 17 rows, ours-only M32 and theirs-only M28 both present. README/analysis/docs-numbers/ADR-019 took our structure with every number re-derived. TODO took main's side (it carries M28's own block) with our 15 T-M32-* blocks and M32's `pr` status restored. No duplicate D-numbers, no ADR collisions.",
+    "verifier_path_audit": "verifier.py: 3 lines lost from ours, all three the pre-M28 reason strings M28 replaced with _cite(...); 1 lost from main's, superseded by our M32 sentence on the same line; all four _cite call sites present. agent.py: 0 lost from ours, 21 from main's, EVERY one main's pre-M32 code we replaced — including main's raw splices `steps = new_steps` and `steps = steps[:si] + new_steps`, which adopt() replaced. The merge did not resurrect the pre-M32 laundering hole: changed_nothing, reads_without_acting and adopt all present, no raw splice anywhere, plan-adoption-is-the-only-steps-rebind green. eval_adapter.py: 0 lost from ours, 5 from main's (the same four supersessions as the previous merge); all 18 of M28's added lines verified present line by line.",
+    "terminal_status_hunt": "NOT a HIGH. Both bad shapes exist in assemble_result as a pure function — the INV-2 branch is guarded by `and verdict` so a falsy verdict skips it (success carrying an uncertified answer), and `answer` is nulled only inside that branch (a failure:* built with answer= would carry it) — but neither is reachable. run_task has exactly one done() without failure= (agent.py:1183) and it always passes verify()'s dict, which returns {'verdict': 'PASS'|'FAIL', ...} on every path (verifier.py:598); _apply_judge only ever returns {**verdict, ...}; a verify() exception exits at :1174 as failure:semantic with no answer. No done() call among all 20 passes both answer= and failure=, so no M32 drill-down or plan-lint refusal can carry an answer. The only non-run_task production caller, server.py:_env_failure, passes answer=None. The specific combination asked about therefore cannot occur. Logged as T-M32-15.",
+    "unexpected": "docs/analysis.md's coverage table was already stale and self-contradictory, beyond anything the count change required: the L3 cell read '15 — 4 live + 9 fixture' and enumerated 13 (4+9 is not 15), and two M36 judge cases had never been listed. Recomputed every row from the case files' own tags — TC1 37->38, mechanism/unit probes 60->65, L1 49->53, untagged 38->40, L3 now 4 live + 11 fixture with all eleven named. Both columns now total 164. Ungraded rows, so nothing caught it.",
+    "debt_logged": "T-M32-15 (assemble_result trusts its caller for the verdict).",
+    "gate": {
+      "invariant": "58/58 = 1.000, wall 14.15s / 20, $0.0000",
+      "fast": "153/153 = 1.000, wall 70.31s / 90, $0.0000, 244 actions"
+    }
+  }
+}

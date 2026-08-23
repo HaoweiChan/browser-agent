@@ -1,0 +1,154 @@
+# ADR-021: the local `fast` ceiling moves 80s -> 90s, on the number the grader derives
+
+Date: 2026-08-23
+Status: accepted
+
+**Ruling**: `WALL_BUDGET_S["fast"]` becomes 90. The value is not chosen — it is what `published-band-matches-the-ledger` reports as `required_by_adr013_rule` from the committed ledger at 146 cases (slowest 74.8s, ADR-013's +15%-round-to-five rule). `invariant` stays 20 and CI's `EVAL_WALL_BUDGET_S_FAST` stays 90.
+**Because**: the suite grew 131 -> 146 cases absorbing M31's, M36's and M32's coverage, and the ledger's slowest run moved with it; every non-ceiling case passes, so the gap is a ceiling derived against a smaller suite, not a threshold moved to hide a failure.
+**Enforced by**: `published-band-matches-the-ledger` (derives the number), `fast-wall-clock-budget` (pins the committed ruling), `evals/run.py` `over_budget()`
+
+**Amends**: ADR-019 Decision 2 (local `fast` 80 -> 90; the other three ceilings are unchanged)
+
+---
+
+## Context
+
+`published-band-matches-the-ledger`, the grader M31 added in ADR-019, went red
+on the merged tree and said exactly what was wrong:
+
+```
+suite fast · ceiling 80 · ledger_slowest 74.77 · required_by_adr013_rule 90
+```
+
+Nothing was breached. The runs of the merged tree measure **73.55 / 74.35 /
+74.59 / 74.77s at 146 cases**, all comfortably inside the committed 80. What
+exceeded 80 is ADR-013's own rule applied to that new maximum: 74.77 × 1.15 =
+86.0, rounded up to a multiple of five → **90**.
+
+Those are the numbers at the moment of the decision, quoted as the grader
+reported them. The live band is in ADR-019 §2 and moves as runs accumulate —
+it reads 74.81s over 12 runs as this lands, which derives the same 90. That is
+by design: `published-band-matches-the-ledger` compares the ceiling the
+published band DERIVES with the one the ledger derives, not the seconds
+themselves, so ordinary run-to-run variance does not redden a doc.
+
+## Decision
+
+**`WALL_BUDGET_S["fast"] = 90`**, and nothing else moves:
+
+- **`invariant` stays 20.** It grew 51 → 54 cases and still derives 20 from the
+  same rule (slowest 13.43s → 15.4 → 20). CI's `invariant` step ran 16.79s
+  against it.
+- **CI's `EVAL_WALL_BUDGET_S_FAST` stays 90.** When this was written CI had
+  produced no `fast` measurement at all on this branch — its run died at the
+  `invariant` step, on the two cases this ADR closes — so this bullet originally
+  left 90 in place for want of evidence. It no longer rests on that: CI has
+  since measured the shipped tree at 74.25s, the rule applied to that derives 90,
+  and the human ruled to leave it there. The CI section below is the account.
+
+**The number came from a grader, not from arithmetic in a commit message**, and
+that is the whole difference between this decision and the one before it. The
+band it reads is computed from `evals/report/history.jsonl`; the rule is
+ADR-013's; the case fails when the committed ceiling is below what the rule
+derives and stays failing until someone changes one of them. Nobody had to be
+trusted to do the multiplication.
+
+## Why this is not moving a threshold to make a red run green
+
+- **Every non-ceiling case passes.** 144 of 146 on `fast`, and the two reds are
+  this ceiling gap and the `docs-numbers-are-derived` cascade off it — no
+  correctness failure anywhere in the suite.
+- **The breach tracks case count, not per-case cost.** The suite went from
+  main's ~131 to 146 by absorbing M31's plan-lint and `extract_all` cases,
+  M36's judge cases and M32's drill-down cases. That is coverage.
+- **The distinguishing test, stated so it can be applied against us later:** if
+  a future gap comes from per-case cost RISING rather than case count rising,
+  the answer is removing waste, not raising the number again. `T-M32-3` is the
+  standing record of the part of this suite that is arguably waste — five
+  act-failure cases paying a full `SETTLE_BUDGET_MS` each — with its corrected
+  cost model (only a *postcondition* failure pays the settle loop; an act
+  failure raised inside `execute` is free).
+
+## The second ceiling decision in this PR, and why the first was withdrawn
+
+PR #34 already tried this once. **ADR-020 raised CI's ceiling 80 → 92 and was
+reverted** (`744b7a6`), and a reader should be able to see why that one was
+withdrawn and this one was not:
+
+| | ADR-020 (reverted) | ADR-021 (this) |
+|---|---|---|
+| where the number came from | arithmetic in a commit message, by hand | `published-band-matches-the-ledger`, from the committed ledger |
+| what it answered | a CI failure that M31 had already fixed by raising CI to 90 | a gap no other change closes |
+| the variable it set | `EVAL_WALL_BUDGET_S`, which M31 had renamed per-suite — so it would have applied no ceiling at all | `WALL_BUDGET_S["fast"]`, the ruling itself |
+| rounding | dropped the round-to-five half by hand | the grader's rule, unmodified |
+
+The first was a duplicate answer to a settled question, derived by the same
+hand that wanted the answer. This one is the answer a committed case computed
+and refused to stop reporting.
+
+## What CI has measured, and the ruling on CI's ceiling
+
+This section has been wrong twice and the corrections are kept rather than
+tidied, because the shape of the error is the point: both times it published an
+absolute claim about CI that a later run falsified.
+
+The first version headed itself "CI has now measured this tree" when the only
+run was on the parent (PR #34 R22). The second version corrected that, and
+over-corrected into "no CI run exists for any later commit on this branch" and
+"CI has never measured the tree this PR ships" — true when written, false within
+the hour, because the merge that carried the correction is what let CI run at
+all (PR #34 R28).
+
+**CI has now measured the tree this PR ships.** Run **32639577041** on
+**`07e3d34`** — HEAD — conclusion success:
+
+| | wall | ceiling | margin | rule gives |
+|---|---|---|---|---|
+| CI `fast` on `07e3d34` (152 cases) | **74.25s**, 152/152 = 1.000 | 90 | **17.5%** | 74.25 × 1.15 = 85.39 → **90** |
+| CI `invariant` on `07e3d34` (58 cases) | **14.88s**, 58/58 = 1.000 | 20 | **25.6%** | 14.88 × 1.15 = 17.11 → **20** |
+
+The earlier data point stands beside it, because it is real and it is why the
+LOCAL ceiling moved. Run **32627229208** measured **`920218e`**, the parent of
+the R16 repair, at 146 `fast` / 54 `invariant`: `fast` **88.39s** against 90 —
+**1.8%** — and `invariant` 16.79s against 20.
+
+### The ceiling stays at 90, and that is a ruling
+
+Three things, in order, because the ADR previously left 90 standing on an
+absence of evidence and R28 deletes that reasoning:
+
+1. **CI has measured the shipped tree** — 74.25s, above.
+2. **ADR-013's rule applied to that measurement derives 90**, the number already
+   committed. `74.25 × 1.15 = 85.39 → 90`. The rule asks for no change.
+3. **The human was asked and ruled to leave it at 90.** Answered, not deferred.
+
+A raise was asked for, and the honest account of why is that the request was
+made against the `920218e` measurement — 88.39s, 1.8% of margin, on a runner
+whose spread `fast-wall-clock-budget` records as 6.8%, nearly four times the
+margin. On that number a raise looked overdue; applied as a band it would have
+asked for 105. **The shipped tree's own measurement removed the premise.** CI
+came in FASTER on a LARGER suite — 88.39s at 146 cases, 74.25s at 152 — so the
+gap the raise was meant to close is not there on the tree that ships.
+
+`EVAL_WALL_BUDGET_S_FAST` stays 90 and `_INVARIANT` stays 20;
+`.github/workflows/eval.yml` is byte-identical to `origin/main`. That is now the
+ruled state rather than the untouched default.
+
+### What this does NOT claim
+
+Not that the margin question is closed. Ninety is the right number on today's
+measurement of today's tree; that is a different claim from "this will not need
+revisiting", and the two should not be blurred.
+
+The live version of the question is `T-M32-13`'s second symptom: CI's own rows
+enter `ledger max` mid-job — the `invariant` step appends before the `fast` step
+grades — so a slow CI `invariant` run can demand a ceiling no local run
+justifies, and it is **ungreenable locally** because the local ledger holds no
+CI rows. CI's `invariant` measured 16.03s in run 32637648447 and 14.88s here;
+the next band starts at **17.39s**. That is the number to watch, and nothing in
+this ADR grades it — ADR-021's CI figures are hand-read off the workflow log and
+ungraded, which is `T-R51`.
+
+One run is still not a band. Two runs of two different trees are not a band
+either. What has changed is that the ceiling now rests on a measurement of the
+tree it guards plus a decision, instead of on the absence of one.

@@ -77,14 +77,19 @@ ABLATION_MODELS = [
 ALLOWED_MODELS = list(dict.fromkeys([DEFAULT_MODEL, *ABLATION_MODELS]))
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
-Each step: {"action": "navigate|click|fill|extract|extract_all",
+Each step: {"action": "navigate|click|fill|extract|extract_all|observe",
  "target": {"role": str|null, "name": str|null, "text": str|null, "near": str|null, "index": int|null} | null,
  "value": str|null,
  "anchor": str|null,
  "rank": bool|null,
  "expected_state": {"url_contains": str} | {"text_visible": str} | {"role_visible": {"role": str, "name": str|null}} | null}
 Rules: `navigate` puts the URL in `value`. `extract` reads the target element's
-text as the answer. `extract_all` reads EVERY match of its target and returns
+text as the answer. `observe` asks for a closer look: an observation is capped
+and a long page is cut off mid-way, so when the answer is inside a container you
+can see but whose contents you cannot, target that container with `observe` and
+you are re-planned against that subtree alone — all of its elements, more of its
+text. It costs one planning call out of a small budget: ask once, then extract.
+`extract_all` reads EVERY match of its target and returns
 them as a list — use it whenever the task compares, ranks or counts across many
 items ("which X has the most/least Y", "the cheapest one"): extract the values
 to be compared, one per item, and never the answer itself. The comparison is
@@ -195,7 +200,10 @@ def build_user(task: str, url: str | None, observation: dict | None = None,
     `stub_planner` and never reaches this line (PR #29 R11). It is now a pure
     function with a case over it (`planner-prompt-carries-the-note`); the
     `expect.planner_note_contains` key grades the other half, what the call
-    sites pass.
+    sites pass. M32's cold review reached the same conclusion from the other
+    caller: a drill-down is a SUCCESSFUL request for a closer look, and a shared
+    "A previous attempt failed" wrapper told the model the step that asked for
+    it had failed (`planner-note-is-not-always-a-failure`).
     """
     user = f"Task: {task}\nStart URL: {url or 'none — choose one via navigate'}"
     if observation:

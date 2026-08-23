@@ -1,0 +1,24 @@
+{
+  "id": "observe-drilldown-no-progress-stops-the-run",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "input": {
+    "task": "What is the serial number of the Nimbus Field Notebook?",
+    "fixture": "deep-spec.html",
+    "stub_plans": [
+      [{ "action": "observe", "target": { "role": "region", "name": "Product Information" } }],
+      [{ "action": "observe", "target": { "role": "region", "name": "Product Information" } }]
+    ]
+  },
+  "expect": {
+    "status": "failure:env",
+    "replans": 0,
+    "recovery": false
+  },
+  "provenance": "the second way a drill-down can be refused, and the pair to `observe-refused-drilldown-stops-the-run` (which covers the first — an exhausted budget with a step queued behind the `observe`). Here the budget is untouched and the REPLAN is the problem: handed the subtree it asked for, the planner comes back with the same plan it already had. Taking it would re-run the identical drill-down and spend the budget one call at a time on a plan that is not moving, so it is refused, and the refusal ends the run rather than falling through to whatever came next — the same quiet-success hole finding 1 of the M32 cold review found on the budget branch. Watched red first on the pre-fix build: the refusal appended a note and let the loop continue, so this plan (which has nothing queued behind the `observe`) ran out of steps and ended `failure:extract` / `empty answer or empty trace` — loud, but about the wrong thing, with the reason naming neither the refusal nor the budget. Give the same plan one trailing step and the identical fall-through reports `success` instead, which is what its pair pins. `replans: 0` is the assertion that matters: nothing was spent, because nothing usable came back.",
+  "triage": {
+    "class": "silent-failure",
+    "note": "family 2's equivalent guard notes the same shape and then dies of the act failure that opened the ladder, which is the right answer there and impossible here — a drill-down opens on no failure at all, so a refusal has to carry its own terminal class. `env` matches `budget_stop`'s reading of a planning resource that could not be turned into progress; the reason string names the target that was asked for."
+  }
+}

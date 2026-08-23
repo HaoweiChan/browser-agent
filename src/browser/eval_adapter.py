@@ -1394,7 +1394,7 @@ def _run_judge_case(case: dict) -> dict:
 
 
 def _run_observe_case(case: dict) -> dict:
-    from .observe import observe
+    from .observe import DRILL_TEXT_HEAD, observe
 
     url = f"{_base_url()}/fixtures/{case['input']['fixture']}"
 
@@ -1423,6 +1423,15 @@ def _run_observe_case(case: dict) -> dict:
             # contract. Same lesson as the screenshot bound one level up —
             # try/except bounds error propagation, never latency.
             await page.goto(url)
+            if drill := case["input"].get("drill"):
+                # The scoped observation, reached the way production reaches it:
+                # through the real resolver, from a target a plan could write.
+                # The eval harness does not get its own path to a subtree —
+                # that would grade something the executor never runs.
+                from .resolver import resolve
+
+                loc, _tier = await resolve(page, drill)
+                return await observe(page, root=loc, text_head=DRILL_TEXT_HEAD)
             return await observe(page)
         finally:
             await ctx.close()
@@ -1443,13 +1452,54 @@ def _run_observe_case(case: dict) -> dict:
     names, roles = {e["name"] for e in obs["elements"]}, {e["role"] for e in obs["elements"]}
     starved = ([n for n in exp.get("must_include_names", []) if n not in names]
                + [r for r in exp.get("must_include_roles", []) if r not in roles])
+    # The other direction, and the reason M32 exists: a name the page-level
+    # observation must NOT reach, because it sits past MAX_ELEMS in document
+    # order. Asserting the cap rather than assuming it — this is what makes
+    # `observe-drilldown-past-max-elems` a drill-down case and not a plan that
+    # would have worked anyway, and it reddens if MAX_ELEMS is ever raised to
+    # "fix" the defect instead of disclosing the subtree (ADR-020).
+    leaked = [n for n in exp.get("must_exclude_names", []) if n in names]
+    # The other half of what an observation discloses: its text head. A drill
+    # widens it (DRILL_TEXT_HEAD), and on a page whose content carries no
+    # addressable role that head is the ONLY thing the planner gets.
+    text_missing = [t for t in exp.get("text_head_contains", []) if t not in obs["text_head"]]
     return {
-        "passed": not missing and not unnameable and not starved,
+        "passed": not missing and not unnameable and not starved and not leaked
+                  and not text_missing,
         "missing": missing,
         "advertised_unresolvable": unnameable,
         "starved_by_chrome": starved,
+        "inside_the_cap_after_all": leaked,
+        "text_head_missing": text_missing,
         "n_elements": len(obs["elements"]),
     }
+
+
+def _run_planner_prompt_case(case: dict) -> dict:
+    """What the LIVE planner actually sends, graded with no key and no spend.
+
+    `planner.build_user` is the half of the live planner that is pure string
+    assembly, and it was where a note describing a SUCCESSFUL drill-down got
+    wrapped in "A previous attempt failed" — true of the only caller that
+    existed when the wrapper was written, false for the one M32 added, and
+    invisible to every case here because the `fast` suite stubs the planner one
+    level above this (M32 cold review, finding 3). M31 reached the same
+    conclusion from its own second caller (PR #29 R5) and carried it further:
+    the shared trailing sentence is gone too, so the note is the whole of what
+    a caller contributes."""
+    from .planner import build_user
+
+    wrong = []
+    for probe in case["input"]["prompts"]:
+        got = build_user(probe.get("task", "t"), probe.get("url"),
+                         probe.get("observation"), probe.get("note"))
+        for want in probe.get("has", []):
+            if want not in got:
+                wrong.append({"missing": want, "note": probe.get("note"), "got": got})
+        for want in probe.get("lacks", []):
+            if want in got:
+                wrong.append({"present": want, "note": probe.get("note"), "got": got})
+    return {"passed": not wrong, "wrong": wrong}
 
 
 def _run_fixture_case(case: dict) -> dict:
@@ -1479,6 +1529,18 @@ def _run_fixture_case(case: dict) -> dict:
     # the case fails loudly; stubbing it would grade a capability nobody ran
     # (CLAUDE.md rule 4).
     planner = live_planner() if inp.get("planner") == "live" else stub_planner(plans)
+    # What the planner was actually SHOWN, per call. A stub plan is hand-written
+    # (every plan in this repo is), so a case whose point is "the planner could
+    # not have known this string" proves nothing from the plan alone — the M32
+    # drill-down is exactly that shape. This records the observation each call
+    # received so `expect.planner_saw` can grade the disclosure itself rather
+    # than the hand-written plan that follows it.
+    shown: list = []
+
+    async def recording_planner(task, url, observation=None, note=None):
+        shown.append(observation)
+        return await planner(task, url, observation, note)
+
     # M36: `judge: "live"` is the same opt-in shape as `planner: "live"` --
     # only a `full`-tagged case may spend real tokens on it. `judge_verdicts`
     # (mirrors `stub_plans`) lets a case script certify/reject/"error" per
@@ -1486,8 +1548,9 @@ def _run_fixture_case(case: dict) -> dict:
     # is what every case written before M36 needs to keep meaning what it did.
     judge = (live_judge() if inp.get("judge") == "live"
              else stub_judge(inp["judge_verdicts"]) if "judge_verdicts" in inp else None)
-    result = _run_agent(inp["task"], inp.get("url", fixture_url), planner, url_guard=guard,
-                        own_browser=inp.get("own_browser", False), judge=judge)
+    result = _run_agent(inp["task"], inp.get("url", fixture_url), recording_planner,
+                        url_guard=guard, own_browser=inp.get("own_browser", False),
+                        judge=judge)
 
     # Re-verify with ground truth the runtime cannot have: hand labels, identity
     # anchors, and the fixture's own record of what it received.
@@ -1534,6 +1597,39 @@ def _run_fixture_case(case: dict) -> dict:
         checks["recovery"] = bool(recovered) == exp["recovery"]
     if "replans" in exp:
         checks["replans"] = result["budgets_spent"]["replans"] == exp["replans"]
+    # Which steps actually RAN, in order. A terminal status says what the run
+    # died of and not where, and two different guards can reach the same status
+    # on the same input — PR #34 R13: `observe-cannot-launder-noop-action`
+    # asserted only `failure:act` and stayed green when the family-2 guard it
+    # exists to pin was disabled, because the drill-down guard one step later
+    # produced the identical status. The trace prefix is what tells them apart:
+    # a refusal at replan time means the replanned steps never ran at all.
+    # Structural on purpose — `got.reason` would say the same thing and turn a
+    # reworded message into a false red.
+    if "trace_actions" in exp:
+        checks["trace_actions"] = [s["action"] for s in trace] == exp["trace_actions"]
+    # One entry per planner call, in order: {"has": [...], "lacks": [...]} of
+    # strings that must / must not appear in the observation THAT call was given,
+    # rendered exactly as the live planner renders it into its prompt. The call
+    # count is graded too — a disclosure that never happened would otherwise
+    # pass by having no call to check.
+    if "planner_saw" in exp:
+        from .observe import render
+        seen = [render(o) if o else "" for o in shown]
+        checks["planner_saw"] = len(seen) == len(exp["planner_saw"]) and all(
+            all(w in text for w in want.get("has", []))
+            and not any(w in text for w in want.get("lacks", []))
+            for want, text in zip(exp["planner_saw"], seen))
+    # WHICH actions wear `retry_or_recovery: "recovery"` in this run, as a
+    # sorted set. Asserted rather than described, because `recovery_rungs`
+    # publishes a count of these steps and the contract makes a claim about
+    # what may be inside it (PR #34 R2, then R9: the first version of this key
+    # only forbade `observe`, so it structurally could not see the `extract`
+    # the deferral actually lands on).
+    if "recovery_labelled_actions" in exp:
+        checks["recovery_labelled_actions"] = sorted(
+            {s["action"] for s in trace if s.get("retry_or_recovery") == "recovery"}
+        ) == sorted(exp["recovery_labelled_actions"])
     # "the browser never moved" is a claim about a COUNT, and no other key
     # carries it: a plan rejected before the first action spends exactly the
     # pre-plan navigation and nothing else (verifier-aggregate-superlative-fails-loud).
@@ -3687,6 +3783,23 @@ def _run_doc_counts_case(case: dict) -> dict:
             if want not in readme:
                 wrong.append({"readme_does_not_say": want, "from": ws["reports"][suite]})
         head = reports.get(ws["headline"])
+        # A baseline block is a claim that the tree is in this state. Citing a
+        # run that FAILED cases and publishing its wall clock as the tree's is
+        # the same defect as citing a stale report, one step worse (PR #34 R4).
+        # THIS case's own row is excluded, and that is not a loophole — it is
+        # the difference between a guard and a deadlock. A report is evidence
+        # about the tree the block describes; this case failing in a SUPERSEDED
+        # report says only that the block was stale when that report was taken,
+        # which is what fixing the block cures. Without the exclusion the guard
+        # has no fixed point: once it goes red, every subsequent report contains
+        # it failing, so no green report can ever be produced to cite (found by
+        # merging origin/main into task/M32 — the numbers all had to move at
+        # once). Any OTHER failing case still disqualifies the report.
+        if head and (failed := [r["id"] for r in head["results"]
+                                if not r["passed"] and r["id"] != case.get("id")]):
+            wrong.append({"headline_report_is_red": ws["reports"][ws["headline"]],
+                          "failed": failed})
+            head = None  # the red baseline IS the finding; nothing under it is worth recomputing
         if head:
             t, m = head["totals"], head["metrics"]
             for want in (f"${t['llm_usd']:.4f}", f"{t['wall_seconds']:.1f}s",
@@ -3719,6 +3832,22 @@ def _run_doc_counts_case(case: dict) -> dict:
         if stated and stated not in row:
             wrong.append({"d8_range": {"the_cited_reports_show": stated,
                                        "row": row[:300]}})
+
+    # docs/analysis.md §1 publishes per-run counts (actions, how many cases
+    # drive a real browser) that nothing derived, so they aged three milestones
+    # behind the reports beside them while the sentence above them was being
+    # edited (PR #34 R5). Same rule as everything else here: recomputed from the
+    # headline report, never re-typed.
+    s1 = inp.get("analysis_section1")
+    if s1 and (head := reports.get(ws["headline"]) if ws else None):
+        vals = {"actions": int(head["totals"]["actions"]),
+                "with_browser": int(head["totals"]["cases_with_budgets"]),
+                "total": len(head["results"]),
+                "remaining": len(head["results"]) - int(head["totals"]["cases_with_budgets"])}
+        text = (RUN_ROOT / s1["doc"]).read_text(encoding="utf-8")
+        for q in s1["quotes"]:
+            if (want := q.format(**vals)) not in text:
+                wrong.append({"analysis_section1_does_not_say": want})
 
     cov = inp.get("analysis_coverage")
     domains: dict[str, int] = {}
@@ -3831,6 +3960,90 @@ def _run_doc_counts_case(case: dict) -> dict:
             "got": {"counts": counts, "domains": domains}}
 
 
+def _check_steps_adopt_only() -> dict:
+    """`steps` is never rebound after the first plan except through `adopt()`.
+
+    ADR-018 stated this as an invariant ("that is the invariant, not the two
+    call sites") and nothing enforced it, so M32's drill-down adopted a replan
+    with no lint and reproduced the silent-success class a seventh time
+    (PR #34 R16). The repair routed all three adoption points through one
+    nested `adopt()` and the contract then published "a fourth adoption point
+    cannot be added without a lint" — the SAME modal promise, one round later,
+    still resting on convention (PR #34 R25). This is what makes it true: a
+    raw splice at a new site is red here before it can be green in a run.
+
+    Read structurally, not by regex, because the defect the reviewer
+    demonstrated is invisible to one: `adopted, gap = (steps[:si] + new_steps,
+    None)` leaves the line `steps = adopted` untouched, so the rebind still
+    LOOKS linted. Any local that reaches `steps` has to be adopt-derived too.
+    """
+    import ast
+
+    src = (Path(__file__).with_name("agent.py")).read_text(encoding="utf-8")
+    tree = ast.parse(src)
+
+    def targets(node):
+        for t in ast.walk(node):
+            if isinstance(t, ast.Name) and isinstance(t.ctx, ast.Store):
+                yield t.id
+
+    def adopt_derived(v):
+        # `adopt(...)` or `adopt(...)[0]` — the two shapes the executor uses.
+        while isinstance(v, ast.Subscript):
+            v = v.value
+        return (isinstance(v, ast.Call) and isinstance(v.func, ast.Name)
+                and v.func.id == "adopt")
+
+    # Locals that hold an adopt() result. A name qualifies only if EVERY
+    # binding of it is adopt-derived — one non-adopt binding elsewhere in the
+    # module disqualifies the name, which is exactly the mutation above.
+    binds: dict[str, list] = {}
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign):
+            for name in {x for t in n.targets for x in targets(t)}:
+                binds.setdefault(name, []).append(n.value)
+        elif isinstance(n, (ast.AugAssign, ast.AnnAssign, ast.NamedExpr)):
+            for name in targets(n.target):
+                binds.setdefault(name, []).append(getattr(n, "value", None))
+    adopt_names = {k for k, vs in binds.items()
+                   if vs and all(adopt_derived(v) for v in vs)}
+
+    wrong = []
+    first_plan = 0
+    for n in ast.walk(tree):
+        line = getattr(n, "lineno", None)
+        if isinstance(n, ast.Assign) and any("steps" == x
+                                             for t in n.targets for x in targets(t)):
+            v = n.value
+            if isinstance(v, ast.Await):
+                # The first plan is not spliced into anything; it is linted
+                # where it lands. Exactly one such binding is allowed.
+                first_plan += 1
+                continue
+            if not (adopt_derived(v)
+                    or (isinstance(v, ast.Name) and v.id in adopt_names)):
+                wrong.append({"line": line, "rebinds_steps_without_adopt":
+                              ast.unparse(n)})
+        elif isinstance(n, (ast.AugAssign, ast.AnnAssign, ast.NamedExpr)) and (
+                "steps" in set(targets(n.target))):
+            wrong.append({"line": line, "rebinds_steps_without_adopt":
+                          ast.unparse(n)})
+        elif isinstance(n, ast.Assign) and any(
+                isinstance(t, ast.Subscript) and isinstance(t.value, ast.Name)
+                and t.value.id == "steps" for t in n.targets):
+            wrong.append({"line": line, "mutates_steps_in_place": ast.unparse(n)})
+        elif (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+              and isinstance(n.func.value, ast.Name) and n.func.value.id == "steps"
+              and n.func.attr in {"append", "extend", "insert", "pop", "remove",
+                                  "clear", "sort", "reverse", "__setitem__"}):
+            wrong.append({"line": line, "mutates_steps_in_place": ast.unparse(n)})
+    if first_plan != 1:
+        wrong.append({"first_plan_bindings": first_plan, "expected": 1})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"adopt_derived_locals": sorted(adopt_names & {"adopted"}),
+                    "first_plan_bindings": first_plan}}
+
+
 def _check_examples_cover_matrix() -> dict:
     """Every real-site row of docs/support-matrix.md has a Try example on the
     page, and no example points at a row that is not there (M35 acceptance,
@@ -3856,6 +4069,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
               "mutation-metrics": _check_mutation_metrics,
               "plan-gap": _check_plan_gap,
+              "steps-adopt-only": _check_steps_adopt_only,
               "published-band": _check_published_band,
               "published-band-slack": _check_published_band_slack,
               "history-dirty-before-report": _check_history_dirty_before_report,
@@ -3957,7 +4171,7 @@ def _run_wall_clock_case(case: dict) -> dict:
                 wrong.append({"env": r["value"], "expected_ceiling": r["budget"], "got": got,
                               "note": r["note"]})
         # The override is the FAST gate's alone (ADR-019). If it raised every
-        # suite's ceiling, CI's 80 would apply to `invariant` too — five times
+        # suite's ceiling, CI's `fast` number would apply to `invariant` too — five times
         # what that suite costs — and the tag valve ADR-019 closed locally would
         # still be open there.
         for r in case["input"].get("invariant_override", []):
@@ -4087,6 +4301,7 @@ KINDS = {
     "mutation": _run_mutation_case,
     "observe": _run_observe_case,
     "parse-plan": _run_parse_plan_case,
+    "planner-prompt": _run_planner_prompt_case,
     "readyz-transitions": _run_readyz_case,
     "relocate": _run_relocate_case,
     "schema": _run_schema_case,

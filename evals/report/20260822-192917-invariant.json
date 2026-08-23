@@ -1,0 +1,530 @@
+{
+  "suite": "invariant",
+  "score": 1.0,
+  "totals": {
+    "actions": 4,
+    "llm_tokens": 0,
+    "llm_usd": 0.0,
+    "replans": 0,
+    "ms": 263,
+    "wall_seconds": 7.85,
+    "latency_p50": 0.0,
+    "latency_p95": 2.24,
+    "cases_with_budgets": 2
+  },
+  "metrics": {
+    "diagnosis_cases": 2,
+    "diagnosis_correct": 2
+  },
+  "results": [
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 2.24,
+      "id": "ablation-env-failure-is-a-result",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.01,
+      "id": "ablation-preflight-refuses-old-build",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "adr_files": 18,
+        "index_entries": 18
+      },
+      "seconds": 0.0,
+      "id": "adr-header-and-index",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.02,
+      "id": "analysis-ablation-table-not-estimated",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "result": [
+          "status",
+          "model",
+          "answer",
+          "reason",
+          "verdict",
+          "evidence",
+          "budgets_spent"
+        ],
+        "evidence": [
+          "trace",
+          "screenshots",
+          "extractions",
+          "final_url",
+          "final_page_digest"
+        ],
+        "verdict": [
+          "verdict",
+          "layer",
+          "ground_truth",
+          "checks",
+          "reason"
+        ],
+        "budgets_spent": [
+          "actions",
+          "llm_tokens",
+          "llm_usd",
+          "replans",
+          "ms"
+        ],
+        "trace_step": [
+          "action",
+          "anchor",
+          "expected_state",
+          "failure_class",
+          "i",
+          "ms",
+          "note",
+          "page_changed",
+          "postcondition_ok",
+          "resolved",
+          "retry_or_recovery",
+          "screenshot",
+          "superseded_by",
+          "target",
+          "value"
+        ]
+      },
+      "seconds": 0.32,
+      "id": "contract-trace-schema",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "docs": []
+      },
+      "got": {
+        "counts": {
+          "fast": 121,
+          "invariant": 41,
+          "live": 9,
+          "full": 10,
+          "all": 132
+        },
+        "domains": {
+          "books.toscrape.com": 3,
+          "openlibrary.org": 2,
+          "news.ycombinator.com": 2,
+          "quotes.toscrape.com": 3
+        }
+      },
+      "seconds": 0.06,
+      "id": "docs-numbers-are-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "window_len": 2000,
+      "seconds": 0.0,
+      "id": "evidence-window-miss-is-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "shape": true,
+        "classified": true
+      },
+      "wrong": {},
+      "got": {
+        "status": "failure:env",
+        "reason": "PlanError: OPENROUTER_API_KEY is not set"
+      },
+      "seconds": 0.0,
+      "id": "gateway-error-contract-shape",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "recorded_models": [],
+      "seconds": 0.0,
+      "id": "gateway-model-not-allowlisted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "recorded_models": [
+        "openai/gpt-5.6-luna",
+        "openai/gpt-5.6-luna",
+        "deepseek/deepseek-v4-pro",
+        "openai/gpt-5.6-luna",
+        "tencent/hy3",
+        "deepseek/deepseek-v4-flash-0731"
+      ],
+      "seconds": 0.01,
+      "id": "gateway-model-reaches-planner",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv3-budget-exhaustion-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-delete-determiners",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-login-contracted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "parsed_quietly": []
+      },
+      "seconds": 0.0,
+      "id": "matrix-parse-fails-loudly",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "mutation-metrics-honesty",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "missing": [],
+      "advertised_unresolvable": [],
+      "starved_by_chrome": [],
+      "inside_the_cap_after_all": [],
+      "text_head_missing": [],
+      "n_elements": 60,
+      "seconds": 0.05,
+      "id": "observe-cap-hides-the-answer-element",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "missing": [],
+      "advertised_unresolvable": [],
+      "starved_by_chrome": [],
+      "inside_the_cap_after_all": [],
+      "text_head_missing": [],
+      "n_elements": 26,
+      "seconds": 0.05,
+      "id": "observe-content-survives-chrome",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "missing": [],
+      "advertised_unresolvable": [],
+      "starved_by_chrome": [],
+      "inside_the_cap_after_all": [],
+      "text_head_missing": [],
+      "n_elements": 60,
+      "seconds": 0.05,
+      "id": "observe-drill-into-chrome-gets-the-page-budget",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "opt-in-expect-keys-declared",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "planner-note-is-not-always-a-failure",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "states": [
+          "idle",
+          "busy",
+          "idle"
+        ],
+        "during_latency_s": 0.006,
+        "run_seconds": 2.33
+      },
+      "seconds": 2.33,
+      "id": "readyz-tracks-the-run-slot",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "citations": 35,
+        "skip": [
+          "29991231-235959-fast.json"
+        ]
+      },
+      "seconds": 0.01,
+      "id": "report-citations-resolve",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "soak": []
+      },
+      "seconds": 0.08,
+      "id": "soak-counts-only-real-completions",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "dangling": []
+      },
+      "got": {
+        "status": "failure:env",
+        "steps": 2
+      },
+      "seconds": 2.3,
+      "id": "supersede-never-dangles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "illegal_status": [],
+        "dangling_citations": []
+      },
+      "got": {
+        "rows": 9,
+        "limitations": 64,
+        "citations": 69
+      },
+      "seconds": 0.0,
+      "id": "support-matrix-cites-real-cases",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "ui-execution-progress-is-trace-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "ui-tinboker-style",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "recovery": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": false,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty; state-changing step(s) [2] carried no checkable postcondition"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "text"
+      ],
+      "got": {
+        "status": "failure:task",
+        "answer": null,
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:55127/fixtures/hello.html'"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 149
+      },
+      "seconds": 0.16,
+      "id": "url-guard-holds-after-navigation",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-aggregate-ground-truth-untouched",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": false
+        },
+        "reason": "superlative/aggregate question over a set ('which X has the most/least Y') has no enumerate-and-count step in the plan vocabulary; a layer-1-only verdict cannot tell a right guess from a wrong one, so it fails loudly rather than passing on unverifiable evidence"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "failure:semantic",
+        "answer": "Nimbus Shop",
+        "reason": "verifier FAIL: superlative/aggregate question over a set ('which X has the most/least Y') has no enumerate-and-count step in the plan vocabulary; a layer-1-only verdict cannot tell a right guess from a wrong one, so it fails loudly rather than passing on unverifiable evidence"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 114
+      },
+      "seconds": 0.12,
+      "id": "verifier-aggregate-superlative-fails-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "win_plain_len": 2000,
+      "win_anchored_len": 3615,
+      "seconds": 0.0,
+      "id": "verifier-dump-ratio-anchor-flip",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-numeric-precision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-sign-currency-percent",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-superseded-not-a-loophole",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "before": 525,
+        "after": 525
+      },
+      "seconds": 0.04,
+      "id": "wall-clock-probe-history-isolated",
+      "kind": "adversarial"
+    }
+  ]
+}

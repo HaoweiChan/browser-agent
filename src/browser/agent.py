@@ -158,6 +158,55 @@ def classify(action: str, exc: BaseException) -> str:
     return "nav" if action == "navigate" else "act"
 
 
+def changed_nothing(rec: dict) -> bool:
+    """Did this attempt leave the page as it found it?
+
+    The only evidence a laundering guard has, and the two guards that read it
+    disagreed for one commit (PR #34 R8). `page_changed` is `False` when the
+    attempt ran and moved nothing, and `null` when it never got far enough to
+    be compared — every act failure raised INSIDE `execute` (a click timeout, a
+    fill readback mismatch) leaves it null, because the before/after comparison
+    is on the line after `execute` returns. Neither value is evidence that
+    anything moved, so both mean the same thing here, and asking it in one
+    place is what stops the next guard from picking a different half.
+    """
+    return not rec.get("page_changed")
+
+
+def reads_without_acting(steps) -> bool:
+    """Does this plan reach an EXTRACTION with nothing that changes the page
+    before it?
+
+    The question every replan has to answer before it is allowed to drop a
+    failed action: a plan that only READS is reporting the state the failed
+    action was supposed to change (`replan-cannot-launder-noop-action`). It
+    was once asked as "is the first step an `extract`", which was the same
+    question while `extract` was the only step that neither acted nor
+    enumerated. Two branches then broke it at once, each finding its own half:
+
+      * M31 added `extract_all`, which launders identically while the literal
+        string `extract` does not match it (PR #29 R1,
+        `replan-cannot-launder-noop-action-extract-all`);
+      * M32 added `observe`, which changes nothing, so `[observe, extract]`
+        drops the failed action just as surely (PR #34 R1,
+        `observe-cannot-launder-noop-action`).
+
+    Either fix alone reverts the other on merge, and the intersection
+    `[observe, extract_all]` passes both pre-merge tests while laundering under
+    either (`observe-cannot-launder-extract-all`). So: every extraction verb
+    terminates the scan, and `observe` is transparent to it — for the same
+    reason its `page_changed` is null. A plan that looks and THEN acts is not
+    laundering and is not refused.
+    """
+    for step in steps:
+        action = str(step.get("action") or "")
+        if action.startswith("extract"):
+            return True
+        if action != "observe":
+            return False
+    return False
+
+
 # Per run. The stub planner spends 0 tokens; a live one is capped here.
 RUN_BUDGETS = {"actions": 30, "llm_tokens": 100_000}
 
@@ -497,7 +546,12 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
 
     from playwright.async_api import async_playwright
 
-    from .observe import observe
+    from .observe import DRILL_TEXT_HEAD, observe
+
+    # At most one scoped observation, produced by an `observe` step and consumed
+    # by the replan it triggers. A list rather than a variable so `execute`
+    # (nested) can write it without a `nonlocal` dance.
+    drilled: list[dict] = []
 
     answers: list = []
     async with contextlib.AsyncExitStack() as stack:
@@ -572,6 +626,38 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
             # change with no evidence behind it. It is deliberately NOT labelled
             # `recovery`: nothing failed and no ladder ran, and ADR-003 keeps
             # that flag for a classified failure that switched strategy.
+            def adopt(prefix: int, new_steps: list):
+                """Splice a plan into the running one — the only place `steps`
+                is rebound after the first plan arrives, and therefore the only
+                place the lint can be enforced rather than remembered. (The
+                first plan is not spliced into anything; it is linted where it
+                lands, on the line below.)
+
+                ADR-018 states the invariant as "lint at every adoption point,
+                not at these two call sites", and named M32's drill-down as the
+                next one. M32 then adopted its replan without a lint, and a
+                mid-run drill-down could add a second enumeration: `success`,
+                verdict PASS, an unranked list of lists as the answer to "which
+                product has the most reviews" (PR #34 R16, the seventh
+                occurrence of this class). The fix is not a third `plan_gap`
+                call — hand-placing the third is how the second was forgotten —
+                so all three adoption points come through here. A fourth
+                cannot be added without one, and that is enforced rather than
+                promised: `plan-adoption-is-the-only-steps-rebind` parses this
+                file and reddens on any binding of `steps` after the first plan
+                that is not adopt-derived (PR #34 R25 — the promise stood on
+                convention for one round, which is exactly how ADR-018's
+                version of it failed).
+
+                Returns (steps, None) when the plan is adoptable, or
+                (None, gap) when the lint refuses it. The CALLER decides what a
+                refusal means: before execution it is a re-plan, mid-run it
+                ends the run, because there is nothing left to re-plan with.
+                """
+                candidate = steps[:prefix] + new_steps
+                gap = plan_gap(task, candidate)
+                return (None, gap) if gap else (candidate, None)
+
             lint_note = None
             if gap := plan_gap(task, steps):
                 # What actually happened, in the planner's own terms: a plan was
@@ -591,13 +677,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     return done(failure="env", reason=f"replanner failed: {e}")
                 budgets["llm_tokens"] += usage["llm_tokens"]
                 budgets["llm_usd"] += usage["llm_usd"]
-                if not new_steps or new_steps == steps or plan_gap(task, new_steps):
+                adopted, _ = adopt(0, new_steps)
+                if not new_steps or new_steps == steps or adopted is None:
                     return done(failure="task",
                                 reason=f"plan rejected before execution: {gap}; the replan "
                                        "did not close the gap")
                 budgets["replans"] += 1
                 lint_note = f"replanned before execution — plan lint: {gap}"
-                steps = new_steps
+                steps = adopted
 
             async def execute(step, rec):
                 """Perform one step against the page. Raises; the caller classifies."""
@@ -607,7 +694,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         raise StepError("task", f"blocked URL: {step.get('value')!r}")
                     await navigate(page, step["value"])
                     return
-                if action not in ("click", "fill", "extract", "extract_all"):
+                if action not in ("click", "fill", "extract", "extract_all", "observe"):
                     raise StepError("task", f"unknown action {action!r}")
                 # A key the resolver does not implement used to be dropped, and
                 # the step ran against whatever was left of its target — the plan
@@ -646,7 +733,26 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 loc, tier = await resolve(page, step.get("target") or {},
                                           many=action == "extract_all")
                 rec["resolved"] = {"tier": tier, "description": str(step.get("target"))}
-                if action == "click":
+                if action == "observe":
+                    # An observation asserts nothing about the page, so there is
+                    # nothing for an expected_state to hold. Refused rather than
+                    # ignored (`resolver-unknown-target-key`'s rule): left to
+                    # `check_state`, a failing assertion raised StepError("act")
+                    # for a step that acted on nothing, diagnosed the run
+                    # `failure:act` and opened the act/replan recovery ladder for
+                    # it (M32 cold review, runner-up; case
+                    # observe-step-cannot-carry-expected-state).
+                    if step.get("expected_state"):
+                        raise StepError(
+                            "task", "an observe step cannot carry expected_state: "
+                                    f"{step['expected_state']}")
+                    # Drill-down (M32, ADR-020): re-observe THIS subtree with the
+                    # whole element budget and a longer text head, then hand it
+                    # to the replanner below. Reads the page and changes nothing,
+                    # so like `extract` it has no postcondition of its own.
+                    drilled.append(await observe(page, root=loc,
+                                                 text_head=DRILL_TEXT_HEAD))
+                elif action == "click":
                     await loc.click(timeout=10_000)
                 elif action == "fill":
                     # An element that cannot hold a value is the WRONG element,
@@ -755,7 +861,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # replacement attempt actually exists. Writing the pointer early
                 # shipped traces whose run-killing step claimed to be superseded
                 # by an index that was never created (case supersede-never-dangles).
-                if pending_supersede:
+                # `observe` is excluded: `superseded_by` claims "this failed
+                # attempt was replaced by that one", and an observation replaces
+                # nothing — it reads. The pointer waits for the first attempt
+                # that actually acts (PR #34 R1/R2). If the run ends before one,
+                # nothing is written and the failed step keeps
+                # `superseded_by: null`, which is the safe direction
+                # `supersede-never-dangles` asks for.
+                if pending_supersede and step["action"] != "observe":
                     pending_supersede.pop()["superseded_by"] = rec["i"]
                 budgets["actions"] += 1
                 s0 = time.monotonic()
@@ -764,7 +877,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # separates a replan legitimately skipping work already done from
                 # one laundering an action that did nothing (replan-cannot-launder-noop-action).
                 before = (await page.inner_text("body")
-                          if not step["action"].startswith("extract") else None)
+                          if not step["action"].startswith("extract")
+                          and step["action"] != "observe" else None)
                 try:
                     await execute(step, rec)
                     if url_guard and not url_guard(page.url):
@@ -825,9 +939,18 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 if stop := budget_stop(budgets):
                     return done(failure="env", reason=stop)
                 step = steps[si]
+                # Same rule for the label: a strategy switch is worn by the
+                # attempt that switches strategy, and an `observe` is not one —
+                # it recovered nothing, and `recovery_rungs` publishes the count
+                # (PR #34 R2; `specs/001-browser-contract.md`, ADR-020 §2 both
+                # already said so). It waits for the first acting attempt.
+                read_only = step["action"] == "observe"
                 rec, cls = await attempt(step, note=pending,
-                                         recovery="recovery" if pending_recovery else None)
-                pending, pending_recovery = None, False
+                                         recovery=("recovery" if pending_recovery
+                                                   and not read_only else None))
+                pending = None
+                if not read_only:
+                    pending_recovery = False
 
                 # --- Family 1: locate -> relocation (self-maintenance) --------
                 # Stale locator -> fresh a11y snapshot -> same intent at a
@@ -843,6 +966,94 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         if cls is None:
                             step = alt
                             break
+
+                # --- Drill-down: observe a subtree -> replan against it -------
+                # M32 (ADR-020). Not a recovery ladder: nothing failed. The
+                # planner looked at a capped observation, saw the container the
+                # answer is in and none of its contents, and asked for a closer
+                # look — progressive disclosure of the PAGE, not of the tool set
+                # (prompts/015). The scoped observation goes back through the
+                # same observation+note argument a replan already uses, and
+                # spends the same MAX_REPLANS budget, so a planner that keeps
+                # asking to look instead of acting runs out exactly like one that
+                # keeps failing (INV-3, budget_stop).
+                if step["action"] == "observe" and cls is None and drilled:
+                    scoped = drilled.pop()
+                    if budgets["replans"] >= MAX_REPLANS:
+                        # Loud, not a fall-through. `cls` is None here, so
+                        # letting the loop continue ran whatever the plan put
+                        # AFTER the observe — the run spent its whole planning
+                        # budget asking for a closer look, never got one, and
+                        # then answered from the observation the drill-down
+                        # existed to replace, reporting `success` (M32 cold
+                        # review, finding 1; case
+                        # observe-refused-drilldown-stops-the-run). `env` for
+                        # the same reason `budget_stop` uses it: a resource ran
+                        # out. The class of a ladder that failed to help is the
+                        # failure it was fixing (specs/000) — this ladder was
+                        # fixing nothing, so the exhaustion is the failure.
+                        return done(failure="env", reason=(
+                            f"step {rec['i']} asked to observe {step.get('target')} and the "
+                            f"replan budget is exhausted ({MAX_REPLANS}); the rest of this "
+                            "plan was written against an observation it asked to replace"))
+                    else:
+                        try:
+                            new_steps, usage = await planner(
+                                task, page.url, scoped,
+                                note=(f"step {rec['i']} asked to look closer at "
+                                      f"{step.get('target')}. The observation above is THAT "
+                                      "subtree only, not the whole page."))
+                        except PlanError as e:  # same split as the first plan
+                            budgets["llm_tokens"] += e.usage["llm_tokens"]
+                            budgets["llm_usd"] += e.usage["llm_usd"]
+                            return done(failure="env", reason=f"replanner rejected: {e}")
+                        except Exception as e:
+                            return done(failure="env", reason=f"replanner failed: {e}")
+                        budgets["llm_tokens"] += usage["llm_tokens"]
+                        budgets["llm_usd"] += usage["llm_usd"]
+                        # The one no-progress shape this branch can produce: a
+                        # plan that just asks to look at the same thing again.
+                        # Family 2's other two guards are about laundering a
+                        # FAILED action, and nothing failed here.
+                        # The same evidence rule family 2 applies, because this
+                        # is a second planner call and it can return the same
+                        # laundering plan (PR #34 R1,
+                        # `observe-drilldown-cannot-launder-noop-action`). The
+                        # failed action is still outstanding here — an `observe`
+                        # attempt does not consume it — so the run dies of what
+                        # it actually died of: that action.
+                        outstanding = pending_supersede[-1] if pending_supersede else None
+                        if (outstanding is not None
+                                and changed_nothing(outstanding)
+                                and reads_without_acting(new_steps)):
+                            return done(failure="act", reason=(
+                                f"step {outstanding['i']} ({outstanding['action']}) failed and "
+                                "changed nothing on the page; the plan after the drill-down at "
+                                f"step {rec['i']} would read the page as if it had worked"))
+                        if not new_steps or new_steps == steps[si:]:
+                            return done(failure="env", reason=(
+                                f"step {rec['i']} asked to observe {step.get('target')} and the "
+                                "replan made no progress (identical or empty plan)"))
+                        adopted, gap = adopt(si, new_steps)
+                        if gap:
+                            # Mid-run there is no re-plan left to try: the
+                            # drill-down WAS the replan. specs/000's rule that a
+                            # plan the executor cannot honour is `task` applies
+                            # here exactly as it does before execution.
+                            return done(failure="task", reason=(
+                                f"the plan after the drill-down at step {rec['i']} was rejected "
+                                f"by the plan lint: {gap}"))
+                        if adopted is not None:
+                            budgets["replans"] += 1
+                            pending = (f"replan #{budgets['replans']} after the drill-down at "
+                                       f"step {rec['i']}: {len(new_steps)} step(s) planned from "
+                                       "the subtree observation")
+                            # Same evolving prefix as family 2. The `observe`
+                            # step itself is dropped, not superseded: it did what
+                            # it was asked to do, and re-running it would be the
+                            # loop this budget exists to bound.
+                            steps = adopted
+                            continue
 
                 # --- Family 2: act -> postcondition invalidated -> replan -----
                 if cls == "act":
@@ -870,13 +1081,16 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         # (recovery-replan-postcondition) clicks a control that
                         # really did re-sort the list, so page_changed tells them
                         # apart where nothing about the PLAN can.
-                        # Every extraction verb, not the literal string: M31 added
-                        # `extract_all` and this test kept naming only `extract`,
-                        # so the same laundering in the new verb walked straight
-                        # through (PR #29 R1, case
-                        # replan-cannot-launder-noop-action-extract-all).
-                        drops_action = bool(new_steps) and str(
-                            new_steps[0].get("action") or "").startswith("extract")
+                        # Every extraction verb (M31/PR #29 R1: `extract_all`
+                        # laundered exactly like `extract` while this named only
+                        # the literal string) AND transparent to a leading
+                        # `observe` (M32/PR #34 R1: an observation changes
+                        # nothing, so `[observe, extract]` dropped the failed
+                        # action just as surely). Each parent fixed one half and
+                        # neither is sufficient alone -- `reads_without_acting`
+                        # is the union, and `observe-cannot-launder-extract-all`
+                        # is the case the merge itself made necessary.
+                        drops_action = reads_without_acting(new_steps)
                         if not new_steps or new_steps == steps[si:]:
                             rec["note"] += "; replan made no progress (identical or empty plan)"
                         elif new_steps[0] == steps[si]:
@@ -885,7 +1099,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # that just failed is a retry, and specs/001 keeps
                             # retries out of the recovery metric by construction.
                             rec["note"] += "; replan re-issued the step that just failed"
-                        elif drops_action and not rec.get("page_changed"):
+                        elif drops_action and changed_nothing(rec):
                             rec["note"] += ("; replan would skip a failed action that changed "
                                             "nothing on the page")
                         # The lint runs at EVERY point the executor adopts a plan,
@@ -897,7 +1111,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         # Linting only the first plan let a mid-run replan produce
                         # the unranked list of lists ADR-018 names as the defect
                         # (PR #29 R3, case plan-lint-holds-across-a-midrun-replan).
-                        elif lint := plan_gap(task, steps[:si] + new_steps):
+                        elif lint := adopt(si, new_steps)[1]:
                             rec["note"] += f"; replan rejected by the plan lint: {lint}"
                         else:
                             budgets["replans"] += 1
@@ -914,7 +1128,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # would append it twice and turn a scalar answer into
                             # a list. No case produces it (ADR-003); dedupe by
                             # (value, step intent) if one ever does.
-                            steps = steps[:si] + new_steps
+                            steps = adopt(si, new_steps)[0]
                             continue
 
                 if cls:
@@ -942,8 +1156,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
     # The `len(answers) == 1` half is about the PLAN, not the task: a plan that
     # also extracts something else is composing a list, not ranking one
     # (multi-extract-list). More than one enumeration never reaches here for an
-    # aggregate task, because `plan_gap` runs at BOTH points where the executor
-    # adopts a plan — the first plan and an act-ladder replan (PR #29 R3). A tie
+    # aggregate task, because `plan_gap` runs at EVERY point where the executor
+    # adopts a plan — the first plan, an act-ladder replan (PR #29 R3), and the
+    # drill-down replan M32 added, which was adopted unlinted until PR #34 R16
+    # and made this sentence false: a mid-run drill-down could add a second
+    # enumeration and the run reported `success` with a list of lists. All
+    # three now splice through one `adopt()`, so the claim rests on there being
+    # one path rather than on three call sites being remembered. A tie
     # is refused rather than guessed, and a refusal is `semantic`: the page was
     # read correctly and does not decide.
     enumerated = next((s.get("rank") for s in trace
