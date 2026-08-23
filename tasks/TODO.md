@@ -134,6 +134,43 @@ shape that implies verdict PASS — empty, `{"status": "success"}`, and
 `{"verdict": "PASS"}` alike — with the fix watched red on a non-empty `expect`
 first, so it cannot be closed by special-casing the empty one.
 
+### T-M32-14 — `plan-adoption-is-the-only-steps-rebind` has three binding forms it cannot see, and does not say so            [status: todo]
+Origin: PR #34 R30. Routed to debt by the reviewer, not repaired here.
+Spec: `_check_steps_adopt_only` enumerates `ast.Assign`, `ast.AugAssign`,
+`ast.AnnAssign` and `ast.NamedExpr` targets plus in-place mutation of `steps`.
+Three forms bind the name and are invisible to it:
+1. `for steps in ...` — `ast.For.target` is never inspected;
+2. `with ... as steps` — `ast.withitem.optional_vars` likewise;
+3. any callable literally named `adopt` shadowing the real nested one — the
+   check matches `adopt` by NAME, not by resolving which `adopt` is in scope, so
+   a local helper of that name satisfies `adopt_derived()` while doing anything
+   it likes.
+Mitigation, confirmed by the reviewer rather than assumed: the only one of the
+three that actually REMOVES a lint is caught at runtime —
+`observe-drilldown-replan-is-linted` goes red — so the property holds in the
+layered sense (source-shape here, behaviour there). That is why this is LOW and
+why it is debt rather than a hole in the M32 acceptance.
+What makes it worth logging anyway is the disclosure gap, which is the same
+class the enforcing case was written to close. The case's `triage.note` already
+declares the adopt()-BEHAVIOUR exclusion ("adopt() itself could stop calling
+plan_gap, which is a different assertion") and a known false positive (a helper
+returning adopt()'s value), but says nothing about BINDING FORMS — so a reader
+reasonably concludes the binding enumeration is exhaustive when it is not. This
+PR spent five rounds on claims that were true only by convention (R25) and on
+absolute statements a later fact falsified (R22, R28); an undeclared exclusion
+in the case that fixed R25 is the same shape one level down.
+Repro: add `for steps in [steps[:si] + new_steps]: break` at any adoption point
+in `src/browser/agent.py` and run `--suite invariant` — the case stays green.
+Acceptance, in preference order. The honest MINIMUM is disclosure: name these
+three forms in the case's "what it does NOT cover" list, beside the runtime
+cases that do cover them, so the layered argument is stated rather than left to
+be discovered. Better, and cheap: also inspect `ast.For.target` and
+`withitem.optional_vars` — two more node types in the same walk, no new
+machinery. The shadowing hole is the one NOT worth closing by hand (resolving
+scope means a symbol table, which is a real static analyser and far past what
+this case is for); declare it and lean on the runtime case. Watch any code fix
+red against the repro above first.
+
 ### T-M32-13 — the band ledger's `ts` is not a valid ordering key across environments, so a locally-derived band is structurally red on CI            [status: todo]
 Origin: PR #34 round 5 CI diagnosis.
 **Latent defect in main's property. This PR triggered it; this PR did not

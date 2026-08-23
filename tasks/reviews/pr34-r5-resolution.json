@@ -127,5 +127,32 @@
       "invariant": "58/58 = 1.000, wall 13.35s / 20, $0.0000",
       "fast": "152/152 = 1.000, wall 70.89s / 90, $0.0000, 242 actions"
     }
+  },
+  "round6_repairs": {
+    "R28": {
+      "outcome": "fixed",
+      "severity": "MEDIUM",
+      "note": "ADR-021 published two absolute claims about what CI had not measured -- ':106' \"No CI run exists for any later commit on this branch\" and ':136' \"CI has never measured the tree this PR ships\" -- both true when written and both falsified within the hour by run 32639577041 on 07e3d34 (success: invariant 58/58 at 14.88s, fast 152/152 at 74.25s). Verified independently with gh: headSha 07e3d34, steps 12:30:54-12:31:09Z and 12:31:09-12:32:23Z. The section is rewritten to lead with the shipped-tree measurement, keeps the 920218e/88.39s data point beside it because it is real and is why the LOCAL ceiling moved, and scopes both former absolutes to the commits that made them. The '1.8% is a coin flip / prediction already due' paragraph is gone: it rested on the parent's number, and the shipped tree came in FASTER on a LARGER suite (88.39s at 146 cases -> 74.25s at 152), so the premise is gone rather than merely stale. Real margins now published: 17.5% for fast, 25.6% for invariant. INDEX.md's ADR-021 line rewritten to match. Note for the record: 88.39 x 1.15 derives 105, so had the parent's figure been used as a band it would have asked for a much larger raise than the one requested -- which is the clearest statement of why the shipped tree's measurement mattered."
+    },
+    "ci_ceiling_ruling": {
+      "outcome": "recorded",
+      "note": "The human ruled to leave CI's ceiling at 90. ADR-021 now records the ruling on its actual basis rather than on absence of evidence: (1) CI has measured the shipped tree at 74.25s; (2) ADR-013's rule applied to it gives 74.25 x 1.15 = 85.39 -> 90, exactly the committed number, so the rule derives no change; (3) the human was asked and answered. A new 'What this does NOT claim' subsection states that the margin question is NOT closed and points at T-M32-13's second symptom as its live form (CI rows entering ledger max mid-job, ungreenable locally, next band at 17.39s, CI invariant seen at 16.03s and 14.88s), and that ADR-021's CI figures remain hand-read and ungraded (T-R51). EVAL_WALL_BUDGET_S_FAST 90 and _INVARIANT 20 untouched; .github/workflows/eval.yml byte-identical to origin/main -- now the RULED state rather than the default."
+    },
+    "R29": {
+      "outcome": "fixed",
+      "severity": "MEDIUM",
+      "note": "ADR-019 section 3 said the invariant band sits as close to 'the ledger's own maximum of 13.80s' as a real run allows. The committed ledger at HEAD holds 13.92s at 58 cases (ts 20260823-202223, sha c799da7, dirty, 57/58) -- a row the final merge brought in, so the merge is what made the sentence false. Fixed the way the coordinator preferred: BOTH hand-copied maxima are gone, section 3's and section 2's (which published 71.01s by the same method and happened to still be right), and the prose now defers to what published-band-matches-the-ledger computes as ledger_slowest. A short note records why, naming R21 and T-M32-8 as the same drift class and stating that nothing went red on either scalar -- both derive 20 -- which is why it had to be caught by reading. Immediately validated: the gate run for this commit measured invariant at 14.16s, so a hand-copied 13.92 would have been stale again within one run."
+    },
+    "R30": {
+      "outcome": "debt",
+      "severity": "LOW",
+      "debt_id": "T-M32-14",
+      "note": "Logged, not fixed. Three binding forms the enforcing case cannot see: `for steps in ...` (ast.For.target never inspected), `with ... as steps` (withitem.optional_vars), and any callable literally named `adopt` shadowing the real nested one (the check matches by NAME, not by resolving scope). Repro CONFIRMED rather than taken on trust: inserting `for steps in [steps[:si] + new_steps]: break` at an adoption point leaves the case GREEN; agent.py restored byte-identical afterwards. The block records the reviewer's mitigation (the only evasion that actually removes a lint is caught at runtime by observe-drilldown-replan-is-linted, so the property holds in the layered sense), states that the case's triage.note declares the adopt()-BEHAVIOUR exclusion but not the BINDING-FORM one, and sets the honest minimum as naming the three forms in the case's 'what it does NOT cover' list. Acceptance is ordered: disclosure first, then the two cheap node types, and explicitly NOT the shadowing hole, which would mean a symbol table."
+    }
+  },
+  "gate_round6": {
+    "invariant": "58/58 = 1.000, wall 14.16s / 20, $0.0000",
+    "fast": "152/152 = 1.000, wall 70.68s / 90, $0.0000, 242 actions",
+    "movement": "none -- both suites green before and after, no case changed state, no code touched"
   }
 }

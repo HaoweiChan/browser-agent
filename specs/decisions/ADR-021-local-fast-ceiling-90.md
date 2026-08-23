@@ -39,12 +39,12 @@ themselves, so ordinary run-to-run variance does not redden a doc.
 - **`invariant` stays 20.** It grew 51 → 54 cases and still derives 20 from the
   same rule (slowest 13.43s → 15.4 → 20). CI's `invariant` step ran 16.79s
   against it.
-- **CI's `EVAL_WALL_BUDGET_S_FAST` stays 90 in this decision.** When this was
-  written CI had produced no `fast` measurement at all on this branch — its run
-  died at the `invariant` step, on the two cases this ADR closes. One `fast`
-  measurement has landed since, on the PARENT commit and not on this tree; the
-  section below says exactly which tree that was, and it is not evidence enough
-  to move a per-environment ceiling on its own.
+- **CI's `EVAL_WALL_BUDGET_S_FAST` stays 90.** When this was written CI had
+  produced no `fast` measurement at all on this branch — its run died at the
+  `invariant` step, on the two cases this ADR closes — so this bullet originally
+  left 90 in place for want of evidence. It no longer rests on that: CI has
+  since measured the shipped tree at 74.25s, the rule applied to that derives 90,
+  and the human ruled to leave it there. The CI section below is the account.
 
 **The number came from a grader, not from arithmetic in a commit message**, and
 that is the whole difference between this decision and the one before it. The
@@ -86,52 +86,69 @@ The first was a duplicate answer to a settled question, derived by the same
 hand that wanted the answer. This one is the answer a committed case computed
 and refused to stop reporting.
 
-## What CI has measured — and which tree it was
+## What CI has measured, and the ruling on CI's ceiling
 
-Written before CI had run `fast` on this branch at all, this section said the
-first green CI run would be the evidence and declined to predict it. A run
-happened, and the first version of this section then headed itself "CI has now
-measured this tree", which was not true and is the finding this paragraph
-exists to correct (PR #34 R22). The numbers below all verify; the tree they
-describe is the one to read carefully.
+This section has been wrong twice and the corrections are kept rather than
+tidied, because the shape of the error is the point: both times it published an
+absolute claim about CI that a later run falsified.
 
-Run **32627229208** measured commit **`920218e`** — the PARENT of the R16
-repair, at 146 `fast` cases and 54 `invariant`:
+The first version headed itself "CI has now measured this tree" when the only
+run was on the parent (PR #34 R22). The second version corrected that, and
+over-corrected into "no CI run exists for any later commit on this branch" and
+"CI has never measured the tree this PR ships" — true when written, false within
+the hour, because the merge that carried the correction is what let CI run at
+all (PR #34 R28).
 
-| | wall | ceiling | margin |
-|---|---|---|---|
-| CI `fast` on `920218e` | **88.39s**, 146/146 = 1.000 | 90 | **1.8%** |
-| CI `invariant` on `920218e` | 16.79s, 54/54 = 1.000 | 20 | 16% |
+**CI has now measured the tree this PR ships.** Run **32639577041** on
+**`07e3d34`** — HEAD — conclusion success:
 
-**No CI run exists for any later commit on this branch.** `gh run list
---commit 8d38c52` and `--commit d60da88` both return nothing, because PR #34
-went `CONFLICTING` against `main` and GitHub silently runs no checks on a dirty
-PR — which is also why the R16 repair itself shipped with zero CI verification
-until the merge that carries this correction. The tree this PR now ships is
-larger again: the `origin/main` merge plus this round's own case take `fast`
-past 146.
+| | wall | ceiling | margin | rule gives |
+|---|---|---|---|---|
+| CI `fast` on `07e3d34` (152 cases) | **74.25s**, 152/152 = 1.000 | 90 | **17.5%** | 74.25 × 1.15 = 85.39 → **90** |
+| CI `invariant` on `07e3d34` (58 cases) | **14.88s**, 58/58 = 1.000 | 20 | **25.6%** | 14.88 × 1.15 = 17.11 → **20** |
 
-**1.8% is a coin flip on this runner, and the repo has twice ruled that a coin
-flip is not a ceiling.** `fast-wall-clock-budget` records `ubuntu-latest`'s own
-spread on byte-identical code as 6.8% — nearly four times the margin. The first
-version of this section called a red CI `fast` run "predicted on the next case
-anyone adds", as though that were a future event; the case it was predicting
-against (`observe-drilldown-replan-is-linted`) was added by the same commit,
-and this round adds another, so **the prediction is already due rather than
-pending**. When it lands it should be read as this line coming due, not as a
-regression in whatever change happens to be in flight.
+The earlier data point stands beside it, because it is real and it is why the
+LOCAL ceiling moved. Run **32627229208** measured **`920218e`**, the parent of
+the R16 repair, at 146 `fast` / 54 `invariant`: `fast` **88.39s** against 90 —
+**1.8%** — and `invariant` 16.79s against 20.
 
-That is stated, not acted on here. Raising CI's ceiling is a separate decision
-and the human's to make — and unlike the local number this ADR moves, there is
-no grader demanding a specific value: CI's evidence is one run, on the wrong
-tree, and ADR-019's rule wants a band. `EVAL_WALL_BUDGET_S_FAST` stays 90 in
-this ADR and `.github/workflows/eval.yml` is untouched by it.
+### The ceiling stays at 90, and that is a ruling
 
-## What this does not fix
+Three things, in order, because the ADR previously left 90 standing on an
+absence of evidence and R28 deletes that reasoning:
 
-The ceiling is per-environment, and CI's `fast` number is still the one M31
-derived from CI runs of a smaller tree. The measurement above is one data
-point, taken at 146 cases on a commit this branch has since moved past; one run
-is not a band, which is exactly why it is recorded here as a warning rather
-than used to re-derive anything. **CI has never measured the tree this PR
-ships**, and nothing in this ADR should be read as saying otherwise.
+1. **CI has measured the shipped tree** — 74.25s, above.
+2. **ADR-013's rule applied to that measurement derives 90**, the number already
+   committed. `74.25 × 1.15 = 85.39 → 90`. The rule asks for no change.
+3. **The human was asked and ruled to leave it at 90.** Answered, not deferred.
+
+A raise was asked for, and the honest account of why is that the request was
+made against the `920218e` measurement — 88.39s, 1.8% of margin, on a runner
+whose spread `fast-wall-clock-budget` records as 6.8%, nearly four times the
+margin. On that number a raise looked overdue; applied as a band it would have
+asked for 105. **The shipped tree's own measurement removed the premise.** CI
+came in FASTER on a LARGER suite — 88.39s at 146 cases, 74.25s at 152 — so the
+gap the raise was meant to close is not there on the tree that ships.
+
+`EVAL_WALL_BUDGET_S_FAST` stays 90 and `_INVARIANT` stays 20;
+`.github/workflows/eval.yml` is byte-identical to `origin/main`. That is now the
+ruled state rather than the untouched default.
+
+### What this does NOT claim
+
+Not that the margin question is closed. Ninety is the right number on today's
+measurement of today's tree; that is a different claim from "this will not need
+revisiting", and the two should not be blurred.
+
+The live version of the question is `T-M32-13`'s second symptom: CI's own rows
+enter `ledger max` mid-job — the `invariant` step appends before the `fast` step
+grades — so a slow CI `invariant` run can demand a ceiling no local run
+justifies, and it is **ungreenable locally** because the local ledger holds no
+CI rows. CI's `invariant` measured 16.03s in run 32637648447 and 14.88s here;
+the next band starts at **17.39s**. That is the number to watch, and nothing in
+this ADR grades it — ADR-021's CI figures are hand-read off the workflow log and
+ungraded, which is `T-R51`.
+
+One run is still not a band. Two runs of two different trees are not a band
+either. What has changed is that the ceiling now rests on a measurement of the
+tree it guards plus a decision, instead of on the absence of one.

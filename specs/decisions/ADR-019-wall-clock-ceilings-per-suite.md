@@ -70,7 +70,8 @@ debt (T-R51).
   DIRTY citation is what made this band red on CI and green locally, because
   item 2 (cited-run) refuses a dirty row against any clean row stamped earlier,
   and CI's rows are clean and stamped in UTC while ours are local. See T-M32-13.
-  The ledger's own maximum here is 71.01s and derives the same ceiling.)
+  The ledger's own maximum at this count derives the same ceiling; it is not
+  copied here — see §3's note on why this file stopped quoting that scalar.)
 
 Both cited rows measured this branch at this case count BEFORE its last
 `origin/main` merge, and say so rather than being presented as post-merge
@@ -130,10 +131,24 @@ commit that changed nothing but JSON.
   came rather than selected for their numbers. 12.93s is disqualified: it
   derives **15** where the ledger's maximum derives 20 — item 3 (same-ceiling).
   Of the three that qualify this is the slowest, chosen so the
-  published number sits as close to the ledger's own maximum of 13.80s as a real
-  run allows — §6 tolerates up to one ceiling step of slack, and R21's point was
+  published number sits as close to the ledger's own maximum as a real run
+  allows — §6 tolerates up to one ceiling step of slack, and R21's point was
   that publishing below the maximum is how a band drifts, so take the least
   slack on offer.)
+
+Neither band quotes the ledger's maximum as a number any more, and that is the
+fix for a defect this file produced twice. §3 published **13.80s** and the final
+`origin/main` merge brought in a 13.92s row (ts `20260823-202223`, dirty, 57/58)
+that made the sentence false — while §2, two sections up, was hand-copying its
+own maximum by the same method, so the two halves of one decision disagreed on
+method (PR #34 R29). A hand-copied scalar sitting beside a computed one is
+exactly the drift class R21 and `T-M32-8` both name. The maximum is whatever
+`published-band-matches-the-ledger` reports as `ledger_slowest`, computed over
+every row at the current case count — red and mid-edit runs included, which is
+why it can exceed the band source (§6, and the paragraph above) — and the
+grader prints it, with the case count, whenever a band needs republishing.
+Nothing here went red on either scalar: both derived 20, which is precisely why
+this had to be caught by reading rather than by the gate.
 
 The same rule gives 13.78 × 1.15 = 15.85 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
