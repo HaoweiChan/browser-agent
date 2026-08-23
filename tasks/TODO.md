@@ -184,6 +184,11 @@ than typed — the ledger row has both fields — or the parenthetical is droppe
 there is nothing to be inconsistent about. Watched red by publishing a band whose citation
 claims a result the row does not have.
 
+### T-R62 — the EXAMPLES header comment dates every receipt 2026-08-22, but the HN entry's receipts are 2026-08-23            [status: todo]
+Origin: PR #37 R2 (LOW)
+Spec: `src/browser/server.py` EXAMPLES header comment says "Every entry was run against the deployment on 2026-08-22"; M37 swapped the HN entry for one whose receipts (`97f2157d`, `4453fae6`) are dated 2026-08-23. A JS comment, not rendered, but a reader of the source takes it as the receipt date.
+Acceptance: the comment states the date per entry or "on or after 2026-08-22"; nothing grades comments, so this is a doc fix with no case.
+
 ### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
 Origin: M37 implementer
 Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
