@@ -1,0 +1,77 @@
+{
+  "pr": 34,
+  "round": 4,
+  "task": "M32",
+  "commit": "8d38c52",
+  "note": "The implementer session was torn down before it returned a report. This resolution is reconstructed from the commit message and from the orchestrator's own independent verification, and is marked as such rather than presented as the implementer's own account.",
+  "resolutions": [
+    {
+      "id": "R16",
+      "severity": "HIGH",
+      "outcome": "fixed",
+      "cases": [
+        "observe-drilldown-replan-is-linted"
+      ],
+      "red_first": "status: success, verdict: PASS, replans: 1, answer [[\"Aurora Desk Lamp\", ...], [\"Aurora Desk Lamp $39.00\", ...]] \u2014 the reviewer's plans committed as the case.",
+      "fix": "Fixed as the invariant, not as a third call site, because hand-placing the third is how the second was forgotten. Every place the executor rebinds `steps` was enumerated \u2014 there were three \u2014 and all three now splice through one nested `adopt(prefix, new_steps)` that lints and returns either the spliced plan or the gap. The caller still owns what a refusal MEANS: before execution it re-plans, mid-run it ends the run failure:task, because the drill-down WAS the replan and there is nothing left to re-plan with. A fourth adoption point cannot be added without a lint. The first plan is not spliced into anything and is linted where it lands; the docstring says so rather than overclaiming.",
+      "green_after": "failure:task naming the gap; the reviewer's probe no longer reaches success.",
+      "assertion_shape": "Structural, per the R13 lesson: trace_actions [navigate, extract_all, observe] pins that the run got as far as the observation and stopped there, replans: 0 that the refused plan was never counted as progress. A reason-string assertion would have passed on any of the drill-down's four refusal exits.",
+      "tagging": "Tagged `invariant` as well as `fast` \u2014 the lint at every adoption point is a property, not a run-dependent outcome.",
+      "docs": "agent.py's 'more than one enumeration never reaches here' comment and specs/001-browser-contract.md now say three adoption points and one path.",
+      "orchestrator_verification": "Independently mutation-tested after the session was lost: neutering the lint inside adopt() (`gap = None`) turns observe-drilldown-replan-is-linted RED, together with M31's plan-lint-holds-across-a-midrun-replan \u2014 fast 145/147 = 0.986. The case is real and the fix is what makes it green."
+    },
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "debt_spawned": "T-M32-10",
+      "fix": "ADR-020's 'live suite 9/9 after this change' cited a report scoring 0.889. Re-pointed at 20260823-155452-live.json (score 1.0, this tree's run) with the earlier 9/9 named beside it, and the sentence now states what happened rather than quietly swapping the citation \u2014 a green claim hung on a red artifact is worth recording, not tidying. Both 8/9 runs are described accurately as openlibrary.org outages (the second measured at 14.3s by curl against 0.88s earlier the same day).",
+      "mechanism_logged": "T-M32-10 \u2014 report-citations-resolve grades that a citation RESOLVES, never that the number beside it is the report's own."
+    },
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "ADR-021 records CI's measurement plainly rather than filing it as a success: fast 88.39s against the 90 ceiling, 146/146 = 1.000 (run 32627229208) \u2014 1.8% of margin inside a runner whose spread fast-wall-clock-budget records as 6.8%. A red CI fast run on the next case anyone adds is therefore a predicted event, not a surprise, and should be read as this line coming due rather than as a regression in whatever is in flight.",
+      "explicitly_not_done": "CI's ceiling is a third ceiling decision and the human's, and unlike the local number there is no grader demanding a value \u2014 one run is not a band. .github/workflows/eval.yml is untouched."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "outcome": "debt",
+      "debt_id": "T-M32-8",
+      "note": "Untouched as routed, including fast-wall-clock-budget's expect.note, left at 'the committed 80' so the debt block stays one coherent fix."
+    },
+    {
+      "id": "R19",
+      "severity": "LOW",
+      "outcome": "debt",
+      "debt_id": "T-M32-9",
+      "note": "Untouched as routed."
+    }
+  ],
+  "debt_logged_this_round": [
+    {
+      "id": "T-M32-10",
+      "origin": "PR #34 R17",
+      "claim": "report-citations-resolve grades that a citation resolves, never that the number beside it is the report's own \u2014 which is how a green claim came to cite a red report."
+    },
+    {
+      "id": "T-M32-11",
+      "origin": "PR #34 R16",
+      "claim": "Found while reproducing R16 with the reviewer's probe: a fixture case with an empty `expect` crashes the adapter on a run that fails before grading, turning 'the run failed loudly' into a traceback in exactly the tool people use to hunt defects."
+    }
+  ],
+  "gate": {
+    "invariant": "55/55 = 1.000, wall 13.2s (local ceiling 20), $0.0000",
+    "fast": "147/147 = 1.000, wall 74.69s (local ceiling 90), $0.0000",
+    "live": "9/9 = 1.000, $0.0000",
+    "orchestrator_verified": "Re-run independently after the session teardown: invariant 55/55 = 1.000, fast 147/147 = 1.000. The pre-commit gate then passed on the review-artifact commit with NO --no-verify \u2014 147/147 at 75.23s, 242 actions, $0.0000.",
+    "untouched": [
+      ".eval-baseline.json",
+      ".github/workflows/eval.yml",
+      "R13's fix",
+      "T-M32-4/6/7"
+    ]
+  }
+}
