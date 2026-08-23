@@ -2,38 +2,38 @@
   "suite": "invariant",
   "score": 1.0,
   "totals": {
-    "actions": 23,
+    "actions": 26,
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 5537,
+    "ms": 5879,
     "judge_calls": 4,
     "judge_tokens": 0,
     "judge_usd": 0.0,
-    "wall_seconds": 12.93,
+    "wall_seconds": 13.73,
     "latency_p50": 0.0,
-    "latency_p95": 2.21,
-    "cases_with_budgets": 11
+    "latency_p95": 2.28,
+    "cases_with_budgets": 12
   },
   "metrics": {
     "verdict_evaluated": 4,
     "judge_invoked": 4,
     "judge_certified": 4,
-    "diagnosis_cases": 7,
-    "diagnosis_correct": 7
+    "diagnosis_cases": 8,
+    "diagnosis_correct": 8
   },
   "results": [
     {
       "passed": true,
       "wrong": [],
-      "seconds": 1.81,
+      "seconds": 2.24,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
     {
       "passed": true,
       "wrong": [],
-      "seconds": 0.01,
+      "seconds": 0.0,
       "id": "ablation-preflight-refuses-old-build",
       "kind": "adversarial"
     },
@@ -111,7 +111,7 @@
           "value"
         ]
       },
-      "seconds": 0.35,
+      "seconds": 0.33,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -129,11 +129,11 @@
       },
       "got": {
         "counts": {
-          "fast": 146,
-          "invariant": 54,
+          "fast": 147,
+          "invariant": 55,
           "live": 9,
           "full": 10,
-          "all": 157
+          "all": 158
         },
         "domains": {
           "books.toscrape.com": 3,
@@ -142,7 +142,7 @@
           "quotes.toscrape.com": 3
         }
       },
-      "seconds": 0.07,
+      "seconds": 0.08,
       "id": "docs-numbers-are-derived",
       "kind": "adversarial"
     },
@@ -196,7 +196,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 122,
+        "ms": 118,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -247,12 +247,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 112,
+        "ms": 114,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.11,
+      "seconds": 0.12,
       "id": "extract-all-declared-intent-beats-wording",
       "kind": "adversarial"
     },
@@ -299,12 +299,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 200,
+        "ms": 215,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.2,
+      "seconds": 0.22,
       "id": "extract-all-declared-rank-obeys-the-plan",
       "kind": "adversarial"
     },
@@ -356,12 +356,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 215,
+        "ms": 230,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.22,
+      "seconds": 0.23,
       "id": "extract-all-list-task-keeps-every-row",
       "kind": "adversarial"
     },
@@ -403,12 +403,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 90,
+        "ms": 109,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.1,
+      "seconds": 0.12,
       "id": "extract-all-refuses-a-selector",
       "kind": "adversarial"
     },
@@ -451,7 +451,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 109,
+        "ms": 110,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -594,8 +594,61 @@
     },
     {
       "passed": true,
+      "checks": {
+        "status": true,
+        "recovery": true,
+        "replans": true,
+        "trace_actions": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "failure:task",
+        "answer": null,
+        "reason": "the plan after the drill-down at step 3 was rejected by the plan lint: the task asks which item of a set ranks highest or lowest, so the plan must read the page exactly once, with `extract_all`; this one reads it as [{'action': 'extract_all', 'target': {'role': 'link'}, 'rank': True}, {'action': 'extract_all', 'target': {'role': 'listitem'}, 'rank': True}]. A single `extract` guesses the winner; a second read makes the answer a composite with nothing to rank. Enumerate the candidates once \u2014 the comparison is done in code, so extract the values to compare, not the answer"
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 165,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 0.17,
+      "id": "observe-drilldown-replan-is-linted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
       "wrong": [],
-      "seconds": 0.0,
+      "seconds": 0.01,
       "id": "opt-in-expect-keys-declared",
       "kind": "adversarial"
     },
@@ -649,12 +702,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2234,
+        "ms": 2295,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.24,
+      "seconds": 2.3,
       "id": "plan-lint-holds-across-a-midrun-replan",
       "kind": "adversarial"
     },
@@ -698,7 +751,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 51,
+        "ms": 54,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -744,10 +797,10 @@
           "busy",
           "idle"
         ],
-        "during_latency_s": 0.001,
-        "run_seconds": 2.52
+        "during_latency_s": 0.003,
+        "run_seconds": 2.51
       },
-      "seconds": 2.52,
+      "seconds": 2.51,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -799,12 +852,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2199,
+        "ms": 2270,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.21,
+      "seconds": 2.28,
       "id": "replan-cannot-launder-noop-action-extract-all",
       "kind": "adversarial"
     },
@@ -812,7 +865,7 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "citations": 43,
+        "citations": 42,
         "skip": [
           "29991231-235959-fast.json"
         ]
@@ -826,7 +879,7 @@
       "wrong": {
         "soak": []
       },
-      "seconds": 0.07,
+      "seconds": 0.06,
       "id": "soak-counts-only-real-completions",
       "kind": "adversarial"
     },
@@ -839,7 +892,7 @@
         "status": "failure:env",
         "steps": 2
       },
-      "seconds": 2.19,
+      "seconds": 2.26,
       "id": "supersede-never-dangles",
       "kind": "adversarial"
     },
@@ -906,19 +959,19 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:61454/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:56089/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 149,
+        "ms": 146,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.16,
+      "seconds": 0.15,
       "id": "url-guard-holds-after-navigation",
       "kind": "adversarial"
     },
@@ -976,12 +1029,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 56,
+        "ms": 53,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.07,
+      "seconds": 0.06,
       "id": "verifier-aggregate-superlative-fails-loud",
       "kind": "adversarial"
     },
@@ -1019,10 +1072,10 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 868,
-        "after": 868
+        "before": 883,
+        "after": 883
       },
-      "seconds": 0.06,
+      "seconds": 0.05,
       "id": "wall-clock-probe-history-isolated",
       "kind": "adversarial"
     }

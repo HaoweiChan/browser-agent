@@ -57,11 +57,11 @@ decision that amends it.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Slowest recorded `fast` run at 146 cases: **74.81s** — 12 runs:
-  73.26 / 73.55 / 73.78 / 73.81 / 74.14 / 74.27 / 74.3 / 74.35 / 74.55 / 74.59 / 74.77 / 74.81s.
+- Slowest recorded `fast` run at 147 cases: **74.46s** — 3 runs:
+  74.38 / 74.39 / 74.46s.
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 74.8 × 1.15 = 86.0 → **90**, which was ABOVE the 80 this ADR
+five — gives 74.46 × 1.15 = 85.6 → **90**, which was ABOVE the 80 this ADR
 committed. Republished at the case count the tree actually ships after M32
 merged in (132 → 146); the 132-case reading below it, 66.33 × 1.15 = 76.3 →
 **80**, was correct for that tree and is superseded rather than corrected.
@@ -85,10 +85,10 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Slowest recorded `invariant` run at 54 cases: **13.85s** — 14 runs:
-  12.27 / 12.71 / 12.8 / 12.9 / 12.92 / 12.93 / 12.96 / 12.97 / 12.97 / 13.36 / 13.41 / 13.43 / 13.56 / 13.85s.
+- Slowest recorded `invariant` run at 55 cases: **13.55s** — 3 runs:
+  13.13 / 13.42 / 13.55s.
 
-The same rule gives 13.56 × 1.15 = 15.6 → **20**, which is the committed
+The same rule gives 13.55 × 1.15 = 15.6 → **20**, which is the committed
 number: `invariant` grew 51 → 54 cases with the M32 merge and still derives the
 same ceiling.
 

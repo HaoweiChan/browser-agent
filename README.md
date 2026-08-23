@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 146 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 147 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,14 +50,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260823-155414-fast.json`, with
-`evals/report/20260823-155427-invariant.json` and
-`evals/report/20260823-155452-live.json`:
+Latest offline baseline — `evals/report/20260823-164641-fast.json`, with
+`evals/report/20260823-164702-invariant.json` and
+`evals/report/20260823-164737-live.json`:
 
 ```
-fast  146/146    invariant  54/54    live  9/9    $0.0000    74.8s
+fast  147/147    invariant  55/55    live  9/9    $0.0000    73.9s
 recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 31/31 · 13 replans
+diagnosis 32/32 · 13 replans
 ```
 
 `live` is 8/9 in that run because `live-ol-search-a11y-invisible` timed out on
@@ -344,7 +344,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 157 cases (146 of them in the offline gate), it
+The eval set is not weak; it is 158 cases (147 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

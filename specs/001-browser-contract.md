@@ -221,7 +221,11 @@ appears, in order — no post-hoc reconstruction).
   - **a plan that should have enumerated and did not is rejected before the
     first action.** `agent.plan_gap` is a deterministic, site-agnostic lint
     that runs at every point the executor adopts a plan — the first plan, and
-    again on the plan of record when the `act` ladder replans mid-run: an aggregate-shaped task (shared with
+    again on the plan of record when either mid-run replanner returns one: the
+    `act` ladder, and M32's drill-down. There are three, not two, and the third
+    was adopted unlinted until `observe-drilldown-replan-is-linted` (PR #34
+    R16); they now splice through a single `adopt()` so a fourth cannot be
+    added without a lint. An aggregate-shaped task (shared with
     the verifier's own guard through `verifier.is_aggregate` — one regex, two
     callers) whose extraction steps are not exactly one `extract_all` and
     nothing else is replanned once with a note naming the gap and stopped by

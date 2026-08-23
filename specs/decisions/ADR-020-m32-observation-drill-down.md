@@ -241,13 +241,19 @@ debating critic.
    `live-quotes-js-role-tier-blind` keeps its honest marker: it still reports
    `success` with `"Next →"`, `answer_is_known_wrong: true`, and still passes
    (`live` suite 9/9 after this change,
-   `evals/report/20260822-234757-live.json`). One earlier `live` run on this
-   branch went 8/9 and is not this change: `openlibrary.org` did not answer
-   inside the 20s navigation budget, so `live-ol-search-a11y-invisible` ended
-   `failure:nav` before a locator was ever resolved. The same suite, unchanged,
-   was 9/9 two minutes later and `curl` answered that host in 0.88s — a
-   third-party outage, not a result about this system, and its history line is
-   in `evals/report/history.jsonl` either way.
+   `evals/report/20260823-155452-live.json`, score 1.0 — the current tree's
+   run; `evals/report/20260822-192844-live.json` is the earlier 9/9 on the
+   same claim). Two `live` runs on this branch went 8/9 and neither is this
+   change: both are `openlibrary.org` failing to answer inside the 20s
+   navigation budget, so an `ol` case ended `failure:nav` before a locator was
+   ever resolved, and on the second occasion `curl` measured that host at
+   14.3s against 0.88s earlier the same day. A third-party outage, not a
+   result about this system; both history lines are in
+   `evals/report/history.jsonl` either way. **The 9/9 sentence cited a report
+   whose score was 0.889 until PR #34 R17 caught it** — a green claim hung on
+   a red artifact, which `report-citations-resolve` cannot see because it
+   checks that a citation RESOLVES, not that the number beside it is the
+   report's own. Logged as `T-M32-10`.
 2. If the drilled subtree is itself larger than `MAX_ELEMS`, the same cliff
    recurs one level down. No fixture demonstrates it; the text head is the
    only thing that still reaches past it, and nothing here makes the

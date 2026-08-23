@@ -123,6 +123,36 @@ M34's deterministic checks — they are cheaper and they run first.
 
 ## Debt
 
+### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
+Origin: PR #34 R17.
+Spec: ADR-020 claimed "`live` suite 9/9 after this change" and cited a report
+whose `score` is 0.889 — 8/9, with `live-ol-edition-title` failing. The claim
+and the artifact disagreed and nothing could see it, because
+`report-citations-resolve` grades that `evals/report/<id>.json` EXISTS. That is
+the repo's standing one-direction gap (T-R19 is the same shape for the reverse
+direction), and it is what let a green claim hang on a red artifact inside a
+review's own surface. The citation is corrected; the mechanism is not.
+Repro: point any "N/N" prose at a report whose `score < 1.0` and run
+`--suite invariant` — nothing goes red.
+Acceptance: a citation adjacent to a pass-rate claim must resolve to a report
+whose score supports it — the parse only has to be good enough to catch
+"9/9 ... <red report>", not to understand arbitrary prose — watched red against
+the ADR-020 sentence as it stood before this fix.
+
+### T-M32-11 — a fixture case with an empty `expect` crashes the adapter on a failing run            [status: todo]
+Origin: PR #34, found while reproducing R16 with the reviewer's own probe.
+Spec: `_run_fixture_case` ends with `v = audit["verdict"] if audit["layer"] > 1
+else result["verdict"]["verdict"]`. A run that fails before grading carries
+`result["verdict"] is None`, and with no `expect` the audit stays at layer 1, so
+the subscript raises `TypeError` and the case reports a traceback instead of the
+failure it just produced. Every committed case has a non-empty `expect`, so this
+only bites ad-hoc probes — which is precisely the tool people reach for when
+hunting defects, and it turns "the run failed loudly" into "the harness broke".
+Repro: `_run_fixture_case({... "expect": {}})` on any plan that ends
+`failure:task`, e.g. the R16 reproduction after its fix.
+Acceptance: a failing run with no expectations reports its status, not a
+traceback.
+
 ### T-M32-3 — act-failure coverage costs 4.6s of a suite that already straddles its ceiling            [status: todo]
 Origin: PR #34 R1 (the fix, not the finding); cost model corrected per PR #34 R11.
 Spec: an act failure is only expensive when it is a POSTCONDITION failure. Those

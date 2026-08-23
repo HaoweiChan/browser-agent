@@ -84,10 +84,34 @@ The first was a duplicate answer to a settled question, derived by the same
 hand that wanted the answer. This one is the answer a committed case computed
 and refused to stop reporting.
 
+## CI has now measured this tree, and the margin is thin
+
+Written before CI had run `fast` on the merged tree, this section said the
+first green CI run would be the evidence and declined to predict it. That run
+happened (32627229208) and the number is worth stating plainly rather than
+filed as a success:
+
+| | wall | ceiling | margin |
+|---|---|---|---|
+| CI `fast` | **88.39s**, 146/146 = 1.000 | 90 | **1.8%** |
+| CI `invariant` | 16.79s, 54/54 = 1.000 | 20 | 16% |
+
+**1.8% is a coin flip on this runner, and the repo has twice ruled that a coin
+flip is not a ceiling.** `fast-wall-clock-budget` records `ubuntu-latest`'s own
+spread on byte-identical code as 6.8% — nearly four times the margin. So a red
+CI `fast` run on the next case anyone adds is a **predicted event, not a
+surprise**, and it should be read as this line coming due rather than as a
+regression in whatever change happens to be in flight when it lands.
+
+That is stated, not acted on. Raising CI's ceiling would be the third ceiling
+decision in this PR and it is the human's to make — and unlike the local
+number this ADR moves, there is no grader demanding a specific value: CI's
+band is one run, and ADR-019's rule wants a band. `EVAL_WALL_BUDGET_S_FAST`
+stays 90 and the workflow is untouched.
+
 ## What this does not fix
 
-The ceiling is per-environment and CI's `fast` number is still the one M31
-measured on CI, at a case count below this tree's. The first green CI `fast`
-run on the merged tree is the evidence for whether 90 holds there too; it is
-not claimed here in advance, for the same reason ADR-019 gives for measuring
-each environment separately.
+The ceiling is per-environment, and CI's `fast` number is still the one M31
+derived from CI runs of a smaller tree. The measurement above is the first
+data point against it at 146 cases; one run is not a band, which is exactly
+why it is recorded here as a warning rather than used to re-derive anything.

@@ -619,6 +619,33 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
             # change with no evidence behind it. It is deliberately NOT labelled
             # `recovery`: nothing failed and no ladder ran, and ADR-003 keeps
             # that flag for a classified failure that switched strategy.
+            def adopt(prefix: int, new_steps: list):
+                """Splice a plan into the running one — the only place `steps`
+                is rebound after the first plan arrives, and therefore the only
+                place the lint can be enforced rather than remembered. (The
+                first plan is not spliced into anything; it is linted where it
+                lands, on the line below.)
+
+                ADR-018 states the invariant as "lint at every adoption point,
+                not at these two call sites", and named M32's drill-down as the
+                next one. M32 then adopted its replan without a lint, and a
+                mid-run drill-down could add a second enumeration: `success`,
+                verdict PASS, an unranked list of lists as the answer to "which
+                product has the most reviews" (PR #34 R16, the seventh
+                occurrence of this class). The fix is not a third `plan_gap`
+                call — hand-placing the third is how the second was forgotten —
+                so all three adoption points come through here and a fourth
+                cannot be added without one.
+
+                Returns (steps, None) when the plan is adoptable, or
+                (None, gap) when the lint refuses it. The CALLER decides what a
+                refusal means: before execution it is a re-plan, mid-run it
+                ends the run, because there is nothing left to re-plan with.
+                """
+                candidate = steps[:prefix] + new_steps
+                gap = plan_gap(task, candidate)
+                return (None, gap) if gap else (candidate, None)
+
             lint_note = None
             if gap := plan_gap(task, steps):
                 # What actually happened, in the planner's own terms: a plan was
@@ -638,13 +665,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     return done(failure="env", reason=f"replanner failed: {e}")
                 budgets["llm_tokens"] += usage["llm_tokens"]
                 budgets["llm_usd"] += usage["llm_usd"]
-                if not new_steps or new_steps == steps or plan_gap(task, new_steps):
+                adopted, _ = adopt(0, new_steps)
+                if not new_steps or new_steps == steps or adopted is None:
                     return done(failure="task",
                                 reason=f"plan rejected before execution: {gap}; the replan "
                                        "did not close the gap")
                 budgets["replans"] += 1
                 lint_note = f"replanned before execution — plan lint: {gap}"
-                steps = new_steps
+                steps = adopted
 
             async def execute(step, rec):
                 """Perform one step against the page. Raises; the caller classifies."""
@@ -994,7 +1022,16 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             return done(failure="env", reason=(
                                 f"step {rec['i']} asked to observe {step.get('target')} and the "
                                 "replan made no progress (identical or empty plan)"))
-                        else:
+                        adopted, gap = adopt(si, new_steps)
+                        if gap:
+                            # Mid-run there is no re-plan left to try: the
+                            # drill-down WAS the replan. specs/000's rule that a
+                            # plan the executor cannot honour is `task` applies
+                            # here exactly as it does before execution.
+                            return done(failure="task", reason=(
+                                f"the plan after the drill-down at step {rec['i']} was rejected "
+                                f"by the plan lint: {gap}"))
+                        if adopted is not None:
                             budgets["replans"] += 1
                             pending = (f"replan #{budgets['replans']} after the drill-down at "
                                        f"step {rec['i']}: {len(new_steps)} step(s) planned from "
@@ -1003,7 +1040,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # step itself is dropped, not superseded: it did what
                             # it was asked to do, and re-running it would be the
                             # loop this budget exists to bound.
-                            steps = steps[:si] + new_steps
+                            steps = adopted
                             continue
 
                 # --- Family 2: act -> postcondition invalidated -> replan -----
@@ -1062,7 +1099,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         # Linting only the first plan let a mid-run replan produce
                         # the unranked list of lists ADR-018 names as the defect
                         # (PR #29 R3, case plan-lint-holds-across-a-midrun-replan).
-                        elif lint := plan_gap(task, steps[:si] + new_steps):
+                        elif lint := adopt(si, new_steps)[1]:
                             rec["note"] += f"; replan rejected by the plan lint: {lint}"
                         else:
                             budgets["replans"] += 1
@@ -1079,7 +1116,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # would append it twice and turn a scalar answer into
                             # a list. No case produces it (ADR-003); dedupe by
                             # (value, step intent) if one ever does.
-                            steps = steps[:si] + new_steps
+                            steps = adopt(si, new_steps)[0]
                             continue
 
                 if cls:
@@ -1107,8 +1144,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
     # The `len(answers) == 1` half is about the PLAN, not the task: a plan that
     # also extracts something else is composing a list, not ranking one
     # (multi-extract-list). More than one enumeration never reaches here for an
-    # aggregate task, because `plan_gap` runs at BOTH points where the executor
-    # adopts a plan — the first plan and an act-ladder replan (PR #29 R3). A tie
+    # aggregate task, because `plan_gap` runs at EVERY point where the executor
+    # adopts a plan — the first plan, an act-ladder replan (PR #29 R3), and the
+    # drill-down replan M32 added, which was adopted unlinted until PR #34 R16
+    # and made this sentence false: a mid-run drill-down could add a second
+    # enumeration and the run reported `success` with a list of lists. All
+    # three now splice through one `adopt()`, so the claim rests on there being
+    # one path rather than on three call sites being remembered. A tie
     # is refused rather than guessed, and a refusal is `semantic`: the page was
     # read correctly and does not decide.
     enumerated = next((s.get("rank") for s in trace
