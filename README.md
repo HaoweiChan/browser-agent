@@ -103,29 +103,25 @@ ADR-013's own rule: slowest observed run +15%, rounded up to a multiple of five.
 
 **Every LOCAL band below is computed from `evals/report/history.jsonl`**, the
 ledger committed in this repo, and `published-band-matches-the-ledger` grades
-that on every run — the doc's case count must be the suite's current case count,
-the published maximum must derive the SAME ceiling as the ledger's slowest run
-does, the ceiling that maximum derives in the ADR's prose must be the ceiling
-`evals/run.py` commits, and the committed ceiling must be at least the rule
-applied to the ledger's maximum, computed from the ledger rather than from the
-published number. This table's row and ADR-019's sentence are checked against
-each other as well, because they drifted apart once (PR #29 R24) and a
-hand-kept second copy is how that happens. It is a property, not a snapshot,
-because the ledger grows on every gate run; a list of times would go red on the
-next run instead of on a regression. It exists because three bands in PR #29 did
-not match the ledger beside them, and one ceiling was derived from a maximum
-that was never measured (R18, R21) — the same selective presentation ADR-013
-Decision 4 was withdrawn over.
+that on every run. What it requires — seven properties, including that this
+table's row and ADR-019's sentence carry the same four values — is listed once,
+in [ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md), and
+restated nowhere: a second copy of a rule is what goes stale while the rule
+moves. It is a property, not a snapshot, because the ledger grows on every gate
+run; a list of times would go red on the next run instead of on a regression. It
+exists because three bands in PR #29 did not match the ledger beside them, and
+one ceiling was derived from a maximum that was never measured (R18, R21) — the
+same selective presentation ADR-013 Decision 4 was withdrawn over.
 
 CI's two numbers below are NOT in this ledger and cannot be: no CI run commits
 its wall clock, so they are measured by hand off the workflow log and recorded
 in ADR-019 §5. That half is unfalsifiable here and is logged as debt (T-R40),
 not graded.
 
-Same ceiling, not `published >= ledger max`: so the published maximum can be
-below the ledger's, by at most one ceiling step (**4.35s**), and the table below
-states the slowest run recorded when the band was last republished rather than
-the slowest in the ledger today. That is a declared limitation, not an
+Same ceiling, not `published >= ledger max`: so the published number can be
+below the ledger's maximum, by at most one ceiling step (**4.35s**). The table
+below states one named run of this tree — the one ADR-019 §2/§3 cites by ledger
+timestamp — and not the slowest run in the ledger today. That is a declared limitation, not an
 oversight — the reasoning is
 [ADR-019 §6](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) and
 `published-band-slack-is-declared` pins it. Both forms lag identically (the

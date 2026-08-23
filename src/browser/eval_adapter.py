@@ -501,33 +501,21 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
 def _check_published_band() -> dict:
     """A published wall-clock band must be reproducible from the committed ledger.
 
-    Property, not snapshot (PR #29 R21). Three prose bands in this PR turned out
-    not to match `evals/report/history.jsonl` committed beside them — values that
-    were in no recorded run, the two slowest runs dropped unlabelled, and a
-    ceiling derived from a maximum that did not exist. What is graded here holds
-    as runs accumulate and goes red exactly when it should:
+    Property, not snapshot (PR #29 R21): three prose bands in that PR did not
+    match the `evals/report/history.jsonl` committed beside them — values in no
+    recorded run, the two slowest runs dropped unlabelled, a ceiling derived
+    from a maximum that did not exist. What is graded holds as runs accumulate
+    and goes red exactly when it should.
 
-      1. the doc's case count is the suite's current case count — so growing a
-         suite forces the band to be re-measured, the same contract
-         `docs-numbers-are-derived` has for README's totals;
-      2. the published number derives the SAME ceiling as the ledger's slowest
-         run does — `rule(published) == rule(ledger max)`, not
-         `published >= ledger max`. The harmful failure R21 found is a band
-         that justifies a lower ceiling than the truth (12.96s published where
-         13.57s was recorded: 15 where the rule said 20). The strict form was
-         reconsidered in T-R34 and refused again: it reddens on ordinary
-         run-to-run variance, and since the ledger is appended by every gate
-         run it would redden the NEXT commit rather than the one that got
-         slower. What it lets through is bounded by one ceiling step and
-         DECLARED in ADR-019 §6, graded by `published-band-slack-is-declared`;
-      3. the committed ceiling is >= ADR-013's rule applied to that ledger
-         maximum (slowest x 1.15, rounded up to a multiple of five). This is
-         the one that actually gates, it reads the ledger and not the published
-         number, and it does not move with noise.
+    **The seven properties are listed in ADR-019 §6 and are not restated here.**
+    That is the point of the section: this docstring carried its own three-item
+    version for three rounds while the check grew to seven, and the two drifted
+    (PR #35 R15/R16). Each block below names the item it implements.
 
     A run slower than the published band reddens the NEXT gate run, which is the
     intended cost: the band is a claim about this tree, and a tree that got
-    slower has to say so.
+    slower has to say so. That lag is shared with the strict form and is NOT the
+    argument against it — §6 has the argument, which is frequency.
     """
     import json as _json
 
@@ -541,8 +529,8 @@ def _check_published_band() -> dict:
     counts = {s: len(load_cases(s)) for s in WALL_BUDGET_S}
     wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows)
     # README's table is the other half of the same claim and drifted from this
-    # file once already (PR #29 R24, the origin of T-R34). Same two numbers or
-    # red: one number, two documents, no hand-kept copy.
+    # file once already (PR #29 R24, the origin of T-R34). The whole row or red:
+    # one set of numbers, two documents, no hand-kept copy (ADR-019 §6 item 7).
     readme = _README.read_text(encoding="utf-8")
     rows = [(m.group(1), (int(m.group(2)), float(m.group(3)),
                           float(m.group(4)), int(m.group(5))))
@@ -565,10 +553,14 @@ def _check_published_band() -> dict:
         seen = [s for s, _ in pairs]
         for suite in sorted({s for s in seen if seen.count(s) > 1}):
             wrong.append({"suite": suite, f"{where}_publishes_two_bands": True})
-    # The ceiling the ADR DERIVES from that maximum, in prose, must be the
-    # ceiling `evals/run.py` commits. Without this, growing a suite re-measures
-    # the band downwards and §3 reads "-> **15**" under a heading that says 20s,
-    # with every other property green (PR #35 R4).
+    # The ceiling the ADR DERIVES from that maximum, in prose, must be the one
+    # the RULE gives — not the one `evals/run.py` commits (ADR-019 §6 item 5).
+    # Requiring the committed ceiling here reddens every case addition: a fresh
+    # count has two or three runs, a short sample derives lower, and the commit
+    # adding the case cannot pass its own gate (PR #35 R11). So "-> **15**"
+    # under a heading that says 20s IS green, and §6 declares that residue;
+    # what is graded is that the arrow is arithmetically the rule's own answer
+    # and never above the committed ceiling.
     for suite, (_, _ts, said) in sorted(published.items()):
         stated = [(float(a), float(b), int(c))
                   for a, b, c in _BAND_DERIVATION.findall(adr) if float(a) == said]
@@ -602,21 +594,21 @@ def _check_published_band() -> dict:
 def _check_published_band_slack() -> dict:
     """ADR-019 §6: the band property's blind spot is declared, bounded, and pinned.
 
-    `_check_published_band`'s property 2 is `rule(published) == rule(ledger
-    max)`, so a published maximum BELOW the ledger's is green while both derive
-    the same ceiling. PR #29 R24 asked whether that was a decision or an
+ADR-019 §6 item 3 is `rule(published) == rule(ledger max)`, so a
+    published number BELOW the ledger's maximum is green while both derive the
+    same ceiling. PR #29 R24 asked whether that was a decision or an
     artefact. This is what makes it a decision.
 
     Driven with a synthetic one-suite ledger and a ceiling of 999 so that only
-    property 2 can speak — property 3 is graded against the real ledger by
+    item 3 can speak — item 4 is graded against the real ledger by
     `published-band-matches-the-ledger` and would otherwise mask the boundary.
 
       - the miss is green right up to the top of the band, and red one
         hundredth of a second past it, where the ceiling the doc justifies
         stops being the ceiling the ledger requires;
-      - the harmful direction is still red, on BOTH properties: R21's real
+      - the harmful direction is still red, on BOTH items: R21's real
         numbers, 12.96s published where 13.57s was recorded, once with property
-        3 disabled and once with R21's own 15s ceiling in place;
+        4 disabled and once with R21's own 15s ceiling in place;
       - the width of the hole is one ceiling step and ADR-019 publishes it, as
         a number `_band_step_s` reads off the rule rather than a sentence
         someone can quietly soften.
@@ -651,7 +643,7 @@ def _check_published_band_slack() -> dict:
 
     def judge(said: float, ledger_max: float) -> list:
         # Two clean rows: the one the band cites and a slower one the ledger
-        # also holds. Both clean, so only property 2 can speak — the ceiling is
+        # also holds. Both clean, so only §6 item 3 can speak — the ceiling is
         # 999 for the same reason.
         rows = [{"suite": "s", "total": 1, "ts": t, "wall_s": w, "dirty": False}
                 for t, w in (("1", said), ("2", ledger_max))]
@@ -678,8 +670,8 @@ def _check_published_band_slack() -> dict:
                           "derives": _band_rule(top),
                           "published_derives": _band_rule(said)})
     # PR #29 R21, the direction that is NOT declared: a band justifying a lower
-    # ceiling than the truth. Red on property 2 (above, ceiling out of the way)
-    # and red on property 3 with the 15s ceiling R21 found it defending.
+    # ceiling than the truth. Red on §6 item 3 (above, ceiling out of the way)
+    # and red on item 4 with the 15s ceiling R21 found it defending.
     if not judge(12.96, 13.57):
         wrong.append({"r21_underpublished_band_green_on_property_2": [12.96, 13.57]})
     if not _band_wrong({"s": (1, "1", 12.96)}, {"s": 1}, {"s": 15.0},
@@ -3406,6 +3398,17 @@ def _run_doc_counts_case(case: dict) -> dict:
             for bad in c5.get("forbidden", []):
                 if _live(bad) in live_text:
                     wrong.append({"asserts_criterion5_green": bad, "doc": docrel})
+            # Same sweep, different reason: sentences that describe a rule the
+            # code no longer implements. A repair keeps outliving its own
+            # description here — three rounds of PR #35 in a row — so each rule
+            # this PR deleted or weakened leaves its old wording behind as a
+            # phrase no document may carry again (R15, R16). ponytail: a
+            # blacklist catches re-assertion of THESE rules, not the general
+            # class; the general defence is one description in one place, which
+            # is what ADR-019 §6 now is.
+            for bad in inp.get("describes_a_deleted_rule", []):
+                if _live(bad) in live_text:
+                    wrong.append({"describes_a_deleted_rule": bad, "doc": docrel})
             for good in required_in.get(docrel, []):
                 if _live(good) not in live_text:
                     wrong.append({"missing_red_evidence": good, "doc": docrel})

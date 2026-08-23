@@ -45,9 +45,8 @@ is worth less than the 4.9s it costs.
 
 Every LOCAL band here — this section's and §3's — is computed from
 `evals/report/history.jsonl`, the ledger committed in this repo, and
-`published-band-matches-the-ledger` grades that property on every run, against
-README's copy of the same two scalars and against the ceiling each derivation
-sentence below lands on. It has to, because three bands in PR #29 did not
+`published-band-matches-the-ledger` grades that on every run — §6 lists exactly
+what it requires, and this file states it nowhere else. It has to, because three bands in PR #29 did not
 match the ledger beside them: nine of fifteen runs published as "every run the
 ledger records", four values that appear in no recorded run, the two slowest
 `invariant` runs dropped unlabelled, and a maximum (64.71s) the ceiling was
@@ -66,13 +65,11 @@ debt (T-R40).
   134th case was being added to, so `dirty: true` — see §6's last paragraph).
 
 Every run of this tree is in `evals/report/history.jsonl`, committed beside
-this file; the sentence above names the one the band is derived from, and
-`published-band-matches-the-ledger` requires it to be a row recorded with
-nothing uncommitted in the tree. Round 1 of PR #35 published both bands off
-runs that were red AND dirty — a band justified by a tree that was never
-committed (R5). The ledger's own maximum at a given count may be higher than
-the band source, because it includes red and dirty runs; §6 is why that is
-allowed and by how much. The enumeration that used to stand here — and the one in §3 —
+this file; the sentence above names the one the band is derived from by its
+ledger timestamp, and §6 items 2-4 are what the check requires of it. The
+ledger's own maximum at a given count may be higher than the band source,
+because it includes red runs and runs taken mid-edit; §6 is why that is allowed
+and by how much. The enumeration that used to stand here — and the one in §3 —
 is gone: it was a snapshot of a file that grows on every gate run, nothing
 graded it, and it had drifted to publishing six of the eight runs recorded at
 the shipped case count, which is the R21 defect this ADR was amended over. What
@@ -99,11 +96,14 @@ commit that changed nothing but JSON.
 The same rule gives 13.32 × 1.15 = 15.32 → **20**. Two decimals on the product
 because one is not enough to re-derive it: "15.3" and "15.0" both round up to a
 multiple of five differently depending on how a reader reads them, and the
-committed ceiling is 20 (PR #35 R13). Note the band moved within this round: the
-first two runs at 53 cases measured 12.87 and 12.89s, which derive **15**, and
-`published-band-matches-the-ledger` refused a band deriving 15 as soon as a
-13.32s run landed. That is §6 working — the ceiling did not ratchet down on the
-short sample, and the doc had to be re-measured when the ledger crossed the band.
+committed ceiling is 20 (PR #35 R13). Note the band moved within this round, and be
+precise about why. The first two runs at 53 cases measured 12.87 and 12.89s,
+which derive **15**; that band was published, and the check was GREEN on it —
+§6 item 5 does not require the rule's value to equal the committed ceiling. What
+re-reddened it was item 3, when a 13.32s run landed and the ledger's maximum
+crossed into the next band. Had that run not landed, the 15-deriving band would
+have stood. This is the declared deviation in §6, not a mechanism catching
+something.
 
 This number was **15** until PR #29 R21, and that was a reading error, not a
 rule change: the band behind it published five runs of a ledger holding
@@ -164,9 +164,35 @@ PR #29 R24 asked why `published-band-matches-the-ledger` grades
 The weak property is kept, and this section is the price of keeping it: the
 hole is measured, named, and pinned by a case, so nobody has to discover it.
 
-**What it lets through.** A published maximum may sit anywhere inside the band
-that derives the committed ceiling, so it can understate the ledger's slowest
-run by up to one ceiling step — five seconds of ceiling divided by the rule's
+**What the check enforces.** One list, in one place; every other sentence in
+this file and in README refers to it instead of restating it. Three rounds of
+PR #35 ended the same way — the repair correct, its own description left behind
+(R15, R16) — and a second copy of a rule is the thing that goes stale.
+`published-band-matches-the-ledger` requires, per suite:
+
+1. the published case count is the suite's current case count;
+2. the band sentence cites a ledger row by timestamp, at that count, whose wall
+   clock IS the published number — and if that row is dirty, that no clean row
+   at that count existed by then. Judged as of the cited run, not as of now;
+3. the published number derives the SAME ceiling as the ledger's maximum at that
+   count — `rule(published) == rule(ledger max)`, not `published >= ledger max`;
+4. the committed ceiling is at least `rule(ledger max)`, read from the ledger
+   and never from the published number;
+5. the derivation sentence multiplies the published number, is right to two
+   decimals, and states the ceiling **the rule gives** — `_band_rule(x)` — which
+   must not exceed the committed ceiling;
+6. the Ruling's own local ceilings are the ones `evals/run.py` commits;
+7. README's band row carries the same four values as this file, and neither
+   document publishes two bands for one suite.
+
+Green is required nowhere in that list and cannot be (T-R42). Item 5 states the
+rule's value and deliberately does NOT require it to equal the committed
+ceiling — the paragraph on what this does not cover, below, is why.
+
+**What it lets through.** The published number may sit anywhere inside the band
+that derives the committed ceiling — item 2 requires it to be a run that
+happened, not the slowest one — so it can understate the ledger's maximum at
+that count by up to one ceiling step — five seconds of ceiling divided by the rule's
 1.15, a declared slack of one ceiling step (**4.35s**) of wall clock.
 `published-band-slack-is-declared` derives that bound from the rule's own
 constants rather than trusting this sentence, measures the headroom of each
@@ -191,24 +217,33 @@ real change in what the
 tree costs and worth a human writing a number down. A regeneration script
 changes who types the number, not how often the interruption arrives.
 
-**What the slack cannot hide — and what it does not cover.** §2's ceiling is
-graded against `rule(ledger max)` directly, from the ledger, never from the
-published number, so a tree that crosses its band reddens the gate. R21's
-direction (12.96s published where 13.57s was recorded: 15 where the rule said
-20) is red on that property and on property 2, and the case asserts both.
+**What the slack cannot hide — and what it does not cover.** Item 4 is graded
+against `rule(ledger max)` directly, from the ledger, never from the published
+number, so a tree that crosses its band reddens the gate. R21's direction
+(12.96s published where 13.57s was recorded: 15 where the rule said 20) is red
+on that and on item 3, and the case asserts both.
 
 That is not the same as "no ceiling is ever justified by a maximum smaller than
-the truth", which is what this section claimed first and the filter falsifies
-(PR #35 R4). The ledger is filtered to rows at the CURRENT case count, so
-adding one 0.0s case discards every earlier run: `invariant` had 34 runs at 51
-cases reaching 14.12s, and the first two runs at 52 cases maxed at 12.78s,
-which derives **15** — the number CI has been red against twice. Property 3 is
-`>=`, so a committed ceiling above the freshly-derived one is accepted and
-nothing goes red. What was missing is that nothing read the ceiling this ADR
-*derives in prose*: §3 could have said "→ **15**" under a heading that says
-20s. `published-band-matches-the-ledger` now reads it — the derivation sentence
-must multiply the published maximum and land on the ceiling `evals/run.py`
-commits — so that state is red.
+the truth", which is what this section claimed first (PR #35 R4). The ledger is
+filtered to rows at the CURRENT case count, so adding one 0.0s case discards
+every earlier run: `invariant` had 34 runs at 51 cases reaching 14.12s, and the
+first two runs at 52 cases maxed at 12.78s, which derives **15** — the number CI
+has been red against twice. Item 4 is `>=`, so a committed ceiling above the
+freshly-derived one is accepted and nothing goes red.
+
+**And item 5 stops short of closing that**, deliberately. It requires the
+derivation to state what the RULE gives, not what `evals/run.py` commits, so
+`12.89 × 1.15 = 14.82 → **15**` under a §3 heading that says 20s is GREEN — that
+exact state was published in this round and the check accepted it (§3). Round 3
+tried conjoining the two, requiring the rule's value to equal the committed
+ceiling, and reverted it: a fresh case count has two or three runs, a short
+sample derives lower, and the commit that adds the case then cannot pass its own
+gate — R11's deadlock by another route (PR #35 R16). What the deviation buys is
+that adding a case stays one commit. What it costs is a reader meeting an arrow
+smaller than the ceiling printed beside it. What still holds is that the ceiling
+itself cannot be wrong: item 6 grades the Ruling against `WALL_BUDGET_S` and
+item 4 grades it against the ledger, so the residue is the arrow and nothing
+else.
 
 The residue is declared, not graded: a freshly republished band is a short
 sample and therefore a LOWER bound on what the tree costs. The rule is that a

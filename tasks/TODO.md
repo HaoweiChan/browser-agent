@@ -108,6 +108,30 @@ in `src/`, `evals/`, `.github/` and `specs/` against the ADR that actually carri
 ruling — or at minimum against the file existing and its Ruling mentioning the subject.
 Related: T-R32 (D-number citations are not machine-checked) is the same hole for D-numbers.
 
+### T-R44 — the `fast` band cites a red run without saying so; `invariant` discloses its result            [status: todo]
+Origin: PR #35 R17
+Spec: ADR-019 §2 cites ts `20260823-041419` and discloses `dirty: true` but not that the row
+is 132/134 — the run was red. §3's citation for ts `20260823-041729` discloses `53/53`. A
+reader comparing the two would reasonably read the silence as a pass. Nothing grades the
+parenthetical either way: `_BAND_LINE` captures suite, case count, ts and seconds, and the
+result is prose beside it. Green is deliberately not required of a band source (T-R42, and
+§6 says so), which is exactly why the result should be stated wherever a band is cited.
+Acceptance: the band citation carries `passed/total` from the row it names, derived rather
+than typed — the ledger row has both fields — or the parenthetical is dropped from both so
+there is nothing to be inconsistent about. Watched red by publishing a band whose citation
+claims a result the row does not have.
+
+### T-R45 — the slack sweep matches the rendered scalar, not the value            [status: todo]
+Origin: PR #35 R18
+Spec: `published-band-slack-is-declared` builds its bare-scalar regex from `f"{step_s:g}"`,
+so it sweeps for the exact string `4.35`. A document writing the same value as `4.350`, or
+`4.35 s`, or in a table cell as `4.4`, carries an ungraded copy that the sweep does not see
+and the marker check never reaches. The marked occurrences are parsed as floats and compared
+with a tolerance, so the marker half is rendering-independent; only the sweep half is not.
+Acceptance: the sweep matches any decimal rendering of the current value (a numeric scan of
+`[\d.]+s?` tokens compared as floats, rather than one string), or the limitation is stated
+in the check's docstring beside the existing `ponytail:` note. Watched red with `4.350`.
+
 ### T-R39 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
 Origin: T-R34, restated after PR #35 R4
 Spec: `_band_wrong` filters `history.jsonl` to rows whose `total` equals the CURRENT case
