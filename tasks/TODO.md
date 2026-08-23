@@ -926,6 +926,22 @@ section that contains an item's own distinctive token (the backticked expression
 uses) to carry a reference, since those tokens are derived from the list rather than
 blacklisted. Watched red by adding a paraphrase of one item with no reference beside it.
 
+### T-R63 — the band region's guard pins a named set, not everything band-shaped            [status: todo]
+Origin: T-R56 round 4 (PR #36 R19/R20)
+Spec: `published-band-matches-the-ledger` requires every name matching `_band…`,
+`_check_published_band…`, `_BAND…`, `_SIX…`, `_SLACK_MARK` or `_REGION` to sit between the two
+region markers, by byte offset, and both markers to start their own line with the closing one
+outside any body. Eight mutations are red against it (each of the five definitions moved out,
+band code appended after the end marker, either marker moved into a body, either edge moved
+inward). What it does not pin is the module-level names outside that set — `_ADR019`,
+`_README`, `_INDEX`, `_DECIMAL_TOKEN`, `_README_BAND_ROW`, `_ADR_CEILING` — and any band code
+added later under a name the pattern does not match. None of those carries a §6 reference
+today, so the residue is currently empty; it stops being empty the moment one does.
+Acceptance: either the region's contents are pinned positively (the band block is delimited by
+what it contains rather than by markers — e.g. the check reads its own `__code__` sources), or
+the pattern is derived from the module namespace rather than written out. Watched red by
+moving an unpinned constant that carries a §6 reference out of the region.
+
 ### T-R60 — two band parses are still last-wins, and derivations are matched document-wide            [status: todo]
 Origin: T-R56 cold review (secondary findings)
 Spec: two holes the T-R56 sweep found and left, both in `_check_published_band`, both the

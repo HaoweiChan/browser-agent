@@ -359,8 +359,8 @@ def _check_planner_prompt() -> dict:
 
 
 # ==== ADR-019 §6 band section: begin ====
-# Everything between these two markers is the band subsystem, and §6 item 8 (references)
-# (references) reads THIS REGION of this file — not the whole 3,900-line
+# Everything between these two markers is the band subsystem, and
+# §6 item 8 (references) reads THIS REGION of this file — not the whole 3,900-line
 # adapter, which serves every task in the repo and would hand the band case a
 # red for an `item N` written about something else entirely (PR #36 R5).
 #
@@ -432,6 +432,13 @@ _SIX_REF = re.compile(
 # 300 lines of band code silently unscanned and the check green.
 _REGION = tuple(f"# ==== ADR-019 §6 band section: {edge} ===="
                 for edge in ("begin", "end"))
+
+# What has to be inside those markers, matched at column 0: the band functions,
+# and the module-level constants the band checks read. Named rather than
+# inferred, so what it does NOT pin is legible — ADR-019 §6 says which.
+_BAND_DEF = re.compile(
+    r"^(?:def )?(_band\w*|_check_published_band\w*|_BAND\w*|_SIX\w*"
+    r"|_SLACK_MARK|_REGION)\b", re.M)
 
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
@@ -691,34 +698,39 @@ def _check_published_band() -> dict:
     # definition (458 lines -> 68, green), and a fixed list of three names that
     # said nothing about band code added later (PR #36 R16). So the region is
     # checked before it is read, on three counts: each marker occurs EXACTLY
-    # once in the file, EVERY band definition in the file is inside it, and the
-    # closing marker sits at a top-level boundary rather than inside a body.
+    # once in the file, every name in the band set below is between them, and
+    # both markers start their own line with the closing one outside any body.
     here = Path(__file__).read_text(encoding="utf-8")
     marker_counts = [here.count(m) for m in _REGION]
     region = (here.split(_REGION[0], 1)[-1].split(_REGION[1], 1)[0]
               if marker_counts == [1, 1] else "")
-    # Every band definition in the FILE, not three names written down here: a
-    # fixed list pins what it happens to know about and says nothing about band
-    # code added later, which is the hole the previous version's own comment
-    # advertised (PR #36 R16). Matched at column 0, and membership is tested
-    # with a name built at runtime — a literal `def _band_wrong(` written here
-    # would sit inside the region and satisfy the test from within, which is
-    # how the first attempt at this guard passed its own mutation.
-    strays = [m.group(1)
-              for m in re.finditer(r"^def (_band\w*|_check_published_band\w*)\(",
-                                   here, re.M)
-              if f"def {m.group(1)}(" not in region]
-    # ...and the closing marker sits at a top-level boundary. Moved up into a
-    # function's body it leaves every definition inside the region, keeps both
-    # marker counts at 1, and still drops the rest of that body — 111 lines and
-    # five references, green, masking a mis-pointed one (PR #36 R16). What says
-    # so is the first non-blank line after it: indented means mid-body.
+    # The band set, located in the FILE by OFFSET. Two earlier versions of
+    # this test were satisfied from inside the region by text that describes
+    # it: a fixed tuple of names whose literals sit here, and then a substring
+    # test that the very comment warning against it spelled out — the words
+    # "def _band_wrong(" in a comment made that definition inside-the-region
+    # wherever its body actually was (PR #36 R19). No comment can be an offset.
+    # `_BAND…`/`_SIX…`/`_SLACK_MARK`/`_REGION` are in the pattern because the
+    # module-level half of this subsystem is what the OPENING edge drops
+    # (PR #36 R20); it is a named set, not everything band-shaped, and
+    # `_ADR019`, `_README`, `_INDEX`, `_DECIMAL_TOKEN`, `_README_BAND_ROW` and
+    # `_ADR_CEILING` are deliberately outside it — see ADR-019 §6.
+    begin, end = ((here.index(_REGION[0]), here.index(_REGION[1]))
+                  if marker_counts == [1, 1] else (0, 0))
+    strays = [m.group(1) for m in _BAND_DEF.finditer(here)
+              if not begin < m.start() < end]
+    # ...and both markers sit at a top-level boundary: each starts its own line,
+    # and the closing one is not inside a body — moved up into one it leaves
+    # every definition on the correct side of it, keeps the counts at [1, 1],
+    # and still drops the rest of that body (PR #36 R16). The first non-blank
+    # line after it says which: indented means mid-body.
     after = here.split(_REGION[1], 1)[-1].lstrip("\n")
-    mid_body = bool(after[:1]) and after[:1].isspace()
-    if marker_counts != [1, 1] or strays or mid_body:
+    off_boundary = (bool(after[:1]) and after[:1].isspace()
+                    or any(here[i - 1:i] not in ("", "\n") for i in (begin, end)))
+    if marker_counts != [1, 1] or strays or off_boundary:
         wrong.append({"band_region_does_not_cover_the_band_code":
                       {"marker_counts": marker_counts, "outside_the_region": strays,
-                       "end_marker_inside_a_body": mid_body,
+                       "markers_off_a_top_level_boundary": off_boundary,
                        "region_lines": region.count("\n")}})
     for where, text in (("adr", adr), ("readme", readme), ("eval_adapter", region)):
         for m in _SIX_REF.finditer(text):

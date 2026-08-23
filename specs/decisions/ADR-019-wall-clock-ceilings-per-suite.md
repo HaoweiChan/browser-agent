@@ -194,10 +194,21 @@ reference to it — here, in README, and in the marked band region of
 `src/browser/eval_adapter.py` — names a number this list HAS and spells that
 item's slug, so a bare name, a name for an item that does not exist, a name
 aimed at the wrong item, a plural range and the retired `property N` numbering
-are each red; and that region is checked before it is read — one occurrence of
-each marker in the file, every band definition inside them, the closing marker
-at a top-level boundary — so the five ways this scan has been made to stop
-scanning are red rather than green. **Not graded:** a
+are each red; and the region is checked before it is read — one occurrence of
+each marker in the file, both markers starting their own line, the closing one
+not inside a body, and every name in the band set (`_band…`,
+`_check_published_band…`, `_BAND…`, `_SIX…`, `_SLACK_MARK`, `_REGION`) between
+them by byte offset, a form of membership no comment can spell its way into
+(PR #36 R19, where a substring test was satisfied by the comment warning
+against it). Eleven ways of making this scan stop scanning have been watched
+red: each of the five definitions moved out of the region one at a time, band
+code added after the end marker, either marker deleted, a comment quoting a
+marker a second time, a marker sharing a line with code, the closing marker
+moved into a body, and the opening one moved inward past the module-level
+block. What that set does NOT pin is the module-level names outside
+it, `_ADR019`, `_README`, `_INDEX`, `_DECIMAL_TOKEN`, `_README_BAND_ROW` and
+`_ADR_CEILING`: moving one of those out of the region takes no §6 reference with
+it today, and nothing would notice if that changed (T-R63). **Not graded:** a
 paragraph that paraphrases a rule and names no item at all, and references in
 `tasks/TODO.md`, which is outside the scanned set (T-R62 carries both). What
 keeps those rare is that there is one list to point at, and pointing is cheaper
