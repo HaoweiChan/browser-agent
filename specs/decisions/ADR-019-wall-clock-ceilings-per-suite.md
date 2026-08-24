@@ -68,9 +68,12 @@ repo's ledger and nothing else.
 - Band source — local `fast` at 178 cases, ts `20260824-024916`, **74.19s**, 178/178
   (`evals/report/20260824-024916-fast.json`; `dirty: true`, for the reason the
   next paragraph gives — and under §7 that is no longer a price, only a
-  description. The stamp is UTC, as every row written since §7 is. Its two reds
-  are `docs-numbers-are-derived` and `published-band-matches-the-ledger`,
-  precisely the two this republish clears. How many rows the ledger holds at
+  description. The stamp is UTC, as every row written since §7 is. This row is
+  GREEN — 178/178, an empty failed set in the report named above. The two reds
+  a republish clears belonged to `20260824-024553` (73.47s, 176/178), the
+  citation the paragraph below narrates as superseded; that sentence was left
+  behind here when the band moved and is corrected rather than carried (PR #42
+  R20). How many rows the ledger holds at
   this count, and what its maximum is, are deliberately not written here — see
   §3.)
 
@@ -92,8 +95,11 @@ this band cites a dirty row and the gate is green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 178 cases, 178/178) and
-(restated — `invariant`: 64 cases, 62/64) — are graded against the bullets they
-summarise, by item 10 (restatement), not merely stated beside them (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
+(restated — `invariant`: 65 cases, 63/65) — are graded against the bullets they
+summarise, by item 10 (restatement), not merely stated beside them (T-R55).
+The result is stated because a band source is taken as it is found — item 2
+(cited-run) requires a run that happened, and green is required nowhere in §6 —
+so a reader comparing two bands should not have to read silence as a pass.
 
 **The band cites the SLOWEST run on record when it is published, not the
 fastest** (PR #42 R14). Item 3 (same-ceiling) compares the ceiling the published number derives
@@ -112,8 +118,12 @@ immunity, and this merge is the proof: the band was first published here at
 (same-ceiling) reddened exactly as it did at 168 cases. The band re-cites that
 slower run rather than the faster one, so the published number now sits inside
 the 73.92-78.26s window where every value derives 90 — the widest span this
-suite's own spread (73.3-74.2s across five consecutive runs of this tree) can
-be absorbed by. A run above 78.26s would still require a re-citation. That coupling — a band pinned to whatever the
+suite's own spread can be absorbed by: EVERY row the committed ledger holds at
+this case count derives the same ceiling as the band, which is the property
+item 3 (same-ceiling) grades on every run rather than a range anyone has to
+keep current. The previous version of this sentence published a spread and a
+row count, and both were stale within the hour — the same snapshot defect §3
+refuses two sections down (PR #42 R24). A run above 78.26s would still require a re-citation. That coupling — a band pinned to whatever the
 slowest recorded run happens to be, whoever recorded it — is what `T-M38-5`
 records, named rather than papered over.
 
@@ -127,7 +137,8 @@ describing code that never existed as a commit. It recurred one round later —
 two more probe rows at 168 cases, one of them again the maximum (75.02s,
 162/168) — which is the strongest evidence `T-M38-5` could ask for that the
 hole is in the mechanism rather than in one careless sweep. Those rows and
-their report files were deleted, five at 165 cases and two at 168, on the
+their report files were deleted — five at 165 cases, two at 168 and two at
+170, nine in all — on the
 precedent this repo already set — PR #20 R18,
 where `_main_exit_code` injected fabricated rows and 52 of 241 committed lines
 were probe artifacts, redirected to a temp path and *"deleted by hand as part
@@ -161,8 +172,9 @@ deletion git can show:
 | `20260823-231442` | fast | 157/165 | 71.87 | plural test removed |
 | `20260823-231611` | fast | 161/165 | 72.63 | plural test un-hoisted |
 
-Removed BEFORE they were ever committed, in round 2, and therefore invisible to
-git — this table is their only record, which is exactly why it is here:
+Removed BEFORE they were ever committed — the first two in round 2, the last
+two in round 3, whose sweeps ran at 170 cases — and therefore invisible to git.
+This table is their only record, which is exactly why it is here:
 
 | ts | suite | passed/total | wall_s | ablation |
 |---|---|---|---|---|
@@ -175,10 +187,6 @@ Nine rows, nine ablation sweeps, each one at a pass count no shipped tree
 produces. Two of the nine were the ledger's maximum at their case count when
 they landed, which is how they reached the published band in the first place. That the isolation mechanism this repo built for one probe class does
 not cover ablation is `T-M38-5`.
-it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
-requires a run that happened, and green is required nowhere in §6 — so a reader
-comparing two bands should not have to read silence as a pass.
-
 Every run of this tree is in `evals/report/history.jsonl`, committed beside
 this file; the sentence above names the one the band is derived from by its
 ledger timestamp. §6 item 2 (cited-run) and item 3 (same-ceiling) are what the
@@ -215,10 +223,11 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 64 cases, ts `20260824-020008`, **13.66s**, 62/64
-  (`dirty: true`, and red, for the same structural reason §2's is: T-M40-2's cases
-  are tagged `fast` and `invariant` both, so 64 exists only while the merge is
-  uncommitted and the two red cases are the two this republish clears. ADR-012
+- Band source — local `invariant` at 65 cases, ts `20260824-032906`, **13.67s**, 63/65
+  (`dirty: true`, and red, for the same structural reason §2's is: M38's
+  `resolver-narrowing-fails-closed` joins this suite in the commit that
+  republishes the band, so 65 exists only while that commit is uncommitted, and
+  the two red cases are the two this republish clears. ADR-012
   writes no per-case report for a green run, so a ledger row is the whole
   artifact, which is why this cites a ts and not a file. As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
@@ -278,7 +287,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.66 × 1.15 = 15.71 → **20**, which is the committed
+The same rule gives 13.67 × 1.15 = 15.72 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

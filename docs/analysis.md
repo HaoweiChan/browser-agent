@@ -6,10 +6,10 @@ verification. Every number below is read out of a committed report in
 says so rather than supplying a plausible one.
 
 Baseline: **sections 1 and 5's reliability line were refreshed at M8** to
-`evals/report/20260824-025831-fast.json` plus the `live`
+`evals/report/20260824-033233-fast.json` plus the `live`
 (`…-020100-live.json`) and `invariant` (`…-020104-invariant.json`) runs of the
 same tree. M7 baseline:
-`evals/report/20260824-025831-fast.json` plus the `live`
+`evals/report/20260824-033233-fast.json` plus the `live`
 (`evals/report/20260819-015005-live.json`) and `invariant`
 (`evals/report/20260819-151925-invariant.json`) runs of the same working
 tree, taken after PR #10 merged M7 with main's navigation fix (post-M6 fix:
@@ -35,10 +35,10 @@ now closes (`docs/plans/completed/task1-a-level-plan.md`).
 That table is the M8 run, kept at the numbers of the report it cites. Two
 milestones have moved it since, in opposite directions: **M9 added five cases,
 all offline** (`fast` to 91/91, `invariant` to 27/27, the gate at 71.3-76.5s —
-`evals/report/20260824-025831-fast.json`, `…-162043-invariant.json`), and
+`evals/report/20260824-033233-fast.json`, `…-162043-invariant.json`), and
 **M12 stopped launching a Chromium per case**, which took the gate back under
 ADR-002's ceiling. The merged tree is given here in full rather than left to be
-inferred — `evals/report/20260824-025831-fast.json`, `…-170753-invariant.json`, `…-164456-live.json`:
+inferred — `evals/report/20260824-033233-fast.json`, `…-170753-invariant.json`, `…-164456-live.json`:
 
 | Suite | Cases | Score | Wall | p50 | p95 | Cost |
 |---|---|---|---|---|---|---|
@@ -60,7 +60,7 @@ its own report beside it.
 189 distinct cases (20 golden + 169 adversarial).
 283 browser actions in a `fast` run; **107 of the 178** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260824-025831-fast.json` rather than tallied by hand (the
+`evals/report/20260824-033233-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
@@ -189,7 +189,7 @@ than mocked. A successful step never waits it out.
 
 The per-case numbers in that table each still carried a cold Chromium launch,
 ~0.20s of the ~0.35s median. Since M12 the suite shares one browser and the
-median case is **0.12s** (p95 4.10s, `evals/report/20260824-025831-fast.json`);
+median case is **0.12s** (p95 4.10s, `evals/report/20260824-033233-fast.json`);
 the tall cases above are unchanged, because what they spend is the settle loop,
 not the launch.
 
