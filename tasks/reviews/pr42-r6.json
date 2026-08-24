@@ -1,0 +1,29 @@
+{
+  "pr": 42,
+  "round": 6,
+  "task": "M38",
+  "result": "APPROVED",
+  "findings": [],
+  "standing": {
+    "R27": {
+      "verdict": "CLOSED",
+      "evidence": "The quoted expression is exact: eval_adapter.py:665 is `if _band_rule(said) != _band_rule(slowest):` and :622 is `slowest = max(recorded) if recorded else None`, with recorded filtered on suite, total == now, and env. The consequence follows on every conjunct, not just item 3: appending a faster row cannot change max(recorded), cannot reach item 2's dirty clause (which only looks at clean rows with ts <= ts_cited), and cannot reach item 4 (also keyed on slowest). No other graded check reads the ledger's minimum. The 'quantifies nothing' claim holds \u2014 the only number is the pre-existing 73.92-78.26s window, exact against the rule at both boundaries (_band_rule(73.91)=85, (73.92)=90, (78.26)=90, (78.27)=95). Both retracted versions are described accurately.",
+      "judgement": "Keeping both wrong versions is honest history, not clutter: neither retracted claim publishes a snapshot that can rot \u2014 the 15-vs-1 split is in an append-only ledger and cannot un-happen. The one staleness vector, the phrase 'at this count', is bounded rather than silent: item 1 reddens on any count change and forces section 2 to be rewritten anyway."
+    },
+    "R28": {
+      "verdict": "CLOSED",
+      "evidence": "evals/report/20260824-032906-invariant.json is tracked and was added by adc6584 (git log --diff-filter=A), the same commit that moved section 3's band source from 20260824-020008 (64 cases) to 20260824-032906 (65) \u2014 so the attribution is correct on both halves. The report is red and matches the citation exactly: wall_seconds 13.67, score 0.969 (63/65), failed set exactly the two the republish clears. The rationale is now the true one: evals/run.py:311 writes a report for any red run."
+    },
+    "R29": {
+      "verdict": "CLOSED",
+      "evidence": "ADR-019:201 is blank; the two paragraphs render separately."
+    }
+  },
+  "gate": {
+    "invariant": "65/65 = 1.000, 13.64s / 20",
+    "fast": "178/178 = 1.000, 73.24s / 90",
+    "cost": "$0.0000",
+    "graders": "report-citations-resolve, adr-header-and-index, docs-numbers-are-derived, published-band-slack-is-declared all PASS",
+    "ledger": "append-only in this commit \u2014 4 rows added, none deleted"
+  }
+}

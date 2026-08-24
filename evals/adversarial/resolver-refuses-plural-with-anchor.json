@@ -1,0 +1,21 @@
+{
+  "id": "resolver-refuses-plural-with-anchor",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "List all the users who posted in this thread.",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "name": "user profile" }, "anchor": "Aurora Desk Lamp teardown" }
+    ]
+  },
+  "expect": { "status": "failure:locate" },
+  "provenance": "PR #42 R1 (HIGH), the milestone's own defect. `anchor-proximity` returned before the plural test, which lived inside rung 2 — so a plural ask whose step carried an identity anchor was answered from ONE of several matches: exactly the silent wrong answer `resolver-refuses-plural-wording` claims to forbid, wrong by omission rather than by picking the wrong element. Two users posted in this thread and the run named one of them. Watched red first, on the reviewer's own repro: `status success, answer 'arden'` — verdict PASS, grounded, anchored. The fix moves the plural refusal (and the reading-step refusal) above BOTH rungs, so a narrowing rung is now reached only for a task that asks for one thing.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "that the plural guard gates rung 1 as well as rung 2. It is the anchor twin of `resolver-refuses-plural-wording`: same page, same plural wording, but a `near`-able identity anchor that resolves to exactly one place (the `<h2>`), so rung 1 fires and rung 2 is never reached. Removing the hoist turns this case green-to-red again while the rung-2 twin stays green, which is the asymmetry the review found.",
+    "not_covered": "whether `arden` or `bellweather` is 'the' answer — neither is. A plural ask has no single-element answer, which is why the refusal is the result rather than a better pick."
+  }
+}

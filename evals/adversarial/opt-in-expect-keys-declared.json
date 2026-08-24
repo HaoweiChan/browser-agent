@@ -1,23 +1,57 @@
 {
   "id": "opt-in-expect-keys-declared",
   "task": "browser",
-  "suites": ["invariant", "fast"],
+  "suites": [
+    "invariant",
+    "fast"
+  ],
   "level": "L1",
   "input": {
     "kind": "declared-keys",
     "declared": {
-      "mutation_survived": ["l4-shop-element-reordered"],
-      "answer_is_known_wrong": ["l4-shop-element-reordered", "live-quotes-js-role-tier-blind"],
-      "actions": ["verifier-aggregate-superlative-fails-loud", "probe3-quotes-most-quoted-author", "extract-all-undeclared-intent-fails-loud", "plan-lint-refuses-a-declared-non-comparison", "plan-lint-refuses-a-document-root-extract"],
-      "planner_note_contains": ["probe3-quotes-most-quoted-author", "recovery-replan-postcondition", "plan-lint-refuses-a-document-root-extract"],
-      "trace_note_contains": ["probe3-quotes-most-quoted-author"],
-      "answer_null": ["extract-container-dump-is-not-the-answer", "plan-lint-refuses-a-document-root-extract", "plan-lint-refuses-a-document-root-extract-midrun"],
-      "reason_max_chars": ["extract-container-dump-is-not-the-answer"],
-      "evidence_contains": ["extract-container-dump-is-not-the-answer"]
+      "mutation_survived": [
+        "l4-shop-element-reordered"
+      ],
+      "answer_is_known_wrong": [
+        "l4-shop-element-reordered",
+        "live-quotes-js-role-tier-blind"
+      ],
+      "actions": [
+        "verifier-aggregate-superlative-fails-loud",
+        "probe3-quotes-most-quoted-author",
+        "extract-all-undeclared-intent-fails-loud",
+        "plan-lint-refuses-a-declared-non-comparison",
+        "plan-lint-refuses-a-document-root-extract"
+      ],
+      "planner_note_contains": [
+        "probe3-quotes-most-quoted-author",
+        "recovery-replan-postcondition",
+        "plan-lint-refuses-a-document-root-extract"
+      ],
+      "trace_note_contains": [
+        "probe3-quotes-most-quoted-author",
+        "resolver-narrows-by-anchor-proximity",
+        "resolver-narrows-identical-matches",
+        "resolver-near-normalises-typography",
+        "resolver-narrows-singular-noun-ending-in-s"
+      ],
+      "answer_null": [
+        "extract-container-dump-is-not-the-answer",
+        "plan-lint-refuses-a-document-root-extract",
+        "plan-lint-refuses-a-document-root-extract-midrun"
+      ],
+      "reason_max_chars": [
+        "extract-container-dump-is-not-the-answer"
+      ],
+      "evidence_contains": [
+        "extract-container-dump-is-not-the-answer"
+      ]
     }
   },
-  "expect": { "note": "the opt-in expect keys are carried by exactly the cases the docs name" },
-  "provenance": "two `expect` keys exist so a case can say something the harness cannot infer — `mutation_survived: false` (this run succeeded and is still not a survival) and `answer_is_known_wrong: true` (this expectation pins the wrong answer as ground truth). Both are described in prose across ADR-009, docs/support-matrix.md and docs/evals/evaluation-methodology.md, and that prose has already gone stale once: after round 2 removed the key from l4-shop-render-delayed (its status excludes it now), the methodology doc still said the key kept BOTH non-survivors out of the numerator, for a whole review round (PR #12, R12). Sets rather than counts, so a mismatch names the file that moved. Watched red by adding `mutation_survived` to a second case: the check reports declared ['l4-shop-element-reordered'] vs actual two ids. M31 and PR #29 added three more, each for the same reason — the harness cannot infer them from a run: `actions` (a plan rejected before the browser moved spends exactly the pre-plan navigation), `planner_note_contains` (WHICH replan prompt a path sends, since the stub planner discards the note) and `trace_note_contains` (that the trace records why a plan changed). M28 added three more for the shape of a verifier-rejected run, which no status/verdict key can see: `answer_null` (the demoted run carries no answer), `reason_max_chars` (the reason does not quote the rejected dump back) and `evidence_contains` (the extraction is still in evidence, in full). T-M40-2 adds no key: `plan-lint-refuses-a-document-root-extract` reuses `actions`, `planner_note_contains` and `answer_null` — a plan refused before execution is the shape all three were written for — and is declared against each of them here; its mid-run twin (PR #46 R1) reuses `answer_null` and nothing else new.",
+  "expect": {
+    "note": "the opt-in expect keys are carried by exactly the cases the docs name"
+  },
+  "provenance": "two `expect` keys exist so a case can say something the harness cannot infer — `mutation_survived: false` (this run succeeded and is still not a survival) and `answer_is_known_wrong: true` (this expectation pins the wrong answer as ground truth). Both are described in prose across ADR-009, docs/support-matrix.md and docs/evals/evaluation-methodology.md, and that prose has already gone stale once: after round 2 removed the key from l4-shop-render-delayed (its status excludes it now), the methodology doc still said the key kept BOTH non-survivors out of the numerator, for a whole review round (PR #12, R12). Sets rather than counts, so a mismatch names the file that moved. Watched red by adding `mutation_survived` to a second case: the check reports declared ['l4-shop-element-reordered'] vs actual two ids. M31 and PR #29 added three more, each for the same reason — the harness cannot infer them from a run: `actions` (a plan rejected before the browser moved spends exactly the pre-plan navigation), `planner_note_contains` (WHICH replan prompt a path sends, since the stub planner discards the note) and `trace_note_contains` (that the trace records why a plan changed). M28 added three more for the shape of a verifier-rejected run, which no status/verdict key can see: `answer_null` (the demoted run carries no answer), `reason_max_chars` (the reason does not quote the rejected dump back) and `evidence_contains` (the extraction is still in evidence, in full). T-M40-2 adds no key: `plan-lint-refuses-a-document-root-extract` reuses `actions`, `planner_note_contains` and `answer_null` — a plan refused before execution is the shape all three were written for — and is declared against each of them here; its mid-run twin (PR #46 R1) reuses `answer_null` and nothing else new. M38 added three cases to `trace_note_contains` rather than a fourth key: WHICH narrowing rung settled an ambiguity is exactly the 'why did this step do that' the trace note already carries, and a run that answered from one of several matches without saying which rung picked it is the reading M38's ADR-026 refuses.",
   "triage": {
     "class": "eval-integrity",
     "note": "guards a documentation claim, not the product — the same shape as support-matrix-cites-real-cases and the MUTATIONS coverage check in mutation-catalog-integrity. Also refuses `answer_is_known_wrong` on a case with no `expect.answer`, where the marker would label nothing."

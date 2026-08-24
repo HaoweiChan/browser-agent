@@ -1,0 +1,30 @@
+{
+  "id": "resolver-refuses-plural-zh",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "列出這個討論串裡所有的作者。",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "text": "Marisol Vance"
+        },
+        "anchor": null
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "PR #42 R4 (MEDIUM). `_PLURAL_ASK` was a seven-token list, and the reviewer walked around it with ordinary phrasings: `Name the authors...`, `Who are the authors...?`, `Give me the authors...` and the ZH plural form each returned `success, answer 'Marisol Vance'` — one of three authors offered as the answer to a question about the set. This case is the ZH plural ask. `_PLURAL_ASK` was structurally incapable of firing on it: every alternative was an English token wrapped in `\\b`, and `\\b` never matches inside a CJK run — the lesson `SCOPE_BLOCK` already carries in agent.py (case `screening-word-boundary`). The repo ships six ZH cases, so this was a hole in a supported surface, not an unseen phrasing. `anchor: null` on purpose: with no anchor, rung 1 cannot fire, so the only thing that can refuse this plan is the plural test itself. Watched red first, on the committed regex: `status success, answer 'Marisol Vance'`, verdict PASS.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "one phrasing of the widened plural test, watched red before the widening — the repo's rule for every regex over English (D21): widen on a phrasing a probe actually found, never on synonyms nobody has seen. The remaining ceiling is declared in docs/support-matrix.md D29."
+  }
+}

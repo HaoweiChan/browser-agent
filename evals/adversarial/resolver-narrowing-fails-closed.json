@@ -1,0 +1,23 @@
+{
+  "id": "resolver-narrowing-fails-closed",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "narrowing-fails-closed"
+  },
+  "expect": {
+    "note": "`_nearest`'s `loose` switch is keyword-only with no default, so a caller that forgets it fails loudly instead of restoring the ungated rung 3"
+  },
+  "provenance": "PR #42 R18, promoted out of debt by the human's explicit ask ('fix rung 3 too'). The R7 repair routed every M38 narrowing rung through one flag, `may_narrow` — except that rung 3 reads it through a parameter, `_nearest(..., loose=)`, which shipped as `loose: bool = True`. Both call sites passed it correctly, so nothing was wrong; what was wrong is the shape. R7's defect WAS a narrowing path nobody remembered to gate, and a permissive default reproduces it for the next caller by omission, silently, with no case able to go red — the two R7 cases exercise the real path and never see a default. `loose` is now keyword-only with no default: a caller that forgets it raises TypeError. Watched red first by restoring `loose: bool = True` and running this case: `passed false`, `loose {'kind': 'POSITIONAL_OR_KEYWORD', 'default': 'True'}`.",
+  "triage": {
+    "class": "eval-integrity",
+    "what_this_grades": "the guard on the guard: pure code inspection, no browser, no page. It reads the signature rather than calling the function, because the failure it grades is a call site that does not exist yet.",
+    "not_covered": "a future caller that passes `loose=True` deliberately where it should pass the flag. That is a decision, not an omission, and it is visible in the diff — this case only makes the omission impossible.",
+    "why_invariant": "it belongs in the `invariant` suite by shape — pure code inspection, no browser, no page, ~0s — and it is there. It shipped `fast`-only for one round on a justification the committed ledger falsifies: the block claimed a 59-case invariant row from 2026-08-16 (32.25s) would collide with the band. That row is `suite: \"fast\"` (history.jsonl line 15), and `_band_wrong` filters on `suite` AND `total`, so it can never enter an invariant band at all; the 41 real invariant rows at 59 cases run 13.09-14.80s and every one of them derives the committed 20. The claim was also stale by count — `invariant` is 64 before this case, so adding it makes 65, never 59. PR #42 R21 caught it; the cost of moving is one band republication, which is what this commit pays."
+  }
+}

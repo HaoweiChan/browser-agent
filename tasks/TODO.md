@@ -135,7 +135,7 @@ CI band becomes falsifiable from the same field. If instead CI's numbers are lab
 hand-read, T-R44 still needs the environment tag, so the tag is the common floor.
 
 
-### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: todo]
+### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: in-progress]
 Origin: post-deploy receipt rounds for PR #32/#37/#38 (2026-08-23). `349e4839`,
 `e08b7627`, `bcae4fe7`, `63b9d944` (HN item 1, "Who submitted this story?"):
 `extract {role: link, name: "pg"}` → `ResolveError: 2 matches`; the relocation
@@ -185,24 +185,6 @@ reason and `judge_attempts: 2`; `judge-fail-closed-on-*` cases stay green;
 `docs/analysis.md` cost section states the worst-case extra judge call per
 run; gate green under the ADR-019 ceiling.
 Out of scope: judge prompt/model changes; retrying a reasoned FAIL.
-
-### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
-Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
-but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
-page text the agent captured and absent from the a11y elements the planner
-was shown (`docs/analysis.md` §8a-2).
-Spec: progressive disclosure of the *page*, not the tool set — the whole
-vocabulary is ~524 tokens of system prompt and disclosing it lazily saves
-nothing while breaking the closed-world guarantee. One new action `observe`
-with a `target` subtree: the executor re-runs `observe()` scoped to that
-subtree with the full `MAX_ELEMS` budget and a longer text head, and the
-result reaches the replanner through the existing observation+note path.
-Costs one planning call, bounded by `MAX_REPLANS`. No site knowledge.
-Acceptance: an offline fixture case where the answer element sits past
-`MAX_ELEMS` in document order goes from `failure:locate`/dump to correct, red
-first; `quotes.toscrape.com/js` keeps its honest marker if it is still
-unplannable; tokens-per-task measured before/after from committed reports
-and stated (must stay inside the 100k run budget).
 
 ### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: pr]
 Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
@@ -275,6 +257,148 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M39-12 — the judge's unreadable-completion retry may not reach a MISSING body, only a malformed one            [status: todo]
+Origin: T-M40-5 probe, 2026-08-24, `run_id 97677d75`, build `8183dc2`
+(`docs/analysis.md` §8a-4, new failure shape 2).
+Spec: this is not a new defect — it is a second live instance of the class PR #44 (M39,
+not yet merged — its decision file is numbered 023 but that number does not resolve on this
+branch, per ADR-025's own collision check) is fixing, and a distinct sub-shape from the one
+M39 was built against. M39's retry is scoped to exactly one branch: `live_judge`'s `json.loads`
+of the completion
+body raising `JSONDecodeError` (`src/browser/judge.py`), because run `7787f9c9` (the case that
+motivated M39) recorded `JSONDecodeError: Expecting value: line 1 column 1 (char 0)` — a body
+that parsed as empty string, i.e. a MALFORMED (present-but-unparseable) body. `run_id 97677d75`
+recorded a different exception entirely: `JudgeError: malformed judge response: AttributeError:
+'NoneType' object has no attribute 'strip'` — a `.strip()` (or similar) call on a body that is
+`None`, i.e. a MISSING body, one level up from where `json.loads` ever runs. The extraction this
+run tried to grade was correct (`"Market cap: $4.514 Trillion USD"`, matching the `curl`-re-verified
+ground truth) and ADR-017's fail-closed rule held — the run correctly did not certify a verdict it
+never received — but if M39's retry guard (`retryable=True` set only at the `JSONDecodeError` site)
+does not also fire on a `None`/absent body, this exact shape survives PR #44 unfixed: one more
+malformed-completion class costing a correct run, exactly the harm M39 exists to prevent, just
+arriving one processing step earlier.
+Acceptance: read PR #44's merged `src/browser/judge.py` once it lands — if the missing-body path
+already sets `retryable=True` (e.g. a `None`-body guard ahead of or alongside the `json.loads` try)
+this block closes as already covered, cited by line. If it does not, an adversarial case pinning a
+`None`/absent judge completion body (not an empty-string/malformed JSON body — M39's own cases
+already cover that one) is added and watched red against M39's shipped fix before either the guard
+is widened or this is declared a deliberately separate, un-widened scope.
+
+### T-M40-5-1 — the replan-path identity-anchor kill T-M40-2-4 predicted is now confirmed live            [status: todo]
+Origin: T-M40-5 probe, 2026-08-24, `run_id`s `110e9e8f` and `48b60ee3`, build `8183dc2`
+(`docs/analysis.md` §8a-4, new failure shape 1).
+Spec: not a new defect — `T-M40-2-4` already names this exact shape from a fixture repro
+(`hello.html`) and this block exists only to attach live evidence, not to duplicate the spec.
+On x-rates.com, ADR-024's plan lint fires correctly (the plan that would `extract` off `WebArea`
+is refused before execution), then the REPLAN dies on `StepError: identity anchor 'EUR to USD'
+absent from the page the answer was read from` — even though the correct value (`1.168062 USD` /
+`1.168190 USD` across the two runs) was present in the very extraction evidence the step recorded.
+2 of 3 x-rates.com reps hit this in the T-M40-5 probe; the third (`591cf2dc`) resolved correctly.
+This confirms T-M40-2-4's fixture-predicted shape reproduces against a real deployed build and a
+real planner, not just the constructed `hello.html` repro.
+Acceptance: closed together with T-M40-2-4, not separately — see that block's own Acceptance
+(an adversarial case pinning the repro, watched red, closed by whichever lever T-M40-5's probe
+justifies). This block's own acceptance is narrower: T-M40-2-4 is updated to cite `110e9e8f` and
+`48b60ee3` as the live confirmation once that block is next touched, and this block is then closed
+as folded in.
+
+### T-M40-5-2 — extraction lands on the label instead of the value, adjacent to it, on a single-match resolve            [status: todo]
+Origin: T-M40-5 probe, 2026-08-24, `run_id`s `c20b1fda`, `37fe5cec`, `2f12cf5e`, build `8183dc2`
+(`docs/analysis.md` §8a-4, new failure shape 3).
+Spec: on quotes.toscrape.com's author page, three separate probe reps all resolved a SINGLE
+element (`{role: strong, near: "Born:"}` or equivalent) and extracted the text of an adjacent
+label rather than the value beside it — `"Description:"` twice, a bare `"Born:"` once — while
+the correct answer (`"March 14, 1879 in Ulm, Germany"`) sat in the same evidence window,
+untaken. The judge correctly rejected all three. **This is explicitly NOT M38's territory**:
+M38 (`a target with several matches is narrowed by the page, not failed`) is about a target that
+resolves to N>1 elements needing narrowing; every one of these three runs resolved to exactly one
+element and extracted the wrong text from it — a single-match extraction defect, not an
+ambiguity-resolution one. It is also a DIFFERENT shape from D28's own prior record on this same
+page: `run_id 6811f8bf` extracted the site title `"Quotes to Scrape"` (a page-furniture shape);
+these three extract an in-context label instead (a label-without-value shape). The failure surface
+on this one page has now moved between probe rounds — worth naming as a pattern (unstable failure
+mode on a stable page), not just three isolated misses.
+Acceptance: an adversarial case reproducing "resolve succeeds on one element, extracted text is a
+label with no adjacent value" on this or an equivalent fixture, watched red first per CLAUDE.md
+rule 2, before any fix to the extraction/anchor-selection path is attempted.
+
+### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
+Origin: PR #42, R2/R3's acceptance and the coordinator's round-1 disposition.
+Re-checked against `origin/main` after T-R44 merged (2026-08-24): **both halves
+are still open**, and what T-R44 closed is the neighbouring coupling, not this.
+Spec: this repo already ruled that a probe is not a run and must not reach the
+committed ledger. `wall-clock-probe-history-isolated` is that ruling in force:
+`_main_exit_code` (src/browser/eval_adapter.py) redirects `R.HISTORY` and
+`R.REPORT_DIR` to a temp path because without it the probe injected fabricated
+rows — 52 of 241 committed lines were probe artifacts at PR #20 R18, deleted by
+hand as part of that repair rather than caught by a check. **The mechanism
+covers exactly one probe class: the one that calls `evals.run.main()` in
+process.** An ablation probe — the whole suite run with one guard conjunct
+removed, which is how R2/R3 require a guard to be pinned — is a subprocess gate
+run, appends rows like any other, and is invisible to that isolation. Nine such
+rows were produced and hand-deleted across three review rounds (the table in
+ADR-019 §2 lists every one); twice the probe row was the ledger's maximum and
+forced the published band onto code that never existed as a commit.
+**What T-R44 changed, and what it did not.** `env` per row and a UTC `ts` close
+`T-M32-13`: a band is now graded against its own environment, so CI's rows
+cannot redden a local band and a dirty citation is no longer a two-commit price.
+Neither reaches this. Checked on the merged tree: `evals/run.py` has no
+history opt-out of any kind (`--no-history`, `EVAL_HISTORY`, a probe flag — none
+exist), so an ablation sweep still appends indistinguishable rows; and
+`_band_wrong` reads `env`, `suite`, `total`, `wall_s`, `dirty` and `ts` and
+never reads `sha`, so a row from a tree that is not an ancestor of HEAD still
+counts toward the maximum the band must match.
+Repro: run `--suite fast` with any resolver conjunct ablated, then
+`published-band-matches-the-ledger` — the probe row is indistinguishable from a
+gate run, and if it is the slowest it dictates the band.
+Acceptance: extend the isolation `wall-clock-probe-history-isolated` already
+pins rather than inventing a second mechanism — an opt-out the probe passes
+(`--no-history`, or `EVAL_HISTORY` pointed at a temp path) so a deliberately
+broken tree cannot append to the committed time series, plus a case in that
+same file's shape: run the suite through the opt-out, assert the committed
+ledger did not grow. Watched red against today's behaviour, where it does.
+Second half, unchanged by T-R44 and worth doing with it: `_band_wrong` should
+refuse a row whose `sha` is not an ancestor of HEAD — a different hole (a row
+from a branch that never merged) in the same class, and the one that makes a
+band a claim about a tree that exists.
+
+### T-M38-1 — D29's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: todo]
+Origin: M38, ADR-026's accepted risk.
+Spec: rung 1 reuses the step's identity `anchor` as a proximity anchor whenever
+it identifies exactly one place on the page. Where the anchor sits nearer the
+WRONG candidate, the run now answers confidently where it used to fail loudly —
+`success`, grounded, anchored, and wrong. `docs/support-matrix.md` D29 declares
+it and no case shows it, which is this repo's most-falsified kind of claim
+(memory: "declared limitations get demonstrated"). Not built here because it is
+a sixth case in a PR whose case count already forced the two-commit band dance
+(T-M32-13), and because the shape is a wrong-answer pin, not a fix.
+Repro/acceptance: on `forum-thread.html`, an extract whose `anchor` is the
+thread title (`Aurora Desk Lamp teardown`, in the `<h2>`) against
+`{role: link, name: "user profile"}` — the h2 is one element from the FIRST
+byline, so the anchor happens to be right there; invert it by moving the target
+to a page where the anchor's nearest same-named candidate is not the task's
+(e.g. a second article whose byline sits closer to the h2 than the first
+article's). Pin it the way `l4-shop-element-reordered` pins its wrong answer:
+`expect.answer` = what the build really returns, plus
+`answer_is_known_wrong: true` (and its entry in `opt-in-expect-keys-declared`),
+so the report cannot be read as "verified correct".
+
+### T-M38-2 — which narrowing rung fired is prose in `note`, not a field, and the reviewer UI has no badge for it            [status: todo]
+Origin: M38.
+Spec: `agent.py` appends `narrowed: <rung>` to the trace step's `note`, and
+that string is the whole record — graded by substring through
+`trace_note_contains`, rendered by `src/browser/server.py` only as the note
+text. A consumer that wants "which runs answered from one of several matches"
+has to grep English. `resolved` is the structured home for it
+(`{"tier": ..., "description": ..., "narrowed": ...}`), and the reviewer UI
+already badges `tier:` beside it. Deliberately not done in M38: adding a key to
+`resolved` widens the TraceStep shape `contract-trace-schema` mirrors, and the
+narrowing is legible in the trace either way — this is a consumer-ergonomics
+debt, not a correctness one. Same family as T-M32-1 (no UI phase for `observe`).
+Acceptance: `resolved.narrowed` carried through the contract, the schema case
+and the UI badge in one change; the note string stays or goes with the badge,
+not before it.
 
 ### T-M39-11 — a published band makes every open PR re-derive its numbers whenever any PR changes the case count            [status: todo]
 Origin: observed twice in one delivery while merging `origin/main` into
@@ -895,10 +1019,21 @@ Evidence: `src/browser/eval_adapter.py:385` — `wrong = [{"task": t, "plan": [s
 Repro: flip `(AGG, [None], True)` to `False` -> `[FAIL] plan-gap-truth-table (adversarial, 0.0s) AttributeError: 'NoneType' object has no attribute 'get'`, suite 59/60 with INVARIANT VIOLATION.
 Acceptance: the report builder tolerates a non-dict step (e.g. `s.get("action") if isinstance(s, dict) else s`) so a red row names its plan.
 
-### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: todo]
+### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: probe run, half done — see Update]
 Depends: T-M40-2
 Origin: PR #43 (M40) T-M40-2, split at pr-loop SPEC 2026-08-24 — the half of T-M40-2's
 acceptance that cannot be gated inside T-M40-2's own PR.
+Update (ADR-025, PR #51, 2026-08-24): the probe half of this task is done. Pre-registered in
+`specs/decisions/ADR-025-t-m40-5-preregistered-probe.md` (pushed as `82af7bf`, before any run),
+then run 18 times against deployed `main@8183dc2` (`deploy-smoke` `32683725839`). Verdict:
+(a) zero wrong-success PASS 0/18; (b) regressed set ≥50% FAIL — 2/12 = 16.7% vs. prior 0/7,
+**the fix is insufficient**; (c) controls PASS; (d) 0 refusals. Full write-up
+`docs/analysis.md` §8a-4; D28 re-declared in `docs/support-matrix.md` (same commit); raw
+evidence `evals/report/20260824-030201-t-m40-5-probe.json`. What is NOT done: the probe
+surfaced three failure shapes (filed below as debt) that were not in D28's post-M32 taxonomy,
+and T-M40-2-1/T-M40-2-2 (the two levers this probe exists to attribute against) still need a
+decision now that the data they were waiting on exists — this block stays open until those are
+resolved rather than closed on "the re-probe happened."
 Spec: T-M40-2's acceptance ends "then the D28 rows re-declared from a post-fix probe of the
 same tasks". That clause is structurally not deliverable by the PR that carries the fix: a
 post-fix probe reads the DEPLOYED build, and the deploy is a push to `origin/main` (Zeabur),
@@ -1179,6 +1314,11 @@ unrelated PR is how two trackers end up disagreeing.
 Repro: `grep -c 'T-R34' tasks/DONE.md` -> 0, while `tasks/pr-loop-ledger.jsonl`
 holds a T-R34 row dated 2026-08-23 and `git log --oneline origin/main` shows
 PR #35 merged.
+Status (2026-08-23, PR #40 housekeeping): both instances are now filed — T-R34
+and M37 have DONE.md lines, as do T-R56, M28 and M32 — so the repro above no
+longer reproduces. The block stays open for the guard only: the gap has now
+recurred across five tasks and was closed by hand each time, which is the
+argument for the second acceptance branch rather than the first.
 Acceptance: DONE.md gains its T-R34 line (and M37's when that closes), or the
 pr-loop close step is what writes it so the gap cannot recur — the latter is
 the better fix, since this is the second instance in two milestones. Cheap

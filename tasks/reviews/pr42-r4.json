@@ -1,0 +1,114 @@
+{
+  "pr": 42,
+  "round": 4,
+  "task": "M38",
+  "result": "REQUEST_CHANGES",
+  "summary": "Text-only round. R13-R18 genuinely closed, all three merges verified clean by set difference. What blocks: ADR-019 section 2 again ships a sentence its own committed evidence falsifies, and a deliberate suite-tagging deviation is justified by a ledger row that is in the wrong suite.",
+  "standing": {
+    "R13": {
+      "verdict": "CLOSED",
+      "evidence": "Whole-suite in-process ablation at 178 cases: committed rule -> []; ss exclusion dropped -> ['resolver-narrows-singular-noun-ending-in-s']; widened back to [^\\Wsui]s -> ['resolver-refuses-plural-menus']. Exactly one case each, neither direction tradeable. Regex probe over 44 phrasings: every regularly-inflected plural caught (menus, taxis, skis, gurus, addresses, classes, buses, analyses); over-firing residue exactly as declared. Honest, not a flattering subset."
+    },
+    "R14": {
+      "verdict": "CLOSED",
+      "evidence": "invariant, fast, invariant, fast, fast on HEAD: 64/64 (14.45s), 178/178 (73.12s), 64/64 (14.58s), 178/178 (72.75s), 178/178 (72.72s). Zero FAIL lines in all five; both band cases PASS in each. No green run reddens the next. Published 74.19s IS the ledger maximum at 178 and rule holds to 78.26s \u2014 4.07s headroom against an observed 2.15s spread."
+    },
+    "R15": {
+      "verdict": "CLOSED",
+      "residue": [
+        "R25",
+        "R26"
+      ],
+      "evidence": "The false universal is gone from all four sites; grep returns only the review record."
+    },
+    "R16": {
+      "verdict": "CLOSED",
+      "evidence": "Arithmetic replaced by a table of every deleted row. Table 1 re-derived against git show 820d807 -- evals/report/history.jsonl: five rows, all ts/suite/passed-total/wall_s match to the digit. No commit in e949f59..HEAD removes any ledger row."
+    },
+    "R17": {
+      "verdict": "CLOSED"
+    },
+    "R18": {
+      "verdict": "CLOSED for the signature",
+      "successor": "R21",
+      "evidence": "_nearest(page, loc, near, *, loose: bool); both call sites pass explicitly; _check_narrowing_fails_closed requires KEYWORD_ONLY AND default is empty, so restoring either a default or a positional kind is red. The PLACEMENT rationale is not sound."
+    }
+  },
+  "merges": {
+    "verdict": "CLEAN, verified by set difference against both parents",
+    "ledger": "e101a38 1271+1444 -> 1496; 8c54d58 1541+1501 -> 1573; 62ed038 1585+1584 -> 1668 (1688 at HEAD). Zero rows lost from either parent in all three; nothing present that is in neither parent nor the merge's own gate runs.",
+    "renames": "evals/report/ 283+255 -> 301, zero missing either way at 62ed038; whole tree 712+672 -> 740 with exactly one missing (their own git mv of the ADR). e101a38's one apparent loss is NOT rename detection \u2014 origin/main deleted that report in 9840e23 (T-R44) and the three-way merge correctly took the deletion.",
+    "adr": "026 collides with nothing on disk, origin/main (max 024) or any live ref (023 = M39, 025 = T-M40-5). Every live citation moved; tasks/reviews/ and evals/report/ correctly keep old numbers.",
+    "opt_in_keys": "per-key union verified across all three merges \u2014 no key dropped, no case-id dropped, nothing added that was in neither parent.",
+    "item_10": "used, not worked around: ADR-019:94-96 carries both restatements in the marked form and both match their bullets."
+  },
+  "findings": [
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 section 2's band bullet states the row it cites has two red cases; that row is 178/178 with zero failures \u2014 the two reds belong to 20260824-024553, the row cited before the merge re-citation, and the sentence was left behind.",
+      "evidence": "ADR-019:68-73. Line 68 (62ed038) publishes ts 20260824-024916, 74.19s, 178/178; lines 71-73 (8c54d58, one merge earlier) say 'Its two reds are docs-numbers-are-derived and published-band-matches-the-ledger'. The ledger row is 178/178 and the report's failed set is empty. Those two reds are 20260824-024553's (73.47s, 176/178). Nothing goes red: item 2 grades only the stated passed/total, and item 10 grades only sentences in the marked restated form, which this one is not.",
+      "acceptance": "The parenthetical describes the row it cites, or names 20260824-024553 explicitly as the superseded citation. No sentence in the bullet contradicts the 178/178 three lines above it."
+    },
+    {
+      "id": "R21",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The stated reason resolver-narrowing-fails-closed is kept out of the invariant suite is false: the cited '59-case invariant row from 2026-08-16 (32.25s)' is a FAST row, and _band_wrong filters by suite as well as count, so it can never enter an invariant band.",
+      "evidence": "resolver-narrowing-fails-closed.json:20 why_not_invariant. The only 32.25s row is history.jsonl:15, suite 'fast', total 59. eval_adapter.py:620-621 filters r['suite'] == suite and r['total'] == now. T-R53 states the same in prose. The 41 invariant rows at 59 cases all run 13.09-14.80s and derive 20. The claim is also stale by count: invariant is 64 post-merge, so adding this makes 65, not 59. Net effect: an L1 pure-code check the case file itself calls 'invariant by shape' sits outside the 100%-gated suite on a justification the committed ledger falsifies, repeated in 92cee87's commit message.",
+      "acceptance": "Either the case moves to invariant (and the band is republished at 65 with the receipt commit that always costs), or why_not_invariant states the real obstacle and stops describing a fast row as an invariant one."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "route": "repair",
+      "batched": "same paragraphs as R20",
+      "claim": "The merges orphaned half a sentence in ADR-019 section 2: its head moved up to the graded restatement block and its tail was left dangling at the end of the ablation-deletion paragraph, where it now reads as a claim about T-M38-5.",
+      "evidence": "ADR-019:176-180. At the review baseline the sentence was whole (git show e949f59). Its head was rewritten into lines 94-96; 92cee87 replaced the paragraph above the tail, leaving 178-180 with no antecedent.",
+      "acceptance": "Lines 178-180 rejoin their head at 94-96 or are deleted; no sentence in section 2 begins with a pronoun whose referent is in another paragraph."
+    },
+    {
+      "id": "R23",
+      "severity": "LOW",
+      "route": "repair",
+      "batched": "same section as R20",
+      "claim": "The deletion audit trail's prose disagrees with its tables twice \u2014 seven deleted rows where the tables list nine, and the round-3 ablations dated to round 2.",
+      "evidence": "ADR-019:130 says 'five at 165 cases and two at 168' (=7) against :156-172 listing 5+4=9 and :174 'Nine rows, nine ablation sweeps'. :164 heads the second table 'in round 2' while 20260824-084337 and -084452, both at 170 cases, are round 3's sweeps \u2014 170 cases only existed after round 3 added resolver-refuses-plural-menus. The TABLES are correct and reconcile against git show 820d807.",
+      "acceptance": "The prose count equals the table count and the second table's heading covers the rounds its rows come from."
+    },
+    {
+      "id": "R24",
+      "severity": "LOW",
+      "route": "repair",
+      "batched": "same section as R20",
+      "claim": "ADR-019 section 2's stated run-to-run spread is contradicted by the ledger committed beside it \u2014 an ungraded hand-copied scalar range of the kind section 3 says it deleted everywhere else.",
+      "evidence": "ADR-019:114-115 says '73.3-74.2s across five consecutive runs'. The committed ledger holds thirteen fast rows at 178 spanning 72.04-74.19s, and the reviewer's three fresh runs came in at 72.72/72.75/73.12s \u2014 below the stated floor. The arithmetic the slack rests on (73.92-78.26s) is correct and one-directional, so the band is not threatened; the published range is decorative and wrong.",
+      "acceptance": "The sentence cites the spread the ledger shows, or drops the range and keeps only the derived 73.92-78.26s window."
+    },
+    {
+      "id": "R25",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M38-8",
+      "claim": "The replacement universal \u2014 'no plural has ss immediately before its final s' \u2014 is still false in the under-firing direction for zero-marked plurals.",
+      "evidence": "resolver.py:146, ADR-026:118, D29 (4), resolver-refuses-plural-menus.json:19. 'Show me the bass in the tank.' and 'Name the Swiss who signed it.' both fail to match; both are plural asks answered from one match. Much rarer than the menus/taxis class.",
+      "acceptance": "The four sites scope the claim to inflected plurals, or name the zero-plural residue by example."
+    },
+    {
+      "id": "R26",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M38-9",
+      "claim": "The largest under-firing residue of the plural branch is not the one declared: any modifier between 'the' and the plural noun defeats it entirely.",
+      "evidence": "resolver.py:167 requires 'the ' immediately followed by one \\w-token. 'Name the top stories...', 'Name the other users...', 'Name the two authors...' all fail to match while 'Name the authors...' matches. D29 (3) names three residues; an adjective or numeral before the noun is not among them and is far more common. Pre-existing since R4.",
+      "acceptance": "D29 (3) names the modifier shape by example, or the pattern is widened with a case pinning 'Name the top stories ...' watched red first."
+    }
+  ],
+  "gate": {
+    "invariant": "64/64 = 1.000 twice",
+    "fast": "178/178 = 1.000 three times",
+    "band": "green after every one",
+    "cost": "$0.0000"
+  }
+}
