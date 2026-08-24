@@ -1,0 +1,58 @@
+{
+  "pr": 45,
+  "task": "T-M40-1",
+  "round": 2,
+  "reviewer": "pr-reviewer subagent, fresh context, no author reasoning",
+  "scope": "repair diff 637933a..32cb549 plus the three standing round-1 findings \u2014 not a fresh full-diff sweep",
+  "result": "REQUEST_CHANGES",
+  "gate_observed": "invariant 59/59 = 1.000 (13.47s / 20) \u00b7 fast 154/154 = 1.000 (69.79s / 90) \u00b7 $0.0000; reviewer's two rows reverted, worktree clean",
+  "standing": {
+    "R1": "CLOSED \u2014 the round-1 mutant (server.py only) is now red as refusal_does_not_satisfy_the_page_busy_branch; an indexOf(...)===0 rewrite reddens loudly as page_branch_is_not_a_prefix_test rather than passing vacuously; a consistently-reworded pair staying green is correct, since the coupling is the invariant, not the word. Residual field-level gap filed as R6.",
+    "R2": "OPEN \u2014 the scalar half is genuinely fixed and independently verified (003025 / 14.16s / 59-59 is the ledger max at invariant/59; 14.16 x 1.15 = 16.28 -> 20; README and the hunk doc swept; \u00a72's 152/154 correct against row 20260824-002536). The replacement paragraph introduces R4, and the refusal of the grader half rests on the arithmetically false claim in R5.",
+    "R3": "CLOSED \u2014 T-R75 exists with Origin: PR #45 R3 and verbatim claim/evidence/repro/acceptance; the non-subsumption argument holds (eval_adapter.py:2233 is a different string on a different endpoint, untouched by the R1 repair)."
+  },
+  "findings": [
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R2's replacement prose introduces a new false ledger claim of the same class it repairs: ADR-019 \u00a73 states the ledger holds five rows at invariant/59 and enumerates them, while evals/report/history.jsonl committed in the same commit holds six.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:138 \u2014 'The ledger holds five rows at 59, not one: 002326 14.02s, 002424 14.08s, 002824 13.17s, 003025 14.16s, 003411 13.18s'. Commit 32cb549 adds 20260824-081958 invariant 59/59 13.2s to history.jsonl in that same commit, so the committed count at invariant/59 is six. The band scalar itself (14.16 / 003025 / 59-59) is correct and still the maximum; only the enumeration is false. ADR-019:167-170, twelve lines below, records this exact defect class \u2014 PR #34 R21 found an enumeration publishing three runs where the ledger held six \u2014 and \u00a72:75 deliberately refuses to copy the maximum for the same reason.",
+      "repro": "git show 32cb549:evals/report/history.jsonl | python3 -c \"import sys,json;print(len([r for r in map(json.loads,sys.stdin) if r['suite']=='invariant' and r['total']==59]))\" -> 6, against 'five rows' at ADR-019:138. Nothing grades it: _band_wrong (src/browser/eval_adapter.py:489-570) reads only the band bullet's ts/wall/passed/total.",
+      "acceptance": "\u00a73 stops hand-copying an ungraded row list (the resolution ADR-019:167-170 already records for this class) and states the selection rule plus the one graded citation, or the enumeration is made true at the committed ledger and carries the ts as of which it is true; the pre-commit hook's own row appended by the same commit must not falsify it.",
+      "route_reason": "MEDIUM and a dishonest published claim in a committed ADR \u2014 the same class the finding it repairs belongs to.",
+      "orchestrator_verification": "Re-ran the repro against 32cb549: six rows at invariant/59 (002326 14.02, 002424 14.08, 002824 13.17, 003025 14.16, 003411 13.18, 081958 13.2), all dirty: true. The sixth was appended by the repair commit itself. Confirmed."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The grader half of R2 is refused on a false premise: T-R76's stated treadmill-free check passes the very defect it claims would have been caught, so ADR-019 \u00a73's pointer at it overstates the coverage that debt item would buy.",
+      "evidence": "tasks/TODO.md:1594 \u2014 'Grade published >= max(wall_s of rows at this count with ts <= the cited ts)', justified at tasks/reviews/pr45-r1-resolution.json (rejected_scope) by 'it would have caught this exact defect: 002424 was cited when 002326/14.02 already stood'. Arithmetic on the committed ledger: rows at invariant/59 with ts <= 20260824-002424 are 14.02 and 14.08, max 14.08; the defective publication was 14.08, so 14.08 >= 14.08 is GREEN. The R2 defect was citing 002424 when the slower 003025/14.16 stood at a LATER ts, which an as-of-the-cited-ts bound cannot see by construction \u2014 an author can always satisfy it by citing an early row, which is precisely what happened. ADR-019:145-147 sends the reader to T-R76 as 'the treadmill-free form of the check' for a class it would not catch.",
+      "repro": "git show 32cb549:evals/report/history.jsonl piped through the as-of-max computation for cited 002424/published 14.08 and cited 003025/published 14.16 -> both True (both green).",
+      "acceptance": "T-R76's acceptance names a form that is red on the 002424/14.08 publication and green on 003025/14.16 against the committed ledger (e.g. as-of the band's own publication/commit rather than as-of the cited ts), demonstrated by the arithmetic; or the claim 'it would have caught this exact defect' is removed from T-R76 and from ADR-019 \u00a73's pointer, and \u00a73 states plainly that no graded form is currently known.",
+      "route_reason": "MEDIUM and a dishonest published claim \u2014 a committed ADR points the reader at a debt item as the treadmill-free form of a check that, by the reviewer's arithmetic and mine, would not have reddened the defect it cites as its motivation.",
+      "orchestrator_verification": "Recomputed independently against 32cb549: cited 002424 published 14.08 -> as-of max 14.08 -> GREEN; cited 003025 published 14.16 -> as-of max 14.16 -> GREEN. The check passes both. Confirmed."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The R1 repair pins only the prefix LITERAL parsed out of expect.page_branch, not the event field the predicate reads, so a page branch that tests a field the refusal event never carries still passes green with the panel rendering 'chromium failed'.",
+      "evidence": "src/browser/eval_adapter.py:2218-2222 \u2014 the regex takes 'busy' out of page_branch but the observed side is hardcoded to e.get('error'). Mutating server.py:794 and the case's expect.page_branch together to String(ev.status || '').startsWith('busy') (the refusal event has no status field) leaves page_branch in S.PAGE satisfied and ev.error still starting with 'busy': observed {passed: true, wrong: {}}. The indexOf(...)===0 rewrite does redden as claimed, so the vacuous path is the field, not the operator. Lower than R1 because the exploit requires editing the case JSON, which a diff review sees; R1's original required editing server.py alone.",
+      "repro": "copy 32cb549 to /tmp, replace String(ev.error || '').startsWith('busy') with String(ev.status || '').startsWith('busy') in BOTH src/browser/server.py and evals/adversarial/smoke-stream-takes-the-run-slot.json, then run_case(...) -> {passed: true, wrong: {}}.",
+      "acceptance": "the grader derives the read field from the branch as well as the literal (e.g. parse ev.<field> out of page_branch and test that key of the observed event), watched red against the ev.status mutant; or the case's provenance drops the claim that the server's string and the page's predicate are pinned to one another and states that only the literal is pinned.",
+      "route_reason": "LOW. Per the pr-loop scope boundary only HIGH/MEDIUM trigger REPAIR; logged as debt with evidence carried verbatim."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The repair renamed the refusal assertion key but left the hand-off doc naming the deleted key, so the six-key red list it publishes for the rebasing party no longer matches the grader.",
+      "evidence": "tasks/reviews/pr-T-M40-1-smoke-guard-hunk.md:28 still lists refusal_does_not_say_busy; src/browser/eval_adapter.py no longer contains that string (the repair replaced it with refusal_does_not_satisfy_the_page_busy_branch). The same file was edited by this commit at line 91 for the R2 band numbers, so the sweep was partial. Round 1 explicitly verified that six-key list against PR #43's guard, so the verified claim is now stale.",
+      "repro": "grep -n refusal_does_not_say_busy tasks/reviews/pr-T-M40-1-smoke-guard-hunk.md src/browser/eval_adapter.py -> hit in the doc, no hit in the grader.",
+      "acceptance": "line 28 names refusal_does_not_satisfy_the_page_busy_branch; grep -rn refusal_does_not_say_busy over the tree returns nothing outside tasks/reviews/pr45-r1*.json (the frozen round-1 record).",
+      "route_reason": "LOW. Routed to debt per the scope boundary, but the implementer may close it in flight if it is already editing that file for R4/R5 \u2014 in which case the debt block is marked closed rather than left open for work already done."
+    }
+  ]
+}
