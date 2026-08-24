@@ -65,12 +65,14 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 161 cases, ts `20260824-013123`, **72.76s**, 159/161
-  (`evals/report/20260824-013123-fast.json`; `dirty: true`, for the reason the next paragraph
-  gives. The stamp is UTC, as every row written since §7 is. How many rows the
-  ledger holds at this count, and what its maximum is, are deliberately not
-  written here — see §3. The count moved 158 -> 161 when M39 merged: three
-  judge cases, and no change to what this section rules.)
+- Band source — local `fast` at 161 cases, ts `20260824-014809`, **70.73s**, 161/161
+  (`dirty: false`; ADR-012 writes no per-case report for a green run, so the ledger
+  row is the whole artifact, which is why this cites a ts and not a file. The stamp
+  is UTC, as every row written since §7 is. How many rows the ledger holds at this
+  count, and what its maximum is, are deliberately not written here — see §3. The
+  count moved 158 -> 161 when M39 merged: three judge cases, and no change to what
+  this section rules. Published against a dirty row in the merge commit and re-cited
+  here, the same two-commit price §3 records.)
 
 **This band was dirty for one commit, and that price is what §7 removed.** A case
 addition forces a dirty citation: the tree only reaches its new count while the
@@ -113,11 +115,11 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 72.76 × 1.15 = 83.67 → **85**, which is BELOW the committed 90 and
+five — gives 70.73 × 1.15 = 81.34 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. The
-one run at 161 cases is exactly that short sample. Item 5 (derivation) grades the
+handful of runs at 161 cases is exactly that short sample. Item 5 (derivation) grades the
 arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
 that says 90 is green and declared rather than a contradiction. The band
 published for the earlier
