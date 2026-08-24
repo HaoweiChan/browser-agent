@@ -12,6 +12,57 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
+### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: pr]
+Promoted from Debt to Queue 2026-08-23 by the owner.
+Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
+routed to debt in round 4, never written into this file until round 5.
+Spec: `evals/run.py:91` commits `WALL_BUDGET_S = {"fast": 90, "invariant": 20}`
+locally. Publications that disagree: (1) **`CLAUDE.md`'s Gate and Commands
+blocks** — the repo's stated working contract — still say `invariant` "wall
+clock <= 15s" and `fast` "wall clock <= 75s", so every committed `fast` run on
+this tree (73.9-74.8s local, 88.39s on CI) reads as a breach against the
+contract while passing the gate it actually has; (2) `INDEX.md`'s ADR-017 line
+publishes "fast 75s local"; (3) `fast-wall-clock-budget.json`'s `expect.note`
+says the override "falls back to the committed 80 for everything else" while
+every `env_override` row in the same case now expects 90. (1) and (2) are
+byte-identical to `origin/main` and predate this branch; (3) was introduced
+with ADR-021. `evals/run.py:304` also still labels the ceiling's source
+"ADR-002 Decision 4" when ADR-019 and ADR-021 are the live rulings.
+Repro: `grep -n '75s\|15s' CLAUDE.md specs/decisions/INDEX.md` against
+`evals/run.py:91`; the suites stay green.
+Acceptance: all three publications state the enforced pair, or drop the
+literals for "the ceiling `evals/run.py` enforces" — CLAUDE.md's Gate and
+Commands blocks named explicitly, since that is the file a new contributor
+reads as the contract. Nothing graded changes; if it can be graded cheaply
+(one sweep over tracked markdown for a ceiling literal that is not the
+committed one), do that instead and watch it red on CLAUDE.md first.
+Update 2026-08-23: done, with two corrections to the spec above. Leg (2) does
+not reproduce — `INDEX.md` carries no "75s local" on this tree or on
+`origin/main`; that text was PR #29 R5's finding and was fixed there, by
+dropping the literal, which is the same shape used here. A fourth site the spec
+does not name was found by the sweep and fixed: `ADR-002`'s Ruling published
+"`fast` 80s local ... `invariant` has had its own 15s ceiling since ADR-019",
+two wrong numbers in one sentence (this is also T-R35's third leg — see
+T-M32-17). Literals dropped rather than corrected in CLAUDE.md and ADR-002;
+`fast-wall-clock-budget`'s note and `evals/run.py`'s OVER BUDGET source label
+corrected in place. Graded by `docs-numbers-are-derived`'s new
+`commands_publish_the_committed_ceiling` sweep, watched red on CLAUDE.md first;
+its deliberate narrowness is T-M32-16.
+Update 2026-08-23, PR #40 round 1: fixing ADR-002's Ruling and stopping there
+was not enough, and the wording above ("literals dropped ... in ADR-002") read
+as if that file were done. It was not: the Status line three lines above the
+Ruling still published "**60s locally, 80s on CI** ... both measured and both
+enforced" (R2), and a THIRD file nobody had enumerated — `ADR-013`'s Ruling,
+"**80s since ADR-019**" under an explicit "at the time of writing" — was 10s
+stale and graded by nothing (R3). Both fixed here the same way, by dropping the
+literal. Round 1 also falsified the grader's precision: it matched any duration,
+not a ceiling, so "# ~71s on an M-series laptop" reddened the gate on a true
+sentence (R1), and its scope was narrower than its published claim, skipping
+`tasks/` and every dot-directory including a second publication of the gate
+commands in `.claude/skills/finish-task/SKILL.md` (R5). Both fixed, both pinned
+by `ceiling_sweep_rows`.
+
+
 ### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: pr]
 Origin: PR #32 CI run 32626835735 (M31's check)
 Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
@@ -248,7 +299,7 @@ from a branch that never merged) in the same class, and the one that makes a
 band a claim about a tree that exists.
 
 ### T-M38-1 — D29's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: todo]
-Origin: M38, ADR-023's accepted risk.
+Origin: M38, ADR-026's accepted risk.
 Spec: rung 1 reuses the step's identity `anchor` as a proximity anchor whenever
 it identifies exactly one place on the page. Where the anchor sits nearer the
 WRONG candidate, the run now answers confidently where it used to fail loudly —
@@ -283,6 +334,81 @@ debt, not a correctness one. Same family as T-M32-1 (no UI phase for `observe`).
 Acceptance: `resolved.narrowed` carried through the contract, the schema case
 and the UI badge in one change; the note string stays or goes with the badge,
 not before it.
+### T-M32-16 — a live ceiling published in any shape other than a gate command is still ungraded            [status: todo]
+Origin: T-M32-9; enumeration corrected at PR #40 R3.
+Spec: the sweep T-M32-9 added (`docs-numbers-are-derived`,
+`commands_publish_the_committed_ceiling`) grades exactly one form: a runnable
+`--suite X` command whose own trailing comment publishes a ceiling, anchored to
+`<=`/`ceiling`/`budget`/`wall clock`. That is the only form in this repo's
+markdown that can *only* mean the live number. It reaches nothing else, on
+purpose — ~93 lines of tracked markdown pair a seconds literal with a ceiling
+word and nearly all are the record (ADR-002 Decision 4's 60s, ADR-013's
+derivation prose, README's history), and ADR-002's Ruling carried a live number
+and a historical one in one sentence, so no cheap pattern separates them.
+**The first version of this block asserted "the two live non-command
+publications that exist today are covered by other means". That was wrong and
+round 1 falsified it: there were three, and the third — `ADR-013`'s Ruling,
+"80s since ADR-019", marked current by its own "at the time of writing"
+qualifier — was covered by nothing** (PR #40 R3). The count is the point: an
+enumeration is exactly the kind of claim this task exists to distrust, and it
+was written into the debt block that records the residual. Standing today,
+after PR #40 fixed all three: ADR-019's Ruling is graded by
+`published-band-matches-the-ledger` item 6 (ruling); ADR-002's Status line and
+Ruling, and ADR-013's Ruling, have had their literals dropped, so there is
+nothing left in them to drift. Nothing grades a *new* live publication in a
+non-command shape, and nothing would have caught any of these three.
+This is the mechanism T-R25 has stayed open for since PR #23 R8 — "a guard that
+reads the ceiling out of `WALL_BUDGET_S` instead of out of prose" — now built
+for one form and unbuilt for the rest; whoever closes this should close T-R25
+with it.
+Repro: write "`fast` 75s local" into any tracked markdown outside a `--suite`
+comment; the suites stay green.
+Acceptance: either a convention that marks a live ceiling statement so it can be
+swept (the `**Ns**` form `_ADR_CEILING` already relies on inside ADR-019 is the
+obvious candidate), or the honest finding that dropping the literal everywhere
+is the whole defence — argued, not defaulted to. Do not replace the falsified
+enumeration with another one; grade it or drop the literals.
+
+### T-M32-17 — T-R35 is closed on all four acceptance clauses; delete the block            [status: todo]
+Origin: T-M32-9; clause (1) corrected at PR #40 R4.
+Spec: not an audit — the audit is done, and this is the evidence. T-R35 ("three
+specs files still publish the withdrawn 75s/15s ceilings as current") has four
+acceptance clauses:
+(1) "every ceiling statement in specs/ names 80/90/20/20" — satisfied **only as
+of PR #40**, and the first version of this block wrongly claimed it was already
+satisfied. Round 1 found two specs files still publishing a live pair that
+nothing enforced: `ADR-002`'s Status line ("**60s locally, 80s on CI** via
+`EVAL_WALL_BUDGET_S`, both measured and both enforced", plus "the local number
+ships unchanged at 60s") and `ADR-013`'s Ruling ("**80s since ADR-019**", marked
+current by "at the time of writing", 10s stale). Both are fixed in PR #40 by
+dropping the literals and deferring to ADR-019 §2/§3/§5 as amended by ADR-021.
+Note the clause's own wording is stale in the same way it was written to catch:
+the enforced local `fast` has been 90 since ADR-021, so a reader obeying
+"names 80/90/20/20" verbatim would re-introduce the defect. Read it as "names
+the enforced pair", and it now holds.
+(2) "ADR-019's Amends header matches its Ruling" — satisfied.
+`specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:12` reads "**Amends**:
+ADR-013 Decision 4 (local `fast` ceiling 60 → 80)", which is its Ruling's own
+number; the "60 -> 75" T-R35 quotes is gone.
+(3) "ADR-002's parenthetical stops asserting a live 15s invariant ceiling" —
+satisfied by T-M32-9, which dropped both literals from that Ruling.
+(4) "T-R25's Update states what is actually fixed" — satisfied. T-R25 carries
+`[status: fixed at PR #29 R22, kept for the mechanism]` and an Update that
+separates what was corrected from what was not, naming the mechanism as the
+open half. T-R35's premise ("T-R25 asserts ... it is not") no longer holds.
+Its fifth, optional clause — "ideally one graded row that compares INDEX/ADR
+ceiling numbers against `WALL_BUDGET_S`" — is what T-M32-9 built, narrower;
+T-M32-16 records exactly how much narrower and is the block that inherits it.
+T-R35's separately-named leg on `specs/decisions/INDEX.md:11` ("fast 75s local")
+never needed this branch: PR #29 R5 fixed it by dropping the literal, and
+`grep -c '75s local' specs/decisions/INDEX.md` is 0 on disk and on `origin/main`.
+Repro: run T-R35's own repro — `grep -n '75s local' specs/decisions/INDEX.md`,
+`grep -n '60 → 75' specs/decisions/ADR-019-*.md` — both empty.
+Acceptance: T-R35 deleted from tasks/TODO.md with a DONE.md line citing this
+block, not re-audited. **Do not delete it before confirming (1) — until PR #40
+merges, T-R35 is the only tracked pointer at ADR-002's Status line and
+ADR-013's Ruling.** If any clause above is wrong, the correction belongs here,
+in the block that made the claim.
 ### T-M40-3 — the SSRF case for `/view` is `fast`-only because the invariant suite cannot carry it on CI            [status: todo]
 Origin: PR #43 (M40), CI run 32651052282
 Spec: `view-proxy-refuses-private-and-redirects` guards a public SSRF surface and belongs in
@@ -349,27 +475,148 @@ problem and does NOT mention `--update-baseline`. Cheapest form: check the chose
 import the harness first and fail with that message instead. Watched red from a worktree
 with no `.venv`.
 
-### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: todo]
-Origin: PR (M40) post-merge re-probe of the deployment, 2026-08-23
-Spec: M40 declared three live rows from 43 runs against the build deployed BEFORE PR #34 (M32).
-After M32 deployed, a re-probe of the same tasks shows a new dominant failure shape that none of
-D28's three shapes covers: the planner emits `extract {"role": "WebArea", "name": "<the page
-title>"}` — the document root, named by `<title>` — and the relocation rung then retargets as
-`{text: "<the page title>"}` and resolves nothing. Measured: x-rates.com 0/2 (`b8b95067`,
-`133264ee`, was 3/3 pre-M32), multpl.com 0/2 (`bdc38f65` container dump via a Table link,
-`c7fa2623` three `observe` steps then a click and no extraction; was 2/3), quotes.toscrape.com's
-author page 0/1 (`6811f8bf` — extracted "Quotes to Scrape", the site title, and the M36 judge
-rejected it; was 3/3), openlibrary.org 0/1 (`a6797fbe`, same WebArea shape). companiesmarketcap.com
-is unaffected (2/2, `d0b63c7e`, `f2c8c624`) — its answer is the accessible NAME of a heading, so
-the plan never needs a container.
-Not claimed: that M32 CAUSED this. The probe is one task phrasing per page against a deployment
-that also moved model-side; `WebArea` targets appear in two pre-M32 runs too (`8c1a3344` stooq,
-`c80b1dd0` coingecko). What is measured is that four of five re-probed tasks that answered before
-do not answer now, and that the shape they share is a container target the resolver cannot use.
-Acceptance: an offline fixture case pinning `extract {role: WebArea}` (and the `{text: <title>}`
-relocation it degrades into) as a refused plan rather than a locate failure — the plan lint is the
-natural home, next to the container-dump clause M28/T-R66 already owns — watched red first; then
-the D28 rows re-declared from a post-fix probe of the same tasks.
+### T-M40-2-1 — `observe` still hands the planner the document root as element #1 of every page            [status: todo]
+Origin: T-M40-2 implementation, 2026-08-24. Verified in code, not inferred: `observe.walk`
+starts at `page.accessibility.snapshot(...)`'s root, whose role is `WebArea` and whose name is
+the page `<title>`; the role is in neither `SKIP_ROLES` nor `NAME_PROHIBITED`, so `render`
+prints `- WebArea — 'Quotes Fixture — page 1'` as the first element of every observation.
+Reproduced on `src/browser/fixtures/quotes.html` with the production `observe`.
+Spec: T-M40-2 refuses the resulting PLAN (ADR-024). It deliberately does not stop the
+observation from advertising the target, which is the other half of the root cause: the
+planner is shown an answer-shaped string attached to a node no extraction can use. Dropping
+the root node (or renaming it) is a two-line change in `src/browser/observe.py` and it was NOT
+made in T-M40-2's PR for one reason: it changes what every run sees, its effect is only
+measurable by a live probe, and T-M40-5 is that probe — shipping both levers at once would
+leave a recovered row unattributable to either. Note the shape is not purely repo-side:
+`WebArea` targets appear in two pre-M32 runs (`8c1a3344`, `c80b1dd0`), so a model that knows
+the term may emit it whether or not the observation offers it. The lint is the guard either way.
+Acceptance: after T-M40-5 has measured the lint alone on a deployed build, decide whether to
+drop the root from the observation, with the decision recorded and an offline case pinning
+whichever behaviour is chosen (the render no longer carrying the root, or a stated reason it
+still does).
+
+### T-M40-2-2 — the planner system prompt says nothing about container targets            [status: todo]
+Origin: T-M40-2 implementation, 2026-08-24. `src/browser/planner.py`'s system prompt tells a
+model to `observe` a container it can see but cannot read into; nothing tells it not to
+`extract` from one. The runtime correction exists (ADR-024's refusal is replanned with a note
+naming the offending role), but it costs a planner round trip on every occurrence.
+Spec: a prompt line is a one-line diff and plausibly prevents the loop entirely. Held out of
+T-M40-2's PR for the same attribution reason as T-M40-2-1, and with the same ceiling: a prompt
+change is graded offline only by `_check_planner_prompt` (that the string is assembled), never
+by whether a model obeys it — the `full` suite is the only place that could measure obedience
+and it spends tokens.
+Acceptance: taken with T-M40-2-1 after T-M40-5's probe, or dropped if the probe shows the lint
+alone recovers the rows.
+
+### T-M40-2-3 — `docs/analysis.md` §6 says "six L5 refusal cases" where the case files carry eight            [status: todo]
+Origin: T-M40-2 implementation, 2026-08-24, noticed while updating the §6 counts that
+`docs-numbers-are-derived` DOES grade (the golden/adversarial split and the domain rows).
+Counting `level` over `evals/golden` + `evals/adversarial` gives L5 = 8; §6's prose says six.
+Pre-existing and unrelated to T-M40-2's case, which is L3.
+Spec: the TC/level tables in §6 are hand-maintained beside a split line that is derived, which
+is the exact drift class `docs-numbers-are-derived` exists to close — the check simply does not
+reach them.
+Acceptance: either the tables are derived from the case files' own tags by that check, or the
+prose is corrected and the residue declared.
+
+### T-M40-2-4 — the refused plan's REPLAN can name the same node one tier down, and answer with the page title            [status: todo]
+Origin: T-M40-2 cold review, 2026-08-24, finding 1. Repro, constructible as a fast case:
+`hello.html` (its `<title>` and `<h1>` are the same string), task "What does the second heading
+on this page say?", `stub_plans` = [[extract {role: WebArea, name: "Hello Fixture"}],
+[extract {text: "Hello Fixture"}]]. Plan 1 is refused by ADR-024's clause; plan 2 is what a real
+planner most plausibly returns, because the gap note re-shows the SAME observation whose element
+#1 is still `WebArea — 'Hello Fixture'` and whose text head opens with that string. Plan 2 passes
+the lint, resolves at the text tier onto the `<h1>`, and the run reports `status: success`,
+`answer: "Hello Fixture"`, `replans: 1`, all ten L1 checks green, judge certified — the same
+terminal state ADR-024 was written against, reached one replan later instead of one relocation
+later.
+Spec: the lint cannot see this. `plan_gap(task, steps)` takes no page and no title, and the only
+rule that would catch it — refuse an extraction whose target string equals the page title — is
+already refuted by a committed case: `evals/golden/tc1-hello-heading.json` asks for the heading
+on that same fixture and its correct answer IS that string. So the fix is not in the lint. The
+two candidates are T-M40-2-1 (stop advertising the root in the observation, which removes the
+string the planner is copying) and giving the lint the observation it is linting against, which
+is a signature change across three adoption points.
+Acceptance: the repro above committed as an adversarial case, watched red, and closed by
+whichever lever T-M40-5's probe justifies.
+
+### T-M40-2-5 — an `observe` onto the document root fails to locate, and its recovery rung is labelled but answers nothing            [status: todo]
+Origin: T-M40-2 cold review, 2026-08-24, finding 3. `observe {role: WebArea, name: <title>}` is
+deliberately NOT refused (ADR-024 §3 — refusing it would be a rule about M32's drill-down), but
+it does not work either: `resolve` gives 0 matches for the root, `classify` makes it a `locate`
+failure, and the relocation ladder runs on a read-only step. Before T-M40-2's rung guard that
+ladder retargeted it as `{text: <title>}` and drilled into the title's own heading — a
+13-character subtree handed to the planner under the note "The observation above is THAT subtree
+only, not the whole page", for a request that named the whole document. With the guard the rung
+is gone; what remains is a step whose locate failure has no rung at all, plus the older half of
+the finding: `agent.py` labels a relocation attempt `retry_or_recovery: "recovery"` regardless of
+verb, so a read-only `observe` rung counts into `recovery_rungs` — which is exactly what
+`recovery-label-lands-on-the-extract` rules out for the drill-down deferral ("it produces no
+answer, so labelling it counts a rung that recovered nothing").
+Spec: two decisions, both ADR-020's subject rather than ADR-024's — whether an `observe` onto an
+unresolvable container is a loud `failure:locate` instead of a relocation, and whether a
+relocation rung on a read-only verb may wear the `recovery` label at all.
+Acceptance: a case pinning whichever answer is taken, watched red first.
+
+### T-M40-2-6 — a plan step that is not a dict kills `run_task` with an uncaught TypeError            [status: todo]
+Origin: PR #46 R6, 2026-08-24. `parse_plan` (src/browser/planner.py) validates that the top
+level is a list and nothing below it, so `[None]` or `["extract WebArea"]` is a plan as far as
+the executor is concerned. `plan_gap` no longer raises on those (both its clauses are guarded,
+`plan-gap-truth-table` rows), but the step loop then reads `step["action"]` at
+the `read_only = step["action"]` line in `run_task`'s step loop (agent.py:1024 at this commit — named by symbol because the number drifts; PR #46 R10 caught it already stale at :1013) and the TypeError propagates out of `run_task` — no status, no
+failure class, none of the taxonomy. `server.py:_execute` catches it into `failure:env`, so a
+deployed run reports SOMETHING; an eval-adapter caller gets the raw exception.
+Repro: any fixture case with `stub_plan: ["extract WebArea"]`.
+Not a regression: `main` (d06a569) reaches the same line the same way — `plan_gap` returned
+None for a plain task there too. Deliberately not fixed inside T-M40-2: the lint's contract is
+"is this plan answerable", and "is this object a step" is `parse_plan`'s, one layer up.
+Acceptance: `parse_plan` rejects a plan whose members are not step-shaped objects, with the
+loud `PlanError` it already raises for a non-list, and an adversarial case pinning that a
+malformed plan is a classified failure rather than an exception — watched red first.
+
+### T-M40-2-7 — the fix for the restatement grader instantiates the figures it protects, one file over            [status: todo]
+Origin: PR #46 R8
+Spec: `_BAND_RESTATE`'s explanatory comment quotes a band bullet's real numbers in source, where
+item 9's check never looks — it scans the ADR text only. So on the next case-count move the ADR
+bullet, the ADR restatement and README all go red together while this comment silently keeps the
+old figures. This is the exact trap the implementer declared and avoided in ADR-019 §6 item 9
+("the form is described rather than shown, because a literal example here would be a third copy"),
+reintroduced one file over — which is the strongest evidence yet that "describe the form, never
+show it" needs to be enforced rather than remembered.
+Evidence: `src/browser/eval_adapter.py:510` — the comment instantiates `155 cases, 153/155`. The
+item-9 loop at :746-759 iterates `_BAND_RESTATE.finditer(adr)`, i.e. the ADR only; the region text
+is passed only to the item-8 reference loop at :826. The string sits inside the marked region but
+is read by no check.
+Repro: `.venv/bin/python -c "import re,pathlib;src=pathlib.Path('src/browser/eval_adapter.py').read_text();print(re.findall(r'\(restated — .(fast|invariant).: (\d+) cases, (\d+)/(\d+)\)',src))"` -> `[('fast','155','153','155')]`
+Acceptance: the comment describes the form without the figures (as §6 item 9 does), or
+`_BAND_RESTATE` is also run over `region` so the illustration is graded. Not a merge blocker: a
+source comment, not a published band.
+
+### T-M40-2-8 — a red truth-table row with a non-dict step cannot name itself            [status: todo]
+Origin: PR #46 R9
+Spec: `plan-gap-truth-table`'s failure-report comprehension calls `s.get` on every step of a
+failing plan, so a future regression on one of the non-dict rows surfaces as a bare AttributeError
+with no row named. The gate still goes red — only the diagnostic is useless, which is the half that
+costs someone an hour at the point they most need the row's identity.
+Evidence: `src/browser/eval_adapter.py:385` — `wrong = [{"task": t, "plan": [s.get("action") for s in p], ...}]`, where `p` is `[None]` / `['extract WebArea']` for the rows at :375-377 and :367-369.
+Repro: flip `(AGG, [None], True)` to `False` -> `[FAIL] plan-gap-truth-table (adversarial, 0.0s) AttributeError: 'NoneType' object has no attribute 'get'`, suite 59/60 with INVARIANT VIOLATION.
+Acceptance: the report builder tolerates a non-dict step (e.g. `s.get("action") if isinstance(s, dict) else s`) so a red row names its plan.
+
+### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: todo]
+Depends: T-M40-2
+Origin: PR #43 (M40) T-M40-2, split at pr-loop SPEC 2026-08-24 — the half of T-M40-2's
+acceptance that cannot be gated inside T-M40-2's own PR.
+Spec: T-M40-2's acceptance ends "then the D28 rows re-declared from a post-fix probe of the
+same tasks". That clause is structurally not deliverable by the PR that carries the fix: a
+post-fix probe reads the DEPLOYED build, and the deploy is a push to `origin/main` (Zeabur),
+which happens after merge. D28 additionally lives on PR #43's branch and is not on `main`.
+So the rows that describe the WebArea failure shape stay declared against the pre-fix build
+until someone re-probes deliberately.
+Acceptance: after PR #43 has merged AND T-M40-2's fix is live on the deployed URL, the same
+tasks named in T-M40-2 (x-rates.com, multpl.com, quotes.toscrape.com's author page,
+openlibrary.org, companiesmarketcap.com as the control) are re-probed against that build and
+D28's rows re-declared from the results — including declaring a row `unsupported` where the
+probe says so. The build the probe measured is cited by sha.
 
 ### T-R78 — §7 claims §5 names a demonstrating mutation for every graded item; §5 names two of seven            [status: done]
 Origin: PR #41 R17
@@ -673,30 +920,6 @@ Acceptance: ADR-002's Ruling, Status and `Amended by` name ADR-021 and the
 enforced local pair, or drop the numbers in favour of "the ceiling
 `evals/run.py` enforces"; the CI half is either graded or explicitly declared
 ungraded where it is published.
-
-### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: todo]
-Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
-routed to debt in round 4, never written into this file until round 5.
-Spec: `evals/run.py:91` commits `WALL_BUDGET_S = {"fast": 90, "invariant": 20}`
-locally. Publications that disagree: (1) **`CLAUDE.md`'s Gate and Commands
-blocks** — the repo's stated working contract — still say `invariant` "wall
-clock <= 15s" and `fast` "wall clock <= 75s", so every committed `fast` run on
-this tree (73.9-74.8s local, 88.39s on CI) reads as a breach against the
-contract while passing the gate it actually has; (2) `INDEX.md`'s ADR-017 line
-publishes "fast 75s local"; (3) `fast-wall-clock-budget.json`'s `expect.note`
-says the override "falls back to the committed 80 for everything else" while
-every `env_override` row in the same case now expects 90. (1) and (2) are
-byte-identical to `origin/main` and predate this branch; (3) was introduced
-with ADR-021. `evals/run.py:304` also still labels the ceiling's source
-"ADR-002 Decision 4" when ADR-019 and ADR-021 are the live rulings.
-Repro: `grep -n '75s\|15s' CLAUDE.md specs/decisions/INDEX.md` against
-`evals/run.py:91`; the suites stay green.
-Acceptance: all three publications state the enforced pair, or drop the
-literals for "the ceiling `evals/run.py` enforces" — CLAUDE.md's Gate and
-Commands blocks named explicitly, since that is the file a new contributor
-reads as the contract. Nothing graded changes; if it can be graded cheaply
-(one sweep over tracked markdown for a ceiling literal that is not the
-committed one), do that instead and watch it red on CLAUDE.md first.
 
 ### T-M32-3 — act-failure coverage costs 4.6s of a suite that already straddles its ceiling            [status: todo]
 Origin: PR #34 R1 (the fix, not the finding); cost model corrected per PR #34 R11.

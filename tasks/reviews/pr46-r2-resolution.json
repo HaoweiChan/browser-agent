@@ -1,0 +1,28 @@
+{
+  "pr": 46, "round": 2, "task": "T-M40-2",
+  "counts": {"fixed": 3, "rejected": 0, "debt": 1},
+  "gate_after_repair": {"invariant": "60/60 = 1.000", "fast": "155/155 = 1.000 (71.48s / 90)", "cost": "$0.0000", "baseline": "untouched", "run_by": "orchestrator, independently of the implementer"},
+  "orchestrator_independent_verification": {
+    "what": "The round's whole point was a grader that catches the recurrence, so the orchestrator verified it bites rather than taking the claim.",
+    "method": "Mutated ONE marked restatement in ADR-019 to R5's exact stale value ('155 cases, 153/155' -> '154 cases, 152/154'), changing nothing else.",
+    "result": "published-band-matches-the-ledger RED, invariant 59/60 = 0.983. Restored -> 60/60 = 1.000.",
+    "conclusion": "the root-cause fix for the recurring restatement class is real, not asserted"
+  },
+  "resolutions": [
+    {"id": "R5", "outcome": "fixed", "half_taken": "the root-cause one - a grader, not a third prose correction",
+     "grader": "ADR-019 section 6 item 9 (restatement). A sentence quoting a band's case count and result writes them in a marked form; published-band-matches-the-ledger reads them back against the bullet they summarise (_BAND_RESTATE, inside the marked band region so the region check keeps covering it). Extended that case rather than docs-numbers-are-derived because it already parses band bullets into published[suite] - a 6-line comparison against a dict that exists.",
+     "watched_red": "against the tree as round 1 shipped it, marker added and figures untouched: [{\"suite\": \"fast\", \"restated\": [154,152,154], \"band_publishes\": [155,153,155]}, {\"suite\": \"invariant\", \"restated\": [59,59,59], \"band_publishes\": [60,58,60]}] - R5's finding produced by code instead of by a reviewer",
+     "prose": "the summarising paragraph names 153/155 and 58/60 in marked form; the SECOND restatement of the same rows eight lines below is DELETED rather than corrected, as are the bullets' re-quotes of their own numbers. Two restated figures survive, both graded. R5's repro grep returns nothing (orchestrator confirmed).",
+     "self_caught_trap": "section 6's item 9 originally SHOWED the marked form with real numbers, so the item became a third ungraded copy of the numbers it exists to protect. Reworded to describe the form instead - the same lesson _REGION already carries in code. Verified it matched before the rewording and does not now.",
+     "declared_ceiling": "an UNMARKED restatement is still invisible (T-R62). The fix for unmarked prose is to stop restating, which is what the deletions do."},
+    {"id": "R6", "outcome": "fixed", "half_taken": "the smaller one - one isinstance in the reads comprehension, making the comments true rather than rewriting them to describe a crash",
+     "watched_red": "three new truth-table rows tagged AGG (the tag IS the finding - all three round-1 rows were PLAIN and return before that clause): RAISED AttributeError 'str' object has no attribute 'get'",
+     "comments_now_state": "a malformed TARGET reaches the executor's loud TARGET_KEYS rejection; a STEP THAT IS NOT A DICT dies at step[\"action\"] in the step loop with an uncaught TypeError, no status and no failure class",
+     "residue": "the non-dict-step half is pre-existing (main reaches the same line the same way) and belongs to parse_plan, not to a lint - logged as T-M40-2-6 with the reviewer's repro"},
+    {"id": "R7", "outcome": "fixed",
+     "what": "ADR-024's Ruling now states both branches (one replan before execution; end of run at a mid-run adoption point) and points at Consequences rather than section 2, which does not rule on it.",
+     "beyond_the_finding": "INDEX.md's one-liner carried the identical stale clause and was corrected too - same restatement class, and leaving it would have been R8 next round"}
+  ],
+  "debt_logged": ["T-M40-2-6 - a step that is not a dict dies with an uncaught TypeError in the step loop rather than a classified failure; pre-existing, belongs to parse_plan"],
+  "notes": ["No case FILES added this round (rows only), so counts, bands and the baseline block are unchanged and needed no bookkeeping.", "Untouched as instructed: CI's published-band-matches-the-ledger red (T-R44/T-M32-13, PR #41), T-M40-3, T-M40-2-1..5."]
+}

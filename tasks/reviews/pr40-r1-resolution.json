@@ -1,0 +1,76 @@
+{
+  "pr": 40,
+  "round": 1,
+  "task": "T-M32-9",
+  "commit": "ac56e9a",
+  "resolutions": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "cases": [
+        "docs-numbers-are-derived / ceiling_sweep_rows"
+      ],
+      "red_first": "{'publishes_a_ceiling_nothing_enforces': '--suite fast ... 71s', 'committed': 90} and the same for '... 2.2s' \u2014 both on the reviewer's own payloads against the pre-fix code.",
+      "fix": "Took the anchoring branch. _CEILING_LITERAL now requires <=/\u2264/ceiling/budget/wall clock within 24 characters. The larger half \u2014 the exercise-set gap \u2014 fixed structurally: nine ceiling_sweep_rows in both directions, graded through the SAME _ceiling_drift the file sweep calls, so a row probes the sweep rather than a copy of it. Load-bearing proof: mutating the anchor back out turns both timing-note rows red with should_flag False / got True."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "red_first": "Green-is-the-defect watched first: with a ceiling planted in .claude/skills/finish-task/SKILL.md the pre-fix sweep returned passed=True and zero rows. After the fix that plant yields {'publishes_a_ceiling_nothing_enforces': '--suite invariant ... 15s', 'committed': 20, 'doc': '.claude/skills/finish-task/SKILL.md'}; a plant in tasks/ reddens too.",
+      "fix": "Sweep hoisted out of the criterion-5 block and widened to every markdown file in the tree (.git/.venv excluded as machinery). Confirmed the reviewer's reading: no tasks/ false positive, and the real finish-task SKILL.md carries the gate commands with no ceiling literal, so widening is green on the committed tree. The criterion-5 scan keeps its carve-out with the reason inline. expect.note now states the wider scope. Cost 0.08s -> 0.14s."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "ADR-002's Status line: literals dropped, now names ADR-019 section 4's per-suite variables and defers to sections 2/3/5 as amended by ADR-021. Both false claims corrected too \u2014 tasks/TODO.md:46 and the T-M32-16 residual no longer say ADR-002 was done."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "ADR-013's Ruling: the 'at the time of writing' qualifier stays on the historical numbers, the live pair is dropped and deferred. 'Amended by' now names ADR-021.",
+      "judgement_call": "Adding ADR-021 to ADR-013's Amended-by is the only edit that could read as amending another ADR. Phrased as the transitive reach it actually is \u2014 'ADR-021 (ADR-019's local fast number re-derived 80 -> 90 at 146 cases, reaching this ADR's Decision 4 through ADR-019 Decision 2)' \u2014 after confirming ADR-021's own Amends line says ADR-019 Decision 2 and nothing more. Records an existing chain, asserts no new direct ruling. The stale-number fix stands without the clause if the orchestrator reads it differently."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "outcome": "fixed",
+      "fix": "Clause (1) failed twice over: ADR-002's Status line failed it outright, ADR-013's Ruling passed it VERBATIM while being the defect. Corrected in place, names both lines, and now holds only because this commit fixes them. Added an explicit hold: do not delete T-R35 before this merges \u2014 it is the only tracked pointer at those two lines. Clauses (2)(3)(4) unchanged. T-M32-16's enumeration marked as FALSIFIED rather than quietly replaced, and its acceptance now says: do not substitute another count, grade it or drop the literals."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "outcome": "debt",
+      "debt_id": "T-M32-18",
+      "note": "Routed at review time, not relayed."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "outcome": "debt",
+      "debt_id": "T-M32-19",
+      "note": "Routed at review time, not relayed."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "outcome": "debt",
+      "note": "Pre-existing duplicate ### T-R61 on origin/main. Carried by the orchestrator, deliberately not filed here \u2014 a third id allocation while two branches are mid-housekeeping is the larger risk."
+    }
+  ],
+  "rejected": [],
+  "gate": {
+    "invariant": "58/58 = 1.000, 13.77s / 20, $0.0000",
+    "fast": "153/153 = 1.000, 70.57s / 90, $0.0000",
+    "precommit": "hook re-ran fast at 153/153 = 1.000, 70.36s",
+    "orchestrator_verified": "Re-run independently after ac56e9a: invariant 58/58 = 1.000, fast 153/153 = 1.000. No scratch files left in docs/.",
+    "untouched": [
+      "WALL_BUDGET_S",
+      ".github/workflows/eval.yml",
+      ".eval-baseline.json"
+    ]
+  }
+}

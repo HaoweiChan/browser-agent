@@ -1,4 +1,4 @@
-# ADR-023: an ambiguous target is narrowed by the page, not failed — under four conjuncts and in the trace
+# ADR-026: an ambiguous target is narrowed by the page, not failed — under four conjuncts and in the trace
 
 Date: 2026-08-23
 Status: accepted

@@ -40,6 +40,17 @@ from .verifier import normalize
 # (case resolver-unknown-target-key).
 TARGET_KEYS = {"role", "name", "text", "near", "index"}
 
+# The accessibility document root, in the spellings a plan or a snapshot can name
+# it with: Chromium calls it `WebArea`, `RootWebArea` in other builds. Stripped
+# and case-folded, because one of the two writers is a model.
+#
+# It lives here rather than in agent.py because BOTH of its readers are about
+# resolution: `agent.plan_gap` refuses a plan that extracts from it (ADR-024),
+# and `relocation_candidates` below refuses to PROPOSE it. `document` is
+# deliberately absent — that is an author-supplied role on an in-page container,
+# and it resolves; see ADR-024 §1.
+DOC_ROOT_ROLES = {"webarea", "rootwebarea"}
+
 # Nearest candidate to an anchor, in DOCUMENT order rather than pixels. Layout
 # distance ties on the shape that needs `near` most: a subline whose bounding
 # box contains every link in it ("57 points by <a>pg</a>" — live-hn-item1-submitter)
@@ -388,8 +399,16 @@ def relocation_candidates(target: dict, obs: dict) -> list[dict]:
     rungs = []
     if not (target.get("role") and target.get("name")):  # role+name tier untried
         seen = {normalize(w) for w in wanted}
+        # ...and never the document root. `observe` emits it as element #1 of
+        # every observation, named by the page <title>, so a target whose string
+        # IS the title matches it first — a rung that resolves nowhere, spending
+        # one of the two this ladder has (T-M40-2, relocation-distinct-tier
+        # row 5). It is the same node `plan_gap` refuses when a planner names it
+        # directly; refusing to invent it here is the other half.
         match = next((e for e in obs.get("elements", [])
-                      if e.get("name") and normalize(e["name"]) in seen), None)
+                      if e.get("name") and normalize(e["name"]) in seen
+                      and str(e.get("role") or "").strip().lower() not in DOC_ROOT_ROLES),
+                     None)
         if match:
             rungs.append({"role": match["role"], "name": match["name"]})
     if not target.get("text"):  # text tier untried

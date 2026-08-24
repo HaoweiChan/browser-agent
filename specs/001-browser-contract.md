@@ -124,7 +124,7 @@ appears, in order — no post-hoc reconstruction).
   the tier that found it in every case but two: a target carrying `near` is
   recorded as `structural` however its candidates were gathered, because
   proximity is what identified the element — and so is one narrowed by its
-  identity anchor, which is proximity by another name (M38, `ADR-023`; which
+  identity anchor, which is proximity by another name (M38, `ADR-026`; which
   rung fired is named in the step's `note`). The self-maintenance metric reads
   this field.
   `role`, `text` and `structural` are reachable; `attrs` is named
@@ -201,7 +201,7 @@ appears, in order — no post-hoc reconstruction).
   excluded outright.
 
   The anchor is matched through **four passes**, strictest first (M38,
-  `ADR-023`): exact, substring, then a normalised pass that accepts typographic
+  `ADR-026`): exact, substring, then a normalised pass that accepts typographic
   variants of quote/apostrophe/dash characters and collapses whitespace runs,
   then the same over the anchor's first 40 characters. The last two exist
   because `get_by_text` is a literal match and a model quoting a page back gets
@@ -210,7 +210,7 @@ appears, in order — no post-hoc reconstruction).
   `resolver-near-normalises-typography`). Order is the honesty: the loosest
   match is only reached when every stricter one found nothing, and a loose
   match that names two places is refused exactly like a literal one.
-- **Narrowing** (M38, `ADR-023`). N>1 matches at every tier is not always a
+- **Narrowing** (M38, `ADR-026`). N>1 matches at every tier is not always a
   question the plan failed to answer; often the page answers it. After every
   tier has had its chance at a *unique* match — a clean single match at a later
   tier still outranks any narrowing at an earlier one — two rungs are tried,
@@ -294,6 +294,19 @@ appears, in order — no post-hoc reconstruction).
     twice (`verifier-aggregate-superlative-fails-loud`,
     `probe3-quotes-most-quoted-author`, `plan-gap-truth-table`,
     `specs/decisions/ADR-018-m31-plan-lint.md`).
+    The same lint carries a second rule, which is about the TARGET and holds for
+    every task shape rather than only the aggregate one: an `extract`/
+    `extract_all` naming the accessibility document root (`WebArea` or
+    `RootWebArea`) is refused, because that node's text is the
+    whole page and its accessible name is the page title — the string `observe`
+    puts first in every observation. It is checked above the `is_aggregate`
+    early return, since the tasks that produce it are ordinary single-answer
+    ones, and it is not a rule about containers in general: `observe` on the
+    same target is M32's drill-down and is untouched (untouched is not
+    functional — T-M40-2-5), ARIA `document` is not the root and is not refused,
+    and any other container stays with `verify`'s calibrated `not_a_dump`
+    (`plan-lint-refuses-a-document-root-extract`, `plan-gap-truth-table`,
+    `specs/decisions/ADR-024-document-root-is-not-an-answer.md`).
   - **`index` and `near` are refused on this step**, because both select one of
     the matches the step exists to enumerate; honouring either would enumerate
     a single element and let the relaxed aggregate guard certify a single-shot
@@ -323,7 +336,7 @@ appears, in order — no post-hoc reconstruction).
   logs as neither: it is not a second attempt at anything, so it carries a note
   and no label at all — this sentence used to promise it would log as `retry`,
   and the drill-down falsified that in the same file that shipped it. M38's
-  narrowing rungs (`ADR-023`) log as neither for the same reason and one more:
+  narrowing rungs (`ADR-026`) log as neither for the same reason and one more:
   they are not a second attempt at all, but part of the FIRST resolution of the
   step, so there is no earlier attempt for them to supersede. What they carry
   instead is a `note` naming the rung.

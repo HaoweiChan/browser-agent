@@ -305,6 +305,16 @@ def _check_plan_gap() -> dict:
     norank = [{"action": "extract_all", "target": {"role": "link"}, "rank": False}]
     two = one + [{"action": "extract_all", "target": {"role": "listitem"}, "rank": True}]
     plain = [{"action": "extract", "target": {"role": "link"}}]
+    # T-M40-2. The document root, as `observe` puts it at the top of every
+    # observation: role `WebArea`, name the page <title>. The rows below are the
+    # ones the end-to-end case cannot reach, and the first of them is the whole
+    # placement question — `PLAIN` is not aggregate-shaped, so a clause written
+    # below `if not is_aggregate(task)` is dead here, and every task in the
+    # M40 re-probe is this shape. The comparison is stripped and case-folded
+    # over the two ROOT spellings only; ARIA `document` is not one of them, and
+    # the rows below say so (PR #46 R1-2 — this comment claimed the opposite for
+    # a round, having outlived the first version of the set).
+    ROOT = {"role": "WebArea", "name": "Some Page — A Site"}
     rows = [
         (AGG, [], True), (AGG, plain, True), (AGG, one, False),
         (AGG, plain + one, True), (AGG, one + plain, True), (AGG, two, True),
@@ -314,6 +324,63 @@ def _check_plan_gap() -> dict:
         (AGG, norank, True), (AGG, [dict(one[0])], False),
         (PLAIN, [], False), (PLAIN, plain, False), (PLAIN, two, False),
         (PLAIN, plain + one, False), (PLAIN, norank, False),
+        # T-M40-2: extracting the document root is refused whatever the task
+        # shape, and refused for `extract_all` too — enumerating a root is one
+        # dump, not a set. Spelling is the model's, not Chromium's, so the
+        # comparison is stripped and case-folded, and it covers the `RootWebArea`
+        # spelling other builds emit.
+        (PLAIN, [{"action": "extract", "target": ROOT}], True),
+        (PLAIN, [{"action": "extract", "target": {"role": "webarea"}}], True),
+        (PLAIN, [{"action": "extract", "target": {"role": "RootWebArea"}}], True),
+        (PLAIN, [{"action": "extract", "target": {"role": " WebArea "}}], True),
+        # ...and ARIA `document` is NOT refused, though the first version of this
+        # clause refused it. It is not the root: it is an author-supplied role on
+        # an in-page container (`<div class="modal-dialog" role="document">` is
+        # Bootstrap boilerplate), Playwright resolves it, and on the fixture built
+        # for the cold review it resolved to a 40-character confirmation inside a
+        # dialog — a correct answer refused with a reason asserting the node was
+        # "the ENTIRE page". A container that MIGHT be too big is `not_a_dump`'s
+        # judgement, with the page in hand (ADR-024 §1); only the root is refusable
+        # from the plan alone, because only the root is the whole page by
+        # construction.
+        (PLAIN, [{"action": "extract", "target": {"role": "document"}}], False),
+        (PLAIN, [{"action": "extract",
+                  "target": {"role": "document", "name": "Order confirmation"}}], False),
+        (AGG, [{"action": "extract_all", "target": ROOT, "rank": True}], True),
+        (PLAIN, plain + [{"action": "extract", "target": ROOT}], True),
+        # ...and the other direction, which is load-bearing: M32's drill-down
+        # targets a container ON PURPOSE, so `observe` on the root is a plan
+        # about what to look at next, not an answer offered from a container.
+        # Same for a click: nothing is being read off it.
+        (PLAIN, [{"action": "observe", "target": ROOT}] + plain, False),
+        (PLAIN, [{"action": "click", "target": ROOT}] + plain, False),
+        # A target with no role at all must not fault the clause.
+        (PLAIN, [{"action": "extract", "target": {"text": "Some Page — A Site"}}], False),
+        (PLAIN, [{"action": "extract"}], False),
+        # ...and neither must a MALFORMED plan (PR #46 R1-4). `parse_plan`
+        # validates that the top level is a list and nothing below it, so a
+        # string target and a step that is not a dict both reach this function —
+        # and this clause is the first thing in it that runs for EVERY task
+        # shape, where the aggregate rule used to return None immediately on a
+        # plain task. A lint may not be the thing that raises: it says "no gap"
+        # and leaves the plan to the executor. What the executor then does splits
+        # in two, and saying only the first half of it was the false claim R6
+        # caught: a malformed TARGET is rejected loudly there (TARGET_KEYS), and
+        # a step that is not a dict dies at `step["action"]` with an uncaught
+        # TypeError — pre-existing, unchanged by this PR, logged as T-M40-2-6.
+        # These rows grade the lint's half only, which is all a lint owns.
+        (PLAIN, [{"action": "extract", "target": "WebArea"}], False),
+        (PLAIN, ["extract WebArea"], False),
+        (PLAIN, [None], False),
+        # ...and the SAME plans under an aggregate task (PR #46 R6). The first
+        # version of this fix guarded the doc-root loop and left the aggregate
+        # clause below it reading `s.get` off whatever the list holds, so the
+        # rows above proved nothing about the branch that actually runs for a
+        # which-one question — they are all tagged PLAIN, which returns before
+        # reaching it.
+        (AGG, [{"action": "extract", "target": "WebArea"}], True),
+        (AGG, ["extract WebArea"], True),
+        (AGG, [None], True),
     ]
     wrong = [{"task": t, "plan": [s.get("action") for s in p], "expected_gap": want,
               "got": plan_gap(t, p)}
@@ -454,6 +521,16 @@ _REGION = tuple(f"# ==== ADR-019 §6 band section: {edge} ===="
 _BAND_DEF = re.compile(
     r"^(?:def )?(_band\w*|_check_published_band\w*|_BAND\w*|_SIX\w*"
     r"|_SLACK_MARK|_REGION|_LEGACY_ENV)\b", re.M)
+
+# "(restated — `fast`: 155 cases, 153/155)" — a band bullet's numbers quoted in
+# a sentence somewhere else in the ADR. Prose keeps wanting to summarise the
+# bullets, and a summary of a graded number is an ungraded copy of it: PR #46 R3
+# repaired one such sentence and R5 found the paragraph eight lines away stale in
+# the same edit, from the same republication. So a restatement wears this form
+# and is read back against the bullet it claims to be about (ADR-019 §6
+# item 10 (restatement)).
+_BAND_RESTATE = re.compile(
+    r"\(restated — `(fast|invariant)`: (\d+) cases, (\d+)/(\d+)\)")
 
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
@@ -699,6 +776,23 @@ def _check_published_band() -> dict:
         if ruling.get(suite) != WALL_BUDGET_S[suite]:
             wrong.append({"suite": suite, "adr_ruling_ceiling": ruling.get(suite),
                           "committed_ceiling": WALL_BUDGET_S[suite]})
+    # Item 10 (restatement). Every marked restatement carries the bullet's own
+    # case count and result, so republishing a band without fixing the paragraph
+    # that summarises it is red. What it does NOT see is a restatement wearing no
+    # marker — the same ceiling item 8 (references) declares for an unreferenced
+    # paraphrase, and for the same reason: the cheap half is worth having, and
+    # the fix for prose nobody marked is to stop restating (T-R62).
+    for m in _BAND_RESTATE.finditer(adr):
+        suite, cases, passed, total = m.group(1), *map(int, m.group(2, 3, 4))
+        if suite not in published:
+            wrong.append({"suite": suite, "restates_a_suite_with_no_band": True})
+        # `published[suite]` is (env, cases, ts, wall, passed, total) since T-R44
+        # put the environment in front — indices, not names, so the merge that
+        # added `env` moved every one of them.
+        elif (cases, passed, total) != (published[suite][1], *published[suite][4:6]):
+            wrong.append({"suite": suite, "restated": [cases, passed, total],
+                          "band_publishes": [published[suite][1], *published[suite][4:6]]})
+
     # Item 8 (references). §6's numbered list is the normative statement of what
     # this check requires; the blocks above name the item they implement and say
     # nothing else about it. What is graded is the naming, not the absence of a
@@ -4407,6 +4501,57 @@ def _run_soak_accounting_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": {"soak": wrong}}
 
 
+# "python3 -m evals.run --suite fast   # ..., wall clock <= 75s" — a runnable
+# gate command and, in its own trailing comment, the ceiling that command
+# enforces. The one form in this repo's markdown that can only ever mean the
+# LIVE ceiling: it tells a contributor what the gate they are about to run
+# will refuse. Narrative prose about a past ceiling ("the 60s ceiling of its
+# day", "moved to 70", "60 -> 80") is not separable from a live publication by
+# any cheap pattern — ADR-002 and ADR-013 keep their old numbers deliberately,
+# as the record of what was decided then — so this grades the command form and
+# says nothing about the prose. See `_run_doc_counts_case`.
+_SUITE_CMD = re.compile(r"--suite (\w+)[^\n#]*#([^\n]*)")
+
+# The number must be a CEILING, not just a duration. Anchored to the words that
+# make it one, because the first version matched any `Ns` anywhere in the
+# comment and reddened the gate on "# ~71s on an M-series laptop" and
+# "# p95 2.2s per case" (PR #40 R1) — both TRUE sentences, and this repo's
+# documents are full of them. A gate that refuses a commit over a true timing
+# note is a gate someone switches off, which costs more than the drift it
+# catches. The 24-character window is the gap these forms actually leave
+# ("wall clock <= 15s", "ceiling 15s", "wall clock <= 90 seconds").
+_CEILING_LITERAL = re.compile(
+    r"(?:<=|≤|ceiling|budget|wall[- ]?clock)[^0-9\n]{0,24}"
+    r"(\d+(?:\.\d+)?)\s*(?:s|secs?|seconds)\b", re.I)
+
+
+def _ceiling_drift(text: str, budgets: dict) -> list:
+    """Gate commands in `text` publishing a ceiling that is not the committed one.
+
+    One function, two callers: the file sweep and the case's own value-level
+    rows. The rows exist because the first version of this check was exercised
+    only against ceiling-shaped payloads, so the over-fire R1 found had no way
+    to show up — an exercise set that only tries the cases the code was written
+    for proves nothing (PR #40 R1). Keeping both callers on this one function
+    is what makes a row a real probe of the sweep rather than of a copy of it.
+    """
+    # Struck spans first, the same convention `_live` applies below and for the
+    # same reason: `prompts/` is append-only and records the gate block as it
+    # stood on its date, so a superseded ceiling there is struck with a dated
+    # pointer, never rewritten — and a guard that reddens on preserved history
+    # is a guard someone turns off.
+    unstruck = re.sub(r"~~.*?~~", "", text, flags=re.DOTALL)
+    out = []
+    for suite, comment in _SUITE_CMD.findall(unstruck):
+        # Only suites that HAVE a committed ceiling: `live`/`full`/`all` have
+        # none, so a duration in their comments is prose, not a gate.
+        if suite not in budgets:
+            continue
+        out.extend((suite, lit) for lit in _CEILING_LITERAL.findall(comment)
+                   if float(lit) != budgets[suite])
+    return out
+
+
 def _run_doc_counts_case(case: dict) -> dict:
     """Numbers in the documents of record, derived rather than re-typed.
 
@@ -4425,7 +4570,7 @@ def _run_doc_counts_case(case: dict) -> dict:
     stale report, which the citation check makes visible.
     """
     from evals.run import ROOT as RUN_ROOT
-    from evals.run import load_cases
+    from evals.run import WALL_BUDGET_S, load_cases
 
     inp, wrong = case["input"], []
     counts = {s: len(load_cases(s)) for s in ("fast", "invariant", "live", "full", "all")}
@@ -4564,6 +4709,39 @@ def _run_doc_counts_case(case: dict) -> dict:
             if missing:
                 wrong.append({"coverage_missing_domains": missing})
 
+    if inp.get("commands_publish_the_committed_ceiling"):
+        # EVERY markdown file in the tree, not the criterion-5 subset. That
+        # subset excludes `tasks/` because a tracker quotes forbidden phrases
+        # as the thing that must NOT be true, which a literal phrase scan reads
+        # backwards — reasoning that does not transfer here: a ceiling in a
+        # gate command is the same claim wherever it is written, and there is
+        # no `tasks/` false positive (PR #40 R5). Dot-directories were the
+        # costlier half of that inherited scope: `.claude/skills/finish-task/`
+        # publishes the gate commands a SECOND time, so a ceiling re-typed
+        # there was green forever. `.git`/`.venv` are machinery, not documents;
+        # rglob does not follow the `.venv` symlink, so only `.git` is pruned
+        # in practice.
+        skip = {".git", ".venv"}
+        for path in sorted(p for p in RUN_ROOT.rglob("*.md")
+                           if not skip & set(p.relative_to(RUN_ROOT).parts)):
+            docrel = path.relative_to(RUN_ROOT).as_posix()
+            for suite, lit in _ceiling_drift(path.read_text(encoding="utf-8"),
+                                             WALL_BUDGET_S):
+                wrong.append({"publishes_a_ceiling_nothing_enforces":
+                              f"--suite {suite} ... {lit}s",
+                              "committed": WALL_BUDGET_S[suite], "doc": docrel})
+        # Value-level rows: the payloads no file in this repo has to carry, and
+        # the half that would have caught R1's over-fire. A row states the line
+        # and whether the sweep must flag it; both directions are listed,
+        # because the dangerous one is a sweep that goes quiet, and the
+        # expensive one is a sweep that reddens on a true sentence.
+        for row in inp.get("ceiling_sweep_rows", []):
+            got = bool(_ceiling_drift(row["line"], WALL_BUDGET_S))
+            if got != row["flags"]:
+                wrong.append({"ceiling_row": row["line"],
+                              "should_flag": row["flags"], "got": got,
+                              "why": row.get("note")})
+
     c5 = inp.get("criterion5")
     if c5:
         # Every tracked-looking markdown file, not a hardcoded allowlist
@@ -4618,6 +4796,7 @@ def _run_doc_counts_case(case: dict) -> dict:
         required_in = c5.get("required_in", {})
         for path in md_files:
             docrel = path.relative_to(RUN_ROOT).as_posix()
+            live_text = _live(path.read_text(encoding="utf-8"))
             live_text = _live(path.read_text(encoding="utf-8"))
             for bad in c5.get("forbidden", []):
                 if _live(bad) in live_text:

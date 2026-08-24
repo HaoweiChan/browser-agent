@@ -1,0 +1,99 @@
+{
+  "pr": 40,
+  "round": 1,
+  "task": "T-M32-9",
+  "result": "REQUEST_CHANGES",
+  "verified_clean": [
+    "gate re-run on the branch: invariant 58/58 = 1.000 (14.03s), fast 153/153 = 1.000 (70.32s)",
+    "the claimed red on main's CLAUDE.md reproduces exactly \u2014 6 rows: 15s/75s/15s x CLAUDE.md + AGENTS.md (AGENTS.md is a symlink)",
+    "WALL_BUDGET_S, .eval-baseline.json, .github/, .githooks/ untouched by the diff",
+    "band-section markers (eval_adapter.py:361-433) outside every hunk",
+    "INDEX.md carries no '75s local' on this tree or origin/main \u2014 leg (2) genuinely does not reproduce",
+    "T-M32-16/17 collide with nothing on origin/main, task/M38 or task/T-R44; no duplicate ### T-M32-* heading survives"
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The new sweep does not grade \"a ceiling\" \u2014 it grades any duration in a gate command's trailing comment, so a true measured-runtime or p95 note reds the offline gate and accuses the doc of publishing a ceiling nothing enforces.",
+      "evidence": "src/browser/eval_adapter.py:3735 `_CEILING_LITERAL = re.compile(r\"(\\d+(?:\\.\\d+)?)\\s*(?:s|secs?|seconds)\\b\")` applied to the whole `#` comment of any `--suite fast|invariant` line. Live against the real grader with a scratch doc containing `python3 -m evals.run --suite fast   # ~71s on an M-series laptop` -> passed=False, {'publishes_a_ceiling_nothing_enforces': '--suite fast ... 71s', 'committed': 90}. Same for `# p95 2.2s per case` -> row '... 2.2s', committed 90. Both statements are TRUE; the gate blocks the commit and the message says the opposite. The provenance claims it was exercised in all four directions (re-introduced literal, struck span, spelled-out `90 seconds`) \u2014 none of the four is a non-ceiling duration.",
+      "repro": "write `docs/_scratch.md` = \"```bash\\npython3 -m evals.run --suite fast   # ~71s on an M-series laptop\\n```\" then run `run_case` on docs-numbers-are-derived -> passed False.",
+      "acceptance": "Either the literal is anchored to a ceiling word (`<=`, `ceiling`, `budget`, `wall clock`) so a timing note is green, or the over-fire is named in the case's own triage/expect.note as a deliberate cost \u2014 with one case pinning the chosen behaviour."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-002 does not now state the truth: the Status paragraph three lines above the Ruling this PR edited still publishes 60s local / 80s CI as the enforced pair, in the present tense, via an override variable that no longer exists.",
+      "evidence": "specs/decisions/ADR-002-performance-thresholds.md:5 \u2014 \"the ceiling is per-environment since ADR-013 Decision 3 \u2014 60s locally, 80s on CI via `EVAL_WALL_BUDGET_S`, both measured and both enforced\" and \"the local number ships unchanged at 60s\". Enforced is WALL_BUDGET_S = {'fast': 90, 'invariant': 20} (evals/run.py:94) and the variable has been per-suite (EVAL_WALL_BUDGET_S_FAST) since ADR-019 section 4 (evals/run.py:100-107). The PR's own record contradicts this: tasks/TODO.md:46 'Literals dropped rather than corrected in CLAUDE.md and ADR-002' and tasks/TODO.md:214-215 'ADR-002's [live publication is covered] by having had its literals removed'. They were removed from the Ruling only. The new grader cannot see it (not a --suite comment), so nothing catches it.",
+      "repro": "sed -n 5p specs/decisions/ADR-002-performance-thresholds.md; grep -n 'WALL_BUDGET_S = ' evals/run.py",
+      "acceptance": "ADR-002:5 either drops its live pair the way the Ruling did, or is explicitly marked as the M12-era record (as the Ruling now does for Decision 4's 60s); and T-M32-16's 'ADR-002 ... by having had its literals removed' is corrected to match what is left in the file."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "A third live, stale ceiling publication exists in specs/ today \u2014 ADR-013's Ruling says the local `fast` ceiling is 80s \u2014 falsifying the PR's logged claim that only two live non-command publications exist and both are covered.",
+      "evidence": "specs/decisions/ADR-013-fast-suite-wall-clock.md:10 \u2014 \"60s locally at the time of writing, 80s since ADR-019, 80s on CI at the time of writing and 90s since ADR-019 section 5\"; the 'at the time of writing' qualifier marks the 60s as historical and the 80s as current. ADR-019's own Ruling (ADR-019:6) now reads \"local `fast` 60 -> 80 -> 90s (ADR-021)\", and ADR-013:14 'Amended by' stops at ADR-019, never naming ADR-021. tasks/TODO.md:212-215 asserts 'The two live non-command publications that exist today are covered by other means ... A third document publishing a live pair would be ungraded.' published-band-matches-the-ledger reads only ADR-019 (eval_adapter.py:393), so ADR-013 is graded by nothing.",
+      "repro": "sed -n '10p;14p' specs/decisions/ADR-013-fast-suite-wall-clock.md; sed -n 6p specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "ADR-013:10 drops or defers its local number the way ADR-002's Ruling now does (or gains the ADR-021 amendment), and T-M32-16's enumeration of live non-command publications is corrected to the set that actually exists."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "T-M32-17 asks for T-R35 to be deleted 'not re-audited' on the basis that all four clauses are satisfied, but clause (1) is not satisfied on this tree \u2014 two specs/ files still publish a local `fast` ceiling that is neither 90 nor even T-R35's own 80.",
+      "evidence": "tasks/TODO.md:229-233 claims clause (1) 'every ceiling statement in specs/ names 80/90/20/20' is satisfied. Counter-evidence: ADR-002:5 names '60s locally, 80s on CI ... both enforced' (fails the clause verbatim), and ADR-013:10 names '80s since ADR-019' as the live local number (passes the clause verbatim but is exactly the defect T-R35 exists to catch, now 10s stale). Clauses (2), (3) and (4) do check out. Deleting T-R35 as proposed drops the only tracked pointer at R2/R3.",
+      "repro": "sed -n 229,233p tasks/TODO.md; sed -n 5p specs/decisions/ADR-002-performance-thresholds.md; sed -n 10p specs/decisions/ADR-013-fast-suite-wall-clock.md",
+      "acceptance": "T-M32-17's clause (1) is corrected in place to name ADR-002:5 and ADR-013:10 as still-open, or T-R35 is kept/retargeted rather than deleted until those two lines are fixed."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The published scope of the new check is wider than the code: expect.note says 'tracked markdown' while the sweep skips tasks/ and every dot-directory \u2014 16 tracked markdown files, including the two skill files that document the gate commands \u2014 and the logged residual names only the shape gap, not this one.",
+      "evidence": "src/browser/eval_adapter.py:3944-3948 reuses md_files (SKIP_TOP = {'tasks'} plus the dot-part filter). Measured: 56 files scanned; tracked-but-unscanned includes .claude/agents/cold-reviewer.md, .claude/agents/eval-adversary.md, four .claude/skills/*/SKILL.md, 8 graphify files, tasks/DONE.md, tasks/TODO.md. .claude/skills/finish-task/SKILL.md:11-13 is a SECOND publication of the gate commands, so a ceiling re-typed there stays green forever. docs-numbers-are-derived.json:45 asserts 'no --suite gate command in tracked markdown publishes a wall-clock ceiling that is not the one evals/run.py commits' \u2014 and the criterion-5 clause in the SAME sentence does carve tasks/ out explicitly, so the omission reads as coverage rather than as a gap.",
+      "repro": "compare `git ls-files '*.md'` against the sweep's file set; see the reviewer's one-liner in the finding.",
+      "acceptance": "Either expect.note and the residual block say 'tracked markdown outside tasks/ and dot-directories', or the ceiling sweep runs over the full tracked-markdown set (it has no tasks/ false positive \u2014 that carve-out was needed for the criterion-5 phrase scan, not this one), with a case that would have gone red on a ceiling planted in .claude/skills/finish-task/SKILL.md."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M32-18",
+      "claim": "_SUITE_CMD binds a comment to the FIRST --suite on the line, so two gate commands on one line both mis-name the suite in the red row and can hide a stale `fast` ceiling entirely.",
+      "evidence": "eval_adapter.py:3734 r\"--suite (\\w+)[^\\n#]*#([^\\n]*)\" \u2014 [^\\n#]* runs greedily past a second --suite. Live: 'python3 -m evals.run --suite invariant && python3 -m evals.run --suite fast  # wall clock <= 20s' -> passed=True (20 validated against invariant while the line publishes 20s for fast, committed 90). With 75s it reds but names the WRONG suite, sending the fixer to the wrong number.",
+      "repro": "python3 -c \"import re;print(re.compile(r'--suite (\\\\w+)[^\\\\n#]*#([^\\\\n]*)').findall('python3 -m evals.run --suite invariant && python3 -m evals.run --suite fast  # wall clock <= 20s'))\"",
+      "acceptance": "Either the match is anchored per-command (last --suite before the #, or a non-greedy body), or the two-on-a-line case is named in the residual block as out of scope.",
+      "route_note": "LOW; the shape does not occur in any tracked file today. Logged rather than repaired to keep this PR's diff to the four sites plus one grader."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M32-19",
+      "claim": "The re-labelled OVER BUDGET source cannot report an override that happens to equal the committed number \u2014 precisely CI's configuration since ADR-021 \u2014 so a red CI run credits ADR-019/ADR-021 for a ceiling that came from the environment.",
+      "evidence": "evals/run.py:309-311 picks the env label only when `ceiling != WALL_BUDGET_S[suite]`; .github/workflows/eval.yml:31-32 exports EVAL_WALL_BUDGET_S_FAST=90 and _INVARIANT=20, both equal to WALL_BUDGET_S since ADR-021 converged them. The branch condition is pre-existing; the collision it papers over is new. Related: eval_adapter.py:4168, the docstring of the grader that pins this very message, still opens 'ADR-002 Decision 4's wall-clock ceiling' \u2014 the attribution this PR corrected everywhere else.",
+      "repro": "EVAL_WALL_BUDGET_S_FAST=90 .venv/bin/python -c \"import evals.run as R;print(R.wall_budget('fast')==R.WALL_BUDGET_S['fast'])\" -> True, so the env branch is unreachable on CI.",
+      "acceptance": "The source is decided by whether the variable is set (and positive), not by whether its value differs \u2014 or the case that pins this message asserts the CI-equal-value path explicitly.",
+      "route_note": "LOW and pre-existing in the branch condition; this PR only changed the string. The eval_adapter.py:4168 docstring half is a one-line attribution fix and rides with it."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The reported pre-existing duplicate ### T-R61 is real and remains tracked by nothing after this PR's TODO.md housekeeping.",
+      "evidence": "tasks/TODO.md:641 and :653 on this branch, byte-identical headings; same duplicate at origin/main:569 and :581, so not this PR's doing. adr-header-and-index covers ADR numbers, not task ids.",
+      "repro": "grep -n '### T-R61' tasks/TODO.md; git show origin/main:tasks/TODO.md | grep -n '### T-R61'",
+      "acceptance": "Should land as a one-line Debt block on whichever branch closes its TODO.md work last, or be de-duplicated there.",
+      "route_note": "Reviewer agrees leaving it out of THIS PR is right \u2014 a third id allocation while two branches are mid-housekeeping is the larger risk. Carried to the orchestrator to place, not filed here."
+    }
+  ],
+  "gate": {
+    "invariant": "58/58 = 1.000 (14.03s / 20)",
+    "fast": "153/153 = 1.000 (70.32s / 90)",
+    "cost": "$0.0000",
+    "reviewer_reran": "yes"
+  }
+}

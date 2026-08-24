@@ -58,7 +58,7 @@ Known holes, both declared in the support matrix: `near` degenerates inside
 shadow DOM (`querySelectorAll('*')` doesn't pierce open shadow roots, so
 `indexOf` is -1 and everything ties), and no fixture has one.
 
-**Narrowing (M38, ADR-023) is where an ambiguity goes before it fails.** Same
+**Narrowing (M38, ADR-026) is where an ambiguity goes before it fails.** Same
 warning as `near:` — three rungs, each bought with a deployment run, and the
 guards are the whole thing. They run AFTER the tier loop, never inside it: a
 clean single match at the text tier outranks a narrowed one at the role tier.

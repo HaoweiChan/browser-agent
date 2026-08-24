@@ -1,0 +1,52 @@
+{
+  "id": "plan-lint-refuses-a-document-root-extract-midrun",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L3",
+  "tc": "TC1",
+  "trap": "the document-root extract arrives from the DRILL-DOWN's replan, at the mid-run adoption point, where there is no re-plan left to spend",
+  "input": {
+    "fixture": "shop.html",
+    "task": "What is the price of the Aurora Desk Lamp?",
+    "stub_plans": [
+      [
+        {
+          "action": "observe",
+          "target": {
+            "role": "list",
+            "name": "Catalogue"
+          }
+        }
+      ],
+      [
+        {
+          "action": "extract",
+          "target": {
+            "role": "WebArea",
+            "name": "Nimbus Shop — Catalogue"
+          },
+          "anchor": null
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "replans": 0,
+    "recovery": false,
+    "trace_actions": [
+      "navigate",
+      "observe"
+    ],
+    "answer_null": true
+  },
+  "provenance": "PR #46 R1 (MEDIUM). `plan-lint-refuses-a-document-root-extract` grades the PRE-execution refusal: one `stub_plan`, the gap note goes to the planner, the stub returns the same plan, and the no-progress rule (`new_steps == steps`) ends the run — which is why its `replans` is 0. ADR-024's Consequences paragraph attributed that 0 to the OTHER branch, a mid-run adoption refusal, and no case in the PR reached `adopt()` with a document-root target at all: the rule was stated for a path nothing exercised. This is that path. The first plan only looks — `observe` on the catalogue list, the M32 drill-down (ADR-020) — and the replan it earns comes back with the root target. `adopt()` lints the spliced plan of record and refuses it, and mid-run that ends the run instead of replanning, because the drill-down WAS the replan. The two cases now cover both branches of the same clause and disagree about nothing: this one's `replans: 0` is the mid-run rule (a refused adoption is never counted as progress), that one's is the no-progress rule.",
+  "triage": {
+    "class": "coverage-gap",
+    "watched_red": "cannot fail before the thing it refuses exists, so watched red by ablation (ADR-009's method): `DOC_ROOT_ROLES` emptied, everything else untouched. checks {status: false, recovery: false, replans: false, trace_actions: false, answer_null: true}, got status `failure:locate`, budgets.actions 4, replans 1, tiers ['role'], reason \"step 4 (extract): relocation after locate failure: retargeting as {'text': 'Nimbus Shop — Catalogue'}; ResolveError: no tier resolved {'text': 'Nimbus Shop — Catalogue'}\" — the adopted plan ran, the root target failed to locate, and the ladder spent its rung on the page title. Restored, green.",
+    "note": "structural assertions only, for the reason `observe-drilldown-replan-is-linted` gives (PR #34 R13): `trace_actions` pins that the run got as far as the `observe` and stopped there — the refused plan's `extract` never ran — and `replans: 0` that the refusal was not counted as progress. A reason-string assertion would pass on any of the drill-down's four refusal exits. The task is deliberately non-aggregate, so the only clause that can produce this refusal is ADR-024's."
+  }
+}
