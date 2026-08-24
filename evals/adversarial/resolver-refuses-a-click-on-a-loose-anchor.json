@@ -1,0 +1,34 @@
+{
+  "id": "resolver-refuses-a-click-on-a-loose-anchor",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L2",
+  "tc": "TC4",
+  "input": {
+    "task": "Reply to bellweather in this thread.",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "near": "to arden - thread starter"
+        },
+        "expected_state": {
+          "text_visible": "Replying to bellweather"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "PR #42 R7 (HIGH), the acting half — rebuilt, because the finding's own repro does not show what it claims. `near: 'to  arden'` (two spaces) resolves through Playwright's SUBSTRING pass, which normalises whitespace itself: measured on this fixture, `get_by_text('to  arden')` returns 1 match with no M38 code involved, so that input presses the same button on `main` and is M6 behaviour, not a regression this milestone introduced. What IS M38's is the loosened passes. This case therefore anchors on `'to arden - thread starter'` with an ASCII hyphen against the fixture's EM DASH: exact misses, substring misses, and only the `normalised` pass can resolve it. It then selects one of two identically-named Reply buttons by proximity and the executor presses it. Watched red first: `status failure:act`, and a direct probe of the resolver confirms what was pressed — tier `structural`, and the page reads 'Replying to arden' against an expected_state of 'Replying to bellweather'. The wrong control, pressed on the strength of an anchor the plan spelled loosely. After the fix the loosened passes are unavailable to a step that acts: `failure:locate`, nothing pressed, and the act ladder gets the problem instead.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "that the reading-step refusal reaches rung 3. A `near` anchor that matches literally still resolves for a click, exactly as M6 shipped it and as `near-equidistant-is-ambiguous` and the golden `near` cases depend on — this case is red when and only when the LOOSENED passes are available to a step that acts.",
+    "not_covered": "whether this plan is any good. It is not: its anchor names arden's line while the task says bellweather. That is the point — a sloppy anchor is what a real planner produces, and the guard's job is that a sloppy anchor cannot cause an act."
+  }
+}

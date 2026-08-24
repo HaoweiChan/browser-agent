@@ -1,0 +1,78 @@
+{
+  "pr": 42,
+  "round": 1,
+  "task": "M38",
+  "result": "REQUEST_CHANGES",
+  "verified_clean": [
+    "gate re-run: invariant 58/58 = 1.000 (14.07s), fast 158/158 = 1.000 (71.6s) under ADR-019's 90/20",
+    "all five new cases reproduce their documented red under ablation (role-half; _PLURAL_ASK; _loose; READS=set())",
+    "the 3-tuple resolve() has exactly two callers (agent.py:733, eval_adapter.py:1433), both updated; the committed red report 20260823-221127-invariant.json shows observe-drill-into-chrome-gets-the-page-budget catching the miss mid-work",
+    "wall clock ~0.56s for five cases; the band re-derivation (71.20 x 1.15 = 81.88 -> 85) and the cited clean row 20260823-223759 (158/158, dirty false, sha cb9a782) both check out; the two-commit split matches T-M32-13's documented cost",
+    "ui-no-url-guard-and-example-chips and ui-examples-cover-matrix byte-identical to main; no stale D26 in ADR-022; history.jsonl a pure append",
+    "the retry_or_recovery deviation is sound on the merits \u2014 recovery_rungs literally counts steps with that label, and verified-recovery additionally requires superseding a prior attempt, which a narrowing has none of"
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "Rung 1 (anchor-proximity) carries no singular-task guard, so a plural task whose step has an identity anchor is silently answered from ONE of several matches \u2014 the exact silent-wrong-answer resolver-refuses-plural-wording claims to forbid; that case only stays green because its anchor happens to be the candidate text itself.",
+      "evidence": "resolver.py:279 (`if anchor:` -> return ... 'anchor-proximity') runs BEFORE the _PLURAL_ASK test at :293. On the shipped fixture forum-thread.html: task 'List all the users who posted in this thread.', step {action: extract, target: {role: link, name: 'user profile'}, anchor: 'Aurora Desk Lamp teardown'} -> {'status':'success','answer':'arden'}. Two users posted (arden, bellweather). Same shape with the committed negative case's own target: task 'List all the authors quoted in this thread.', target {text: 'Marisol Vance'}, anchor 'Quoted in this thread' -> success/'Marisol Vance', where the committed case with anchor 'Marisol Vance' correctly gives failure:locate. On main both inputs are failure:locate. Undeclared: D28 declares only the 'anchor nearer the WRONG candidate' risk, not wrong-by-omission on a plural ask.",
+      "repro": "run_case with the plural task + non-degenerate anchor above -> got.status success, answer 'arden'.",
+      "acceptance": "The _PLURAL_ASK refusal (and the interchangeability decision) gates ALL narrowing rungs, not only rung 2 \u2014 or ADR-022/D28 state explicitly that rung 1 answers plural asks and a case pins the resulting answer with answer_is_known_wrong: true. New adversarial case: the plural task above with a non-degenerate anchor, red before the fix."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The 'acting step' conjunct (READS = {'extract'}) is pinned by no case: widening it to include click/fill/observe leaves the whole fast suite 158/158 green, contradicting THREE documents of record that name l4-shop-duplicate-labels as the case that goes red when it is removed.",
+      "evidence": "resolver.py:121,270. Claims: docs/support-matrix.md:62, ADR-022 'Alternatives rejected', .claude/skills/browser-domain/SKILL.md:76. Measured: with READS = {'extract','click','fill','observe'} the full fast suite is 158/158, RED []. l4-shop-duplicate-labels stays passed=True because its two same-named buttons are ALSO blocked by the text half of INTERCHANGEABLE_JS; it only reddens when BOTH conjuncts are ablated. So the guard that stops the agent clicking a control the plan did not uniquely name can be deleted and the gate stays green.",
+      "repro": "set resolver.READS={'extract','click','fill','observe'} and run load_cases('fast') -> 158/158, RED [].",
+      "acceptance": "A case red when and only when READS is widened \u2014 e.g. a click on two same-role, same-text buttons where narrowing would press the first \u2014 or the three documents drop the claim that l4-shop-duplicate-labels pins this conjunct and say it is unpinned."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The text half of INTERCHANGEABLE_JS is pinned by no case either: deleting it leaves the fast suite 158/158 green, falsifying ADR-022's 'Alternatives rejected' argument for adding it and resolver-narrows-identical-matches's claim about its red case.",
+      "evidence": "resolver.py:99-105. Claims: ADR-022:127 and resolver-narrows-identical-matches.json:23. Measured: with the text half deleted (role-only guard) the fast suite is 158/158, RED []; resolver-narrows-by-anchor-proximity stays green because rung 1 fires first and never reaches rung 2. And rung 2 fully unguarded with that case's anchor removed still returns 'arden' \u2014 the fixture's document order coincides with the expected answer, so this case can never demonstrate 'document order picks the wrong byline'.",
+      "repro": "set INTERCHANGEABLE_JS to a role-only comparator and run the suite -> 158/158, RED [].",
+      "acceptance": "A case red with the text conjunct removed \u2014 a same-role, different-reading ambiguity on a READ step with NO usable anchor (so rung 2 is actually reached) and whose first document-order match is the WRONG answer \u2014 or the ADR/case text stops claiming this conjunct is pinned."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "_PLURAL_ASK misses ordinary English plural phrasings and is structurally incapable of firing on Chinese (\\b word boundaries around English tokens), so rung 2 answers those plural tasks from the first match; the repo ships 6 ZH cases, so this is a supported-surface hole.",
+      "evidence": "resolver.py:129-130. On forum-thread.html with {text:'Marisol Vance'}, anchor null (so only rung 2 can fire), each of these returns success/'Marisol Vance' where the committed negative case's wording returns failure:locate: 'Name the authors quoted in this thread.', 'Who are the authors quoted in this thread?', 'Give me the authors quoted in this thread.', and the ZH plural form. The ceiling is declared only inside resolver-refuses-plural-wording.json's triage.ceiling; D28 does not carry it, and the ZH inertness is named nowhere.",
+      "repro": "run_case with each phrasing above and anchor null -> success.",
+      "acceptance": "Either the regex is widened with a case per new phrasing, or a ZH plural case is added and D28 carries the declared ceiling including 'the plural test cannot fire on non-space-delimited languages'."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M38-3",
+      "claim": "INTERCHANGEABLE_JS collapses \\s+ (JS \\s includes U+00A0) while extract returns inner_text().strip() uncollapsed, so two matches judged 'the same reading' can yield different answer strings \u2014 contradicting ADR-022's 'the choice cannot change the answer'.",
+      "evidence": "resolver.py:101-102 vs agent.py:795. Probe: two links reading 'Read&nbsp;more' and 'Read more' -> tier role, narrowed document-order, picked text 'Read\\xa0more'.",
+      "acceptance": "Either the interchangeability text function matches what extract returns, or ADR-022 scopes the claim to 'the same answer modulo whitespace normalisation'.",
+      "route_note": "LOW; the divergence is whitespace-only and no shipped fixture exhibits it. Logged rather than repaired to keep this PR on the narrowing guards."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M38-4",
+      "claim": "docs/analysis.md's '94 of the 158 fast cases drive a real Chromium end to end \u2014 counted here as cases that actually recorded browser actions' does not match the definition it states: the cited report has 94 cases_with_budgets but only 89 with budgets.actions > 0.",
+      "evidence": "docs/analysis.md:60-63 citing 20260823-222543-fast.json: totals.cases_with_budgets 94, sum(1 for r in results if r['budgets']['actions']) 89. Pre-existing on main (89 vs 84) and re-published unchanged here.",
+      "acceptance": "The prose names the metric it actually reads (cases_with_budgets), or the number is derived from actions > 0.",
+      "route_note": "LOW and pre-existing on origin/main; this PR re-published it unchanged rather than introducing it."
+    }
+  ],
+  "gate": {
+    "invariant": "58/58 = 1.000 (14.07s / 20)",
+    "fast": "158/158 = 1.000 (71.6s / 90)",
+    "cost": "$0.0000",
+    "reviewer_reran": "yes"
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "pr": 42,
+  "round": 2,
+  "task": "M38",
+  "result": "REQUEST_CHANGES",
+  "standing": {
+    "R1": {
+      "verdict": "CLOSED as filed, acceptance only partly met",
+      "successor": "R7",
+      "evidence": "Both original exploits now fail loudly. The hoist is real and pinned: un-hoisting the plural test back into rung 2 gives 163/165, red = exactly resolver-refuses-plural-with-anchor + resolver-refuses-plural-wording. Reviewer could not get past the hoisted guard via observe (not in READS), a drill-down replan (agent.py:733 passes the original task, so plural wording survives), the eval-adapter caller (action=''), or extract_all (many=True). The one route that works is rung 3 \u2014 R7 \u2014 which is why 'gates ALL narrowing rungs' is not satisfied. Phrasings the widened regex still misses are declared in D28 item (3) with a worked example, so declared rather than hidden.",
+      "declined_half": "Gating rung 1 on interchangeability is SOUND to decline: if candidates are interchangeable, rung 2 already handles them, so such a rung does nothing rung 2 does not. The residual risk is an anchor confidently near the wrong candidate, which no comparator over candidates can see \u2014 already D28 item (2) / T-M38-1. No new finding."
+    },
+    "R2": {
+      "verdict": "CLOSED",
+      "residue": "R9",
+      "evidence": "Every row of the ablation table re-run in-process. READS widened -> 164/165, red ['resolver-refuses-narrowing-a-click'] and nothing else; l4-shop-duplicate-labels green, confirming the original measurement. The new case is red for the reason it names: ablated it narrows to the first Reply button, the page reads 'Replying to arden', and the run ends failure:act on the 'Replying to bellweather' postcondition."
+    },
+    "R3": {
+      "verdict": "CLOSED",
+      "evidence": "Text half removed -> 164/165, red ['resolver-refuses-different-readings'] only. Role half removed -> 164/165, red ['resolver-refuses-mixed-roles'] only. The fixture does NOT flatter the result this time: with the text half removed, 'Who replied to the Aurora Desk Lamp teardown?' returns success/'arden' \u2014 the first document-order match and the WRONG user. Round 1's specific objection is answered."
+    },
+    "R4": {
+      "verdict": "CLOSED",
+      "residue": "R8",
+      "evidence": "'name the author' still narrows; 'name the authors' refuses. Deleting _PLURAL_ASK entirely -> 159/165, red = exactly the six plural cases. D28 item (3) enumerates covered shapes and names real misses, so an honest ceiling rather than a flattering subset."
+    },
+    "ledger_repair": {
+      "verdict": "SOUND, with one stale paragraph (R10)",
+      "evidence": "All five deleted rows provably ablation probes \u2014 each report failed exactly one narrowing case plus the two doc-derivation cases, and the reviewer independently reproduced the un-hoist signature. No shipped tree produces those pass counts; no real run deleted. The two KEPT rows (163/165, 164/165) have all 14 resolver-* cases green \u2014 only the repaired resolver does that \u2014 with reds confined to the doc-derivation pair. Keeping them was right. No deleted report is cited anywhere. The band row exists, sha fb71f37, dirty false, 165/165, 73.36s, is the ledger maximum; 73.36 x 1.15 = 84.36 -> 85, README's row matches. Zero slack does not violate published-band-slack-is-declared, which governs publishing BELOW the maximum. T-M38-5 describes a real hole, both halves: the isolation mechanism redirects only the in-process main() call, and _band_wrong never reads sha."
+    }
+  },
+  "findings": [
+    {
+      "id": "R7",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The hoisted guard covers rungs 1 and 2 only \u2014 rung 3 (near-normalised / near-prefix) sits above the `if ambiguous:` block and is gated by neither refusal, so a plural ask is still answered from one of several matches where pre-M38 code failed loudly; D28, rewritten in this very diff, states all three rungs are tried 'only for a READING step whose task asks for one thing'.",
+      "evidence": "resolver.py:239-252 \u2014 the `near is not None` branch returns before control reaches the shared guard at :293. On forum-thread.html: task 'List all the users who submitted quotes.', step {action: extract, target: {role: link, near: <the long featured quote>}, anchor: 'Featured quote'} -> success, answer 'corvin'. {role: link} matches three links; the task asks for the set. Same input against main's exact+substring _nearest -> failure:locate. The ACTING half is open too: {action: click, target: {role: button, near: 'to  arden'}} (two spaces, so only the normalised pass matches) resolves tier structural and presses one of two same-named Reply buttons \u2014 the exact act resolver-refuses-narrowing-a-click exists to forbid, reached by the ungated rung. docs/support-matrix.md:62 D28 says all three rungs are reading-and-singular only; ADR-022's Ruling says 'on any step, (3)'. The two documents of record disagree. No case covers a plural ask or an acting step on rung 3.",
+      "repro": "run_case with the plural + long-near step above -> {'status':'success','answer':'corvin'}.",
+      "acceptance": "Either the two shared refusals move above the `near` branch as well, with a new adversarial case for the plural-ask-on-rung-3 shape and one for a click narrowed by a loosened anchor, each watched red first \u2014 or D28 is corrected to say rung 3 is deliberately ungated because the plan asked for proximity, with both consequences named as declared limitations and one demonstrated. Either way ADR-022's Ruling and D28 must stop disagreeing."
+    },
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The new `(?:name|list|give|show)(?: me)? the \\w+s` branch reads any singular noun ending in s as plural, so ordinary singular tasks now refuse a narrowing that used to succeed \u2014 undeclared in D28 (which declares only under-firing) and contradicted by the code comment and ADR-022 section 2b, both of which claim the required trailing s is what separates 'the authors' from 'the author'.",
+      "evidence": "resolver.py:141; the claim it breaks is at :128-130 and ADR-022:86-88. Measured on forum-thread.html with resolver-narrows-identical-matches's own step: 'Who wrote the quote about thinking?' -> success (control), but 'Show me the address of the author who wrote about thinking.' -> failure:locate, 'Name the business that published the quote...' -> failure:locate, 'Give me the status of the quote...' -> failure:locate, 'Show me the class of the quote...' -> failure:locate. D28 item (3) declares only the opposite direction; no case pins either direction of this branch.",
+      "repro": "_PLURAL_ASK.search('Show me the address on this page.') matches 'Show me the address'.",
+      "acceptance": "Either the branch stops matching a singular noun that merely ends in s, with a case pinning a singular task like 'Show me the address ...' that must still narrow (red before the fix) \u2014 or D28 gains a fourth declared shape for the over-firing direction and the code comment and ADR-022 section 2b stop claiming the trailing s distinguishes singular from plural."
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The falsified l4-shop-duplicate-labels pin was removed from three documents but survives in two more \u2014 one of them the output contract, edited in the same hunk \u2014 so R2's acceptance is only partly met and a reader of specs/ still learns the thing R2 disproved.",
+      "evidence": "specs/001-browser-contract.md:227-229 still reads 'Removing any one of those turns a case red (resolver-refuses-mixed-roles, resolver-refuses-plural-wording, l4-shop-duplicate-labels)' \u2014 the surrounding sentence was rewritten by fb71f37 and this clause left untouched. specs/decisions/INDEX.md:31 (untouched by the whole diff) still lists ADR-022 as enforced by the same trio, while ADR-022:150-153 now says the opposite. adr-header-index grades INDEX for presence and number only, so this drift is ungraded.",
+      "repro": "grep -n l4-shop-duplicate-labels specs/001-browser-contract.md specs/decisions/INDEX.md",
+      "acceptance": "Both citations name the cases that actually pin the conjuncts or drop the pin claim; `grep -rn l4-shop-duplicate-labels specs/ docs/ .claude/` returns no line asserting it pins a narrowing conjunct."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 section 2 contradicts itself about the band it publishes: the band source at line 66 is clean and green while the paragraph at 106-116 \u2014 written by fb71f37 and not updated by the ledger repair \u2014 tells the reader 'the band above is dirty again' and 'the clean re-citation at 165 is therefore still owed', and the same paragraph ends with the T-M32-13 sentence pasted twice.",
+      "evidence": "ADR-019:66-70 vs :109-114. The ledger row it cites is dirty false, 165/165, so both sentences are false as shipped. published-band-matches-the-ledger grades the band line and the derivation, not this prose, so it is green either way.",
+      "repro": "sed -n '64,120p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "Section 2's narrative describes the state the branch actually ships (dirty in fb71f37, re-cited clean in 820d807), the duplicated T-M32-13 sentence is gone, and no sentence asserts something the band line four paragraphs above contradicts."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M38-5 (second half)",
+      "claim": "Zero slack leaves 0.553s of headroom before the next ordinary gate run flips the derived ceiling 85 -> 90 and reddens published-band-matches-the-ledger for no code reason \u2014 and the same 165-case workload has already been measured at 74.29s.",
+      "evidence": "_band_rule is ((int(x*1.15)//5)+1)*5, so 85 holds only while x < 73.9130. Committed rows at 165 span 71.50-73.36s; the deleted ablation row measured 74.29s on the identical cases.",
+      "acceptance": "Nothing required \u2014 noted so the next slow gate run is recognised as a band republication, not a regression. If it recurs, T-M38-5's opt-out work is where the 'any run rewrites the band' coupling gets fixed.",
+      "route_note": "Reviewer states no action required; folded into T-M38-5 rather than filed separately."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "tasks/TODO.md carries the T-R61 block twice, verbatim.",
+      "evidence": "tasks/TODO.md:571 and :583 identical. Pre-existing: introduced by the d06a569 merge on main (git log -S returns d06a569 and efb2711), not by this PR. Nothing grades TODO.md ids for uniqueness.",
+      "acceptance": "One block.",
+      "route_note": "Out of scope for this PR; the same duplicate the T-M32-9 session declined to file to avoid a third concurrent id allocation. Carried by the orchestrator."
+    }
+  ],
+  "gate": {
+    "invariant": "58/58 = 1.000 (13.19s / 20)",
+    "fast": "165/165 = 1.000 (71.47s / 90)",
+    "cost": "$0.0000",
+    "reviewer_reran": "yes, all ablations in-process \u2014 no ledger rows, no report files"
+  }
+}

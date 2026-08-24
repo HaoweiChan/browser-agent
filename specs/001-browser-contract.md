@@ -121,10 +121,13 @@ appears, in order — no post-hoc reconstruction).
   `failure:semantic`; a `fill` verifies itself by field readback and needs no
   authored postcondition.
 - `resolved.tier` is the tier the winning locator is *attributed* to, which is
-  the tier that found it in every case but one: a target carrying `near` is
+  the tier that found it in every case but two: a target carrying `near` is
   recorded as `structural` however its candidates were gathered, because
-  proximity is what identified the element. The self-maintenance metric reads
-  this field. `role`, `text` and `structural` are reachable; `attrs` is named
+  proximity is what identified the element — and so is one narrowed by its
+  identity anchor, which is proximity by another name (M38, `ADR-026`; which
+  rung fired is named in the step's `note`). The self-maintenance metric reads
+  this field.
+  `role`, `text` and `structural` are reachable; `attrs` is named
   here because the taxonomy defines the full ladder, and no run has ever
   emitted it. `structural` became reachable at M6 with `near` (below) and is
   still not a relocation rung: the ladder climbs between `role` and `text`
@@ -196,6 +199,51 @@ appears, in order — no post-hoc reconstruction).
   the anchor outranks every neighbour — that is the row or card the value sits
   in (`near-prefers-the-container`) — and only the anchor's own element is
   excluded outright.
+
+  The anchor is matched through **four passes**, strictest first (M38,
+  `ADR-026`): exact, substring, then a normalised pass that accepts typographic
+  variants of quote/apostrophe/dash characters and collapses whitespace runs,
+  then the same over the anchor's first 40 characters. The last two exist
+  because `get_by_text` is a literal match and a model quoting a page back gets
+  the typography and the length wrong, which is indistinguishable from a page
+  that does not contain the anchor at all (`no tier resolved`, run `e6768ee0`;
+  `resolver-near-normalises-typography`). Order is the honesty: the loosest
+  match is only reached when every stricter one found nothing, and a loose
+  match that names two places is refused exactly like a literal one.
+- **Narrowing** (M38, `ADR-026`). N>1 matches at every tier is not always a
+  question the plan failed to answer; often the page answers it. After every
+  tier has had its chance at a *unique* match — a clean single match at a later
+  tier still outranks any narrowing at an earlier one — two rungs are tried,
+  and only on a step that READS and whose task asks for ONE thing: the step's
+  identity `anchor` reused as a proximity anchor (winning as tier `structural`,
+  for the same reason `near` does), and the first match in document order. On a
+  `click`, a `fill` or an `observe` the ambiguity stays loud, because narrowing
+  there would act on a control the plan did not uniquely name rather than read
+  one of several identical values; on a plural ask it stays loud because one of
+  several matches answers a different question — wrong by omission. Both tests
+  gate all three rungs, including the loosened anchor passes inside `near`
+  matching, which sit above the other two and were ungated for a round
+  (`resolver-refuses-plural-with-anchor`,
+  `resolver-refuses-plural-on-a-loose-anchor`,
+  `resolver-refuses-a-click-on-a-loose-anchor`). `near`'s own exact and
+  substring matching is NOT gated: an anchor the page contains is the proximity
+  the plan asked for, and M6 shipped it available to every step. The
+  document-order rung is refused further unless the plan carried no `index` and
+  the matches are interchangeable — same role and same rendered text, so the
+  choice cannot change the answer. Removing any one of those conjuncts turns
+  exactly one case red, verified by ablating each over the whole suite
+  (`resolver-refuses-mixed-roles` for the role half,
+  `resolver-refuses-different-readings` for the text half,
+  `resolver-refuses-narrowing-a-click` for the acting refusal, the plural
+  family for the other), and everything not covered by the rungs stays the loud
+  `locate` failure it was.
+  The rung that fired is recorded in the step's `note` as
+  `narrowed: <rung>` — a run that answered from one of several matches has to
+  say which one it picked and why. It is NOT `retry_or_recovery: "recovery"`:
+  narrowing happens inside a single resolution, with nothing classified as a
+  failure, nothing superseded and no ladder run, so labelling it would inflate
+  the recovery metric with attempts that never failed (the ruling `ADR-020`
+  made for the drill-down and `ADR-018` for the lint note).
 - `extract_all` reads **every** match of its target instead of requiring the
   target to identify one element, and contributes a list to `answer`. It is the
   comparison primitive the vocabulary lacked: "which author has the most
@@ -287,7 +335,11 @@ appears, in order — no post-hoc reconstruction).
   construction, not by intention. M32's re-observe rung (`observe`, `ADR-020`)
   logs as neither: it is not a second attempt at anything, so it carries a note
   and no label at all — this sentence used to promise it would log as `retry`,
-  and the drill-down falsified that in the same file that shipped it.
+  and the drill-down falsified that in the same file that shipped it. M38's
+  narrowing rungs (`ADR-026`) log as neither for the same reason and one more:
+  they are not a second attempt at all, but part of the FIRST resolution of the
+  step, so there is no earlier attempt for them to supersede. What they carry
+  instead is a `note` naming the rung.
 - `page_changed` — did this action change the page's text at all? `null` on
   `extract`/`extract_all` and `observe` (none of which change anything by
   definition) and on the

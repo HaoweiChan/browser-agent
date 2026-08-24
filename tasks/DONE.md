@@ -25,10 +25,9 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 - M35 — Visitor-facing console: verified example prompts, plain-language limits, no-URL guard (2026-08-23) — PR #32, trace in tasks/reviews/pr32-r*.json
 - T-R34 — the band's slack becomes a declared ceiling (2026-08-23) — ADR-019, PR #35, trace in tasks/reviews/pr35-r*.json; 4 rounds, 1 circuit breaker
 - M37 — Swap the HN Try example for one that reproduces on the deployed build (2026-08-23) — PR #37, efb2711
-- M32 — Observation drill-down: the planner can ask for a deeper view of the page (2026-08-23) — ADR-020, PR #34, trace in tasks/reviews/pr34-r*.json
-- T-R56 — the band subsystem's documents and strings say what the code does (2026-08-23) — PR #36, trace in tasks/reviews/pr36-r*.json; 5 rounds, 1 circuit breaker
-- M28 — a verifier-rejected run carries no answer; the dump stays in evidence (2026-08-23) — PR #38
-- M32 — Observation drill-down: the planner can ask for a deeper view of the page (2026-08-22) — ADR-020, PR #34, trace in tasks/reviews/pr34-r*.json
+- T-R56 — the band subsystem's documents and its own strings say what the code does (2026-08-23) — ADR-019, PR #36, trace in tasks/reviews/pr36-r*.json; 5 rounds, 1 circuit breaker; bundles T-R45/46/47/48/49/52/54/55
+- M28 — a verifier-rejected run carries no answer: the dump stays in evidence, the reason cites it by preview (2026-08-23) — PR #38
+- M32 — Observation drill-down: the planner can ask for a deeper view of the page (2026-08-23) — ADR-020, ADR-021, PR #34, trace in tasks/reviews/pr34-r*.json; 6 rounds, 1 circuit breaker, 7 merges of main; ADR-020 written then reverted as superseded
 - T-M32-13 — the ledger's `ts` becomes a valid ordering key: stamped UTC, not naive local (2026-08-23) — found and root-caused on `task/M32` from PR #34's CI red; closed by T-R44 on both halves (UTC stamp + per-row `env`), ADR-019 §7, cases `ledger-ts-orders-real-time` and `band-is-graded-against-its-own-environment`
 - T-R78 — §7 stops claiming §5 names a demonstrating mutation for every graded item (2026-08-24) — PR #41 R17, the fifth instance of the class; the pointer now names `ci-numbers-are-derived`'s `watched_red`, closed in T-R44's merge commit
 

@@ -807,9 +807,19 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # `extract_all` wants every match, so ambiguity is the answer
                 # rather than a locate failure — the only difference in how a
                 # target is resolved.
-                loc, tier = await resolve(page, step.get("target") or {},
-                                          many=action == "extract_all")
+                loc, tier, narrowed = await resolve(
+                    page, step.get("target") or {}, many=action == "extract_all",
+                    anchor=step.get("anchor"), task=task, action=action)
                 rec["resolved"] = {"tier": tier, "description": str(step.get("target"))}
+                # WHICH narrowing rung settled an ambiguity the plan left open
+                # (M38). It goes in the trace because a run that answered from
+                # one of several matches has to say so — but NOT as
+                # `retry_or_recovery`: nothing failed and no ladder ran, the
+                # same ruling the plan lint above and M32's drill-down got, and
+                # the recovery metric counts rungs that rescued a classified
+                # failure (specs/001, ADR-003).
+                if narrowed:
+                    rec["note"] = "; ".join(x for x in (rec["note"], f"narrowed: {narrowed}") if x)
                 if action == "observe":
                     # An observation asserts nothing about the page, so there is
                     # nothing for an expected_state to hold. Refused rather than

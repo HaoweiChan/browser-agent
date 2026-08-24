@@ -1832,7 +1832,7 @@ def _run_observe_case(case: dict) -> dict:
                 # that would grade something the executor never runs.
                 from .resolver import resolve
 
-                loc, _tier = await resolve(page, drill)
+                loc, _tier, _narrowed = await resolve(page, drill)
                 return await observe(page, root=loc, text_head=DRILL_TEXT_HEAD)
             return await observe(page)
         finally:
@@ -4927,6 +4927,37 @@ def _check_examples_cover_matrix() -> dict:
             "got": {"examples": sorted(examples), "rows": sorted(rows)}}
 
 
+def _check_narrowing_fails_closed() -> dict:
+    """`_nearest`'s `loose` switch has no permissive default, and no default at all.
+
+    The M38 narrowing rungs are gated by one flag, `may_narrow`, and rung 3 —
+    the loosened anchor passes — is reached through a parameter rather than
+    through that flag directly. It shipped as `loose: bool = True` (PR #42
+    R18). Both call sites were correct, and that is exactly the shape of the
+    defect R7 had just found: a narrowing path nobody remembered to gate. A
+    permissive default means the NEXT call site restores the ungated rung by
+    omission, silently, and no case would go red — the two R7 cases pass
+    `loose` through the real path, so they cannot see a default they never use.
+
+    Read off the signature rather than by calling it, because the failure this
+    grades is a call that does not exist yet.
+    """
+    import inspect
+
+    from .resolver import _nearest
+
+    param = inspect.signature(_nearest).parameters.get("loose")
+    got = None if param is None else {
+        "kind": str(param.kind), "default": (None if param.default is param.empty
+                                             else repr(param.default))}
+    ok = (param is not None and param.kind is inspect.Parameter.KEYWORD_ONLY
+          and param.default is param.empty)
+    return {"passed": ok, "wrong": {} if ok else {
+        "loose": got, "want": "KEYWORD_ONLY with no default, so an omitted "
+                              "argument is a TypeError and not M38 behaviour"},
+            "got": {"signature": str(inspect.signature(_nearest))}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "examples-cover-matrix": _check_examples_cover_matrix,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
@@ -4941,7 +4972,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "ci-numbers-derived": _check_ci_numbers_are_derived,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
-              "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
+              "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
+              "narrowing-fails-closed": _check_narrowing_fails_closed}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

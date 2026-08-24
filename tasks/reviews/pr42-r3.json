@@ -1,0 +1,97 @@
+{
+  "pr": 42,
+  "round": 3,
+  "task": "M38",
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "FIRED \u2014 three review rounds without approval. Orchestrator stopped and escalated.",
+  "standing": {
+    "R7": {
+      "verdict": "CLOSED",
+      "evidence": "Both halves independently reproduced. Ungating rung 3 turns resolver-refuses-plural-on-a-loose-anchor into success/'corvin' and resolver-refuses-a-click-on-a-loose-anchor into failure:act with the wrong button pressed; committed code gives failure:locate for both. Swept for a narrowing path that skips may_narrow: relocation re-enters through attempt->execute preserving action/task; drill-down replans the same; extract_all is refused a near/index target before resolve; rung 1's _nearest is already inside the gate. The only unguarded caller (eval_adapter.py:1433, action='') errs closed."
+    },
+    "R7_rejected_evidence": {
+      "verdict": "THE REJECTION IS CORRECT",
+      "evidence": "Measured against 4e272db's fixture: get_by_text('to  arden', exact=True) -> 0, get_by_text('to  arden') -> 1, identical to get_by_text('to arden'). Playwright's substring pass normalises the whitespace with no M38 code involved, so the original repro pressed the same button on main. The rebuilt anchor is genuinely rung-3-only: exact -> 0, substring -> 0, _loose -> 1."
+    },
+    "R8": {
+      "verdict": "NOT CLOSED",
+      "successor": "R13/R15",
+      "evidence": "The fix is real for the four demonstrated nouns and the new case is genuinely red under ablation, but it bought the safe direction by opening the unsafe one."
+    },
+    "R9": {
+      "verdict": "CLOSED",
+      "evidence": "grep returns 8 lines in 7 files: two mutation-table rows and six sentences that all RECORD the falsification. None re-asserts the pin."
+    },
+    "R10": {
+      "verdict": "PARTLY CLOSED",
+      "successor": "R17",
+      "evidence": "Duplicated sentence gone, band line and paragraph agree \u2014 but section 2 acquired a fresh internal contradiction."
+    }
+  },
+  "findings": [
+    {
+      "id": "R13",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The R8 repair's [^\\Wsui] exclusion stops recognising ordinary English plurals (menus, taxis, skis, kiwis, gurus, alibis, bikinis, bayous), so a plural ask that failed loudly on 4e272db now narrows and returns one of several matches as a confident success.",
+      "evidence": "resolver.py:148. Taking the committed case resolver-refuses-plural-with-anchor and changing only the noun: 'Name the users who posted in this thread.' -> failure:locate (correct); 'Name the menus posted in this thread.' -> success, answer 'arden', audit verdict PASS at layer 1, grounded true, identity_anchors true; 'Show me the taxis posted in this thread.' -> same. With _PLURAL_ASK reverted to 4e272db's \\w+s, the identical menus input gives failure:locate. So this commit converts a loud refusal into a silent answer-by-omission for a whole class of real plurals. resolver-narrows-singular-noun-ending-in-s grades only the opposite (safe) direction, so nothing in the suite could have gone red for this.",
+      "repro": "run_case on resolver-refuses-plural-with-anchor with task 'Name the menus posted in this thread.' -> success/'arden'.",
+      "acceptance": "A new adversarial case whose task is an ordinary plural with u or i before the final s, expecting failure:locate, watched red against the current rule and green after it is narrowed. resolver-narrows-singular-noun-ending-in-s must stay green, so both directions are pinned independently."
+    },
+    {
+      "id": "R14",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The band published by 250a901 has zero slack and is already falsified by an ordinary clean gate run of 250a901 itself: both gate suites are RED on the tree as it stands.",
+      "evidence": "The uncommitted ledger tail holds {'ts':'20260824-003208','suite':'fast','sha':'250a901','dirty':false,'passed':168,'total':168,'wall_s':75.0} \u2014 a clean, green, non-ablated gate run of HEAD, exactly the kind of row this round says must not be hand-deleted. It makes the ledger maximum at 168 cases 75.0s: 75.0 x 1.15 = 86.25 -> 90, while ADR-019:66 publishes 72.19 -> 85. _check_published_band() returns passed false with published_slowest 72.19 / derives 85 / ledger_slowest 75.0 / ledger_derives 90. Measured: invariant 57/58 (INVARIANT VIOLATION) and fast 167/168 (REGRESSION), both failing on published-band-matches-the-ledger. THE ORCHESTRATOR'S REPORTED 58/58 AND 168/168 WERE TRUE ONLY BECAUSE ITS INVARIANT RUN HAPPENED BEFORE ITS OWN FAST RUN APPENDED THE ROW. The escape is either committing the row (CI red) or hand-deleting a real clean gate run \u2014 the fourth hand deletion in three rounds, and the one this round's own standard forbids.",
+      "repro": "_check_published_band() with the uncommitted rows present -> passed false; then evals.run --suite invariant -> 57/58.",
+      "acceptance": "The band cites a clean 168-case row that is the ledger's maximum at that count (or derives the same ceiling as it), the two uncommitted rows are committed rather than deleted, and invariant/fast are green when run TWICE BACK TO BACK \u2014 a second consecutive green gate run must not redden the first."
+    },
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "D28's fourth declared shape asserts a false universal ('what no English plural has') and names only the safe over-firing direction, so the declaration is a flattering subset of what the edit did \u2014 repeated in three more documents of record.",
+      "evidence": "support-matrix.md:62 D28 (4), ADR-022:117, resolver.py:134, and the ceiling field of resolver-narrows-singular-noun-ending-in-s.json. Falsified by menus, taxis, skis, kiwis, gurus, emus, alibis, bikinis, bayous. D28's header was widened to 'misses plural asks in both directions' but bullet (4) documents only one.",
+      "acceptance": "All four sites drop the 'no English plural has' claim and state the under-firing residue by example, with R13's case cited as its pin \u2014 or the rule is changed so the claim is true."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 section 2's 'arithmetic, stated so a reader can check it' does not reconcile with the committed ledger in either direction, so the only audit trail for the hand deletions is itself wrong.",
+      "evidence": "ADR-019:96-100. (a) 'ten rows at 165 cases ... five kept' \u2014 the committed ledger has SIX at 165, so eleven total and six kept. (b) 'three rows at 168 cases' \u2014 the committed ledger has SIX at 168, five kept rows unaccounted for, and ADR-019:69 cites a 73.66s row at 168 that this count excludes. (c) three rows were deleted this round; the ADR and TODO say two. Deleted rows leave no trace in git \u2014 removed from an append-only file before the commit \u2014 so this paragraph is the ENTIRE audit trail for T-M38-5's recurring deletions, and the reviewer could not verify 'no real gate run was deleted' from the committed record.",
+      "acceptance": "The arithmetic reconciles line by line with git show HEAD:evals/report/history.jsonl: total at each count = kept + deleted, and every deleted row listed with its ts, wall_s and pass count."
+    },
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R10's self-contradiction is only partly closed: ADR-019 section 2's heading says 'this branch paid it twice' against a body listing three payments.",
+      "evidence": "ADR-019:103 heading versus :111-115 ('at 158 ..., again at 165 ..., and a third time at 168').",
+      "acceptance": "The heading states the same count as the body, and no sentence in section 2 asserts a count another sentence contradicts."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M38-6",
+      "claim": "_nearest's new loose parameter defaults to True, so the single point R7 created is fail-open: any future call site that forgets the argument silently restores the ungated rung 3.",
+      "evidence": "resolver.py:172. Both current callers are correct, but the defect R7 named was precisely a narrowing path nobody remembered to gate, and the default preserves that failure mode for the next caller.",
+      "acceptance": "loose is required keyword-only (or defaults to False), so a caller that omits it gets M6 behaviour; the three R7/R8 cases stay green."
+    },
+    {
+      "id": "R19",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M38-7",
+      "claim": "README publishes two different fast numbers for the same 168-case tree: the 'latest offline baseline' headline cites a dirty pre-repair run (72.9s, sha 4e272db) while the band table cites the clean post-repair one (72.19s, sha 28cda58).",
+      "evidence": "README.md:53-60 vs :147. Both graded green today because docs-numbers-are-derived and published-band-matches-the-ledger grade different rows.",
+      "acceptance": "Headline and band table cite the same clean row for the same suite at the same case count, or the headline says its report is a dirty pre-receipt run."
+    }
+  ],
+  "gate": {
+    "as_reported_by_orchestrator": "invariant 58/58, fast 168/168 \u2014 INVALID, an artifact of run order",
+    "actual": "invariant 57/58 (INVARIANT VIOLATION) and fast 167/168 (REGRESSION) once the fast run's own row is in the ledger, both failing on published-band-matches-the-ledger"
+  }
+}

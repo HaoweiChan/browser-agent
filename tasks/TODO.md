@@ -135,7 +135,7 @@ CI band becomes falsifiable from the same field. If instead CI's numbers are lab
 hand-read, T-R44 still needs the environment tag, so the tag is the common floor.
 
 
-### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: todo]
+### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: in-progress]
 Origin: post-deploy receipt rounds for PR #32/#37/#38 (2026-08-23). `349e4839`,
 `e08b7627`, `bcae4fe7`, `63b9d944` (HN item 1, "Who submitted this story?"):
 `extract {role: link, name: "pg"}` → `ResolveError: 2 matches`; the relocation
@@ -185,24 +185,6 @@ reason and `judge_attempts: 2`; `judge-fail-closed-on-*` cases stay green;
 `docs/analysis.md` cost section states the worst-case extra judge call per
 run; gate green under the ADR-019 ceiling.
 Out of scope: judge prompt/model changes; retrying a reasoned FAIL.
-
-### M32 — Observation drill-down: the planner can ask for a deeper view instead of planning against 60 elements of chrome            [status: pr]
-Origin: `prompts/015`. README's `live-quotes-js-role-tier-blind` ("readable
-but unplannable") and M10 probe #4/#5/#7, where the value was verbatim in the
-page text the agent captured and absent from the a11y elements the planner
-was shown (`docs/analysis.md` §8a-2).
-Spec: progressive disclosure of the *page*, not the tool set — the whole
-vocabulary is ~524 tokens of system prompt and disclosing it lazily saves
-nothing while breaking the closed-world guarantee. One new action `observe`
-with a `target` subtree: the executor re-runs `observe()` scoped to that
-subtree with the full `MAX_ELEMS` budget and a longer text head, and the
-result reaches the replanner through the existing observation+note path.
-Costs one planning call, bounded by `MAX_REPLANS`. No site knowledge.
-Acceptance: an offline fixture case where the answer element sits past
-`MAX_ELEMS` in document order goes from `failure:locate`/dump to correct, red
-first; `quotes.toscrape.com/js` keeps its honest marker if it is still
-unplannable; tokens-per-task measured before/after from committed reports
-and stated (must stay inside the 100k run budget).
 
 ### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: pr]
 Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
@@ -276,6 +258,82 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
+Origin: PR #42, R2/R3's acceptance and the coordinator's round-1 disposition.
+Re-checked against `origin/main` after T-R44 merged (2026-08-24): **both halves
+are still open**, and what T-R44 closed is the neighbouring coupling, not this.
+Spec: this repo already ruled that a probe is not a run and must not reach the
+committed ledger. `wall-clock-probe-history-isolated` is that ruling in force:
+`_main_exit_code` (src/browser/eval_adapter.py) redirects `R.HISTORY` and
+`R.REPORT_DIR` to a temp path because without it the probe injected fabricated
+rows — 52 of 241 committed lines were probe artifacts at PR #20 R18, deleted by
+hand as part of that repair rather than caught by a check. **The mechanism
+covers exactly one probe class: the one that calls `evals.run.main()` in
+process.** An ablation probe — the whole suite run with one guard conjunct
+removed, which is how R2/R3 require a guard to be pinned — is a subprocess gate
+run, appends rows like any other, and is invisible to that isolation. Nine such
+rows were produced and hand-deleted across three review rounds (the table in
+ADR-019 §2 lists every one); twice the probe row was the ledger's maximum and
+forced the published band onto code that never existed as a commit.
+**What T-R44 changed, and what it did not.** `env` per row and a UTC `ts` close
+`T-M32-13`: a band is now graded against its own environment, so CI's rows
+cannot redden a local band and a dirty citation is no longer a two-commit price.
+Neither reaches this. Checked on the merged tree: `evals/run.py` has no
+history opt-out of any kind (`--no-history`, `EVAL_HISTORY`, a probe flag — none
+exist), so an ablation sweep still appends indistinguishable rows; and
+`_band_wrong` reads `env`, `suite`, `total`, `wall_s`, `dirty` and `ts` and
+never reads `sha`, so a row from a tree that is not an ancestor of HEAD still
+counts toward the maximum the band must match.
+Repro: run `--suite fast` with any resolver conjunct ablated, then
+`published-band-matches-the-ledger` — the probe row is indistinguishable from a
+gate run, and if it is the slowest it dictates the band.
+Acceptance: extend the isolation `wall-clock-probe-history-isolated` already
+pins rather than inventing a second mechanism — an opt-out the probe passes
+(`--no-history`, or `EVAL_HISTORY` pointed at a temp path) so a deliberately
+broken tree cannot append to the committed time series, plus a case in that
+same file's shape: run the suite through the opt-out, assert the committed
+ledger did not grow. Watched red against today's behaviour, where it does.
+Second half, unchanged by T-R44 and worth doing with it: `_band_wrong` should
+refuse a row whose `sha` is not an ancestor of HEAD — a different hole (a row
+from a branch that never merged) in the same class, and the one that makes a
+band a claim about a tree that exists.
+
+### T-M38-1 — D29's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: todo]
+Origin: M38, ADR-026's accepted risk.
+Spec: rung 1 reuses the step's identity `anchor` as a proximity anchor whenever
+it identifies exactly one place on the page. Where the anchor sits nearer the
+WRONG candidate, the run now answers confidently where it used to fail loudly —
+`success`, grounded, anchored, and wrong. `docs/support-matrix.md` D29 declares
+it and no case shows it, which is this repo's most-falsified kind of claim
+(memory: "declared limitations get demonstrated"). Not built here because it is
+a sixth case in a PR whose case count already forced the two-commit band dance
+(T-M32-13), and because the shape is a wrong-answer pin, not a fix.
+Repro/acceptance: on `forum-thread.html`, an extract whose `anchor` is the
+thread title (`Aurora Desk Lamp teardown`, in the `<h2>`) against
+`{role: link, name: "user profile"}` — the h2 is one element from the FIRST
+byline, so the anchor happens to be right there; invert it by moving the target
+to a page where the anchor's nearest same-named candidate is not the task's
+(e.g. a second article whose byline sits closer to the h2 than the first
+article's). Pin it the way `l4-shop-element-reordered` pins its wrong answer:
+`expect.answer` = what the build really returns, plus
+`answer_is_known_wrong: true` (and its entry in `opt-in-expect-keys-declared`),
+so the report cannot be read as "verified correct".
+
+### T-M38-2 — which narrowing rung fired is prose in `note`, not a field, and the reviewer UI has no badge for it            [status: todo]
+Origin: M38.
+Spec: `agent.py` appends `narrowed: <rung>` to the trace step's `note`, and
+that string is the whole record — graded by substring through
+`trace_note_contains`, rendered by `src/browser/server.py` only as the note
+text. A consumer that wants "which runs answered from one of several matches"
+has to grep English. `resolved` is the structured home for it
+(`{"tier": ..., "description": ..., "narrowed": ...}`), and the reviewer UI
+already badges `tier:` beside it. Deliberately not done in M38: adding a key to
+`resolved` widens the TraceStep shape `contract-trace-schema` mirrors, and the
+narrowing is legible in the trace either way — this is a consumer-ergonomics
+debt, not a correctness one. Same family as T-M32-1 (no UI phase for `observe`).
+Acceptance: `resolved.narrowed` carried through the contract, the schema case
+and the UI badge in one change; the note string stays or goes with the badge,
+not before it.
 ### T-M32-16 — a live ceiling published in any shape other than a gate command is still ungraded            [status: todo]
 Origin: T-M32-9; enumeration corrected at PR #40 R3.
 Spec: the sweep T-M32-9 added (`docs-numbers-are-derived`,
@@ -828,6 +886,11 @@ unrelated PR is how two trackers end up disagreeing.
 Repro: `grep -c 'T-R34' tasks/DONE.md` -> 0, while `tasks/pr-loop-ledger.jsonl`
 holds a T-R34 row dated 2026-08-23 and `git log --oneline origin/main` shows
 PR #35 merged.
+Status (2026-08-23, PR #40 housekeeping): both instances are now filed — T-R34
+and M37 have DONE.md lines, as do T-R56, M28 and M32 — so the repro above no
+longer reproduces. The block stays open for the guard only: the gap has now
+recurred across five tasks and was closed by hand each time, which is the
+argument for the second acceptance branch rather than the first.
 Acceptance: DONE.md gains its T-R34 line (and M37's when that closes), or the
 pr-loop close step is what writes it so the gap cannot recur — the latter is
 the better fix, since this is the second instance in two milestones. Cheap
