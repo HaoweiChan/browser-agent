@@ -2512,6 +2512,144 @@ def _run_readyz_case(case: dict) -> dict:
             "got": {"states": got, "during_latency_s": during_latency, "run_seconds": elapsed}}
 
 
+def _run_smoke_guard_case(case: dict) -> dict:
+    """`/smoke/stream` must TAKE the single run slot, not read it.
+
+    The slot is `SEM`, and a browser check launches a real Chromium — the same
+    resource a run launches, on a container sized for one. A guard that only
+    reads `SEM.locked()` stops a check from starting under a run and stops
+    nothing else: two tabs both clicking Browser check launch two Chromiums, a
+    run submitted during a check launches the second, and `/readyz` reports
+    `ready: true` throughout because it reads `SEM` too.
+
+    Graded through the real endpoint on the real server loop, because the repro
+    is two concurrent HTTP clients. Chromium is never launched: playwright's
+    entry point is swapped for a stub that parks at `launch()` until this case
+    releases it, so the held window is event-driven rather than a sleep — no
+    timing margin to derive, and a 10s cap inside the stub so a hang fails loudly
+    instead of hanging the suite.
+
+    The last check is in-process and is the one that matters most: a leaked
+    semaphore bricks the service for good, which is worse than the bug. A client
+    that closes the tab mid-check leaves an async generator to be closed early,
+    so `smoke_events()` is driven to `launching` and then `aclose()`d — the
+    `GeneratorExit` path — and the slot must come back.
+    """
+    import playwright.async_api as _pa
+
+    from . import server as S
+
+    base, exp = _base_url(), case["expect"]
+    wrong, got = {}, {}
+    if S.SEM.locked():
+        return {"passed": False, "wrong": {"slot_not_free_at_case_start": True}}
+
+    release = threading.Event()
+
+    class _StubBrowserType:
+        async def launch(self, **kw):
+            # Parks where the real launch would spend its seconds and its memory.
+            deadline = time.monotonic() + 10
+            while not release.is_set() and time.monotonic() < deadline:
+                await asyncio.sleep(0.005)
+            raise RuntimeError("stub playwright: no browser is launched in this suite")
+
+    class _StubPW:
+        chromium = _StubBrowserType()
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *e):
+            return False
+
+    def _read(resp, stop_after: set[str], limit: int = 20) -> list[dict]:
+        """SSE frames off a live response, up to and including one of `stop_after`."""
+        seen = []
+        for _ in range(limit):
+            line = resp.readline()
+            if not line:
+                break
+            if not line.startswith(b"data:"):
+                continue
+            seen.append(json.loads(line[5:]))
+            if seen[-1]["event"] in stop_after:
+                break
+        return seen
+
+    prev = _pa.async_playwright
+    _pa.async_playwright = lambda: _StubPW()
+    try:
+        first = urllib.request.urlopen(f"{base}/smoke/stream", timeout=15)
+        got["first"] = [e["event"] for e in _read(first, {"launching", "error", "done"})]
+        held = S.SEM.locked()
+        during = _get_json("/readyz")
+        second = urllib.request.urlopen(f"{base}/smoke/stream", timeout=15)
+        second_evs = _read(second, {"error", "done"})
+        got["second"] = [e["event"] for e in second_evs]
+        second.close()
+        release.set()
+        got["first"] += [e["event"] for e in _read(first, {"error", "done"})]
+        first.close()
+        after = _get_json("/readyz")
+
+        gen = S.smoke_events()
+        got["closed_early"] = [json.loads(_await(gen.__anext__())[5:])["event"] for _ in range(2)]
+        held_by_generator = S.SEM.locked()
+        _await(gen.aclose())
+        leaked = S.SEM.locked()
+    finally:
+        _pa.async_playwright = prev
+
+    # A check that reaches Chromium at all is the thing being protected: a guard
+    # that refuses every smoke stream passes every other assertion here.
+    if exp["reaches"] not in got["first"]:
+        wrong["first_stream_never_launched"] = got["first"]
+    if exp["reaches"] in got["second"]:
+        wrong["second_stream_launched_a_second_browser"] = got["second"]
+    if not got["second"] or got["second"][-1] != exp["refused_with"]:
+        wrong["second_stream_not_refused"] = got["second"]
+    # Terminal, and self-explaining: the frontend closes the stream on this
+    # event and shows its text. Containing "busy" is NOT the bar — the panel
+    # runs a PREFIX test, so the refusal the server actually sends has to
+    # satisfy the predicate the page actually runs, or a reworded message that
+    # still says "busy" somewhere renders "chromium failed" for a refusal in
+    # which no Chromium was launched, which is this case's whole defect. The
+    # prefix is parsed out of the branch, and the branch is asserted verbatim
+    # in `S.PAGE` below, so the two ends are one string (PR #45 R1).
+    prefix = re.search(r'startsWith\("([^"]*)"\)', exp["page_branch"])
+    if not prefix:
+        wrong["page_branch_is_not_a_prefix_test"] = exp["page_branch"]
+    elif not any(str(e.get("error", "")).startswith(prefix.group(1)) for e in second_evs):
+        wrong["refusal_does_not_satisfy_the_page_busy_branch"] = {
+            "prefix": prefix.group(1), "events": second_evs}
+    if not held:
+        wrong["slot_not_held_while_smoke_runs"] = held
+    # Everything that reads the slot follows from holding it: /readyz stops
+    # claiming an idle service, and `_execute`'s `async with SEM` cannot start a
+    # run under a browser check.
+    if during.get("ready") or not during.get("busy"):
+        wrong["readyz_ready_while_a_browser_is_up"] = during
+    # The operator-facing half: `busy` with no run id is a browser check, and
+    # "a run is executing (None)" would send someone hunting a run that never
+    # existed.
+    if not during.get("reason") or "None" in str(during.get("reason")):
+        wrong["readyz_reason_names_a_run_that_does_not_exist"] = during.get("reason")
+    if not after.get("ready"):
+        wrong["slot_not_released_on_the_error_path"] = after
+    if not held_by_generator:
+        wrong["slot_not_held_at_launching"] = got["closed_early"]
+    if leaked:
+        wrong["slot_leaked_when_the_client_went_away"] = True
+    # ponytail: substring, not a rendered page — the console's EventSource
+    # handler closes on `error` and prints its status, and without this branch a
+    # refusal reads as "chromium failed", i.e. a browser fault that never
+    # happened. Rendering it is `ui-rendered`'s machinery and a browser launch.
+    if exp["page_branch"] not in S.PAGE:
+        wrong["console_reports_a_busy_slot_as_a_browser_failure"] = exp["page_branch"]
+    return {"passed": not wrong, "wrong": wrong, "got": got}
+
+
 def _run_stream_case(case: dict) -> dict:
     """The progress stream must show the run that happened, not a tidier one.
 
@@ -4929,6 +5067,7 @@ KINDS = {
     "ablation-table": _run_ablation_table_case,
     "adr-header-index": _run_adr_header_index_case,
     "readyz-transitions": _run_readyz_case,
+    "smoke-guard": _run_smoke_guard_case,
     "soak-accounting": _run_soak_accounting_case,
     "doc-counts": _run_doc_counts_case,
     "browser-liveness": _run_browser_liveness_case,

@@ -65,9 +65,12 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 160 cases, ts `20260824-013939`, **71.10s**, 158/160
-  (`evals/report/20260824-013939-fast.json`; `dirty: true`, for the reason the next paragraph
-  gives. The stamp is UTC, as every row written since §7 is. How many rows the
+- Band source — local `fast` at 161 cases, ts `20260824-020120`, **72.09s**, 159/161
+  (`dirty: true`, for the reason the next paragraph gives — T-M40-2 adds two cases
+  on top of T-M40-1's 159, so 161 exists only while the merge is uncommitted, and
+  the two cases red in that row are `docs-numbers-are-derived` and
+  `published-band-matches-the-ledger`, precisely the ones this republish clears.
+  The stamp is UTC, as every row written since §7 is. How many rows the
   ledger holds at this count, and what its maximum is, are deliberately not
   written here — see §3.)
 
@@ -88,8 +91,8 @@ longer disqualified by a row from another machine. Locally that is demonstrated 
 this band cites a dirty row and the gate is green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 160 cases, 158/160) and
-(restated — `invariant`: 63 cases, 61/63) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 161 cases, 159/161) and
+(restated — `invariant`: 64 cases, 62/64) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -110,11 +113,11 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 71.10 × 1.15 = 81.76 → **85**, which is BELOW the committed 90 and
+five — gives 72.09 × 1.15 = 82.9 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. The
-runs at this count are exactly that short sample. Item 5 (derivation) grades the
+one run at 161 cases is exactly that short sample. Item 5 (derivation) grades the
 arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
 that says 90 is green and declared rather than a contradiction. The band
 published for the earlier
@@ -130,9 +133,12 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 63 cases, ts `20260824-013828`, **13.76s**, 61/63
-  (`dirty: false`; ADR-012 writes no per-case report for a green run, so the
-  ledger row is the whole artifact, which is why this cites a ts and not a file. As in §2,
+- Band source — local `invariant` at 64 cases, ts `20260824-020008`, **13.66s**, 62/64
+  (`dirty: true`, and red, for the same structural reason §2's is: T-M40-2's cases
+  are tagged `fast` and `invariant` both, so 64 exists only while the merge is
+  uncommitted and the two red cases are the two this republish clears. ADR-012
+  writes no per-case report for a green run, so a ledger row is the whole
+  artifact, which is why this cites a ts and not a file. As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
   deliberately NOT in this suite: it was tagged `invariant`, moved this band, and
@@ -140,6 +146,27 @@ commit that changed nothing but JSON.
   count and derives a different ceiling — `T-M40-3` carries that decision.
   `T-M32-13`, which the note originally cited beside it, is closed here; whether
   its closure changes M40's tagging is T-M40-3's question, not this section's.)
+
+**No graded form of "the published row is the maximum" is currently known.**
+`T-R85` records the class, why the strict form is refused, and the candidate that
+was proposed and then killed on its own arithmetic — it was green on the defect it
+claimed to catch (PR #45 R5). The paragraph above says what the maximum IS and
+where to read it; what nothing says is that the published row equals it. Until a
+form exists that is red on a band published below the maximum and green on one
+published at it, this class is caught by reading, and §6's "What it lets through"
+is the bound that holds meanwhile (PR #45 R2, R8).
+
+T-M40-1's case is tagged `fast` and `invariant` both, so it moves this count by
+one from the other direction than the case the bullet above says is deliberately
+absent. The CI question `T-M40-3` owns is therefore live again, with the one
+difference that has to be stated rather than assumed: this case measures 0.01s —
+it stubs playwright's entry point and launches no browser — where M40's SSRF case
+was the expensive one. On `T-M40-3`'s own committed numbers (CI invariant 14.88s
+at 58 cases, ADR-021) 14.88 × 1.15 = 17.11 → 20, so a case costing 0.01s leaves
+the derived ceiling at 20 rather than 25. That is a projection from two committed
+numbers, not a measurement: only a CI run confirms it, and if it is wrong the
+symptom and the remedy are both `T-M40-3`'s. This ADR publishes the local band;
+CI's ceiling is measured on CI (§5).
 
 
 Neither band quotes the ledger's maximum, or counts the rows behind it, and that
@@ -169,16 +196,15 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.76 × 1.15 = 15.82 → **20**, which is the committed
+The same rule gives 13.66 × 1.15 = 15.71 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
 
-Both bands above are republished at the case count this branch ships after six
-`origin/main` merges and three rounds' own cases: `fast` 136 → 160, `invariant`
-53 → 63. T-M40-2's merge of T-R44 and M40 is the last of those, and it moved the
-counts a second time inside one PR — which is why the paragraph above quotes the
-results through item 10 (restatement) rather than restating them by hand. Neither is the enumeration this file used to carry. PR #34 R21 found
+Both bands above are republished at whatever case count this branch ships, which
+has moved on every `origin/main` merge and moves again on the next one — so the
+counts are in the graded bullets and are not narrated here (PR #45 R4).
+Neither bullet is the enumeration this file used to carry. PR #34 R21 found
 that enumeration publishing three runs where the ledger held six and calling the
 smallest of them the maximum — the same defect PR #35 had already fixed here by
 deleting the list and citing one graded row instead, which is the resolution

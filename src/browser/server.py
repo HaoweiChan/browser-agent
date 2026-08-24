@@ -698,11 +698,17 @@ const EXAMPLES = {
     url: "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
     task: "What is the price of this book?"},                  // run ac69e850 → "£51.77"
   "news.ycombinator.com (live)": {label: "Title of an HN story",
-    url: "https://news.ycombinator.com/item?id=1",
-    // runs 97f2157d, 4453fae6 → "Y Combinator" (M37). Retired "Who submitted
-    // this story?" (run bcdc8f8a → "pg"): post-M35 it failed 5/5 on the
-    // deployment — 349e4839, e08b7627, bcae4fe7, 63b9d944, failure:locate,
-    // the planner targets link "pg" and the page has two.
+    url: "https://news.ycombinator.com/item?id=2",
+    // runs c0af867b, 6e537b01 → "A Student's Guide to Startups" (2/2, 2026-08-24).
+    // Moved off item?id=1, whose title is literally "Y Combinator" (runs
+    // 97f2157d, 4453fae6, correct answers): a right answer there is
+    // indistinguishable from the domain-name fallback a broken extractor
+    // would emit, so the example demonstrated nothing. Item 2 is the same
+    // frozen Oct-2006 shape with a title that can only have been read off
+    // the page. Retired "Who submitted this story?" (run bcdc8f8a → "pg"):
+    // post-M35 it failed 5/5 on the deployment — 349e4839, e08b7627,
+    // bcae4fe7, 63b9d944, failure:locate, the planner targets link "pg"
+    // and the page has two.
     task: "What is the title of this story?"},
   "quotes.toscrape.com (live)": {label: "First of the top ten tags",
     url: "https://quotes.toscrape.com/",
@@ -1133,7 +1139,11 @@ function smoke() {
     if (ev.event === "done" || ev.event === "error") {
       s.close(); smokeStream = null;
       $("status").className = "big " + (ev.event === "done" ? "success" : "failure");
-      $("status").textContent = ev.event === "done" ? "chromium ok" : "chromium failed";
+      // A refusal for a busy slot is not a browser failure: no Chromium was
+      // ever launched, and reporting one sends the reader after a bug.
+      $("status").textContent = ev.event === "done" ? "chromium ok"
+        : String(ev.error || "").startsWith("busy") ? "busy — one browser at a time"
+        : "chromium failed";
       busy(false);
     }
   };
@@ -1213,7 +1223,11 @@ async def readyz():
         "busy": busy,
         "active_run_id": ACTIVE_RUN,
         "running": sum(1 for r in RUNS.values() if r.get("status") == "running"),
-        "reason": f"a run is executing ({ACTIVE_RUN})" if busy else None,
+        # `busy` without a run id is the browser check holding the slot; naming a
+        # run that does not exist ("a run is executing (None)") is the shape an
+        # operator would chase.
+        "reason": (f"a run is executing ({ACTIVE_RUN})" if ACTIVE_RUN
+                   else "a browser check is running") if busy else None,
     }
 
 
@@ -1291,13 +1305,23 @@ async def smoke_events():
         return f"data: {json.dumps({'event': event, **kw})}\n\n"
 
     yield ev("start", target=SMOKE_URL)
+    # A browser check launches the same Chromium a run does, on a container
+    # sized for exactly one — so it TAKES the run slot instead of reading it.
+    # Reading it (`if SEM.locked(): return`) is one-directional and lets two
+    # concurrent checks, or a run submitted during a check, open the second
+    # browser: the OOM the slot exists to prevent. Refusing rather than queueing
+    # on purpose — a check that waits out a 60s run and then opens a browser
+    # after the visitor has navigated away is worse than one that says busy now.
+    # ponytail: check-then-acquire, because asyncio has no try_acquire and the
+    # uncontended path of Semaphore.acquire() never suspends, so nothing can
+    # take the slot between these two lines on a single-threaded loop. A real
+    # non-blocking primitive is the upgrade if this ever runs threaded.
     if SEM.locked():
-        # Concurrency is 1 by design (SEM, /readyz). Without this, two tabs --
-        # or one tab before the M40 button-locking -- launched a second browser
-        # outside the semaphore, so the property /readyz reports stopped holding
-        # while /readyz still reported it from SEM alone.
-        yield ev("error", error=f"a run is executing ({ACTIVE_RUN}); one browser at a time")
+        yield ev("error", error="busy: the single run slot is taken — "
+                 + ("a run is executing" if ACTIVE_RUN else "a browser check is running")
+                 + ". No browser was launched; try again in a moment.")
         return
+    await SEM.acquire()
     try:
         from playwright.async_api import async_playwright
 
@@ -1315,6 +1339,11 @@ async def smoke_events():
         yield ev("done", title=title)
     except Exception as e:  # loud failure is the contract (CLAUDE.md rule 4)
         yield ev("error", error=f"{type(e).__name__}: {e}")
+    finally:
+        # Every exit path, including the GeneratorExit Starlette throws in when
+        # the client closes the tab mid-check. A slot taken and never returned
+        # bricks the service for good — worse than the bug above.
+        SEM.release()
 
 
 @app.get("/smoke/stream")
