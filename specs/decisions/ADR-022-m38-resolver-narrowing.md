@@ -5,7 +5,7 @@ Status: accepted
 
 **Ruling**: when a semantic target resolves to N>1 elements at every tier, `resolve()` tries three site-agnostic narrowing rungs before raising `ambiguous-match`: on a READING step whose task asks for ONE thing, (1) the step's identity `anchor` reused as a proximity anchor and (2) the first match in document order, the latter only when the matches are interchangeable (same role AND same reading); and (3) inside proximity matching, on the same terms, an anchor string matched through typographic variants and then by its first 40 characters. `near`'s own exact and substring matching is unchanged and stays available to every step, as M6 shipped it. The rung that fired is named in the trace step's `note` (`narrowed: <rung>`); none of them is labelled `retry_or_recovery`.
 **Because**: six deployment runs died `failure:locate` on pages that held the answer and plans that named it — two `pg` links on an HN item (`349e4839`, `e08b7627`, `bcae4fe7`, `63b9d944`), three `Albert Einstein` matches on quotes.toscrape.com (`e985e048`), and a `near` anchor the page rendered with typographic quotes (`e6768ee0`). In each, the ambiguity was one the page itself settles.
-**Enforced by**: the rungs — `resolver-narrows-by-anchor-proximity`, `resolver-narrows-identical-matches`, `resolver-near-normalises-typography`; the guards, each red when and only when its own conjunct is removed — `resolver-refuses-narrowing-a-click` (reading steps), `resolver-refuses-plural-with-anchor` + `resolver-refuses-plural-wording` (singular task, both rungs) + `resolver-refuses-plural-name-the` / `-who-are` / `-give-me` / `-zh` (the wording), `resolver-refuses-mixed-roles` (role half), `resolver-refuses-different-readings` (text half), `resolver-refuses-plural-on-a-loose-anchor` + `resolver-refuses-a-click-on-a-loose-anchor` (both refusals reaching rung 3) and `resolver-narrows-singular-noun-ending-in-s` (the plural test's over-firing direction); and verified UNCHANGED by this milestone, pinning nothing in it: `l4-shop-duplicate-labels` (PR #42 R2 — it does not pin the acting refusal), `near-equidistant-is-ambiguous`, `near-anchor-substring`, `relocation-preserves-near`
+**Enforced by**: the rungs — `resolver-narrows-by-anchor-proximity`, `resolver-narrows-identical-matches`, `resolver-near-normalises-typography`; the guards, each red when and only when its own conjunct is removed — `resolver-refuses-narrowing-a-click` (reading steps), `resolver-refuses-plural-with-anchor` + `resolver-refuses-plural-wording` (singular task, both rungs) + `resolver-refuses-plural-name-the` / `-who-are` / `-give-me` / `-zh` (the wording), `resolver-refuses-mixed-roles` (role half), `resolver-refuses-different-readings` (text half), `resolver-refuses-plural-on-a-loose-anchor` + `resolver-refuses-a-click-on-a-loose-anchor` (both refusals reaching rung 3) and `resolver-narrows-singular-noun-ending-in-s` + `resolver-refuses-plural-menus` (the plural test, pinned in both directions); `resolver-narrowing-fails-closed` (the `loose` switch has no permissive default, so a future caller cannot restore the ungated rung by omission); and verified UNCHANGED by this milestone, pinning nothing in it: `l4-shop-duplicate-labels` (PR #42 R2 — it does not pin the acting refusal), `near-equidistant-is-ambiguous`, `near-anchor-substring`, `relocation-preserves-near`
 
 ---
 
@@ -112,12 +112,21 @@ the guard is narrower than the spec, for the same reason as the first.
    the plural copula (`who are the authors`). A trailing `s` is not by itself
    what separates those two, which this section claimed for a round: `\w+s`
    read every singular noun ending in s as plural, so `show me the address`,
-   `the business`, `the status` and `the class` all stopped narrowing (R8,
-   `resolver-narrows-singular-noun-ending-in-s`). The character BEFORE the
-   final s carries the rule — no English plural has `ss`, `us` or `is` there,
-   and all four of those nouns do. It is a spelling rule and not a grammar, so
-   `the lens` and `the news` still read as plural; the cost is a refused
-   narrowing, never a wrong answer, and D28 declares it. The
+   `the business` and `the class` all stopped narrowing (R8,
+   `resolver-narrows-singular-noun-ending-in-s`). The character before the
+   final s carries what can be carried, and that is `ss` alone: an English
+   plural of a word ending in `ss` is `-sses`, so no plural has `ss`
+   immediately before its final s. `u` and `i` were excluded beside it for one
+   round and that was a worse bug than the one it fixed — `the status` and `the
+   menus` both end in `us`, `the analysis` and `the taxis` both in `is`, so a
+   whole class of real plurals stopped being recognised and was answered from
+   one match (R13, `resolver-refuses-plural-menus`). Separating those needs a
+   lexicon. **Where no rule is correct in both directions, this milestone keeps
+   the over-firing**, because the costs are not symmetric: an unrecognised
+   plural is a confident wrong answer, a refused narrowing is a loud failure.
+   So `the status`, `the genius`, `the analysis`, `the lens` and `the news` all
+   read as plural and refuse to narrow — declared as D28 (4), and pinned in
+   both directions by two cases that cannot be traded for each other. The
    CJK alternatives carry no `\b`, because the boundary never matches inside a
    CJK run and the English list was therefore structurally inert on the six ZH
    cases this repo ships — the lesson `agent.SCOPE_BLOCK` already carried
@@ -203,9 +212,12 @@ reached, and that fixture's document order coincides with its expected answer.
 ## Consequences
 
 - Ambiguity is no longer terminal in three shapes, and remains terminal in every
-  other. The `fast` suite gains 12 cases (153 -> 165) and ~1.3s — five for the
-  rungs, seven for the guards, after PR #42 round 1 found three of the original
-  five passing for reasons unrelated to the guard they claimed to pin.
+  other. The `fast` suite gains 17 cases (153 -> 170) and ~2s: three for the
+  rungs, thirteen for the guards, one for the guard's own signature. The ratio
+  is the record of three review rounds, which found guards pinned by nothing,
+  claims wider than the guard they described, and a fix that opened the unsafe
+  direction while closing the safe one. A rung is cheap; knowing it cannot
+  answer the wrong question is not.
 - One declared limitation, `docs/support-matrix.md` **D28**: the role test reads
   `getAttribute('role') || tagName`, not the computed ARIA role.
 - `resolve()` returns a 3-tuple and takes the step's `anchor`, the task string

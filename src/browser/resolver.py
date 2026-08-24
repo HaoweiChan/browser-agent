@@ -129,12 +129,20 @@ READS = {"extract"}
 # ("name the authors", and not "name the author"), and the plural copula ("who
 # are the authors"). A trailing `s` is not by itself what separates those two —
 # `\w+s` read every singular noun ending in s as plural and refused to narrow
-# for "show me the address / the business / the status / the class" (PR #42 R8,
-# case resolver-narrows-singular-noun-ending-in-s). The character BEFORE the
-# final s does more of the work: no English plural has `ss`, `us` or `is` there,
-# and those four nouns all do. It is a spelling rule and not a grammar, so
-# `the lens` and `the news` still read as plural — a refused narrowing, never a
-# wrong answer, declared in docs/support-matrix.md D28. CJK alternatives
+# for "show me the address / the business / the class" (PR #42 R8, case
+# resolver-narrows-singular-noun-ending-in-s). The character BEFORE the final s
+# carries what can be carried: an English plural of a word ending in `ss` is
+# `-sses`, so no plural has `ss` immediately before its final s, and that one
+# exclusion is correct in BOTH directions. `u` and `i` were excluded too for a
+# round and are not: `the status` and `the menus` both end in `us`, `the
+# analysis` and `the taxis` both in `is`, so excluding them stopped recognising
+# a whole class of real plurals and answered them from one match (PR #42 R13,
+# case resolver-refuses-plural-menus). Separating those needs a lexicon, and
+# where no correct rule exists this milestone keeps the OVER-firing: an
+# unrecognised plural is a confident wrong answer, a refused narrowing is a
+# loud failure, and the two costs are not symmetric. So `the status`, `the
+# genius`, `the analysis`, `the lens` and `the news` all read as plural and
+# refuse to narrow — declared in docs/support-matrix.md D28. CJK alternatives
 # carry NO `\b`: the boundary never matches inside a CJK run, so the whole
 # English list was structurally inert on the six ZH cases this repo ships —
 # the lesson agent.SCOPE_BLOCK already carries (case screening-word-boundary).
@@ -145,7 +153,7 @@ READS = {"extract"}
 # is declared in docs/support-matrix.md D28, not left to be discovered.
 _PLURAL_ASK = re.compile(
     r"\b(all|every|each|both|list|how many|which ones|names of|who are|what are)\b"
-    r"|\b(?:name|list|give|show)(?: me)? the \w*[^\Wsui]s\b"
+    r"|\b(?:name|list|give|show)(?: me)? the \w*[^\Ws]s\b"
     r"|所有|全部|列出|哪些|每一?[個个]|各[個个]",
     re.IGNORECASE)
 
@@ -169,7 +177,7 @@ class ResolveError(Exception):
         super().__init__(note)
 
 
-async def _nearest(page, loc, near: str, loose: bool = True) -> tuple[int | None, str | None]:
+async def _nearest(page, loc, near: str, *, loose: bool) -> tuple[int | None, str | None]:
     """(index of the match closest to the text `near`, how the anchor matched).
 
     The index is None if there is no anchor or no candidate, or AMBIGUOUS.
@@ -191,6 +199,13 @@ async def _nearest(page, loc, near: str, loose: bool = True) -> tuple[int | None
     whitespace runs — and then `prefix`, the head of a long anchor. Order is
     the honesty: the loosest match is only reached when every stricter one
     found nothing, and an ambiguous loose match is still refused by NEAREST_JS.
+
+    `loose` is required and keyword-only, with no default (PR #42 R18). The
+    defect R7 named was a narrowing path nobody remembered to gate, and a
+    permissive default preserves exactly that failure mode for the next caller:
+    it would silently restore the ungated rung 3. Now a call site that forgets
+    it does not run. `resolver-narrowing-fails-closed` reads this signature and
+    goes red if a default is added back.
 
     `loose=False` withholds the two M38 passes, leaving `near` exactly as M6
     shipped it. The caller sets it from the same two refusals that gate the
@@ -328,7 +343,7 @@ async def resolve(page, target: dict, many: bool = False,
         # (AMBIGUOUS) falls through to the next rung instead of raising —
         # loudness belongs to what the plan actually asked for.
         if anchor:
-            i, _ = await _nearest(page, loc, anchor)
+            i, _ = await _nearest(page, loc, anchor, loose=True)
             if i is not None and i >= 0:
                 return loc.nth(i), "structural", "anchor-proximity"
         # Rung 2. The first match in document order, and ONLY where that choice

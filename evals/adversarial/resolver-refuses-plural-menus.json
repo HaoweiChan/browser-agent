@@ -1,0 +1,21 @@
+{
+  "id": "resolver-refuses-plural-menus",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "Name the menus posted in this thread.",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "name": "user profile" }, "anchor": "Aurora Desk Lamp teardown" }
+    ]
+  },
+  "expect": { "status": "failure:locate" },
+  "provenance": "PR #42 R13 (HIGH). R8 fixed the plural test's over-firing — singular nouns ending in s — by requiring the character before the final s not to be `s`, `u` or `i`. The `u` and `i` halves bought the safe direction by opening the unsafe one: `menus`, `taxis`, `skis`, `kiwis`, `gurus`, `alibis`, `bikinis`, `bayous` are ordinary plurals, and every one of them stopped being recognised, so a plural ask that failed loudly before R8 returned one of several matches with a PASS. This case is the reviewer's repro, `resolver-refuses-plural-with-anchor` with only the noun changed. Watched red first, against the shipped `[^\\Wsui]` rule: `status success, answer 'arden'`, verdict PASS, grounded, anchored — for a question about a set. Green once the exclusion is narrowed to `ss` alone.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "the UNSAFE direction of the plural test, which R8's case could not see because it grades only the safe one. Both directions now have their own case and neither can be traded for the other: this one is red if the exclusion widens past `ss`, and `resolver-narrows-singular-noun-ending-in-s` is red if the exclusion is dropped altogether.",
+    "why_ss_only": "no suffix rule separates `the status` (singular) from `the menus` (plural) — both end in `us`, and the same holds for `is` (`the analysis` against `the taxis`). A rule correct in both directions needs a lexicon. `ss` is the one exclusion that IS correct in both: an English plural of a word ending in `ss` is `-sses`, so it never carries `ss` immediately before its final s. Where no correct rule exists the milestone takes the over-firing back, because the two costs are not symmetric — an unrecognised plural is a confident wrong answer, a refused narrowing is a loud failure (ADR-022)."
+  }
+}
