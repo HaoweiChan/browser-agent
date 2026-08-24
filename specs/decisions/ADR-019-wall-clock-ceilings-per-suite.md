@@ -135,19 +135,22 @@ commit that changed nothing but JSON.
   uncommitted, so EVERY row at this count is dirty and item 2 (cited-run)'s
   as-of reading is what admits any of them at all.)
 
-That row is not the only one at 59, and this file does not say how many there
-are. A count or a row list here falsifies itself on write: the ledger grows on
-every gate run, and the pre-commit hook of the very commit that publishes a band
-appends a row to it — which is exactly what happened to the first attempt at
-this paragraph (PR #45 R4). It is PR #34 R21's resolution, recorded two
-paragraphs down, reaching §3 a second time, and §2 refuses a hand-copied
-maximum for the same reason. What is published is the selection rule and the one
-row item 2 (cited-run) grades: §6's residue rule says republish the maximum, and
-`20260824-003025` was the maximum at 59 when this band was published — also
-green, and the run README's "Where it stands" cites. The ledger's maximum as of
-any later reading is whatever `published-band-matches-the-ledger` computes as
-`ledger_slowest`, and item 3 (same-ceiling) grades the ceiling against that, not
-against anything typed here.
+That row is not the only one at its count, and this file does not say how many
+there are. A count or a row list here falsifies itself on write: the ledger
+grows on every gate run, and the pre-commit hook of the very commit that
+publishes a band appends a row to it — which is exactly what happened to the
+first attempt at this paragraph (PR #45 R4). It is PR #34 R21's resolution,
+recorded two paragraphs down, reaching §3 a second time, and §2 refuses a
+hand-copied maximum for the same reason. What is published is the selection
+rule and the one row item 2 (cited-run) grades: §6's residue rule says
+republish the maximum, and the row in the bullet above was the maximum at its
+count when this band was published. That bullet is the only place a live band's
+ts and case count are written down — the derivation sentence below repeats its
+wall because item 5 (derivation) grades that arithmetic, and nothing else here
+restates any of the three. The ledger's maximum as of any later reading is
+whatever `published-band-matches-the-ledger` computes as `ledger_slowest`, and
+item 3 (same-ceiling) grades the ceiling against that, not against anything
+typed here.
 
 An earlier revision of this bullet published `002424`/14.08s and asserted 59 held
 a single row. Both halves were false against the ledger committed in the same
@@ -179,9 +182,10 @@ ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
 
-Both bands above are republished at the case count this branch ships after four
-`origin/main` merges and this round's own case: `fast` 136 → 152, `invariant`
-53 → 58. Neither is the enumeration this file used to carry. PR #34 R21 found
+Both bands above are republished at whatever case count this branch ships, which
+has moved on every `origin/main` merge and moves again on the next one — so the
+counts are in the graded bullets and are not narrated here (PR #45 R4).
+Neither bullet is the enumeration this file used to carry. PR #34 R21 found
 that enumeration publishing three runs where the ledger held six and calling the
 smallest of them the maximum — the same defect PR #35 had already fixed here by
 deleting the list and citing one graded row instead, which is the resolution
