@@ -94,7 +94,7 @@ AMBIGUOUS = -2
 # resolver-refuses-mixed-roles).
 #
 # ponytail: `getAttribute('role') || tagName` is not the computed ARIA role —
-# a scope-less <th> and a <td> read alike here (support-matrix D28). Upgrade
+# a scope-less <th> and a <td> read alike here (support-matrix D29). Upgrade
 # path is a computed-role probe per candidate; no case asks for one yet.
 INTERCHANGEABLE_JS = """cands => {
   const role = el => el.getAttribute('role') || el.tagName;
@@ -142,7 +142,7 @@ READS = {"extract"}
 # unrecognised plural is a confident wrong answer, a refused narrowing is a
 # loud failure, and the two costs are not symmetric. So `the status`, `the
 # genius`, `the analysis`, `the lens` and `the news` all read as plural and
-# refuse to narrow — declared in docs/support-matrix.md D28. CJK alternatives
+# refuse to narrow — declared in docs/support-matrix.md D29. CJK alternatives
 # carry NO `\b`: the boundary never matches inside a CJK run, so the whole
 # English list was structurally inert on the six ZH cases this repo ships —
 # the lesson agent.SCOPE_BLOCK already carries (case screening-word-boundary).
@@ -150,7 +150,7 @@ READS = {"extract"}
 # ponytail: still a regex over natural language, the same ceiling as
 # agent.SCOPE_BLOCK and verifier._AGGREGATE — widened on phrasings a probe
 # actually found, never on synonyms nobody has seen (D21). What it still misses
-# is declared in docs/support-matrix.md D28, not left to be discovered.
+# is declared in docs/support-matrix.md D29, not left to be discovered.
 _PLURAL_ASK = re.compile(
     r"\b(all|every|each|both|list|how many|which ones|names of|who are|what are)\b"
     r"|\b(?:name|list|give|show)(?: me)? the \w*[^\Ws]s\b"

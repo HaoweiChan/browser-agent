@@ -16,6 +16,6 @@
   "triage": {
     "class": "silent-failure",
     "what_this_grades": "that `resolve` refuses to pick when the matches differ in role, however identical their text. Also that nothing downstream rescues it: neither element is nameable (observe() blanks names on `strong`/`emphasis`, case observe-name-prohibited-roles) so the role+name relocation rung finds nothing, and the text tier is already spent — the run ends `failure:locate`, which is the correct outcome and the one this case exists to keep.",
-    "ceiling": "the role test reads `getAttribute('role') || tagName`, not the computed ARIA role — two elements with the same tag and different computed roles (a scope-less <th>, an <a> with no href) read as interchangeable here. Declared in docs/support-matrix.md D28; the upgrade is a computed-role probe per candidate, which costs an evaluate per match and has no case asking for it yet."
+    "ceiling": "the role test reads `getAttribute('role') || tagName`, not the computed ARIA role — two elements with the same tag and different computed roles (a scope-less <th>, an <a> with no href) read as interchangeable here. Declared in docs/support-matrix.md D29; the upgrade is a computed-role probe per candidate, which costs an evaluate per match and has no case asking for it yet."
   }
 }

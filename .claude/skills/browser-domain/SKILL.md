@@ -58,7 +58,7 @@ Known holes, both declared in the support matrix: `near` degenerates inside
 shadow DOM (`querySelectorAll('*')` doesn't pierce open shadow roots, so
 `indexOf` is -1 and everything ties), and no fixture has one.
 
-**Narrowing (M38, ADR-022) is where an ambiguity goes before it fails.** Same
+**Narrowing (M38, ADR-023) is where an ambiguity goes before it fails.** Same
 warning as `near:` — three rungs, each bought with a deployment run, and the
 guards are the whole thing. They run AFTER the tier loop, never inside it: a
 clean single match at the text tier outranks a narrowed one at the role tier.
@@ -90,7 +90,7 @@ clean single match at the text tier outranks a narrowed one at the role tier.
   the guard they named — a degenerate anchor, a second conjunct masking the
   first, a fixture whose document order matched the right answer.
   `_PLURAL_ASK` is three English shapes plus boundary-free CJK markers (`\b`
-  never matches inside a CJK run), one case per phrasing; D28 carries the rest
+  never matches inside a CJK run), one case per phrasing; D29 carries the rest
   of the ceiling.
 - **Rung 3, `near-normalised` / `near-prefix`.** Two more anchor passes after
   exact and substring: typographic quote/dash variants with whitespace runs

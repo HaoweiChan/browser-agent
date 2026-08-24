@@ -1,4 +1,4 @@
-# ADR-022: an ambiguous target is narrowed by the page, not failed — under four conjuncts and in the trace
+# ADR-023: an ambiguous target is narrowed by the page, not failed — under four conjuncts and in the trace
 
 Date: 2026-08-23
 Status: accepted
@@ -125,13 +125,13 @@ the guard is narrower than the spec, for the same reason as the first.
    the over-firing**, because the costs are not symmetric: an unrecognised
    plural is a confident wrong answer, a refused narrowing is a loud failure.
    So `the status`, `the genius`, `the analysis`, `the lens` and `the news` all
-   read as plural and refuse to narrow — declared as D28 (4), and pinned in
+   read as plural and refuse to narrow — declared as D29 (4), and pinned in
    both directions by two cases that cannot be traded for each other. The
    CJK alternatives carry no `\b`, because the boundary never matches inside a
    CJK run and the English list was therefore structurally inert on the six ZH
    cases this repo ships — the lesson `agent.SCOPE_BLOCK` already carried
    (`screening-word-boundary`). One case per phrasing, each watched red against
-   the committed regex. It is still a regex over natural language and D28
+   the committed regex. It is still a regex over natural language and D29
    carries what it misses.
 3. **`near-normalised` / `near-prefix`.** `_nearest` gains two passes after
    exact and substring: a regex that accepts typographic variants of
@@ -218,7 +218,7 @@ reached, and that fixture's document order coincides with its expected answer.
   claims wider than the guard they described, and a fix that opened the unsafe
   direction while closing the safe one. A rung is cheap; knowing it cannot
   answer the wrong question is not.
-- One declared limitation, `docs/support-matrix.md` **D28**: the role test reads
+- One declared limitation, `docs/support-matrix.md` **D29**: the role test reads
   `getAttribute('role') || tagName`, not the computed ARIA role.
 - `resolve()` returns a 3-tuple and takes the step's `anchor`, the task string
   and the action. The policy lives in the resolver rather than in `agent.py` so
@@ -226,6 +226,6 @@ reached, and that fixture's document order coincides with its expected answer.
 - The known risk, accepted: an identity anchor that sits confidently nearer the
   WRONG candidate produces a confident wrong answer where the old code produced
   a loud failure. No case in the suite has that shape and none is invented here
-  — the honest form of that claim is D28's, and the trace names the rung on
+  — the honest form of that claim is D29's, and the trace names the rung on
   every run it fires, so the evidence for a wrong answer of this kind is in the
   artifact rather than in a reader's inference.

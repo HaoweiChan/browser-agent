@@ -124,7 +124,7 @@ appears, in order — no post-hoc reconstruction).
   the tier that found it in every case but two: a target carrying `near` is
   recorded as `structural` however its candidates were gathered, because
   proximity is what identified the element — and so is one narrowed by its
-  identity anchor, which is proximity by another name (M38, `ADR-022`; which
+  identity anchor, which is proximity by another name (M38, `ADR-023`; which
   rung fired is named in the step's `note`). The self-maintenance metric reads
   this field.
   `role`, `text` and `structural` are reachable; `attrs` is named
@@ -201,7 +201,7 @@ appears, in order — no post-hoc reconstruction).
   excluded outright.
 
   The anchor is matched through **four passes**, strictest first (M38,
-  `ADR-022`): exact, substring, then a normalised pass that accepts typographic
+  `ADR-023`): exact, substring, then a normalised pass that accepts typographic
   variants of quote/apostrophe/dash characters and collapses whitespace runs,
   then the same over the anchor's first 40 characters. The last two exist
   because `get_by_text` is a literal match and a model quoting a page back gets
@@ -210,7 +210,7 @@ appears, in order — no post-hoc reconstruction).
   `resolver-near-normalises-typography`). Order is the honesty: the loosest
   match is only reached when every stricter one found nothing, and a loose
   match that names two places is refused exactly like a literal one.
-- **Narrowing** (M38, `ADR-022`). N>1 matches at every tier is not always a
+- **Narrowing** (M38, `ADR-023`). N>1 matches at every tier is not always a
   question the plan failed to answer; often the page answers it. After every
   tier has had its chance at a *unique* match — a clean single match at a later
   tier still outranks any narrowing at an earlier one — two rungs are tried,
@@ -323,7 +323,7 @@ appears, in order — no post-hoc reconstruction).
   logs as neither: it is not a second attempt at anything, so it carries a note
   and no label at all — this sentence used to promise it would log as `retry`,
   and the drill-down falsified that in the same file that shipped it. M38's
-  narrowing rungs (`ADR-022`) log as neither for the same reason and one more:
+  narrowing rungs (`ADR-023`) log as neither for the same reason and one more:
   they are not a second attempt at all, but part of the FIRST resolution of the
   step, so there is no earlier attempt for them to supersede. What they carry
   instead is a `note` naming the rung.

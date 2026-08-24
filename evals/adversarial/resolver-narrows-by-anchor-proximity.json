@@ -21,6 +21,6 @@
   "triage": {
     "class": "capability-gap",
     "what_this_grades": "that the identity anchor is used as a PROXIMITY tiebreaker when a tier is ambiguous and the plan gave no `near`. The two candidates carry the same accessible name and DIFFERENT readings ('arden' vs 'bellweather'), so the case fails if the resolver picks by document order instead — this is the shape where the cheap rung is a wrong answer, and it is why rung 2 (document order) refuses matches that do not read identically.",
-    "not_covered": "whether the anchor is a GOOD proximity signal in general. It is opportunistic: an anchor that identifies no single place on the page, or that is nearer some other candidate, resolves nothing here and the run falls through to the next rung or fails loudly — but an anchor that is confidently near the WRONG candidate produces a confident wrong answer, which is the accepted risk recorded in ADR-022."
+    "not_covered": "whether the anchor is a GOOD proximity signal in general. It is opportunistic: an anchor that identifies no single place on the page, or that is nearer some other candidate, resolves nothing here and the run falls through to the next rung or fails loudly — but an anchor that is confidently near the WRONG candidate produces a confident wrong answer, which is the accepted risk recorded in ADR-023."
   }
 }

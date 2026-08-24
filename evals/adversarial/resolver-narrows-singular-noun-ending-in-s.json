@@ -31,6 +31,6 @@
   "triage": {
     "class": "capability-gap",
     "what_this_grades": "the OVER-firing direction of the plural test, which had no case at all — every other plural case grades under-firing. Red when the exclusion is removed, green with it, and the plural family stays green either way, so the two directions are pinned independently.",
-    "ceiling": "still a spelling rule, not a grammar, and now deliberately biased: every singular noun ending in any letter but `s` plus s — `the status`, `the genius`, `the analysis`, `the lens`, `the news` — reads as plural and refuses to narrow. That direction costs a loud `locate` failure; the opposite direction costs a confident wrong answer (R13), so the asymmetry is chosen rather than split. Declared as D28 (4)."
+    "ceiling": "still a spelling rule, not a grammar, and now deliberately biased: every singular noun ending in any letter but `s` plus s — `the status`, `the genius`, `the analysis`, `the lens`, `the news` — reads as plural and refuses to narrow. That direction costs a loud `locate` failure; the opposite direction costs a confident wrong answer (R13), so the asymmetry is chosen rather than split. Declared as D29 (4)."
   }
 }

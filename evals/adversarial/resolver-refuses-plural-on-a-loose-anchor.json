@@ -18,6 +18,6 @@
   "triage": {
     "class": "silent-failure",
     "what_this_grades": "that the shared refusals reach every rung M38 added, not just the two below the `near` branch. The anchor here matches nothing literally — straight quotes against the fixture's typographic ones, and a sentence longer than the page renders — so ONLY the loosened passes can resolve it, which is what makes this case red when and only when they are ungated.",
-    "not_covered": "a plural ask whose `near` anchor matches EXACTLY. That resolves as it did at M6, and answering one element from an explicit proximity request is a plan defect (the plan said `near`, which means 'one of these'), not a narrowing this milestone invented. Declared in docs/support-matrix.md D28."
+    "not_covered": "a plural ask whose `near` anchor matches EXACTLY. That resolves as it did at M6, and answering one element from an explicit proximity request is a plan defect (the plan said `near`, which means 'one of these'), not a narrowing this milestone invented. Declared in docs/support-matrix.md D29."
   }
 }
