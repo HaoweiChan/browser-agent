@@ -296,9 +296,16 @@ def plan_gap(task: str, steps: list) -> str | None:
     the ceiling of a regex over English — same as SCOPE_BLOCK's.
     """
     for step in steps or []:
-        if not str(step.get("action") or "").startswith("extract"):
+        # `isinstance` twice, because a lint is not the thing that raises: this
+        # clause runs for EVERY task shape, where the aggregate rule below used
+        # to return None immediately on a plain task, and `parse_plan` validates
+        # only that the top level is a list — a string target reaches here
+        # (PR #46 R1-4). A malformed plan is "no gap"; the loud rejection is the
+        # executor's, and unchanged.
+        if not isinstance(step, dict) or not str(step.get("action") or "").startswith("extract"):
             continue  # `observe` names a container ON PURPOSE — see DOC_ROOT_ROLES
-        role = str((step.get("target") or {}).get("role") or "")
+        target = step.get("target")
+        role = str(target.get("role") or "") if isinstance(target, dict) else ""
         if role.strip().lower() in DOC_ROOT_ROLES:
             return (f"the plan reads {step['action']!r} off {role!r}, the accessibility root of "
                     "the document — the node `observe` lists first on every page, whose accessible "

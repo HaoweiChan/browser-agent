@@ -2,31 +2,31 @@
   "suite": "invariant",
   "score": 1.0,
   "totals": {
-    "actions": 27,
+    "actions": 29,
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 5804,
+    "ms": 5967,
     "judge_calls": 4,
     "judge_tokens": 0,
     "judge_usd": 0.0,
-    "wall_seconds": 13.67,
+    "wall_seconds": 14.41,
     "latency_p50": 0.01,
-    "latency_p95": 2.23,
-    "cases_with_budgets": 13
+    "latency_p95": 2.28,
+    "cases_with_budgets": 14
   },
   "metrics": {
     "verdict_evaluated": 4,
     "judge_invoked": 4,
     "judge_certified": 4,
-    "diagnosis_cases": 9,
-    "diagnosis_correct": 9
+    "diagnosis_cases": 10,
+    "diagnosis_correct": 10
   },
   "results": [
     {
       "passed": true,
       "wrong": [],
-      "seconds": 2.23,
+      "seconds": 2.64,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
@@ -43,10 +43,10 @@
       "got": {
         "adr_files": 23,
         "index_entries": 23,
-        "adr_citations_seen": 710,
-        "files_scanned": 239
+        "adr_citations_seen": 714,
+        "files_scanned": 240
       },
-      "seconds": 0.04,
+      "seconds": 0.06,
       "id": "adr-header-and-index",
       "kind": "adversarial"
     },
@@ -113,7 +113,7 @@
           "value"
         ]
       },
-      "seconds": 0.35,
+      "seconds": 0.36,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -131,11 +131,11 @@
       },
       "got": {
         "counts": {
-          "fast": 154,
-          "invariant": 59,
+          "fast": 155,
+          "invariant": 60,
           "live": 9,
           "full": 10,
-          "all": 165
+          "all": 166
         },
         "domains": {
           "books.toscrape.com": 3,
@@ -144,7 +144,7 @@
           "quotes.toscrape.com": 3
         }
       },
-      "seconds": 0.08,
+      "seconds": 0.09,
       "id": "docs-numbers-are-derived",
       "kind": "adversarial"
     },
@@ -198,7 +198,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 125,
+        "ms": 126,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -249,12 +249,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 131,
+        "ms": 113,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.13,
+      "seconds": 0.12,
       "id": "extract-all-declared-intent-beats-wording",
       "kind": "adversarial"
     },
@@ -301,7 +301,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 215,
+        "ms": 218,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -358,12 +358,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 214,
+        "ms": 246,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.22,
+      "seconds": 0.25,
       "id": "extract-all-list-task-keeps-every-row",
       "kind": "adversarial"
     },
@@ -506,10 +506,10 @@
       "got": {
         "reports_when_asked": [],
         "written": [
-          "20260824-004829-fast.json"
+          "20260824-084332-fast.json"
         ]
       },
-      "seconds": 0.01,
+      "seconds": 0.02,
       "id": "history-dirty-precedes-the-report",
       "kind": "adversarial"
     },
@@ -651,12 +651,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 171,
+        "ms": 181,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.18,
+      "seconds": 0.19,
       "id": "observe-drilldown-replan-is-linted",
       "kind": "adversarial"
     },
@@ -779,13 +779,66 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 54,
+        "ms": 59,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.06,
+      "seconds": 0.07,
       "id": "plan-lint-refuses-a-declared-non-comparison",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "recovery": true,
+        "replans": true,
+        "trace_actions": true,
+        "answer_null": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "failure:task",
+        "answer": null,
+        "reason": "the plan after the drill-down at step 2 was rejected by the plan lint: the plan reads 'extract' off 'WebArea', the accessibility root of the document \u2014 the node `observe` lists first on every page, whose accessible name is the page title and whose text is the ENTIRE page. It cannot be the answer to anything, and it carries no other string to retarget by, so the page title is all a relocation could ask for next. Name the element that holds the value; if you can see a container but not its contents, `observe` that container first"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 116,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 0.12,
+      "id": "plan-lint-refuses-a-document-root-extract-midrun",
       "kind": "adversarial"
     },
     {
@@ -831,12 +884,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 51,
+        "ms": 61,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.06,
+      "seconds": 0.07,
       "id": "plan-lint-refuses-a-document-root-extract",
       "kind": "adversarial"
     },
@@ -867,8 +920,8 @@
       "got": {
         "declared_slack_s": 4.35,
         "headroom_s": {
-          "fast": 2.4,
-          "invariant": 3.06
+          "fast": 3.06,
+          "invariant": 3.52
         }
       },
       "seconds": 0.0,
@@ -892,9 +945,9 @@
           "idle"
         ],
         "during_latency_s": 0.001,
-        "run_seconds": 2.5
+        "run_seconds": 2.51
       },
-      "seconds": 2.5,
+      "seconds": 2.51,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -946,12 +999,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2200,
+        "ms": 2197,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.21,
+      "seconds": 2.2,
       "id": "replan-cannot-launder-noop-action-extract-all",
       "kind": "adversarial"
     },
@@ -959,12 +1012,12 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "citations": 46,
+        "citations": 47,
         "skip": [
           "29991231-235959-fast.json"
         ]
       },
-      "seconds": 0.02,
+      "seconds": 0.03,
       "id": "report-citations-resolve",
       "kind": "adversarial"
     },
@@ -986,7 +1039,7 @@
         "status": "failure:env",
         "steps": 2
       },
-      "seconds": 2.2,
+      "seconds": 2.28,
       "id": "supersede-never-dangles",
       "kind": "adversarial"
     },
@@ -1053,14 +1106,14 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:62730/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:60973/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 148,
+        "ms": 147,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1123,12 +1176,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 55,
+        "ms": 63,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.06,
+      "seconds": 0.07,
       "id": "verifier-aggregate-superlative-fails-loud",
       "kind": "adversarial"
     },
@@ -1166,10 +1219,10 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 1241,
-        "after": 1241
+        "before": 1250,
+        "after": 1250
       },
-      "seconds": 0.05,
+      "seconds": 0.06,
       "id": "wall-clock-probe-history-isolated",
       "kind": "adversarial"
     }

@@ -5,7 +5,7 @@ Status: accepted
 
 **Ruling**: a plan whose `extract`/`extract_all` names the accessibility document root (`WebArea` or `RootWebArea`, stripped and case-folded — NOT ARIA `document`, see §1) is refused by the plan lint for every task shape — above `plan_gap`'s `is_aggregate` early return, because the shape it catches is an ordinary single-answer question — and replanned once through the existing replan budget. Only the extraction verbs: `observe` on a container is M32's feature, not this defect. Only the ROOT: every other container — a landmark, or an author's `role="document"` — stays with `verify`'s calibrated `not_a_dump` ratio (ADR-008), which judges it with the page in hand. `relocation_candidates` will not PROPOSE a root either: one set, defined once, in `resolver.py`.
 **Because**: `observe` walks Chromium's snapshot from its root, and that root is in neither `SKIP_ROLES` nor `NAME_PROHIBITED` — so element #1 of every observation the planner sees is `WebArea — <the page title>`, the most answer-shaped string in the list attached to the one node whose text is the entire document. The M40 re-probe measured four of five live tasks planning exactly that; the resolver finds no match, and the single relocation rung left (role+name is the tier that just failed) is `{text: <the page title>}`, which either finds nothing or finds the title and answers with it.
-**Enforced by**: `plan-lint-refuses-a-document-root-extract`, `plan-gap-truth-table`, `relocation-distinct-tier` (row 5)
+**Enforced by**: `plan-lint-refuses-a-document-root-extract` (pre-execution), `plan-lint-refuses-a-document-root-extract-midrun` (the `adopt()` branch), `plan-gap-truth-table`, `relocation-distinct-tier` (row 5)
 
 ---
 
@@ -131,10 +131,19 @@ subject, not this one's.
 - A root target no longer reaches `resolve` from either direction: a plan
   naming one is refused by the lint, and the relocation ladder will not invent
   one. What a refusal costs depends on where the plan was adopted, and the two
-  are not the same: refused BEFORE execution it is one replan with a note naming
-  the offending role (`agent.py`'s pre-execution branch); refused at a mid-run
-  adoption point it ends the run, because there is nothing left to re-plan with
-  — which is why the shipped case asserts `replans: 0`.
+  are not the same. Refused BEFORE execution, the gap note goes to the planner
+  and the replan is spent trying to close it; both branches have a case, and
+  neither one's `replans: 0` means what the other's does.
+  `plan-lint-refuses-a-document-root-extract` takes the pre-execution branch and
+  reads 0 because the stub returns the same plan and the no-progress rule
+  (`new_steps == steps`) ends the run — a planner that closed the gap would
+  spend a replan there and be right to.
+  `plan-lint-refuses-a-document-root-extract-midrun` takes the other: the
+  drill-down's replan comes back with the root target, `adopt()` refuses it, and
+  the run ends without a replan because the drill-down WAS the replan — there is
+  nothing left to re-plan with. That second case exists because this paragraph
+  once claimed the mid-run rule while no case reached `adopt()` with a root
+  target at all (PR #46 R1).
 - The observation itself is unchanged: the planner is still *shown*
   `WebArea — <the page title>` as element #1 of every page. Removing it from
   `observe` is the other half of the root cause and is deliberately not done

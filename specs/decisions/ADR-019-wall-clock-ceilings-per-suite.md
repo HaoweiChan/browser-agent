@@ -63,13 +63,13 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 154 cases, ts `20260824-002450`, **71.51s**, 152/154
+- Band source — `fast` at 155 cases, ts `20260824-083831`, **70.85s**, 153/155
   (`dirty: true`, ts-only for the ADR-012 reason §3 gives. Dirty by construction —
   T-M40-2's own case is what takes the suite to 154, so it is uncommitted while
   every run at 154 is taken, and item 2 (cited-run) allows that exactly here: no
   clean row at this count exists to prefer. Of the rows recorded at this count
   when the band was republished, this is the slowest, on §3's least-slack rule.
-  The 152/154 is the row's own result: it measured the wall clock while the two
+  The 153/155 is the row's own result: it measured the wall clock while the two
   doc-bookkeeping cases were still red on the very numbers this republication
   supplies.)
 
@@ -93,11 +93,13 @@ The `152/154` and `59/59` above are the cited rows' own results, graded against
 them, not prose beside them (T-R55). They are stated because a band source is
 taken as it is found — item 2 (cited-run) requires a run that happened, and green
 is required nowhere in §6 — so a reader comparing two bands should not have to
-read silence as a pass. Both rows are runs of this tree taken while the two
-doc-bookkeeping cases (`docs-numbers-are-derived`,
-`published-band-matches-the-ledger`) were red on precisely the numbers this
-republication supplies; no third case failed in either, and `invariant`'s cited
-row is a fully green one.
+read silence as a pass. Both rows carry the same two failures and no others:
+`docs-numbers-are-derived` and `published-band-matches-the-ledger`, tagged into
+both suites, still red on precisely the numbers this republication supplies —
+153/155 and 58/60. Whether a cited row is green depends on when in the
+republication cycle it was taken, so the result is stated per row rather than
+described once for both (PR #46 R1-3, against a sentence that called a 59/59 row
+red).
 
 Every run of this tree is in `evals/report/history.jsonl`, committed beside
 this file; the sentence above names the one the band is derived from by its
@@ -115,7 +117,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 71.51 × 1.15 = 82.24 → **85**, which is BELOW the committed 90 and
+five — gives 70.85 × 1.15 = 81.48 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
@@ -135,7 +137,7 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 59 cases, ts `20260824-003032`, **14.33s**, 59/59
+- Band source — `invariant` at 60 cases, ts `20260824-083720`, **13.87s**, 58/60
   (`dirty: true`, ts-only for the same ADR-012 reason as §2, and dirty for the
   same construction reason §2 gives — the case that takes the suite to 59 is the
   one being committed. The slowest row recorded at this count when the band was
@@ -159,7 +161,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 14.33 × 1.15 = 16.48 → **20**, which is the committed
+The same rule gives 13.87 × 1.15 = 15.95 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
@@ -167,7 +169,8 @@ reader reads them (PR #35 R13).
 Both bands above are republished at the case count this branch ships. M32
 republished them after four `origin/main` merges and its own case (`fast`
 136 → 152, `invariant` 53 → 58); T-M40-2 republishes them again for one case,
-`fast` 153 → 154 and `invariant` 58 → 59. Neither is the enumeration this file used to carry. PR #34 R21 found
+`fast` 153 → 154 and `invariant` 58 → 59, and PR #46's review round adds one
+more case on the same branch: `fast` 154 → 155, `invariant` 59 → 60. Neither is the enumeration this file used to carry. PR #34 R21 found
 that enumeration publishing three runs where the ledger held six and calling the
 smallest of them the maximum — the same defect PR #35 had already fixed here by
 deleting the list and citing one graded row instead, which is the resolution

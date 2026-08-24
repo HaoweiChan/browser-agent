@@ -310,7 +310,10 @@ def _check_plan_gap() -> dict:
     # ones the end-to-end case cannot reach, and the first of them is the whole
     # placement question — `PLAIN` is not aggregate-shaped, so a clause written
     # below `if not is_aggregate(task)` is dead here, and every task in the
-    # M40 re-probe is this shape.
+    # M40 re-probe is this shape. The comparison is stripped and case-folded
+    # over the two ROOT spellings only; ARIA `document` is not one of them, and
+    # the rows below say so (PR #46 R1-2 — this comment claimed the opposite for
+    # a round, having outlived the first version of the set).
     ROOT = {"role": "WebArea", "name": "Some Page — A Site"}
     rows = [
         (AGG, [], True), (AGG, plain, True), (AGG, one, False),
@@ -324,8 +327,8 @@ def _check_plan_gap() -> dict:
         # T-M40-2: extracting the document root is refused whatever the task
         # shape, and refused for `extract_all` too — enumerating a root is one
         # dump, not a set. Spelling is the model's, not Chromium's, so the
-        # comparison is case-folded and covers the `RootWebArea` spelling other
-        # builds emit and the ARIA `document` role for an embedded one.
+        # comparison is stripped and case-folded, and it covers the `RootWebArea`
+        # spelling other builds emit.
         (PLAIN, [{"action": "extract", "target": ROOT}], True),
         (PLAIN, [{"action": "extract", "target": {"role": "webarea"}}], True),
         (PLAIN, [{"action": "extract", "target": {"role": "RootWebArea"}}], True),
@@ -354,6 +357,17 @@ def _check_plan_gap() -> dict:
         # A target with no role at all must not fault the clause.
         (PLAIN, [{"action": "extract", "target": {"text": "Some Page — A Site"}}], False),
         (PLAIN, [{"action": "extract"}], False),
+        # ...and neither must a MALFORMED plan (PR #46 R1-4). `parse_plan`
+        # validates that the top level is a list and nothing below it, so a
+        # string target and a step that is not a dict both reach this function —
+        # and this clause is the first thing in it that runs for EVERY task
+        # shape, where the aggregate rule used to return None immediately on a
+        # plain task. A lint may not be the thing that raises: it says "no gap"
+        # and leaves the malformed plan to the executor, which is where the loud
+        # rejection lives (TARGET_KEYS, `unknown action`).
+        (PLAIN, [{"action": "extract", "target": "WebArea"}], False),
+        (PLAIN, ["extract WebArea"], False),
+        (PLAIN, [None], False),
     ]
     wrong = [{"task": t, "plan": [s.get("action") for s in p], "expected_gap": want,
               "got": plan_gap(t, p)}
