@@ -258,6 +258,71 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M39-1 — the judge's unreadable-completion retry may not reach a MISSING body, only a malformed one            [status: todo]
+Origin: T-M40-5 probe, 2026-08-24, `run_id 97677d75`, build `8183dc2`
+(`docs/analysis.md` §8a-4, new failure shape 2).
+Spec: this is not a new defect — it is a second live instance of the class PR #44 (M39,
+not yet merged — its decision file is numbered 023 but that number does not resolve on this
+branch, per ADR-025's own collision check) is fixing, and a distinct sub-shape from the one
+M39 was built against. M39's retry is scoped to exactly one branch: `live_judge`'s `json.loads`
+of the completion
+body raising `JSONDecodeError` (`src/browser/judge.py`), because run `7787f9c9` (the case that
+motivated M39) recorded `JSONDecodeError: Expecting value: line 1 column 1 (char 0)` — a body
+that parsed as empty string, i.e. a MALFORMED (present-but-unparseable) body. `run_id 97677d75`
+recorded a different exception entirely: `JudgeError: malformed judge response: AttributeError:
+'NoneType' object has no attribute 'strip'` — a `.strip()` (or similar) call on a body that is
+`None`, i.e. a MISSING body, one level up from where `json.loads` ever runs. The extraction this
+run tried to grade was correct (`"Market cap: $4.514 Trillion USD"`, matching the `curl`-re-verified
+ground truth) and ADR-017's fail-closed rule held — the run correctly did not certify a verdict it
+never received — but if M39's retry guard (`retryable=True` set only at the `JSONDecodeError` site)
+does not also fire on a `None`/absent body, this exact shape survives PR #44 unfixed: one more
+malformed-completion class costing a correct run, exactly the harm M39 exists to prevent, just
+arriving one processing step earlier.
+Acceptance: read PR #44's merged `src/browser/judge.py` once it lands — if the missing-body path
+already sets `retryable=True` (e.g. a `None`-body guard ahead of or alongside the `json.loads` try)
+this block closes as already covered, cited by line. If it does not, an adversarial case pinning a
+`None`/absent judge completion body (not an empty-string/malformed JSON body — M39's own cases
+already cover that one) is added and watched red against M39's shipped fix before either the guard
+is widened or this is declared a deliberately separate, un-widened scope.
+
+### T-M40-5-1 — the replan-path identity-anchor kill T-M40-2-4 predicted is now confirmed live            [status: todo]
+Origin: T-M40-5 probe, 2026-08-24, `run_id`s `110e9e8f` and `48b60ee3`, build `8183dc2`
+(`docs/analysis.md` §8a-4, new failure shape 1).
+Spec: not a new defect — `T-M40-2-4` already names this exact shape from a fixture repro
+(`hello.html`) and this block exists only to attach live evidence, not to duplicate the spec.
+On x-rates.com, ADR-024's plan lint fires correctly (the plan that would `extract` off `WebArea`
+is refused before execution), then the REPLAN dies on `StepError: identity anchor 'EUR to USD'
+absent from the page the answer was read from` — even though the correct value (`1.168062 USD` /
+`1.168190 USD` across the two runs) was present in the very extraction evidence the step recorded.
+2 of 3 x-rates.com reps hit this in the T-M40-5 probe; the third (`591cf2dc`) resolved correctly.
+This confirms T-M40-2-4's fixture-predicted shape reproduces against a real deployed build and a
+real planner, not just the constructed `hello.html` repro.
+Acceptance: closed together with T-M40-2-4, not separately — see that block's own Acceptance
+(an adversarial case pinning the repro, watched red, closed by whichever lever T-M40-5's probe
+justifies). This block's own acceptance is narrower: T-M40-2-4 is updated to cite `110e9e8f` and
+`48b60ee3` as the live confirmation once that block is next touched, and this block is then closed
+as folded in.
+
+### T-M40-5-2 — extraction lands on the label instead of the value, adjacent to it, on a single-match resolve            [status: todo]
+Origin: T-M40-5 probe, 2026-08-24, `run_id`s `c20b1fda`, `37fe5cec`, `2f12cf5e`, build `8183dc2`
+(`docs/analysis.md` §8a-4, new failure shape 3).
+Spec: on quotes.toscrape.com's author page, three separate probe reps all resolved a SINGLE
+element (`{role: strong, near: "Born:"}` or equivalent) and extracted the text of an adjacent
+label rather than the value beside it — `"Description:"` twice, a bare `"Born:"` once — while
+the correct answer (`"March 14, 1879 in Ulm, Germany"`) sat in the same evidence window,
+untaken. The judge correctly rejected all three. **This is explicitly NOT M38's territory**:
+M38 (`a target with several matches is narrowed by the page, not failed`) is about a target that
+resolves to N>1 elements needing narrowing; every one of these three runs resolved to exactly one
+element and extracted the wrong text from it — a single-match extraction defect, not an
+ambiguity-resolution one. It is also a DIFFERENT shape from D28's own prior record on this same
+page: `run_id 6811f8bf` extracted the site title `"Quotes to Scrape"` (a page-furniture shape);
+these three extract an in-context label instead (a label-without-value shape). The failure surface
+on this one page has now moved between probe rounds — worth naming as a pattern (unstable failure
+mode on a stable page), not just three isolated misses.
+Acceptance: an adversarial case reproducing "resolve succeeds on one element, extracted text is a
+label with no adjacent value" on this or an equivalent fixture, watched red first per CLAUDE.md
+rule 2, before any fix to the extraction/anchor-selection path is attempted.
+
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
 Origin: PR #42, R2/R3's acceptance and the coordinator's round-1 disposition.
 Re-checked against `origin/main` after T-R44 merged (2026-08-24): **both halves
@@ -334,6 +399,7 @@ debt, not a correctness one. Same family as T-M32-1 (no UI phase for `observe`).
 Acceptance: `resolved.narrowed` carried through the contract, the schema case
 and the UI badge in one change; the note string stays or goes with the badge,
 not before it.
+
 ### T-M32-16 — a live ceiling published in any shape other than a gate command is still ungraded            [status: todo]
 Origin: T-M32-9; enumeration corrected at PR #40 R3.
 Spec: the sweep T-M32-9 added (`docs-numbers-are-derived`,
@@ -602,10 +668,21 @@ Evidence: `src/browser/eval_adapter.py:385` — `wrong = [{"task": t, "plan": [s
 Repro: flip `(AGG, [None], True)` to `False` -> `[FAIL] plan-gap-truth-table (adversarial, 0.0s) AttributeError: 'NoneType' object has no attribute 'get'`, suite 59/60 with INVARIANT VIOLATION.
 Acceptance: the report builder tolerates a non-dict step (e.g. `s.get("action") if isinstance(s, dict) else s`) so a red row names its plan.
 
-### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: todo]
+### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: probe run, half done — see Update]
 Depends: T-M40-2
 Origin: PR #43 (M40) T-M40-2, split at pr-loop SPEC 2026-08-24 — the half of T-M40-2's
 acceptance that cannot be gated inside T-M40-2's own PR.
+Update (ADR-025, PR #51, 2026-08-24): the probe half of this task is done. Pre-registered in
+`specs/decisions/ADR-025-t-m40-5-preregistered-probe.md` (pushed as `82af7bf`, before any run),
+then run 18 times against deployed `main@8183dc2` (`deploy-smoke` `32683725839`). Verdict:
+(a) zero wrong-success PASS 0/18; (b) regressed set ≥50% FAIL — 2/12 = 16.7% vs. prior 0/7,
+**the fix is insufficient**; (c) controls PASS; (d) 0 refusals. Full write-up
+`docs/analysis.md` §8a-4; D28 re-declared in `docs/support-matrix.md` (same commit); raw
+evidence `evals/report/20260824-030201-t-m40-5-probe.json`. What is NOT done: the probe
+surfaced three failure shapes (filed below as debt) that were not in D28's post-M32 taxonomy,
+and T-M40-2-1/T-M40-2-2 (the two levers this probe exists to attribute against) still need a
+decision now that the data they were waiting on exists — this block stays open until those are
+resolved rather than closed on "the re-probe happened."
 Spec: T-M40-2's acceptance ends "then the D28 rows re-declared from a post-fix probe of the
 same tasks". That clause is structurally not deliverable by the PR that carries the fix: a
 post-fix probe reads the DEPLOYED build, and the deploy is a push to `origin/main` (Zeabur),

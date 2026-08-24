@@ -934,6 +934,126 @@ green offline. `specs/decisions/ADR-015-a-freeze.md` is amended accordingly
 for this record-correction pass and is tracked as `tasks/TODO.md` M34.
 
 
+## 8a-4. Pre-registered post-fix probe (T-M40-5)
+
+**Pre-registration provenance.** `specs/decisions/ADR-025-t-m40-5-preregistered-probe.md`
+freezes the six-task set, the exact task text and start URL for each, the
+protocol, and the four pass/fail thresholds below — pushed as commit
+`82af7bf` (PR #51, opened `2026-08-24T02:36:20Z`) **before any run in this
+section executed**. Nothing below — task list, "correct answer" definition,
+or threshold — was written or adjusted after seeing which runs failed; where
+this write-up finds something ADR-025 did not anticipate (the three new
+failure shapes), it is recorded as new adversarial-case debt, not as a
+retroactive change to the frozen protocol.
+
+**Build identity.** All 18 runs are terminal against deployed `main` at
+`8183dc2` (`deploy-smoke` run `32683725839`, status `success`). The
+provenance check ADR-025 requires ran before and after the probe:
+`main_sha` and `deploy_smoke_run_id` both unchanged (`main_moved_during_probe:
+false`, `new_deploy_smoke_during_probe: false`), so none of the 18 runs is
+flagged build-contaminated. Raw evidence for every run, including the full
+trace and extraction text, is committed at
+`evals/report/20260824-030201-t-m40-5-probe.json`.
+
+**Per-task table** (3 runs each, 18 total):
+
+| # | Group | Site | Correct | Loud failure | Wrong success | Refusal | run_ids |
+|---|---|---|---|---|---|---|---|
+| 1 | regressed | x-rates.com | 1 | 2 | 0 | 0 | `591cf2dc` (correct); `110e9e8f`, `48b60ee3` (loud) |
+| 2 | regressed | multpl.com | 1 | 2 | 0 | 0 | `df42fa8f` (correct); `86935b56`, `dbd3e3ca` (loud) |
+| 3 | regressed | quotes.toscrape.com (author page) | 0 | 3 | 0 | 0 | `c20b1fda`, `37fe5cec`, `2f12cf5e` (loud) |
+| 4 | regressed | openlibrary.org | 0 | 3 | 0 | 0 | `bdd9ebf7`, `b9e6ddd9`, `b43acc40` (loud) |
+| 5 | control | companiesmarketcap.com | 2 | 1 | 0 | 0 | `a93832c7`, `98d9f1c7` (correct); `97677d75` (loud) |
+| 6 | control | bankofcanada.ca | 3 | 0 | 0 | 0 | `ff4f793a`, `4ea9ee33`, `6c247c24` (correct) |
+| | **regressed set total** | | **2/12** | 10 | 0 | 0 | |
+| | **control set total** | | **5/6** | 1 | 0 | 0 | |
+| | **all 18** | | **7/18** | 11 | 0 | 0 | |
+
+**Threshold verdicts, stated plainly:**
+
+- **(a) HARD — zero wrong-success across all runs: PASS, 0/18.** No run
+  anywhere in this probe reported `status: success` with an answer that did
+  not match the re-verified ground truth.
+- **(b) Regressed set correct-answer rate ≥ 50%: FAIL — 2/12 = 16.7%.**
+  ADR-025's frozen baseline for this same set is 0/7 post-M32
+  (x-rates.com 0/3, multpl.com 0/2, quotes-author 0/1, openlibrary.org 0/1 —
+  `specs/decisions/ADR-025-t-m40-5-preregistered-probe.md` §Frozen task
+  table). 2/12 clears that floor but falls far short of the pre-registered
+  50% bar. **The fix is insufficient.**
+- **(c) Controls no worse than prior post-M32 rate, at most one miss per
+  control: PASS.** companiesmarketcap.com 2/3 vs. prior 8/8 — one miss,
+  within the allowance, and the miss (`97677d75`) is a judge crash on a
+  *correct* extraction, not a wrong answer (see below). bankofcanada.ca 3/3
+  vs. prior 3/3 — no miss.
+- **(d) Refusals, counted separately: 0.** All 18 `POST /tasks` calls
+  returned HTTP 200; no run reported a refusal state.
+
+**Three new failure shapes, none of them the D28/regressed shape this probe
+was measuring:**
+
+1. **Replan-path identity-anchor kill** (x-rates.com, `run_id 110e9e8f`,
+   reproduced at `48b60ee3`). ADR-024's plan lint from PR #46 does exactly
+   what it was built to do — it fires on the plan that would have extracted
+   off the `WebArea` target and refuses it before execution. The replanned
+   step then dies on `StepError: identity anchor 'EUR to USD' absent from
+   the page the answer was read from`, even though the correct value
+   (`1.168062 USD`, `run_id 110e9e8f`'s own extraction evidence) was sitting
+   right there in the page text the step read. The lint is working; the
+   recovery path behind it is not. This is exactly the live path
+   ADR-024 §2 / `tasks/TODO.md` T-M40-2-4 named and deferred, now confirmed
+   against a real deployment rather than a fixture.
+2. **Judge crash fails closed** (companiesmarketcap.com,
+   `run_id 97677d75`). The extraction was correct —
+   `"Market cap: $4.514 Trillion USD"`, matching the `curl`-re-verified
+   ground truth at probe time — but the run still ended
+   `failure:semantic`: `judge unavailable, failing closed: JudgeError:
+   malformed judge response: AttributeError: 'NoneType' object has no
+   attribute 'strip'`. ADR-017's fail-closed rule held — a judge that
+   cannot be read did not certify — but the crash itself is a defect, and a
+   distinct one from the `JSONDecodeError` shape M39 (PR #44, not yet
+   merged) already targets (see the TODO.md debt block below).
+3. **Label-without-value extraction** (quotes.toscrape.com's author page,
+   0/3: `c20b1fda`, `37fe5cec`, `2f12cf5e`). All three runs extracted an
+   adjacent label instead of the value next to it — `"Description:"` twice
+   and a bare `"Born:"` once — and the judge correctly rejected all three
+   (`"The candidate answer 'Description:' does not provide any information
+   about the author's birth date."`). This is **not** the site-title shape
+   D28 recorded on this same page (`run_id 6811f8bf`, which extracted
+   `"Quotes to Scrape"`); the failure surface on this page moved between
+   probe rounds — site-title, then label-without-value — which is itself
+   worth noting as a pattern, not a one-off.
+
+Plus a fourth, stable (not new-shape, just newly measured 3/3) failure:
+**openlibrary.org, 3/3 identical `"extraction returned empty text"`**
+(`bdd9ebf7`, `b9e6ddd9`, `b43acc40`) at step 2 every time — no variation
+across reps, on a page this repo has never recorded a successful extraction
+from (ADR-025 §Frozen task table row 4).
+
+**What improved.** 2/12 on the regressed set is the first time this set has
+cleared zero since the post-M32 regression (0/7). Zero wrong-success across
+18 runs is the first probe round ever recorded with that property in this
+document — every prior live round (§8a, §8a-2, §8a-3, §8b) found at least one
+run that reported success with a wrong or unverifiable answer. ADR-024's
+lint is doing its named job: no run in this probe reports `status: success`
+with a raw `WebArea`/document-root answer, the shape that dominated D28's
+post-M32 rows.
+
+**What did not.** 16.7% is well under the pre-registered 50% floor.
+**The fix is insufficient** — stated in those words, per ADR-025's own
+commitment not to move the goalposts after seeing the numbers. The lint
+converts what used to be a silent wrong answer or a container dump into a
+loud, classified failure on 2 of 4 regressed sites (x-rates.com, quotes'
+author page) and leaves two more failure shapes standing in its place
+(replan-path identity-anchor kill; label-without-value). multpl.com and
+openlibrary.org show no clear connection to the WebArea shape at all in this
+round — their failures are `failure:extract` (empty extraction, empty
+trace), a different defect class entirely. None of this is a case for
+adjusting ADR-025's thresholds; it is the evidence T-M40-2-1 and T-M40-2-2
+(the two levers deliberately not shipped in PR #46) were held out to be
+attributed against, and the debt blocks below are the next-lever candidates
+this round actually produced.
+
+
 ## 8b. The first live-planner run, and the first wrong answer scored PASS
 
 Run `734d3d1f`, 2026-08-18, submitted through the deployed `POST /tasks` (the
