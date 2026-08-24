@@ -273,19 +273,23 @@ Acceptance: deploy-smoke does not fail on a busy deployment, never passes silent
 browser, and the unchecked case is visible in the run log — plus a follow-up that removes the race
 rather than tolerating it.
 
-### T-M40-1 — `/smoke/stream`'s concurrency guard is a read, not an acquire            [status: todo]
-Origin: PR (M40) round 2, cold review finding "also noted"
-Spec: `smoke_events` (`src/browser/server.py`) checks `SEM.locked()` and returns early, but never
-takes `SEM`. The guard is therefore one-directional: it stops a browser check starting under a
-RUN, and stops nothing else. Two tabs both clicking Browser check launch two Chromiums; a check
-followed within its ~15s window by `POST /tasks` does the same; and `/readyz` reports
-`{"ready": true, "busy": false, "active_run_id": null}` throughout, because it reads `SEM` too.
-On a small PaaS container the second Chromium is the OOM the guard exists to prevent, and it gets
-attributed to the agent.
-Repro: two concurrent `curl -N https://<host>/smoke/stream` — both reach `launching`.
-Acceptance: the smoke path takes the same semaphore the run path does (or a documented
-non-blocking `try-acquire`), and a case pins that two concurrent smoke streams cannot both reach
-`launching` — watched red against the current early-return.
+### T-R91 — the pre-commit hook reports a missing interpreter as an eval regression, and points at `--update-baseline`            [status: todo]
+Origin: PR #49, hit while committing the T-M40-1 DONE.md line
+Spec: `.githooks/pre-commit` picks `PY=python3` unless `.venv/bin/python` exists in the
+*worktree*. A `git worktree` has no `.venv`, so the hook runs a system interpreter that
+lacks `fastapi`, `evals.run` dies on import, and the non-zero exit is reported as
+`COMMIT BLOCKED by the eval gate. Fix the regression, or if the baseline move is
+deliberate: --suite fast --update-baseline`. Both suites were green at the time
+(fast 159/159, invariant 62/62) — the message names the one remedy CLAUDE.md rule 1
+forbids, on a failure that is not a regression at all. A tired author takes the
+suggestion, and the hook has then talked them into the thing it exists to prevent.
+Repro: `git worktree add -b x /tmp/wt origin/main && cd /tmp/wt && git commit --allow-empty -m x`
+-> COMMIT BLOCKED, with `python3 -c 'import fastapi'` failing in the same shell.
+Acceptance: the hook distinguishes "the suite ran and regressed" from "the suite could not
+run" — non-zero exit with no report written, or an import failure, reports the interpreter
+problem and does NOT mention `--update-baseline`. Cheapest form: check the chosen `PY` can
+import the harness first and fail with that message instead. Watched red from a worktree
+with no `.venv`.
 
 ### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: pr]
 Origin: PR #43 (M40) post-merge re-probe of the deployment, 2026-08-23
