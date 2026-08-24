@@ -1,0 +1,76 @@
+{
+  "id": "ui-terminal-state-on-every-ending",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "kind": "ui-terminal-state",
+    "viewport_width": 390,
+    "scheme": "dark",
+    "run_id": "aaaa1111",
+    "task": "What is the market cap of this company?",
+    "url": "https://companiesmarketcap.com/apple/marketcap/",
+    "long_value_chars": 2000,
+    "record": {
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "verifier FAIL: value reproduces most of its own evidence window",
+      "verdict": null,
+      "evidence": {
+        "trace": [],
+        "extractions": [],
+        "final_url": null
+      },
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 900,
+        "llm_usd": 0.0009,
+        "replans": 0,
+        "ms": 4100
+      }
+    },
+    "stale_record": {
+      "status": "success",
+      "answer": "STALE-ANSWER-FROM-RUN-A",
+      "reason": null,
+      "verdict": null,
+      "evidence": {
+        "trace": [
+          {
+            "i": 1,
+            "action": "extract",
+            "target": null,
+            "value": null,
+            "resolved": null,
+            "postcondition_ok": true,
+            "failure_class": null,
+            "note": null,
+            "retry_or_recovery": null,
+            "superseded_by": null,
+            "screenshot": "step_1.png",
+            "ms": 12
+          }
+        ],
+        "extractions": [],
+        "final_url": null
+      },
+      "budgets_spent": {
+        "actions": 1,
+        "llm_tokens": 10,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 30
+      }
+    }
+  },
+  "expect": {
+    "guidance_contains": "stream lost"
+  },
+  "provenance": "M40 cold review, three findings folded into one case because they are one property: the surface must end TERMINAL and USABLE however the run ends, and each defect instead left it asserting something untrue. (1) `es.onerror` polled `GET /tasks/{id}` with no `.catch`, and `renderResult` read `r.status.split(':')` unguarded -- so a run record that 404s (the in-memory `RUNS` after a redeploy, support-matrix D19, or a mid-run restart, D18) threw a TypeError, and `$('go').disabled = false` never ran. (2) The same handler re-enabled submission and rendered against the module-global `runId`, so a late poll for run A built `/runs/<B>/step_N.png` URLs -- run B's screenshots under run A's step captions, no error anywhere. (3) `renderScraped` cut a value at 300 chars with no marker, which on the dominant live failure shape (D28's CONTAINER DUMP, six finance domains) renders a multi-thousand-character page dump as a tidy, well-scoped extraction, hiding the exact defect the run was rejected for. What makes (1) an M40 defect rather than an old one is the spinner this milestone added: the page now ANIMATES the claim that a dead run is in progress. The case drives the real PAGE on the shared `_ui_page` render with `fetch` and `EventSource` stubbed, the same way `ui-form` does, and restores both. ROUND 2 (same milestone, second cold review) widened this case three times, each against a defect the first version could not see. (a) `lost()` was called for a run record that still said `running` — a stream dropped by a proxy idle timeout or a sleeping laptop over a run that is alive and usually succeeds seconds later — painting `#status` in the failure colour and `#progress[data-terminal]=failure`. That is the same lie as the spinner over a dead run, pointed the other way and worse, because the run's real result is then never shown; `detached()` replaces it, asserts no verdict and sets no `data-terminal`. (b) The `smoke()` stream kept its own handle and its own `onerror`, so the exact spinner-over-a-dead-run defect this case was written for stayed open on the button beside the fixed one. (c) The stale-poll assertion was VACUOUS: it let the poll land before reassigning `runId` and then compared `#status` with itself, so deleting both cross-run guards kept it green. It now holds the poll open across the reassignment and asserts the old run's record never reaches `#result`, its screenshots never reach `#pvshot`, and it does not release the buttons under the run that now owns them.",
+  "triage": {
+    "class": "silent-failure",
+    "watched_red": "against `git show HEAD:src/browser/server.py` served by uvicorn and driven by the same stubs: submit -> stream 500 -> record 404 gives `#status` 'RUNNING' with `go.disabled true` forever and one uncaught pageerror, \"Cannot read properties of undefined (reading 'split')\". Re-run against the fixed page: `#status` 'STREAM LOST', `animationName` 'none', both buttons enabled, `#progress[data-terminal]` 'failure', no pageerror. The clip half was watched red the same way -- a 2000-char value rendered as 300 characters with no ellipsis and no length. Round 2, each watched red against the round-1 page: the `running` record gave `terminal: 'failure'` with `status_class: 'big failure'`; deleting the `runId !== mine` guards with the poll held open rendered run A's `STALE-ANSWER-FROM-RUN-A` into `#result` under run B; and `smoke()`'s stream erroring left `#status` `running` with `animationName: spin`.",
+    "note": "Ceilings, declared. This grades the page's handlers against a stubbed transport, not a real dropped connection against the real gateway. `/smoke/stream`'s SERVER half — the `SEM.locked()` early return — is graded by nothing here, and that guard is a READ, not an acquire: two tabs both starting a browser check still launch two Chromiums, and `/readyz` reports neither. That is logged as debt, not fixed behind this case's back."
+  }
+}

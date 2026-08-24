@@ -170,6 +170,57 @@ def git_sha():
     return _git("rev-parse", "--short", "HEAD")
 
 
+# Which machine measured a row. A ceiling is per (suite, environment) — ADR-019's
+# own Ruling — but until T-R44 the ledger had no environment dimension at all, so
+# `published-band-matches-the-ledger` read whatever rows the process could see,
+# and on CI that includes CI's own `invariant` row, appended by the step before.
+#
+# Two CI runs fired two different clauses, and this tag is the shared cause of
+# both. On run 32626835735 (sha 434a98d, T-R44's origin) the row was SLOWER: 16.02s
+# against a published 12.92s, deriving 20 against 15, red on item 3 (same-ceiling)
+# — that tree had no dirty clause to fire, and no `ts` group in `_BAND_LINE`. On
+# run 32637648447 (sha 11545a1, task/M32) the row was CLEAN and its naive-local
+# `ts` sorted early, red on item 2 (cited-run)'s dirty allowance. ADR-019 §7 keeps
+# the two apart. `stamp` is UTC now, which fixes the ordering key of the second;
+# this tag keeps a foreign row out of the ledger entirely, which is the only thing
+# that reaches the first — a foreign row is the wrong row to derive a ceiling from
+# however it is stamped.
+#
+# NOT derived from the effective `EVAL_WALL_BUDGET_S_*`, which is the obvious
+# guess and is wrong in exactly the case that produced the defect: CI's
+# `invariant` ceiling is 20 and so is this laptop's, so the two environments
+# would share a tag on the suite that broke.
+#
+# The `CI` fallback is what actually tags a runner — GitHub Actions sets `CI`
+# unconditionally, as does essentially every other runner, so no workflow has to
+# remember. `EVAL_ENV` is for a third environment that wants a name of its own,
+# and for saying it out loud where a reader of the workflow will see it.
+EVAL_ENV = "EVAL_ENV"
+
+
+def env_tag():
+    return os.environ.get(EVAL_ENV) or ("ci" if os.environ.get("CI") else "local")
+
+
+def stamp(instant=None):
+    """The ledger's `ts`, in UTC.
+
+    Naive local time until T-M32-13. `_band_wrong` orders these strings as real
+    time — item 2 (cited-run) refuses a dirty citation against any CLEAN row
+    stamped earlier — and the ledger mixes zones, because a laptop writes local
+    and a runner writes UTC. A CI row 25 minutes later in real time sorted eight
+    hours earlier, was clean, and disqualified a citation it did not predate; on
+    a tree that only reaches count N+1 while the new case is uncommitted, that
+    made every case addition cost two commits. Graded by
+    `ledger-ts-orders-real-time`, which sets both zones explicitly so it cannot
+    pass by running on a UTC host.
+
+    Rows written before the switch keep their local stamps: nothing records the
+    zone a row was written in, so rewriting them would be invented precision.
+    ADR-019 §7 states what that leaves."""
+    return time.strftime("%Y%m%d-%H%M%S", time.gmtime(instant))
+
+
 def git_dirty():
     """Working tree dirty, excluding history.jsonl itself.
 
@@ -260,7 +311,7 @@ def main():
     write_report = (args.report or args.suite == "all" or red) and not args.no_report
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    stamp = time.strftime("%Y%m%d-%H%M%S")
+    ts = stamp()
     # Read the tree BEFORE writing the report: the report is an untracked file
     # in the tree it is describing, so asking afterwards made every `--report`
     # run record `dirty: true` on account of its own artifact — and the bands
@@ -268,13 +319,14 @@ def main():
     sha, dirty = git_sha(), git_dirty()
     report_name = None
     if write_report:
-        report_name = f"{stamp}-{args.suite}.json"
+        report_name = f"{ts}-{args.suite}.json"
         (REPORT_DIR / report_name).write_text(json.dumps(
             {"suite": args.suite, "score": score, "totals": totals, "metrics": metrics,
              "results": results}, indent=2))
 
     history_line = {
-        "ts": stamp, "suite": args.suite, "sha": sha, "dirty": dirty,
+        "ts": ts, "suite": args.suite, "sha": sha, "dirty": dirty,
+        "env": env_tag(),
         "passed": passed, "total": len(results), "score": round(score, 6),
         "wall_s": totals.get("wall_seconds", 0.0), "cost_usd": totals.get("llm_usd"),
         "report": report_name,

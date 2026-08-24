@@ -1,0 +1,87 @@
+{
+  "pr": 41,
+  "round": 2,
+  "scope": "repair diff 21c6f22..HEAD + standing round-1 findings",
+  "standing_round1": {
+    "R1": "closed in ADR-019, TODO, run.py, eval_adapter.py and one case file; NOT closed in band-is-graded-against-its-own-environment.json -> R7",
+    "R2": "closed — parentheticals are count-independent",
+    "R3": "closed — README's strike ground holds (run 32455716866 is fast 95/95 on 09b9740); ADR-013 untouched",
+    "R4": "closed as a mechanism; its scope statement overreaches -> R8",
+    "R5": "closed — matches `_BAND_DEF`'s seven alternatives",
+    "R6": "closed as debt T-R77, but the block's own repro is broken -> R10"
+  },
+  "reviewer_verified_sound": [
+    "§7's two-run account is factually correct — 32626835735 is sha 434a98d with invariant 52/52 wall 16.02s and [FAIL] in the fast step at 132/133; 434a98d publishes invariant 12.92s at 52 cases with no `_band_wrong`/`cited_a_dirty_run` and a ts-less `_BAND_LINE`; 32637648447 is sha 11545a1 on task/M32 with wall 16.03s and an invariant band of 13.15s at 58 cases, so rule is 20 on both sides and item 3 is genuinely silent there",
+    "the new grader is not vacuous — source-side and both README-side mutations redden"
+  ],
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R1 is not closed in `band-is-graded-against-its-own-environment.json`: only the provenance's opening paragraph was rewritten, so the same file still states the wall-clock symptom was latent, still says the mechanism was the timestamp and not the wall clock without scoping it to a run, still conflates item 3 with item 4, and its `watched_red` asserts the `slowest` symptom \"is not the clause PR #32 fired\" — which the new opening paragraph of the same file says it is.",
+      "evidence": "ORCHESTRATOR-VERIFIED: `'latent' in provenance` True, `'NOT THE WALL CLOCK' in provenance` True, `'not the clause PR #32 fired' in triage.watched_red` True. The provenance opens with the corrected \"On 32626835735 ... the clause was item 3 (same-ceiling), on the WALL CLOCK\" and then carries, unchanged, \"THE MECHANISM IS THE TIMESTAMP, NOT THE WALL CLOCK\" and \"A second and separate symptom rides along ... latent today at 16.03s ... ungreenable locally above 17.39s\" — the exact items-3/4 conflation R1 named. The sibling `published-band-matches-the-ledger.json` WAS corrected (\"it is the OTHER symptom and it is not latent\", \"item 4 ... alone that would need 17.39s\"). triage.note (2) and (3) still point at the old reading. Run 32626835735 failed on exactly the symptom the file denies: `invariant 52/52 wall 16.02s`, then `[FAIL] published-band-matches-the-ledger` in the fast step at 132/133.",
+      "repro": "`'latent' in provenance`, `'NOT THE WALL CLOCK' in provenance`, `'not the clause PR #32 fired' in triage.watched_red` -> all True",
+      "acceptance": "The whole file — provenance, triage.note (2)/(3), triage.watched_red — reads the way the corrected `published-band-matches-the-ledger` provenance does: the wall-clock/`slowest` symptom is what fired on 32626835735, the `ts` mechanism is scoped to 32637648447, the 17.39s bound is item 4 alone. No sentence may say the wall-clock symptom is latent or that it is not what PR #32 fired."
+    },
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`ci-numbers-are-derived`'s scope statement claims more than the check reads: its triage note says the only CI figures it does not cover are those \"published outside ADR-019 §5 and README\", but README's own CI-derived ceilings are unread — README can publish a CI `fast` ceiling contradicting both §5's derivation and the workflow, and the gate stays green.",
+      "evidence": "src/browser/eval_adapter.py:1057-1119 reads only §5's four table cells, their presence as a sorted list and two ranges in README, the run id in both, and rule(max) vs the workflow. README.md:174-175 republishes the derived ceilings (\"so **20s** and **90s** by the same rule\") and is not read. Also, because the README side is a bare substring test, a second contradictory CI band added to README stays green — while the case's provenance claims parity with `published-band-matches-the-ledger` item 7 (readme-row), whose contract includes the exactly-one-band-line half added by PR #35 R2/R4.",
+      "repro": "edit README's `so **20s** and **90s** by the same rule` to `85s` -> `--suite invariant` stays 61/61 = 1.000",
+      "acceptance": "Either the check also reads the ceilings README derives from the same four numbers (watched red on the 85s mutation), or the docstring and triage note stop implying every CI figure inside README is covered and name the ceilings sentence and the multiple-band case as ungraded."
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Both documents the new case binds together still tell the reader the CI numbers are ungraded, in the commit that grades them.",
+      "evidence": "ADR-019:234-238 (\"Nothing grades the four measurements ... The run id is what a reader checks instead of the gate\") and README.md:141-146 (\"What is graded is that the workflow declares the values `fast-wall-clock-budget` pins ... the run id is what a reader checks instead\"), both untouched by 2e00ab3. After this PR, editing any cell of §5's table reddens the gate, and deleting the run id from README yields `{readme: does_not_name_the_run_the_adr_cites, adr_cites: '32561162459'}`. The new case's docstring and provenance quote §5's sentence in the PAST tense (\"§5 said so itself\", \"ADR-019 §5 admitted it in those words\") while §5 still asserts it in the present.",
+      "repro": "sed -n '234,238p' ADR-019; sed -n '141,146p' README.md; then mutate a §5 table cell and run `--suite invariant` -> red",
+      "acceptance": "§5 and README:141-146 state what is graded after this commit (table cells and run id pinned by `ci-numbers-are-derived`; only \"that anyone measured them\" remains ungraded, T-R73), and the new case's docstring stops citing a sentence it made stale as if it were history."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "T-R77 — the debt entry that closes R6 — carries a Repro that returns nothing and a row count that does not match the ledger: the comparison is inverted, so the residual it records cannot be reproduced from the command it publishes.",
+      "evidence": "ORCHESTRATOR-VERIFIED. tasks/TODO.md:560-576's Repro is `[r for r in ledger if r.get(\"env\") == \"local\" and r[\"ts\"] < \"20260823-140957\"]`. Against the committed ledger: 102 rows carry `env`, `min(ts)` over them IS `20260823-140957`, so the filter yields **0 rows**. The rows the entry means (e.g. 20260823-210938 invariant/54, 20260823-211124 fast/138, both env: local, sha 0efb0e9) are Taipei stamps that sort ABOVE the switch point — the correct set has 51 members, not the 55 the heading and body claim.",
+      "repro": "count env-tagged rows and apply the published filter -> 102 rows, min ts 20260823-140957, filter returns 0, correct set 51",
+      "acceptance": "T-R77's Repro selects a non-empty set from the committed ledger (env-tagged rows whose `ts` sorts above the first UTC stamp) and its stated count equals what that selection returns."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "ADR-019 §7's rewritten item-4 paragraph still quotes the other run's margin: it is scoped to run 32626835735 (16.02s) but keeps \"1.36s of margin, 8.5%\", which is 17.39 - 16.03 from run 32637648447; against 16.02s it is 1.37s / 8.55%.",
+      "evidence": "ADR-019:512-522 — \"20 against `rule(16.02)` = 20 holds ... It would go red above 17.39s ... That was 1.36s of margin, 8.5%\". 32626835735's log gives wall 16.02s; 32637648447's gives 16.03s.",
+      "repro": "sed -n '512,522p' ADR-019; 17.39-16.02 = 1.37",
+      "acceptance": "The margin figure is derived from the run the paragraph names, or the sentence names the run its 16.03s belongs to."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The run-id regex's markdown-link tolerance is `\\s*`, which crosses blank lines, so the phrase \"eval-gate run\" and a bare number two paragraphs apart satisfies the citation requirement.",
+      "evidence": "src/browser/eval_adapter.py:1085 `run_id = _re.search(r\"eval-gate run\\s*\\[?(\\d{6,})\", adr)`. Replacing §5's `eval-gate run\\n[32561162459](...)` with `eval-gate run\\n\\n32561162459 is not written here as a link` leaves passed True. The regex is also unanchored to §5 — it takes the first \"eval-gate run\" anywhere in ADR-019.",
+      "repro": "monkeypatch `_ADR019` with that substitution -> `_check_ci_numbers_are_derived()` returns passed True",
+      "acceptance": "The tolerance is bounded to the wrap it exists for (`[ \\t]*\\n?[ \\t]*\\[?`) and ideally scoped to §5's paragraph, so a number that is not a citation cannot satisfy it."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "ADR-019 §3's corrective paragraph re-introduces ungraded ledger enumerations one sentence after declaring that the fix is to stop counting rows — and the counts it publishes are already false against the history.jsonl committed in the same commit.",
+      "evidence": "ADR-019:242-251 says \"Neither band quotes the ledger's maximum, or counts the rows behind it\" and then publishes \"the ledger held six\", \"eighteen\", \"a 13.94s row\". True of the ledger at 21c6f22 but not of HEAD's, which holds 9 at fast/155 and 25 at invariant/60 with max 14.03s at ts 20260823-145353. Nothing grades any of the three figures.",
+      "repro": "count rows at fast/155 and invariant/60 in the committed ledger -> 9 and 25, max 14.03",
+      "acceptance": "The historical counts either name the state they describe (commit or ts) or are dropped, so no ungraded row count in §3 is contradicted by the ledger committed beside it."
+    }
+  ],
+  "gate": {
+    "invariant": "61/61 = 1.000",
+    "fast": "156/156 = 1.000"
+  }
+}
