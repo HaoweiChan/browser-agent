@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260824-025118-fast.json`, with
-`evals/report/20260824-025140-invariant.json` and
+Latest offline baseline — `evals/report/20260824-025813-fast.json`, with
+`evals/report/20260824-025827-invariant.json` and
 `evals/report/20260823-164737-live.json`:
 
 ```
-fast  163/164    invariant  64/65    live  9/9    $0.0000    70.6s
+fast  164/164    invariant  65/65    live  9/9    $0.0000    70.6s
 recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 36/36 · 13 replans
 ```
@@ -170,8 +170,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 164 | 72.68s | 83.58 | **90s** |
-| `invariant` | 65 | 14.06s | 16.17 | **20s** |
+| `fast` | 164 | 70.61s | 81.2 | **90s** |
+| `invariant` | 65 | 13.4s | 15.41 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of one commit (`d173340`, 116 `fast` / 48 `invariant` cases, a smaller
