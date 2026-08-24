@@ -7,11 +7,11 @@ day, on PR #20 round 5 review, when the band that justified 70 did not
 reproduce — all the same day)
 Status: accepted
 
-**Ruling**: ADR-002 Decision 4's `fast` wall-clock ceiling is per-environment and each number is measured as the slowest observed run +15% (CI) or as the slowest *reproducible* run (local, since round 5 — see Decision 4) — 60s locally at the time of writing, **80s since ADR-019**, 80s on CI at the time of writing and **90s since ADR-019 §5**, via `EVAL_WALL_BUDGET_S_FAST` — applied by `evals/run.py` to the run it just measured, exiting non-zero; the suite gets one shared Chromium, re-launched if it dies, with each run in its own BrowserContext.
+**Ruling**: ADR-002 Decision 4's `fast` wall-clock ceiling is per-environment and each number is measured as the slowest observed run +15% (CI) or as the slowest *reproducible* run (local, since round 5 — see Decision 4) — 60s locally and 80s on CI at the time of writing; both have moved since, and the numbers in force are ADR-019 §2/§3/§5 as amended by ADR-021, read through `EVAL_WALL_BUDGET_S_FAST` and committed in `evals/run.py` rather than restated here — applied by `evals/run.py` to the run it just measured, exiting non-zero; the suite gets one shared Chromium, re-launched if it dies, with each run in its own BrowserContext.
 **Because**: 11.3s of the 67.0s breach was per-case browser process lifecycle — scaffolding, not evidence — and a budget nothing reads drifts from 13s to 68s without one run turning red.
 **Enforced by**: `evals/run.py` `over_budget()` (the ceiling itself), `fast-wall-clock-budget` (the ruling it applies), `agent-launches-its-own-browser` and `shared-browser-relaunches-when-dead` (what sharing a browser would otherwise leave ungraded).
 
-**Amended by**: ADR-019 (Decision 4's local number re-derived 60 -> 80 after M31 grew the suite; `invariant` given its own 20s ceiling; CI's `fast` number re-measured on CI to 90s; `EVAL_WALL_BUDGET_S` split into one variable per suite; every band computed from the committed ledger and graded against it)
+**Amended by**: ADR-019 (Decision 4's local number re-derived 60 -> 80 after M31 grew the suite; `invariant` given its own 20s ceiling; CI's `fast` number re-measured on CI to 90s; `EVAL_WALL_BUDGET_S` split into one variable per suite; every band computed from the committed ledger and graded against it); **ADR-021** (ADR-019's local `fast` number re-derived 80 -> 90 at 146 cases, reaching this ADR's Decision 4 through ADR-019 Decision 2)
 
 **Amends**: ADR-002 Decision 4 (breach closed, ceiling per-environment, enforcement added, local number unchanged at 60 — Decision 4 below tried 70 and withdrew it the same day); ADR-009 Decision 6 and `docs/support-matrix.md` D8 (the declared breach they carry is resolved)
 
@@ -172,7 +172,15 @@ not asserted blind either time.
    60.16 × 1.15 = 69.2 → **70s** locally (Decision 4). Unlike the first
    measurement, this band does **not** straddle its ceiling — 68.96s against 80s
    — where the first CI band straddled the old 60s on three of its four runs
-   (59.77/60.84/64.61/64.67). What each number rests on is a band, not a
+   (~~59.77/60.84/64.61/64.67~~ — superseded 2026-08-23, PR #41 R3: that band
+   measured a **95-case tree**, and ADR-019 §5 re-measured CI on `d173340` at
+   116 `fast` / 48 `invariant`. The case count is the honest ground. Its
+   provenance is *not* in doubt and is not the ground: :162-163 above names
+   commit `09b9740`, run `32455716866` and three re-runs, and all four values
+   reproduce from that run's attempts. Third instance today of the same shape —
+   a correct record struck because the striker could not see its provenance,
+   where "I could not find it" was written down as "it does not exist"). What
+   each number rests on is a band, not a
    distribution, and the CI band is not even one commit's worth: run
    `32465066308` (attempt 1) is `94f1a42`, `32465584897`'s three re-run
    attempts are all `7a2869a` — one run at the pre-merge sha plus three at the

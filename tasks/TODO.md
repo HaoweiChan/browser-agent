@@ -12,6 +12,57 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
+### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: pr]
+Promoted from Debt to Queue 2026-08-23 by the owner.
+Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
+routed to debt in round 4, never written into this file until round 5.
+Spec: `evals/run.py:91` commits `WALL_BUDGET_S = {"fast": 90, "invariant": 20}`
+locally. Publications that disagree: (1) **`CLAUDE.md`'s Gate and Commands
+blocks** — the repo's stated working contract — still say `invariant` "wall
+clock <= 15s" and `fast` "wall clock <= 75s", so every committed `fast` run on
+this tree (73.9-74.8s local, 88.39s on CI) reads as a breach against the
+contract while passing the gate it actually has; (2) `INDEX.md`'s ADR-017 line
+publishes "fast 75s local"; (3) `fast-wall-clock-budget.json`'s `expect.note`
+says the override "falls back to the committed 80 for everything else" while
+every `env_override` row in the same case now expects 90. (1) and (2) are
+byte-identical to `origin/main` and predate this branch; (3) was introduced
+with ADR-021. `evals/run.py:304` also still labels the ceiling's source
+"ADR-002 Decision 4" when ADR-019 and ADR-021 are the live rulings.
+Repro: `grep -n '75s\|15s' CLAUDE.md specs/decisions/INDEX.md` against
+`evals/run.py:91`; the suites stay green.
+Acceptance: all three publications state the enforced pair, or drop the
+literals for "the ceiling `evals/run.py` enforces" — CLAUDE.md's Gate and
+Commands blocks named explicitly, since that is the file a new contributor
+reads as the contract. Nothing graded changes; if it can be graded cheaply
+(one sweep over tracked markdown for a ceiling literal that is not the
+committed one), do that instead and watch it red on CLAUDE.md first.
+Update 2026-08-23: done, with two corrections to the spec above. Leg (2) does
+not reproduce — `INDEX.md` carries no "75s local" on this tree or on
+`origin/main`; that text was PR #29 R5's finding and was fixed there, by
+dropping the literal, which is the same shape used here. A fourth site the spec
+does not name was found by the sweep and fixed: `ADR-002`'s Ruling published
+"`fast` 80s local ... `invariant` has had its own 15s ceiling since ADR-019",
+two wrong numbers in one sentence (this is also T-R35's third leg — see
+T-M32-17). Literals dropped rather than corrected in CLAUDE.md and ADR-002;
+`fast-wall-clock-budget`'s note and `evals/run.py`'s OVER BUDGET source label
+corrected in place. Graded by `docs-numbers-are-derived`'s new
+`commands_publish_the_committed_ceiling` sweep, watched red on CLAUDE.md first;
+its deliberate narrowness is T-M32-16.
+Update 2026-08-23, PR #40 round 1: fixing ADR-002's Ruling and stopping there
+was not enough, and the wording above ("literals dropped ... in ADR-002") read
+as if that file were done. It was not: the Status line three lines above the
+Ruling still published "**60s locally, 80s on CI** ... both measured and both
+enforced" (R2), and a THIRD file nobody had enumerated — `ADR-013`'s Ruling,
+"**80s since ADR-019**" under an explicit "at the time of writing" — was 10s
+stale and graded by nothing (R3). Both fixed here the same way, by dropping the
+literal. Round 1 also falsified the grader's precision: it matched any duration,
+not a ceiling, so "# ~71s on an M-series laptop" reddened the gate on a true
+sentence (R1), and its scope was narrower than its published claim, skipping
+`tasks/` and every dot-directory including a second publication of the gate
+commands in `.claude/skills/finish-task/SKILL.md` (R5). Both fixed, both pinned
+by `ceiling_sweep_rows`.
+
+
 ### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: pr]
 Origin: PR #32 CI run 32626835735 (M31's check)
 Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
@@ -225,6 +276,81 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M32-16 — a live ceiling published in any shape other than a gate command is still ungraded            [status: todo]
+Origin: T-M32-9; enumeration corrected at PR #40 R3.
+Spec: the sweep T-M32-9 added (`docs-numbers-are-derived`,
+`commands_publish_the_committed_ceiling`) grades exactly one form: a runnable
+`--suite X` command whose own trailing comment publishes a ceiling, anchored to
+`<=`/`ceiling`/`budget`/`wall clock`. That is the only form in this repo's
+markdown that can *only* mean the live number. It reaches nothing else, on
+purpose — ~93 lines of tracked markdown pair a seconds literal with a ceiling
+word and nearly all are the record (ADR-002 Decision 4's 60s, ADR-013's
+derivation prose, README's history), and ADR-002's Ruling carried a live number
+and a historical one in one sentence, so no cheap pattern separates them.
+**The first version of this block asserted "the two live non-command
+publications that exist today are covered by other means". That was wrong and
+round 1 falsified it: there were three, and the third — `ADR-013`'s Ruling,
+"80s since ADR-019", marked current by its own "at the time of writing"
+qualifier — was covered by nothing** (PR #40 R3). The count is the point: an
+enumeration is exactly the kind of claim this task exists to distrust, and it
+was written into the debt block that records the residual. Standing today,
+after PR #40 fixed all three: ADR-019's Ruling is graded by
+`published-band-matches-the-ledger` item 6 (ruling); ADR-002's Status line and
+Ruling, and ADR-013's Ruling, have had their literals dropped, so there is
+nothing left in them to drift. Nothing grades a *new* live publication in a
+non-command shape, and nothing would have caught any of these three.
+This is the mechanism T-R25 has stayed open for since PR #23 R8 — "a guard that
+reads the ceiling out of `WALL_BUDGET_S` instead of out of prose" — now built
+for one form and unbuilt for the rest; whoever closes this should close T-R25
+with it.
+Repro: write "`fast` 75s local" into any tracked markdown outside a `--suite`
+comment; the suites stay green.
+Acceptance: either a convention that marks a live ceiling statement so it can be
+swept (the `**Ns**` form `_ADR_CEILING` already relies on inside ADR-019 is the
+obvious candidate), or the honest finding that dropping the literal everywhere
+is the whole defence — argued, not defaulted to. Do not replace the falsified
+enumeration with another one; grade it or drop the literals.
+
+### T-M32-17 — T-R35 is closed on all four acceptance clauses; delete the block            [status: todo]
+Origin: T-M32-9; clause (1) corrected at PR #40 R4.
+Spec: not an audit — the audit is done, and this is the evidence. T-R35 ("three
+specs files still publish the withdrawn 75s/15s ceilings as current") has four
+acceptance clauses:
+(1) "every ceiling statement in specs/ names 80/90/20/20" — satisfied **only as
+of PR #40**, and the first version of this block wrongly claimed it was already
+satisfied. Round 1 found two specs files still publishing a live pair that
+nothing enforced: `ADR-002`'s Status line ("**60s locally, 80s on CI** via
+`EVAL_WALL_BUDGET_S`, both measured and both enforced", plus "the local number
+ships unchanged at 60s") and `ADR-013`'s Ruling ("**80s since ADR-019**", marked
+current by "at the time of writing", 10s stale). Both are fixed in PR #40 by
+dropping the literals and deferring to ADR-019 §2/§3/§5 as amended by ADR-021.
+Note the clause's own wording is stale in the same way it was written to catch:
+the enforced local `fast` has been 90 since ADR-021, so a reader obeying
+"names 80/90/20/20" verbatim would re-introduce the defect. Read it as "names
+the enforced pair", and it now holds.
+(2) "ADR-019's Amends header matches its Ruling" — satisfied.
+`specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:12` reads "**Amends**:
+ADR-013 Decision 4 (local `fast` ceiling 60 → 80)", which is its Ruling's own
+number; the "60 -> 75" T-R35 quotes is gone.
+(3) "ADR-002's parenthetical stops asserting a live 15s invariant ceiling" —
+satisfied by T-M32-9, which dropped both literals from that Ruling.
+(4) "T-R25's Update states what is actually fixed" — satisfied. T-R25 carries
+`[status: fixed at PR #29 R22, kept for the mechanism]` and an Update that
+separates what was corrected from what was not, naming the mechanism as the
+open half. T-R35's premise ("T-R25 asserts ... it is not") no longer holds.
+Its fifth, optional clause — "ideally one graded row that compares INDEX/ADR
+ceiling numbers against `WALL_BUDGET_S`" — is what T-M32-9 built, narrower;
+T-M32-16 records exactly how much narrower and is the block that inherits it.
+T-R35's separately-named leg on `specs/decisions/INDEX.md:11` ("fast 75s local")
+never needed this branch: PR #29 R5 fixed it by dropping the literal, and
+`grep -c '75s local' specs/decisions/INDEX.md` is 0 on disk and on `origin/main`.
+Repro: run T-R35's own repro — `grep -n '75s local' specs/decisions/INDEX.md`,
+`grep -n '60 → 75' specs/decisions/ADR-019-*.md` — both empty.
+Acceptance: T-R35 deleted from tasks/TODO.md with a DONE.md line citing this
+block, not re-audited. **Do not delete it before confirming (1) — until PR #40
+merges, T-R35 is the only tracked pointer at ADR-002's Status line and
+ADR-013's Ruling.** If any clause above is wrong, the correction belongs here,
+in the block that made the claim.
 ### T-M40-3 — the SSRF case for `/view` is `fast`-only because the invariant suite cannot carry it on CI            [status: todo]
 Origin: PR #43 (M40), CI run 32651052282
 Spec: `view-proxy-refuses-private-and-redirects` guards a public SSRF surface and belongs in
@@ -731,30 +857,6 @@ Acceptance: ADR-002's Ruling, Status and `Amended by` name ADR-021 and the
 enforced local pair, or drop the numbers in favour of "the ceiling
 `evals/run.py` enforces"; the CI half is either graded or explicitly declared
 ungraded where it is published.
-
-### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: todo]
-Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
-routed to debt in round 4, never written into this file until round 5.
-Spec: `evals/run.py:91` commits `WALL_BUDGET_S = {"fast": 90, "invariant": 20}`
-locally. Publications that disagree: (1) **`CLAUDE.md`'s Gate and Commands
-blocks** — the repo's stated working contract — still say `invariant` "wall
-clock <= 15s" and `fast` "wall clock <= 75s", so every committed `fast` run on
-this tree (73.9-74.8s local, 88.39s on CI) reads as a breach against the
-contract while passing the gate it actually has; (2) `INDEX.md`'s ADR-017 line
-publishes "fast 75s local"; (3) `fast-wall-clock-budget.json`'s `expect.note`
-says the override "falls back to the committed 80 for everything else" while
-every `env_override` row in the same case now expects 90. (1) and (2) are
-byte-identical to `origin/main` and predate this branch; (3) was introduced
-with ADR-021. `evals/run.py:304` also still labels the ceiling's source
-"ADR-002 Decision 4" when ADR-019 and ADR-021 are the live rulings.
-Repro: `grep -n '75s\|15s' CLAUDE.md specs/decisions/INDEX.md` against
-`evals/run.py:91`; the suites stay green.
-Acceptance: all three publications state the enforced pair, or drop the
-literals for "the ceiling `evals/run.py` enforces" — CLAUDE.md's Gate and
-Commands blocks named explicitly, since that is the file a new contributor
-reads as the contract. Nothing graded changes; if it can be graded cheaply
-(one sweep over tracked markdown for a ceiling literal that is not the
-committed one), do that instead and watch it red on CLAUDE.md first.
 
 ### T-M32-3 — act-failure coverage costs 4.6s of a suite that already straddles its ceiling            [status: todo]
 Origin: PR #34 R1 (the fix, not the finding); cost model corrected per PR #34 R11.
