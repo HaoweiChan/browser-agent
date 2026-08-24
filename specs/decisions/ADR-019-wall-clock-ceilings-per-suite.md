@@ -133,10 +133,12 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 62 cases, ts `20260824-013010`, **14.30s**, 60/62
-  (`evals/report/20260824-013010-invariant.json`; `dirty: true`, for the reason §2's
-  next paragraph gives — the count moved 61 -> 62 when M39 merged, and a tree only
-  reaches a new count while the case that moves it is uncommitted. As in §2,
+- Band source — local `invariant` at 62 cases, ts `20260824-014315`, **13.54s**, 62/62
+  (`dirty: false`; ADR-012 writes no per-case report for a green run, so the ledger
+  row is the whole artifact, which is why this cites a ts and not a file. The count
+  moved 61 -> 62 when M39 merged; the band was published against a dirty row in the
+  merge commit and re-cited here to the clean receipt that could not exist until that
+  commit had landed — T-M32-13's two-commit price, paid. As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
   deliberately NOT in this suite: it was tagged `invariant`, moved this band, and
@@ -173,7 +175,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 14.30 × 1.15 = 16.45 → **20**, which is the committed
+The same rule gives 13.54 × 1.15 = 15.57 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
