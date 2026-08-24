@@ -377,9 +377,24 @@ def _check_planner_prompt() -> dict:
 # Deliberately a labelled scalar, not the list of run times: a list is a
 # snapshot and `history.jsonl` grows on every gate run, so a grader that
 # string-matched it would go red on the next run rather than on a regression.
+# The environment group is T-R44: a band is a claim about one machine, and until
+# it said which, the check read whatever rows the process could see — on CI,
+# including CI's own, whose naive-local `ts` sorts hours away from a row written
+# on a laptop at the same moment (ADR-019 §7). Named groups, not positional:
+# inserting a group at the front of a six-group pattern re-points every reader of
+# it, which is the same shape as re-numbering §6's list under its references.
 _BAND_LINE = re.compile(
-    r"Band source — `(fast|invariant)` at (\d+) cases, ts `([\d-]+)`, "
-    r"\*\*([\d.]+)s\*\*, (\d+)/(\d+)")
+    r"Band source — (?P<env>[a-z]+) `(?P<suite>fast|invariant)` at (?P<cases>\d+) "
+    r"cases, ts `(?P<ts>[\d-]+)`, \*\*(?P<wall>[\d.]+)s\*\*, "
+    r"(?P<passed>\d+)/(?P<total>\d+)")
+
+# What a row with no `env` field counts as. Every row committed before T-R44 is
+# one, and every one of them was measured locally: nothing but a local run ever
+# appends to the committed ledger — CI's rows die with the runner workspace, which
+# is T-R51. What holds this reading up is the case, not the live ledger: the bands
+# §2/§3 publish cite rows recorded AFTER the tag existed, so changing this value
+# leaves `_check_published_band` green today. ADR-019 §7 says so in those words.
+_LEGACY_ENV = "local"
 
 # ADR-019 §6's declaration of what the band property does NOT see: the size of
 # the hole, as a number the rule fixes rather than prose that can be softened
@@ -438,7 +453,7 @@ _REGION = tuple(f"# ==== ADR-019 §6 band section: {edge} ===="
 # inferred, so what it does NOT pin is legible — ADR-019 §6 says which.
 _BAND_DEF = re.compile(
     r"^(?:def )?(_band\w*|_check_published_band\w*|_BAND\w*|_SIX\w*"
-    r"|_SLACK_MARK|_REGION)\b", re.M)
+    r"|_SLACK_MARK|_REGION|_LEGACY_ENV)\b", re.M)
 
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
@@ -503,26 +518,40 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         if suite not in published:
             wrong.append({"suite": suite, "adr_publishes_no_band_line": True})
             continue
-        cases, ts, said, passed, total = published[suite]
+        env, cases, ts, said, passed, total = published[suite]
         now = counts[suite]
+        # Item 9 (environment). One filter, applied before anything below reads a
+        # row, because every item below is about "the ledger at this count" and a
+        # foreign row is not this band's ledger. A ceiling is per (suite,
+        # environment) by ADR-019's own Ruling; this is where the grader learns it.
+        # It reaches TWO clauses below, not one: the dirty allowance, where a
+        # clean CI row with an early naive-local `ts` claimed to predate a band it
+        # followed (ADR-019 §7), and `slowest`, where CI's wall clock would enter
+        # a maximum no local ledger can reproduce. It does not repair `ts`, which
+        # `stamp()` is UTC since T-M32-13, which fixes the ordering key; this is
+        # the other property, and ADR-019 §7 keeps the two apart.
+        # A local name: rebinding `rows` here would hand the NEXT suite in this
+        # loop the previous suite's already-filtered ledger, which is invisible
+        # while every published band names the same environment.
+        env_rows = [r for r in rows if r.get("env", _LEGACY_ENV) == env]
         # Every recorded run at this case count, not only the green ones. A
         # wall clock is a wall clock whether or not a case failed, taking the
         # max is the conservative direction — and requiring green would
         # deadlock: this check is itself in both suites, so the first run after
         # a band is republished could never be green while the band it needs is
         # the one that run would produce.
-        recorded = [r["wall_s"] for r in rows
+        recorded = [r["wall_s"] for r in env_rows
                     if r["suite"] == suite and r["total"] == now]
         slowest = max(recorded) if recorded else None
         if cases != now:
             # Item 1 (count). Carry the number the doc needs, not just the fact that it
             # is stale: growing a suite reddens this, and the fix is to republish
             # both scalars, so the red output is the whole regeneration step.
-            wrong.append({"suite": suite, "published_case_count": cases,
+            wrong.append({"suite": suite, "env": env, "published_case_count": cases,
                           "actual": now, "ledger_slowest_at_actual": slowest})
             continue
         if slowest is None:
-            wrong.append({"suite": suite, "no_recorded_run_at": now})
+            wrong.append({"suite": suite, "env": env, "no_recorded_run_at": now})
             continue
         # Item 2 (cited-run). The cited run must exist at this count and must have measured
         # the published number. Cleanliness is judged AS OF that run: a dirty row is
@@ -535,10 +564,11 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         # band, which is the treadmill §6 exists to refuse. Green is neither
         # required nor requirable — this check is in both suites, so at a new
         # count every run is red until the band is republished (T-R53).
-        at = [r for r in rows if r["suite"] == suite and r["total"] == now]
+        at = [r for r in env_rows if r["suite"] == suite and r["total"] == now]
         src = next((r for r in at if r["ts"] == ts), None)
         if src is None:
-            wrong.append({"suite": suite, "cites_no_recorded_run": ts, "at": now})
+            wrong.append({"suite": suite, "env": env,
+                          "cites_no_recorded_run": ts, "at": now})
         elif src["wall_s"] != said:
             wrong.append({"suite": suite, "published": said, "cited_run": ts,
                           "actually_measured": src["wall_s"]})
@@ -556,7 +586,7 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
                           "row_records": f"{src['passed']}/{src['total']}"})
         # Item 3 (same-ceiling).
         if _band_rule(said) != _band_rule(slowest):
-            wrong.append({"suite": suite, "published_slowest": said,
+            wrong.append({"suite": suite, "env": env, "published_slowest": said,
                           "derives_ceiling": _band_rule(said),
                           "ledger_slowest": slowest,
                           "ledger_derives": _band_rule(slowest),
@@ -599,8 +629,8 @@ def _check_published_band() -> dict:
     from evals.run import HISTORY, WALL_BUDGET_S, load_cases
 
     adr = _ADR019.read_text(encoding="utf-8")
-    lines = [(m.group(1), (int(m.group(2)), m.group(3), float(m.group(4)),
-                           int(m.group(5)), int(m.group(6))))
+    lines = [(m["suite"], (m["env"], int(m["cases"]), m["ts"], float(m["wall"]),
+                           int(m["passed"]), int(m["total"])))
              for m in _BAND_LINE.finditer(adr)]
     published = dict(lines)
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
@@ -615,7 +645,7 @@ def _check_published_band() -> dict:
                           float(m.group(4)), int(m.group(5))))
             for m in _README_BAND_ROW.finditer(readme)]
     table = dict(rows)
-    for suite, (cases, _ts, said, _p, _t) in sorted(published.items()):
+    for suite, (_env, cases, _ts, said, _p, _t) in sorted(published.items()):
         # The whole row, product and ceiling included: an ungraded copy is the
         # one that drifts, which is the lesson of R1 and R2 in this same PR.
         want = (cases, said, round(said * _BAND_RATE, 2), WALL_BUDGET_S[suite])
@@ -642,7 +672,7 @@ def _check_published_band() -> dict:
     # under a heading that says 20s IS green, and §6 declares that residue;
     # what is graded is that the arrow is arithmetically the rule's own answer
     # and never above the committed ceiling.
-    for suite, (_, _ts, said, _p, _t) in sorted(published.items()):
+    for suite, (_env, _c, _ts, said, _p, _t) in sorted(published.items()):
         stated = [(float(a), float(b), int(c))
                   for a, b, c in _BAND_DERIVATION.findall(adr) if float(a) == said]
         if not stated:
@@ -826,12 +856,14 @@ ADR-019 §6 item 3 (same-ceiling) is `rule(published) == rule(ledger max)`, so a
         # ceiling is
         # 999 for the same reason.
         rows = [{"suite": "s", "total": 1, "passed": 1, "ts": t, "wall_s": w,
-                 "dirty": False} for t, w in (("1", said), ("2", ledger_max))]
-        return _band_wrong({"s": (1, "1", said, 1, 1)}, {"s": 1}, {"s": 999.0}, rows)
+                 "dirty": False, "env": "e"}
+                for t, w in (("1", said), ("2", ledger_max))]
+        return _band_wrong({"s": ("e", 1, "1", said, 1, 1)}, {"s": 1}, {"s": 999.0},
+                           rows)
 
     # The bound is measured against the bands ADR-019 actually publishes, so it
     # is the headroom a reader of THIS doc has, not a sample chosen to flatter.
-    published = {g.group(1): float(g.group(4)) for g in _BAND_LINE.finditer(adr)}
+    published = {g["suite"]: float(g["wall"]) for g in _BAND_LINE.finditer(adr)}
     if not published:
         wrong.append({"adr_publishes_no_band_line": True})
     headroom = {}
@@ -862,13 +894,289 @@ ADR-019 §6 item 3 (same-ceiling) is `rule(published) == rule(ledger max)`, so a
     # longer
     # there (cold review of T-R56). The item-4 shape is `required_by_adr013_rule`.
     if not any("required_by_adr013_rule" in w for w in _band_wrong(
-            {"s": (1, "1", 12.96, 1, 1)}, {"s": 1}, {"s": 15.0},
+            {"s": ("e", 1, "1", 12.96, 1, 1)}, {"s": 1}, {"s": 15.0},
             [{"suite": "s", "total": 1, "passed": 1, "ts": t, "wall_s": w,
-              "dirty": False} for t, w in (("1", 12.96), ("2", 13.57))])):
+              "dirty": False, "env": "e"} for t, w in (("1", 12.96), ("2", 13.57))])):
         wrong.append({"r21_underjustified_ceiling_green_on_item_4": 15.0})
     return {"passed": not wrong, "wrong": wrong,
             "got": {"declared_slack_s": step_s, "headroom_s": headroom}}
+
+
+def _check_published_band_environment() -> dict:
+    """ADR-019 §6 item 9 (environment): a band is graded against its own environment.
+
+    T-R44, live and not theoretical: `.github/workflows/eval.yml` runs
+    `--suite invariant` first, which appends CI's row to the job's copy of the
+    ledger, then `--suite fast`, whose band check read that row as though this
+    laptop had written it — red on CI, green locally, on the same tree.
+
+    TWO RUNS, TWO CLAUSES, and this filter is the shared cause of both; an earlier
+    version of this docstring named only the second and attached it to the first.
+    On run 32626835735 (sha `434a98d`, T-R44's origin) CI's row was SLOWER —
+    16.02s against a published 12.92s, `rule` 20 against 15 — and item 3
+    (same-ceiling) fired. Nothing else in that tree could have: it has no
+    `_band_wrong`, no `cited_a_dirty_run`, and no timestamp group in `_BAND_LINE`.
+    On run 32637648447 (sha `11545a1`, `task/M32`, T-M32-13) CI's row was CLEAN
+    and its naive-local `ts` sorted eight hours before a band row it followed by
+    25 minutes, so item 2 (cited-run)'s dirty allowance fired. ADR-019 §7 keeps
+    the runs and the clauses apart, and carries the control that isolates the
+    second. `ts` is stamped UTC now, which repairs the second's ordering key; this
+    filter keeps a foreign row out of the ledger, which is the only thing that
+    reaches the first.
+
+    Driven with a synthetic ledger because the defect cannot be reproduced from
+    the committed one: no CI run's row ever reaches it (T-R51). The wall clocks
+    below are the ones PR #32 measured, and assertions 1-2 use them because a
+    filter has to be shown excluding something that WOULD have spoken; the
+    `ts`-ordered clause is graded where it lives, in the sibling check.
+    """
+    wrong = []
+
+    def ledger(*specs):
+        return [{"suite": "s", "total": 1, "passed": 1, "ts": ts, "wall_s": w,
+                 **({} if e is None else {"env": e})} for ts, w, e in specs]
+
+    def judge(env, rows):
+        return _band_wrong({"s": (env, 1, "1", 12.92, 1, 1)}, {"s": 1}, {"s": 15.0},
+                           rows)
+
+    mine = ("1", 12.92, "local")
+    # 1. The defect itself: a slower row from another environment is not this
+    #    band's evidence and must not redden it.
+    foreign = judge("local", ledger(mine, ("2", 16.02, "ci")))
+    if foreign:
+        wrong.append({"foreign_row_reddened_the_band": foreign})
+    # 2. ...and the same row measured HERE still does, or the filter is a hole
+    #    rather than a filter. Item 3 (same-ceiling) by name: 16.02 derives 20
+    #    where 12.92 derives 15.
+    native = judge("local", ledger(mine, ("2", 16.02, "local")))
+    if not any("ledger_derives" in w for w in native):
+        wrong.append({"same_environment_slower_row_stayed_green": native})
+    # 3. A row written before T-R44 carries no `env` at all, and nothing but a
+    #    local run has ever appended to the committed ledger, so an untagged row
+    #    is read as `local`. This assertion is the ONLY thing holding that
+    #    reading up — §2/§3 cite rows recorded after the tag existed, so the live
+    #    ledger stays green whatever `_LEGACY_ENV` says (ADR-019 §7).
+    legacy = judge("local", ledger(mine, ("2", 16.02, None)))
+    if not any("ledger_derives" in w for w in legacy):
+        wrong.append({"untagged_legacy_row_was_not_read_as_local": legacy})
+    # 4. The direction that would make this whole item decorative: a band
+    #    labelled with an environment the ledger holds no rows for must fail the
+    #    precondition, not pass for want of anything to compare against.
+    empty = judge("ci", ledger(mine, ("2", 16.02, "local")))
+    if not any("no_recorded_run_at" in w for w in empty):
+        wrong.append({"band_for_an_unrecorded_environment_stayed_green": empty})
+    # 5. Two suites banded in DIFFERENT environments in one call. The filter is
+    #    per-suite and must not carry over — the first draft of it rebound the
+    #    shared `rows`, so the second suite was judged against the first's
+    #    already-filtered ledger and found nothing. Invisible for as long as
+    #    every published band names the same environment, which is today.
+    two = _band_wrong(
+        {"a": ("local", 1, "1", 12.92, 1, 1), "b": ("ci", 1, "2", 16.02, 1, 1)},
+        {"a": 1, "b": 1}, {"a": 15.0, "b": 20.0},
+        [{"suite": s, "total": 1, "passed": 1, "ts": ts, "wall_s": w, "env": e}
+         for s, ts, w, e in (("a", "1", 12.92, "local"), ("b", "2", 16.02, "ci"))])
+    if two:
+        wrong.append({"one_environments_filter_leaked_into_the_next": two})
+    return {"passed": not wrong, "wrong": wrong}
+
+
+def _check_published_band_ts_orders_real_time() -> dict:
+    """ADR-019 §7: the ledger's `ts` is a total order on real time, so the band
+    check's `r["ts"] <= ts` compares what it says it compares.
+
+    T-M32-13, found by `task/M32` when PR #34 hit it on CI. `evals/run.py`
+    stamped `ts` with naive local time and item 2 (cited-run)'s dirty allowance
+    orders those strings as real time. The committed ledger mixed zones — this
+    laptop writes Asia/Taipei, a runner writes UTC — so a row 25 minutes LATER in
+    real time sorted eight hours EARLIER, was clean, and disqualified a dirty
+    citation it did not predate.
+
+    The zones are set explicitly rather than inherited: a check that asked the
+    host what time it is would be green on a UTC runner and red on this laptop,
+    which is the environment-dependent shape `fast-wall-clock-budget` was
+    falsified by twice.
+    """
+    import os
+    import time as _time
+
+    from evals import run as _run
+
+    wrong = []
+
+    def stamped(tz, instant):
+        old = os.environ.get("TZ")
+        os.environ["TZ"] = tz
+        _time.tzset()
+        try:
+            return _run.stamp(instant)
+        finally:
+            os.environ.pop("TZ", None) if old is None else os.environ.__setitem__("TZ", old)
+            _time.tzset()
+
+    # The T-M32-13 pair, re-derived from its two real instants rather than quoted
+    # as strings: 2026-08-23 11:25:33Z on this laptop, 11:50:44Z on the runner.
+    earlier, later = 1787484333.0, 1787485844.0
+    assert earlier < later
+    # 1. The stamp does not depend on the zone the writer happens to sit in.
+    here, there = stamped("Asia/Taipei", earlier), stamped("UTC", earlier)
+    if here != there:
+        wrong.append({"same_instant_stamped_differently_per_zone":
+                      {"Asia/Taipei": here, "UTC": there}})
+    # 2. ...so the later instant sorts later, which is the whole property. Stamped
+    #    in the two zones the ledger actually mixed, in the order that bit.
+    band_row, foreign = stamped("Asia/Taipei", earlier), stamped("UTC", later)
+    if not band_row < foreign:
+        wrong.append({"later_run_sorts_earlier": {"earlier_instant": band_row,
+                                                  "later_instant": foreign}})
+    # 3. The consumer: those two stamps through the clause that read them. A clean
+    #    row that happened AFTER the cited one must not disqualify it.
+    rows = [{"suite": "s", "total": 1, "passed": 1, "ts": band_row, "wall_s": 13.32,
+             "dirty": True, "env": "local"},
+            {"suite": "s", "total": 1, "passed": 1, "ts": foreign, "wall_s": 13.40,
+             "dirty": False, "env": "local"}]
+    fired = _band_wrong({"s": ("local", 1, band_row, 13.32, 1, 1)}, {"s": 1},
+                        {"s": 20.0}, rows)
+    if fired:
+        wrong.append({"dirty_clause_fired_on_a_row_that_came_later": fired})
+    # What is NOT here, deliberately: a check that the committed ledger holds no
+    # pre-switch row at a live case count. That is true of this tree and it is
+    # stated in ADR-019 §7 as an assumption, because it is not gradeable from the
+    # ledger — a row does not record the zone it was written in, and a `ts`
+    # threshold cannot separate the two sides: a post-switch UTC stamp of a given
+    # day sorts BELOW a pre-switch local stamp of the same day, not above it. A
+    # threshold here would have been green on a ledger that still mixed zones,
+    # which is a worse outcome than no check.
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"pair": [band_row, foreign]}}
+
+
 # ==== ADR-019 §6 band section: end ====
+
+
+
+def _check_ci_numbers_are_derived() -> dict:
+    """ADR-019 §5's four CI measurements are one source, and README derives from it.
+
+    T-R51 was closed on the labelling route — CI's wall clocks are hand-read off
+    the log of a named workflow run rather than committed to the ledger — and its
+    acceptance said "watched red either way". The labelling route shipped with
+    nothing that could go red: ADR-019 §5 said so itself ("Nothing grades the four
+    measurements"), and editing README's `74.04` to `99.99` left `--suite
+    invariant` at 60/60 (PR #41 R4). T-R51's own "Compounding" clause was exactly
+    this defect one version earlier — README published the CI band twice, in two
+    incompatible forms.
+
+    So the same contract `published-band-matches-the-ledger` item 7 (readme-row)
+    gives README's LOCAL band row now covers the CI numbers: §5's table is the one
+    source, README's four values and its two ranges are read back from it, and the
+    ceilings §5 derives are the ones the workflow declares.
+
+    What is still NOT graded, and cannot be from here: that anyone ever measured
+    those four numbers. The run id is what a reader checks (`gh run view … --log`);
+    this only refuses two documents drifting apart, and a run id that no document
+    mentions. Both halves are ungradeable locally for the same reason no CI row
+    reaches the ledger (T-R51, T-R73).
+
+    Regexes are local rather than module-level on purpose: ADR-019 §6 enumerates
+    the module-level names its band region does not pin, and a new constant up
+    there would silently make that enumeration stale.
+    """
+    import re as _re
+
+    adr = _ADR019.read_text(encoding="utf-8")
+    readme = _README.read_text(encoding="utf-8")
+    wf = (Path(__file__).parents[2] / ".github" / "workflows" / "eval.yml").read_text(
+        encoding="utf-8")
+    wrong = []
+
+    # §5 alone, not the whole ADR: the run id and the table both have to come from
+    # the section that publishes them, or an id mentioned three sections away
+    # satisfies the citation (PR #41 R12).
+    five = adr[adr.index("### 5."):]
+    five = five[:five.index("\n### ")] if "\n### " in five else five
+
+    # §5's table is the source: `| 1 | 16.47s | 69.54s |`, invariant then fast.
+    rows = [(float(a), float(b)) for a, b in
+            _re.findall(r"^\| \d+ \| ([\d.]+)s \| ([\d.]+)s \|", five, _re.M)]
+    if len(rows) != 4:
+        return {"passed": False, "wrong": [{"adr_five_table_rows": len(rows)}]}
+    by = {"invariant": [r[0] for r in rows], "fast": [r[1] for r in rows]}
+
+    # All eight cells, in attempt order, against the second copy that already
+    # exists: `.github/workflows/eval.yml`'s own comment block. Without this only
+    # `fast` was cell-wise graded — `invariant` is used through `min`/`max` alone,
+    # so attempts 2 and 4 were numbers in a spec that nothing read, which is the
+    # T-R51 residue this case exists to close (PR #41 R14). The workflow copy was
+    # itself ungraded, so this closes a third-copy drift in the same stroke; what
+    # it cannot do is tell either copy from the measurement, which stays T-R73.
+    wf_cells = {m[1]: [float(m[2]), float(m[3]), float(m[4]), float(m[5])]
+                for m in _re.finditer(
+                    r"^\s*#\s+(invariant|fast)\s+([\d.]+) / ([\d.]+) / ([\d.]+) / "
+                    r"([\d.]+)s\s*$", wf, _re.M)}
+    for suite in sorted(by):
+        if wf_cells.get(suite) != by[suite]:
+            wrong.append({"suite": suite, "adr_five_table": by[suite],
+                          "workflow_comment": wf_cells.get(suite)})
+
+    # The run id that makes them checkable, in both documents.
+    # The id may sit on the NEXT line, inside a markdown link — these are prose
+    # documents and a citation near a line end is not a defect (same reasoning as
+    # `_SIX_REF`'s wrapped slugs). Bounded to exactly that: `\s*` spans blank
+    # lines, so "eval-gate run" and a bare number two paragraphs apart used to
+    # satisfy this (PR #41 R12).
+    run_id = _re.search(r"eval-gate run[ \t]*\n?[ \t]*\[?(\d{6,})", five)
+    if not run_id:
+        wrong.append({"adr": "names_no_workflow_run_for_the_ci_numbers"})
+    elif run_id.group(1) not in readme:
+        wrong.append({"readme": "does_not_name_the_run_the_adr_cites",
+                      "adr_cites": run_id.group(1)})
+
+    # README republishes the four `fast` values as a sorted list. Read back from
+    # the table, not compared to a literal typed here.
+    want = " / ".join(f"{v:g}" for v in sorted(by["fast"])) + "s"
+    if want not in readme:
+        wrong.append({"readme": "fast_attempt_list_is_not_the_adr_table",
+                      "expected": want})
+
+    # ...and both ranges WITH the ceilings they derive, bound in one match so the
+    # mapping from suite to ceiling is read rather than assumed. The ceilings were
+    # unread until PR #41 R8: editing README's `90s` to `85s` left the gate green
+    # while the sentence claimed the rule gave it.
+    m = _re.search(r"gave `invariant` ([\d.]+)-([\d.]+)s and\s+`fast` "
+                   r"([\d.]+)-([\d.]+)s, so \*\*(\d+)s\*\* and \*\*(\d+)s\*\*", readme)
+    if not m:
+        wrong.append({"readme": "publishes_no_ci_range_and_ceiling_sentence"})
+    else:
+        got = {"invariant": (float(m[1]), float(m[2]), int(m[5])),
+               "fast": (float(m[3]), float(m[4]), int(m[6]))}
+        for suite in sorted(by):
+            want = (min(by[suite]), max(by[suite]), _band_rule(max(by[suite])))
+            if got[suite] != want:
+                wrong.append({"readme": "ci_range_or_ceiling_is_not_the_adr_table",
+                              "suite": suite, "readme_says": list(got[suite]),
+                              "adr_table_gives": list(want)})
+
+    # One CI band in README, not two. T-R51's "Compounding" clause was exactly
+    # this: README published the CI band twice, incompatibly, and one of the two
+    # values was a LOCAL ledger row. The graded FORM is the bolded four-value
+    # list; a superseded band written unbolded and labelled as superseded — which
+    # is how the 95-case one is written — is deliberately not read (PR #41 R8).
+    lists = _re.findall(r"\*\*[\d.]+ / [\d.]+ / [\d.]+ / [\d.]+s\*\*", readme)
+    if len(lists) > 1:
+        wrong.append({"readme": "publishes_more_than_one_ci_band", "found": lists})
+
+    # The ceilings §5 derives from its own maxima are the ones the workflow
+    # declares — the chain the four numbers exist to justify.
+    for suite in sorted(by):
+        declared = _re.search(rf'EVAL_WALL_BUDGET_S_{suite.upper()}: "(\d+)"', wf)
+        got = int(declared.group(1)) if declared else None
+        if got != _band_rule(max(by[suite])):
+            wrong.append({"suite": suite, "workflow_declares": got,
+                          "adr_five_max": max(by[suite]),
+                          "rule_gives": _band_rule(max(by[suite]))})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"adr_five": by, "run": run_id.group(1) if run_id else None}}
 
 
 def _check_history_dirty_before_report() -> dict:
@@ -4311,6 +4619,9 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "steps-adopt-only": _check_steps_adopt_only,
               "published-band": _check_published_band,
               "published-band-slack": _check_published_band_slack,
+              "published-band-environment": _check_published_band_environment,
+              "published-band-ts": _check_published_band_ts_orders_real_time,
+              "ci-numbers-derived": _check_ci_numbers_are_derived,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip}
