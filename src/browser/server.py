@@ -12,7 +12,9 @@ import json
 import re
 import uuid
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+import urllib.error
+import urllib.request
+from urllib.parse import parse_qs, quote, urlparse
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
@@ -284,6 +286,94 @@ async def stream_task(run_id: str):
     return StreamingResponse(gen(), media_type="text/event-stream")
 
 
+# --- Live page view -------------------------------------------------------
+# The right-hand panel shows the real page, scrollable, not only a screenshot.
+# It cannot iframe the site directly: the sites worth demoing send
+# X-Frame-Options/CSP frame-ancestors and refuse to be framed. So the page is
+# fetched here and served same-origin.
+#
+# Three things make that safe enough to expose publicly, and none of them is
+# optional:
+#  1. `url_ok` on the submitted URL AND on every redirect hop. A proxy that
+#     validates only the first URL is an SSRF hole with extra steps -- the
+#     redirect is the attack (case view-proxy-refuses-redirect-to-private).
+#  2. The response is capped and never streamed unbounded: a demo endpoint that
+#     will read an arbitrary number of bytes from an arbitrary host is a way to
+#     fill this container's memory from outside it.
+#  3. The frontend frames it with `sandbox` and no `allow-scripts` /
+#     `allow-same-origin`, so the document lands in an opaque origin with
+#     scripting off. `Content-Security-Policy: sandbox` repeats that on the
+#     response, because the iframe attribute is the caller's promise and this
+#     header is ours -- anything that reaches the endpoint by another route
+#     (a pasted link, a fetch) gets the same treatment.
+# What it is NOT: the DOM the agent saw. It is a fresh, script-free fetch of the
+# same URL, so a page that builds itself with script renders emptier here than
+# the trace shows. That is stated on the panel rather than left to be discovered.
+
+VIEW_MAX_BYTES = 3_000_000
+VIEW_TIMEOUT_S = 10
+VIEW_MAX_REDIRECTS = 5
+VIEW_UA = "Mozilla/5.0 (compatible; browser-agent page view; +https://github.com/HaoweiChan/browser-agent)"
+
+
+class _GuardedRedirect(urllib.request.HTTPRedirectHandler):
+    """Every hop re-checked. urllib follows redirects inside `urlopen`, so the
+    guard has to live in the handler -- checking `resp.url` afterwards means the
+    request to the private address has already been made."""
+
+    max_redirections = VIEW_MAX_REDIRECTS
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not url_ok(newurl):
+            raise urllib.error.HTTPError(
+                newurl, 403, "redirect to a blocked host", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _fetch_page(url: str) -> tuple[bytes, str]:
+    opener = urllib.request.build_opener(_GuardedRedirect)
+    req = urllib.request.Request(url, headers={"User-Agent": VIEW_UA})
+    with opener.open(req, timeout=VIEW_TIMEOUT_S) as resp:
+        if not url_ok(resp.url):          # belt and braces: the final hop too
+            raise ValueError(f"final URL blocked: {resp.url}")
+        # read() one byte past the cap so a truncated body is detectable rather
+        # than silently served as if it were the whole page.
+        body = resp.read(VIEW_MAX_BYTES + 1)
+        return body, resp.url
+
+
+@app.get("/view")
+async def view_page(url: str):
+    """The submitted page, fetched server-side and served same-origin so the
+    panel can frame and scroll it. Read-only, no cookies, no credentials."""
+    if not url_ok(url):
+        raise HTTPException(422, "url blocked: http/https public hosts only")
+    try:
+        body, final = await asyncio.to_thread(_fetch_page, url)
+    except Exception as e:  # loud, and never a blank frame with no reason
+        raise HTTPException(502, f"could not fetch the page: {type(e).__name__}: {e}") from e
+    truncated = len(body) > VIEW_MAX_BYTES
+    text = body[:VIEW_MAX_BYTES].decode("utf-8", "replace")
+    # <base> so the page's own relative CSS/images resolve against ITS origin
+    # rather than ours. Injected after any <meta charset> so it cannot displace
+    # one; appended if the document has no <head> at all.
+    tag = f'<base href="{html.escape(final, quote=True)}">'
+    lower = text.lower()
+    cut = lower.find("<head")
+    if cut >= 0 and (close := lower.find(">", cut)) >= 0:
+        text = text[:close + 1] + tag + text[close + 1:]
+    else:
+        text = tag + text
+    if truncated:
+        text += ('<p style="font:14px system-ui;padding:1rem;background:#ffe;border-top:2px solid #ca0">'
+                 f'Page view truncated at {VIEW_MAX_BYTES:,} bytes. The run itself read the whole page.</p>')
+    return HTMLResponse(text, headers={
+        "Content-Security-Policy": "sandbox",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+    })
+
+
 @app.get("/runs/{run_id}/{shot}")
 async def run_screenshot(run_id: str, shot: str):
     """Per-step screenshots — the visual half of inspecting a failure. Both
@@ -327,6 +417,13 @@ PAGE = r"""<!doctype html>
     color-scheme:light;
   } }
   * { box-sizing:border-box }
+  /* `hidden` is a `display:none` UA default, and every one of this page's own
+     layout rules outranks it: `.status-line{display:flex}` and
+     `.progress{display:grid}` both kept rendering under `hidden=true`, so the
+     idle panel showed a RUNNING chip with the spinner over an empty progress
+     rail while the DOM correctly reported both as hidden. One rule, not a class
+     per element -- the attribute is the intent and it should win. */
+  [hidden] { display:none !important }
   html { min-height:100%; background:var(--bg) }
   body { margin:0; min-height:100vh; background-color:var(--bg); color:var(--fg);
          font:14px/1.6 var(--mono); letter-spacing:-.01em;
@@ -428,6 +525,41 @@ PAGE = r"""<!doctype html>
   .progress li[data-state="current"]::before { content:"› "; color:var(--accent) }
   .progress li[data-state="failed"] { border-left-color:var(--bad); color:var(--bad) }
   .progress li[data-state="failed"]::before { content:"× "; color:var(--bad) }
+  /* The running stage spins. CSS only: the progress case forbids timers in the
+     script, and a phase that advances on a clock would be a progress bar that
+     lies about the trace. */
+  @keyframes spin { to { transform:rotate(1turn) } }
+  .progress li[data-state="current"]::after, .big.running::after {
+       content:""; display:inline-block; width:.66em; height:.66em; margin-left:.45em;
+       vertical-align:-.05em; border:2px solid color-mix(in srgb,var(--accent) 26%,transparent);
+       border-top-color:var(--accent); border-radius:50%; animation:spin .75s linear infinite }
+  /* Trace on the left, what the browser actually saw on the right. */
+  .live-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,25rem);
+       gap:.7rem; align-items:start }
+  .live-main { min-width:0 }
+  .pageview { position:sticky; top:.7rem; max-height:calc(100vh - 1.4rem); overflow:auto;
+       padding:.75rem; min-width:0 }
+  .pv-hd { display:flex; gap:.5rem; align-items:baseline; justify-content:space-between;
+       flex-wrap:wrap; margin-bottom:.5rem }
+  .pv-shot img { display:block; width:100%; border:1px solid var(--line); border-radius:var(--radius) }
+  .pv-text { margin-top:.7rem }
+  .pv-tabs { display:flex; gap:.3rem; margin:0 0 .55rem }
+  .pv-tab { background:transparent; border:1px solid var(--line); color:var(--dim);
+       padding:.3rem .55rem; font-size:11px; letter-spacing:.05em; flex:1 1 auto }
+  .pv-tab[aria-selected="true"] { border-color:var(--accent); color:var(--accent);
+       background:color-mix(in srgb,var(--accent) 10%,transparent) }
+  .pv-tab:hover:not(:disabled) { color:var(--fg) }
+  /* The frame is the point: it scrolls, so a reviewer can read the page the
+     task was about instead of squinting at a screenshot of the fold. */
+  #pvframe { display:block; width:100%; height:min(62vh,34rem); border:1px solid var(--line);
+       border-radius:var(--radius); background:#fff; color-scheme:light }
+  #pvframe[hidden] { display:none }
+  .scrape { border-left:3px solid var(--accent); padding:.4rem .55rem; margin-top:.4rem;
+       background:var(--bg); border-radius:var(--radius); overflow-wrap:anywhere }
+  @media (max-width:900px) {
+    .live-grid { grid-template-columns:minmax(0,1fr) }
+    .pageview { position:static; max-height:none }
+  }
   .limits-summary { margin:0; padding-left:1.2rem; color:var(--fg) }
   .limits-summary li + li { margin-top:.35rem }
   a { color:var(--accent) }
@@ -480,12 +612,12 @@ PAGE = r"""<!doctype html>
 <div class="panel command">
   <div class="row">
     <div class="field"><label for="task">What should it find?</label>
-      <input id="task" placeholder="e.g. Who submitted this story?"></div>
+      <input id="task" placeholder="e.g. What is the market cap of this company?"></div>
     <div class="field"><label for="url">Start URL</label>
-      <input id="url" placeholder="https://… the page to start on"></div>
+      <input id="url" placeholder="https://… the page to start on" onchange="urlChanged()"></div>
     <div class="actions">
       <button id="go" onclick="submitTask()">Run task</button>
-      <button class="ghost" onclick="smoke()"
+      <button id="check" class="ghost" onclick="smoke()"
         title="Launches Chromium against example.com — proves the browser works, spends no tokens">Browser check</button>
     </div>
   </div>
@@ -496,7 +628,7 @@ PAGE = r"""<!doctype html>
 
 <div id="live" hidden>
   <h2><span class="section-no">02</span> Trace <span class="note" id="runid"></span></h2>
-  <div class="status-line"><span class="big running" id="status">running</span>
+  <div class="status-line" id="statusline"><span class="big running" id="status">running</span>
     <span class="note" id="budgets"></span></div>
   <ol class="progress" id="progress" aria-label="Run progress" aria-live="polite">
     <li data-phase="planning" data-state="upcoming">Planning</li>
@@ -505,8 +637,29 @@ PAGE = r"""<!doctype html>
     <li data-phase="verification" data-state="upcoming">Verify answer</li>
     <li data-phase="complete" data-state="upcoming">Complete</li>
   </ol>
-  <div id="steps"></div>
-  <div id="result"></div>
+  <div class="live-grid">
+    <div class="live-main">
+      <div id="steps"></div>
+      <div id="result"></div>
+    </div>
+    <aside class="panel pageview" id="pageview" aria-label="Page view">
+      <div class="pv-hd"><b>Page view</b>
+        <a class="note" id="pvlink" href="#" target="_blank" rel="noopener noreferrer" hidden>open the real page &#8599;</a></div>
+      <div class="pv-tabs" role="tablist" aria-label="Page view mode">
+        <button class="pv-tab" id="tab-live" role="tab" aria-selected="true" onclick="pvTab('live')">Live page</button>
+        <button class="pv-tab" id="tab-shot" role="tab" aria-selected="false" onclick="pvTab('shot')">Screenshot</button>
+        <button class="pv-tab" id="tab-read" role="tab" aria-selected="false" onclick="pvTab('read')">What was read</button>
+      </div>
+      <p class="note" id="pvcap">Enter a URL, or pick an example below.</p>
+      <div id="pvlive" class="pv-pane">
+        <iframe id="pvframe" title="The page, fetched and rendered read-only"
+                sandbox referrerpolicy="no-referrer" loading="lazy"></iframe>
+        <p class="note" id="pvlivenote"></p>
+      </div>
+      <div id="pvshot" class="pv-shot pv-pane" hidden></div>
+      <div id="pvtext" class="pv-text pv-pane" hidden></div>
+    </aside>
+  </div>
 </div>
 
 <h2><span class="section-no">03</span> What works today</h2>
@@ -531,8 +684,11 @@ const SUPPORT_LABELS = {
   TC4: "Compare or sort", TC5: "Submit a form"
 };
 // One per real-site support-matrix row — the cards are the only example
-// surface. Every entry was run against the deployment on 2026-08-22; the
-// run_id is the receipt (GET /tasks/<run_id>). A site declared supported/—
+// surface. Every entry was run against the deployment: the M35 entries on
+// 2026-08-22, the four M40 ones (quotes, companiesmarketcap, x-rates, multpl)
+// on 2026-08-23. A run_id here is a receipt against docs/support-matrix.md and
+// the eval record, NOT against a live GET /tasks/<run_id> — RUNS is in-memory
+// and a redeploy destroys the history (support matrix D19). A site declared supported/—
 // cites a run that answered correctly; a site declared unreliable/unsupported
 // may cite a run that demonstrates the declared status (fails loudly, never a
 // wrong answer) and says so in `note`. An example nobody can reproduce is
@@ -548,25 +704,55 @@ const EXAMPLES = {
     // deployment — 349e4839, e08b7627, bcae4fe7, 63b9d944, failure:locate,
     // the planner targets link "pg" and the page has two.
     task: "What is the title of this story?"},
-  "quotes.toscrape.com (live)": {label: "Who said this quote?",
+  "quotes.toscrape.com (live)": {label: "First of the top ten tags",
     url: "https://quotes.toscrape.com/",
-    task: "Who wrote the quote about the world we have created?",  // run 24820d4c → "Albert Einstein"
-    note: "This static page answered correctly once (run 24820d4c); the declared failure is the JS-rendered /js/ pages."},
-  "openlibrary.org (live)": {label: "Author of a book",
+    // Third task on this card in one milestone, and the first that survives a
+    // pre-merge re-run: 3/3 (51bc4a0a, eb5ed750, b131ac78 → "love"). The two it
+    // replaces are both the resolver-ambiguity shape main's M38 exists to fix —
+    // "Who wrote the quote about the world we have created?" is 1/6 on this build
+    // ("3 matches at tier text" for "Albert Einstein", three of his quotes on the
+    // page: f7dd7f52, 7d05d5e2), and the /author/ page answers with the site
+    // title and is rejected by the judge (6811f8bf, 79572b33, a8fe1b01). This
+    // task asks for a value that is unique on the page, which is the property
+    // this agent needs and the page cannot always offer.
+    task: "Which tag is listed first under Top Ten tags?",
+    note: "3/3 on this task. The author-name tasks are 1/6 — the same value appears three times and the resolver will not guess; the declared failure is the JS-rendered /js/ pages."},
+  "openlibrary.org (live)": {label: "See a failure: author of a book",
     url: "https://openlibrary.org/books/OL7025919M",
     task: "Who is the author of this book?",   // run f1ecf157 → failure:extract (015b6778, 65af344f too: loud, never wrong)
     note: "Declared unreliable — this example fails loudly, so you can see what a failure looks like."},
+  "companiesmarketcap.com (live)": {label: "Market cap of a company",
+    url: "https://companiesmarketcap.com/apple/marketcap/",
+    // The only row here with a real repeat count behind it: 7/7 on the pre-M32
+    // build and 8/8 on the current one (d0b63c7e, f2c8c624, 65bb1028, 03eedb79,
+    // 2a058974, 4cec8304, 215e511a, f8925a42) across six pages. It survives a
+    // build change because the answer IS a heading's accessible name, so no plan
+    // ever needs a container — D28 has the shape.
+    task: "What is the market cap of this company?"},
+  "bankofcanada.ca (live)": {label: "A central bank's policy rate",
+    url: "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+    task: "What is the current policy interest rate?",   // 3/3: e36edcc1, 93fc8e6f, 5125b503 → "2.25"
+    },
+  "ecb.europa.eu (live)": {label: "An ECB key rate",
+    url: "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
+    task: "What is the deposit facility rate?",   // 2/3: c8f04424, 9597fab9 → "2.25"
+    note: "2/3 — the third run read the historical table instead of the current rate, and the judge rejected it."},
   "wikipedia.org": {label: "A university's motto",
     url: "https://en.wikipedia.org/wiki/Harvard_University",
-    task: "What is the motto of this university?",            // run 6a828ddb → "Veritas (Latin)[3]"
-    note: "Not in the eval set yet — one verified run."},
+    // 3/4 on the current build (4bdbd12f, f31a05c8, a51a772f → "Veritas
+    // (Latin)[3]"; 7547e580 failed at locate). The pre-merge re-run is what
+    // found the failure — the earlier note said "one verified run", which was
+    // true and told a reader nothing about how often it holds.
+    task: "What is the motto of this university?",
+    note: "3/4 on this build; still no eval case, so nothing re-checks it."},
 };
 // Short limits for visitors; the declared rows with evidence stay in
 // docs/support-matrix.md, linked below with their count from the payload.
 const LIMITS = [
   "Needs a start URL or a site named in the task — no web search",
   "One visible value per page; second-page tasks (open category → read price) unreliable",
-  "Large tables / infoboxes: often fails — reads the whole block, not the one cell",
+  "Large tables / infoboxes / stock-quote grids: often fails — reads the whole block, not the one cell",
+  "Numbers painted by script after the page loads are invisible to the planner",
   "Can pass verification with a wrong answer — known defect, fix in progress",
   "Login, payment, CAPTCHA, delete, download: refused",
 ];
@@ -596,12 +782,46 @@ function useExample(key) {
   const e = EXAMPLES[key];
   $("task").value = e.task;
   $("url").value = new URL(e.url, location.origin).href;
+  urlChanged();
   if (!$("go").disabled) submitTask();
+}
+
+// Typing or pasting a URL is enough to see the page. The panel exists to let a
+// reviewer read what the task is about; making that wait for a run would hide
+// it behind the thing it is supposed to explain.
+function urlChanged() {
+  const url = $("url").value.trim();
+  $("live").hidden = false;
+  if (!runId) {                 // the panel is open to show a page, not a run
+    $("statusline").hidden = true;
+    $("progress").hidden = true;
+    $("steps").innerHTML = ""; $("result").innerHTML = "";
+  }
+  pvTab("live");
+  showLive(url);
+  if (url) { $("pvlink").href = url; $("pvlink").hidden = false; }
+  $("pvcap").textContent = url ? "the page, before anything runs" : "Enter a URL, or pick an example below.";
 }
 document.addEventListener("click", (ev) => {
   const hit = ev.target.closest("[data-example]");
   if (hit) useExample(hit.dataset.example);
+  const step = ev.target.closest("[data-step]");
+  if (step) { pinned = Number(step.dataset.step); showPage(pinned); }
 });
+
+// Both buttons open a stream and both write #status, #steps and the page view.
+// Before this there was no shared owner: starting a browser check under a live
+// run overwrote the trace with smoke output and painted `chromium ok` in the
+// success colour over a run that was still executing (or had failed).
+let smokeStream = null;
+
+function busy(on) {
+  $("go").disabled = on;
+  $("check").disabled = on;
+  if (!on) return;
+  if (es) { es.close(); es = null; }
+  if (smokeStream) { smokeStream.close(); smokeStream = null; }
+}
 
 function progressItems() { return [...$("progress").children]; }
 function labelProgress() {
@@ -645,6 +865,14 @@ function setTerminal(status) {
 
 function badge(text, cls) { return `<span class="badge ${cls||""}">${esc(text)}</span>`; }
 
+// A silently truncated value is the one thing this panel must never do: the
+// container dumps the verifier rejects are thousands of characters, and cutting
+// one to 300 with no marker renders a page dump as a tidy, well-scoped
+// extraction — hiding the defect the run was rejected for.
+function clip(t, n) {
+  return t.length > n ? esc(t.slice(0, n)) + `… <span class="note">(${t.length} chars)</span>` : esc(t);
+}
+
 // postcondition_ok is three-valued and null is NOT true: it means nothing was
 // asserted about this step. Collapsing null into "ok" here would show a green
 // tick on exactly the unverified action the contract calls a failure.
@@ -654,7 +882,7 @@ function postBadge(v) {
   return badge("unverified", "warn");
 }
 
-function stepEl(s) {
+function stepEl(s, idx) {
   const cls = [s.failure_class ? "failed" : "",
                s.retry_or_recovery === "recovery" ? "recovered" : "",
                s.superseded_by ? "superseded" : ""].join(" ");
@@ -668,7 +896,7 @@ function stepEl(s) {
   if (s.superseded_by) b += badge("superseded by #" + s.superseded_by);
   const shot = s.screenshot && runId
     ? `<img class="shot" loading="lazy" src="/runs/${runId}/${esc(s.screenshot)}">` : "";
-  return `<div class="step ${cls}">
+  return `<div class="step ${cls}" data-step="${idx}">
     <div class="hd"><span class="i">#${s.i}</span><span class="act">${esc(s.action)}</span>
       <code>${esc(t.length > 90 ? t.slice(0, 90) + "…" : t)}</code>
       ${b}<span class="ms">${s.ms}ms</span></div>
@@ -677,7 +905,71 @@ function stepEl(s) {
   </div>`;
 }
 
-function renderSteps(steps) { $("steps").innerHTML = steps.map(stepEl).join(""); }
+// The page view mirrors the trace: the latest step that produced a screenshot,
+// unless a step was clicked. Screenshots are best-effort in the executor, so a
+// step without one is a real state, not an error.
+let LIVE = [], pinned = null;
+
+// The panel has three views of one page and they answer different questions:
+// the live frame is "what does this page say", the screenshot is "what did the
+// browser see at this step", and the read pane is "what did we take off it".
+// Only the first is useful before a run starts, so it is the default and it
+// loads as soon as there is a URL.
+let PV = "live";
+
+function pvTab(which) {
+  PV = which;
+  for (const [name, pane] of [["live", "pvlive"], ["shot", "pvshot"], ["read", "pvtext"]]) {
+    $(pane).hidden = name !== which;
+    $("tab-" + (name === "live" ? "live" : name === "shot" ? "shot" : "read"))
+      .setAttribute("aria-selected", String(name === which));
+  }
+}
+
+// Framed through our own /view, because the sites worth demoing refuse to be
+// framed directly (X-Frame-Options / frame-ancestors). Sandboxed with no
+// allow-scripts: the frame renders and scrolls, and cannot run the page's
+// script — which is also why a script-built page looks emptier here than the
+// trace shows, and the note says so rather than leaving it to be discovered.
+function showLive(url) {
+  const frame = $("pvframe"), note = $("pvlivenote");
+  if (!url) { frame.removeAttribute("src"); note.textContent = ""; return; }
+  frame.src = "/view?url=" + encodeURIComponent(url);
+  note.innerHTML = "Read-only copy, fetched server-side and rendered with scripting off — "
+    + "so a page that builds itself with script shows less here than the trace read. "
+    + "Scroll it like the real page.";
+}
+
+function showPage(idx) {
+  const s = LIVE[idx];
+  if (!s) return;
+  $("pvcap").textContent = `step #${s.i} \u00b7 ${s.action}`
+    + (pinned === idx ? " \u00b7 pinned" : "") + (s.screenshot ? "" : " \u00b7 no screenshot");
+  if (s.action === "navigate" && s.value) showLive(s.value);
+  $("pvshot").innerHTML = s.screenshot && runId
+    ? `<img src="/runs/${runId}/${esc(s.screenshot)}" alt="The page as the browser saw it at step ${s.i}">`
+    : "";
+}
+
+function renderSteps(steps) {
+  LIVE = steps;
+  $("steps").innerHTML = steps.map(stepEl).join("");
+  let latest = -1;
+  steps.forEach((s, i) => { if (s.screenshot) latest = i; });
+  showPage(pinned !== null && pinned < steps.length ? pinned : latest);
+}
+
+// What was actually read off the page, with the text it was read from — the
+// half of "is this answer right?" that a screenshot cannot settle.
+function renderScraped(r) {
+  const ex = (r.evidence && r.evidence.extractions) || [];
+  $("pvtext").innerHTML = ex.length
+    ? `<div class="note">Read from the page (${ex.length})</div>` + ex.map(e =>
+        `<div class="scrape"><b>${clip(String(e.value), 300)}</b>
+         <details><summary>surrounding page text</summary><pre>${esc(e.page_text || "")}</pre></details>
+         </div>`).join("")
+    : `<p class="note">Nothing was read off the page in this run.</p>`;
+}
 
 function renderResult(r) {
   setTerminal(r.status);
@@ -691,6 +983,9 @@ function renderResult(r) {
   // Re-render from the final trace: it is authoritative where the live stream is
   // provisional — a supersede lands after its attempt was already sent.
   if (r.evidence && r.evidence.trace) renderSteps(r.evidence.trace);
+  renderScraped(r);
+  const fin = r.evidence && r.evidence.final_url;
+  if (fin) { $("pvlink").href = fin; $("pvlink").hidden = false; showLive(fin); }
   const v = r.verdict, none = r.answer === null || r.answer === undefined;
   const checks = v ? Object.entries(v.checks || {}).map(([k, ok]) =>
       badge((ok ? "✓ " : "✗ ") + k.replace(/_/g, " "), ok ? "ok" : "bad")).join("") : "";
@@ -725,14 +1020,19 @@ async function submitTask() {
     $("url").focus();
     return;
   }
-  $("go").disabled = true;
+  busy(true);
+  $("statusline").hidden = false;
   $("err").hidden = true;
   $("live").hidden = false;
   $("progress").hidden = true;
   $("steps").innerHTML = ""; $("result").innerHTML = "";
   $("status").className = "big running"; $("status").textContent = "running";
   $("budgets").textContent = ""; $("runid").textContent = "";
-  if (es) es.close();
+  runId = null; LIVE = []; pinned = null;
+  $("pvshot").innerHTML = ""; $("pvtext").innerHTML = "";
+  $("pvcap").textContent = "waiting for the browser\u2026";
+  $("pvlink").href = url; $("pvlink").hidden = false;
+  showLive(url);
   try {
     const r = await fetch("/tasks", {
       method: "POST", headers: {"Content-Type": "application/json"},
@@ -742,7 +1042,7 @@ async function submitTask() {
     if (!r.ok) {
       // A refusal is a terminal path too: without this the guard working once
       // disables the form for good, and the UI looks broken by its own success.
-      $("go").disabled = false;
+      busy(false);
       $("live").hidden = true;
       $("err").hidden = false;
       $("err").textContent = "rejected (" + r.status + "): " +
@@ -753,45 +1053,98 @@ async function submitTask() {
     resetProgress();
     $("progress").hidden = false;
     $("runid").textContent = "run " + runId;
+    const mine = runId;  // this run's id, captured before any await
     es = new EventSource("/tasks/" + runId + "/stream");
     const live = [];
     es.onmessage = (e) => {
       const ev = JSON.parse(e.data);
       if (ev.event === "step") { live.push(ev.step); setPhase(phaseFor(ev.step)); renderSteps(live); }
-      else if (ev.event === "done") { es.close(); setTerminal(ev.result.status); renderResult(ev.result); $("go").disabled = false; }
+      else if (ev.event === "done") { setTerminal(ev.result.status); renderResult(ev.result); busy(false); }
     };
-    es.onerror = () => {  // stream dropped — the run record is still the truth
-      es.close();
-      fetch("/tasks/" + runId).then(x => x.json()).then(s => {
-        if (s.status !== "running") renderResult(s);
-        else { $("status").textContent = "stream lost — reload to poll"; }
-        $("go").disabled = false;
-      });
+    // Stream dropped. The run record is the truth — but the poll for it can
+    // fail too, and every way it failed used to end in the same place: the
+    // button disabled for good and #status still reading `running`, now with a
+    // spinner animating beside it. A page that asserts a run is in progress for
+    // a run that is dead is the UI lying quietly, which is the one thing this
+    // surface exists not to do. `mine` guards the other half: a late poll for
+    // run A must not render against run B's id, or A's step captions get B's
+    // screenshots with no error anywhere.
+    es.onerror = () => {
+      if (es) { es.close(); es = null; }
+      fetch("/tasks/" + mine)
+        .then(x => x.ok ? x.json() : Promise.reject(new Error("HTTP " + x.status)))
+        .then(r => {
+          if (runId !== mine) return;             // a newer run owns the surface
+          if (r && typeof r.status === "string" && r.status === "running") detached(mine);
+          else if (r && typeof r.status === "string") renderResult(r);
+          else lost("stream lost, and the run record does not say what happened");
+        })
+        .catch(err => { if (runId === mine) lost("stream lost, and the run record is unreachable: " + err); })
+        .finally(() => { if (runId === mine) busy(false); });
     };
   } catch (e) {
-    $("err").hidden = false; $("err").textContent = String(e); $("go").disabled = false;
+    $("err").hidden = false; $("err").textContent = String(e); busy(false);
   }
 }
 
+// Terminal, and honest about being terminal: no spinner, no claim of a verdict.
+function lost(message) {
+  setTerminal("failure:env");
+  $("status").className = "big failure"; $("status").textContent = "stream lost";
+  $("err").hidden = false; $("err").textContent = message;
+}
+
+// NOT terminal. The stream dropped — a proxy idle timeout, a sleeping laptop, a
+// throttled background tab — and the run record says the run is still going. The
+// first version of this path called `lost()` here, which painted a healthy run as
+// `failure:env` with the progress rail marked failed: the same defect as the
+// spinner over a dead run, pointed the other way, and worse because a run that
+// then succeeds is never shown. So: no verdict, no `data-terminal`, no spinner,
+// and the run id stays on screen because it is the only way back to the record.
+function detached(id) {
+  $("progress").removeAttribute("data-terminal");
+  progressItems().forEach(item => item.removeAttribute("aria-current"));
+  $("status").className = "big unsupported"; $("status").textContent = "detached";
+  $("err").hidden = false;
+  $("err").textContent = "The live stream dropped, but the run record says this run is still "
+    + "executing. Nothing here is a verdict. Reload, or read the record directly at /tasks/" + id;
+}
+
 function smoke() {
+  busy(true);
+  runId = null;
+  smokeStream = null;
+  $("statusline").hidden = false;
   $("live").hidden = false;
   $("progress").hidden = true;
   $("steps").innerHTML = ""; $("result").innerHTML = "";
+  LIVE = []; pinned = null;
+  $("pvshot").innerHTML = ""; $("pvtext").innerHTML = "";
+  $("pvcap").textContent = "the browser check takes no screenshots";
+  $("pvlink").hidden = true;
   $("runid").textContent = "platform smoke — real Chromium, no LLM spend";
   $("status").className = "big running"; $("status").textContent = "running";
-  const s = new EventSource("/smoke/stream");
+  const s = smokeStream = new EventSource("/smoke/stream");
   const lines = [];
   s.onmessage = (e) => {
     const ev = JSON.parse(e.data);
     lines.push(e.data);
     $("steps").innerHTML = `<pre>${esc(lines.join("\n"))}</pre>`;
     if (ev.event === "done" || ev.event === "error") {
-      s.close();
+      s.close(); smokeStream = null;
       $("status").className = "big " + (ev.event === "done" ? "success" : "failure");
       $("status").textContent = ev.event === "done" ? "chromium ok" : "chromium failed";
+      busy(false);
     }
   };
-  s.onerror = () => s.close();
+  // Same treatment as the task stream, because it is the same failure: without
+  // it a check whose stream dies before `done` left #status reading `running`
+  // with the spinner going, forever.
+  s.onerror = () => {
+    s.close(); smokeStream = null;
+    lost("the browser check's stream dropped before it reported a result");
+    busy(false);
+  };
 }
 
 fetch("/support-matrix").then(r => r.json()).then(m => {
@@ -938,6 +1291,13 @@ async def smoke_events():
         return f"data: {json.dumps({'event': event, **kw})}\n\n"
 
     yield ev("start", target=SMOKE_URL)
+    if SEM.locked():
+        # Concurrency is 1 by design (SEM, /readyz). Without this, two tabs --
+        # or one tab before the M40 button-locking -- launched a second browser
+        # outside the semaphore, so the property /readyz reports stopped holding
+        # while /readyz still reported it from SEM alone.
+        yield ev("error", error=f"a run is executing ({ACTIVE_RUN}); one browser at a time")
+        return
     try:
         from playwright.async_api import async_playwright
 

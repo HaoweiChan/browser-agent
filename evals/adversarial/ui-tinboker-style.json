@@ -1,24 +1,74 @@
 {
   "id": "ui-tinboker-style",
   "task": "browser",
-  "suites": ["invariant", "fast"],
+  "suites": [
+    "invariant",
+    "fast"
+  ],
   "input": {
     "kind": "ui-style",
     "tokens": [
-      "--bg", "--panel", "--raised", "--line", "--fg", "--dim",
-      "--amber", "--amber-ink", "--on-amber", "--accent", "--ok",
-      "--bad", "--grid", "--mono"
+      "--bg",
+      "--panel",
+      "--raised",
+      "--line",
+      "--fg",
+      "--dim",
+      "--amber",
+      "--amber-ink",
+      "--on-amber",
+      "--accent",
+      "--ok",
+      "--bad",
+      "--grid",
+      "--mono"
     ],
     "contrast": [
-      ["--fg", "--bg", 4.5],
-      ["--dim", "--bg", 4.5],
-      ["--fg", "--panel", 4.5],
-      ["--dim", "--panel", 4.5],
-      ["--amber-ink", "--bg", 4.5],
-      ["--accent", "--bg", 4.5],
-      ["--ok", "--bg", 4.5],
-      ["--bad", "--bg", 4.5],
-      ["--on-amber", "--amber", 4.5]
+      [
+        "--fg",
+        "--bg",
+        4.5
+      ],
+      [
+        "--dim",
+        "--bg",
+        4.5
+      ],
+      [
+        "--fg",
+        "--panel",
+        4.5
+      ],
+      [
+        "--dim",
+        "--panel",
+        4.5
+      ],
+      [
+        "--amber-ink",
+        "--bg",
+        4.5
+      ],
+      [
+        "--accent",
+        "--bg",
+        4.5
+      ],
+      [
+        "--ok",
+        "--bg",
+        4.5
+      ],
+      [
+        "--bad",
+        "--bg",
+        4.5
+      ],
+      [
+        "--on-amber",
+        "--amber",
+        4.5
+      ]
     ],
     "fragments": [
       "color-scheme:dark",
@@ -28,16 +78,35 @@
       ":focus-visible",
       "body::before",
       "background-image:",
-      "button:not(.ghost):hover:not(:disabled)"
+      "button:not(.ghost):hover:not(:disabled)",
+      "@keyframes spin",
+      "animation:spin",
+      "[hidden] { display:none !important }"
     ],
     "ids": [
-      "task", "url", "go", "err", "live", "steps", "result",
-      "matrix", "limits", "budgets", "runid", "status"
+      "task",
+      "url",
+      "go",
+      "err",
+      "live",
+      "steps",
+      "result",
+      "matrix",
+      "limits",
+      "budgets",
+      "runid",
+      "status",
+      "pageview",
+      "pvshot",
+      "pvtext"
     ],
-    "forbid": ["fonts.googleapis.com", "fonts.gstatic.com"]
+    "forbid": [
+      "fonts.googleapis.com",
+      "fonts.gstatic.com"
+    ]
   },
   "expect": {},
-  "provenance": "TinBoker restyle requested on 2026-08-21, adapted from sec-10k-extract PR #18 rather than copied: this reviewer UI keeps its trace-first information architecture and existing DOM hooks. Watched red against the pre-restyle PAGE: no light palette, grid, viewport keyline, focus-visible treatment, reduced-motion branch, or amber button scoping; the old page also lacked the raised/amber-ink/grid/mono tokens. Contrast was then watched red independently by changing light --accent to #8a8a8a: the case reported 2.76:1 against --bg. The committed dark floor is 6.84:1 (dim/panel) and light floor is 4.85:1 (accent/bg) across the declared pairs. The case deliberately checks the source-level visual contract, contrast pairs and stable UI hooks, not pixel output or exact spacing, so future refinements remain possible.",
+  "provenance": "TinBoker restyle requested on 2026-08-21, adapted from sec-10k-extract PR #18 rather than copied: this reviewer UI keeps its trace-first information architecture and existing DOM hooks. Watched red against the pre-restyle PAGE: no light palette, grid, viewport keyline, focus-visible treatment, reduced-motion branch, or amber button scoping; the old page also lacked the raised/amber-ink/grid/mono tokens. Contrast was then watched red independently by changing light --accent to #8a8a8a: the case reported 2.76:1 against --bg. The committed dark floor is 6.84:1 (dim/panel) and light floor is 4.85:1 (accent/bg) across the declared pairs. The case deliberately checks the source-level visual contract, contrast pairs and stable UI hooks, not pixel output or exact spacing, so future refinements remain possible. M40: the running stage spins. The keyframes and the `animation:spin` shorthand are pinned beside the existing `@media (prefers-reduced-motion:reduce)` fragment, and the limit of that is stated rather than implied: the adapter runs three INDEPENDENT substring tests, so it grades that all three strings are present and nothing about their relationship. Narrowing the reduced-motion block from `*,*::before,*::after` to `*` would leave the spinner — an `::after` pseudo-element — animating under `prefers-reduced-motion:reduce` with all three fragments still matching and this case still green. Pinning the strings is worth doing and is not the guard the sentence would like to be; a real one renders the page under an emulated reduced-motion preference and reads `animationName`, which is a case nobody has written. The three new ids are the page view beside the trace. Watched red against the pre-M40 page (HEAD before this commit): the case reports FAIL, as does its M40-widened twin ui-execution-progress-is-trace-derived. M40 owner amendment 2: `[hidden]{display:none!important}` is pinned because this page's own layout rules outrank the attribute's UA default — `.status-line{display:flex}` and `.progress{display:grid}` both kept rendering while the DOM reported `hidden === true`, so the idle page view showed a RUNNING chip with the spinner over an empty progress rail. Found by looking at a screenshot after the DOM assertion had already passed, which is the whole argument for the rendered UI cases existing beside the source-fragment ones.",
   "triage": {
     "class": "visual-regression",
     "note": "The interface worked but did not carry the requested TinBoker terminal language. This check makes the distinguishing style and accessibility decisions executable while the existing stream and gateway cases continue to grade behavior."

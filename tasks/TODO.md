@@ -136,6 +136,54 @@ first; `quotes.toscrape.com/js` keeps its honest marker if it is still
 unplannable; tokens-per-task measured before/after from committed reports
 and stated (must stay inside the 100k run budget).
 
+### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: pr]
+Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
+two Try examples produce nothing, five cards should be eight, the running stage should
+show it is running, a right-hand panel should show what the browser saw so a reviewer can
+check the scraped content, and the covered domains should include the investment sites an
+investment firm actually uses.
+**Process note, recorded rather than tidied away:** this block was written AFTER the work
+started, at the owner's instruction mid-session ("make sure you update TODO before
+implementation"). CLAUDE.md's per-feature loop puts plan → ADR → cases first; on this task
+the probing came first and the block second. Written down because the ordering is exactly
+what this file exists to make visible, and because the probe results below are what a plan
+written first would have had to guess at.
+Spec: four frontend asks, one that is not. The four are `src/browser/server.py`'s inline
+PAGE — a CSS-only spinner on the current phase (the progress case forbids timers in the
+script, and a phase advancing on a clock is a progress bar that lies about the trace), a
+right-hand page view carrying the step screenshot the executor already takes plus, after
+the run, every extraction with the page text it was read from, and an EXAMPLES/matrix set
+that reaches eight real-site rows. The fifth — "support investment sites" — cannot be
+answered by writing code; it is answered by running the deployment and declaring what came
+back, under the same report-assisted/human-declared rule as every other row.
+Acceptance:
+- Every Try example and every live-declared row is re-run against the build being
+  shipped, immediately before merge (added mid-task — see ADR-022 Decision 1a; the
+  first three rows declared here expired when the deployment was replaced).
+- The page view shows the page ITSELF, scrollable, not only a screenshot (owner
+  amendment mid-task) — and the proxy that requires is graded as the SSRF surface
+  it is, watched red per property.
+- No Try example cites a run shape that no longer reproduces. Each card's example is
+  re-run against the deployment and its status matches what happened, including the one
+  card that is deliberately a failure demo.
+- Eight non-fixture rows in `docs/support-matrix.md`, each with an EXAMPLES entry
+  (`ui-examples-cover-matrix` already grades set equality in both directions).
+- The new live-declared rows carry their run ids, their repeat counts, and a declared
+  limitation naming the page shapes that failed — not a pass rate thresholded into a word.
+- Every new UI hook is pinned by the UI cases, watched red against the pre-M40 page.
+- Cold review and spec-drift both run before the commit; every finding either lands as a
+  fix with a case, or as a declared limitation. No finding is closed by rewording alone.
+Rebased onto main 2026-08-23 after PR #34/#39 merged: this block was written as M38 and
+renamed to M40 — main had already queued M38 (resolver disambiguation) and M39. The
+collision is worth noting rather than silently renumbering, because main's M38 is the fix
+for one of the two broken Try examples this task found by hand: `e985e048`/`e6768ee0` in
+its Origin are the same quotes.toscrape.com ambiguity this task hit as `eefae1b8`.
+Not in scope, and why: a plan-lint clause refusing container-role `extract` targets. It is
+the obvious fix for the dominant live failure shape and it would turn
+`extract-container-dump-is-not-the-answer` red by ending the run before anything is read —
+changing what that case can observe rather than fixing what it grades. Isolating the cell
+stays T-R66/M28.
+
 ### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
 Origin: `prompts/015` — "would an MCP / tool-calling loop raise completion?"
 `docs/architecture/task1-overview.md` chose B over A (LLM-per-step) on
@@ -159,6 +207,58 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M40-3 — the SSRF case for `/view` is `fast`-only because the invariant suite cannot carry it on CI            [status: todo]
+Origin: PR #43 (M40), CI run 32651052282
+Spec: `view-proxy-refuses-private-and-redirects` guards a public SSRF surface and belongs in
+`invariant` beside `url-guard-literal-ips`, which guards the task path's twin. Tagged that way it
+is ungreenable on CI: the invariant suite ran **17.58s at 59 cases** on CI against 13.12s locally,
+and 17.58 derives a ceiling of 25 where the committed one is 20, so item 3 (same-ceiling) reddens
+every CI run while every local run is green. That is T-M32-13's second symptom, which its own
+block already records at 17.39s — before this case existed. CI's invariant row was 14.88s at 58
+cases (ADR-021), so the gap was already there.
+Not a silent downgrade: the guard runs on every commit regardless, because `fast` is the
+pre-commit gate and CI runs it too. What is lost is the `invariant` suite's 100%-or-red rule.
+Acceptance: either T-M32-13 lands (so a locally-derived band is not structurally red against CI
+rows) and the tag is restored, or the CI invariant ceiling is re-derived from CI's own measurement
+under an ADR with an owner ruling — ADR-021's precedent, and its own text says the margin question
+is not closed. Restoring the tag without one of those puts the branch back to red-on-CI.
+
+### T-M40-1 — `/smoke/stream`'s concurrency guard is a read, not an acquire            [status: todo]
+Origin: PR (M40) round 2, cold review finding "also noted"
+Spec: `smoke_events` (`src/browser/server.py`) checks `SEM.locked()` and returns early, but never
+takes `SEM`. The guard is therefore one-directional: it stops a browser check starting under a
+RUN, and stops nothing else. Two tabs both clicking Browser check launch two Chromiums; a check
+followed within its ~15s window by `POST /tasks` does the same; and `/readyz` reports
+`{"ready": true, "busy": false, "active_run_id": null}` throughout, because it reads `SEM` too.
+On a small PaaS container the second Chromium is the OOM the guard exists to prevent, and it gets
+attributed to the agent.
+Repro: two concurrent `curl -N https://<host>/smoke/stream` — both reach `launching`.
+Acceptance: the smoke path takes the same semaphore the run path does (or a documented
+non-blocking `try-acquire`), and a case pins that two concurrent smoke streams cannot both reach
+`launching` — watched red against the current early-return.
+
+### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: todo]
+Origin: PR (M40) post-merge re-probe of the deployment, 2026-08-23
+Spec: M40 declared three live rows from 43 runs against the build deployed BEFORE PR #34 (M32).
+After M32 deployed, a re-probe of the same tasks shows a new dominant failure shape that none of
+D28's three shapes covers: the planner emits `extract {"role": "WebArea", "name": "<the page
+title>"}` — the document root, named by `<title>` — and the relocation rung then retargets as
+`{text: "<the page title>"}` and resolves nothing. Measured: x-rates.com 0/2 (`b8b95067`,
+`133264ee`, was 3/3 pre-M32), multpl.com 0/2 (`bdc38f65` container dump via a Table link,
+`c7fa2623` three `observe` steps then a click and no extraction; was 2/3), quotes.toscrape.com's
+author page 0/1 (`6811f8bf` — extracted "Quotes to Scrape", the site title, and the M36 judge
+rejected it; was 3/3), openlibrary.org 0/1 (`a6797fbe`, same WebArea shape). companiesmarketcap.com
+is unaffected (2/2, `d0b63c7e`, `f2c8c624`) — its answer is the accessible NAME of a heading, so
+the plan never needs a container.
+Not claimed: that M32 CAUSED this. The probe is one task phrasing per page against a deployment
+that also moved model-side; `WebArea` targets appear in two pre-M32 runs too (`8c1a3344` stooq,
+`c80b1dd0` coingecko). What is measured is that four of five re-probed tasks that answered before
+do not answer now, and that the shape they share is a container target the resolver cannot use.
+Acceptance: an offline fixture case pinning `extract {role: WebArea}` (and the `{text: <title>}`
+relocation it degrades into) as a refused plan rather than a locate failure — the plan lint is the
+natural home, next to the container-dump clause M28/T-R66 already owns — watched red first; then
+the D28 rows re-declared from a post-fix probe of the same tasks.
 
 ### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
 Origin: PR #34 R17.
@@ -566,7 +666,7 @@ Acceptance: `specs/001-browser-contract.md:145-150` states the null half and
 cites the third case, matching D25 and ADR-020 word for word on the predicate;
 ideally a grader covers the contract's case citations the way
 `support-matrix-cites-real-cases` covers the matrix's.
-### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
+### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: pr]
 Origin: M37 implementer
 Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
 because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
@@ -577,18 +677,12 @@ who types the placeholder verbatim against the HN card's URL reproduces the reti
 Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
 "What is the title of this story?" is the obvious one), pinned by the ui-form case the way
 `expected_examples` pins a chip — or a note that placeholders are illustrative only.
-
-### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: todo]
-Origin: M37 implementer
-Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
-because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
-failure:locate, two "pg" links). The form's `#task` placeholder in `src/browser/server.py`
-(`placeholder="e.g. Who submitted this story?"`) is the same prompt, unchanged because M37's
-acceptance reads "No other page text changes" and nothing grades placeholder text. A visitor
-who types the placeholder verbatim against the HN card's URL reproduces the retired failure.
-Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
-"What is the title of this story?" is the obvious one), pinned by the ui-form case the way
-`expected_examples` pins a chip — or a note that placeholders are illustrative only.
+Closed by M40: the placeholder is now "What is the market cap of this company?" — the
+`companiesmarketcap.com` example's task, 7/7 on the deployment (D28), the strongest cited run
+in the set rather than the HN one. It sits two lines above the EXAMPLES map M40 rewrote, so
+fixing it there rather than in its own PR is the shorter diff. The acceptance's second half is
+NOT met and is not claimed to be: nothing grades placeholder text, so this can regress silently
+again — the `ui-form` pin stays open work.
 
 ### T-R50 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
 Origin: T-R34, restated after PR #35 R4 (renumbered from T-R39 during the M35 merge — main had allocated that id independently)

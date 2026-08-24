@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 153 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 155 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260823-211825-fast.json`, with
-`evals/report/20260823-211839-invariant.json` and
+Latest offline baseline — `evals/report/20260824-000842-fast.json`, with
+`evals/report/20260824-002333-invariant.json` and
 `evals/report/20260823-164737-live.json`:
 
 ```
-fast  153/153    invariant  58/58    live  9/9    $0.0000    70.4s
+fast  155/155    invariant  57/58    live  9/9    $0.0000    70.8s
 recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 33/33 · 13 replans
 ```
@@ -144,7 +144,7 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 153 | 70.2s | 80.73 | **90s** |
+| `fast` | 155 | 70.85s | 81.48 | **90s** |
 | `invariant` | 58 | 13.78s | 15.85 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
@@ -181,7 +181,11 @@ case went green immediately while the other kept failing, because the outage had
 been hiding a defect of ours: navigation waited for `load`, so one hanging
 subresource made a fully readable page `failure:nav` ([ADR-007](specs/decisions/ADR-007-navigation-wait-condition.md)).
 
-**The fourth live site is there to fail.** `quotes.toscrape.com/js` renders every
+**The fourth live site is there to fail.** (M40: on its *static* pages it now
+succeeds — the domain row moved to `unreliable` on 3/3 author-page runs, and the
+site's Try example is one of them. The paragraph below is about `/js`, which
+still fails exactly as described. Both halves are the site: that is why the row
+is `unreliable` and not either extreme.) `quotes.toscrape.com/js` renders every
 quote with `document.write`, so the body text the verifier reads carries all ten
 of them (1,499 characters) while the accessibility tree the *planner* is handed
 carries none — 11 elements, every one of them chrome. Asked who wrote the first
@@ -325,11 +329,18 @@ The biggest ones, stated plainly:
   the only measurements of it are the two probes and the M9 ablation — five
   tasks per model on the deployment ([ADR-010](specs/decisions/ADR-010-m9-model-ablation.md)),
   which is what moved the default to `openai/gpt-5.6-luna`.
-- **Live planning is unmeasured on every live domain.** Four live domains,
-  three task classes (TC1/TC2/TC3), and every green live case runs a
-  *hand-written* plan. The live TC2 cell is a correctly diagnosed unreachable
-  control, not a working search. Fixtures remain self-authored and therefore
-  friendly.
+- **Live planning is unmeasured by the eval set on every live domain.** The
+  `live` suite is 9 cases across four domains and three task classes
+  (TC1/TC2/TC3), and every green live case runs a *hand-written* plan. The live
+  TC2 cell is a correctly diagnosed unreachable control, not a working search.
+  Fixtures remain self-authored and therefore friendly. M40 measured live
+  planning for the first time — 43 runs across 22 finance domains, real planner,
+  [D28](docs/support-matrix.md) — but by hand against the deployment, not by any
+  suite: no case covers those domains, nothing re-checks them, and 19 of the 22
+  never answered. Then the deployed build changed mid-milestone and three
+  domains that had answered stopped; two declared rows were withdrawn before
+  merge. That is a measurement, not coverage, and the gap this bullet names is
+  coverage.
 - **Responsiveness is checked by shape, not by meaning.** `not_a_dump` catches
   a page dump returned as the answer (M7); `aggregate_needs_comparison` refuses
   a superlative question the vocabulary cannot answer (M10). A short, focused,
@@ -346,7 +357,7 @@ The biggest ones, stated plainly:
 
 ## Where AI helped, and where it was wrong
 
-The full record is [`prompts/`](prompts/) — 15 curated records in reading
+The full record is [`prompts/`](prompts/) — 16 curated records in reading
 order, each ending in *assumed → eval said → corrected*.
 
 The honest headline is a measurement of this method's weak spot: **26 defects
@@ -373,7 +384,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 164 cases (153 of them in the offline gate), it
+The eval set is not weak; it is 166 cases (155 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
@@ -393,7 +404,7 @@ src/browser/        agent loop · planner · resolver · verifier · gateway + f
 evals/              run.py (stdlib runner) · golden/ · adversarial/ · labels/ · report/
 specs/              000-invariants · 001-browser-contract · decisions/ADR-* + INDEX
 docs/               analysis · support-matrix · methodology · architecture · plans (docs/README.md is the index)
-prompts/            AI-collaboration record, 001–015
+prompts/            AI-collaboration record, 001–016
 tasks/              TODO.md (milestone queue + debt) · DONE.md · pr-loop-ledger.jsonl · reviews/
 .github/workflows/  eval-gate (offline, $0) · deploy-smoke (the deployed URL, daily + on push)
 ```

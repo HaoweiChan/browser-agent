@@ -63,14 +63,16 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 153 cases, ts `20260823-212240`, **70.20s**, 153/153
-  (`dirty: false`, ts-only for the ADR-012 reason §3 gives. Two clean rows were
-  available at this count — 70.20 / 70.19s, taken as they came — and this is the
-  slower, on §3's least-slack rule. The ledger's own maximum at this count
-  derives the same ceiling; it is not copied here, see §3.)
+- Band source — `fast` at 155 cases, ts `20260824-000842`, **70.85s**, 155/155
+  (`dirty: false`. M40 adds `ui-terminal-state-on-every-ending` and
+  `view-proxy-refuses-private-and-redirects`, so the count moved to 155 and the
+  band moved with it. This is the second of the two commits the paragraph below
+  describes: the first published a dirty row, CI reddened on it exactly as
+  `T-M32-13` predicts, and this re-cites the clean run that could not exist
+  until the cases were committed.)
 
 **This band was dirty for one commit, and the reason is worth keeping.** A case
-addition forces a dirty citation: the tree only reaches 153 cases while the new
+addition forces a dirty citation: the tree only reaches its new count while the new
 case is uncommitted, which is the entire reason the dirty allowance exists. But
 a dirty citation is red on CI and green locally — `T-M32-13` is the diagnosis,
 the ledger's `ts` being a naive local stamp compared lexicographically against
@@ -83,8 +85,7 @@ landed. Two commits, by construction, for one case addition. That is the price
 row from the 152-case tree, because the count changed and a band has to describe
 the tree that ships.
 
-The `153/153` is the cited row's own result, graded against it, not prose beside
-The `151/153` is the cited row's own result, graded against it, not prose beside
+The `155/155` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -105,11 +106,11 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 70.20 × 1.15 = 80.73 → **85**, which is BELOW the committed 90 and
+five — gives 70.85 × 1.15 = 81.48 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
-run at 153 cases is exactly that short sample. Item 5 (derivation) grades the
+run at 155 cases is exactly that short sample. Item 5 (derivation) grades the
 arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
 that says 90 is green and declared rather than a contradiction. The band
 published for the earlier
@@ -126,15 +127,10 @@ commit that changed nothing but JSON.
 ### 3. `invariant` gets a ceiling: 20s
 
 - Band source — `invariant` at 58 cases, ts `20260823-200456`, **13.78s**, 58/58
-  (`dirty: false`, ts-only for the same ADR-012 reason as §2. Four clean rows
-  were available at this count — 12.93 / 13.78 / 13.18 / 13.12s, taken as they
-  came rather than selected for their numbers. 12.93s is disqualified: it
-  derives **15** where the ledger's maximum derives 20 — item 3 (same-ceiling).
-  Of the three that qualify this is the slowest, chosen so the
-  published number sits as close to the ledger's own maximum as a real run
-  allows — §6 tolerates up to one ceiling step of slack, and R21's point was
-  that publishing below the maximum is how a band drifts, so take the least
-  slack on offer.)
+  (`dirty: false`, ts-only for the same ADR-012 reason as §2. Unchanged by M40:
+  its SSRF case was tagged `invariant`, moved this band to 59 cases, and was
+  moved back to `fast`-only because CI's invariant suite runs 17.58s at that
+  count and derives a different ceiling — T-M40-3 and T-M32-13 carry it.)
 
 Neither band quotes the ledger's maximum as a number any more, and that is the
 fix for a defect this file produced twice. §3 published **13.80s** and the final
