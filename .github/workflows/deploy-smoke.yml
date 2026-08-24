@@ -48,8 +48,34 @@ jobs:
             -d '{"task":"read the admin page","url":"http://127.1/admin"}')
           cat guard.json; echo
           test "$code" = "422" && grep -q "url blocked" guard.json
+      # A busy service is not a broken one. M40 made /smoke/stream refuse while a
+      # run holds the semaphore, so that a second Chromium is never launched
+      # beside the agent's -- and this step then failed the moment anyone used
+      # the demo, which for a public URL is whenever anyone is looking at it
+      # (run 32677457166: refused with "a run is executing (e26da76d)").
+      #
+      # So: retry. A `done` passes. Anything OTHER than the concurrency refusal
+      # fails immediately -- a broken browser must still be caught. Exhausting
+      # the retries on refusals alone does NOT fail, because the deployment
+      # answered every time and correctly serialised; but it does not silently
+      # pass either, because the property genuinely went unchecked and the log
+      # says so in those words.
       - name: real Chromium launches and navigates on the deployment
         run: |
-          curl -fsS -N -m 90 "$BASE/smoke/stream" > smoke.log || true
-          cat smoke.log
-          grep -q '"event": "done"' smoke.log
+          for i in $(seq 1 6); do
+            curl -fsS -N -m 90 "$BASE/smoke/stream" > smoke.log || true
+            cat smoke.log
+            if grep -q '"event": "done"' smoke.log; then
+              echo "chromium launched and navigated"; exit 0
+            fi
+            if ! grep -q 'one browser at a time' smoke.log; then
+              echo "smoke stream failed for a reason other than concurrency"; exit 1
+            fi
+            echo "attempt $i: a run holds the browser; retrying in 30s"
+            sleep 30
+          done
+          echo "::warning::UNCHECKED — a run held the browser for every attempt." \
+               "The deployment answered each time and refused correctly, so this is" \
+               "not a failure, but real-Chromium-on-the-deployment was NOT verified" \
+               "by this job."
+

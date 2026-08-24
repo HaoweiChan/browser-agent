@@ -12,7 +12,7 @@
     "The stub does NOT wedge the event loop: it parks on `await asyncio.sleep(0.005)` polling a threading.Event, not on Event.wait — so the case does not pass for the wrong reason.",
     "asyncio.Semaphore on this repo's Python 3.12.13 confirms the check-then-acquire atomicity claim: locked() is True when _value == 0 or any live waiter exists, and acquire()'s uncontended path returns without a suspension point.",
     "The busy-branch `return` is outside the `try`, so there is no over-release path (a spurious release would silently raise the concurrency limit to 2).",
-    "A real client disconnect mid-`launching` (raw socket, SO_LINGER 0) returned the slot in 0.00s — T-R73's logged debt is real but not currently exploitable."
+    "A real client disconnect mid-`launching` (raw socket, SO_LINGER 0) returned the slot in 0.00s — T-R82's logged debt is real but not currently exploitable."
   ],
   "findings": [
     {

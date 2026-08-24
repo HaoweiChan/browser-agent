@@ -1,0 +1,73 @@
+{
+  "pr": 41,
+  "round": 1,
+  "resolutions": [
+    {
+      "id": "R1",
+      "resolution": "fixed",
+      "detail": "Verified independently before rewriting: `git show 434a98d:src/browser/eval_adapter.py` has no `_band_wrong`, no `cited_a_dirty_run`, and the pre-ts `_BAND_LINE` — item 2 is physically absent from T-R44's origin tree. Run 32626835735 is sha 434a98d at 07:54:44Z (invariant 52/52, wall 16.02s, fast 132/133); 434a98d publishes invariant 12.92s at 52 cases, so rule(12.92)=15 vs rule(16.02)=20 -> item 3 (same-ceiling), exactly the original Repro. Run 32637648447 is sha 11545a1 on task/M32 — a different run. ADR-019 §7 rewritten around 'one missing dimension, two runs, two clauses — and both of them fired', each run named with sha and clause. The 17.39s figure re-scoped to item 4 alone everywhere including ADR-021. Item 4 is stated as the only clause that stayed green on 434a98d.",
+      "restored": "the original Repro is restored as correct, with a note recording WHY it was struck: a correct record removed as unevidenced because the person checking could not see the evidence — 'this record does not observe X' is not 'X did not happen'.",
+      "verified_by_orchestrator": "`git show 434a98d:... | grep -c cited_a_dirty_run` -> 0; the two surviving mentions of 32626835735 near item 2 are the corrected form, which names both runs and flags the earlier conflation."
+    },
+    {
+      "id": "R2",
+      "resolution": "fixed",
+      "detail": "Both parentheticals now state only what item 2 (cited-run) grades — run, wall clock, result, `dirty` flag. The enumerable claims and §3's restated selection rule are gone, so the sentences are count-independent and survive the coming re-derivation. §3 records this as the third instance of the class with the actual numbers (six rows vs 'the only row'; eighteen rows and a closer 13.94s vs 'two rows ... the slower')."
+    },
+    {
+      "id": "R3",
+      "resolution": "fixed (README half; ADR-013 half handed off)",
+      "detail": "README strikes the older band as SUPERSEDED — a 95-case tree replaced by §5's 32561162459 measurement — and says explicitly that it is not unevidenced, naming ADR-013's citation. Handoff to `task/T-M32-9` recorded in README and the commit message.",
+      "verified_by_orchestrator": "`git diff origin/main...HEAD --name-only -- specs/decisions/ADR-013-fast-suite-wall-clock.md` -> 0 files"
+    },
+    {
+      "id": "R4",
+      "resolution": "fixed",
+      "case": "ci-numbers-are-derived",
+      "detail": "New case in its own file (not `docs-numbers-are-derived`, which PR #40 touches). §5's attempt table is the single source; README's four values and both ranges are READ BACK from it rather than compared to literals; the run id must appear in both documents; and the ceilings §5 derives must equal what the workflow declares.",
+      "watched_red": "six mutations: README's 4th value -> 99.99 gives {readme: fast_attempt_list_is_not_the_adr_table, expected: '69.37 / 69.54 / 74.04 / 74.06s'}; each README range; THE ADR TABLE ITSELF -> 76.06s reddens both keys (the source-side direction); README dropping the run id -> {does_not_name_the_run_the_adr_cites, adr_cites: '32561162459'}; workflow FAST: \"85\" -> {workflow_declares: 85, adr_five_max: 74.06, rule_gives: 90}.",
+      "false_start": "the first regex missed the run id because §5 wraps it into a markdown link; fixed by tolerating the wrap, not by relaxing what counts as a citation."
+    },
+    {
+      "id": "R5",
+      "resolution": "fixed",
+      "detail": "The sentence carries no count and points at `_BAND_DEF` instead, noting it has now carried a wrong count twice."
+    },
+    {
+      "id": "R6",
+      "resolution": "debt",
+      "tid": "T-R77",
+      "detail": "Filed above T-R76 with the repro and three candidate closures."
+    }
+  ],
+  "rejected": [],
+  "debt_logged": [
+    "T-R77"
+  ],
+  "orchestrator_note": "R1's misattribution originated in the orchestrator's relay of a peer session's diagnosis, not in the implementer's analysis. The implementer's original Repro was correct for its own run and was struck on the orchestrator's instruction.",
+  "cross_branch": {
+    "R3": "ADR-013 half accepted by `task/T-M32-9` (PR #40) with `Origin: PR #41 R3` recorded in that block and its commit message; this branch leaves ADR-013 untouched."
+  },
+  "provisional": {
+    "reason": "PR #40 and PR #42 land first; #42 moves `fast` again",
+    "count_dependent_will_be_redone": [
+      "both band citations (fast 156 / ts 20260823-150057 / 71.61s; invariant 61 / ts 20260823-150113 / 13.20s)",
+      "README's band table row values",
+      "the case-count strings",
+      "'Where it stands'"
+    ],
+    "count_independent_written_to_survive": [
+      "the run-to-clause attribution",
+      "the 434a98d tree evidence",
+      "README's strike ground",
+      "the `_BAND_DEF` fix",
+      "T-R77",
+      "the whole `ci-numbers-are-derived` case, which reads §5's table dynamically and has no case-count dependency"
+    ]
+  },
+  "sweep": "all five band/ceiling checks green individually; `adr-header-and-index` resolves 737 citations; no surviving text attributes item 2 to 32626835735; ADR-013 untouched; five uncited reports pruned",
+  "gate": {
+    "invariant": "61/61 = 1.000",
+    "fast": "156/156 = 1.000"
+  }
+}
