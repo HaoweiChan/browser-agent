@@ -417,33 +417,6 @@ problem and does NOT mention `--update-baseline`. Cheapest form: check the chose
 import the harness first and fail with that message instead. Watched red from a worktree
 with no `.venv`.
 
-### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: pr]
-Origin: PR #43 (M40) post-merge re-probe of the deployment, 2026-08-23
-Spec: M40 declared three live rows from 43 runs against the build deployed BEFORE PR #34 (M32).
-After M32 deployed, a re-probe of the same tasks shows a new dominant failure shape that none of
-D28's three shapes covers: the planner emits `extract {"role": "WebArea", "name": "<the page
-title>"}` — the document root, named by `<title>` — and the relocation rung then retargets as
-`{text: "<the page title>"}` and resolves nothing. Measured: x-rates.com 0/2 (`b8b95067`,
-`133264ee`, was 3/3 pre-M32), multpl.com 0/2 (`bdc38f65` container dump via a Table link,
-`c7fa2623` three `observe` steps then a click and no extraction; was 2/3), quotes.toscrape.com's
-author page 0/1 (`6811f8bf` — extracted "Quotes to Scrape", the site title, and the M36 judge
-rejected it; was 3/3), openlibrary.org 0/1 (`a6797fbe`, same WebArea shape). companiesmarketcap.com
-is unaffected (2/2, `d0b63c7e`, `f2c8c624`) — its answer is the accessible NAME of a heading, so
-the plan never needs a container.
-Not claimed: that M32 CAUSED this. The probe is one task phrasing per page against a deployment
-that also moved model-side; `WebArea` targets appear in two pre-M32 runs too (`8c1a3344` stooq,
-`c80b1dd0` coingecko). What is measured is that four of five re-probed tasks that answered before
-do not answer now, and that the shape they share is a container target the resolver cannot use.
-Acceptance: an offline fixture case pinning `extract {role: WebArea}` (and the `{text: <title>}`
-relocation it degrades into) as a refused plan rather than a locate failure — the plan lint is the
-natural home, next to the container-dump clause M28/T-R66 already owns — watched red first.
-Out of scope (orchestrator scope call, pr-loop SPEC 2026-08-24): the second acceptance half,
-"the D28 rows re-declared from a post-fix probe of the same tasks". D28 does not exist on `main`
-— it ships with PR #43, still open — and a post-fix probe requires the fix DEPLOYED, which cannot
-happen inside the PR that contains it. Re-declaring D28 is therefore sequenced after PR #43 merges
-and this fix deploys, and is logged as its own block rather than left as an ungateable clause on
-this one. This PR delivers the offline refusal and its watched-red cases.
-
 ### T-M40-2-1 — `observe` still hands the planner the document root as element #1 of every page            [status: todo]
 Origin: T-M40-2 implementation, 2026-08-24. Verified in code, not inferred: `observe.walk`
 starts at `page.accessibility.snapshot(...)`'s root, whose role is `WebArea` and whose name is
