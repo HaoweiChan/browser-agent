@@ -296,12 +296,23 @@ def plan_gap(task: str, steps: list) -> str | None:
     the ceiling of a regex over English — same as SCOPE_BLOCK's.
     """
     for step in steps or []:
-        # `isinstance` twice, because a lint is not the thing that raises: this
-        # clause runs for EVERY task shape, where the aggregate rule below used
-        # to return None immediately on a plain task, and `parse_plan` validates
-        # only that the top level is a list — a string target reaches here
-        # (PR #46 R1-4). A malformed plan is "no gap"; the loud rejection is the
-        # executor's, and unchanged.
+        # `isinstance`, because a lint is not the thing that raises: this clause
+        # runs for EVERY task shape, where the aggregate rule below used to
+        # return None immediately on a plain task, and `parse_plan` validates
+        # only that the top level is a list — a string target, or a step that is
+        # not a dict at all, reaches here (PR #46 R1-4). The `reads` comprehension
+        # below carries the same guard: the first version of this fix covered
+        # only this loop, so the identical plan still raised on an aggregate task
+        # (PR #46 R6), which is what a partial guard is worth.
+        #
+        # What happens instead of raising, precisely, because the first version
+        # of this comment overclaimed it: a malformed TARGET is "no gap" here and
+        # the executor rejects it loudly (TARGET_KEYS). A malformed STEP is "no
+        # gap" here and then dies at `step["action"]` in the step loop with an
+        # uncaught TypeError — no status, no failure class. That is pre-existing
+        # and unchanged by this PR (`main` reaches the same line the same way),
+        # it is the executor's contract rather than the lint's, and it is logged
+        # as T-M40-2-6 rather than fixed here.
         if not isinstance(step, dict) or not str(step.get("action") or "").startswith("extract"):
             continue  # `observe` names a container ON PURPOSE — see DOC_ROOT_ROLES
         target = step.get("target")
@@ -317,7 +328,7 @@ def plan_gap(task: str, steps: list) -> str | None:
     if not is_aggregate(task):
         return None
     reads = [s for s in steps or []
-             if str(s.get("action") or "").startswith("extract")]
+             if isinstance(s, dict) and str(s.get("action") or "").startswith("extract")]
     actions = [s.get("action") for s in reads]
     if actions == ["extract_all"]:
         # The plan enumerates once — now check what it says it did with the

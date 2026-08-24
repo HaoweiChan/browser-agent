@@ -65,11 +65,11 @@ debt (T-R51).
 
 - Band source — `fast` at 155 cases, ts `20260824-083831`, **70.85s**, 153/155
   (`dirty: true`, ts-only for the ADR-012 reason §3 gives. Dirty by construction —
-  T-M40-2's own case is what takes the suite to 154, so it is uncommitted while
-  every run at 154 is taken, and item 2 (cited-run) allows that exactly here: no
-  clean row at this count exists to prefer. Of the rows recorded at this count
+  T-M40-2's own case is what takes the suite to this count, so it is uncommitted
+  while every run at it is taken, and item 2 (cited-run) allows that exactly
+  here: no clean row at this count exists to prefer. Of the rows recorded at this count
   when the band was republished, this is the slowest, on §3's least-slack rule.
-  The 153/155 is the row's own result: it measured the wall clock while the two
+  The result above is the row's own: it measured the wall clock while the two
   doc-bookkeeping cases were still red on the very numbers this republication
   supplies.)
 
@@ -89,17 +89,18 @@ Two commits, by construction, for one case addition. That is the price
 from the smaller tree, because the count changed and a band has to describe the
 tree that ships.
 
-The `152/154` and `59/59` above are the cited rows' own results, graded against
-them, not prose beside them (T-R55). They are stated because a band source is
+The cited rows' own results — (restated — `fast`: 155 cases, 153/155) and
+(restated — `invariant`: 60 cases, 58/60) — are graded against the bullets they
+summarise, by item 9 (restatement), not merely stated beside them (T-R55). They are stated because a band source is
 taken as it is found — item 2 (cited-run) requires a run that happened, and green
 is required nowhere in §6 — so a reader comparing two bands should not have to
 read silence as a pass. Both rows carry the same two failures and no others:
 `docs-numbers-are-derived` and `published-band-matches-the-ledger`, tagged into
-both suites, still red on precisely the numbers this republication supplies —
-153/155 and 58/60. Whether a cited row is green depends on when in the
-republication cycle it was taken, so the result is stated per row rather than
-described once for both (PR #46 R1-3, against a sentence that called a 59/59 row
-red).
+both suites, still red on precisely the numbers this republication supplies.
+Whether a cited row is green depends on when in the republication cycle it was
+taken, which is why each bullet states its own result and this paragraph quotes
+them in the one form a check can read back (PR #46 R3, then R5 when the repair
+for R3 left this paragraph behind).
 
 Every run of this tree is in `evals/report/history.jsonl`, committed beside
 this file; the sentence above names the one the band is derived from by its
@@ -139,8 +140,8 @@ commit that changed nothing but JSON.
 
 - Band source — `invariant` at 60 cases, ts `20260824-083720`, **13.87s**, 58/60
   (`dirty: true`, ts-only for the same ADR-012 reason as §2, and dirty for the
-  same construction reason §2 gives — the case that takes the suite to 59 is the
-  one being committed. The slowest row recorded at this count when the band was
+  same construction reason §2 gives — the case that takes the suite to this count
+  is the one being committed. The slowest row recorded at this count when the band was
   republished, taken as it came rather than selected for its number: §6 tolerates
   up to one ceiling step of slack, and R21's point was that publishing below the
   maximum is how a band drifts, so take the least slack on offer. Both scalars
@@ -318,6 +319,16 @@ is about this section itself:
    bare name, a name the list has no item for, the `property N` numbering
    PR #35 round 4 retired, and a plural range no single slug can carry are each
    red.
+9. (restatement) a sentence elsewhere in this file that quotes a band's case
+   count and result writes them in the marked form — the word `restated`, the
+   suite, `N cases`, `P/T` — and both numbers are the ones that band's bullet
+   publishes. The form is described rather than shown, because a literal example
+   here would be a third copy of the very numbers this item exists to keep from
+   drifting, and the check would read it as one (the same trap `_REGION` names
+   in the code: a marker written out is the first one the scan finds). Two rounds running, a repaired band left a
+   paragraph summarising it behind (PR #46 R3, then R5 against R3's own fix), so
+   the copy is now read back against the original. An unmarked restatement is
+   still invisible, the same ceiling item 8 (references) declares (T-R62).
 
 Green is required nowhere in that list and cannot be (T-R53); item 2 (cited-run) requires
 the result to be *stated*, not to be a pass. Item 5 (derivation) states the rule's value and

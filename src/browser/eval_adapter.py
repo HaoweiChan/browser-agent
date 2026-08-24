@@ -363,11 +363,24 @@ def _check_plan_gap() -> dict:
         # and this clause is the first thing in it that runs for EVERY task
         # shape, where the aggregate rule used to return None immediately on a
         # plain task. A lint may not be the thing that raises: it says "no gap"
-        # and leaves the malformed plan to the executor, which is where the loud
-        # rejection lives (TARGET_KEYS, `unknown action`).
+        # and leaves the plan to the executor. What the executor then does splits
+        # in two, and saying only the first half of it was the false claim R6
+        # caught: a malformed TARGET is rejected loudly there (TARGET_KEYS), and
+        # a step that is not a dict dies at `step["action"]` with an uncaught
+        # TypeError — pre-existing, unchanged by this PR, logged as T-M40-2-6.
+        # These rows grade the lint's half only, which is all a lint owns.
         (PLAIN, [{"action": "extract", "target": "WebArea"}], False),
         (PLAIN, ["extract WebArea"], False),
         (PLAIN, [None], False),
+        # ...and the SAME plans under an aggregate task (PR #46 R6). The first
+        # version of this fix guarded the doc-root loop and left the aggregate
+        # clause below it reading `s.get` off whatever the list holds, so the
+        # rows above proved nothing about the branch that actually runs for a
+        # which-one question — they are all tagged PLAIN, which returns before
+        # reaching it.
+        (AGG, [{"action": "extract", "target": "WebArea"}], True),
+        (AGG, ["extract WebArea"], True),
+        (AGG, [None], True),
     ]
     wrong = [{"task": t, "plan": [s.get("action") for s in p], "expected_gap": want,
               "got": plan_gap(t, p)}
@@ -493,6 +506,16 @@ _REGION = tuple(f"# ==== ADR-019 §6 band section: {edge} ===="
 _BAND_DEF = re.compile(
     r"^(?:def )?(_band\w*|_check_published_band\w*|_BAND\w*|_SIX\w*"
     r"|_SLACK_MARK|_REGION)\b", re.M)
+
+# "(restated — `fast`: 155 cases, 153/155)" — a band bullet's numbers quoted in
+# a sentence somewhere else in the ADR. Prose keeps wanting to summarise the
+# bullets, and a summary of a graded number is an ungraded copy of it: PR #46 R3
+# repaired one such sentence and R5 found the paragraph eight lines away stale in
+# the same edit, from the same republication. So a restatement wears this form
+# and is read back against the bullet it claims to be about (ADR-019 §6
+# item 9 (restatement)).
+_BAND_RESTATE = re.compile(
+    r"\(restated — `(fast|invariant)`: (\d+) cases, (\d+)/(\d+)\)")
 
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
@@ -723,6 +746,20 @@ def _check_published_band() -> dict:
         if ruling.get(suite) != WALL_BUDGET_S[suite]:
             wrong.append({"suite": suite, "adr_ruling_ceiling": ruling.get(suite),
                           "committed_ceiling": WALL_BUDGET_S[suite]})
+    # Item 9 (restatement). Every marked restatement carries the bullet's own
+    # case count and result, so republishing a band without fixing the paragraph
+    # that summarises it is red. What it does NOT see is a restatement wearing no
+    # marker — the same ceiling item 8 (references) declares for an unreferenced
+    # paraphrase, and for the same reason: the cheap half is worth having, and
+    # the fix for prose nobody marked is to stop restating (T-R62).
+    for m in _BAND_RESTATE.finditer(adr):
+        suite, cases, passed, total = m.group(1), *map(int, m.group(2, 3, 4))
+        if suite not in published:
+            wrong.append({"suite": suite, "restates_a_suite_with_no_band": True})
+        elif (cases, passed, total) != (published[suite][0], *published[suite][3:5]):
+            wrong.append({"suite": suite, "restated": [cases, passed, total],
+                          "band_publishes": [published[suite][0], *published[suite][3:5]]})
+
     # Item 8 (references). §6's numbered list is the normative statement of what
     # this check requires; the blocks above name the item they implement and say
     # nothing else about it. What is graded is the naming, not the absence of a

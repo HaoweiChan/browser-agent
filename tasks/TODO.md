@@ -147,6 +147,22 @@ and it spends tokens.
 Acceptance: taken with T-M40-2-1 after T-M40-3's probe, or dropped if the probe shows the lint
 alone recovers the rows.
 
+### T-M40-2-6 — a plan step that is not a dict kills `run_task` with an uncaught TypeError            [status: todo]
+Origin: PR #46 R6, 2026-08-24. `parse_plan` (src/browser/planner.py) validates that the top
+level is a list and nothing below it, so `[None]` or `["extract WebArea"]` is a plan as far as
+the executor is concerned. `plan_gap` no longer raises on those (both its clauses are guarded,
+`plan-gap-truth-table` rows), but the step loop then reads `step["action"]` at
+src/browser/agent.py:1013 and the TypeError propagates out of `run_task` — no status, no
+failure class, none of the taxonomy. `server.py:_execute` catches it into `failure:env`, so a
+deployed run reports SOMETHING; an eval-adapter caller gets the raw exception.
+Repro: any fixture case with `stub_plan: ["extract WebArea"]`.
+Not a regression: `main` (d06a569) reaches the same line the same way — `plan_gap` returned
+None for a plain task there too. Deliberately not fixed inside T-M40-2: the lint's contract is
+"is this plan answerable", and "is this object a step" is `parse_plan`'s, one layer up.
+Acceptance: `parse_plan` rejects a plan whose members are not step-shaped objects, with the
+loud `PlanError` it already raises for a non-list, and an adversarial case pinning that a
+malformed plan is a classified failure rather than an exception — watched red first.
+
 ### T-M40-2-4 — the refused plan's REPLAN can name the same node one tier down, and answer with the page title            [status: todo]
 Origin: T-M40-2 cold review, 2026-08-24, finding 1. Repro, constructible as a fast case:
 `hello.html` (its `<title>` and `<h1>` are the same string), task "What does the second heading
