@@ -117,15 +117,25 @@ immunity, and this merge is the proof: the band was first published here at
 73.47s → 85, the very next gate run came in at 74.19s → 90, and item 3
 (same-ceiling) reddened exactly as it did at 168 cases. The band re-cites that
 slower run rather than the faster one, so the published number now sits inside
-the 73.92-78.26s window where every value derives 90 — the widest span this
-suite's own spread can be absorbed by: EVERY row the committed ledger holds at
-this case count derives the same ceiling as the band, which is the property
-item 3 (same-ceiling) grades on every run rather than a range anyone has to
-keep current. The previous version of this sentence published a spread and a
-row count, and both were stale within the hour — the same snapshot defect §3
-refuses two sections down (PR #42 R24). A run above 78.26s would still require a re-citation. That coupling — a band pinned to whatever the
-slowest recorded run happens to be, whoever recorded it — is what `T-M38-5`
-records, named rather than papered over.
+the 73.92-78.26s window where every value derives 90. What item 3
+(same-ceiling) compares is exactly two numbers — the published one and the
+ledger's MAXIMUM at this count in this environment: `_band_rule(said) !=
+_band_rule(slowest)`, with `slowest = max(recorded)`. It never iterates the
+rows, and the rows below that maximum are compared against nothing, which is
+why a faster run cannot redden this band and only a slower one can. A run above
+78.26s would still require a re-citation. That coupling — a band pinned to
+whatever the slowest recorded run happens to be, whoever recorded it — is what
+`T-M38-5` records, named rather than papered over.
+
+Two earlier versions of that sentence were wrong in opposite directions and
+both are worth leaving on the record: one published a measured spread and a row
+count, which were stale within the hour (PR #42 R24, the snapshot defect §3
+refuses two sections down); its replacement claimed EVERY row at this count
+derives the band's ceiling, which is false here — the rows at this count do not
+all derive one ceiling — and describes an iteration the grader does not perform
+(R27). The sentence above is read off the comparison in
+`src/browser/eval_adapter.py`, and the check that falsifies it is one line:
+print `_band_rule` over the rows at this count.
 
 **Ablation probes are not runs, and their rows are deleted rather than cited.**
 PR #42's repair had to prove that each narrowing conjunct is pinned, which
@@ -185,8 +195,10 @@ This table is their only record, which is exactly why it is here:
 
 Nine rows, nine ablation sweeps, each one at a pass count no shipped tree
 produces. Two of the nine were the ledger's maximum at their case count when
-they landed, which is how they reached the published band in the first place. That the isolation mechanism this repo built for one probe class does
-not cover ablation is `T-M38-5`.
+they landed, which is how they reached the published band in the first place.
+That the isolation mechanism this repo built for one probe class does not cover
+ablation is `T-M38-5`.
+
 Every run of this tree is in `evals/report/history.jsonl`, committed beside
 this file; the sentence above names the one the band is derived from by its
 ledger timestamp. §6 item 2 (cited-run) and item 3 (same-ceiling) are what the
@@ -227,9 +239,12 @@ commit that changed nothing but JSON.
   (`dirty: true`, and red, for the same structural reason §2's is: M38's
   `resolver-narrowing-fails-closed` joins this suite in the commit that
   republishes the band, so 65 exists only while that commit is uncommitted, and
-  the two red cases are the two this republish clears. ADR-012
-  writes no per-case report for a green run, so a ledger row is the whole
-  artifact, which is why this cites a ts and not a file. As in §2,
+  the two red cases are the two this republish clears; the run is red,
+  so ADR-012 wrote a per-case report for it and this bullet cites the file the
+  way §2's does — `evals/report/20260824-032906-invariant.json`, committed in
+  `adc6584` alongside the band it belongs to. The sentence that used to stand
+  here said no such artifact existed, which was true of the citation before
+  this one and false the moment the citation moved (PR #42 R28). As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
   deliberately NOT in this suite: it was tagged `invariant`, moved this band, and

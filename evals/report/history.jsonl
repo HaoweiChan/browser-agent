@@ -1695,3 +1695,7 @@
 {"ts": "20260824-033500", "suite": "fast", "sha": "5ac3ca3", "dirty": true, "env": "local", "passed": 178, "total": 178, "score": 1.0, "wall_s": 71.93, "cost_usd": 0.0, "report": null, "p95_s": 2.25, "recovery": "8/8", "mutation": "9/11"}
 {"ts": "20260824-033513", "suite": "invariant", "sha": "5ac3ca3", "dirty": true, "env": "local", "passed": 65, "total": 65, "score": 1.0, "wall_s": 13.18, "cost_usd": 0.0, "report": null, "p95_s": 2.2}
 {"ts": "20260824-033626", "suite": "fast", "sha": "5ac3ca3", "dirty": true, "env": "local", "passed": 178, "total": 178, "score": 1.0, "wall_s": 72.75, "cost_usd": 0.0, "report": null, "p95_s": 2.3, "recovery": "8/8", "mutation": "9/11"}
+{"ts": "20260824-035438", "suite": "invariant", "sha": "a248d56", "dirty": true, "env": "local", "passed": 65, "total": 65, "score": 1.0, "wall_s": 13.51, "cost_usd": 0.0, "report": null, "p95_s": 2.31}
+{"ts": "20260824-035551", "suite": "fast", "sha": "a248d56", "dirty": true, "env": "local", "passed": 178, "total": 178, "score": 1.0, "wall_s": 72.79, "cost_usd": 0.0, "report": null, "p95_s": 2.33, "recovery": "8/8", "mutation": "9/11"}
+{"ts": "20260824-035605", "suite": "invariant", "sha": "a248d56", "dirty": true, "env": "local", "passed": 65, "total": 65, "score": 1.0, "wall_s": 13.71, "cost_usd": 0.0, "report": null, "p95_s": 2.31}
+{"ts": "20260824-035718", "suite": "fast", "sha": "a248d56", "dirty": true, "env": "local", "passed": 178, "total": 178, "score": 1.0, "wall_s": 73.2, "cost_usd": 0.0, "report": null, "p95_s": 2.33, "recovery": "8/8", "mutation": "9/11"}
