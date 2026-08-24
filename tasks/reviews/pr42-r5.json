@@ -1,0 +1,75 @@
+{
+  "pr": 42,
+  "round": 5,
+  "task": "M38",
+  "result": "REQUEST_CHANGES",
+  "summary": "Text-only again, and narrowing: two one-line fixes in one document. R20-R23 closed. R24's replacement is false against the ledger \u2014 the fix for a wrong claim introduced another wrong claim, which is the fifth round of the same class.",
+  "standing": {
+    "R20": {
+      "verdict": "CLOSED",
+      "evidence": "20260824-024916-fast.json failed set is [] (178/178); 20260824-024553-fast.json failed set is exactly ['docs-numbers-are-derived','published-band-matches-the-ledger'] and its ledger row is 73.47s, 176/178. The replacement attributes both correctly and names the superseded citation."
+    },
+    "R21": {
+      "verdict": "CLOSED",
+      "evidence": "Case is ['fast','invariant']; load_cases gives invariant 65 / fast 178; green in both. Every claim in the new why_invariant checks out: history.jsonl:15 is suite 'fast', total 59, 32.25s; the 41 invariant rows at 59 span 13.09-14.80s and all derive 20; _band_wrong filters on suite AND total. Citing the red 63/65 row is legitimate and NOT the R20 pattern \u2014 the row is labelled 'and red' and its two reds really are the two this republish clears, verified against the report's failed set. 'No receipt commit owed' verified independently: the grader refuses a dirty citation only when a clean row at the same count exists with ts <= cited ts; no clean row exists at 178 or 65 and post-commit clean rows stamp later. 65 appears consistently in README's headline, README's band table, ADR sections 3 and 5, and the section 2 restatement."
+    },
+    "R22": {
+      "verdict": "CLOSED for the sentence",
+      "residue": "R29"
+    },
+    "R23": {
+      "verdict": "CLOSED",
+      "evidence": "Prose reads 'five at 165 cases, two at 168 and two at 170, nine in all' against tables listing 5 + 4, and the round attribution matches the case counts."
+    },
+    "R24": {
+      "verdict": "NOT CLOSED",
+      "successor": "R27",
+      "evidence": "The stale range is gone; the replacement clause is false against the ledger and misdescribes item 3."
+    }
+  },
+  "findings": [
+    {
+      "id": "R27",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R24 replacement trades a wrong number for a wrong property: ADR-019 section 2 now asserts that EVERY row the ledger holds at 178 cases derives the same ceiling as the band, and that item 3 grades this on every run. 13 of the 14 committed local rows at 178 derive 85, not the band's 90, and item 3 compares the published number against the ledger MAXIMUM only, never against every row.",
+      "evidence": "ADR-019:120-124. Local fast rows at total=178 are 71.93, 72.04, 72.28, 72.53, 72.75, 72.77, 72.95, 73.13, 73.19, 73.26, 73.29, 73.33, 73.47 -> _band_rule = 85, and only 74.19 -> 90. The paragraph refutes itself four lines up at :116-118 ('first published here at 73.47s -> 85, the very next gate run came in at 74.19s -> 90'). The grader is eval_adapter.py:664-670, `if _band_rule(said) != _band_rule(slowest)` with slowest = max(recorded) at :620-622 \u2014 nothing iterates the rows. Nothing goes red: the sentence is not in the marked '(restated \u2014 ...)' form item 10 grades, exactly as with R20.",
+      "acceptance": "Section 2 states the property item 3 actually enforces \u2014 the published number and the ledger's maximum at this count derive the same ceiling \u2014 or drops the clause and keeps only the derived 73.92-78.26s window, which was round 4's R24 acceptance. No sentence in section 2 asserts a universal over ledger rows that a one-line read of history.jsonl falsifies."
+    },
+    {
+      "id": "R28",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Moving the invariant band onto ts 20260824-032906 left section 3's rationale behind: it says ADR-012 writes no report for a green run 'which is why this cites a ts and not a file', but the cited run is RED and its report file was auto-written and committed by this same commit.",
+      "evidence": "ADR-019:225-229. evals/run.py:311 `write_report = (args.report or args.suite == 'all' or red) and not args.no_report` \u2014 a red run always writes one. adc6584 adds evals/report/20260824-032906-invariant.json (1320 lines) whose failed set is exactly ['docs-numbers-are-derived','published-band-matches-the-ledger']. The previous citation (20260824-020008) has no file on disk, so the sentence was defensible before the citation moved and is false after. Same class as R20 \u2014 a rationale left behind by a moved citation \u2014 ungraded for the same reason.",
+      "acceptance": "Section 3's bullet either cites the committed report file the way section 2's does, or drops the 'a ledger row is the whole artifact' reason. No sentence tells a reader an artifact does not exist while that artifact is committed in the same commit."
+    },
+    {
+      "id": "R29",
+      "severity": "LOW",
+      "route": "repair",
+      "batched": "same document, one blank line",
+      "claim": "The R22 orphan deletion removed the blank line as well, so the ablation paragraph and the 'Every run of this tree is in history.jsonl' paragraph now render as one paragraph about two unrelated things.",
+      "evidence": "ADR-019:188-190. The diff of adc6584 deletes the three orphan lines plus the blank line that separated them from :190.",
+      "acceptance": "A blank line separates the two paragraphs."
+    },
+    {
+      "id": "R30",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M38-10",
+      "claim": "Pre-existing on main, re-affirmed by this commit's re-citation: docs/analysis.md's coverage arithmetic does not close \u2014 178 fast cases minus 107 that drive Chromium leaves 71, and the sentence says 64 (and 107+6+64 = 177, so neither reading of 'remaining' reconciles).",
+      "evidence": "docs/analysis.md:61-67. adc6584 rewrites :63 to point at the new report, so the derivation is re-published against a report that gives 71. 'remaining 64' entered at d06a569 (M32, on main) when fast was 171 cases (171-107=64); nothing regrades it \u2014 docs-numbers-are-derived's analysis_coverage half checks only the 189 = 20+169 split quote.",
+      "acceptance": "The residual count is derived from the cited report, or the line stops publishing one.",
+      "route_note": "LOW and pre-existing on origin/main; this PR re-pointed the citation rather than introducing the arithmetic. Logged rather than repaired to keep this round to the two sentences it is about."
+    }
+  ],
+  "merged_commit_message_question": "adc6584's R21 paragraph carries the correction in bold and why_invariant carries the retraction in the case file, which is in-tree and is what a reader of the eval set sees. Adequate; no separate finding.",
+  "gate": {
+    "invariant": "65/65 = 1.000, 14.15s",
+    "fast": "178/178 = 1.000, 72.97s then 72.96s",
+    "band": "green after each",
+    "cost": "$0.0000",
+    "property": "a green run does not redden the next \u2014 R14's property holds"
+  }
+}
