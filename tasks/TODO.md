@@ -224,6 +224,27 @@ rows) and the tag is restored, or the CI invariant ceiling is re-derived from CI
 under an ADR with an owner ruling — ADR-021's precedent, and its own text says the margin question
 is not closed. Restoring the tag without one of those puts the branch back to red-on-CI.
 
+### T-M40-4 — deploy-smoke cannot verify the browser while anyone is using the demo            [status: pr]
+Origin: PR #43 (M40) post-merge, deploy-smoke run 32677457166
+Spec: M40 made `/smoke/stream` refuse while `SEM` is held, so a browser check can never launch a
+second Chromium beside a run. deploy-smoke's last step greps for `"event": "done"` and so failed
+the first time a run happened to be in flight — which, on a public demo URL, is whenever anyone is
+looking at it. It failed on the merge commit itself, against this session's own card-verification
+run (`e26da76d`).
+Fixed here by retrying six times and treating "refused because a run is executing" as
+not-a-failure, while ANY other error still fails immediately. Exhausting the retries emits a
+GitHub warning saying in those words that real-Chromium-on-the-deployment went UNCHECKED — the
+job stays green because the deployment answered and serialised correctly, but the property is not
+claimed as verified when it was not.
+What is still open, and is the reason this block exists rather than just a workflow edit: on a
+service with concurrency 1 and a public URL, a scheduled smoke check and a visitor are in a race
+that the visitor should win. The honest fix is a check that does not need the browser slot — a
+`/version` endpoint compared against `GITHUB_SHA` (already named as the fix for this workflow's
+other declared ceiling), plus a browser check that runs against a slot this job owns.
+Acceptance: deploy-smoke does not fail on a busy deployment, never passes silently on a broken
+browser, and the unchecked case is visible in the run log — plus a follow-up that removes the race
+rather than tolerating it.
+
 ### T-M40-1 — `/smoke/stream`'s concurrency guard is a read, not an acquire            [status: todo]
 Origin: PR (M40) round 2, cold review finding "also noted"
 Spec: `smoke_events` (`src/browser/server.py`) checks `SEM.locked()` and returns early, but never
