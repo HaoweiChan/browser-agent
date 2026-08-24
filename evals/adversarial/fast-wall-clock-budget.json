@@ -154,7 +154,7 @@
       "invariant"
     ],
     "ci_wall_seconds": 90,
-    "note": "six things: `over_budget` says 90.00s is inside the fast ceiling and 90.01s is not, and the same at 20.00/20.01 for invariant; WALL_BUDGET_S holds exactly {fast, invariant}, checked as a set; EVAL_WALL_BUDGET_S moves the FAST ceiling for a positive number, falls back to the committed 80 for everything else, and never touches invariant's; `evals.run.main()` returns 1 on an over-budget total and 0 otherwise; and .github/workflows/eval.yml declares the CI ceiling this case pins",
+    "note": "six things: `over_budget` says 90.00s is inside the fast ceiling and 90.01s is not, and the same at 20.00/20.01 for invariant; WALL_BUDGET_S holds exactly {fast, invariant}, checked as a set; EVAL_WALL_BUDGET_S moves the FAST ceiling for a positive number, falls back to the committed ceiling for everything else, and never touches invariant's; `evals.run.main()` returns 1 on an over-budget total and 0 otherwise; and .github/workflows/eval.yml declares the CI ceiling this case pins",
     "invariant_wall_seconds": 20,
     "ci_invariant_wall_seconds": 20
   },

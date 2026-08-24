@@ -28,10 +28,12 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 - M32 — Observation drill-down: the planner can ask for a deeper view of the page (2026-08-23) — ADR-020, PR #34, trace in tasks/reviews/pr34-r*.json
 - T-R56 — the band subsystem's documents and strings say what the code does (2026-08-23) — PR #36, trace in tasks/reviews/pr36-r*.json; 5 rounds, 1 circuit breaker
 - M28 — a verifier-rejected run carries no answer; the dump stays in evidence (2026-08-23) — PR #38
+- M32 — Observation drill-down: the planner can ask for a deeper view of the page (2026-08-22) — ADR-020, PR #34, trace in tasks/reviews/pr34-r*.json
 - T-M32-13 — the ledger's `ts` becomes a valid ordering key: stamped UTC, not naive local (2026-08-23) — found and root-caused on `task/M32` from PR #34's CI red; closed by T-R44 on both halves (UTC stamp + per-row `env`), ADR-019 §7, cases `ledger-ts-orders-real-time` and `band-is-graded-against-its-own-environment`
 - T-R78 — §7 stops claiming §5 names a demonstrating mutation for every graded item (2026-08-24) — PR #41 R17, the fifth instance of the class; the pointer now names `ci-numbers-are-derived`'s `watched_red`, closed in T-R44's merge commit
 
 - T-M40-1 — a browser check takes the run slot instead of reading it (2026-08-24) — PR #45, trace in tasks/reviews/pr45-r*.json; 3 rounds, 1 circuit breaker (human ruled option B: R8/R9 shipped as T-R89/T-R90). Nine debt items T-R82..T-R90, renumbered from T-R73..T-R79 after the final merge found seven ids defined differently on both sides with tasks/TODO.md auto-merging clean
+- T-M40-2 — the document root is not an answer: the plan lint refuses it at both adoption points (2026-08-24) — ADR-024, PR #46, trace in tasks/reviews/pr46-r*.json; 3 rounds, approved
 
 ## B-floor exit criteria — final status
 

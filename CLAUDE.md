@@ -40,14 +40,19 @@ The objective pass/fail for this repo. pr-loop, the hooks, and any reviewer
 run exactly these, in order:
 
 ```bash
-python3 -m evals.run --suite invariant   # pass: 100%, wall clock <= 15s
-python3 -m evals.run --suite fast        # pass: score >= .eval-baseline.json, wall clock <= 75s
+python3 -m evals.run --suite invariant   # pass: 100%, wall clock <= the ceiling evals/run.py enforces
+python3 -m evals.run --suite fast        # pass: score >= .eval-baseline.json, wall clock <= the ceiling evals/run.py enforces
 ```
+
+The ceilings themselves are per (suite, environment) and live in `WALL_BUDGET_S`
+(`evals/run.py`) and `.github/workflows/eval.yml` — not here. They are measured,
+not chosen (ADR-013's rule, ADR-019 as amended by ADR-021), so they move; a
+number re-typed into this file is a number nothing reads back.
 
 ## Commands
 
 ```bash
-python3 -m evals.run --suite invariant         # must-always-hold: pure-code probes plus the fixture runs that pin them (loopback only, no LLM, no live site) — 100%, ceiling 15s
+python3 -m evals.run --suite invariant         # must-always-hold: pure-code probes plus the fixture runs that pin them (loopback only, no LLM, no live site) — 100%, and a ceiling of its own
 python3 -m evals.run --suite fast              # offline gate: fixtures + LLM stubs, zero paid calls
 python3 -m evals.run --suite live              # real sites, hand-written plans — network, still $0.00
 python3 -m evals.run --suite full              # live sites + real LLM — manual/scheduled only

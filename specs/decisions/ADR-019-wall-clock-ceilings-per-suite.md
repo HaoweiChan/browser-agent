@@ -65,16 +65,17 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 162 cases, ts `20260824-021016`, **71.56s**, 162/162
-  (`evals/report/20260824-021016-fast.json`; `dirty: false`. The band was published
-  against a dirty row in the merge commit — a tree only reaches a new count while the
-  commit that moves it is uncommitted — and is re-cited here to the clean green
-  receipt that could not exist until that commit had landed. The stamp is UTC, as every row written
+- Band source — local `fast` at 164 cases, ts `20260824-024848`, **72.68s**, 162/164
+  (`dirty: true`, for the reason the next paragraph gives — a tree only reaches a new
+  count while the commit that moves it is uncommitted, and the two red cases in that
+  row are `docs-numbers-are-derived` and `published-band-matches-the-ledger`,
+  precisely the two this republish clears. The stamp is UTC, as every row written
   since §7 is. How many rows the ledger holds at this count, and what its maximum is,
-  are deliberately not written here — see §3. The count reached 162 in two steps
+  are deliberately not written here — see §3. The count reached 164 in three steps
   while this branch was in review: 158 -> 161 when M39's three judge cases merged,
-  161 -> 162 when T-M40-1's `smoke-stream-takes-the-run-slot` did. Neither changed
-  what this section rules; both cost a full re-derivation, which is T-M39-11.)
+  161 -> 162 with T-M40-1's `smoke-stream-takes-the-run-slot`, 162 -> 164 with
+  T-M40-2's two plan-lint cases. None changed what this section rules; each cost a
+  full re-derivation, which is T-M39-11.)
 
 **This band was dirty for one commit, and that price is what §7 removed.** A case
 addition forces a dirty citation: the tree only reaches its new count while the
@@ -93,11 +94,9 @@ longer disqualified by a row from another machine. Locally that is demonstrated 
 this band cites a dirty row and the gate is green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-Each band line carries the cited row's own `passed/total`, graded against that
-row and not prose beside it (T-R55) — written as whatever the row says rather
-than restated in this paragraph, because a number restated here goes stale the
-next time a band moves (PR #44 R2, and this merge is the second time it would
-have). It is stated because a band source is taken as it is found — item 2 (cited-run)
+The cited rows' own results — (restated — `fast`: 164 cases, 162/164) and
+(restated — `invariant`: 65 cases, 63/65) — are graded against the bullets they
+summarise, by item 10 (restatement), not merely stated beside them (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
 
@@ -117,11 +116,11 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 71.56 × 1.15 = 82.29 → **85**, which is BELOW the committed 90 and
+five — gives 72.68 × 1.15 = 83.58 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. The
-handful of runs at 162 cases is exactly that short sample. Item 5 (derivation) grades the
+one run at 164 cases is exactly that short sample. Item 5 (derivation) grades the
 arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
 that says 90 is green and declared rather than a contradiction. The band
 published for the earlier
@@ -137,11 +136,12 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 63 cases, ts `20260824-020904`, **13.36s**, 63/63
-  (`dirty: false`. T-M40-1's `smoke-stream-takes-the-run-slot` is tagged `fast` AND
-  `invariant`, so this count moved with §2's, and this band paid the same two-commit
-  price for the same reason. ADR-012 writes no per-case report for a green run, so
-  a ledger row is the whole artifact, which is why this cites a ts and not a file. As in §2,
+- Band source — local `invariant` at 65 cases, ts `20260824-024735`, **14.06s**, 63/65
+  (`dirty: true`, and red, for the same structural reason §2's row is, and the same two
+  cases. T-M40-2's two plan-lint cases are tagged `fast` AND `invariant`, so this count
+  moved with §2's, as T-M40-1's did before it. ADR-012 writes no per-case report for a
+  green run, so a ledger row is the whole artifact, which is why this cites a ts and not
+  a file. As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
   deliberately NOT in this suite: it was tagged `invariant`, moved this band, and
@@ -199,7 +199,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.36 × 1.15 = 15.36 → **20**, which is the committed
+The same rule gives 14.06 × 1.15 = 16.17 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
@@ -394,6 +394,16 @@ is about this section itself:
    and all of them are local runs. A band naming an environment the ledger holds
    no rows for lands in the `no_recorded_run_at` precondition below rather than
    passing for want of anything to compare against.
+10. (restatement) a sentence elsewhere in this file that quotes a band's case
+   count and result writes them in the marked form — the word `restated`, the
+   suite, `N cases`, `P/T` — and both numbers are the ones that band's bullet
+   publishes. The form is described rather than shown, because a literal example
+   here would be a third copy of the very numbers this item exists to keep from
+   drifting, and the check would read it as one (the same trap `_REGION` names
+   in the code: a marker written out is the first one the scan finds). Two rounds running, a repaired band left a
+   paragraph summarising it behind (PR #46 R3, then R5 against R3's own fix), so
+   the copy is now read back against the original. An unmarked restatement is
+   still invisible, the same ceiling item 8 (references) declares (T-R62).
 
 Green is required nowhere in that list and cannot be (T-R53); item 2 (cited-run) requires
 the result to be *stated*, not to be a pass. Item 5 (derivation) states the rule's value and

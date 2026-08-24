@@ -5,10 +5,13 @@ Failures carry exactly one top-level class from docs/evals/failure-taxonomy.md,
 assigned by `classify` — rules over the action and the error, never an LLM.
 
 One deterministic plan lint runs between the plan and the first action
-(`plan_gap`): an aggregate-shaped task whose plan cannot express the comparison
-is replanned once with a note naming the gap, and stopped rather than executed
-if the gap survives (specs/decisions/ADR-018-m31-plan-lint.md). It is a second
-consumer of the replan budget, and it is not a recovery ladder — nothing failed.
+(`plan_gap`), and it refuses two shapes: an aggregate-shaped task whose plan
+cannot express the comparison (specs/decisions/ADR-018-m31-plan-lint.md), and
+any plan that extracts from the accessibility document root — a container whose
+text is the whole page (specs/decisions/ADR-024-document-root-is-not-an-answer.md).
+Either way the plan is replanned once with a note naming the gap, and stopped
+rather than executed if the gap survives. It is a second consumer of the replan
+budget, and it is not a recovery ladder — nothing failed.
 
 Two recovery ladders, both chosen from the observed failure distribution
 (docs/evals/scope-checkpoint.md) rather than from imagination:
@@ -27,7 +30,8 @@ from pathlib import Path
 
 from .judge import JUDGE_ATTEMPTS, RUN_JUDGE_BUDGET
 from .planner import PlanError
-from .resolver import TARGET_KEYS, ResolveError, relocation_candidates, resolve
+from .resolver import (DOC_ROOT_ROLES, TARGET_KEYS, ResolveError,
+                        relocation_candidates, resolve)
 from .verifier import is_aggregate, rank, verify
 
 MAX_FIXES = 2         # relocation rungs per failed step
@@ -229,29 +233,102 @@ def screen(task: str) -> str | None:
     return f"out of scope (matched '{m.group(0)}'): auth/CAPTCHA/payment/destructive/download tasks are unsupported" if m else None
 
 
+# `DOC_ROOT_ROLES` (imported from resolver.py, where its other reader lives) is
+# the accessibility document root: Chromium's `WebArea`, `RootWebArea` in other
+# builds. Stripped and case-folded because the spelling in a plan is the MODEL's,
+# not Chromium's.
+#
+# ARIA's `document` role is NOT in that set, and the first version of it had it.
+# It is not the root: it is an author-supplied role on an in-page container
+# (`<div class="modal-dialog" role="document">` is Bootstrap boilerplate), and
+# unlike the two root spellings it RESOLVES — on the cold review's fixture,
+# `get_by_role("document", name="Order confirmation")` returned a 40-character
+# confirmation inside a dialog, refused with a reason asserting that node was
+# "the ENTIRE page". That is a false statement about the page, generated from
+# the plan alone, which is exactly what a plan-time rule may not do.
+#
+# `observe` walks that snapshot from its root and the root is in neither
+# SKIP_ROLES nor NAME_PROHIBITED, so element #1 of every observation the planner
+# is shown is `WebArea — <the page title>`: the most answer-shaped string in the
+# list, attached to the one node whose text is the whole document. T-M40-2
+# measured four of five live tasks planning exactly that.
+#
+# Refused only for the extraction verbs. M32's drill-down targets a container ON
+# PURPOSE — `observe {role: WebArea}` is a plan about what to look at next, not
+# an answer offered from a container — and that distinction is the reason this
+# is a rule about the ACTION and the ROLE together, not about the role alone.
+#
+# Scope, deliberately: the document root, not landmarks (`main`, `navigation`,
+# `contentinfo`, …) and not `document`. A root's text is the entire page by
+# construction, so refusing it has no false-positive case to argue about; any
+# other container is a judgement about how much of the page is too much, which
+# `verify`'s `not_a_dump` already makes with the page in hand and a calibrated
+# ratio (ADR-008). Two guards, each where its evidence is.
+
+
 def plan_gap(task: str, steps: list) -> str | None:
     """Deterministic pre-flight over a PLAN. Non-None means: do not execute it.
 
-    One rule, and it is the one PR #25's verifier guard was built to catch after
-    the fact: an aggregate-shaped task ("which X has the most/least Y") whose
-    plan contains no enumerating step. `verify()` already fails that run — but
-    only once the browser has moved and a wrong answer has been produced to fail.
+    Two rules, in the order a plan fails them.
+
+    The first is about the TARGET and holds for every task shape: an extraction
+    step aimed at the accessibility document root (DOC_ROOT_ROLES). Refused
+    before the aggregate rule, and above its early return, because the shape it
+    catches is an ordinary single-answer question — T-M40-2's whole re-probe is
+    non-aggregate, and a clause below that return would have been dead code for
+    all of it.
+
+    The second is the one PR #25's verifier guard was built to catch after the
+    fact: an aggregate-shaped task ("which X has the most/least Y") whose plan
+    contains no enumerating step. `verify()` already fails that run — but only
+    once the browser has moved and a wrong answer has been produced to fail.
     Here the same judgement is made from the plan alone, before the first action.
 
     Structural, not behavioral, and no site knowledge (CLAUDE.md rule 6): it
-    reads the task's shape and the plan's actions, nothing about any page. It is
-    deliberately not an LLM critic — a second model has no more ground truth
-    than the first, and would put two stubbed models in an offline gate that
-    currently stubs one (specs/decisions/ADR-018-m31-plan-lint.md).
+    reads the task's shape, the plan's actions and the roles they name — nothing
+    about any page. It is deliberately not an LLM critic — a second model has no
+    more ground truth than the first, and would put two stubbed models in an
+    offline gate that currently stubs one
+    (specs/decisions/ADR-018-m31-plan-lint.md).
 
     `is_aggregate` is shared with the verifier guard on purpose: one regex, two
     callers, so widening the vocabulary widens both or neither. Its ceiling is
     the ceiling of a regex over English — same as SCOPE_BLOCK's.
     """
+    for step in steps or []:
+        # `isinstance`, because a lint is not the thing that raises: this clause
+        # runs for EVERY task shape, where the aggregate rule below used to
+        # return None immediately on a plain task, and `parse_plan` validates
+        # only that the top level is a list — a string target, or a step that is
+        # not a dict at all, reaches here (PR #46 R1-4). The `reads` comprehension
+        # below carries the same guard: the first version of this fix covered
+        # only this loop, so the identical plan still raised on an aggregate task
+        # (PR #46 R6), which is what a partial guard is worth.
+        #
+        # What happens instead of raising, precisely, because the first version
+        # of this comment overclaimed it: a malformed TARGET is "no gap" here and
+        # the executor rejects it loudly (TARGET_KEYS). A malformed STEP is "no
+        # gap" here and then dies at `step["action"]` in the step loop with an
+        # uncaught TypeError — no status, no failure class. That is pre-existing
+        # and unchanged by this PR (`main` reaches the same line the same way),
+        # it is the executor's contract rather than the lint's, and it is logged
+        # as T-M40-2-6 rather than fixed here.
+        if not isinstance(step, dict) or not str(step.get("action") or "").startswith("extract"):
+            continue  # `observe` names a container ON PURPOSE — see DOC_ROOT_ROLES
+        target = step.get("target")
+        role = str(target.get("role") or "") if isinstance(target, dict) else ""
+        if role.strip().lower() in DOC_ROOT_ROLES:
+            return (f"the plan reads {step['action']!r} off {role!r}, the accessibility root of "
+                    "the document — the node `observe` lists first on every page, whose accessible "
+                    "name is the page title and whose text is the ENTIRE page. It cannot be the "
+                    "answer to anything, and it carries no other string to retarget by, so the "
+                    "page title is all a relocation could ask for next. Name the element that "
+                    "holds the value; if you can see a container but not its contents, `observe` "
+                    "that container first")
     if not is_aggregate(task):
         return None
     reads = [s for s in steps or []
-             if str(s.get("action") or "").startswith("extract")]
+             if isinstance(s, dict) and str(s.get("action") or "").startswith("extract")]
     actions = [s.get("action") for s in reads]
     if actions == ["extract_all"]:
         # The plan enumerates once — now check what it says it did with the

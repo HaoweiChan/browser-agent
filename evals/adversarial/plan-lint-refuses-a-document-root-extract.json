@@ -1,0 +1,29 @@
+{
+  "id": "plan-lint-refuses-a-document-root-extract",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "level": "L3",
+  "tc": "TC1",
+  "trap": "the plan extracts from the accessibility document root — a container whose text is the whole page, wearing the page <title> as its accessible name",
+  "input": {
+    "fixture": "hello.html",
+    "task": "What does the second heading on this page say?",
+    "stub_plan": [
+      {"action": "extract", "target": {"role": "WebArea", "name": "Hello Fixture"}, "anchor": null}
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "actions": 1,
+    "replans": 0,
+    "trace_actions": ["navigate"],
+    "answer_null": true,
+    "planner_note_contains": "WebArea"
+  },
+  "provenance": "T-M40-2, the post-M32 re-probe of PR #43's five live tasks (2026-08-23). Four of the five that answered before do not answer now, and the shape they share is one target: `extract {\"role\": \"WebArea\", \"name\": \"<the page title>\"}` — x-rates.com `b8b95067`/`133264ee`, multpl.com `bdc38f65`/`c7fa2623`, quotes.toscrape.com `6811f8bf`, openlibrary.org `a6797fbe`, plus two pre-M32 runs (`8c1a3344`, `c80b1dd0`), so it is not claimed that M32 caused it. The mechanism is in this repo, not in the model: `observe` walks Chromium's accessibility snapshot from its root, and that root is neither in SKIP_ROLES nor renamed, so element #1 of EVERY observation the planner is shown is `WebArea — <the page title>` — the answer-shaped string at the top of the list, belonging to a node whose text is the entire document. `resolve` then finds zero matches for it (Playwright has no `WebArea` role), and `relocation_candidates` has exactly one rung left, because role+name is the tier that just failed: `{text: \"<the page title>\"}`. On the four live pages that string is not visible text and the run dies a locate failure; on a page where the title is also a heading it resolves, and the run reports the site title as the answer (`6811f8bf` — rejected by the M36 judge, which is the last rung, not the first). This fixture is that second, worse half offline: `hello.html`'s <title> and <h1> are the same string, so the relocation lands and the wrong answer is graded. The refusal is at the lint rather than at the relocation rung because the lint runs first: a plan refused before execution never reaches `resolve`, so the degraded `{text: <title>}` rung is unreachable for this shape and `trace_actions: [\"navigate\"]` is what says so.",
+  "triage": {
+    "class": "silent-failure",
+    "watched_red": "Before the lint clause, with this file's expectations already in place: checks {status: false, replans: true, trace_actions: false, actions: false, planner_note_contains: false, answer_null: false}, got {status: 'success', answer: 'Hello Fixture', reason: null}, budgets.actions 3, tiers ['text'], audit verdict PASS on all ten L1 checks (grounded, not_a_dump, not_page_furniture, identity_anchors, …) and judge_certified 1. The page's own <h1> returned as the answer to 'What does the second heading on this page say?', reported success. The trace was exactly the live degradation: i=2 `extract {'role': 'WebArea', 'name': 'Hello Fixture'}` -> failure_class locate, note \"ResolveError: no tier resolved …\", superseded_by 3; i=3 `extract {'text': 'Hello Fixture'}` labelled `recovery`, note \"relocation after locate failure: retargeting as {'text': 'Hello Fixture'}\", no failure. After the clause: status failure:task, actions 1, trace ['navigate'], answer null.",
+    "note": "the assertions are structural, per PR #34 R13: `trace_actions` pins that the extract never ran at all — which is the same claim as 'the relocation rung was never reached', since the rung is only built from a step that failed to locate. `planner_note_contains: \"WebArea\"` is the one wording assertion, and it grades the thing a real planner needs from the replan: the message names the role it must stop targeting. The task is deliberately NOT aggregate-shaped: `plan_gap` opens with `if not is_aggregate(task): return None`, so a clause placed anywhere below that line is dead for every ordinary task, which is every task in the re-probe."
+  }
+}

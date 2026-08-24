@@ -258,6 +258,19 @@ appears, in order — no post-hoc reconstruction).
     twice (`verifier-aggregate-superlative-fails-loud`,
     `probe3-quotes-most-quoted-author`, `plan-gap-truth-table`,
     `specs/decisions/ADR-018-m31-plan-lint.md`).
+    The same lint carries a second rule, which is about the TARGET and holds for
+    every task shape rather than only the aggregate one: an `extract`/
+    `extract_all` naming the accessibility document root (`WebArea` or
+    `RootWebArea`) is refused, because that node's text is the
+    whole page and its accessible name is the page title — the string `observe`
+    puts first in every observation. It is checked above the `is_aggregate`
+    early return, since the tasks that produce it are ordinary single-answer
+    ones, and it is not a rule about containers in general: `observe` on the
+    same target is M32's drill-down and is untouched (untouched is not
+    functional — T-M40-2-5), ARIA `document` is not the root and is not refused,
+    and any other container stays with `verify`'s calibrated `not_a_dump`
+    (`plan-lint-refuses-a-document-root-extract`, `plan-gap-truth-table`,
+    `specs/decisions/ADR-024-document-root-is-not-an-answer.md`).
   - **`index` and `near` are refused on this step**, because both select one of
     the matches the step exists to enumerate; honouring either would enumerate
     a single element and let the relaxed aggregate guard certify a single-shot
