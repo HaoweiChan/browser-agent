@@ -1,0 +1,50 @@
+{
+  "pr": 46,
+  "round": 2,
+  "task": "T-M40-2",
+  "reviewer": "groundwork:pr-reviewer (repair diff 8b242d1..0d7d427 + standing findings)",
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 2,
+    "LOW": 1
+  },
+  "standing_findings_verified_fixed": [
+    "R1",
+    "R2",
+    "R3",
+    "R4"
+  ],
+  "orchestrator_note": "R1-R4 confirmed fixed and dropped. R1's mid-run case was verified to genuinely drive adopt() (ends at agent.py:1106-1113, failure:task) rather than the pre-execution branch in disguise - that was the specific thing round 2 was told to falsify. R7 is LOW and routed to repair rather than debt, same recorded deviation as round 1: it is a one-line correction in ADR-024, a file R5/R6's repair already opens. PATTERN, flagged by the orchestrator and not by the reviewer: R1/R3 (round 1) and R5/R7 (round 2) are all one defect - a document restating a number or mechanism that nothing grades, going stale when the thing it restates changes. R5 was re-introduced BY the fix for R3. The repair instruction for round 3 therefore requires a grader, not only corrected prose; three rounds of the same class is a root-cause signal, and this is the last round before the circuit breaker.",
+  "findings": [
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "blocks_because": "a committed artifact of record contradicts itself; the published figures a reader takes as verified-correct are false",
+      "claim": "The repair republished ADR-019's band bullets to 153/155 and 58/60 but left the paragraph that summarises them still naming the OLD results, so specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md now contradicts itself eight lines apart - the exact defect class R1-3 was raised for, re-introduced by the fix for R1-3.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:92 'The `152/154` and `59/59` above are the cited rows' own results' - neither figure appears above it any more: :66 now publishes `fast` 153/155 (ts 20260824-083831) and :140 publishes `invariant` 58/60 (ts 20260824-083720), and the repaired sentence at :96-99 states those same two rows as '153/155 and 58/60'. Ledger rows confirm the bullets, not :92 (evals/report/history.jsonl:1245-1246). The same paragraph's dirty-by-construction rationale is stale on the same edit: :68-69 'takes the suite to 154 ... every run at 154 is taken' and :142 'the case that takes the suite to 59' against the 155/60 counts this branch actually ships.",
+      "repro": "grep -n '152/154\\|59/59\\|suite to 154\\|suite to 59' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md -> lines 68, 69, 92, 101, 142 against the 153/155 and 58/60 published at :66 and :140. `published-band-matches-the-ledger` passes (its item 2 grades the bullet, not this sentence), so nothing catches it.",
+      "acceptance": "Line 92 names the two results actually published above it (153/155 and 58/60) or drops the figures and defers to :96-99; :68-69 and :142 name 155 and 60. Ideally the reference-to-the-bullet is graded, since this is the second round the same paragraph has gone stale under a republished number."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "blocks_because": "two shipped comments state categorically something false about the code they annotate, and the accepted R4 fix is half-applied",
+      "claim": "R4's `isinstance` guards are half-applied and the comment they ship with is false: `plan_gap` still raises AttributeError on exactly the same malformed plans when the task is aggregate-shaped, and a non-dict step never reaches the 'loud rejection ... the executor's' that both new comments promise - it crashes `run_task` with an uncaught TypeError before `execute()` is ever called.",
+      "evidence": "src/browser/agent.py:299-304 asserts categorically 'A malformed plan is \"no gap\"; the loud rejection is the executor's, and unchanged', and src/browser/eval_adapter.py:360-366 repeats it. Both false in two ways. (a) The guard covers only the doc-root loop; the aggregate clause below it is unguarded - plan_gap('Which product on this page has the most customer reviews?', ['extract WebArea']) -> AttributeError at agent.py:319 (`reads = [s for s in steps ... if str(s.get(\"action\") ...)]`), same for [None]. All three new truth-table rows are tagged PLAIN only (eval_adapter.py:367-369), so nothing could have caught it. (b) For a non-dict step the run does not reach the executor's TARGET_KEYS/unknown-action rejection at all: it dies at agent.py:1013 `read_only = step[\"action\"] == \"observe\"` with TypeError propagating out of `run_task` (no status, no failure class). Not a regression versus main, so this is honesty-of-claim + partial fix, not new breakage.",
+      "repro": ".venv/bin/python -c \"import sys;sys.path.insert(0,'.');from src.browser.agent import plan_gap;plan_gap('Which product on this page has the most customer reviews?',[None])\" -> AttributeError. End-to-end: any fixture case with stub_plan ['extract WebArea'] -> TypeError at agent.py:1013 out of run_case, not a classified failure.",
+      "acceptance": "Either the same non-dict guard covers the aggregate clause (one `isinstance` in the `reads` comprehension) with truth-table rows (AGG, ['extract WebArea'], False) and (AGG, [None], False) watched red first, or both comments stop claiming the class is handled and say what actually happens (uncaught TypeError in the step loop) and the residue is logged as debt with this repro."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "ADR-024's Ruling line still states a single mechanism - 'replanned once through the existing replan budget' - that is false of the mid-run case the repair just added to the Enforced-by line directly beneath it.",
+      "evidence": "specs/decisions/ADR-024-document-root-is-not-an-answer.md:6 (Ruling) '...is refused by the plan lint for every task shape ... and replanned once through the existing replan budget', against :7 which the repair changed to list plan-lint-refuses-a-document-root-extract-midrun (the adopt() branch) as an enforcing case. Executed: that case ends at agent.py:1106-1113 with failure:task, reason 'the plan after the drill-down at step 2 was rejected by the plan lint: ...', budgets.replans 0 - no replan is spent, which is what the case's expect.replans: 0 pins. The Consequences paragraph at :131-146 (correct, and verified against execution) says so; the Ruling has not caught up.",
+      "repro": ".venv/bin/python -c \"import sys,json;sys.path.insert(0,'.');from src.browser import eval_adapter as ea;r=ea.run_case(json.load(open('evals/adversarial/plan-lint-refuses-a-document-root-extract-midrun.json')));print(r['budgets']['replans'], r['got']['reason'][:80])\" -> 0, 'the plan after the drill-down at step 2 was rejected by the plan lint'",
+      "acceptance": "The Ruling says the refusal costs one replan before execution and ends the run at a mid-run adoption point, matching :131-146 and both enforcing cases."
+    }
+  ]
+}

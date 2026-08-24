@@ -305,6 +305,16 @@ def _check_plan_gap() -> dict:
     norank = [{"action": "extract_all", "target": {"role": "link"}, "rank": False}]
     two = one + [{"action": "extract_all", "target": {"role": "listitem"}, "rank": True}]
     plain = [{"action": "extract", "target": {"role": "link"}}]
+    # T-M40-2. The document root, as `observe` puts it at the top of every
+    # observation: role `WebArea`, name the page <title>. The rows below are the
+    # ones the end-to-end case cannot reach, and the first of them is the whole
+    # placement question — `PLAIN` is not aggregate-shaped, so a clause written
+    # below `if not is_aggregate(task)` is dead here, and every task in the
+    # M40 re-probe is this shape. The comparison is stripped and case-folded
+    # over the two ROOT spellings only; ARIA `document` is not one of them, and
+    # the rows below say so (PR #46 R1-2 — this comment claimed the opposite for
+    # a round, having outlived the first version of the set).
+    ROOT = {"role": "WebArea", "name": "Some Page — A Site"}
     rows = [
         (AGG, [], True), (AGG, plain, True), (AGG, one, False),
         (AGG, plain + one, True), (AGG, one + plain, True), (AGG, two, True),
@@ -314,6 +324,63 @@ def _check_plan_gap() -> dict:
         (AGG, norank, True), (AGG, [dict(one[0])], False),
         (PLAIN, [], False), (PLAIN, plain, False), (PLAIN, two, False),
         (PLAIN, plain + one, False), (PLAIN, norank, False),
+        # T-M40-2: extracting the document root is refused whatever the task
+        # shape, and refused for `extract_all` too — enumerating a root is one
+        # dump, not a set. Spelling is the model's, not Chromium's, so the
+        # comparison is stripped and case-folded, and it covers the `RootWebArea`
+        # spelling other builds emit.
+        (PLAIN, [{"action": "extract", "target": ROOT}], True),
+        (PLAIN, [{"action": "extract", "target": {"role": "webarea"}}], True),
+        (PLAIN, [{"action": "extract", "target": {"role": "RootWebArea"}}], True),
+        (PLAIN, [{"action": "extract", "target": {"role": " WebArea "}}], True),
+        # ...and ARIA `document` is NOT refused, though the first version of this
+        # clause refused it. It is not the root: it is an author-supplied role on
+        # an in-page container (`<div class="modal-dialog" role="document">` is
+        # Bootstrap boilerplate), Playwright resolves it, and on the fixture built
+        # for the cold review it resolved to a 40-character confirmation inside a
+        # dialog — a correct answer refused with a reason asserting the node was
+        # "the ENTIRE page". A container that MIGHT be too big is `not_a_dump`'s
+        # judgement, with the page in hand (ADR-024 §1); only the root is refusable
+        # from the plan alone, because only the root is the whole page by
+        # construction.
+        (PLAIN, [{"action": "extract", "target": {"role": "document"}}], False),
+        (PLAIN, [{"action": "extract",
+                  "target": {"role": "document", "name": "Order confirmation"}}], False),
+        (AGG, [{"action": "extract_all", "target": ROOT, "rank": True}], True),
+        (PLAIN, plain + [{"action": "extract", "target": ROOT}], True),
+        # ...and the other direction, which is load-bearing: M32's drill-down
+        # targets a container ON PURPOSE, so `observe` on the root is a plan
+        # about what to look at next, not an answer offered from a container.
+        # Same for a click: nothing is being read off it.
+        (PLAIN, [{"action": "observe", "target": ROOT}] + plain, False),
+        (PLAIN, [{"action": "click", "target": ROOT}] + plain, False),
+        # A target with no role at all must not fault the clause.
+        (PLAIN, [{"action": "extract", "target": {"text": "Some Page — A Site"}}], False),
+        (PLAIN, [{"action": "extract"}], False),
+        # ...and neither must a MALFORMED plan (PR #46 R1-4). `parse_plan`
+        # validates that the top level is a list and nothing below it, so a
+        # string target and a step that is not a dict both reach this function —
+        # and this clause is the first thing in it that runs for EVERY task
+        # shape, where the aggregate rule used to return None immediately on a
+        # plain task. A lint may not be the thing that raises: it says "no gap"
+        # and leaves the plan to the executor. What the executor then does splits
+        # in two, and saying only the first half of it was the false claim R6
+        # caught: a malformed TARGET is rejected loudly there (TARGET_KEYS), and
+        # a step that is not a dict dies at `step["action"]` with an uncaught
+        # TypeError — pre-existing, unchanged by this PR, logged as T-M40-2-6.
+        # These rows grade the lint's half only, which is all a lint owns.
+        (PLAIN, [{"action": "extract", "target": "WebArea"}], False),
+        (PLAIN, ["extract WebArea"], False),
+        (PLAIN, [None], False),
+        # ...and the SAME plans under an aggregate task (PR #46 R6). The first
+        # version of this fix guarded the doc-root loop and left the aggregate
+        # clause below it reading `s.get` off whatever the list holds, so the
+        # rows above proved nothing about the branch that actually runs for a
+        # which-one question — they are all tagged PLAIN, which returns before
+        # reaching it.
+        (AGG, [{"action": "extract", "target": "WebArea"}], True),
+        (AGG, ["extract WebArea"], True),
+        (AGG, [None], True),
     ]
     wrong = [{"task": t, "plan": [s.get("action") for s in p], "expected_gap": want,
               "got": plan_gap(t, p)}
@@ -454,6 +521,16 @@ _REGION = tuple(f"# ==== ADR-019 §6 band section: {edge} ===="
 _BAND_DEF = re.compile(
     r"^(?:def )?(_band\w*|_check_published_band\w*|_BAND\w*|_SIX\w*"
     r"|_SLACK_MARK|_REGION|_LEGACY_ENV)\b", re.M)
+
+# "(restated — `fast`: 155 cases, 153/155)" — a band bullet's numbers quoted in
+# a sentence somewhere else in the ADR. Prose keeps wanting to summarise the
+# bullets, and a summary of a graded number is an ungraded copy of it: PR #46 R3
+# repaired one such sentence and R5 found the paragraph eight lines away stale in
+# the same edit, from the same republication. So a restatement wears this form
+# and is read back against the bullet it claims to be about (ADR-019 §6
+# item 10 (restatement)).
+_BAND_RESTATE = re.compile(
+    r"\(restated — `(fast|invariant)`: (\d+) cases, (\d+)/(\d+)\)")
 
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
@@ -699,6 +776,23 @@ def _check_published_band() -> dict:
         if ruling.get(suite) != WALL_BUDGET_S[suite]:
             wrong.append({"suite": suite, "adr_ruling_ceiling": ruling.get(suite),
                           "committed_ceiling": WALL_BUDGET_S[suite]})
+    # Item 10 (restatement). Every marked restatement carries the bullet's own
+    # case count and result, so republishing a band without fixing the paragraph
+    # that summarises it is red. What it does NOT see is a restatement wearing no
+    # marker — the same ceiling item 8 (references) declares for an unreferenced
+    # paraphrase, and for the same reason: the cheap half is worth having, and
+    # the fix for prose nobody marked is to stop restating (T-R62).
+    for m in _BAND_RESTATE.finditer(adr):
+        suite, cases, passed, total = m.group(1), *map(int, m.group(2, 3, 4))
+        if suite not in published:
+            wrong.append({"suite": suite, "restates_a_suite_with_no_band": True})
+        # `published[suite]` is (env, cases, ts, wall, passed, total) since T-R44
+        # put the environment in front — indices, not names, so the merge that
+        # added `env` moved every one of them.
+        elif (cases, passed, total) != (published[suite][1], *published[suite][4:6]):
+            wrong.append({"suite": suite, "restated": [cases, passed, total],
+                          "band_publishes": [published[suite][1], *published[suite][4:6]]})
+
     # Item 8 (references). §6's numbered list is the normative statement of what
     # this check requires; the blocks above name the item they implement and say
     # nothing else about it. What is graded is the naming, not the absence of a

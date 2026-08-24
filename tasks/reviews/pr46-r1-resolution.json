@@ -1,0 +1,22 @@
+{
+  "pr": 46, "round": 1, "task": "T-M40-2",
+  "counts": {"fixed": 4, "rejected": 0, "debt": 0},
+  "gate_after_repair": {"invariant": "60/60 = 1.000 (13.73s / 20)", "fast": "155/155 = 1.000 (71.04s / 90)", "cost": "$0.0000", "baseline": "untouched", "run_by": "orchestrator, independently of the implementer"},
+  "resolutions": [
+    {"id": "R1", "outcome": "fixed", "half_taken": "the stronger one - a new case, not a prose narrowing",
+     "case": "plan-lint-refuses-a-document-root-extract-midrun (fast+invariant)",
+     "what": "Plan 1 only looks (observe the catalogue list, M32's drill-down); the replan it earns returns extract {role: WebArea, name: 'Nimbus Shop - Catalogue'}; adopt() refuses it and the run ends without a replan because the drill-down WAS the replan. Asserts trace_actions ['navigate','observe'], replans 0, recovery false, answer_null true. ADR-024's paragraph corrected so both branches have a case and each one's replans:0 is attributed to the rule it actually comes from (no-progress vs nothing-left-to-replan-with).",
+     "watched_red": "by ablation (ADR-009 method - a refusal cannot fail before the thing it refuses exists). DOC_ROOT_ROLES emptied, nothing else touched -> checks {status: false, recovery: false, replans: false, trace_actions: false, answer_null: true}, status failure:locate, actions 4, replans 1, tiers ['role'], reason \"step 4 (extract): relocation after locate failure: retargeting as {'text': 'Nimbus Shop - Catalogue'}; ResolveError: no tier resolved\". Restored -> green."},
+    {"id": "R2", "outcome": "fixed", "case": "plan-gap-truth-table (existing document rows)",
+     "what": "Both adapter comments now say the comparison is stripped and case-folded over the two root spellings; the ARIA-document claim, a survivor of the reverted first version, is gone."},
+    {"id": "R3", "outcome": "fixed",
+     "what": "ADR-019 section 2 now states each cited row's own result and why they can differ, instead of calling a 59/59 row red. Bands republished for this round's case count: fast 155 / 70.85s / 81.48 -> 85; invariant 60 / 13.87s / 15.95 -> 20; both from ledger rows, both under the committed ceilings."},
+    {"id": "R4", "outcome": "fixed", "case": "plan-gap-truth-table (three new rows)",
+     "what": "Two isinstance guards; a malformed plan is now 'no gap' and the loud rejection stays the executor's.",
+     "watched_red": "three new rows (string target, non-dict step, None step) -> RAISED AttributeError 'str' object has no attribute 'get' - the reviewer's own repro, reaching the case as an error before the fix."}
+  ],
+  "notes": [
+    "One superseded report (evals/report/20260824-004811-fast.json) is KEPT rather than pruned: tasks/reviews/pr46-r1.json cites it and report-citations-resolve went red when it was pruned. A review record is verbatim, so its citations do not get broken either. Worth knowing before anyone prunes reports on this branch.",
+    "Untouched as instructed: the CI published-band-matches-the-ledger red (T-R44/T-M32-13, PR #41), T-M40-3, and T-M40-2-1..5. No new debt blocks this round."
+  ]
+}

@@ -11,6 +11,10 @@
     "observation": {
       "elements": [
         {
+          "role": "WebArea",
+          "name": "Nimbus Shop — Catalogue"
+        },
+        {
           "role": "button",
           "name": "Sort by price (low to high)"
         },
@@ -64,12 +68,18 @@
             "text": "Sort by price (low to high)"
           }
         ]
+      },
+      {
+        "target": {
+          "text": "Nimbus Shop — Catalogue"
+        },
+        "expect": []
       }
     ]
   },
-  "provenance": "a recovery ladder whose rungs repeat the failed strategy is retry wearing a recovery label (taxonomy: rungs must be different strategies). This pins the rule as a truth table. Row 1: a dead text tier relocates to role+name found in the fresh snapshot. Row 2: a dead role+name relocates to text — never back to role+name, even though the fresh observation is right there to search. Row 3: a target carrying no name and no text has nothing to relocate BY, so the honest answer is no rung and a loud locate failure, not a guess. Row 4 is the trap: the name IS in the observation, and rung 1 must still be refused because role+name is exactly what just failed.",
+  "provenance": "a recovery ladder whose rungs repeat the failed strategy is retry wearing a recovery label (taxonomy: rungs must be different strategies). This pins the rule as a truth table. Row 1: a dead text tier relocates to role+name found in the fresh snapshot. Row 2: a dead role+name relocates to text — never back to role+name, even though the fresh observation is right there to search. Row 3: a target carrying no name and no text has nothing to relocate BY, so the honest answer is no rung and a loud locate failure, not a guess. Row 4 is the trap: the name IS in the observation, and rung 1 must still be refused because role+name is exactly what just failed. Row 5 (T-M40-2): the observation's FIRST element is always the accessibility document root, `WebArea` named by the page <title> — so a failed target whose string IS that title finds its role+name rung there, and the rung is `{role: WebArea, name: <title>}`: a target no tier can resolve, spending one of two rungs on a node the plan lint refuses when a planner names it directly (ADR-024). The root is not a relocation candidate.",
   "triage": {
     "class": "capability-gap",
-    "note": "watched red as an unknown case kind before relocation_candidates() existed"
+    "note": "watched red as an unknown case kind before relocation_candidates() existed Row 5 watched red before the resolver skipped the root: want [], got [{'role': 'WebArea', 'name': 'Nimbus Shop — Catalogue'}]."
   }
 }
