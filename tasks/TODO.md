@@ -94,7 +94,7 @@ after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
 
-### M39 — A malformed judge response is retried once before failing closed            [status: in-progress]
+### M39 — A malformed judge response is retried once before failing closed            [status: pr]
 Origin: post-deploy receipt round for PR #38 (2026-08-23). Run `7787f9c9`
 (HN item 1, "What is the title of this story?"): extraction `"Y Combinator"`
 was correct, every L1 predicate passed, and the run ended `failure:semantic`
