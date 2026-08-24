@@ -63,11 +63,10 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 170 cases, ts `20260824-084822`, **74.39s**, 168/170
-  (`dirty: true`, ts-only for the ADR-012 reason §3 gives. PR #42's round-3
-  repair added two cases, so no clean row can exist at 170 until they are
-  committed; the receipt commit beside this one re-cites it clean. Its two reds
-  are the two doc-derivation cases a case addition reddens.)
+- Band source — `fast` at 170 cases, ts `20260824-090446`, **75.52s**, 170/170
+  (`dirty: false`, ts-only for the ADR-012 reason §3 gives. A clean, green gate
+  run of the committed tree `92cee87`, and the ledger's own maximum at this
+  count.)
 
 **The band is published at the TOP of its ceiling's range, on purpose** (PR #42
 R14). Item 3 (same-ceiling) compares the ceiling the published number derives
@@ -78,9 +77,11 @@ run available, 72.19s, which derives 85 — and the next ordinary green gate run
 of the same tree came in at 75.0s, derived 90, and turned both suites red
 without a line of code changing. Published here instead is a number near the
 top of the 90-band: anything from 73.92s to 78.26s derives 90, so the band now
-absorbs the ~3s spread this suite actually shows (72.7-74.4s measured across
-five consecutive runs of this tree) instead of sitting one tenth of a second
-from a cliff. The slack is deliberate, it is bounded by §6, and
+absorbs the ~3s spread this suite actually shows (72.3-75.5s across twelve
+consecutive runs of this tree) instead of sitting a tenth of a second from a
+cliff. Choosing the row took several runs, and that is the honest reading of
+it: the band is the slowest clean run on record here, so a future run has to be
+slower than every one of the twelve before it flips a ceiling. The slack is deliberate, it is bounded by §6, and
 `published-band-slack-is-declared` measures what it costs a reader in
 precision.
 
@@ -143,7 +144,7 @@ produces. Two of the nine were the ledger's maximum at their case count when
 they landed, which is how they reached the published band in the first place. That the isolation mechanism this repo built for one probe class does
 not cover ablation is `T-M38-5`.
 
-**Every case-count change costs two commits, and this branch paid it three times.**
+**Every case-count change costs two commits, and this branch paid it four times.**
 A case addition forces a dirty citation first: the tree only reaches its new
 case count while the new cases are uncommitted, which is the entire reason the
 dirty allowance exists. But a dirty citation is red on CI and green locally —
@@ -154,16 +155,17 @@ stamped eight hours behind ours. M28's merge commit paid this once at 153 cases
 (a dirty row, 70.46s, 151/153, re-cited clean in the commit after). M38 paid it
 at 158 (dirty in the implementing commit, clean `20260823-223759` in the
 receipt), again at 165 (dirty in `fb71f37`, clean `20260823-233143` re-cited by
-`820d807`), and a third time at 168 for round 2's three cases (dirty
-`20260824-001838` in the repair commit `28cda58`, clean `20260824-002753`
-re-cited here). The price is per case-count
+`820d807`), a third time at 168 for round 2's three cases (dirty
+`20260824-001838` in `28cda58`, clean `20260824-002753` in `250a901`), and a
+fourth at 170 for round 3's two (dirty `20260824-084822` in `92cee87`, clean
+`20260824-090446` re-cited here). The price is per case-count
 change, not per PR, and it is paid rather than dodged by citing a stale clean
 row from a smaller tree: a band has to describe the tree that ships. A dirty
 citation cannot be left standing, either, and that is not tidiness — item 2
 (cited-run) plus `T-M32-13`'s zone bug make it structurally red the moment CI
 appends its own clean row at this count.
 
-The `168/170` is the cited row's own result, graded against it, not prose beside
+The `170/170` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -184,7 +186,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 74.39 × 1.15 = 85.55 → **90**, which is exactly the committed
+five — gives 75.52 × 1.15 = 86.85 → **90**, which is exactly the committed
 ceiling and does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. Item

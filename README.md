@@ -144,7 +144,7 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 170 | 74.39s | 85.55 | **90s** |
+| `fast` | 170 | 75.52s | 86.85 | **90s** |
 | `invariant` | 58 | 13.78s | 15.85 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
