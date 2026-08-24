@@ -291,8 +291,8 @@ problem and does NOT mention `--update-baseline`. Cheapest form: check the chose
 import the harness first and fail with that message instead. Watched red from a worktree
 with no `.venv`.
 
-### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: todo]
-Origin: PR (M40) post-merge re-probe of the deployment, 2026-08-23
+### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: pr]
+Origin: PR #43 (M40) post-merge re-probe of the deployment, 2026-08-23
 Spec: M40 declared three live rows from 43 runs against the build deployed BEFORE PR #34 (M32).
 After M32 deployed, a re-probe of the same tasks shows a new dominant failure shape that none of
 D28's three shapes covers: the planner emits `extract {"role": "WebArea", "name": "<the page
@@ -310,8 +310,156 @@ that also moved model-side; `WebArea` targets appear in two pre-M32 runs too (`8
 do not answer now, and that the shape they share is a container target the resolver cannot use.
 Acceptance: an offline fixture case pinning `extract {role: WebArea}` (and the `{text: <title>}`
 relocation it degrades into) as a refused plan rather than a locate failure — the plan lint is the
-natural home, next to the container-dump clause M28/T-R66 already owns — watched red first; then
-the D28 rows re-declared from a post-fix probe of the same tasks.
+natural home, next to the container-dump clause M28/T-R66 already owns — watched red first.
+Out of scope (orchestrator scope call, pr-loop SPEC 2026-08-24): the second acceptance half,
+"the D28 rows re-declared from a post-fix probe of the same tasks". D28 does not exist on `main`
+— it ships with PR #43, still open — and a post-fix probe requires the fix DEPLOYED, which cannot
+happen inside the PR that contains it. Re-declaring D28 is therefore sequenced after PR #43 merges
+and this fix deploys, and is logged as its own block rather than left as an ungateable clause on
+this one. This PR delivers the offline refusal and its watched-red cases.
+
+### T-M40-2-1 — `observe` still hands the planner the document root as element #1 of every page            [status: todo]
+Origin: T-M40-2 implementation, 2026-08-24. Verified in code, not inferred: `observe.walk`
+starts at `page.accessibility.snapshot(...)`'s root, whose role is `WebArea` and whose name is
+the page `<title>`; the role is in neither `SKIP_ROLES` nor `NAME_PROHIBITED`, so `render`
+prints `- WebArea — 'Quotes Fixture — page 1'` as the first element of every observation.
+Reproduced on `src/browser/fixtures/quotes.html` with the production `observe`.
+Spec: T-M40-2 refuses the resulting PLAN (ADR-024). It deliberately does not stop the
+observation from advertising the target, which is the other half of the root cause: the
+planner is shown an answer-shaped string attached to a node no extraction can use. Dropping
+the root node (or renaming it) is a two-line change in `src/browser/observe.py` and it was NOT
+made in T-M40-2's PR for one reason: it changes what every run sees, its effect is only
+measurable by a live probe, and T-M40-5 is that probe — shipping both levers at once would
+leave a recovered row unattributable to either. Note the shape is not purely repo-side:
+`WebArea` targets appear in two pre-M32 runs (`8c1a3344`, `c80b1dd0`), so a model that knows
+the term may emit it whether or not the observation offers it. The lint is the guard either way.
+Acceptance: after T-M40-5 has measured the lint alone on a deployed build, decide whether to
+drop the root from the observation, with the decision recorded and an offline case pinning
+whichever behaviour is chosen (the render no longer carrying the root, or a stated reason it
+still does).
+
+### T-M40-2-2 — the planner system prompt says nothing about container targets            [status: todo]
+Origin: T-M40-2 implementation, 2026-08-24. `src/browser/planner.py`'s system prompt tells a
+model to `observe` a container it can see but cannot read into; nothing tells it not to
+`extract` from one. The runtime correction exists (ADR-024's refusal is replanned with a note
+naming the offending role), but it costs a planner round trip on every occurrence.
+Spec: a prompt line is a one-line diff and plausibly prevents the loop entirely. Held out of
+T-M40-2's PR for the same attribution reason as T-M40-2-1, and with the same ceiling: a prompt
+change is graded offline only by `_check_planner_prompt` (that the string is assembled), never
+by whether a model obeys it — the `full` suite is the only place that could measure obedience
+and it spends tokens.
+Acceptance: taken with T-M40-2-1 after T-M40-5's probe, or dropped if the probe shows the lint
+alone recovers the rows.
+
+### T-M40-2-3 — `docs/analysis.md` §6 says "six L5 refusal cases" where the case files carry eight            [status: todo]
+Origin: T-M40-2 implementation, 2026-08-24, noticed while updating the §6 counts that
+`docs-numbers-are-derived` DOES grade (the golden/adversarial split and the domain rows).
+Counting `level` over `evals/golden` + `evals/adversarial` gives L5 = 8; §6's prose says six.
+Pre-existing and unrelated to T-M40-2's case, which is L3.
+Spec: the TC/level tables in §6 are hand-maintained beside a split line that is derived, which
+is the exact drift class `docs-numbers-are-derived` exists to close — the check simply does not
+reach them.
+Acceptance: either the tables are derived from the case files' own tags by that check, or the
+prose is corrected and the residue declared.
+
+### T-M40-2-4 — the refused plan's REPLAN can name the same node one tier down, and answer with the page title            [status: todo]
+Origin: T-M40-2 cold review, 2026-08-24, finding 1. Repro, constructible as a fast case:
+`hello.html` (its `<title>` and `<h1>` are the same string), task "What does the second heading
+on this page say?", `stub_plans` = [[extract {role: WebArea, name: "Hello Fixture"}],
+[extract {text: "Hello Fixture"}]]. Plan 1 is refused by ADR-024's clause; plan 2 is what a real
+planner most plausibly returns, because the gap note re-shows the SAME observation whose element
+#1 is still `WebArea — 'Hello Fixture'` and whose text head opens with that string. Plan 2 passes
+the lint, resolves at the text tier onto the `<h1>`, and the run reports `status: success`,
+`answer: "Hello Fixture"`, `replans: 1`, all ten L1 checks green, judge certified — the same
+terminal state ADR-024 was written against, reached one replan later instead of one relocation
+later.
+Spec: the lint cannot see this. `plan_gap(task, steps)` takes no page and no title, and the only
+rule that would catch it — refuse an extraction whose target string equals the page title — is
+already refuted by a committed case: `evals/golden/tc1-hello-heading.json` asks for the heading
+on that same fixture and its correct answer IS that string. So the fix is not in the lint. The
+two candidates are T-M40-2-1 (stop advertising the root in the observation, which removes the
+string the planner is copying) and giving the lint the observation it is linting against, which
+is a signature change across three adoption points.
+Acceptance: the repro above committed as an adversarial case, watched red, and closed by
+whichever lever T-M40-5's probe justifies.
+
+### T-M40-2-5 — an `observe` onto the document root fails to locate, and its recovery rung is labelled but answers nothing            [status: todo]
+Origin: T-M40-2 cold review, 2026-08-24, finding 3. `observe {role: WebArea, name: <title>}` is
+deliberately NOT refused (ADR-024 §3 — refusing it would be a rule about M32's drill-down), but
+it does not work either: `resolve` gives 0 matches for the root, `classify` makes it a `locate`
+failure, and the relocation ladder runs on a read-only step. Before T-M40-2's rung guard that
+ladder retargeted it as `{text: <title>}` and drilled into the title's own heading — a
+13-character subtree handed to the planner under the note "The observation above is THAT subtree
+only, not the whole page", for a request that named the whole document. With the guard the rung
+is gone; what remains is a step whose locate failure has no rung at all, plus the older half of
+the finding: `agent.py` labels a relocation attempt `retry_or_recovery: "recovery"` regardless of
+verb, so a read-only `observe` rung counts into `recovery_rungs` — which is exactly what
+`recovery-label-lands-on-the-extract` rules out for the drill-down deferral ("it produces no
+answer, so labelling it counts a rung that recovered nothing").
+Spec: two decisions, both ADR-020's subject rather than ADR-024's — whether an `observe` onto an
+unresolvable container is a loud `failure:locate` instead of a relocation, and whether a
+relocation rung on a read-only verb may wear the `recovery` label at all.
+Acceptance: a case pinning whichever answer is taken, watched red first.
+
+### T-M40-2-6 — a plan step that is not a dict kills `run_task` with an uncaught TypeError            [status: todo]
+Origin: PR #46 R6, 2026-08-24. `parse_plan` (src/browser/planner.py) validates that the top
+level is a list and nothing below it, so `[None]` or `["extract WebArea"]` is a plan as far as
+the executor is concerned. `plan_gap` no longer raises on those (both its clauses are guarded,
+`plan-gap-truth-table` rows), but the step loop then reads `step["action"]` at
+the `read_only = step["action"]` line in `run_task`'s step loop (agent.py:1024 at this commit — named by symbol because the number drifts; PR #46 R10 caught it already stale at :1013) and the TypeError propagates out of `run_task` — no status, no
+failure class, none of the taxonomy. `server.py:_execute` catches it into `failure:env`, so a
+deployed run reports SOMETHING; an eval-adapter caller gets the raw exception.
+Repro: any fixture case with `stub_plan: ["extract WebArea"]`.
+Not a regression: `main` (d06a569) reaches the same line the same way — `plan_gap` returned
+None for a plain task there too. Deliberately not fixed inside T-M40-2: the lint's contract is
+"is this plan answerable", and "is this object a step" is `parse_plan`'s, one layer up.
+Acceptance: `parse_plan` rejects a plan whose members are not step-shaped objects, with the
+loud `PlanError` it already raises for a non-list, and an adversarial case pinning that a
+malformed plan is a classified failure rather than an exception — watched red first.
+
+### T-M40-2-7 — the fix for the restatement grader instantiates the figures it protects, one file over            [status: todo]
+Origin: PR #46 R8
+Spec: `_BAND_RESTATE`'s explanatory comment quotes a band bullet's real numbers in source, where
+item 9's check never looks — it scans the ADR text only. So on the next case-count move the ADR
+bullet, the ADR restatement and README all go red together while this comment silently keeps the
+old figures. This is the exact trap the implementer declared and avoided in ADR-019 §6 item 9
+("the form is described rather than shown, because a literal example here would be a third copy"),
+reintroduced one file over — which is the strongest evidence yet that "describe the form, never
+show it" needs to be enforced rather than remembered.
+Evidence: `src/browser/eval_adapter.py:510` — the comment instantiates `155 cases, 153/155`. The
+item-9 loop at :746-759 iterates `_BAND_RESTATE.finditer(adr)`, i.e. the ADR only; the region text
+is passed only to the item-8 reference loop at :826. The string sits inside the marked region but
+is read by no check.
+Repro: `.venv/bin/python -c "import re,pathlib;src=pathlib.Path('src/browser/eval_adapter.py').read_text();print(re.findall(r'\(restated — .(fast|invariant).: (\d+) cases, (\d+)/(\d+)\)',src))"` -> `[('fast','155','153','155')]`
+Acceptance: the comment describes the form without the figures (as §6 item 9 does), or
+`_BAND_RESTATE` is also run over `region` so the illustration is graded. Not a merge blocker: a
+source comment, not a published band.
+
+### T-M40-2-8 — a red truth-table row with a non-dict step cannot name itself            [status: todo]
+Origin: PR #46 R9
+Spec: `plan-gap-truth-table`'s failure-report comprehension calls `s.get` on every step of a
+failing plan, so a future regression on one of the non-dict rows surfaces as a bare AttributeError
+with no row named. The gate still goes red — only the diagnostic is useless, which is the half that
+costs someone an hour at the point they most need the row's identity.
+Evidence: `src/browser/eval_adapter.py:385` — `wrong = [{"task": t, "plan": [s.get("action") for s in p], ...}]`, where `p` is `[None]` / `['extract WebArea']` for the rows at :375-377 and :367-369.
+Repro: flip `(AGG, [None], True)` to `False` -> `[FAIL] plan-gap-truth-table (adversarial, 0.0s) AttributeError: 'NoneType' object has no attribute 'get'`, suite 59/60 with INVARIANT VIOLATION.
+Acceptance: the report builder tolerates a non-dict step (e.g. `s.get("action") if isinstance(s, dict) else s`) so a red row names its plan.
+
+### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: todo]
+Depends: T-M40-2
+Origin: PR #43 (M40) T-M40-2, split at pr-loop SPEC 2026-08-24 — the half of T-M40-2's
+acceptance that cannot be gated inside T-M40-2's own PR.
+Spec: T-M40-2's acceptance ends "then the D28 rows re-declared from a post-fix probe of the
+same tasks". That clause is structurally not deliverable by the PR that carries the fix: a
+post-fix probe reads the DEPLOYED build, and the deploy is a push to `origin/main` (Zeabur),
+which happens after merge. D28 additionally lives on PR #43's branch and is not on `main`.
+So the rows that describe the WebArea failure shape stay declared against the pre-fix build
+until someone re-probes deliberately.
+Acceptance: after PR #43 has merged AND T-M40-2's fix is live on the deployed URL, the same
+tasks named in T-M40-2 (x-rates.com, multpl.com, quotes.toscrape.com's author page,
+openlibrary.org, companiesmarketcap.com as the control) are re-probed against that build and
+D28's rows re-declared from the results — including declaring a row `unsupported` where the
+probe says so. The build the probe measured is cited by sha.
 
 ### T-R78 — §7 claims §5 names a demonstrating mutation for every graded item; §5 names two of seven            [status: done]
 Origin: PR #41 R17

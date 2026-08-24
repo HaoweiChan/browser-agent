@@ -65,10 +65,10 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 159 cases, ts `20260824-013546`, **71.0s**, 157/159
-  (`dirty: true`, for the reason the next paragraph gives — T-M40-1 adds one case
-  on top of M40's 158, so 159 exists only while the merge is uncommitted, and the
-  two cases red in that row are `docs-numbers-are-derived` and
+- Band source — local `fast` at 161 cases, ts `20260824-020120`, **72.09s**, 159/161
+  (`dirty: true`, for the reason the next paragraph gives — T-M40-2 adds two cases
+  on top of T-M40-1's 159, so 161 exists only while the merge is uncommitted, and
+  the two cases red in that row are `docs-numbers-are-derived` and
   `published-band-matches-the-ledger`, precisely the ones this republish clears.
   The stamp is UTC, as every row written since §7 is. How many rows the
   ledger holds at this count, and what its maximum is, are deliberately not
@@ -91,8 +91,9 @@ longer disqualified by a row from another machine. Locally that is demonstrated 
 this band cites a dirty row and the gate is green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The `157/159` is the cited row's own result, graded against it, not prose beside
-it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
+The cited rows' own results — (restated — `fast`: 161 cases, 159/161) and
+(restated — `invariant`: 64 cases, 62/64) — are graded against the bullets they
+summarise, by item 10 (restatement), not merely stated beside them (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
 
@@ -112,11 +113,11 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 71.0 × 1.15 = 81.65 → **85**, which is BELOW the committed 90 and
+five — gives 72.09 × 1.15 = 82.9 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. The
-one run at 159 cases is exactly that short sample. Item 5 (derivation) grades the
+one run at 161 cases is exactly that short sample. Item 5 (derivation) grades the
 arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
 that says 90 is green and declared rather than a contradiction. The band
 published for the earlier
@@ -132,9 +133,9 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 62 cases, ts `20260824-013435`, **13.63s**, 60/62
-  (`dirty: true`, and red, for the same structural reason §2's is: T-M40-1's case
-  is tagged `fast` and `invariant` both, so 62 exists only while the merge is
+- Band source — local `invariant` at 64 cases, ts `20260824-020008`, **13.66s**, 62/64
+  (`dirty: true`, and red, for the same structural reason §2's is: T-M40-2's cases
+  are tagged `fast` and `invariant` both, so 64 exists only while the merge is
   uncommitted and the two red cases are the two this republish clears. ADR-012
   writes no per-case report for a green run, so a ledger row is the whole
   artifact, which is why this cites a ts and not a file. As in §2,
@@ -195,7 +196,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.63 × 1.15 = 15.67 → **20**, which is the committed
+The same rule gives 13.66 × 1.15 = 15.71 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
@@ -390,6 +391,16 @@ is about this section itself:
    and all of them are local runs. A band naming an environment the ledger holds
    no rows for lands in the `no_recorded_run_at` precondition below rather than
    passing for want of anything to compare against.
+10. (restatement) a sentence elsewhere in this file that quotes a band's case
+   count and result writes them in the marked form — the word `restated`, the
+   suite, `N cases`, `P/T` — and both numbers are the ones that band's bullet
+   publishes. The form is described rather than shown, because a literal example
+   here would be a third copy of the very numbers this item exists to keep from
+   drifting, and the check would read it as one (the same trap `_REGION` names
+   in the code: a marker written out is the first one the scan finds). Two rounds running, a repaired band left a
+   paragraph summarising it behind (PR #46 R3, then R5 against R3's own fix), so
+   the copy is now read back against the original. An unmarked restatement is
+   still invisible, the same ceiling item 8 (references) declares (T-R62).
 
 Green is required nowhere in that list and cannot be (T-R53); item 2 (cited-run) requires
 the result to be *stated*, not to be a pass. Item 5 (derivation) states the rule's value and

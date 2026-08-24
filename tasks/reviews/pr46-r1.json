@@ -1,0 +1,60 @@
+{
+  "pr": 46,
+  "round": 1,
+  "task": "T-M40-2",
+  "reviewer": "groundwork:pr-reviewer (fresh context, no author reasoning)",
+  "result": "REQUEST_CHANGES",
+  "counts": {"HIGH": 0, "MEDIUM": 1, "LOW": 3},
+  "orchestrator_note": "Protocol default routes LOW to debt regardless of severity. R2/R3/R4 are routed to repair instead, as an explicit orchestrator deviation: R1 forces a repair round anyway, and all three are <=3-line corrections in the same files R1 opens, of the same defect class (prose in a document of record contradicting the code or artifact beside it). Three debt blocks plus a future PR costs more than the fix. Deviation is recorded here so the next round's reviewer sees it.",
+  "verification_by_reviewer": {
+    "gate": "invariant 59/59 (13.32s), fast 154/154 (71.26s)",
+    "ablations": [
+      "plan_gap clause removed -> plan-gap-truth-table + plan-lint-refuses-a-document-root-extract red (57/59)",
+      "relocation_candidates root filter removed -> relocation-distinct-tier red (58/59)"
+    ],
+    "reachability": "refusal fires on non-aggregate task 'What is the price of the Aurora Desk Lamp?', confirmed by execution above the is_aggregate early return",
+    "doc_root_roles": "exactly one definition at src/browser/resolver.py:36, two readers",
+    "document_boundary": "drawn in code and pinned by cases; widening the set reddens the truth table. Playwright independently confirmed: get_by_role('document', name=...) resolves an in-page container, get_by_role('WebArea') counts 0",
+    "published_numbers": "154/59 counts, 245 actions, 90/154 browser-driving cases derived from evals/report/20260824-004811-fast.json; TC1 39 / L3 16 recomputed from case tags; band derivations 71.51*1.15=82.24 and 14.33*1.15=16.48; .eval-baseline.json untouched",
+    "adr_overclaim": "ADR-024 states 'No live claim is made here' and logs T-M40-2-4/-5 explicitly - does not overclaim on live behaviour"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "blocks_because": "committed artifact of record (specs/decisions/) states a mechanism that is false about its own enforcing case - a reader takes an ADR as verified-correct",
+      "claim": "ADR-024's Consequences section states the wrong mechanism for its own shipped case: it attributes `replans: 0` to a mid-run adoption refusal, when the shipped case is a PRE-execution refusal whose replan simply repeated the plan - and no case in this PR exercises the mid-run adoption path for the new rule at all.",
+      "evidence": "specs/decisions/ADR-024-document-root-is-not-an-answer.md:131-137 - \"refused BEFORE execution it is one replan ...; refused at a mid-run adoption point it ends the run ... - which is why the shipped case asserts `replans: 0`.\" The shipped case (evals/adversarial/plan-lint-refuses-a-document-root-extract.json) carries a single `stub_plan`, so the refusal fires at agent.py:721 (the pre-execution branch, `if gap := plan_gap(task, steps)`), the gap note IS sent to the planner (that is what `planner_note_contains: \"WebArea\"` grades), and `replans` stays 0 only because `stub_planner` repeats its last plan and agent.py:740 (`new_steps == steps`) ends the run. Observed reason string: \"plan rejected before execution: the plan reads 'extract' off 'WebArea' ...; the replan did not close the gap\". Under the ADR's own stated rule for the branch the case actually takes, `replans` should be 1; it is 0 for a reason the ADR does not state. `adopt()` (agent.py:688-717), the mid-run path the sentence describes, is never reached by any case carrying a document-root target.",
+      "repro": "cd <worktree> && .venv/bin/python -c \"import sys,json;sys.path.insert(0,'.');from src.browser import eval_adapter as ea;r=ea.run_case(json.load(open('evals/adversarial/plan-lint-refuses-a-document-root-extract.json')));print(r['got']['reason'],r['budgets']['replans'])\" - prints the pre-execution reason with replans 0.",
+      "acceptance": "Either the ADR sentence is corrected to describe what the shipped case actually does (pre-execution refusal + no-progress stop, hence replans 0), or a case is added that refuses a document-root extract at a mid-run adoption point (`adopt`, e.g. a drill-down/act replan returning `extract {role: WebArea}`), watched red first, so the mid-run claim has an enforcing case."
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "A repair-round comment left behind in the truth-table adapter states the opposite of what the code and the rows 15 lines below assert - it says the role comparison \"covers ... the ARIA `document` role\", which was true only of the reverted first version.",
+      "evidence": "src/browser/eval_adapter.py:326-328 \"the comparison is case-folded and covers the `RootWebArea` spelling other builds emit and the ARIA `document` role for an embedded one\", against eval_adapter.py:343-345 (`{\"role\": \"document\"}` and `{\"role\": \"document\", \"name\": \"Order confirmation\"}` both expected NOT to be a gap) and src/browser/resolver.py:36 `DOC_ROOT_ROLES = {\"webarea\", \"rootwebarea\"}`. The next implementer reading only the comment would 'fix' the set and turn the gate red - verified: adding \"document\" to DOC_ROOT_ROLES makes `_check_plan_gap` fail with `expected_gap: false, got: \"...off 'document'...\"`.",
+      "repro": "sed -i '' 's/{\"webarea\", \"rootwebarea\"}/{\"webarea\", \"rootwebarea\", \"document\"}/' src/browser/resolver.py && .venv/bin/python -c \"import sys;sys.path.insert(0,'.');from src.browser.eval_adapter import _check_plan_gap;print(_check_plan_gap()['passed'])\" && git checkout -- src/browser/resolver.py",
+      "acceptance": "The comment says what the set actually covers (the two root spellings, stripped and case-folded) and stops claiming ARIA `document`."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "ADR-019 section 2's republication paragraph asserts something false about one of the two rows it cites, then contradicts itself in the same sentence.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:96-100 - \"Both rows are runs of this tree taken while the two doc-bookkeeping cases (`docs-numbers-are-derived`, `published-band-matches-the-ledger`) were red ...; no third case failed in either, and `invariant`'s cited row is a fully green one.\" Both named cases are tagged [\"fast\",\"invariant\"], and the cited invariant row ts 20260824-003032 is 59/59 in the committed ledger - i.e. those two cases were already GREEN in it, so 'both rows ... were red' is false for that row.",
+      "repro": "git show task/T-M40-2:evals/report/history.jsonl | grep 20260824-003032  (-> passed 59/59) and .venv/bin/python -c \"import json;print(json.load(open('evals/adversarial/published-band-matches-the-ledger.json'))['suites'])\"",
+      "acceptance": "The sentence scopes the 'were red' claim to the `fast` row only (or drops it); the published scalars 71.51 / 14.33 and their derivations 82.24 / 16.48 are correct and need no change."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The new lint clause runs for every task shape and calls `.get` on `step` and `step[\"target\"]` unguarded, so a malformed plan (`target` a string, or a step that is not a dict) now raises AttributeError before the browser moves on ordinary non-aggregate tasks, where `plan_gap` previously returned None immediately.",
+      "evidence": "src/browser/agent.py:298-301 - `step.get(\"action\")` / `(step.get(\"target\") or {}).get(\"role\")`. `parse_plan` (src/browser/planner.py:143-157) validates only that the top level is a list, so `[{\"action\":\"extract\",\"target\":\"WebArea\"}]` reaches here. Not a net regression: main crashes on the same input later inside the executor (TypeError), and `server.py:_execute` catches both into `failure:env`, so the terminal state is unchanged - but the crash now precedes the browser and nothing in the suite covers a non-dict target.",
+      "repro": ".venv/bin/python -c \"import sys;sys.path.insert(0,'.');from src.browser.agent import plan_gap;plan_gap('What is the price of the lamp?',[{'action':'extract','target':'WebArea'}])\" -> AttributeError: 'str' object has no attribute 'get'",
+      "acceptance": "Either a truth-table row (PLAIN, [{\"action\": \"extract\", \"target\": \"WebArea\"}], False) (and a non-dict step) passes without raising, or the malformed-plan class is logged as debt with this repro."
+    }
+  ]
+}
