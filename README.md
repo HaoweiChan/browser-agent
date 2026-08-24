@@ -145,7 +145,7 @@ enumerating them here is the snapshot that drifted:
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
 | `fast` | 154 | 71.42s | 82.13 | **90s** |
-| `invariant` | 59 | 14.08s | 16.19 | **20s** |
+| `invariant` | 59 | 14.16s | 16.28 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of one commit (`d173340`, 116 `fast` / 48 `invariant` cases, a smaller

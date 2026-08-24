@@ -88,8 +88,7 @@ landed. Two commits, by construction, for one case addition. That is the price
 row from the 152-case tree, because the count changed and a band has to describe
 the tree that ships.
 
-The `153/153` is the cited row's own result, graded against it, not prose beside
-The `151/153` is the cited row's own result, graded against it, not prose beside
+The `152/154` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -130,13 +129,23 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 59 cases, ts `20260824-002424`, **14.08s**, 57/59
-  (`dirty: true`, ts-only for the same ADR-012 reason as §2, and dirty and red
-  for the reason §2 states at length: one case added, so 59 exists only while it
-  is uncommitted, and the row's two failures are the two documents this
-  republish repairs. It is the only row at this count, so there is nothing to
-  select and no least-slack choice to make; §6's tolerance and R21's rule are
-  what the next rows at 59 will be judged against.)
+- Band source — `invariant` at 59 cases, ts `20260824-003025`, **14.16s**, 59/59
+  (`dirty: true`, ts-only for the same ADR-012 reason as §2, and dirty for the
+  reason §2 states at length: one case added, so 59 exists only while it is
+  uncommitted, so EVERY row at this count is dirty and item 2 (cited-run)'s
+  as-of reading is what admits any of them at all.)
+
+The ledger holds five rows at 59, not one: `20260824-002326` 14.02s (57/59),
+`002424` 14.08s (57/59), `002824` 13.17s (58/59), `003025` **14.16s** (59/59),
+`003411` 13.18s (59/59). The selection among them is §6's residue rule —
+republish the maximum — which here also happens to be a green row and the one
+README's "Where it stands" cites. An earlier revision of this bullet published
+`002424`/14.08s and asserted 59 held a single row; both halves were false
+against the ledger committed in the same commit, and it took a human reading to
+catch, because item 3 (same-ceiling) compares *derived ceilings* and 14.08 and
+14.16 both derive 20 (PR #45 R2). The grader still cannot catch that class —
+see `T-R76`, which carries the treadmill-free form of the check and why the
+strict form is refused.
 
 Neither band quotes the ledger's maximum as a number any more, and that is the
 fix for a defect this file produced twice. §3 published **13.80s** and the final
@@ -152,7 +161,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 14.08 × 1.15 = 16.19 → **20**, which is the committed
+The same rule gives 14.16 × 1.15 = 16.28 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

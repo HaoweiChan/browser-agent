@@ -2208,9 +2208,19 @@ def _run_smoke_guard_case(case: dict) -> dict:
     if not got["second"] or got["second"][-1] != exp["refused_with"]:
         wrong["second_stream_not_refused"] = got["second"]
     # Terminal, and self-explaining: the frontend closes the stream on this
-    # event and shows its text, so "busy" has to be in it.
-    if not any("busy" in str(e.get("error", "")) for e in second_evs):
-        wrong["refusal_does_not_say_busy"] = second_evs
+    # event and shows its text. Containing "busy" is NOT the bar — the panel
+    # runs a PREFIX test, so the refusal the server actually sends has to
+    # satisfy the predicate the page actually runs, or a reworded message that
+    # still says "busy" somewhere renders "chromium failed" for a refusal in
+    # which no Chromium was launched, which is this case's whole defect. The
+    # prefix is parsed out of the branch, and the branch is asserted verbatim
+    # in `S.PAGE` below, so the two ends are one string (PR #45 R1).
+    prefix = re.search(r'startsWith\("([^"]*)"\)', exp["page_branch"])
+    if not prefix:
+        wrong["page_branch_is_not_a_prefix_test"] = exp["page_branch"]
+    elif not any(str(e.get("error", "")).startswith(prefix.group(1)) for e in second_evs):
+        wrong["refusal_does_not_satisfy_the_page_busy_branch"] = {
+            "prefix": prefix.group(1), "events": second_evs}
     if not held:
         wrong["slot_not_held_while_smoke_runs"] = held
     # Everything that reads the slot follows from holding it: /readyz stops

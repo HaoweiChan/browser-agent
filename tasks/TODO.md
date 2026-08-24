@@ -1559,6 +1559,45 @@ Repro: `grep -c '"readyz-transitions"' src/browser/eval_adapter.py` -> 2.
 Acceptance: the duplicate is gone and a check refuses the shape — a one-line invariant
 over the literal keys is enough, and it should be watched red against the current tree.
 
+### T-R75 — `/readyz`'s `reason` is only negatively asserted            [status: todo]
+Origin: PR #45 R3
+Spec (reviewer's finding, verbatim from `tasks/reviews/pr45-r1.json`):
+- Claim: "The `/readyz` reason string the diff introduces is only negatively asserted
+  (non-empty and free of the substring \"None\"), so the operator-facing wording it exists
+  to fix is not actually pinned."
+- Evidence: "src/browser/eval_adapter.py:2231-2233 — `if not during.get(\"reason\") or
+  \"None\" in str(during.get(\"reason\"))`. A regression to `\"reason\": \"a run is
+  executing\"` (no id interpolated) while a browser check holds the slot passes both
+  halves and still sends an operator hunting a run that never existed, which
+  server.py:868-871 names as the defect being fixed."
+- Repro: "change server.py:870-871 to `\"reason\": \"a run is executing\" if busy else
+  None` and run the case — `readyz_reason_names_a_run_that_does_not_exist` does not fire."
+- Acceptance: "the assertion requires the browser-check wording when `active_run_id` is
+  null (and the run wording when it is not), watched red against the mutant above."
+Not subsumed by PR #45 R1's repair: R1 couples the `error` event's refusal text to the
+console's prefix predicate; this is the `/readyz` JSON `reason` field, a different string
+on a different endpoint with no page predicate to derive from.
+
+### T-R76 — a published band can understate the ledger max without anything going red            [status: todo]
+Origin: PR #45 R2 (the class behind the finding, not the finding — the prose is repaired
+in that PR)
+Spec: `_band_wrong` item 3 (same-ceiling) is `rule(published) == rule(ledger max)`, so a
+band published from any row whose derived ceiling matches the maximum's is green. That is
+deliberate — ADR-019 §6 "What it lets through" declares the slack and
+`published-band-slack-is-declared` bounds it at one ceiling step — but it means §6's own
+residue rule ("republish the maximum") is unenforced, and PR #45 R2 is what that costs:
+§3 published 14.08s where the ledger held 14.16s at the same count and asserted the count
+held a single row, and both halves had to be caught by a human reading the file.
+The strict form — published == ledger max — is REFUSED, and the reason is in §6: a later,
+slower row at the same count would retroactively redden an already-published band, which
+is exactly the treadmill the as-of-the-cited-run rule exists to prevent.
+Acceptance: the treadmill-free form. Grade `published >= max(wall_s of rows at this count
+with ts <= the cited ts)` — the maximum as it stood WHEN the band was published, which no
+later run can change. Watched red against a synthetic ledger in which an earlier row at
+the same count is slower than the cited one (`_band_wrong` is already callable over values
+for exactly this reason). Then §6 gains an item and the "What it lets through" paragraph
+narrows to what remains: rows recorded after the cited ts.
+
 ## Notes
 
 ### Reopen — A-phase (2026-08-17)

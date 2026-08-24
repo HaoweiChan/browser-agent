@@ -88,7 +88,7 @@ Same collision as M39/PR #44 and for the same reason: this branch adds one case,
 so `fast` 153 -> 154 and `invariant` 58 -> 59, and `published-band-matches-the-ledger`
 requires both bands republished at the shipped count. Numbers here:
 `fast` 154 cases, ts `20260824-002536`, 71.42s, 152/154, 71.42 × 1.15 = 82.13 → **85**;
-`invariant` 59 cases, ts `20260824-002424`, 14.08s, 57/59, 14.08 × 1.15 = 16.19 → **20**.
+`invariant` 59 cases, ts `20260824-003025`, 14.16s, 59/59, 14.16 × 1.15 = 16.28 → **20** (the slowest of the five rows at 59; PR #45 R2).
 Whoever rebases second must NOT merge both branches' rows — the parse is
 last-wins and a superseded row left above the live one is graded as
 `adr_publishes_two_bands`. Re-derive at the merged count from the ledger; the
