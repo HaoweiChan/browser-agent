@@ -47,5 +47,15 @@
       "acceptance": "The debt block names 1024, or names the symbol (read_only = step['action'] in run_task's step loop) instead of a line that drifts.",
       "resolution": "Taken as the symbol half, in place: T-M40-2-6 now names the symbol and marks the number as drifting."
     }
-  ]
+  ],
+  "post_merge_note": {
+    "merge": "24bb18f \u2014 origin/main (b55a710: T-R44 #41, M40 #43) merged into task/T-M40-2, every number re-derived",
+    "id_collisions_resolved_in_favour_of_main": {
+      "ADR-019 section 6 item 9": "main's (environment) keeps 9; this task's restatement grader becomes item 10",
+      "T-M40-3": "main uses it for M40's SSRF-case tagging; this task's D28 re-declaration block becomes T-M40-5"
+    },
+    "verbatim_artifacts_left_unchanged": "pr46-r1-resolution.json and pr46-r2-resolution.json name T-M40-3 because that was its id when they were written. They are verbatim records and are not rewritten; this note is where the renumber is recorded.",
+    "orchestrator_caught_after_the_merge": "The implementer reported that git rename detection had paired four of main's committed reports with this branch's near-identical report JSON and 'renamed' them away, and that it had restored them and audited the set against both parents. The orchestrator's own audit found 19 of main's reports still absent, not 4. Verified as real loss, not deliberate pruning: this branch never deleted them (no diff-filter=D hits) and they are present in origin/main. All 19 restored with git checkout origin/main. Separately confirmed that 20260823-161810-invariant.json is absent legitimately - main itself deleted it in 9840e23. Report set now audits clean against both parents.",
+    "gate_after_restore": "invariant 63/63 = 1.000 \u00b7 fast 160/160 = 1.000 (70.71s / 90) \u00b7 $0.0000"
+  }
 }
