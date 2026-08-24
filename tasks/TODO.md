@@ -331,19 +331,23 @@ Acceptance: deploy-smoke does not fail on a busy deployment, never passes silent
 browser, and the unchecked case is visible in the run log — plus a follow-up that removes the race
 rather than tolerating it.
 
-### T-M40-1 — `/smoke/stream`'s concurrency guard is a read, not an acquire            [status: todo]
-Origin: PR (M40) round 2, cold review finding "also noted"
-Spec: `smoke_events` (`src/browser/server.py`) checks `SEM.locked()` and returns early, but never
-takes `SEM`. The guard is therefore one-directional: it stops a browser check starting under a
-RUN, and stops nothing else. Two tabs both clicking Browser check launch two Chromiums; a check
-followed within its ~15s window by `POST /tasks` does the same; and `/readyz` reports
-`{"ready": true, "busy": false, "active_run_id": null}` throughout, because it reads `SEM` too.
-On a small PaaS container the second Chromium is the OOM the guard exists to prevent, and it gets
-attributed to the agent.
-Repro: two concurrent `curl -N https://<host>/smoke/stream` — both reach `launching`.
-Acceptance: the smoke path takes the same semaphore the run path does (or a documented
-non-blocking `try-acquire`), and a case pins that two concurrent smoke streams cannot both reach
-`launching` — watched red against the current early-return.
+### T-R91 — the pre-commit hook reports a missing interpreter as an eval regression, and points at `--update-baseline`            [status: todo]
+Origin: PR #49, hit while committing the T-M40-1 DONE.md line
+Spec: `.githooks/pre-commit` picks `PY=python3` unless `.venv/bin/python` exists in the
+*worktree*. A `git worktree` has no `.venv`, so the hook runs a system interpreter that
+lacks `fastapi`, `evals.run` dies on import, and the non-zero exit is reported as
+`COMMIT BLOCKED by the eval gate. Fix the regression, or if the baseline move is
+deliberate: --suite fast --update-baseline`. Both suites were green at the time
+(fast 159/159, invariant 62/62) — the message names the one remedy CLAUDE.md rule 1
+forbids, on a failure that is not a regression at all. A tired author takes the
+suggestion, and the hook has then talked them into the thing it exists to prevent.
+Repro: `git worktree add -b x /tmp/wt origin/main && cd /tmp/wt && git commit --allow-empty -m x`
+-> COMMIT BLOCKED, with `python3 -c 'import fastapi'` failing in the same shell.
+Acceptance: the hook distinguishes "the suite ran and regressed" from "the suite could not
+run" — non-zero exit with no report written, or an import failure, reports the interpreter
+problem and does NOT mention `--update-baseline`. Cheapest form: check the chosen `PY` can
+import the harness first and fail with that message instead. Watched red from a worktree
+with no `.venv`.
 
 ### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: todo]
 Origin: PR (M40) post-merge re-probe of the deployment, 2026-08-23
@@ -1819,6 +1823,189 @@ table carries TC1 32 and L1 36 (M28 bumped each by one for its own case; the res
 gap predates it). The L3 cell is prose naming cases, which is why nobody regenerated it.
 Acceptance: the TC/level counts join `analysis_coverage`'s graded set (derived from the
 tags, same as the split), or the table is cut down to the graded rows and says so.
+
+### T-R82 — the client-disconnect release is graded in-process, never through a real disconnect            [status: todo]
+Origin: T-M40-1
+Spec: `smoke_events` now holds `SEM` for the length of a browser check and releases it
+in a `finally`, which covers the `GeneratorExit` a closed tab produces. What
+`smoke-stream-takes-the-run-slot` grades is that generator contract directly — drive to
+`launching`, `aclose()`, assert the slot came back. What it does NOT grade is the layer
+that produces the `GeneratorExit`: Starlette's `StreamingResponse` cancels its stream
+task when it sees `http.disconnect`, and if that ever stops happening (a Starlette
+change, a proxy that holds the socket open) the slot stays held until the 15s navigation
+timeout or forever, with every assertion in the case still green. A leaked slot bricks
+the service — `/readyz` says busy and every run queues behind a browser that is gone.
+Repro: `curl -N https://<host>/smoke/stream`, ^C during `launching`, then poll `/readyz`.
+Acceptance: one case that disconnects a real HTTP client mid-stream and requires the slot
+back within a bound, watched red against a `finally` that is removed — cheaply enough to
+stay in the offline gate, which is the part that needs thought, since the honest version
+of this test waits for a real cancellation.
+
+### T-R83 — `KINDS` registers `readyz-transitions` twice            [status: todo]
+Origin: T-M40-1, found while registering a new kind
+Spec: `src/browser/eval_adapter.py`'s `KINDS` dict has `"readyz-transitions": _run_readyz_case`
+at two lines. Both name the same handler, so nothing misbehaves today — but a duplicate
+key is silently last-wins, and the next one will be two entries pointing at different
+handlers with the losing case running the wrong grader and no error anywhere. Nothing in
+the tree lints for it.
+Repro: `grep -c '"readyz-transitions"' src/browser/eval_adapter.py` -> 2.
+Acceptance: the duplicate is gone and a check refuses the shape — a one-line invariant
+over the literal keys is enough, and it should be watched red against the current tree.
+
+### T-R84 — `/readyz`'s `reason` is only negatively asserted            [status: todo]
+Origin: PR #45 R3
+Spec (reviewer's finding, verbatim from `tasks/reviews/pr45-r1.json`):
+- Claim: "The `/readyz` reason string the diff introduces is only negatively asserted
+  (non-empty and free of the substring \"None\"), so the operator-facing wording it exists
+  to fix is not actually pinned."
+- Evidence: "src/browser/eval_adapter.py:2231-2233 — `if not during.get(\"reason\") or
+  \"None\" in str(during.get(\"reason\"))`. A regression to `\"reason\": \"a run is
+  executing\"` (no id interpolated) while a browser check holds the slot passes both
+  halves and still sends an operator hunting a run that never existed, which
+  server.py:868-871 names as the defect being fixed."
+- Repro: "change server.py:870-871 to `\"reason\": \"a run is executing\" if busy else
+  None` and run the case — `readyz_reason_names_a_run_that_does_not_exist` does not fire."
+- Acceptance: "the assertion requires the browser-check wording when `active_run_id` is
+  null (and the run wording when it is not), watched red against the mutant above."
+Not subsumed by PR #45 R1's repair: R1 couples the `error` event's refusal text to the
+console's prefix predicate; this is the `/readyz` JSON `reason` field, a different string
+on a different endpoint with no page predicate to derive from.
+
+### T-R85 — a published band can understate the ledger max without anything going red            [status: todo]
+Origin: PR #45 R2 (the class behind the finding, not the finding — the prose is repaired
+in that PR)
+Spec: `_band_wrong` item 3 (same-ceiling) is `rule(published) == rule(ledger max)`, so a
+band published from any row whose derived ceiling matches the maximum's is green. That is
+deliberate — ADR-019 §6 "What it lets through" declares the slack and
+`published-band-slack-is-declared` bounds it at one ceiling step — but it means §6's own
+residue rule ("republish the maximum") is unenforced, and PR #45 R2 is what that costs:
+§3 published 14.08s where the ledger held 14.16s at the same count and asserted the count
+held a single row, and both halves had to be caught by a human reading the file.
+The strict form — published == ledger max — is REFUSED, and the reason is in §6: a later,
+slower row at the same count would retroactively redden an already-published band, which
+is exactly the treadmill the as-of-the-cited-run rule exists to prevent.
+
+**No graded form is currently known, and one candidate is already dead.** This block first
+proposed `published >= max(wall_s of rows at this count with ts <= the cited ts)` and
+claimed it would have caught PR #45 R2. It would not (PR #45 R5). The arithmetic, against
+the ledger at `32cb549`, rows at invariant/59 being 002326 14.02, 002424 14.08, 002824
+13.17, 003025 14.16, 003411 13.18, 081958 13.2:
+
+    cited 20260824-002424, published 14.08 -> as-of max 14.08 -> 14.08 >= 14.08 -> GREEN
+    cited 20260824-003025, published 14.16 -> as-of max 14.16 -> 14.16 >= 14.16 -> GREEN
+
+It passes the defect and the repair alike, and it does so structurally, not by luck: the
+R2 defect was citing 002424 while the slower 003025 stood at a LATER ts, which an
+as-of-the-cited-ts bound cannot see by construction. An author satisfies it by citing an
+early row, which is precisely what happened. Do not re-propose it.
+Acceptance: a form that is demonstrably **red on `002424`/14.08 and green on
+`003025`/14.16 against the committed ledger**, with the arithmetic run and shown before
+it is published anywhere — the candidate above is what happens otherwise. As-of the band's
+own publication (rather than as-of the cited row's ts) is the obvious next candidate and
+is unchecked; note that it needs a publication instant the grader can derive, and the
+ledger alone does not carry one. Whatever the form, it is watched red against a synthetic
+ledger (`_band_wrong` is already callable over values for exactly this reason), and only
+then does §6 gain an item and "What it lets through" narrow. Until then ADR-019 §3 says
+plainly that no graded form exists, and that sentence is the honest state of this class.
+
+### T-R86 — the busy-branch grader pins the prefix literal, not the field it reads            [status: todo]
+Origin: PR #45 R6
+Spec (reviewer's finding, verbatim from `tasks/reviews/pr45-r2.json`):
+- Claim: "The R1 repair pins only the prefix LITERAL parsed out of expect.page_branch, not
+  the event field the predicate reads, so a page branch that tests a field the refusal
+  event never carries still passes green with the panel rendering 'chromium failed'."
+- Evidence: "src/browser/eval_adapter.py:2218-2222 — the regex takes 'busy' out of
+  page_branch but the observed side is hardcoded to e.get('error'). Mutating server.py:794
+  and the case's expect.page_branch together to String(ev.status || '').startsWith('busy')
+  (the refusal event has no status field) leaves page_branch in S.PAGE satisfied and
+  ev.error still starting with 'busy': observed {passed: true, wrong: {}}. The
+  indexOf(...)===0 rewrite does redden as claimed, so the vacuous path is the field, not
+  the operator. Lower than R1 because the exploit requires editing the case JSON, which a
+  diff review sees; R1's original required editing server.py alone."
+- Repro: "copy 32cb549 to /tmp, replace String(ev.error || '').startsWith('busy') with
+  String(ev.status || '').startsWith('busy') in BOTH src/browser/server.py and
+  evals/adversarial/smoke-stream-takes-the-run-slot.json, then run_case(...) ->
+  {passed: true, wrong: {}}."
+- Acceptance: "the grader derives the read field from the branch as well as the literal
+  (e.g. parse ev.<field> out of page_branch and test that key of the observed event),
+  watched red against the ev.status mutant; or the case's provenance drops the claim that
+  the server's string and the page's predicate are pinned to one another and states that
+  only the literal is pinned."
+
+### T-R87 — `docs/analysis.md`'s "89 of the N fast cases" is hand-counted and stale            [status: todo]
+Origin: PR #45, found while merging `origin/main` (f813af5) into task/T-M40-1
+Spec: `docs/analysis.md` publishes "**89 of the 153** `fast` cases drive a real Chromium end to
+end". Both halves are hand-maintained and nothing recomputes either: `docs-numbers-are-derived`
+grades the three README count strings and the analysis "N distinct cases" string, not this one.
+The denominator was already wrong on `origin/main` before this merge — main's README said 155
+`fast` while this line said 153 — and the merge takes the suite to 156, so it is now wrong by
+three. NOT fixed here on purpose: correcting 153 -> 156 without recomputing 89 publishes a second
+unverified number beside the first, and 89 is exactly the kind of tally that needs deriving, not
+retyping. Pre-existing drift on main, so it is logged rather than swept (CLAUDE.md debt rule).
+Repro: `grep -n '89 of the' docs/analysis.md` -> 153, against `load_cases('fast')` -> 156.
+Acceptance: the sentence derives both numbers, the way the counts beside it already do — the
+denominator from `evals.run.load_cases('fast')` and the numerator from a predicate over the case
+files (a `fast` case whose adapter path launches Chromium) — added to `docs-numbers-are-derived`
+and watched red against the current text.
+
+### T-R88 — §6 does not say who wins when item 2's cleanliness rule and the residue rule pick different rows            [status: todo]
+Origin: PR #45, found while re-deriving bands after the f813af5 merge; the headroom half of the
+original block was wrong and is corrected by T-R90 (PR #45 R9) — read that first
+Spec: at a case count that is NOT new, a clean row can already stand in the ledger, and then item 2
+(cited-run) forces the citation to be it: a dirty row is red once a clean one stood by its ts.
+ADR-019 §6's residue rule independently says republish the maximum. When the maximum is dirty and a
+clean row is not, the two rules select different rows and nothing states which wins. It happened on
+this branch at `invariant`/59: item 2 forced `20260824-000935` (13.12s, clean) while the maximum was
+14.62s and dirty. Cleanliness won because item 2 is graded and the residue rule is prose — but that
+is an accident of enforcement, not a decision anyone recorded.
+What this block claimed ORIGINALLY and what is withdrawn: that the resulting
+`published-band-slack-is-declared` headroom of 4.27s against `declared_slack_s` 4.35s was "0.08s of
+margin", i.e. a near-failure. It is not. `headroom_s` is the width of the remaining green zone and
+is never compared against `declared_slack_s` for pass/fail; larger headroom is SAFER, and it is
+bounded above by one ceiling step by construction. See T-R90 for the arithmetic. The rule-collision
+above stands on its own and does not depend on the withdrawn half.
+Repro: pick any count where the ledger holds a clean row and a slower dirty one, and read §6 for a
+tie-break rule. There is none.
+Acceptance: §6 states which rule wins and why, in one sentence, and `_band_wrong` either enforces it
+or §6 records that it does not — the same "what is graded vs what is asserted" split §6 already
+makes elsewhere.
+
+### T-R89 — ADR-019 §3 hand-copied a ledger maximum that the same commit's ledger falsified            [status: todo]
+Origin: PR #45 R8
+Ruling: the human chose to merge with this landed as named debt rather than repaired in PR #45
+(Option B). It is NOT a repair task for that PR.
+Spec (reviewer's finding, verbatim from `tasks/reviews/pr45-r3.json`):
+- Claim: "The merge resolution re-introduces the exact defect R2 was raised for: ADR-019 §3 hand-copies a ledger maximum that is false against the history ledger committed in the same commit, and directly contradicts a paragraph 50 lines below it."
+- Evidence: "ADR-019:140 states '13.12s is not the maximum at 59, 14.62s is. The gap is 1.50s'. The ledger committed at f0befcc holds three invariant/59 rows above 14.62 — 20260824-085601/14.8, 20260824-085803/14.74, 20260824-090203/14.68 — all sha e6b7e23, appended by this branch's own gate runs during the merge. The maximum is 14.80s and the gap is 1.68s. Line 190 of the same file reads 'Neither band quotes the ledger's maximum as a number any more, and that is the fix for a defect this file produced twice', and :143-160 argues any hand-copied scalar of this shape falsifies itself on write because the pre-commit hook of the very commit that publishes a band appends a row to it — the exact mechanism that falsified :140. Third instance in this PR (PR #34 R29: 13.80 vs 13.92; PR #45 R2: 002424/14.08). Nothing grades it: 13.12, 14.62 and 14.80 all derive ceiling 20."
+- Repro: "git show f0befcc:evals/report/history.jsonl | python3 -c "import sys,json;at=[json.loads(l) for l in sys.stdin if l.strip()];at=[r for r in at if r['suite']=='invariant' and r['total']==59];print(max(at,key=lambda r:r['wall_s']))" -> ts 20260824-085601, wall_s 14.8; then sed -n '138,142p;188,192p' on the ADR."
+- Acceptance: "§3 carries no ledger-maximum scalar — the clause is deleted or restated as the selection rule plus a pointer at ledger_slowest, the way §2 and :190 already promise. Whatever remains must be true against the ledger at the commit that publishes it; a number that stays needs a graded form (T-R85), not a fourth hand-copy."
+State at the time of writing: the merge of `origin/main` (b55a710) took main's §3 band bullet
+wholesale, and main's bullet carries no maximum and no row count — PR #41 R2/R13 found the same
+class independently and fixed it the same way. So the specific sentence this finding names is gone
+from the tree, removed by the merge rather than by a repair. What is NOT gone is the class: nothing
+grades "the published row is the maximum", which is T-R85, and the acceptance above is satisfied
+today only because main's prose happens to satisfy it. A future republish can reintroduce it in one
+keystroke and no check will object. Close this against T-R85's graded form, not against the current
+wording.
+
+### T-R90 — T-R88's headroom framing was wrong: `headroom_s` is a green-zone width, not a margin            [status: todo]
+Origin: PR #45 R9
+Ruling: landed as named debt by the same Option B decision as T-R89.
+Spec (reviewer's finding, verbatim from `tasks/reviews/pr45-r3.json`):
+- Claim: "T-R88 misreads the check it cites: headroom_s is the width of the remaining green zone, not a margin against declared_slack_s, the two are never compared for pass/fail, and headroom is bounded above by one ceiling step by construction — so '0.08s of margin' describes a risk that does not exist, and its Acceptance would make the reported number worse while leaving the real gate risk unchanged."
+- Evidence: "eval_adapter.py:826-846 walks top up from the published wall until _band_rule(top) != _band_rule(said); pass/fail is only judge(said, top-0.01) green and judge(said, top) red. step_s is compared solely against decimal tokens in ADR-019/README/INDEX (:792-822) and otherwise only reported in got (:869). No headroom-vs-step_s comparison exists. _band_step_s's docstring (:461-463) calls it the width of a band, so headroom < step_s always — larger headroom is SAFER, and 4.27 against 4.35 is near-optimal placement, not near-failure. fast's 1.89 is the tighter of the two and T-R88 does not flag it. Item 3 reddens when the ledger max at invariant/59 leaves [13.0435, 17.3913); current max 14.80 means 2.59s of real slack. Republishing from the 14.62s row (T-R88's Acceptance) leaves _band_rule(14.62) == 20 — identical redden point — and drops reported headroom from 4.27 to 2.77. tasks/TODO.md:1752-1768."
+- Repro: "python -c "from src.browser.eval_adapter import _check_published_band_slack as f;print(f()['got'])" -> {'declared_slack_s': 4.35, 'headroom_s': {'fast': 1.89, 'invariant': 4.27}} with wrong=[]; then grep -n 'headroom\|step_s' src/browser/eval_adapter.py."
+- Acceptance: "T-R88 is rewritten against the code or withdrawn: state the quantity that actually bounds the gate (ledger max at 59 vs the 17.39s top of the bucket 13.12 derives) and drop the 0.08s framing and the republish-for-margin Acceptance. The rule-collision half — item 2's cleanliness rule and §6's residue rule selecting different rows — stands on its own and needs §6 to say who wins; it does not need the headroom claim."
+Independently confirmed before adopting it: `_check_published_band_slack` computes
+`headroom[suite] = round(top - 0.01 - said, 2)` and puts it in `got`; the only pass/fail comparisons
+are `judge(said, top - 0.01)` green and `judge(said, top)` red, and `step_s` is compared solely
+against decimal tokens in ADR-019/README/INDEX. No headroom-vs-`step_s` comparison exists anywhere.
+Done here rather than deferred, because shipping the wrong framing was the objection: T-R88 is
+rewritten above, the "0.08s of margin" claim and its republish-for-margin acceptance are withdrawn
+in writing, and T-R88 points here. What remains for this block is the positive half — state the
+quantity that actually bounds the gate (the ledger max at the count versus the top of the bucket the
+published wall derives) somewhere a reader of §6 will find it, so the next person does not
+re-derive the same wrong reading from the same `got`.
 
 ## Notes
 
