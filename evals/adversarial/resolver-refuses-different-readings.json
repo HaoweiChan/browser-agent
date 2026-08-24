@@ -1,0 +1,21 @@
+{
+  "id": "resolver-refuses-different-readings",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "Who replied to the Aurora Desk Lamp teardown?",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      { "action": "extract", "target": { "role": "link", "name": "user profile" }, "anchor": null }
+    ]
+  },
+  "expect": { "status": "failure:locate" },
+  "provenance": "PR #42 R3 (MEDIUM). The text half of the interchangeability test was pinned by nothing: deleting it left the fast suite 158/158 green. `resolver-narrows-by-anchor-proximity` cannot pin it — rung 1 fires there and rung 2 is never reached — and worse, that fixture's document order coincides with its expected answer, so it can never show document order picking the WRONG element. This case is built to be reached and to be wrong if the guard goes: same role (two links), different readings ('arden' / 'bellweather'), a READ step, and NO anchor, so rung 1 is skipped and rung 2 is the only rung left. The task asks who REPLIED — that is bellweather, the SECOND match in document order. Watched red by ablation with the text half of INTERCHANGEABLE_JS removed (role-only comparator), nothing else changed: `status success, answer 'arden'` — verdict PASS, grounded, and the wrong user, which is the whole failure mode the conjunct exists for. With the guard in place: `failure:locate`, `2 matches at tier role`.",
+  "triage": {
+    "class": "silent-failure",
+    "what_this_grades": "the text conjunct, alone. The role half is vacuous here (both matches are links, as any role-tier ambiguity must be), the plural test passes (the task is singular), and the step reads — so this case is red when and only when the text comparison goes.",
+    "not_covered": "the reverse hole, matches that read alike and differ in role — `resolver-refuses-mixed-roles` covers that, and neither conjunct covers the other's tier, which is the reason both exist."
+  }
+}

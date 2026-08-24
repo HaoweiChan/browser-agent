@@ -1,0 +1,28 @@
+{
+  "id": "resolver-near-normalises-typography",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L2",
+  "tc": "TC1",
+  "input": {
+    "task": "Who submitted the featured quote?",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      { "action": "extract",
+        "target": { "role": "link", "near": "\"The lamp as we have built it is a process of our thinking, and it cannot be changed without changing our thinking.\"" },
+        "anchor": "Featured quote" }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "corvin",
+    "anchors": ["Featured quote"],
+    "trace_note_contains": "narrowed: near-prefix"
+  },
+  "provenance": "M38, rung 3. Deployment run e6768ee0: `{near: \"“The world as we have created it …”\"}` ended `failure:locate — no tier resolved`, with the answer one element away from the anchor. Two things break an anchor string that came back through a model: the page renders typographic quotes (U+201C/U+201D) and the plan quotes them back as ASCII (or the reverse), and the plan reproduces MORE of the sentence than the page shows. `get_by_text` is a literal substring match, so both are total misses, and a miss on the anchor is indistinguishable from 'this page does not have it'. The `near` string here does both at once: straight quotes against the fixture's typographic ones, and a sentence the page truncates at 'thinking.' — so the case is red unless BOTH the normalising pass and the prefix fallback exist. Watched red first: `status failure:locate`, reason `element-not-found: no tier resolved {'role': 'link', 'near': '\"The lamp as we have built it is a process of our thinking, and it cannot be changed without changing our thinking.\"'}` (relocation offered no rung either: the target has neither `name` nor `text`, so there is nothing to relocate BY).",
+  "triage": {
+    "class": "capability-gap",
+    "what_this_grades": "that an anchor which the page contains in substance but not byte-for-byte still resolves: quote/apostrophe/dash characters match their typographic variants, runs of whitespace match each other, and a long anchor falls back to its first 40 characters. The fallback ORDER is what keeps it honest — exact, then substring, then normalised, then prefix — so the loosest match is only ever reached when every stricter one found nothing.",
+    "not_covered": "a prefix that is itself ambiguous. It is matched by the same NEAREST_JS rules as any other anchor, so two non-nested matches for the prefix are still a loud `ambiguous-match` rather than a guess (near-anchor-substring's ruling, one loosening further down)."
+  }
+}
