@@ -57,10 +57,10 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-165 distinct cases (20 golden + 145 adversarial).
-244 browser actions in a `fast` run; **89 of the 154** `fast` cases drive a real Chromium end to end — counted here as
+167 distinct cases (20 golden + 147 adversarial).
+244 browser actions in a `fast` run; **89 of the 153** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260824-003136-fast.json` rather than tallied by hand (the
+`evals/report/20260824-085915-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
@@ -71,9 +71,12 @@ mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
 ablation driver's preflight and its `failure:env` classifier and the ablation
 table's honesty guard; and in M12, the wall-clock ruling). `live` is 9/9 across
 four real sites, the fourth added at M8 to be hostile rather than to be passed:
-`quotes.toscrape.com` renders its content invisibly to the accessibility tree,
+`quotes.toscrape.com/js` renders its content invisibly to the accessibility tree,
 and the run there answers confidently and wrongly (§ the M8 rows in
-`docs/support-matrix.md`, D5–D11).
+`docs/support-matrix.md`, D5–D11). M40 note: that is the `/js` page and it is
+unchanged; the domain's static author pages answer 3/3 with a real planner, which
+is why the matrix row is now `unreliable` rather than `unsupported`. The hostile
+case is still hostile and still red-by-design.
 
 **The `fast` gate cost 68s against the 60s ceiling ADR-002 set for two
 milestones, and is back inside that same 60s ceiling at 59.35s (98 cases) —
@@ -456,7 +459,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-165 distinct cases (M32, refreshed from the case files' own `tc`/`level`/`domain`
+167 distinct cases (M32, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -469,7 +472,7 @@ Empty cells are shown, not hidden.
 | TC3 navigate-then-extract | 13 | | **L3** | **15 — 4 live (one of them unrun) + 11 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint `verifier-aggregate-superlative-fails-loud`, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`, R20's `plan-lint-refuses-a-declared-non-comparison`, M34's own page-furniture case `verifier-responsive-not-page-furniture`, and M36's judge pair `judge-catches-varying-context-furniture` / `judge-fail-closed-on-error`** |
 | TC4 interact-then-extract | 34 | | L4 (mutation/recovery) | 16 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
-| mechanism/unit probes | 66 | | untagged (unit probes) | 41 |
+| mechanism/unit probes | 65 | | untagged (unit probes) | 40 |
 
 | Domain | Kind | Cases |
 |---|---|---|
@@ -484,6 +487,24 @@ Empty cells are shown, not hidden.
 | **news.ycombinator.com** | **live** | **2 cases: TC1 ×2** |
 | **openlibrary.org** | **live** | **2 cases: TC1 ×1, TC2 ×1 (the TC2 case grades a correct failure diagnosis, not a working search)** |
 | **quotes.toscrape.com** | **live, hostile (M8)** | **3 cases: the hostile TC1 role-tier-blind case, its text-tier-reaches twin, and the render-delayed L3 case — added since the M6 count above and never given a row until this refresh** |
+
+| **companiesmarketcap.com** | **live, M40 (declared `supported`)** | **0 cases — declared from 15/15 deployment runs across two builds, D28** |
+| **bankofcanada.ca** | **live, M40 (declared `supported`)** | **0 cases — declared from 3/3 deployment runs, D28** |
+| **ecb.europa.eu** | **live, M40 (declared `unreliable`)** | **0 cases — declared from 2/3 deployment runs, D28** |
+
+The three M40 rows are in this table with a zero, and the zero is the finding —
+sharpened by what happened during M40 itself: two rows first declared here
+(x-rates.com, multpl.com) were withdrawn before merge because the deployed build
+changed under them and their runs stopped reproducing. Nothing detected that. A
+row with no case is a claim nothing re-checks, and this is what that costs.
+This table is derived from eval cases' own `domain` tags, and its guard
+(`analysis-coverage-table-complete`) fires when a domain has cases and no row —
+the M8 defect it was written for. A domain declared in the support matrix with
+**no case at all** goes through the one door that guard does not cover, so these
+three rows are hand-added and nothing re-checks them. That is the same class of
+gap the guard exists to close, arriving from the other side; closing it means
+either a case per declared live domain or a second guard reading the matrix, and
+neither is done here.
 
 Also: 6 ZH-language cases (character-level, all with stubbed plans, so ZH
 *planning* is unmeasured), 6 refusal cases, 6 trap cases, 3 DOM mutation types.
@@ -508,10 +529,18 @@ The reviewer-facing version of this list, with per-row evidence, is
    case is unrun (needs `OPENROUTER_API_KEY`). M8's fourth domain sharpens this
    rather than softening it: on `quotes.toscrape.com` the observation a planner
    would be given contains none of the page's content, so the case is green on a
-   hand-written plan **and** its TC1 cell is `unsupported`. Live breadth is no longer the gap; live planning
+   hand-written plan **and** its TC1 cell was `unsupported`. (M40, 2026-08-23:
+   that cell is now `unreliable`. The cited case fails identically — nothing was
+   softened — but the domain's static author pages answer 3/3 end-to-end with the
+   real planner, so one page shape works and one does not. `docs/support-matrix.md`
+   has the runs.) Live breadth is no longer the gap; live planning
    quality is the whole of what remains — and the one live-planner run that
    *has* happened (`734d3d1f`, deployed rather than eval) is the first
-   measurement of it, and it was wrong.
+   measurement of it, and it was wrong. (M40 added 43 more, on 22 finance
+   domains, and 19 of the 22 never answered: D28. Then re-ran 33 of them after
+   the deployed build changed and watched three domains that had answered stop
+   answering. Still no eval case, so this item stays open — the numbers moved,
+   the gap did not, and the second probe is the argument for why it matters.)
 5. **The deployed system end-to-end** — see below.
 6. **L3-difficulty tasks** — two exist (both live, M6); one of them is unrun.
 7. Seven mechanism-level gaps carried deliberately, listed in ADR-005

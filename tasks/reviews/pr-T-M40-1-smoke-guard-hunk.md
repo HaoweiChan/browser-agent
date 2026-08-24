@@ -1,13 +1,33 @@
 # T-M40-1 — the `/smoke/stream` guard hunks, verbatim, for conflict resolution
 
-PR #43 (`claude/gifted-elbakyan-07bbef`, unmerged at the time of writing) adds a
-guard of its own to `smoke_events` in `src/browser/server.py`. T-M40-1 replaces
-that function's opening and adds a `finally` to it. Both PRs therefore touch the
-same lines, and `specs/decisions/ADR-019-*.md` + `README.md`'s band table for the
-same reason M39/PR #44 does: adding a case moves the published case counts.
+**RESOLVED — this is now a record, not a prediction.** PR #43 merged to `main`
+as `f813af5`, T-M40-1 merged `origin/main` back in, and the conflict this file
+was written for happened exactly as described: six files, with `smoke_events`
+and the console `smoke()` handler among them. It went the way this file says —
+`await SEM.acquire()` and `finally: SEM.release()` kept, PR #43's read-only
+`if SEM.locked(): … return` deleted rather than kept alongside. The case was
+re-run against the MERGED page source and still binds (see below). The rest of
+the file is left as written, because what it argues is why that resolution is
+the correct one.
+
+PR #43 (`claude/gifted-elbakyan-07bbef`) added a guard of its own to
+`smoke_events` in `src/browser/server.py`. T-M40-1 replaces that function's
+opening and adds a `finally` to it. Both PRs therefore touch the same lines, and
+`specs/decisions/ADR-019-*.md` + `README.md`'s band table for the same reason
+M39/PR #44 does: adding a case moves the published case counts.
 
 This file exists so that whichever PR rebases second resolves from recorded
 evidence rather than from whichever diff `git` happens to show first.
+
+**Post-merge verification**, so the claim above is not just an assertion. Two
+mutants, run against the merged tree, both red:
+`the single run slot is busy — ` (the reworded refusal) gives
+`refusal_does_not_satisfy_the_page_busy_branch`, and PR #43's read guard put
+back in place of the acquire — with the `finally` removed, as it had none —
+gives `second_stream_launched_a_second_browser` plus four more. The console
+branch is graded as a substring of the merged `PAGE`, which now also carries
+#43's `busy(false)` unlock in the same handler; both were kept, neither
+displaced the other.
 
 **Load-bearing**: the `await SEM.acquire()` and the `finally: SEM.release()`.
 Everything else in these hunks is prose and may be resolved either way.
@@ -89,8 +109,12 @@ against PR #43 — resolve either way, but the case pins the `(None)` shape.
 Same collision as M39/PR #44 and for the same reason: this branch adds one case,
 so `fast` 153 -> 154 and `invariant` 58 -> 59, and `published-band-matches-the-ledger`
 requires both bands republished at the shipped count. Numbers here:
-`fast` 154 cases, ts `20260824-002536`, 71.42s, 152/154, 71.42 × 1.15 = 82.13 → **85**;
-`invariant` 59 cases, ts `20260824-003025`, 14.16s, 59/59, 14.16 × 1.15 = 16.28 → **20** (the maximum at 59 when it was published; PR #45 R2).
+post-merge, at `fast` 156 / `invariant` 59 —
+`fast` ts `20260824-085348`, 72.02s, 154/156, 72.02 × 1.15 = 82.82 → **85**;
+`invariant` ts `20260824-000935`, 13.12s, 59/59, 13.12 × 1.15 = 15.09 → **20**.
+The `invariant` citation is M40's own clean row: 59 was not a new count after the
+merge, so item 2 (cited-run) refused a dirty citation and picked the clean one
+over §6's residue rule — ADR-019 §3 states the resulting gap to the maximum.
 Do not copy a row count or a row list into either document — the pre-commit
 hook appends a ledger row to the very commit that publishes the band, so such a
 list is false on write (PR #45 R4).

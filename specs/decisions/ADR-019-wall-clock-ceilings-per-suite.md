@@ -63,19 +63,21 @@ debt (T-R51).
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — `fast` at 154 cases, ts `20260824-002536`, **71.42s**, 152/154
-  (`dirty: true`, ts-only for the ADR-012 reason §3 gives, and dirty and RED for
-  the same structural reason: T-M40-1 adds one case, so the tree only reaches
-  154 while that case is uncommitted, and the two cases red in that row —
-  `docs-numbers-are-derived` and `published-band-matches-the-ledger` — are
-  precisely the ones this republish clears. Item 2 (cited-run) grades the
+- Band source — `fast` at 156 cases, ts `20260824-085348`, **72.02s**, 154/156
+  (`dirty: true`, and dirty and RED for the structural reason this section keeps
+  restating: M40 took the suite to 155 and merging T-M40-1 into it takes it to
+  156, so 156 exists only while the merge is uncommitted, and the two cases red
+  in that row — `docs-numbers-are-derived` and `published-band-matches-the-ledger`
+  — are precisely the ones this republish clears. Item 2 (cited-run) grades the
   citation against the row's own `passed/total`, not against greenness, because
   requiring green here has no fixed point: this check is in both suites, so at a
-  fresh count every run is red until the band is republished. The ledger's own
-  maximum at this count derives the same ceiling; it is not copied here, see §3.)
+  fresh count every run is red until the band is republished. No clean row exists
+  at 156 for the same reason, so item 2 (cited-run)'s as-of cleanliness rule
+  admits this one. The ledger's own maximum at this count derives the same
+  ceiling; it is not copied here, see §3.)
 
 **This band was dirty for one commit, and the reason is worth keeping.** A case
-addition forces a dirty citation: the tree only reaches 153 cases while the new
+addition forces a dirty citation: the tree only reaches its new count while the new
 case is uncommitted, which is the entire reason the dirty allowance exists. But
 a dirty citation is red on CI and green locally — `T-M32-13` is the diagnosis,
 the ledger's `ts` being a naive local stamp compared lexicographically against
@@ -88,7 +90,7 @@ landed. Two commits, by construction, for one case addition. That is the price
 row from the 152-case tree, because the count changed and a band has to describe
 the tree that ships.
 
-The `152/154` is the cited row's own result, graded against it, not prose beside
+The `154/156` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -109,11 +111,11 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 71.42 × 1.15 = 82.13 → **85**, which is BELOW the committed 90 and
+five — gives 72.02 × 1.15 = 82.82 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. One
-run at 154 cases is exactly that short sample. Item 5 (derivation) grades the
+run at 156 cases is exactly that short sample. Item 5 (derivation) grades the
 arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
 that says 90 is green and declared rather than a contradiction. The band
 published for the earlier
@@ -129,11 +131,18 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — `invariant` at 59 cases, ts `20260824-003025`, **14.16s**, 59/59
-  (`dirty: true`, ts-only for the same ADR-012 reason as §2, and dirty for the
-  reason §2 states at length: one case added, so 59 exists only while it is
-  uncommitted, so EVERY row at this count is dirty and item 2 (cited-run)'s
-  as-of reading is what admits any of them at all.)
+- Band source — `invariant` at 59 cases, ts `20260824-000935`, **13.12s**, 59/59
+  (`dirty: false`, ts-only for the same ADR-012 reason as §2. Unlike §2 this
+  count is NOT new: M40 reached 59 first, from the other direction, so a clean
+  green row already stands here and item 2 (cited-run) requires the citation to
+  be it — a dirty row is refused once a clean one was available by its ts. That
+  rule, not §6's residue rule, is what picked this row, and the two disagree
+  here: **13.12s is not the maximum at 59, 14.62s is.** The gap is 1.50s against
+  §6's declared bound of one ceiling step, both values derive 20, and item 3
+  (same-ceiling) grades the ceiling against the maximum rather than against this
+  number, so the ceiling below is correct either way. Stated rather than left for
+  a reader to recompute, because an unstated gap of exactly this shape is what
+  PR #45 R2 was.)
 
 That row is not the only one at its count, and this file does not say how many
 there are. A count or a row list here falsifies itself on write: the ledger
@@ -163,6 +172,21 @@ killed on its own arithmetic — it was green on the defect it claimed to catch
 repair, this class is caught by reading, and §6's "What it lets through" is the
 bound that holds meanwhile.
 
+`invariant` is back at 59 by a different route than the one M40 backed out of.
+M40 tagged its SSRF case `invariant`, saw CI's invariant suite run 17.58s at 59
+cases — which derives 25, not the committed 20 — and retagged it `fast`-only;
+`T-M40-3` and `T-M32-13` carry that. T-M40-1's case is tagged both suites and
+puts the count back at 59, so the same CI question is live again, with one
+difference that has to be stated rather than assumed: this case measures 0.01s
+(it stubs playwright's entry point and launches no browser), where M40's SSRF
+case was the expensive one. On the CI arithmetic `T-M40-3` itself records — CI's
+invariant is 14.88s at 58 cases (ADR-021), and 14.88 × 1.15 = 17.11 → 20 — a
+case costing 0.01s leaves the derived ceiling at 20 rather than M40's 25. That is
+a projection from two committed numbers, not a measurement: only a CI run
+confirms it, and if it is wrong the symptom is `T-M40-3`'s exactly and so is the
+remedy. The local band above is what this ADR publishes; CI's ceiling is
+measured on CI (§5).
+
 Neither band quotes the ledger's maximum as a number any more, and that is the
 fix for a defect this file produced twice. §3 published **13.80s** and the final
 `origin/main` merge brought in a 13.92s row (ts `20260823-202223`, dirty, 57/58)
@@ -177,7 +201,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 14.16 × 1.15 = 16.28 → **20**, which is the committed
+The same rule gives 13.12 × 1.15 = 15.09 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

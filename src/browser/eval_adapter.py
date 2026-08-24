@@ -3543,6 +3543,245 @@ def _run_ui_form_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong, "got": got}
 
 
+def _run_view_proxy_case(case: dict) -> dict:
+    """The page-view proxy is an SSRF surface, so it is graded like one.
+
+    `/view` fetches a caller-supplied URL server-side and serves the bytes back
+    same-origin -- which is the only way to frame sites that send
+    X-Frame-Options, and also the classic shape of a hole that lets a stranger
+    read this container's neighbours. Four properties, all pure-code against the
+    real handler's own pieces, no network:
+
+      1. the submitted URL goes through the SAME `url_ok` the task gateway uses,
+         so loopback/private/link-local/IP-in-disguise are refused;
+      2. every REDIRECT hop is re-checked, in the handler, before the request is
+         made -- a proxy that validates only the first URL is an SSRF hole with
+         extra steps, and the redirect is the attack;
+      3. the response is capped, so an arbitrary host cannot stream this process
+         out of memory, and a truncated body says so rather than passing as whole;
+      4. the response carries `Content-Security-Policy: sandbox`, so the frame is
+         script-free even for a caller that did not set the sandbox attribute.
+    """
+    from urllib.error import HTTPError
+
+    from .server import (VIEW_MAX_BYTES, _GuardedRedirect, url_ok, view_page)
+
+    inp = case["input"]
+    wrong = {}
+
+    refused = [u for u in inp["must_refuse"] if url_ok(u)]
+    if refused:
+        wrong["accepted_a_blocked_url"] = refused
+    allowed = [u for u in inp["must_allow"] if not url_ok(u)]
+    if allowed:
+        wrong["refused_a_public_url"] = allowed
+
+    # Redirect hops, against the real handler rather than a description of it.
+    import urllib.request as _u
+
+    handler = _GuardedRedirect()
+    for hop in inp["must_refuse_redirect"]:
+        req = _u.Request(inp["start_url"])   # a real Request: the base handler
+        req.timeout = None                   # reads origin_req_host/unverifiable
+        try:
+            handler.redirect_request(req, None, 302, "Found", {}, hop)
+            wrong.setdefault("redirect_allowed", []).append(hop)
+        except HTTPError as e:
+            if e.code != 403:
+                wrong.setdefault("redirect_wrong_code", []).append([hop, e.code])
+        except Exception as e:
+            wrong.setdefault("redirect_raised", []).append([hop, f"{type(e).__name__}: {e}"])
+    if handler.max_redirections > inp["max_redirects"]:
+        wrong["redirect_budget"] = handler.max_redirections
+
+    if VIEW_MAX_BYTES > inp["max_bytes_ceiling"]:
+        wrong["cap_too_large"] = VIEW_MAX_BYTES
+
+    # The refusal is an HTTP error, not a blank frame with no reason.
+    for u in inp["must_refuse"][:1]:
+        try:
+            res = _await(view_page(u))
+            wrong["blocked_url_returned"] = str(res)[:120]
+        except Exception as e:
+            if getattr(e, "status_code", None) != 422:
+                wrong["blocked_url_wrong_status"] = f"{type(e).__name__}: {e}"
+
+    src = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
+    for frag in inp["source_fragments"]:
+        if frag not in src:
+            wrong.setdefault("missing_source", []).append(frag)
+    return {"passed": not wrong, "checks": {"view_proxy_is_guarded": not wrong}, "wrong": wrong}
+
+
+def _run_ui_terminal_state_case(case: dict) -> dict:
+    """Every way a run can end must leave the surface terminal and usable.
+
+    Three defects, all found by cold review of the M40 page view and all watched
+    red against the pre-fix page (`triage.watched_red`). They share one property
+    and that is why they share one case: each ends with the UI ASSERTING SOMETHING
+    THAT IS NOT TRUE, rather than erroring. A stream that drops and a run record
+    that cannot be fetched left `#status` reading `running` with the M40 spinner
+    animating beside it and `Run task` disabled for good; a browser check started
+    under a live run painted `chromium ok` in the success colour over it; and a
+    2k-character container dump -- the dominant live failure shape (D28) --
+    rendered in the page view as a tidy 300-character string with no mark.
+
+    Driven on the shared `_ui_page` render like `ui-form`, with `fetch` and
+    `EventSource` stubbed and restored. No server, no network, no run spent.
+    Ceiling: this grades the page's own handlers against a stubbed transport, not
+    a real dropped connection against the real gateway.
+    """
+    inp, expect = case["input"], case["expect"]
+
+    async def go():
+        page = await _ui_page(inp["viewport_width"], inp["scheme"])
+        return await page.evaluate("""async (inp) => {
+          const realFetch = window.fetch, realES = window.EventSource;
+          const errors = [];
+          const onerr = (e) => errors.push(String(e.message || e.error || e));
+          const onrej = (e) => errors.push("unhandled: " + String(e.reason));
+          window.addEventListener("error", onerr);
+          window.addEventListener("unhandledrejection", onrej);
+          const tick = (n) => new Promise(r => setTimeout(r, n || 0));
+          // Fires onerror as soon as the page attaches its handler, which is
+          // what a stream that dies on connect looks like to this code.
+          let opened = null;
+          window.EventSource = function (url) {
+            opened = url; this.close = () => {};
+            setTimeout(() => this.onerror && this.onerror(new Event("error")), 0);
+          };
+          const submit = async (record) => {
+            window.fetch = (u, o) => {
+              if (String(u).endsWith("/tasks") && o && o.method === "POST")
+                return Promise.resolve({ok: true, status: 200,
+                                        json: () => Promise.resolve({run_id: inp.run_id})});
+              if (record === null)
+                return Promise.resolve({ok: false, status: 404,
+                                        json: () => Promise.resolve({detail: "unknown run_id"})});
+              return Promise.resolve({ok: true, status: 200,
+                                      json: () => Promise.resolve(record)});
+            };
+            $("task").value = inp.task; $("url").value = inp.url;
+            $("go").click();
+            await tick(); await tick(); await tick(); await tick();
+          };
+          const surface = () => ({
+            status: $("status").textContent,
+            status_class: $("status").className,
+            spinning: getComputedStyle($("status"), "::after").animationName,
+            go_disabled: $("go").disabled, check_disabled: $("check").disabled,
+            terminal: $("progress").dataset.terminal || null,
+            err_hidden: $("err").hidden,
+          });
+          const out = {};
+          await submit(null);                       // record unreachable (404)
+          out.record_gone = surface();
+          out.record_gone.opened_stream = opened;
+          await submit(inp.record);                 // record readable and terminal
+          out.record_ok = surface();
+          // A readable terminal record must actually be RENDERED, not merely
+          // survive: the pre-fix bug threw inside renderResult, so "no error"
+          // alone would not distinguish a rendered verdict from a swallowed one.
+          // Read before the next submit, which clears #result.
+          out.record_ok.rendered = $("result").textContent.indexOf(inp.record.status) >= 0;
+          await submit({status: "running"});        // record says the run is ALIVE
+          out.still_running = surface();
+          // A poll that resolves after a NEWER run took the surface must not
+          // render: its step captions would carry the newer run's screenshots.
+          // The poll is HELD OPEN across the reassignment on purpose — the first
+          // version of this block let the poll land first and then compared
+          // #status with itself, which no defect could have reddened.
+          let release;
+          window.fetch = (u, o) => {
+            if (String(u).endsWith("/tasks") && o && o.method === "POST")
+              return Promise.resolve({ok: true, status: 200,
+                                      json: () => Promise.resolve({run_id: inp.run_id})});
+            return new Promise(r => { release = () => r({ok: true, status: 200,
+              json: () => Promise.resolve(inp.stale_record)}); });
+          };
+          $("task").value = inp.task; $("url").value = inp.url;
+          $("go").click();
+          await tick(); await tick(); await tick();   // stream errors, poll opens
+          runId = "zzzzzzzz";                          // a newer run takes over
+          release();
+          await tick(); await tick(); await tick();
+          out.stale = {rendered: $("result").textContent.indexOf(inp.stale_record.status) >= 0,
+                       shot_src: ($("pvshot").querySelector("img") || {}).src || "",
+                       go_disabled: $("go").disabled};
+          // The browser check is the other stream, and it had the same defect.
+          // Driven through the real `smoke()`, not through `busy()`.
+          smoke();
+          await tick(); await tick(); await tick();
+          out.smoke_lost = surface();
+          // Whoever owns the surface owns both buttons.
+          busy(true);
+          out.locked = {go: $("go").disabled, check: $("check").disabled};
+          busy(false);
+          // A truncated extraction must look truncated.
+          runId = inp.run_id;
+          renderScraped({evidence: {extractions:
+            [{value: "X".repeat(inp.long_value_chars), page_text: "context"}]}});
+          const pv = $("pvtext").textContent;
+          out.clipped = {marked: pv.indexOf("\u2026") >= 0,
+                         length_shown: pv.indexOf("(" + inp.long_value_chars + " chars)") >= 0,
+                         rendered_chars: pv.length};
+          out.errors = errors;
+          window.fetch = realFetch; window.EventSource = realES;
+          window.removeEventListener("error", onerr);
+          window.removeEventListener("unhandledrejection", onrej);
+          // Everything this case touched, not just the obvious half: `_ui_page`
+          // caches one render per (width, scheme) and the other UI cases run on
+          // it. The round-2 review showed the leaks that remained were inert
+          // only because `ui-rendered-narrow` happens to call resetProgress()
+          // first and happens to omit `screenshot` from its step payload.
+          runId = null; LIVE = []; pinned = null;
+          resetProgress(); $("progress").hidden = true;
+          $("status").className = "big running"; $("status").textContent = "running";
+          $("live").hidden = true; $("err").hidden = true;
+          $("steps").innerHTML = ""; $("result").innerHTML = "";
+          $("pvtext").innerHTML = ""; $("pvshot").innerHTML = "";
+          $("runid").textContent = ""; $("pvcap").textContent = "";
+          $("pvlink").hidden = true; $("go").disabled = false; $("check").disabled = false;
+          return out;
+        }""", inp)
+
+    got = _await(go())
+    wrong = {}
+    for key in ("record_gone", "record_ok"):
+        end = got[key]
+        if (end["go_disabled"] or end["check_disabled"] or end["spinning"] != "none"
+                or "running" in end["status"].lower() or not end["terminal"]):
+            wrong[key] = end
+    if not got["record_ok"]["rendered"]:
+        wrong["record_ok_not_rendered"] = got["record_ok"]
+    # A run the record says is STILL EXECUTING must not be painted as a terminal
+    # failure — no verdict, no `data-terminal`, no spinner, buttons released.
+    alive = got["still_running"]
+    if (alive["terminal"] or alive["spinning"] != "none" or alive["go_disabled"]
+            or alive["check_disabled"] or "failure" in alive["status_class"]):
+        wrong["running_record_painted_terminal"] = alive
+    # The stale record must not be rendered, and must not have re-enabled the
+    # buttons under the run that now owns them.
+    stale = got["stale"]
+    if stale["rendered"] or inp["run_id"] in stale["shot_src"] or not stale["go_disabled"]:
+        wrong["stale_poll_rendered"] = stale
+    sm = got["smoke_lost"]
+    if (sm["spinning"] != "none" or "running" in sm["status"].lower()
+            or sm["go_disabled"] or sm["check_disabled"]):
+        wrong["smoke_stream_loss_not_terminal"] = sm
+    if not (got["locked"]["go"] and got["locked"]["check"]):
+        wrong["busy_locks_both"] = got["locked"]
+    clip = got["clipped"]
+    if not (clip["marked"] and clip["length_shown"]):
+        wrong["truncation_unmarked"] = clip
+    if got["errors"]:
+        wrong["uncaught"] = got["errors"]
+    if expect.get("guidance_contains") and expect["guidance_contains"] not in got["record_gone"]["status"]:
+        wrong["guidance"] = got["record_gone"]["status"]
+    return {"passed": not wrong, "checks": {"terminal_on_every_end": not wrong},
+            "wrong": wrong, "observed": got}
+
+
 def _run_ui_progress_case(case: dict) -> dict:
     """The execution strip is driven only by acknowledged run/trace/result events."""
     inp = case["input"]
@@ -4450,6 +4689,8 @@ KINDS = {
     "ui-rendered": _run_ui_rendered_case,
     "ui-form": _run_ui_form_case,
     "ui-progress": _run_ui_progress_case,
+    "ui-terminal-state": _run_ui_terminal_state_case,
+    "view-proxy": _run_view_proxy_case,
     "url-guard": _run_url_guard_case,
     "verifier": _run_verifier_case,
     "verifier-labels": _run_verifier_labels_case,

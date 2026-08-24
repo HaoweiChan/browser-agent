@@ -1,0 +1,68 @@
+{
+  "pr": 45,
+  "task": "T-M40-1",
+  "event": "merge origin/main (f813af5, PR #43 / M40) into task/T-M40-1",
+  "role": "implementer",
+  "strategy": "merge, not rebase — repo convention (ca8f272), and one resolution pass instead of six replays",
+  "counts_after_merge": {
+    "source": "evals.run.load_cases on the merged tree, not arithmetic",
+    "fast": 156, "invariant": 59, "live": 9, "full": 10, "all": 167,
+    "note": "confirms the coordinator's projection of 156/59"
+  },
+  "gate_after_merge": {
+    "invariant": "59/59 = 1.000, wall 14.74s / 20, $0.0000",
+    "fast": "156/156 = 1.000, wall 71.82s / 90, $0.0000",
+    "baseline": ".eval-baseline.json untouched"
+  },
+  "conflicts": [
+    {
+      "file": "src/browser/server.py",
+      "hunks": 2,
+      "resolution": "smoke_events: OURS wholesale. PR #43's `if SEM.locked(): yield ev(error, f'a run is executing ({ACTIVE_RUN}); one browser at a time'); return` is deleted, not kept alongside — it is a READ of the slot and it is the exact mutant this branch's case kills. `await SEM.acquire()` and `finally: SEM.release()` stand. Console smoke() handler: BOTH sides kept — our busy branch (`String(ev.error || '').startsWith('busy')`, which is the case's graded page_branch) AND #43's `busy(false)` button unlock, which is #43's own machinery and nothing to do with this case. Neither displaced the other.",
+      "verification": "The case was re-run against the MERGED tree and binds to the merged page source: green as-is, and red against two mutants applied to the merged file — (1) the reworded refusal `the single run slot is busy — ` gives `refusal_does_not_satisfy_the_page_busy_branch: {prefix: 'busy', events: [..., 'the single run slot is busy \\u2014 a browser check is running...']}`; (2) PR #43's read guard reinstated in place of the acquire, with its `finally` removed as it had none, gives `second_stream_launched_a_second_browser: [start, launching, error]` plus `refusal_does_not_satisfy_the_page_busy_branch` and the /readyz and leak keys. #43 changed nothing else in smoke_events or in the smoke() handler beyond the busy(false) line."
+    },
+    {
+      "file": "evals/report/history.jsonl",
+      "resolution": "UNION, no side picked. Both sides are pure insertions over the shared base (d06a569) — verified, not assumed: neither side is missing any base line. Merged = base + our additions + main's additions, sorted by ts. 1316 rows = base 1219 + branch 16 + main 81.",
+      "verification": "Multiset-checked in both directions: every row from base, ours, main and the loose pre-commit-hook row is present in the result, and the result contains nothing none of them had. Every line re-parses as JSON. ts non-decreasing. No exact-duplicate lines.",
+      "caught_in_flight": "The first attempt keyed the union on (ts, suite) and silently dropped 3 rows. Three base rows legitimately SHARE a (ts, suite) — concurrent worktrees landing in the same second, distinct sha/total/wall — so a set-keyed merge eats them. Caught by counting before writing; redone with multiset arithmetic over whole lines. Worth recording because it is precisely the silent-ledger-loss the merge instructions warned about, and it was invisible in the output."
+    },
+    {
+      "file": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "hunks": 4,
+      "resolution": "§2's band bullet and its two dependent scalars: main's shape taken, then every number RE-DERIVED from a run of the merged tree. §3: OURS wholesale — the PR #45 R4 shape (selection rule + one graded citation, no enumeration, no count) is kept exactly, which is why this merge does not reopen R4. Main's §3 bullet carried one fact that is not ours to delete — M40 retagged its SSRF case out of `invariant` on a CI-ceiling argument — so it is carried forward as prose, see judgement_calls.",
+      "verification": "published-band-matches-the-ledger and published-band-slack-is-declared green on the merged tree."
+    },
+    {
+      "file": "README.md",
+      "resolution": "main's file taken wholesale (`--theirs`), then the four numbers re-derived: the band table, the two graded count strings, and the Where-it-stands block + its two report citations. This branch's only changes to README were those same numbers, so nothing of ours was lost by taking theirs."
+    },
+    {
+      "file": "docs/analysis.md",
+      "resolution": "main's file taken wholesale, then the two graded 'N distinct cases' strings re-derived to 167 (20 golden + 147 adversarial), and the action-count report citation re-pointed at this tree's green run — the last of these was a change this branch had already made that `--theirs` reverted."
+    },
+    {
+      "file": "evals/adversarial/docs-numbers-are-derived.json",
+      "resolution": "main's file taken wholesale — it carries #43's m40_note and main's unescaped provenance, and this branch's only edit was the two report pointers — then the two pointers re-derived to the merged tree's green reports."
+    }
+  ],
+  "renumbering": {
+    "method": "Not hand-merged. Conflict markers were resolved to something coherent, both suites were run on the merged tree, and every published number was then re-derived from the fresh committed rows by the graders' own rules.",
+    "fast_band": "156 cases, ts 20260824-085348, 72.02s, 154/156, dirty — 72.02 x 1.15 = 82.82 -> 85, BELOW the committed 90, which does not move (ADR-019 §6 no-ratchet-down). No clean row exists at 156 because the merge is uncommitted, so item 2's as-of cleanliness rule admits the dirty one.",
+    "invariant_band": "59 cases, ts 20260824-000935, 13.12s, 59/59, CLEAN — 13.12 x 1.15 = 15.09 -> 20, the committed ceiling.",
+    "invariant_band_judgement": "This one needed a ruling and ADR-019 §3 now states it. 59 is NOT a new count after the merge: M40 reached it first (from the other direction) and left a clean green row there, so item 2 (cited-run) REFUSES a dirty citation — a dirty row is red once a clean one stood by its ts. §6's residue rule says publish the maximum, which at 59 is 14.62s and dirty. The two rules select different rows and cleanliness wins. Consequence published rather than buried: 13.12s is not the maximum, the gap is 1.50s against §6's declared one-ceiling-step bound, both values derive 20, and item 3 (same-ceiling) grades the ceiling against the maximum anyway. Logged as T-R79 because §6 does not actually say who wins when the two rules disagree, and the resulting slack leaves 0.08s of margin."
+  },
+  "judgement_calls": [
+    "ADR-019 §3 carries forward, as prose, the fact main's deleted bullet held: M40 tagged its SSRF case `invariant`, measured 17.58s at 59 cases on CI (derives 25, not the committed 20) and retagged it `fast`-only — T-M40-3 and T-M32-13. T-M40-1's case is tagged both suites and puts `invariant` back at 59, so that question is live again from the other side. Stated rather than assumed: this case costs 0.01s (playwright's entry point is stubbed, no browser launches) where M40's SSRF case was the expensive one, and on T-M40-3's own committed numbers (CI invariant 14.88s at 58, ADR-021) 14.88 x 1.15 = 17.11 -> 20. That is labelled in the ADR as a PROJECTION from two committed numbers, not a measurement — only a CI run confirms it, and if it is wrong the symptom and the remedy are both T-M40-3's. Flagged to the coordinator rather than absorbed.",
+    "docs/analysis.md's '89 of the 153 fast cases' left as main wrote it. It was already wrong on main (main's README said 155) and the merge makes it wrong by three, but correcting the denominator without recomputing the hand-counted numerator publishes a second unverified number beside the first. Logged as T-R78, not swept."
+  ],
+  "left_as_mains": [
+    "#43's console machinery in full — busy()/lost()/smokeStream lifecycle, the smoke() onerror handler, the terminal-state work.",
+    "#43's two new cases and their fixtures (ui-terminal-state-on-every-ending, view-proxy-refuses-private-and-redirects).",
+    "docs/support-matrix.md, evals/adversarial/ui-execution-progress.json, ui-tinboker-style.json, and every #43 report file — auto-merged, untouched.",
+    "main's unescaped-unicode serialization of docs-numbers-are-derived.json and its m40_note.",
+    "tasks/TODO.md's T-M40-3 and T-M32-13 blocks — read and cited, not edited."
+  ],
+  "debt_opened": ["T-R78", "T-R79"],
+  "history_jsonl": "Six gate rows were produced across this merge (two red-by-design at the stale-numbers fixed point, two mid-derivation, two final green with --report) and all are committed with the merge. The two cited reports are 20260824-085915-fast.json (156/156) and 20260824-085803-invariant.json (59/59). The pre-commit hook's own row rides into the next commit as documented."
+}
