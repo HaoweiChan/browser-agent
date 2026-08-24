@@ -130,9 +130,11 @@ asked for 105. **The shipped tree's own measurement removed the premise.** CI
 came in FASTER on a LARGER suite — 88.39s at 146 cases, 74.25s at 152 — so the
 gap the raise was meant to close is not there on the tree that ships.
 
-`EVAL_WALL_BUDGET_S_FAST` stays 90 and `_INVARIANT` stays 20;
-`.github/workflows/eval.yml` is byte-identical to `origin/main`. That is now the
-ruled state rather than the untouched default.
+`EVAL_WALL_BUDGET_S_FAST` stays 90 and `_INVARIANT` stays 20. That is now the
+ruled state rather than the untouched default. Both values in
+`.github/workflows/eval.yml` are unchanged from `origin/main`; the file itself is
+not byte-identical any more, because T-R44 added `EVAL_ENV: ci` beside them
+(2026-08-23 amendment below) — no ceiling moved.
 
 ### What this does NOT claim
 
@@ -140,15 +142,44 @@ Not that the margin question is closed. Ninety is the right number on today's
 measurement of today's tree; that is a different claim from "this will not need
 revisiting", and the two should not be blurred.
 
-The live version of the question is `T-M32-13`'s second symptom: CI's own rows
+The live version of the question was `T-M32-13`'s second symptom: CI's own rows
 enter `ledger max` mid-job — the `invariant` step appends before the `fast` step
-grades — so a slow CI `invariant` run can demand a ceiling no local run
-justifies, and it is **ungreenable locally** because the local ledger holds no
-CI rows. CI's `invariant` measured 16.03s in run 32637648447 and 14.88s here;
-the next band starts at **17.39s**. That is the number to watch, and nothing in
-this ADR grades it — ADR-021's CI figures are hand-read off the workflow log and
-ungraded, which is `T-R51`.
+grades — so a slow CI `invariant` run could demand a ceiling no local run
+justifies, **ungreenable locally** because the local ledger holds no CI rows.
+CI's `invariant` measured 16.03s in run 32637648447 and 14.88s here; the next
+band starts at **17.39s**. That bound is item 4 (committed-ceiling)'s alone —
+item 3 (same-ceiling) compares `rule(published)` with `rule(ledger max)` and had
+already fired on a 16.02s CI row in run 32626835735, nowhere near 17.39s
+(ADR-019 §7). **Neither is the number to watch any more, and this paragraph is
+amended rather than left standing** — see below. This ADR's CI
+figures are still hand-read off the workflow log and ungraded; they carry the
+run ids that make them checkable by a reader (T-R51's resolution), and the
+ledger route stays open as `T-R73`.
 
 One run is still not a band. Two runs of two different trees are not a band
 either. What has changed is that the ceiling now rests on a measurement of the
 tree it guards plus a decision, instead of on the absence of one.
+
+### (2026-08-23, T-R44) The mid-job CI row no longer reaches `ledger max`
+
+The paragraph above named CI's rows entering `ledger max` as this ADR's live
+margin risk. T-R44 removed the mechanism: every history row now carries an `env`
+tag and ADR-019 §6 item 9 (environment) filters the ledger to the band's own
+environment before any item reads a row, so CI's `invariant` row is not in a
+`local` band's ledger at all. Item 3 (same-ceiling), which fired at 16.02s, and
+item 4 (committed-ceiling)'s 17.39s threshold with its ungreenable-locally
+property, are all unreachable from a mixed ledger, and the paragraph is corrected
+above rather than deleted, because the reasoning is why the ceiling is watched at
+all.
+
+Two things this does NOT change, and the second is why the block was narrowed
+rather than closed. First, nothing about the numbers: 90 still comes from
+`required_by_adr013_rule` at 146 cases, CI's figures are still hand-read, and no
+ceiling moved. Second, and this is the part to read carefully: `T-M32-13` named two symptoms
+and they are two properties, so T-R44 shipped two fixes. Env scoping closed this
+ADR's margin risk; `ts` stamped in UTC closed the ordering key that made a dirty
+citation cost a second commit. Neither substitutes for the other and ADR-019 §7
+keeps them apart on purpose. What is NOT converted is the ledger's history: rows
+written before that commit keep their naive local stamps and are not rewritten,
+so any figure in this ADR quoted with a `ts` older than it is a local-time
+stamp.
