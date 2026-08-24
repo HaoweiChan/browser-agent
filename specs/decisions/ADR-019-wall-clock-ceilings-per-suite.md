@@ -65,28 +65,30 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 156 cases, ts `20260823-150057`, **71.61s**, 154/156
-  (`evals/report/20260823-150057-fast.json`; `dirty: true`, for the reason the
-  next paragraph gives. The stamp is UTC, as every row written since §7 is. How
-  many rows the ledger holds at this count, and what its maximum is, are
-  deliberately not written here — see §3.)
+- Band source — local `fast` at 158 cases, ts `20260824-005609`, **71.75s**, 158/158
+  (`evals/report/20260824-005609-fast.json`; `dirty: true`, for the reason the next paragraph
+  gives. The stamp is UTC, as every row written since §7 is. How many rows the
+  ledger holds at this count, and what its maximum is, are deliberately not
+  written here — see §3.)
 
 **This band was dirty for one commit, and that price is what §7 removed.** A case
-addition forces a dirty citation: the tree only reaches 156 cases while the new
-case is uncommitted, which is the entire reason the dirty allowance exists. A
+addition forces a dirty citation: the tree only reaches its new count while the
+new case is uncommitted, which is the entire reason the dirty allowance exists. A
 dirty citation used to be green locally and red on CI — `T-M32-13` is the
-diagnosis, the ledger's `ts` being a naive local stamp compared
-lexicographically against CI's UTC ones, so item 2 (cited-run) refused a dirty
-row against any clean row stamped earlier and every CI row is clean and stamped
-eight hours behind ours. The band published at 153 cases paid it in full: M28's
-merge commit published `ts 20260823-211340`, 70.46s, 151/153, dirty, and the next
-commit re-cited a clean run that could not exist until the first had landed. Two
-commits, by construction, for one case addition. §7 gives every row an
-environment and item 9 (environment) keeps CI's out of a `local` band's ledger,
-so this band cites its dirty row once and stays green on both sides. That is the
-concrete thing §7 buys, and this sentence is the first band to spend it.
+diagnosis, the ledger's `ts` being a naive local stamp compared lexicographically
+against CI's UTC ones, so item 2 (cited-run) refused a dirty row against any
+clean row stamped earlier and every CI row is clean and stamped eight hours
+behind ours. Two trees paid it in full: M28's merge commit published
+`ts 20260823-211340`, 70.46s, 151/153, dirty, and the next commit re-cited a
+clean run that could not exist until the first had landed; M40 then added
+`ui-terminal-state-on-every-ending` and `view-proxy-refuses-private-and-redirects`
+and paid the same two commits again. §7 gives every row an environment and item 9
+(environment) keeps CI's out of a `local` band's ledger, so a dirty citation is no
+longer disqualified by a row from another machine. Locally that is demonstrated —
+this band cites a dirty row and the gate is green. The CI half is asserted, not
+demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The `154/156` is the cited row's own result, graded against it, not prose beside
+The `158/158` is the cited row's own result, graded against it, not prose beside
 it (T-R55). It is stated because a band source is taken as it is found — item 2 (cited-run)
 requires a run that happened, and green is required nowhere in §6 — so a reader
 comparing two bands should not have to read silence as a pass.
@@ -107,11 +109,11 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 71.61 × 1.15 = 82.35 → **85**, which is BELOW the committed 90 and
+five — gives 71.75 × 1.15 = 82.51 → **85**, which is BELOW the committed 90 and
 does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
-band is a short sample and therefore a lower bound on what the tree costs. One
-run at 153 cases is exactly that short sample. Item 5 (derivation) grades the
+band is a short sample and therefore a lower bound on what the tree costs. The
+three runs at 158 cases are exactly that short sample. Item 5 (derivation) grades the
 arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
 that says 90 is green and declared rather than a contradiction. The band
 published for the earlier
@@ -127,11 +129,17 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 61 cases, ts `20260823-150113`, **13.20s**, 59/61
-  (`evals/report/20260823-150113-invariant.json`; `dirty: true`, for the reason
-  §2 gives — and green on both sides now, which is §7's doing. As in §2, nothing
-  about how many rows sit at this count, or which of them is slowest, is written
-  here.)
+- Band source — local `invariant` at 61 cases, ts `20260823-161322`, **14.08s**, 61/61
+  (`dirty: false`; ADR-012 writes no per-case report for a green run, so the
+  ledger row is the whole artifact, which is why this cites a ts and not a file. As in §2,
+  nothing about how many rows sit at this count, or which of them is slowest, is
+  written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
+  deliberately NOT in this suite: it was tagged `invariant`, moved this band, and
+  was moved back to `fast`-only because CI's invariant suite runs 17.58s at that
+  count and derives a different ceiling — `T-M40-3` carries that decision.
+  `T-M32-13`, which the note originally cited beside it, is closed here; whether
+  its closure changes M40's tagging is T-M40-3's question, not this section's.)
+
 
 Neither band quotes the ledger's maximum, or counts the rows behind it, and that
 is the fix for a defect this file has now produced three times. The third was
@@ -160,7 +168,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.20 × 1.15 = 15.18 → **20**, which is the committed
+The same rule gives 14.08 × 1.15 = 16.19 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
@@ -587,8 +595,11 @@ it, and left standing through two rounds that closed the same claim elsewhere).
 At HEAD, `fast-wall-clock-budget` checks that the workflow declares the ceilings
 §5 names, AND `ci-numbers-are-derived` pins all eight cells of §5's table against
 the workflow's own copy of them, README's four `fast` values, both ranges, both
-derived ceilings, and the run id in both documents. §5 states which mutation
-demonstrates each.
+derived ceilings, and the run id in both documents. The mutation that demonstrates
+each of those lives in `ci-numbers-are-derived`'s own `watched_red`, not in §5 —
+§5 carries only the eight-cell one. An earlier version of this sentence sent the
+reader to §5 for all seven and was the fifth instance in PR #41 of a description
+claiming more than its check does (T-R78, closed here).
 
 What is still not graded, and cannot be from here, is the one thing this route
 never claimed: that those four attempts were ever run. The run id makes that

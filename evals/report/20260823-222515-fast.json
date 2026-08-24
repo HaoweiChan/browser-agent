@@ -1,0 +1,1088 @@
+{
+  "suite": "fast",
+  "score": 0.30434782608695654,
+  "totals": {
+    "wall_seconds": 0.39,
+    "latency_p50": 0.0,
+    "latency_p95": 0.03,
+    "cases_with_budgets": 0
+  },
+  "metrics": {
+    "precision": 0.47619,
+    "recall": 0.909091,
+    "n": 25
+  },
+  "results": [
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1399, in _run_observe_case\n    url = f\"{_base_url()}/fixtures/{case['input']['fixture']}\"\n             ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.06,
+      "id": "observe-hello-elements",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-hello-heading",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-hello-reveal",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-shop-price-near",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-shop-price-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc1-shop-price",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc2-shop-search-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc2-shop-search",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc3-shop-detail-nav-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc3-shop-detail-nav",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc4-shop-sort-cheapest",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc4-shop-sort-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc5-forms-submit-zh",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "tc5-forms-submit",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 2369, in _run_ablation_run_one_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.01,
+      "id": "ablation-env-failure-is-a-result",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 2612, in _run_ablation_preflight_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "ablation-preflight-refuses-old-build",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "adr_files": 21,
+        "index_entries": 21,
+        "adr_citations_seen": 614,
+        "files_scanned": 222
+      },
+      "seconds": 0.04,
+      "id": "adr-header-and-index",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "agent-launches-its-own-browser",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.02,
+      "id": "analysis-ablation-table-not-estimated",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "budget-replans-exhausted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1041, in _run_schema_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "contract-trace-schema",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "docs": []
+      },
+      "got": {
+        "counts": {
+          "fast": 138,
+          "invariant": 53,
+          "live": 9,
+          "full": 10,
+          "all": 149
+        },
+        "domains": {
+          "books.toscrape.com": 3,
+          "openlibrary.org": 2,
+          "news.ycombinator.com": 2,
+          "quotes.toscrape.com": 3
+        }
+      },
+      "seconds": 0.06,
+      "id": "docs-numbers-are-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "evidence-window-keeps-the-anchor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "window_len": 2000,
+      "seconds": 0.0,
+      "id": "evidence-window-miss-is-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-cheapest-wording-still-reduces",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-declared-intent-beats-wording",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-declared-rank-obeys-the-plan",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-list-task-keeps-every-row",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-refuses-a-selector",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-undeclared-intent-fails-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-container-dump-is-not-the-answer",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "budgets": {
+          "fast": 80,
+          "invariant": 20
+        },
+        "ci_ceiling": 90,
+        "main_exit": [
+          {
+            "wall_seconds": 65.53,
+            "exit": 0,
+            "got": 0
+          },
+          {
+            "wall_seconds": 80.01,
+            "exit": 1,
+            "got": 1
+          }
+        ]
+      },
+      "seconds": 0.03,
+      "id": "fast-wall-clock-budget",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 2154, in _run_gateway_error_case\n    base = _base_url()\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "gateway-error-contract-shape",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 2207, in _run_gateway_model_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "gateway-model-not-allowlisted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 2207, in _run_gateway_model_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "gateway-model-reaches-planner",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "reports_when_asked": [],
+        "written": [
+          "20260823-222515-fast.json"
+        ]
+      },
+      "seconds": 0.01,
+      "id": "history-dirty-precedes-the-report",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv3-budget-exhaustion-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "judge-cache-hit-needs-no-key",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "judge-catches-varying-context-furniture",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "judge-fail-closed-on-any-exception",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "judge-fail-closed-on-error",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "judge-fast-suite-stub-boundary",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "judge-injection-cannot-flip-verdict",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "judge-injection-marker-forge-cannot-escape-fence",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "judge-missing-key-fails-closed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.01,
+      "id": "judge-parse-response-strict-boolean",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "judge-run-budget-enforced",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-forms-a11y-stripped",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-recover-name-to-text",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-a11y-stripped",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-button-text-renamed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-duplicate-labels",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-element-reordered-near",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-element-reordered",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-ids-renamed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-overlay-modal",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-render-delayed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l4-shop-wrapper-nesting",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1489, in _run_fixture_case\n    result = _run_agent(inp[\"task\"], inp.get(\"url\", fixture_url), planner, url_guard=guard,\n                        own_browser=inp.get(\"own_browser\", False), judge=judge)\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "l5-refuse-captcha",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-delete-determiners",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1489, in _run_fixture_case\n    result = _run_agent(inp[\"task\"], inp.get(\"url\", fixture_url), planner, url_guard=guard,\n                        own_browser=inp.get(\"own_browser\", False), judge=judge)\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "l5-refuse-destructive-zh",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1489, in _run_fixture_case\n    result = _run_agent(inp[\"task\"], inp.get(\"url\", fixture_url), planner, url_guard=guard,\n                        own_browser=inp.get(\"own_browser\", False), judge=judge)\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "l5-refuse-download",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-login-contracted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1489, in _run_fixture_case\n    result = _run_agent(inp[\"task\"], inp.get(\"url\", fixture_url), planner, url_guard=guard,\n                        own_browser=inp.get(\"own_browser\", False), judge=judge)\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "l5-refuse-login",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "l5-refuse-payment",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 2977, in _run_matrix_drift_case\n    from .server import MATRIX_DOC, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "matrix-parse-fails-loudly",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "multi-extract-list",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "mutation-catalog-integrity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "mutation-metrics-honesty",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "nav-action-load-event-never-fires",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "nav-load-event-never-fires",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "near-anchor-substring",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "near-equidistant-is-ambiguous",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "near-excludes-its-own-anchor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "near-prefers-the-container",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1399, in _run_observe_case\n    url = f\"{_base_url()}/fixtures/{case['input']['fixture']}\"\n             ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "observe-content-survives-chrome",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1399, in _run_observe_case\n    url = f\"{_base_url()}/fixtures/{case['input']['fixture']}\"\n             ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "observe-name-prohibited-roles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.01,
+      "id": "opt-in-expect-keys-declared",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "plan-gap-truth-table",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "plan-lint-holds-across-a-midrun-replan",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "plan-lint-refuses-a-declared-non-comparison",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "got": {
+        "steps": 1,
+        "first_action": "navigate"
+      },
+      "seconds": 0.0,
+      "id": "planner-fenced-json",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "planner-prompt-carries-the-note",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "postcondition-compound-keys",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "postcondition-unverified-click",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "probe3-quotes-most-quoted-author",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.02,
+      "id": "published-band-matches-the-ledger",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "declared_slack_s": 4.35,
+        "headroom_s": {
+          "fast": 1.82,
+          "invariant": 4.07
+        }
+      },
+      "seconds": 0.0,
+      "id": "published-band-slack-is-declared",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "rank-reduces-enumeration-in-code",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1940, in _run_readyz_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "readyz-tracks-the-run-slot",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "recovery-label-requires-strategy-change",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "recovery-replan-postcondition",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "relocate-fill-non-editable",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "relocation-preserves-near",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "replan-cannot-launder-noop-action-extract-all",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "replan-cannot-launder-noop-action",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "citations": 39,
+        "skip": [
+          "29991231-235959-fast.json"
+        ]
+      },
+      "seconds": 0.03,
+      "id": "report-citations-resolve",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolver-substring-name",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolver-unknown-target-key",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "screening-word-boundary",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4143, in _run_browser_liveness_case\n    url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n             ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "shared-browser-relaunches-when-dead",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "soak": []
+      },
+      "seconds": 0.06,
+      "id": "soak-counts-only-real-completions",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 2025, in _run_stream_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "stream-shows-every-step",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4185, in _run_invariant_case\n    return INVARIANTS[check]()\n           ~~~~~~~~~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "supersede-never-dangles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 2067, in _run_matrix_case\n    from .server import CASE_CITATION, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "support-matrix-cites-real-cases",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-empty-extraction",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-form-not-submitted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-near-miss-entity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-search-not-executed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-unsorted-cheapest",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "trap-wrong-field",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4185, in _run_invariant_case\n    return INVARIANTS[check]()\n           ~~~~~~~~~~~~~~~~~^^\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "ui-examples-cover-matrix",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 3268, in _run_ui_form_case\n    got = _await(go())\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "ui-no-url-guard-and-example-chips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 3200, in _run_ui_rendered_case\n    got = _await(go())\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "ui-rendered-narrow",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 3410, in _run_ui_terminal_state_case\n    got = _await(go())\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "ui-terminal-state-on-every-ending",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "ui-tinboker-style",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "url-guard-holds-after-navigation",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 3541, in _run_url_guard_case\n    from .server import url_ok\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-aggregate-ground-truth-untouched",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "verifier-aggregate-superlative-fails-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-anchor-not-self-satisfied",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "verifier-catches-listing-dump",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "verifier-context-anchors-real-occurrence",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "win_plain_len": 2000,
+      "win_anchored_len": 3615,
+      "seconds": 0.0,
+      "id": "verifier-dump-ratio-anchor-flip",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "verifier-list-rows-not-a-dump",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "verifier-listing-detail-title-not-furniture",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-numeric-precision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "matrix": {
+        "tp": 10,
+        "fp": 11,
+        "fn": 1,
+        "tn": 3
+      },
+      "want_matrix": {
+        "tp": 10,
+        "fp": 11,
+        "fn": 1,
+        "tn": 3
+      },
+      "metrics": {
+        "precision": 0.47619047619047616,
+        "recall": 0.9090909090909091,
+        "n": 25,
+        "false_positive_ids": [
+          "trap-near-miss-entity",
+          "trap-wrong-field",
+          "trap-unsorted-cheapest",
+          "trap-search-not-executed",
+          "trap-form-not-submitted",
+          "trap-wrong-cell-total",
+          "live-wrong-field-upc",
+          "live-wrong-field-submitter",
+          "live-unsorted-cheapest",
+          "live-wrong-field-availability",
+          "chunked-dump-cheapest"
+        ],
+        "false_negative_ids": [
+          "unverified-click-correct-answer"
+        ]
+      },
+      "seconds": 0.0,
+      "id": "verifier-precision-recall",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "verifier-responsive-not-page-furniture",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-sign-currency-percent",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/evals/run.py\", line 64, in run_case\n    result = mod.run_case(case)\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 4230, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/willy/Documents/browser-agent/.claude/worktrees/gifted-elbakyan-07bbef/src/browser/eval_adapter.py\", line 1463, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "verifier-sparse-page-not-a-dump",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-superseded-not-a-loophole",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "before": 1087,
+        "after": 1087
+      },
+      "seconds": 0.03,
+      "id": "wall-clock-probe-history-isolated",
+      "kind": "adversarial"
+    }
+  ]
+}
