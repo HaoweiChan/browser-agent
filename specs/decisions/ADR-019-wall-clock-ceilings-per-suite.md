@@ -135,17 +135,30 @@ commit that changed nothing but JSON.
   uncommitted, so EVERY row at this count is dirty and item 2 (cited-run)'s
   as-of reading is what admits any of them at all.)
 
-The ledger holds five rows at 59, not one: `20260824-002326` 14.02s (57/59),
-`002424` 14.08s (57/59), `002824` 13.17s (58/59), `003025` **14.16s** (59/59),
-`003411` 13.18s (59/59). The selection among them is §6's residue rule —
-republish the maximum — which here also happens to be a green row and the one
-README's "Where it stands" cites. An earlier revision of this bullet published
-`002424`/14.08s and asserted 59 held a single row; both halves were false
-against the ledger committed in the same commit, and it took a human reading to
-catch, because item 3 (same-ceiling) compares *derived ceilings* and 14.08 and
-14.16 both derive 20 (PR #45 R2). The grader still cannot catch that class —
-see `T-R76`, which carries the treadmill-free form of the check and why the
-strict form is refused.
+That row is not the only one at 59, and this file does not say how many there
+are. A count or a row list here falsifies itself on write: the ledger grows on
+every gate run, and the pre-commit hook of the very commit that publishes a band
+appends a row to it — which is exactly what happened to the first attempt at
+this paragraph (PR #45 R4). It is PR #34 R21's resolution, recorded two
+paragraphs down, reaching §3 a second time, and §2 refuses a hand-copied
+maximum for the same reason. What is published is the selection rule and the one
+row item 2 (cited-run) grades: §6's residue rule says republish the maximum, and
+`20260824-003025` was the maximum at 59 when this band was published — also
+green, and the run README's "Where it stands" cites. The ledger's maximum as of
+any later reading is whatever `published-band-matches-the-ledger` computes as
+`ledger_slowest`, and item 3 (same-ceiling) grades the ceiling against that, not
+against anything typed here.
+
+An earlier revision of this bullet published `002424`/14.08s and asserted 59 held
+a single row. Both halves were false against the ledger committed in the same
+commit, and it took a human reading to catch: item 3 (same-ceiling) compares
+*derived ceilings*, and 14.08 and 14.16 both derive 20 (PR #45 R2). **No graded
+form of "the published row is the maximum" is currently known.** `T-R76` records
+the class, why the strict form is refused, and the candidate proposed and then
+killed on its own arithmetic — it was green on the defect it claimed to catch
+(PR #45 R5). Until a form exists that is red on the defect and green on the
+repair, this class is caught by reading, and §6's "What it lets through" is the
+bound that holds meanwhile.
 
 Neither band quotes the ledger's maximum as a number any more, and that is the
 fix for a defect this file produced twice. §3 published **13.80s** and the final

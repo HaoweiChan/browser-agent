@@ -1591,12 +1591,53 @@ held a single row, and both halves had to be caught by a human reading the file.
 The strict form — published == ledger max — is REFUSED, and the reason is in §6: a later,
 slower row at the same count would retroactively redden an already-published band, which
 is exactly the treadmill the as-of-the-cited-run rule exists to prevent.
-Acceptance: the treadmill-free form. Grade `published >= max(wall_s of rows at this count
-with ts <= the cited ts)` — the maximum as it stood WHEN the band was published, which no
-later run can change. Watched red against a synthetic ledger in which an earlier row at
-the same count is slower than the cited one (`_band_wrong` is already callable over values
-for exactly this reason). Then §6 gains an item and the "What it lets through" paragraph
-narrows to what remains: rows recorded after the cited ts.
+
+**No graded form is currently known, and one candidate is already dead.** This block first
+proposed `published >= max(wall_s of rows at this count with ts <= the cited ts)` and
+claimed it would have caught PR #45 R2. It would not (PR #45 R5). The arithmetic, against
+the ledger at `32cb549`, rows at invariant/59 being 002326 14.02, 002424 14.08, 002824
+13.17, 003025 14.16, 003411 13.18, 081958 13.2:
+
+    cited 20260824-002424, published 14.08 -> as-of max 14.08 -> 14.08 >= 14.08 -> GREEN
+    cited 20260824-003025, published 14.16 -> as-of max 14.16 -> 14.16 >= 14.16 -> GREEN
+
+It passes the defect and the repair alike, and it does so structurally, not by luck: the
+R2 defect was citing 002424 while the slower 003025 stood at a LATER ts, which an
+as-of-the-cited-ts bound cannot see by construction. An author satisfies it by citing an
+early row, which is precisely what happened. Do not re-propose it.
+Acceptance: a form that is demonstrably **red on `002424`/14.08 and green on
+`003025`/14.16 against the committed ledger**, with the arithmetic run and shown before
+it is published anywhere — the candidate above is what happens otherwise. As-of the band's
+own publication (rather than as-of the cited row's ts) is the obvious next candidate and
+is unchecked; note that it needs a publication instant the grader can derive, and the
+ledger alone does not carry one. Whatever the form, it is watched red against a synthetic
+ledger (`_band_wrong` is already callable over values for exactly this reason), and only
+then does §6 gain an item and "What it lets through" narrow. Until then ADR-019 §3 says
+plainly that no graded form exists, and that sentence is the honest state of this class.
+
+### T-R77 — the busy-branch grader pins the prefix literal, not the field it reads            [status: todo]
+Origin: PR #45 R6
+Spec (reviewer's finding, verbatim from `tasks/reviews/pr45-r2.json`):
+- Claim: "The R1 repair pins only the prefix LITERAL parsed out of expect.page_branch, not
+  the event field the predicate reads, so a page branch that tests a field the refusal
+  event never carries still passes green with the panel rendering 'chromium failed'."
+- Evidence: "src/browser/eval_adapter.py:2218-2222 — the regex takes 'busy' out of
+  page_branch but the observed side is hardcoded to e.get('error'). Mutating server.py:794
+  and the case's expect.page_branch together to String(ev.status || '').startsWith('busy')
+  (the refusal event has no status field) leaves page_branch in S.PAGE satisfied and
+  ev.error still starting with 'busy': observed {passed: true, wrong: {}}. The
+  indexOf(...)===0 rewrite does redden as claimed, so the vacuous path is the field, not
+  the operator. Lower than R1 because the exploit requires editing the case JSON, which a
+  diff review sees; R1's original required editing server.py alone."
+- Repro: "copy 32cb549 to /tmp, replace String(ev.error || '').startsWith('busy') with
+  String(ev.status || '').startsWith('busy') in BOTH src/browser/server.py and
+  evals/adversarial/smoke-stream-takes-the-run-slot.json, then run_case(...) ->
+  {passed: true, wrong: {}}."
+- Acceptance: "the grader derives the read field from the branch as well as the literal
+  (e.g. parse ev.<field> out of page_branch and test that key of the observed event),
+  watched red against the ev.status mutant; or the case's provenance drops the claim that
+  the server's string and the page's predicate are pinned to one another and states that
+  only the literal is pinned."
 
 ## Notes
 
