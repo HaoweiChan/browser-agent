@@ -43,3 +43,5 @@ ADR-007). Full criterion table with evidence: `tasks/TODO.md` at `98de1a6`
 and `docs/plans/completed/task1-b-level-plan.md`. Standing qualification:
 green live cases run hand-written plans, so live *planning* quality is
 unmeasured (ADR-007) — the M5/M10 held-out probes are the counterweight.
+- M39 — a malformed judge completion is retried once, then fails closed exactly as before (2026-08-24) — ADR-023, PR #44, trace in tasks/reviews/pr44-r*.json; 5 rounds, 2 circuit breakers, 12 findings (2 HIGH / 4 MEDIUM / 6 LOW), 13 debt items T-M39-1..T-M39-13, gate green at every commit. Reading a verdict out of an uncontrolled completion fail-opened four times — fence strip, `re.fullmatch`, unguarded object scan, then the published claim about the guard that fixed it — three of them regressions against main, every one through a green gate, because nothing asserted over the *completion* until this PR. Two of the twelve findings originated on the review side. Five merge laps (T-M39-11); the last red was contention rows never in the index, not a regression
+

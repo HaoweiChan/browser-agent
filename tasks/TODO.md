@@ -162,30 +162,6 @@ after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
 
-### M39 — A malformed judge response is retried once before failing closed            [status: pr]
-Origin: post-deploy receipt round for PR #38 (2026-08-23). Run `7787f9c9`
-(HN item 1, "What is the title of this story?"): extraction `"Y Combinator"`
-was correct, every L1 predicate passed, and the run ended `failure:semantic`
-with reason `judge unavailable, failing closed: JudgeError: malformed judge
-response: JSONDecodeError: Expecting value: line 1 column 1 (char 0)`. The
-next two runs of the same task (`833bd511`, `6c66bdd4`) passed. ADR-017's
-fail-closed rule is right — a judge that cannot be read must not certify —
-but one transient malformed completion currently costs a correct run outright.
-Spec: on `JudgeError` caused by an unparseable/empty completion (NOT on a
-missing key, NOT on a refusal, NOT on a reasoned FAIL), `judge()` retries the
-same call exactly once with the same prompt; the second failure fails closed
-exactly as today. Both attempts' usage is billed and recorded; the verdict
-records `judge_attempts`. Bounded: one retry, no backoff loop, no model
-switch; the retry stays inside the run's token/USD budget and ADR-017's
-fail-closed semantics are otherwise unchanged.
-Acceptance: a stub-judge case pins the shape red first (first completion
-malformed, second well-formed → PASS with `judge_attempts: 2`); a negative
-case pins that two malformed completions still fail closed with the existing
-reason and `judge_attempts: 2`; `judge-fail-closed-on-*` cases stay green;
-`docs/analysis.md` cost section states the worst-case extra judge call per
-run; gate green under the ADR-019 ceiling.
-Out of scope: judge prompt/model changes; retrying a reasoned FAIL.
-
 ### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: pr]
 Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
 two Try examples produce nothing, five cards should be eight, the running stage should
@@ -257,6 +233,77 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M39-14 — the front-page baseline cites a run that failed, and the rule set makes it unfixable in place            [status: todo]
+Origin: found on merged `main` (`7e0b662`) by the session that had driven PR #52,
+immediately after M39 merged. Reproduced and diagnosed here; NOT fixed, because
+fixing it needs a decision, not an edit.
+Spec: README's "Where it stands" block publishes
+`fast  180/181    invariant  65/66` as the latest offline baseline, citing
+`evals/report/20260824-052304-fast.json` (score 0.994) and
+`20260824-052134-invariant.json` (score 0.985). Both are RED runs — the failing
+case in each is `docs-numbers-are-derived` itself. ADR-019's band bullets have
+the same shape: the `fast` band cites ts `20260824-051337` at `179/181` and the
+`invariant` band cites `20260824-051159` at `64/66`. So the repo's front page
+and its ceiling ADR both advertise numbers taken from failing runs, while the
+tree itself passes 181/181 and 66/66.
+Why the gate does not catch it: `headline_report_is_red` exists and is correct,
+but it deliberately excludes the running case's own id, with a documented
+deadlock argument (`eval_adapter.py`, ~line 4712) — once this case goes red,
+every later report contains it failing, so without the exclusion no green report
+could ever be produced to cite. The exclusion is right. The consequence is that
+a block stale in exactly this way is invisible to the gate.
+Why it is not a one-line repoint (attempted, reverted): three rules bind at once
+and are currently unsatisfiable together.
+  1. the band may not cite a `dirty` run when a clean one was available
+     (`cited_a_dirty_run`);
+  2. the published number must derive the SAME ceiling as the ledger maximum at
+     that count (`item 3`, same-ceiling);
+  3. producing a green report at the current count requires `--report`, and
+     running it on a tree carrying the very fix under review makes that row
+     `dirty`.
+Measured here: a `--report` pair gives green 181/181 and 66/66, but the gate run
+that follows lands a dirty 75.32s row, which becomes the ledger maximum and
+derives 90, while every CLEAN row is ~73s and derives 85. Republishing to the
+dirty row trips rule 1; republishing to the clean row trips rule 2. The only
+exits are to drop the dirty row from the ledger — a second discretionary
+deletion of measurements, which should not be routine — or to change a rule,
+which is an ADR.
+Repro: on `main`, read README lines 53-58 beside
+`python3 -c "import json; d=json.load(open('evals/report/20260824-052304-fast.json')); print(d['score'])"` -> 0.994.
+Acceptance: the front-page block and both ADR-019 band bullets cite runs that
+PASSED, with the sequencing that makes that reachable written down (commit
+first so the tree is clean, then `--report`, then cite) — or an ADR amending
+whichever of the three rules deadlocks, saying which and why. Plus a case that
+reddens when a cited baseline report has any failure other than the excluded
+self-reference, so this class stops being invisible.
+Out of scope: the self-exclusion in `headline_report_is_red`; it is load-bearing
+and its deadlock argument holds.
+
+### T-M39-13 — nothing grades task-id or ADR-number uniqueness, so both collide silently            [status: todo]
+Origin: PR #44 pass-5 merge, found by the pr-loop verification agent while
+computing over the merged trees (credited at the request of the session that
+hit the second instance).
+Spec: two id collisions happened in this repo on 2026-08-24, both merging
+clean and green because nothing in the eval set reads the id space.
+(1) `T-M39-1` was defined differently on `task/M39` (`stub_judge` certifies on
+any unrecognised verdict token) and on `main` (arrived via PR #51: the judge's
+unreadable-completion retry may not reach a MISSING body); `tasks/TODO.md`
+auto-merged and carried both under one id until a human-directed renumber to
+`T-M39-12`. (2) `ADR-023` was allocated independently by PR #42 and PR #44
+before #42 vacated it to `ADR-026`; the collision was caught by hand, and only
+because one orchestrator happened to grep for it before pushing.
+This is the same class as T-M40-1's nine renumbered debt ids: the failure mode
+is not a merge conflict but the absence of one.
+Repro: define `### T-X-1` on two branches with different bodies, or add
+`specs/decisions/ADR-0NN-*.md` on two branches with the same NN; merge. Git
+reports nothing and both suites stay green.
+Acceptance: an `invariant`-tagged case that reddens on a duplicate task id in
+`tasks/TODO.md` + `tasks/DONE.md`, and on a duplicate ADR number across
+`specs/decisions/` filenames and `INDEX.md` rows. Watched red first by
+introducing one of each. Pure-code probe, no browser, no LLM — it belongs in
+`invariant` because it is a property of the tree, not of a run.
+Out of scope: renaming any existing id; deciding an allocation protocol.
 
 ### T-M39-12 — the judge's unreadable-completion retry may not reach a MISSING body, only a malformed one            [status: todo]
 Origin: T-M40-5 probe, 2026-08-24, `run_id 97677d75`, build `8183dc2`
