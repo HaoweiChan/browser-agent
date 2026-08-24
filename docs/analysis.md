@@ -1076,6 +1076,93 @@ adjusting ADR-025's thresholds; it is the evidence T-M40-2-1 and T-M40-2-2
 attributed against, and the debt blocks below are the next-lever candidates
 this round actually produced.
 
+### Round 2
+
+Probe re-run 2026-08-24 against `main@c83febb` (`deploy-smoke` run
+`32689266803`, status `success`) — a later commit on `main` than round 1's
+`8183dc2`, still carrying ADR-024's plan-lint refusal, so it satisfies
+ADR-025's validity precondition (§Validity precondition: "a later commit on
+`main` that still contains ADR-024's refusal"). Provenance verified
+unchanged before and after (`actual_head_sha_before` ==
+`actual_head_sha_after` == `c83febbe47f86724491688a7dc4d18ecd20d6b13`),
+`contaminated_runs: []` — zero contamination, same as round 1. 18/18 runs
+terminal. Raw evidence for every run is committed at
+`evals/report/20260824-042156-t-m40-5-probe-round2.json`. Cost `$0.015246`
+total, wall-clock `296.1s` total.
+
+**Threshold verdicts, round 2:**
+
+- **(a) HARD — zero wrong-success: PASS, 0/18.** Combined with round 1,
+  that is **36/36 clean across both rounds** — no run in either probe has
+  ever reported `status: success` with an answer that did not match the
+  re-verified ground truth.
+- **(b) Regressed set correct-answer rate ≥ 50%: PASS — 6/12 = 50.0%.**
+  Stated plainly, as ADR-025's own commitment requires: **this is exactly
+  at the pre-registered bar, not comfortably above it.** One fewer correct
+  run on either x-rates.com or multpl.com in this same round would have
+  put it back under threshold. Round 1 measured 2/12 = 16.7% on the same
+  build class (FAIL); round 2 measured 6/12 = 50.0% (PASS) on a later
+  commit with no code change to the resolver/executor path recorded
+  between the two probes.
+- **(c) Controls, at most one miss each: PASS.** companiesmarketcap.com
+  3/3, bankofcanada.ca 3/3 — round 1 was companiesmarketcap.com 2/3 (one
+  miss, a judge crash) and bankofcanada.ca 3/3; round 2 has zero misses on
+  either control.
+- **(d) Refusals: 0.**
+
+**Per-task deltas, round 1 → round 2, every run_id from the round-2 report:**
+
+| # | Site | Round 1 | Round 2 | run_ids (round 2) |
+|---|---|---|---|---|
+| 1 | x-rates.com | 1/3 | 3/3 | `19ae36c1`, `5ff8194f`, `eae1eb65` |
+| 2 | multpl.com | 1/3 | 2/3 | `026e10cb`, `bcdf4d38` (correct); `46e9eb35` (`failure:extract`) |
+| 3 | quotes.toscrape.com (author page) | 0/3 | 1/3 | `4d0d3142` (correct); `480d71a4`, `f8945477` (`failure:semantic`) |
+| 4 | openlibrary.org | 0/3 | 0/3 | `eaa16859`, `12fb368f`, `53722c1a` (all `failure:extract`) |
+| 5 | companiesmarketcap.com (control) | 2/3 | 3/3 | `c4653dbe`, `6580fc85`, `584936a3` |
+| 6 | bankofcanada.ca (control) | 3/3 | 3/3 | `f18bb1c6`, `6544eb51`, `6ecdf5b8` |
+
+**THE CAVEAT THAT MUST NOT BE SOFTENED: round 2 is not evidence for or
+against M38, and does not close M38's post-merge acceptance item.** Zero of
+the 18 round-2 runs carry a `narrowed:` trace note — the round-2 report's
+own `m38_measurement` block records `count_narrowing_fired: 0` and states
+it directly: "0/18 runs exercised any M38 narrowing rung (anchor-proximity,
+document-order, near-normalised, near-prefix). All round-2 improvement over
+round-1 is attributable to OTHER causes (successful mid-run replans,
+live-page-state variance), NOT to M38's ambiguity-narrowing mechanism. The
+frozen 6-task probe set does not appear to exercise resolver ambiguity
+(N>1 matches) at all." M38's ambiguity-narrowing mechanism (PR #42,
+ADR-026) never fired once across either round of this probe, on either
+build. The recovery this round measured traces instead to the **replan
+path**: the same word-identical plan-lint trigger (`WebArea`/document-root
+extract refused before execution) that failed to recover on round 1's
+`8183dc2` now recovers mid-run on `c83febb` — x-rates.com run 1
+(`run_id 19ae36c1`, `replans: 1`, note: "replanned before execution — plan
+lint: ...") and quotes.toscrape.com run 9 (`run_id 4d0d3142`, `replans: 1`,
+the round's only correct quotes-author run). Model-side variance between
+builds cannot be excluded — nothing in this probe distinguishes a
+code-side fix to the replan path from a model-side improvement between the
+two probe windows, and no commit between `8183dc2` and `c83febb` is cited
+here as the cause, because none is known to be.
+
+**Rep-level nondeterminism, as a finding in its own right.** Two tasks
+disagree with themselves across their own three round-2 reps, on the same
+build, same task text, same start URL: multpl.com is 2/3 correct
+(`026e10cb`, `bcdf4d38`) against 1/3 `failure:extract` (`46e9eb35`), and
+quotes.toscrape.com's author page is 1/3 correct (`4d0d3142`) against 2/3
+`failure:semantic` (`480d71a4`, `f8945477`, both extracting an adjacent
+label — `"Description:"` / bare `"Born:"` — instead of the birth date,
+matching T-M40-5-2's already-filed shape). Three identical requests to the
+same page, in the same probe run, three different outcome classes. This is
+distinct from the between-round deltas above: it is variance *inside* a
+single round's three repetitions, and it means a single rep of either task
+is not a reliable signal of that task's true pass rate on a given build.
+openlibrary.org is the control case for the opposite finding: 3/3 across
+both rounds recorded the **identical** `StepError: extraction returned
+empty text` at step 2 (`eaa16859`, `12fb368f`, `53722c1a` — round 2;
+matching round 1's shape) — no variation at all across six total reps
+spanning two builds, on a page this repo has never recorded a successful
+extraction from.
+
 
 ## 8b. The first live-planner run, and the first wrong answer scored PASS
 

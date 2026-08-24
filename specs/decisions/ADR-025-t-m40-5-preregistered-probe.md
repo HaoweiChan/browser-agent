@@ -91,3 +91,33 @@ up in `docs/analysis.md` §8a-4, per the Commitment above. The D28 rows in
 `docs/support-matrix.md` are re-declared from these results in the same
 commit. Raw per-run evidence is committed at
 `evals/report/20260824-030201-t-m40-5-probe.json`.
+
+### Round 2
+
+Re-run 2026-08-24 against `main@c83febb` (`deploy-smoke` run `32689266803`,
+status `success`) — a later commit than round 1's `8183dc2`, still carrying
+ADR-024's refusal, so §Validity precondition's "or a later commit on `main`
+that still contains ADR-024's refusal" applies. Provenance verified
+unchanged before/after, zero contaminated runs. 18/18 runs terminal.
+Verdicts:
+
+- **(a) HARD, zero wrong-success: PASS — 0/18** (36/36 clean across both
+  rounds).
+- **(b) Regressed set ≥ 50%: PASS — 6/12 = 50.0%.** Stated plainly per this
+  ADR's own commitment: this is **exactly at the pre-registered bar**, not
+  comfortably above it.
+- **(c) Controls, at most one miss each: PASS** — companiesmarketcap.com
+  3/3, bankofcanada.ca 3/3.
+- **(d) Refusals: 0.**
+
+Overall verdict: **PASS**. This does **not** close T-M40-5's own Acceptance
+clause by itself — see that clause's "this block stays open until [the
+filed debt] are resolved" — and it does **not** constitute evidence for or
+against M38 (PR #42's resolver narrowing): 0/18 round-2 runs fired any M38
+narrowing rung, so the improvement over round 1 is attributed to the
+replan path and/or model-side variance, not to M38. Full per-task table,
+every run_id, the M38-non-firing measurement, and the rep-level
+nondeterminism finding are written up in `docs/analysis.md` §8a-4 Round 2.
+The D28 rows in `docs/support-matrix.md` are re-declared from these results
+in the same commit. Raw per-run evidence is committed at
+`evals/report/20260824-042156-t-m40-5-probe-round2.json`.

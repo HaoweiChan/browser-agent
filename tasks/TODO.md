@@ -323,6 +323,30 @@ Acceptance: an adversarial case reproducing "resolve succeeds on one element, ex
 label with no adjacent value" on this or an equivalent fixture, watched red first per CLAUDE.md
 rule 2, before any fix to the extraction/anchor-selection path is attempted.
 
+### T-M40-5-3 — the same task, same page, same build disagrees with itself across its own reps            [status: todo]
+Origin: T-M40-5 round-2 probe, 2026-08-24, build `c83febb`
+(`docs/analysis.md` §8a-4 Round 2, "Rep-level nondeterminism, as a finding in its own right").
+Spec: this is not the round-1→round-2 delta (a different build, already the subject of T-M40-5's
+own Update) and not T-M40-5-1/T-M40-5-2 (those name specific failure MECHANISMS — the
+replan-path identity-anchor kill, and the label-without-value extraction — each reproduced
+consistently once it fires). This block names a third, orthogonal thing: on the SAME build,
+SAME task text, SAME start URL, three back-to-back repetitions land in different outcome
+classes. multpl.com: 2/3 correct (`026e10cb`, `bcdf4d38`) vs. 1/3 `failure:extract`
+(`46e9eb35`). quotes.toscrape.com's author page: 1/3 correct (`4d0d3142`) vs. 2/3
+`failure:semantic` (`480d71a4`, `f8945477` — the T-M40-5-2 label-without-value shape, which
+itself only fires on 2 of the 3 reps here, not all 3). Neither task's plan, page, or build
+changed between reps; only the outcome did. This means a single rep of either task is not a
+reliable read of that task's true pass rate on a given build — the 50.0% headline threshold
+number itself (§8a-4 Round 2) would have read 33.3% or 66.7% with one rep's outcome flipped,
+and ADR-025's protocol (3 reps per task) was sized for exactly this risk but does not yet have
+a case that pins the risk itself, only the aggregate threshold.
+Acceptance: an adversarial case that reproduces or fixture-simulates rep-level disagreement on
+an otherwise-identical request (e.g. a mutation that flakes between two extraction outcomes
+across repeated runs against unchanged fixture state), watched red first per CLAUDE.md rule 2,
+before any fix or mitigation (e.g. a majority-vote-of-N-reps policy, or root-causing WHY the
+same request produces different resolver/extraction outcomes) is attempted. Not closed by
+T-M40-5-1 or T-M40-5-2 individually — check both before assuming this is already covered.
+
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
 Origin: PR #42, R2/R3's acceptance and the coordinator's round-1 disposition.
 Re-checked against `origin/main` after T-R44 merged (2026-08-24): **both halves
@@ -1019,7 +1043,7 @@ Evidence: `src/browser/eval_adapter.py:385` — `wrong = [{"task": t, "plan": [s
 Repro: flip `(AGG, [None], True)` to `False` -> `[FAIL] plan-gap-truth-table (adversarial, 0.0s) AttributeError: 'NoneType' object has no attribute 'get'`, suite 59/60 with INVARIANT VIOLATION.
 Acceptance: the report builder tolerates a non-dict step (e.g. `s.get("action") if isinstance(s, dict) else s`) so a red row names its plan.
 
-### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: probe run, half done — see Update]
+### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: both rounds run — see Update]
 Depends: T-M40-2
 Origin: PR #43 (M40) T-M40-2, split at pr-loop SPEC 2026-08-24 — the half of T-M40-2's
 acceptance that cannot be gated inside T-M40-2's own PR.
@@ -1034,6 +1058,23 @@ surfaced three failure shapes (filed below as debt) that were not in D28's post-
 and T-M40-2-1/T-M40-2-2 (the two levers this probe exists to attribute against) still need a
 decision now that the data they were waiting on exists — this block stays open until those are
 resolved rather than closed on "the re-probe happened."
+Update (round 2, 2026-08-24): re-run 18 times against a later commit, `main@c83febb`
+(`deploy-smoke` `32689266803`, still carrying ADR-024's refusal), same pre-registered
+thresholds and task set. Overall verdict this round: **PASS** — (a) 0/18 wrong-success
+(36/36 clean across both rounds); (b) regressed set **6/12 = 50.0%, exactly at the
+pre-registered bar**, not comfortably above it (x-rates.com 1/3→3/3, multpl.com 1/3→2/3,
+quotes-author 0/3→1/3, openlibrary.org unchanged 0/3→0/3); (c) controls 3/3 and 3/3, both
+PASS; (d) 0 refusals. Full write-up `docs/analysis.md` §8a-4 Round 2; ADR-025 Outcome section
+carries both rounds' verdicts; D28 re-declared with round-2 rows in `docs/support-matrix.md`
+(same commit); raw evidence `evals/report/20260824-042156-t-m40-5-probe-round2.json`.
+**Round 2 does NOT close this block's Acceptance and does NOT close M38's post-merge
+acceptance item**: 0/18 round-2 runs fired any M38 (PR #42) narrowing rung, so the frozen
+6-task probe set is not evidence for or against M38 — the recovery traces to the replan path
+recovering mid-run (x-rates run 1 `19ae36c1`, quotes run 9 `4d0d3142`, both `replans: 1`) and
+to possible model-side variance between builds, neither of which this probe can separate.
+Round 2 also surfaced rep-level nondeterminism as its own finding — filed as T-M40-5-3 below.
+This block stays open until T-M40-2-1/T-M40-2-2 are decided (unchanged from the round-1
+update) and until T-M40-5-3 is resolved.
 Spec: T-M40-2's acceptance ends "then the D28 rows re-declared from a post-fix probe of the
 same tasks". That clause is structurally not deliverable by the PR that carries the fix: a
 post-fix probe reads the DEPLOYED build, and the deploy is a push to `origin/main` (Zeabur),
