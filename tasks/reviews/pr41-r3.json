@@ -1,0 +1,54 @@
+{
+  "pr": 41,
+  "round": 3,
+  "scope": "repair diff e634c2b..HEAD + standing round-2 findings",
+  "standing_round2": {
+    "R7": "closed — all three probes False, every case file swept",
+    "R8": "closed — three previously-green mutations redden; the bolded-only gap is declared and its reasoning stands",
+    "R9": "closed in §5 and README:141-146; a third site survives -> R15",
+    "R10": "closed for the repro and the counts; the repair added a new false acceptance clause -> R16",
+    "R11": "closed",
+    "R12": "closed",
+    "R13": "closed"
+  },
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": {
+    "fired": true,
+    "reason": "3 review rounds without approval (pr-loop protocol)",
+    "blocker": "R14 — ADR-019 §5 says 'Edit a cell and the gate reddens'; two of the eight cells are free, verified green on mutation",
+    "pattern": "fourth instance in this PR of a description claiming more than its check does — the misattribution (R1), R7's half-fix, R8's scope statement, and now R14. Each was introduced by the repair for the previous one."
+  },
+  "gate": {
+    "invariant": "61/61 = 1.000",
+    "fast": "156/156 = 1.000"
+  },
+  "findings": [
+    {
+      "id": "R14",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The sentence c8a4777 added to close R9 — ADR-019 §5's \"Edit a cell and the gate reddens\" — is false for a quarter of the table: `ci-numbers-are-derived` reads the `invariant` column only through min/max, so the two non-extreme `invariant` cells can be changed to any value inside the band and the whole gate stays green.",
+      "evidence": "ORCHESTRATOR-VERIFIED. ADR-019:240-244 says \"**This table is graded** ... Edit a cell and the gate reddens.\" The check (eval_adapter.py:1123-1141) builds `by['invariant']` and only ever uses min/max of it — README publishes no invariant four-value list, only the range 14.80-16.47s — while the `fast` column is additionally pinned by the sorted-list substring at :1118-1121. Mutating §5 row 2 `| 2 | 15.85s | 74.06s |` -> `| 2 | 15.90s | 74.06s |` leaves min 14.80 / max 16.47 unchanged and `_check_ci_numbers_are_derived()` returns passed True, wrong []. Row 4 `15.60s` -> `15.99s` likewise. That leaves a number in a spec that nothing reads — the exact T-R51 residue this case was written to close, and this PR's fourth instance of a description claiming more than its check does.",
+      "repro": "rewrite §5's row-2 invariant cell 15.85 -> 15.90 -> `_check_ci_numbers_are_derived()` passed True, and `--suite invariant` stays 61/61",
+      "acceptance": "Either the check reads all eight cells (README publishes the invariant four-value list too, or the table is compared against a second source cell-by-cell) with the row-2 and row-4 mutations added to watched_red and watched red first; or §5:244 and the case's docstring/provenance say precisely which cells are pinned — `fast`'s four values and `invariant`'s min and max — and name the two free cells as ungraded."
+    },
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R9's defect survives in a third place the repair did not sweep: ADR-019 §7 still tells the reader nothing new is graded about the CI numbers, directly contradicting §5's new \"This table is graded\" paragraph in the same file.",
+      "evidence": "ORCHESTRATOR-VERIFIED: `grep -c 'graded stays what was graded'` -> 1. ADR-019:571-573 reads \"**What is graded stays what was graded: `fast-wall-clock-budget` checks that the workflow declares the ceilings §5 names.**\" Written at 9840e23, untouched by 2e00ab3 and c8a4777. At HEAD that is false twice over: `ci-numbers-are-derived` also pins §5's table, README's four `fast` values, both ranges, both derived ceilings and the run id in both documents, and re-checks the workflow declaration. README:141-149, rewritten by c8a4777, points the reader at §7, so a reader following the new text lands on the stale claim. R9's acceptance named §5 and README:141-146 only, so the repair stopped there.",
+      "repro": "`'graded stays what was graded' in ADR-019` -> True, against :240's \"**This table is graded**\"",
+      "acceptance": "§7's sentence states what is graded at HEAD and keeps only the genuinely ungraded half — that anyone ever ran the four attempts (T-R73). No sentence in ADR-019 says the CI numbers' grading is unchanged."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R10 repair introduced a new false claim into the same T-R77 block it was fixing: the acceptance now says the residual is \"watched red by citing a band at `fast` 138, where both regimes are present\", but every row at `fast` 138 is a pre-switch Taipei stamp — no count in the committed ledger holds rows from both stamping regimes, so the watched-red it prescribes cannot fire.",
+      "evidence": "T-R77's acceptance, added by c8a4777 (the pre-repair text was just \"watched red by citing a band at `fast` 138\"). Against the committed ledger: fast/138 has 10 rows, ts 20260823-211124..215030, all `env: local`, all pre-switch Taipei, zero UTC. Grouping every (suite, total) by regime yields NO mixed bucket at all — fast/138 [utc 0, taipei 10], fast/154 [0, 5], invariant/54 [0, 45], invariant/59 [0, 6]; the UTC rows sit only at fast/155-156 and invariant/60-61. Someone implementing T-R77's second option would write a mixed-regime guard, run the prescribed probe, see green, and conclude the guard is broken.",
+      "repro": "group the committed ledger's rows by (suite, total) and regime -> no bucket holds both; fast/138 is [0, 10]",
+      "acceptance": "T-R77's acceptance either drops the \"where both regimes are present\" clause and names a reproducible watched-red (a synthetic ledger holding one Taipei and one UTC row at the same suite/count, the way `band-is-graded-against-its-own-environment` drives its own probes), or states that the committed ledger holds no mixed-regime count today and that the guard must be watched red on a constructed one."
+    }
+  ]
+}

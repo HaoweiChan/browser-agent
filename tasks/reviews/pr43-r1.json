@@ -1,0 +1,137 @@
+{
+  "round": 1,
+  "pr": 43,
+  "result": "REQUEST_CHANGES",
+  "reviewers": [
+    "cold-reviewer (code)",
+    "spec-drift (docs/specs)"
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "A dropped stream whose run record 404s throws inside renderResult and leaves the page asserting a dead run is still executing, with the new spinner animating and Run task disabled forever.",
+      "evidence": "src/browser/server.py es.onerror — no .catch, and renderResult reads r.status.split(':') unguarded. RUNS is in-memory, so a redeploy or restart makes GET /tasks/{id} 404 (D19/D18).",
+      "repro": "submit -> stream 500 -> record 404: #status 'RUNNING', go.disabled true, uncaught TypeError \"Cannot read properties of undefined (reading 'split')\"",
+      "acceptance": "terminal state and both buttons released on every ending; pinned by a case."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Browser check started under a live run overwrites the trace and paints 'chromium ok' in the success colour over a run that is still executing or has failed.",
+      "evidence": "src/browser/server.py — the smoke button had no id and was never disabled; smoke() writes #status/#steps and blanks the page view mid-run; smoke_events launches a second Chromium without taking SEM.",
+      "repro": "click Browser check, then Run task (or any Try card) within the ~2-6s Chromium launch window.",
+      "acceptance": "one stream at a time, both buttons owned by whichever is running."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "renderScraped cuts an extraction at 300 chars with no marker, so a rejected container dump renders as a tidy well-scoped answer.",
+      "evidence": "src/browser/server.py renderScraped — String(e.value).slice(0,300) with no ellipsis, against stepEl which appends one at 90.",
+      "repro": "any run whose evidence.extractions[].value exceeds 300 chars — the dominant live failure shape (D28 shape 1, six domains).",
+      "acceptance": "a truncated value is visibly truncated and states its true length."
+    },
+    {
+      "id": "R4",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "D27/D28's published counts contradict the run ids enumerated in the same cell.",
+      "evidence": "docs/support-matrix.md — header said 27 runs against 40 enumerated ids; 'Answers (10 runs)' enumerated 16; 'Failures (17 runs, 14 domains)' enumerated 23 across 17 domains.",
+      "repro": "recount the run ids in the row.",
+      "acceptance": "every figure re-derived from the raw probe logs; true values 43 runs / 22 domains / 13 answered / 30 failed."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "'Every status below rests on stubbed plans' is falsified 22 lines later by the new rows, and the new paragraph's 'first' claim is false because the quotes row is also live-declared.",
+      "evidence": "docs/support-matrix.md header block vs the M40 paragraph.",
+      "repro": "read both paragraphs.",
+      "acceptance": "header narrowed to name the exception; 'first' claim replaced with the actual methodological difference."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The table's own rule requires unsupported/unreliable rows to cite a failing case id; the new unreliable rows cite run ids, and no check can tell.",
+      "evidence": "docs/support-matrix.md rule line; support-matrix-cites-real-cases only verifies that backticked case ids resolve.",
+      "repro": "read the rule against the rows.",
+      "acceptance": "rule states both forms, which rows use which, why one is weaker, and that nothing grades it."
+    },
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Five documents assert the status this change reversed, none of them graded.",
+      "evidence": "docs/analysis.md sec.4 and sec.6, README live-planning bullet and 'fourth live site' section, ADR-009 Decision 4 ('the support matrix row for the domain is unsupported', in the sentence whose job is 'nothing was softened'), specs/decisions/INDEX.md.",
+      "repro": "grep the quotes.toscrape.com status word across docs/ and specs/.",
+      "acceptance": "each amended in place with a dated note; ADR-009 struck-not-deleted per the ADR-015 convention."
+    },
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "A milestone that changed the reviewer UI's information architecture and added three declared rows shipped with no ADR.",
+      "evidence": "ADR-014 ruled the restyle happened 'without changing the trace-first information architecture'; the change converts the trace region to a two-column grid with a sticky aside.",
+      "repro": "compare ADR-014's ruling with the shipped page.",
+      "acceptance": "an ADR that records the decision and what it concedes."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "ui-tinboker-style's provenance claims a co-check between the spinner and the reduced-motion branch that the adapter does not perform.",
+      "evidence": "src/browser/eval_adapter.py runs three independent substring tests.",
+      "repro": "narrow the reduced-motion block from '*,*::before,*::after' to '*' — spinner keeps animating, case stays green.",
+      "acceptance": "provenance states the real limit and names the case nobody has written."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "docs/analysis.md sec.6's coverage table has no rows for the newly declared live domains, and its guard cannot fire for a domain with no cases.",
+      "evidence": "the guard derives domains from eval-case domain tags.",
+      "repro": "declare a domain with no case — no row, nothing red.",
+      "acceptance": "rows added by hand with the zero stated as the finding."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The EXAMPLES header comment dates every entry 2026-08-22 and offers run ids as receipts against GET /tasks/<id>, which a redeploy makes unreachable.",
+      "evidence": "src/browser/server.py EXAMPLES header; D19 declares RUNS in-memory.",
+      "repro": "read the comment against the entries it introduces.",
+      "acceptance": "dates corrected; the receipt claim points at the docs, not a dead endpoint."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "README's prompt-record count is off by one as of this change set.",
+      "evidence": "README '15 curated records' and 'prompts/ 001-015'.",
+      "repro": "count prompts/.",
+      "acceptance": "16 / 001-016."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "T-R61 (stale HN placeholder) sits two lines above the EXAMPLES map this change rewrote and was left.",
+      "evidence": "tasks/TODO.md T-R61; src/browser/server.py #task placeholder.",
+      "repro": "type the placeholder verbatim against the HN card's URL.",
+      "acceptance": "placeholder is a task with a cited correct run; the ungraded half stays open work."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The documented /support-matrix entry shape is not what the endpoint emits, and CLAUDE.md names a subagent file that does not exist; the methodology doc omits the live suite.",
+      "evidence": "docs/support-matrix.md entry-shape block vs parse_matrix's {rows, cells}; docs/evals/evaluation-methodology.md lists three suites.",
+      "repro": "compare the documented shape with GET /support-matrix.",
+      "acceptance": "pre-existing, out of scope for this task; not introduced here."
+    }
+  ]
+}

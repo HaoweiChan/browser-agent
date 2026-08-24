@@ -1,0 +1,138 @@
+{
+  "pr": 43,
+  "rounds": [
+    {
+      "round": 1,
+      "resolutions": [
+        {
+          "id": "R1",
+          "outcome": "fixed",
+          "covered_by": "ui-terminal-state-on-every-ending"
+        },
+        {
+          "id": "R2",
+          "outcome": "fixed",
+          "covered_by": "ui-terminal-state-on-every-ending (busy() + smoke assertion, round 2)"
+        },
+        {
+          "id": "R3",
+          "outcome": "fixed",
+          "covered_by": "ui-terminal-state-on-every-ending (clip)"
+        },
+        {
+          "id": "R4",
+          "outcome": "fixed",
+          "covered_by": "none — re-derived from the raw probe logs by hand; D28 states that nothing grades it"
+        },
+        {
+          "id": "R5",
+          "outcome": "fixed",
+          "covered_by": "none — prose"
+        },
+        {
+          "id": "R6",
+          "outcome": "fixed",
+          "covered_by": "none — the rule is kept by hand and now says so"
+        },
+        {
+          "id": "R7",
+          "outcome": "fixed",
+          "covered_by": "none — dated amendments; ADR-009 struck-not-deleted"
+        },
+        {
+          "id": "R8",
+          "outcome": "fixed",
+          "covered_by": "ADR-022 (+ Decision 1a added in round 2)"
+        },
+        {
+          "id": "R9",
+          "outcome": "fixed",
+          "covered_by": "none — provenance now states the real limit"
+        },
+        {
+          "id": "R10",
+          "outcome": "fixed",
+          "covered_by": "none — rows added by hand, zero stated as the finding"
+        },
+        {
+          "id": "R11",
+          "outcome": "fixed",
+          "covered_by": "none"
+        },
+        {
+          "id": "R12",
+          "outcome": "fixed",
+          "covered_by": "docs-numbers-are-derived (adjacent)"
+        },
+        {
+          "id": "R13",
+          "outcome": "fixed",
+          "covered_by": "none — ungraded half left open in T-R61"
+        },
+        {
+          "id": "R14",
+          "outcome": "debt",
+          "note": "pre-existing, not introduced here; left for its own task"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "resolutions": [
+        {
+          "id": "R15",
+          "outcome": "fixed",
+          "covered_by": "ui-terminal-state-on-every-ending (still_running / detached)"
+        },
+        {
+          "id": "R16",
+          "outcome": "fixed",
+          "covered_by": "ui-terminal-state-on-every-ending (smoke_lost)"
+        },
+        {
+          "id": "R17",
+          "outcome": "fixed",
+          "covered_by": "ui-terminal-state-on-every-ending (stale, poll held open)"
+        },
+        {
+          "id": "R18",
+          "outcome": "debt",
+          "became": "T-M40-1"
+        },
+        {
+          "id": "R19",
+          "outcome": "fixed",
+          "covered_by": "none — restore block completed; ceiling stated in triage.note"
+        }
+      ]
+    }
+  ],
+  "watched_red": [
+    "R1: pre-fix page, stream 500 + record 404 -> #status RUNNING, go.disabled true, uncaught TypeError",
+    "R15: round-1 page -> terminal 'failure', status_class 'big failure' on a running record",
+    "R16: smoke onerror reverted -> #status running, animationName spin, terminal null",
+    "R17: cross-run guards deleted, poll held open -> stale record rendered, pvshot src /runs/zzzzzzzz/step_1.png",
+    "R3: 2000-char value -> 300 chars, no ellipsis, no length",
+    "widened UI cases: run against git show HEAD:src/browser/server.py -> both FAIL"
+  ],
+  "out_of_band": "The post-merge re-probe (not a review finding) withdrew two declared rows before merge: x-rates.com 3/3 -> 0/3 and multpl.com 3/6 -> 0/2 on the replaced build. Replaced with bankofcanada.ca (3/3) and ecb.europa.eu (2/3). ADR-022 Decision 1a, D28, T-M40-2.",
+  "pre_merge_confirmation": {
+    "date": "2026-08-23",
+    "why": "ADR-022 Decision 1a — every card and every live-declared row re-run against the build being shipped, immediately before merge. Requested by the owner.",
+    "per_card_on_shipped_build": {
+      "books.toscrape.com": "3/3 (c6be24b1, 6913b9a3, 9a7d58d9)",
+      "news.ycombinator.com": "3/3 (650095dd, afc0aab0, 86f3e279)",
+      "openlibrary.org": "0/3 (a6797fbe, e4264d2f, +1) — deliberate failure demo",
+      "quotes.toscrape.com": "3/3 on the new task (51bc4a0a, eb5ed750, b131ac78); 1/6 on the two it replaced",
+      "wikipedia.org": "3/4 (4bdbd12f, f31a05c8, a51a772f; 7547e580 failed)",
+      "companiesmarketcap.com": "9/9 (+5fe78e48)",
+      "bankofcanada.ca": "4/4 (+8e8db007)",
+      "ecb.europa.eu": "4/5 (+baf51485, df6f07fd; 35c4e211 failed)"
+    },
+    "changed_by_this_pass": [
+      "quotes.toscrape.com — third task this milestone; 'Which tag is listed first under Top Ten tags?' 3/3 replaces two author-name tasks at 1/6 combined",
+      "wikipedia.org — TC1 declared `unreliable`, its first status after sitting at `—` since M6; the note 'one verified run' is replaced by 3/4"
+    ],
+    "finding": "Three of the eight cards changed task or status in one pass. That is the measured decay rate of a live-declared row, and it is now in ADR-022 Decision 1a as the argument for automating the expiry check."
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "pr": 41,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The PR's central root-cause claim is misattributed: on CI run 32626835735 (T-R44's origin) the clause that fired was item 3 (same-ceiling), not item 2 (cited-run)'s dirty allowance — item 2 did not exist in that tree — so ADR-019 §7's headline, its demotion of the wall-clock symptom to 'latent rather than live', and tasks/TODO.md's 'Correction' striking the original (correct) Repro are all false.",
+      "evidence": "ORCHESTRATOR-VERIFIED. PR #32's head is 434a98d. `git show 434a98d:src/browser/eval_adapter.py | grep -c cited_a_dirty_run` -> 0, and its `_BAND_LINE` is the pre-ts form `r\"Slowest recorded `(fast|invariant)` run at (\\d+) cases: \\*\\*([\\d.]+)s\\*\\*\"` — no ts group, no dirty read, no `_band_wrong`. The dirty allowance is physically absent from that tree. `gh run view 32626835735` is sha 434a98d at 07:54:44Z; CI's invariant row there is 16.02s / 52/52 / clean, and 434a98d publishes invariant 12.92s at 52 cases: rule(12.92)=15 vs rule(16.02)=20 -> item 3 fires with exactly `{published_slowest: 12.92, derives_ceiling: 15, ledger_slowest: 16.02, ledger_derives: 20}` — verbatim the Repro the Correction calls wrong. The `20260823-192533`/`20260823-115044` pair belongs to a DIFFERENT run: `gh run view 32637648447` is sha 11545a1 on task/M32 at 11:49:54Z. Affected: ADR-019 §7 (the 'firing clause is item 2' headline and 'A second, separate symptom, latent rather than live ... so neither fires today'), tasks/TODO.md:36-46, band-is-graded-against-its-own-environment.json provenance, eval_adapter.py:914-921, evals/run.py:177-184. §7 also conflates item 3 with item 4: '16.03s derives the committed 20 ... so neither fires' is true only of item 4.",
+      "repro": "`git show 434a98d:src/browser/eval_adapter.py | grep -c cited_a_dirty_run` -> 0; `gh run view 32637648447 --json headSha` -> 11545a1 (task/M32), not 434a98d",
+      "acceptance": "ADR-019 §7, the TODO Correction block, the case provenance and the two source comments name run 32637648447 for the ts/dirty mechanism and run 32626835735 for item 3 (same-ceiling), and stop calling the wall-clock symptom latent for the run on which it actually fired. The original TODO Repro is restored as correct rather than struck.",
+      "orchestrator_note": "This misattribution originated in the orchestrator's relay, not the implementer's analysis: the peer session's diagnosis was correct for ITS run (32637648447) and the orchestrator generalised it to T-R44's origin run. Both symptoms are real; they fired on different runs and different clauses."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Both band parentheticals in ADR-019 §2 and §3 are false against the history.jsonl committed in the same commit, and §3's stated selection rule was not followed.",
+      "evidence": "ADR-019:68-70 says '`dirty: true` — the only row this count has'; the committed ledger holds SIX rows at fast/155 (20260823-141120/141309/141536/141700/142534/142721). ADR-019:130-136 says 'Two rows were available at this count, 13.48 / 13.46s ... this is the slower, chosen so the published number sits as close to the ledger's own maximum as a real run allows'; the same ledger holds EIGHTEEN rows at invariant/60 with maximum 13.94s at ts 20260823-142324, which derives the same ceiling 20 and is strictly closer to the maximum than the published 13.48. Neither statement is graded by any §6 item — the PR #29 R21 selective-presentation class §6 exists to refuse.",
+      "repro": "count rows at fast/155 and invariant/60 in `git show HEAD:evals/report/history.jsonl` -> 6 and 18, invariant max 13.94",
+      "acceptance": "Both parentheticals state what the committed ledger holds (or state nothing enumerable at all, per §3's own 'neither band quotes the ledger's maximum as a number any more'), and the invariant band cites the row its stated rule selects."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "README strikes the older CI band on a ground that is demonstrably false — the run that produced it IS named in a committed ADR and its four numbers reproduce exactly from that run's log — and the ADR that publishes the band is left unstruck, so the two documents now disagree.",
+      "evidence": "README.md:88-90: 'an earlier CI band published here — 59.77 / 60.84 / 64.61 / 64.67s — is struck, because nothing named the run it came from'. ADR-013:162-164 names it: 'commit `09b9740`, run `32455716866` and three re-runs: **59.77 / 60.84 / 64.61 / 64.67s**', and the log reproduces all four verbatim across attempts 1-4 on headSha 09b9740. ADR-013:174-175 still publishes the band and derives from it, with no strike or pointer to README's.",
+      "repro": "gh run view 32455716866 --attempt N --log for N in 1..4 -> 64.61 / 59.77 / 60.84 / 64.67",
+      "acceptance": "README's strike gives a ground that survives the repo's own record — that the band is a 95-case tree superseded by ADR-019 §5's 32561162459 measurement — and ADR-013's copy is either struck the same way or explicitly scoped as superseded, so no committed document publishes an unstruck CI band the other calls struck."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "T-R51's acceptance says 'Watched red either way', but the labelling route ships with nothing that could go red — including the cross-document consistency T-R51's own 'Compounding' clause named — so README's CI numbers can silently drift from ADR-019 §5 again.",
+      "evidence": "ADR-019:229-234 states it outright: 'Nothing grades the four measurements'. README.md:84 publishes '69.37 / 69.54 / 74.04 / 74.06s' and :169-170 the ranges; ADR-019:222-227 carries the same four in a table. No check reads any of them — grep for 74.06/69.37 hits only README, ADR-019, ADR-013 and a provenance blob, never src/. Mutating README.md:84 to '74.04 / 99.99s' leaves `--suite invariant` at 60/60 = 1.000.",
+      "repro": "sed README.md's '74.04 / 74.06s' -> '74.04 / 99.99s'; `--suite invariant` stays 60/60 = 1.000",
+      "acceptance": "A case (invariant, pure code) pins README's four CI values and its ranges against ADR-019 §5's table and the run id, watched red by editing one of them — the same contract `published-band-matches-the-ledger` already gives README's local band row."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The §6 sentence that replaces a stale count with a fresh one is itself off by one: it describes eight members of a band set that has seven.",
+      "evidence": "ADR-019:271-279 lists the band set as seven names and then says 'each of the seven definitions and the `_LEGACY_ENV` constant moved out of the region one at a time' — `_LEGACY_ENV` is one of the seven, so the sentence counts eight. eval_adapter.py:454-456 `_BAND_DEF` has exactly seven alternatives. This is in the same sentence that says 'the count that used to stand here went stale the first time the band set grew'.",
+      "repro": "sed -n '271,280p' ADR-019; sed -n '454,456p' eval_adapter.py",
+      "acceptance": "The sentence stops carrying a count, or carries one that equals `len(_BAND_DEF alternatives)` and is graded against it.",
+      "route_note": "LOW, but it is a wrong count inside the sentence explaining why counts go stale."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The migration residual §7 names is real and reachable inside a single environment — 55 committed rows are `env`-tagged AND naive-local stamped, because `env` and the UTC stamp landed in different commits — and unlike T-R73/74/75 it carries no task id.",
+      "evidence": "75 rows in the committed ledger carry `env`; the earliest is 20260823-140957 (UTC) while rows such as 20260823-210938 / 211124 (sha 0efb0e9, env: local) are pre-switch Taipei stamps. Within `env: local`, 20260823-140957 (14:09:57Z) sorts ABOVE 20260823-210938 (13:09:38Z) while being later in real time — the exact T-M32-13 inversion, now inside one environment where item 9's filter cannot separate it. Harmless only because those rows sit at fast/138 and invariant/54, not at a live count. §7 records the residual but files no debt id, while lesser residuals got T-R73, T-R74 and T-R75.",
+      "repro": "filter `git show HEAD:evals/report/history.jsonl` to rows with an `env` field and compare ts ordering against real time",
+      "acceptance": "Either a task id carries the mixed-regime `ts` residual inside `local`, or §7 stops implying `env`-tagged implies UTC-stamped and states the two-commit boundary as it is.",
+      "route_note": "LOW, but every comparable residual in this PR got an id and this one did not."
+    }
+  ],
+  "gate": {
+    "invariant": "60/60 = 1.000",
+    "fast": "155/155 = 1.000"
+  },
+  "reviewer_verified_sound": [
+    "the `env_rows` filter is applied before every row-reading clause in `_band_wrong` (recorded, at, the dirty clause, and `slowest` feeding items 3 and 4)",
+    "`_check_published_band` is the only reader of HISTORY in the band path",
+    "both new cases go red when their mechanism is removed — reproduced",
+    "ADR-019 §5's four numbers reproduce exactly from run 32561162459 attempts 1-4",
+    "the deleted fourth migration assertion's reasoning about `ts` thresholds is sound",
+    ".eval-baseline.json untouched; runs cost $0.0000"
+  ]
+}

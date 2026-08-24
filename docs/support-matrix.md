@@ -22,23 +22,67 @@ Entry shape (also served as JSON to the frontend):
 
 Declared from the M6 baseline (`evals/report/20260817-124241-fast.json`, 65/65)
 plus the M6 live runs; the M8 rows (quotes.toscrape.com, and limitations D5–D11)
-rest on the M8 runs instead — `fast` 86/86 and `live` 9/9, 2026-08-20. Every status below rests on **stubbed plans** — the
-fixture rows on offline fixtures, the live rows on hand-written plans against
-real DOMs — so this table measures the resolver/executor/verifier path and
-says nothing about planning quality on any domain, live or not. Empty cells are
-shown, not hidden.
+rest on the M8 runs instead — `fast` 86/86 and `live` 9/9, 2026-08-20. Every
+status **except the four M40 ones** rests on **stubbed plans** — the fixture rows
+on offline fixtures, the live rows on hand-written plans against real DOMs — so
+for those rows this table measures the resolver/executor/verifier path and says
+nothing about planning quality on any domain. The four M40 rows
+(companiesmarketcap.com, x-rates.com, multpl.com, and the changed
+quotes.toscrape.com cell) are the exception and are marked as such below: they
+were run end-to-end against the deployment with the real planner, so they do
+measure planning quality on their domain, and they rest on no committed report
+at all. Empty cells are shown, not hidden.
 
 `books.toscrape.com` TC4 stays `—` rather than becoming a status: the case that
 would fill it (`live-books-cheapest-travel`) is the only one needing a real
 planner, and it has not been run.
 
-`quotes.toscrape.com` is the M8 hostile domain and its TC1 cell is `unsupported`
+`quotes.toscrape.com` is the M8 hostile domain and its TC1 cell was `unsupported`
 on the strength of `live-quotes-js-role-tier-blind`: the run answers, reports
 success, and answers with the pager. The page is not unreadable — the text tier
 reaches its content exactly (`live-quotes-js-text-tier-reaches`) — it is
 *unplannable*, because the observation the planner is given contains none of it.
 D7 below has the measurements, and D27 records that M32's drill-down was measured
-against this same page and does not change the verdict.
+against this same page and does not change the verdict. M40 moves the cell to
+`unreliable`, not to `supported`: the cited case still fails exactly as it did,
+M32's drill-down still does not rescue it, and the domain's static author pages
+now answer 3/3 end-to-end against the deployment (run_ids b973e350, 93085a40,
+14833919 — "When was this author born?" on /author/Albert-Einstein/, all three
+"Born: March 14, 1879 in Ulm, Germany"). One page shape works and one does not,
+which is what `unreliable` means.
+
+The three M40 rows were re-declared once, and the reason is the most useful thing
+this milestone found. They were first declared from 43 runs against the build
+deployed before PR #34 (M32) — companiesmarketcap.com, x-rates.com and
+multpl.com. When that build was replaced, a re-probe of the same tasks answered
+0/3 on x-rates.com and 0/2 on multpl.com, so those two rows were withdrawn
+rather than shipped, and bankofcanada.ca and ecb.europa.eu were probed and
+declared in their place. D28 has both probes and the failure shape they share.
+The rule this produced is worth stating plainly: **a row declared from live runs
+is a claim about one deployed build, and it expires when the build does.**
+
+**The pre-merge re-run, 2026-08-23.** ADR-022 Decision 1a requires every card and
+every live-declared row to be re-run against the build being shipped, immediately
+before merge. That pass found two more: `wikipedia.org`'s motto task failed
+(7547e580) after passing earlier, and `quotes.toscrape.com` was 1/6 across both
+of the tasks this milestone had put on its card. Neither was caught by anything
+but the re-run. Final per-card counts on the shipped build — `books.toscrape.com`
+3/3, `news.ycombinator.com` 3/3, `companiesmarketcap.com` 9/9,
+`bankofcanada.ca` 4/4, `ecb.europa.eu` 4/5, `wikipedia.org` 3/4,
+`quotes.toscrape.com` 3/3 on its third task and 1/6 on the two it replaced,
+`openlibrary.org` 0/3 and deliberately so. Three of the eight cards therefore
+changed task or status in this one pass, which is the rate at which this kind of
+evidence goes stale.
+
+The M40 rows are declared by a different method than every row above them, and
+the difference is stated rather than blended in. Every other row was declared
+report-assisted, from a committed `fast`/`live` report plus hand-written plans;
+the M40 rows rest on ad-hoc submissions to the deployment with the real planner,
+which produce no committed report and have no eval case behind them. That is
+weaker in one way — nothing in `evals/` re-checks them, and no CI run can
+reproduce them — and stronger in another: they are the only rows here that
+measure the planner. Both halves are why D28 carries every run id rather than a
+fraction, and why two of the three rows are `unreliable`.
 
 | Domain | TC1 | TC2 | TC3 | TC4 | TC5 |
 |--------|-----|-----|-----|-----|-----|
@@ -48,12 +92,30 @@ against this same page and does not change the verdict.
 | books.toscrape.com (live) | — | — | unreliable | — | — |
 | news.ycombinator.com (live) | unreliable | — | — | — | — |
 | openlibrary.org (live) | unreliable | unsupported | — | — | — |
-| quotes.toscrape.com (live) | unsupported | — | — | — | — |
+| quotes.toscrape.com (live) | unreliable | — | — | — | — |
 | lamp-spec fixture | supported | — | — | — | — |
-| wikipedia.org | — | — | — | — | — |
+| wikipedia.org | unreliable | — | — | — | — |
+| companiesmarketcap.com (live) | supported | — | — | — | — |
+| bankofcanada.ca (live) | supported | — | — | — | — |
+| ecb.europa.eu (live) | unreliable | — | — | — | — |
 
 Statuses: `supported` / `unreliable` / `unsupported` / `—` (not yet evaluated).
-Unsupported and unreliable rows must cite a concrete failing case id.
+Unsupported and unreliable rows must cite concrete failing evidence: a case id
+where one exists, and otherwise — for the M40 live-declared rows only — the run
+ids of the failures themselves, in D28. The distinction matters and is not a
+loosening dressed up as a rule: a case id is re-run by the gate on every commit,
+a run id is a receipt for something that happened once and cannot be replayed
+(`RUNS` is in-memory, D19). So `x-rates.com` and `multpl.com` carry the weaker
+form of evidence, deliberately and visibly, until a case exists for either. No
+check enforces this sentence — `support-matrix-cites-real-cases` verifies that
+backticked case ids RESOLVE, and cannot tell which row a citation belongs to
+(its own provenance says so). It is a rule this file keeps by hand.
+
+## Declared limitations (M40 investment-domain probe)
+
+| Limitation | Evidence | Status |
+|---|---|---|
+| **D28** — asked to cover the domains an investment reviewer actually uses, the agent covers exactly one shape of finance page and fails on the others; and the rows that say so expire when the deployed build changes, which is the second and larger finding. Two probes, both against the deployment, both on 2026-08-23: **43 runs across 22 finance domains** on the build deployed BEFORE PR #34 (M32), then **33 runs across 17 domains** on the build after it. | **What answers, and why.** The value has to sit in an element of its own — for companiesmarketcap.com it is literally the accessible NAME of a heading (`extract {role: heading, name: "Market cap: $4.514 Trillion USD"}`), so no plan ever needs a container. That domain answered 7/7 pre-M32 and **8/8 post-M32** (d0b63c7e, f2c8c624, 65bb1028, 03eedb79, 2a058974, 4cec8304, 215e511a, f8925a42, across six pages). bankofcanada.ca answered 3/3 post-M32 (e36edcc1, 93fc8e6f, 5125b503 → "2.25"). ecb.europa.eu answered 2/3 (c8f04424, 9597fab9 → "2.25"; 35c4e211 rejected by the judge, which read the historical table instead of the current rate — a correct rejection). **What the build change did.** x-rates.com answered 3/3 pre-M32 (570f4c04, 0909909e, d9ad84b7 → "1.168361 USD") and **0/3 after** (b8b95067, 133264ee, 81155e22). multpl.com answered 3/6 pre-M32 (97912676, 434335eb, 3ec2b4d5) and **0/2 after** (bdc38f65, c7fa2623). quotes.toscrape.com's author page answered 3/3 pre-M32 and 0/1 after (6811f8bf — it extracted the site title "Quotes to Scrape" and the M36 judge rejected it). openlibrary.org failed in both. The post-M32 failures share ONE shape that none of the pre-M32 shapes covers: the planner emits `extract {role: WebArea, name: "<the page title>"}` — the document root, named by `<title>` — and the relocation rung retargets as `{text: "<the page title>"}` and resolves nothing. That is logged as T-M40-2, with what is NOT claimed written into the block: this is one task phrasing per page, the deployment moved model-side as well as code-side, and two pre-M32 runs (8c1a3344 stooq, c80b1dd0 coingecko) already showed WebArea targets. **The pre-merge confirmation pass.** All eight cards re-run once against the shipped build, then the two failures re-probed: wikipedia.org 3/4 (4bdbd12f, f31a05c8, a51a772f; 7547e580 failed at locate) — declared `unreliable` on that, its first status after sitting at `—` since M6. quotes.toscrape.com 1/6 on the two author-name tasks (63d8a48f the only pass; 7d752e64, 6811f8bf, f7dd7f52, 7d05d5e2, 79572b33), all of them the resolver-ambiguity shape main's M38 is queued to fix — "3 matches at tier text" for a name that appears three times, or the post-M32 WebArea/site-title shape on the author page. Its card moved to a third task, "Which tag is listed first under Top Ten tags?", 3/3 (51bc4a0a, eb5ed750, b131ac78), which asks for a value that is unique on the page. Two further one-run probes failed and are named rather than dropped: 2e1a35f5 (`role: blockquote` resolves to nothing) and a8fe1b01 (answered "Description:", a page label, rejected by the judge). **The pre-M32 failure taxonomy**, kept because it is what those 30 failures were: (1) CONTAINER DUMP, 8 runs — `main` or a whole table extracted and the page returned: stockanalysis.com (ac1dd2f1, f17afbee, 9f624ba5), federalreserve.gov (993aede7), cnbc.com (ab3225a7), newyorkfed.org (68de8ff1), finance.yahoo.com (29279c32), multpl.com (e0b4a2e3) — every one caught by the verifier as `failure:semantic`, never a wrong answer, which is `extract-container-dump-is-not-the-answer` live. (2) NOTHING RESOLVES, 18 runs: coingecko.com (c80b1dd0), coinmarketcap.com (c57de7ef), stooq.com (8c1a3344), slickcharts.com (9d2d83f3, 7977cb1f), marketbeat.com (ef4d37c8), sec.gov EDGAR (7a5fed48, 17184671, 6c29c944), fred.stlouisfed.org (58699716), macrotrends.net (31bfb2d7), investor.gov (fb13acb4), berkshirehathaway.com (b5f84cde), 8marketcap.com (96d27bc6), google.com/finance (e492553a), tradingeconomics.com (3c1cec38), multpl.com (a9d565b2, 602d70be). (3) INVENTED ANCHOR, 2 runs: tradingeconomics.com (8e9470c3), x-rates.com USD→JPY (0f8e532f). (4) two one-offs: federalreserve.gov's 088e7962 hit the M31 aggregate guard on a rate table, and finviz.com's cb86c0d7 answered with the LABEL "PE Ratio" and the M36 judge rejected it — "merely repeats the label ... without supplying the required numeric value (35.49)" — the first live evidence for the grading quality D25 declared unverified. 8 + 18 + 2 + 2 = 30. | `unsupported` for the shapes that dominate real finance sites: a value inside a dense table or grid, any page whose numbers are painted by script after load, and — post-M32 — any page whose answer is not already the accessible name of a small element, since the planner reaches for the document root instead. 19 of 22 domains never answered once pre-M32; 12 of 17 never answered post-M32. **And `unsupported` for the durability of every row in this section**: they are claims about one deployed build. Two of the three first declared here were withdrawn before merge because the build moved under them, and nothing detected that — no gate, no case, no CI job re-runs any of it. It was caught by hand, once, because a merge conflict prompted a re-probe. What is NOT claimed, beyond that: (a) that these runs measure DOMAINS rather than these tasks on these pages — one phrasing per page, one to three repeats, no held-out set; (b) that the answering domains are stable — ecb.europa.eu is `unreliable` for exactly that reason and companiesmarketcap.com's 15/15 across two builds is the only row here with a real repeat count behind it; (c) that the failing domains are unreachable in principle, each failed on one phrasing of one task; (d) that M32 CAUSED the regression — T-M40-2 states the confounds |
 
 ## Declared limitations (M32 observation drill-down)
 

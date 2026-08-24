@@ -25,8 +25,14 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 - M35 — Visitor-facing console: verified example prompts, plain-language limits, no-URL guard (2026-08-23) — PR #32, trace in tasks/reviews/pr32-r*.json
 - T-R34 — the band's slack becomes a declared ceiling (2026-08-23) — ADR-019, PR #35, trace in tasks/reviews/pr35-r*.json; 4 rounds, 1 circuit breaker
 - M37 — Swap the HN Try example for one that reproduces on the deployed build (2026-08-23) — PR #37, efb2711
+- T-R56 — the band subsystem's documents and strings say what the code does (2026-08-23) — PR #36, trace in tasks/reviews/pr36-r*.json; 5 rounds, 1 circuit breaker
+- M28 — a verifier-rejected run carries no answer; the dump stays in evidence (2026-08-23) — PR #38
+- T-M32-13 — the ledger's `ts` becomes a valid ordering key: stamped UTC, not naive local (2026-08-23) — found and root-caused on `task/M32` from PR #34's CI red; closed by T-R44 on both halves (UTC stamp + per-row `env`), ADR-019 §7, cases `ledger-ts-orders-real-time` and `band-is-graded-against-its-own-environment`
+- T-R78 — §7 stops claiming §5 names a demonstrating mutation for every graded item (2026-08-24) — PR #41 R17, the fifth instance of the class; the pointer now names `ci-numbers-are-derived`'s `watched_red`, closed in T-R44's merge commit
 
 ## B-floor exit criteria — final status
+
+
 All 6 met: criterion 2 (coverage/live breadth) was partial at the M5 freeze
 and closed by M6 (3 live domains, 3 live task classes, live 6/6 after
 ADR-007). Full criterion table with evidence: `tasks/TODO.md` at `98de1a6`
