@@ -3,7 +3,11 @@
   "round": 2,
   "task": "M39",
   "commit": "b8db0e1",
-  "gate_after_repair": {"invariant": "59/59 = 1.000, 13.69s / 20", "fast": "156/156 = 1.000, 70.95s / 90", "cost_usd": 0.0},
+  "gate_after_repair": {
+    "invariant": "59/59 = 1.000, 13.69s / 20",
+    "fast": "156/156 = 1.000, 70.95s / 90",
+    "cost_usd": 0.0
+  },
   "orchestrator_verification": "Exercised the predicate directly at HEAD rather than accepting the report. R6's echo payload -> certify=True but whole_completion=False (gated); certify embedded in commentary -> whole_completion=False (gated); reject embedded in commentary -> whole_completion=False (honoured, per the asymmetry); bare compliant certify -> whole_completion=True (honoured). The asymmetry behaves as described.",
   "resolutions": [
     {
@@ -14,7 +18,7 @@
       "watched_red": "Before touching the parser: 'quoted certify + prose rejecting it' want {verdict: FAIL, available: false, attempts: 1, calls: 1} / got {verdict: PASS, attempts: 1, calls: 1, available: null}; 'certify + trailing sign-off' identically PASS. Payload is the repo's own forgery from eval_adapter.py:1273-1274.",
       "fix": "Position decides trust, asymmetrically. `_is_the_whole_completion` distinguishes an object that IS the completion (optionally inside a fence) — the model's own answer, which SYSTEM asks for exactly — from an object embedded in commentary. An embedded object may REJECT but may never CERTIFY. `_json_objects` now returns (obj, start, end) tuples.",
       "rejected_the_suggested_fix": "The orchestrator relayed the reviewer's evidence-echo discriminator. The implementer declined it, with an argument the orchestrator accepts: evidence-echo predicts WHERE quoted text comes from, so it catches R6's instance (which arrives via evidence) but not a model quoting the schema line from SYSTEM, nor one inventing an illustrative object — neither is in the evidence and both would certify. That is a fourth shape-prediction with the same failure mode as the first three.",
-      "why_the_asymmetry_is_the_argument": "`_is_the_whole_completion` is still only string position and will misjudge some completion nobody has seen. The asymmetry is what makes that survivable: the only direction it gates is certification. A reject read out of commentary moves a run no further than an unreadable judge already moves it; a certify read out of commentary is the inviolable property. Every error this predicate can make lands on fail-closed — the first change at this boundary of which that is true.",
+      "why_the_asymmetry_is_the_argument": "`_is_the_whole_completion` is still only string position and will misjudge some completion nobody has seen. The asymmetry is what makes that survivable: the only direction it gates is certification. A reject read out of commentary moves a run no further than an unreadable judge already moves it; a certify read out of commentary is the inviolable property. In the direction it gates, every error this predicate can make lands on fail-closed — the first change at this boundary of which that is true. CORRECTED in round 3 (R8): this sentence originally read \"every error this predicate can make lands on fail-closed\" without the qualifier, and that was false. The predicate does not gate the echo-only case at all — a completion that is the forged object and nothing else returns whole_completion=True and certifies. Not fixable in the parser and not closed by T-M39-7; bounded only by the prompt-side defences judge-injection-cannot-flip-verdict grades, and now pinned as the last scenario of the retry case. Corrected here as data rather than by rewriting the round's history: the claim as it stood is quoted above so the record shows what was believed at the time.",
       "verified_shapes": "Nine: R6's echo, certify-with-sign-off and certify-with-lead-in all FAIL available=false attempts=1; R1's three reject shapes still FAIL responsive=false attempts=1 (the orchestrator's previously verified expectations unchanged); bare, fenced and one-line-fenced compliant certifies still PASS.",
       "ablations": "Both directions. Removing the guard reddens the case; making it SYMMETRIC (gating rejects too) also reddens it, because R1's three shapes break. Neither the guard nor its asymmetry can be dropped quietly."
     },

@@ -1275,3 +1275,10 @@
 {"ts": "20260824-004607", "suite": "fast", "sha": "32fb02c", "dirty": true, "passed": 156, "total": 156, "score": 1.0, "wall_s": 71.13, "cost_usd": 0.0, "report": null, "p95_s": 2.26, "recovery": "8/8", "mutation": "9/11"}
 {"ts": "20260824-005010", "suite": "invariant", "sha": "b8db0e1", "dirty": false, "passed": 59, "total": 59, "score": 1.0, "wall_s": 13.69, "cost_usd": 0.0, "report": null, "p95_s": 2.23}
 {"ts": "20260824-005121", "suite": "fast", "sha": "b8db0e1", "dirty": false, "passed": 156, "total": 156, "score": 1.0, "wall_s": 70.95, "cost_usd": 0.0, "report": null, "p95_s": 2.26, "recovery": "8/8", "mutation": "9/11"}
+{"ts": "20260824-005306", "suite": "fast", "sha": "b8db0e1", "dirty": true, "passed": 156, "total": 156, "score": 1.0, "wall_s": 71.69, "cost_usd": 0.0, "report": null, "p95_s": 2.3, "recovery": "8/8", "mutation": "9/11"}
+{"ts": "20260824-005526", "suite": "invariant", "sha": "cf9b2c5", "dirty": false, "passed": 59, "total": 59, "score": 1.0, "wall_s": 13.63, "cost_usd": 0.0, "report": null, "p95_s": 2.23}
+{"ts": "20260824-083321", "suite": "invariant", "sha": "1b17acc", "dirty": true, "passed": 59, "total": 59, "score": 1.0, "wall_s": 14.1, "cost_usd": 0.0, "report": null, "p95_s": 2.25}
+{"ts": "20260824-083355", "suite": "invariant", "sha": "1b17acc", "dirty": true, "passed": 58, "total": 59, "score": 0.983051, "wall_s": 14.08, "cost_usd": 0.0, "report": null, "p95_s": 2.26}
+{"ts": "20260824-083409", "suite": "invariant", "sha": "1b17acc", "dirty": true, "passed": 59, "total": 59, "score": 1.0, "wall_s": 13.59, "cost_usd": 0.0, "report": null, "p95_s": 2.23}
+{"ts": "20260824-083526", "suite": "invariant", "sha": "1b17acc", "dirty": true, "passed": 59, "total": 59, "score": 1.0, "wall_s": 13.22, "cost_usd": 0.0, "report": null, "p95_s": 2.24}
+{"ts": "20260824-083637", "suite": "fast", "sha": "1b17acc", "dirty": true, "passed": 156, "total": 156, "score": 1.0, "wall_s": 70.64, "cost_usd": 0.0, "report": null, "p95_s": 2.26, "recovery": "8/8", "mutation": "9/11"}

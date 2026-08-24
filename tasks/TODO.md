@@ -160,6 +160,63 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M39-8 — an executable line inside a debt block is ungraded, and this one was a no-op            [status: todo]
+Origin: PR #44 R9.
+Spec: T-M39-6's acceptance shipped a copy-pasteable collapse condition,
+`len({json.dumps(o, sort_keys=True) for o in objects}) == 1`, which is silently
+a no-op against the `(obj, start, end)` tuples `_json_objects` returns after
+PR #44 R6 — `json.dumps` serialises a tuple as a list rather than raising, so
+two identical verdicts at different offsets give 2 and the condition never
+fires. The prose note two lines below it warned that the collapse must compare
+objects and not spans, so the trap was disclosed in English and contradicted in
+the code beside it, which is the worst of both.
+The snippet itself is CORRECTED in the same commit that logs this block, so
+nothing copy-pasteable is left wrong. What stays open is the general hole it
+exposes: `tasks/TODO.md` carries executable fragments in acceptance criteria,
+nothing runs them, and a fragment that is wrong reads exactly like a fragment
+that is right — the same class `report-citations-resolve` and
+`docs-numbers-are-derived` close for citations and counts, unclosed for code.
+Repro: `python3 -c "import json;o=[({'certify':True,'reason':'x'},0,30),
+({'certify':True,'reason':'x'},50,80)];print(len({json.dumps(x,sort_keys=True)
+for x in o}))"` -> 2.
+Acceptance: either a check that every fenced/backticked Python fragment under
+`## Debt` parses and, where it is a self-contained expression over a stated
+input, evaluates to what the block claims — watched red against the pre-fix
+snippet above — or a rule recorded in an ADR that acceptance criteria state
+behaviour in prose and never in runnable code, applied to the existing blocks.
+
+### T-M39-9 — the non-retryable justification for a wrapped certify is unsupported            [status: todo]
+Origin: PR #44 R10.
+Spec: `src/browser/judge.py`'s embedded-certify guard raises a NON-retryable
+JudgeError and justifies it with "an identical second call reproduces that".
+That argument does not hold: the judge payload carries only `model`, `messages`
+and `usage` — no `temperature: 0` — so the provider default applies and a
+wrapper (a lead-in, a sign-off) is a sampling artifact a resample may well not
+reproduce. The reviewer's own note on why this stays LOW is the thing to carry
+forward: the honest argument for non-retryable here is the ANTI-RESAMPLE-BIAS
+one, not the determinism one — retrying only when the parse says certify is
+exactly the directional re-roll ADR-023 forbids for truncation, and it would
+reintroduce the bias that fix exists to remove. The determinism claim should
+not be doing work it cannot do.
+Measured cost (reviewer): body `Here is my verdict: {"certify": true,
+"reason": "..."}` -> FAIL, `judge_available: false`, `judge_attempts: 1`,
+1 call. Scenario 15 of `judge-retry-only-on-unreadable-completion` pins it
+deliberately.
+Why the size of the cost is unknown: `runs/judge_cache.json` stores PARSED
+verdicts, not raw completions, so nothing in this repo shows how the pinned
+live model actually formats a verdict — the availability cost of the guard is
+an assumption, not a number. `SYSTEM` does say "Respond with ONLY a JSON
+object, no markdown fence, no commentary", which is why the assumption is
+plausible rather than idle.
+Repro: scenario 15 of
+`evals/adversarial/judge-retry-only-on-unreadable-completion.json`.
+Acceptance: either the comment at the guard drops the "identical second call"
+argument for the anti-resample-bias one (prose only, no behaviour change), or a
+`full`-suite receipt records the pinned model's real verdict formatting across
+enough calls to turn the availability cost into a number. If the cache is what
+blocks the measurement, caching the raw completion beside the parsed verdict is
+the enabling change and belongs in this block.
+
 ### T-M39-6 — the ambiguity guard fires on two objects that AGREE            [status: todo]
 Origin: PR #44 R7.
 Spec (reviewer's evidence, carried verbatim): "`src/browser/judge.py:304-311`
@@ -182,8 +239,11 @@ import _json_objects;b='{\"certify\": true, \"reason\": \"x\"} In summary:
 {\"certify\": true, \"reason\": \"x\"}';print(len(_json_objects(b)))"` -> 2,
 which takes the >1 branch.
 Acceptance: either identical objects collapse to one verdict
-(`len({json.dumps(o, sort_keys=True) for o in objects}) == 1`) with a scenario
-pinning the restated-verdict body as the verdict it states, or ADR-023 says
+(`len({json.dumps(o, sort_keys=True) for o, _s, _e in objects}) == 1` — note the
+unpack: `objects` holds `(obj, start, end)` tuples since PR #44 R6, and
+`json.dumps` serialises a tuple as a list rather than raising, so the version of
+this line without it compares SPANS and is a silent no-op; PR #44 R9) with a
+scenario pinning the restated-verdict body as the verdict it states, or ADR-023 says
 plainly that agreeing duplicates also fail closed and a scenario pins that
 choice. Note for whoever takes it: the collapse must compare the OBJECTS, not
 their source spans, and the surviving object still has to clear the
@@ -193,6 +253,14 @@ as far as `_is_the_whole_completion` can tell.
 ### T-M39-7 — the judge parses free text where it could demand a schema            [status: todo]
 Origin: PR #44, raised by the implementer while fixing R6; the orchestrator's
 round-2 note asked for this to be said plainly rather than patched again.
+Scope note, first, because the original version of this block did not have one
+and ADR-023 pointed at it as "the fix that ends the class" (PR #44 R8): this
+ends the LOCATING class — where in the completion the verdict sits — and no
+other. It does NOT close the echo-only residual, because a provider-enforced
+object that repeats a forged verdict is still `{"certify": true}`. That residual
+is bounded by the prompt-side defences `judge-injection-cannot-flip-verdict`
+grades and is pinned as the last scenario of
+`judge-retry-only-on-unreadable-completion`; nothing in this block improves it.
 Spec: the judge asks for `{"certify": ..., "reason": ...}` in `SYSTEM` prose and
 then reads whatever comes back out of free text. That boundary has now produced
 four defects in three rounds — a one-line fence emptied by the strip, a
@@ -216,7 +284,10 @@ Acceptance: an ADR deciding for or against provider-enforced JSON with the
 model-support question answered from a live call rather than from the docs; if
 for, the free-text parser is deleted rather than kept as a fallback, and the
 no-key environment's inability to verify it is declared the way ADR-017 declared
-its own.
+its own. The ADR must also state, in the direction that stops a future reader
+concluding otherwise, which defects this does NOT close — the echo-only
+residual above being the one that matters — so the class this block ends is
+named as narrowly as it actually is.
 
 ### T-M39-1 — `stub_judge` certifies on any verdict token it does not recognise            [status: todo]
 Origin: M39, found while watching `judge-two-malformed-completions-fail-closed`
