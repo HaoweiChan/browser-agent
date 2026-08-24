@@ -28,7 +28,7 @@ import re
 import time
 from pathlib import Path
 
-from .judge import RUN_JUDGE_BUDGET
+from .judge import JUDGE_ATTEMPTS, RUN_JUDGE_BUDGET
 from .planner import PlanError
 from .resolver import (DOC_ROOT_ROLES, TARGET_KEYS, ResolveError,
                         relocation_candidates, resolve)
@@ -549,22 +549,51 @@ async def _apply_judge(judge, task, answer, extractions, verdict, budgets) -> di
     A judge that certifies is the only path that leaves PASS standing, and
     even then the check is recorded (`judge_responsive: true`) so the
     per-stage hit-rate is honest about how many runs needed it.
+
+    ADR-023 narrows WHEN (2) fires, never WHETHER it does: an unreadable
+    completion body is not a verdict, so there is nothing to fail closed on
+    yet, and the SAME call is made once more (`JUDGE_ATTEMPTS`, judge.py) with
+    the same prompt. A second failure ends the run exactly as the first used
+    to. Only `JudgeError.retryable` earns that -- a refusal, a wrong-shaped
+    response, a missing key and a reasoned FAIL are all answers a second
+    identical call would only reproduce. Both attempts are billed, and
+    `judge_attempts` records which happened, so the extra call can never be
+    invisible in the cost line.
     """
     checks = dict(verdict["checks"])
     if budgets["judge_calls"] >= RUN_JUDGE_BUDGET:
         checks["judge_available"] = False
+        # Zero, not absent: `judge_attempts` is present on every path that
+        # reached this boundary (specs/001), and a budget refusal made no
+        # provider attempt at all (cold review R5).
+        checks["judge_attempts"] = 0
         return {**verdict, "verdict": "FAIL", "checks": checks,
                 "reason": f"judge budget exhausted ({RUN_JUDGE_BUDGET}/run), failing closed"}
+    # One judge BOUNDARY call per run (RUN_JUDGE_BUDGET), which ADR-023 may
+    # spend over up to JUDGE_ATTEMPTS provider attempts. Counted here, before
+    # the loop, so a retry can never buy a second trip through this function.
     budgets["judge_calls"] += 1
     evidence = " ".join(e.get("page_text", "") for e in extractions or [])
-    try:
-        certify, reason, usage = await judge(task, answer, evidence)
-    except Exception as e:
-        checks["judge_available"] = False
-        return {**verdict, "verdict": "FAIL", "checks": checks,
-                "reason": f"judge unavailable, failing closed: {type(e).__name__}: {e}"}
+    for attempt in range(1, JUDGE_ATTEMPTS + 1):
+        try:
+            certify, reason, usage = await judge(task, answer, evidence)
+            break
+        except Exception as e:
+            # A completion that failed to parse still burned the provider's
+            # tokens. Billed either way, so the retry cannot hide inside the
+            # run's token/USD budget (ADR-023, cost-discipline rule 1).
+            spent = getattr(e, "usage", None) or {}
+            budgets["judge_tokens"] += spent.get("llm_tokens", 0)
+            budgets["judge_usd"] += spent.get("llm_usd", 0.0)
+            if attempt < JUDGE_ATTEMPTS and getattr(e, "retryable", False):
+                continue
+            checks["judge_attempts"] = attempt
+            checks["judge_available"] = False
+            return {**verdict, "verdict": "FAIL", "checks": checks,
+                    "reason": f"judge unavailable, failing closed: {type(e).__name__}: {e}"}
     budgets["judge_tokens"] += usage.get("llm_tokens", 0)
     budgets["judge_usd"] += usage.get("llm_usd", 0.0)
+    checks["judge_attempts"] = attempt
     checks["judge_responsive"] = certify
     if not certify:
         return {**verdict, "verdict": "FAIL", "checks": checks, "reason": f"judge rejected: {reason}"}

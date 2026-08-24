@@ -1,0 +1,56 @@
+{
+  "pr": 44,
+  "round": 1,
+  "task": "M39",
+  "result": "REQUEST_CHANGES",
+  "gate_at_review": {"invariant": "59/59 = 1.000, 14.18s / 20", "fast": "156/156 = 1.000, 71.7s / 90", "cost_usd": 0.0},
+  "reviewer_note": "The classification probe judge-retry-only-on-unreadable-completion is genuinely load-bearing: forcing retryable=False everywhere reddens 5 scenarios, forcing retryable=True everywhere reddens 4 (including both truncation guards and the refusal guard).",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The new fence parser classifies a readable judge verdict that carries any surrounding prose as an unreadable body, which the new retry then re-rolls — turning a reasoned FAIL into `verdict: PASS`, the exact fail-open ADR-023 says it never permits.",
+      "evidence": "src/browser/judge.py:282 `re.fullmatch(r\"```(?:[a-zA-Z]+)?\\s*(.*?)\\s*```\", ...)` requires the whole completion to be nothing but the fence, so any leading/trailing commentary leaves the fence in `text`; line 285-292 then raises `JudgeError(..., retryable=True)` on the resulting JSONDecodeError, and src/browser/agent.py:511 retries it. Concrete input, first completion body = \"```json\\n{\\\"certify\\\": false, \\\"reason\\\": \\\"the answer is the site masthead, not the story title\\\"}\\n```\\n\\nLet me know if you need more.\", second = `{\"certify\": true, ...}`: HEAD returns `verdict=PASS attempts=2 calls=2`. On origin/main the same first body parses cleanly to `certify=False` (old code did `split(\"\\n\",1)[1]` then `rsplit(\"```\",1)[0]`), so this is a regression, not a pre-existing gap. Two more shapes are new fail-opens where main failed closed: bare JSON reject + trailing prose, and leading prose + fenced reject — both `PASS attempts=2 calls=2` on HEAD, both non-retryable JudgeError on main. No case in evals/adversarial covers it: judge-retry-only-on-unreadable-completion pins only the ONE-LINE fenced form, and judge-parse-response-strict-boolean (line 63) pins only a clean multi-line fence.",
+      "repro": "source .venv/bin/activate; python3 scratchpad/repro.py — mocks urllib.request.urlopen, runs the real live_judge under the real _apply_judge. Output: `fenced reject + trailing prose: verdict=PASS attempts=2 calls=2` / `leading prose + fenced reject: verdict=PASS attempts=2 calls=2` / `bare reject + trailing prose: verdict=PASS attempts=2 calls=2` / `plain fenced reject (control): verdict=FAIL attempts=1 calls=1`.",
+      "acceptance": "A completion whose body contains a readable `{\"certify\": ...}` object anywhere — fenced with trailing prose, fenced with leading prose, or bare with trailing prose — is read as that verdict (or, at minimum, classified non-retryable so it fails closed on attempt 1). Three scenarios added to evals/adversarial/judge-retry-only-on-unreadable-completion.json expecting `{verdict: FAIL, responsive: false, attempts: 1, calls: 1}`, watched red against this HEAD first (they currently report PASS/2/2), and green after the fix; invariant + fast suites still 59/59 and 156/156."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §3's band justification is false against the ledger committed in this same PR: the published 13.53s is not the slowest qualifying row, and the \"three that qualify\" it names no longer exist after the enumeration above it was deleted.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:142-146 — \"Of the three that qualify this is the slowest, chosen so the published number sits as close to the ledger's own maximum as a real run allows ... take the least slack on offer.\" The diff deleted the four-row enumeration (\"12.93 / 13.78 / 13.18 / 13.12s\") that supplied the antecedent \"three that qualify\", leaving a dangling reference. And it is not the slowest: evals/report/history.jsonl holds 23 rows at invariant/59 cases; rows recorded BEFORE the cited ts 20260823-232059 include 13.75, 13.75, 13.67 and 13.61s, and the ledger maximum at that count is 20260823-235258 at 13.92s (dirty: false, 59/59) — committed at HEAD in this PR. Published slack is 0.39s where 0.0s was available.",
+      "repro": "python3 -c \"import json;rows=[json.loads(l) for l in open('evals/report/history.jsonl')];print([(r['ts'],r['wall_s'],r['dirty'],r['passed']) for r in rows if r['suite']=='invariant' and r['total']==59])\" — compare against the sentence at ADR-019:142.",
+      "acceptance": "§3's parenthetical either cites the row it actually publishes with a true statement about its position in the ledger, or drops the superseded \"three that qualify / this is the slowest\" clause. published-band-matches-the-ledger and published-band-slack-is-declared stay green."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §2 publishes \"Every row at this count is dirty, and necessarily so ... no clean row was available at this count to prefer\", which is contradicted by the ledger committed at HEAD in this same PR and by §6 of the same file.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:67-71. `git show HEAD:evals/report/history.jsonl | tail -3` contains three clean, fully green rows at the shipped counts: 20260823-235258 invariant 59/59 dirty:false 13.92s, 20260823-235409 fast 156/156 dirty:false 70.78s, 20260823-235540 fast 156/156 dirty:false 70.45s (all sha febc25f, added by commit 1522b6e in this PR). The same file at line 415-417 says \"the clean green runs of this tree that followed did not disturb them\" — acknowledging exactly the rows §2 says do not exist — and lines 78-90 record that a clean citation costs a second commit and \"is paid here rather than dodged\". §6 item 2's as-of rule keeps the GRADER green (the clean rows are stamped after the cited ts), which is why nothing reddens; the defect is the prose claim, not the check.",
+      "repro": "git show HEAD:evals/report/history.jsonl | tail -3 — three dirty:false rows at 156/156 and 59/59; read ADR-019:67-71 beside them.",
+      "acceptance": "The band rows either cite the clean rows now in the committed ledger (the two-commit price §2 already documents), or state the dirty citation without the false universal — e.g. \"no clean row existed at this count as of the cited run\" — so no sentence in the file is falsified by the artefact committed beside it. Both suites stay green."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "docs/analysis.md's coverage section still publishes 153 fast cases and the superseded report, in a section whose own preamble says every count in it is current, while the line three lines above it was updated to 167/147.",
+      "evidence": "docs/analysis.md:57-63 — \"Every count in the rest of this section is the current one\" followed by \"244 browser actions in a `fast` run; **89 of the 153** `fast` cases drive a real Chromium end to end ... read out of the committed report evals/report/20260823-211825-fast.json\". The report this PR commits and cites everywhere else, evals/report/20260823-232036-fast.json, records actions: 248 and cases_with_budgets: 91 at 156 cases. docs-numbers-are-derived grades only the `{total} distinct cases` split quote, so nothing recomputes this pair.",
+      "repro": "python3 -c \"import json;d=json.load(open('evals/report/20260823-232036-fast.json'));print(d['totals']['actions'], d['totals']['cases_with_budgets'])\" → 248 91; compare with docs/analysis.md:61.",
+      "acceptance": "The sentence reads 248 / 91 of 156 against the report this PR publishes, or the section preamble is amended to exempt it."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "rejected",
+      "orchestrator_reason": "Not a defect — the pr-loop protocol sets a task block to [status: in-progress] at IMPLEMENT and to [status: pr] at EVIDENCE, which this PR has not reached yet. The orchestrator sets it as part of EVIDENCE. No debt logged.",
+      "claim": "tasks/TODO.md still carries M39 as `[status: in-progress]` in a PR that claims to deliver it.",
+      "evidence": "tasks/TODO.md, M39 heading: `[status: in-progress]`.",
+      "repro": "grep -n 'M39 —' tasks/TODO.md",
+      "acceptance": "Status reflects the shipped state at merge."
+    }
+  ]
+}

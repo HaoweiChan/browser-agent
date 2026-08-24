@@ -57,6 +57,14 @@ PROMPT_VERSION = "judge-v1"
 # checking it read from.
 RUN_JUDGE_BUDGET = 1
 
+# ADR-023: attempts allowed for that ONE call, when and only when the failure
+# was an unreadable completion body (`JudgeError.retryable`). Two, flat: no
+# backoff, no loop, no model switch. Deployed run `7787f9c9` lost a correct
+# answer to a single empty completion while the two runs after it passed, so
+# the second attempt is worth its price; a third would be paying to argue with
+# a provider that has now said the same unreadable thing twice.
+JUDGE_ATTEMPTS = 2
+
 SYSTEM = """You are a strict responsiveness judge for a browser-automation agent.
 
 You are given a QUESTION the agent was asked and a CANDIDATE_ANSWER it \
@@ -105,6 +113,66 @@ def _defang_fence(evidence: str) -> str:
                      .replace(FENCE_END, "\u2039\u2039\u2039EVIDENCE_END\u203a\u203a\u203a"))
 
 
+def _json_objects(text: str) -> list:
+    """Every top-level JSON object in a completion body, in order.
+
+    Models wrap the verdict: a ``` fence, a lead-in sentence, a sign-off after
+    it. PR #44 R1: stripping a FENCE only handles the wrappers someone thought
+    of -- a `re.fullmatch` fence required the completion to be nothing BUT the
+    fence, so trailing prose left the fence in the text, and after ADR-023 the
+    resulting JSONDecodeError was classified retryable and a reasoned reject
+    was re-rolled into a certify. Scanning for the object is wrapper-agnostic:
+    bare, fenced, or commented, the verdict is the same bytes. `raw_decode`
+    reports where each object ended, so a nested object is skipped rather than
+    counted as a second candidate -- and the span comes back with the object,
+    because WHERE it sat is what tells an answer apart from a quotation
+    (PR #44 R6, and `_is_the_whole_completion` below).
+    """
+    dec = json.JSONDecoder()
+    out, i = [], 0
+    while (j := text.find("{", i)) != -1:
+        try:
+            obj, end = dec.raw_decode(text, j)
+        except ValueError:
+            i = j + 1
+            continue
+        if isinstance(obj, dict):
+            out.append((obj, j, end))
+        i = end
+    return out
+
+
+def _is_the_whole_completion(text: str, start: int, end: int) -> bool:
+    """Is this object the model's ANSWER, or something it merely quoted?
+
+    The only honest discriminator available here is position. `SYSTEM` tells
+    the judge to reply with the object and nothing else, so a completion that
+    IS the object (optionally inside a ``` fence) is the model's own verdict.
+    An object sitting inside commentary might be the verdict, or might be a
+    directive the model is quoting in order to REFUSE it -- PR #44 R6's
+    payload is exactly that: the judge echoes the page's forged
+    `{"certify": true}` while its own prose rejects the answer, and the run
+    certified on the echo.
+
+    Callers must not use this to pick a verdict. It gates the CERTIFY
+    direction only (see the call site): an embedded object may reject, never
+    certify. That asymmetry is why a wrong answer here is survivable -- in the
+    direction it gates, every error this predicate can make lands on
+    fail-closed. NOT in the direction it cannot see: read the ponytail note
+    below, which is the other half of the same sentence (#44 R8/R12).
+
+    ponytail: string position, not provenance. It cannot tell a quoted verdict
+    from an authored one when the model emits nothing else, and it does not
+    try; upgrade path is provider-enforced JSON (`response_format`), which
+    removes the question instead of answering it -- T-M39-7.
+    """
+    outside = (text[:start] + text[end:]).strip()
+    # ``` fences and a bare language tag are markup, not commentary. Nothing
+    # else is tolerated: an unrecognised wrapper reads as commentary, which is
+    # the fail-closed direction.
+    return outside.strip("`").strip().lower() in ("", "json")
+
+
 def _prompt(task: str, answer, evidence: str) -> str:
     """The untrusted `evidence` sits inside its own fenced block, and the
     instruction telling the model what to do with it comes AFTER that block,
@@ -132,9 +200,16 @@ class JudgeError(Exception):
     {"certify": bool, ...} shape. Every caller MUST treat this as a REJECT --
     see `agent.py`'s `_apply_judge` -- never as "skip the check"."""
 
-    def __init__(self, message, usage=None):
+    def __init__(self, message, usage=None, retryable=False):
         super().__init__(message)
         self.usage = usage or {"llm_tokens": 0, "llm_usd": 0.0}
+        # ADR-023: True ONLY for a completion body that could not be read at
+        # all (empty, or not JSON). Every other failure here is either a
+        # readable response of the wrong shape or a call that never reached a
+        # model -- an identical second call reproduces both, so retrying them
+        # buys nothing and spends twice. `agent.py`'s `_apply_judge` is the
+        # only reader; fail-closed is unchanged for both values.
+        self.retryable = retryable
 
 
 def _cache_path() -> Path:
@@ -169,9 +244,12 @@ def stub_judge(verdicts: list):
     order, zero cost -- injected at exactly this boundary the way
     `stub_planner` is injected at the planner boundary (planner.py).
 
-    Each entry is `True`, `False`, `(bool, reason)`, or the string `"error"`
-    (raises JudgeError, for proving fail-closed without a live call). The
-    last entry repeats, mirroring `stub_planner`'s shape.
+    Each entry is `True`, `False`, `(bool, reason)`, the string `"error"`
+    (raises a non-retryable JudgeError, for proving fail-closed without a live
+    call) or `"malformed"` (raises the RETRYABLE shape `live_judge` raises when
+    a completion body cannot be read at all -- ADR-023). The last entry
+    repeats, mirroring `stub_planner`'s shape, so `["malformed"]` is a judge
+    that can never be read and `["malformed", True]` is run `7787f9c9`.
     """
     calls = [0]
 
@@ -180,6 +258,8 @@ def stub_judge(verdicts: list):
         calls[0] += 1
         if v == "error":
             raise JudgeError("stub judge: simulated failure")
+        if v == "malformed":
+            raise JudgeError("stub judge: unreadable completion", retryable=True)
         certify, reason = v if isinstance(v, (tuple, list)) else (v, "stub")
         return bool(certify), reason, {"llm_tokens": 0, "llm_usd": 0.0, "cached": False}
 
@@ -230,12 +310,49 @@ def live_judge(model: str = JUDGE_MODEL):
         usage = {"llm_tokens": u.get("total_tokens", 0), "llm_usd": float(u.get("cost", 0.0))}
         try:
             choice = data["choices"][0]
-            content = choice["message"]["content"]
-            text = content.strip()
-            if text.startswith("```"):
-                text = text.split("\n", 1)[1] if "\n" in text else ""
-                text = text.rsplit("```", 1)[0]
-            parsed = json.loads(text)
+            message = choice["message"]
+            if choice.get("finish_reason") == "length":
+                # ADR-023, cold review R1: the model ANSWERED and was cut off
+                # mid-verdict. The bytes are unreadable, but the completion is
+                # not unread -- and the bias is directional: a reject must
+                # explain itself ("the answer is the site masthead, not the
+                # story title") where a certify can be one word ("fits"), so
+                # truncation destroys rejects far more often than certifies and
+                # a resample would shop the run toward success. `planner.py`
+                # already classifies this exact shape -- `content: null` on
+                # `finish_reason: length` -- as "it answered; the answer does
+                # not fit", and the judge must not classify it the other way.
+                # Fails closed on the first attempt, like every other verdict.
+                raise JudgeError(
+                    "judge response truncated (finish_reason: length)", usage)
+            if message.get("refusal"):
+                # ADR-023: a refusal is the model ANSWERING, badly -- not an
+                # unreadable completion. The identical prompt asked again is
+                # asking to be refused again, so this is never retried. Read
+                # explicitly because a refusal also arrives with
+                # `content: null`, which would otherwise land in the
+                # unreadable-body branch below and buy a pointless second call.
+                raise JudgeError(f"judge refused: {message['refusal']}", usage)
+            text = (message["content"] or "").strip()
+            objects = _json_objects(text)
+            if len(objects) > 1:
+                # Two candidate verdicts in one body ("the schema is {...},
+                # my answer is {...}") are not one readable verdict, and
+                # picking either by position is a coin flip inside a
+                # fail-closed path. Readable enough to be an answer, so it
+                # fails closed on the first attempt like every other answer.
+                raise JudgeError(
+                    f"ambiguous judge response: {len(objects)} JSON objects", usage)
+            if not objects:
+                # ADR-023: the ONE retryable failure -- run `7787f9c9`'s exact
+                # shape, a body with nothing verdict-shaped in it at all.
+                # Everything else raised in this block is a READABLE response
+                # of the wrong shape, which a second identical call would only
+                # reproduce.
+                raise JudgeError(
+                    "malformed judge response: JSONDecodeError: "
+                    "no JSON object in completion", usage, retryable=True)
+            parsed, start, end = objects[0]
             # PR #33 R1 (HIGH): `bool(parsed["certify"])` treated ANY
             # truthy JSON value -- including the strings "false"/"no"/"0" --
             # as certify=True, inverting fail-closed for the one failure
@@ -248,6 +365,21 @@ def live_judge(model: str = JUDGE_MODEL):
             # response).
             certify = parsed["certify"] is True
             reason = str(parsed.get("reason", ""))
+            if certify and not _is_the_whole_completion(text, start, end):
+                # PR #44 R6: the object is wrapped in the model's own prose,
+                # so it is not provably the model's ANSWER -- it may be a
+                # forged verdict the judge is quoting while refusing it. A
+                # reject in that position is honoured (it can only move the
+                # run toward FAIL, which is where an unreadable judge sends it
+                # anyway); a CERTIFY is not, because certifying is the one
+                # thing this whole ladder exists to withhold. Non-retryable:
+                # the model answered, we could not verify WHAT it answered,
+                # and an identical second call reproduces that.
+                raise JudgeError(
+                    "unverified certify: the verdict object is embedded in "
+                    "commentary, not the completion", usage)
+        except JudgeError:
+            raise  # already classified above -- re-wrapping would lose `retryable`
         except Exception as e:
             raise JudgeError(f"malformed judge response: {type(e).__name__}: {e}", usage) from e
         cache[cache_key] = {"certify": certify, "reason": reason}

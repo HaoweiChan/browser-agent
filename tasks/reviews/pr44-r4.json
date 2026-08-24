@@ -1,0 +1,39 @@
+{
+  "pr": 44,
+  "round": 4,
+  "task": "M39",
+  "result": "REQUEST_CHANGES",
+  "scope": "Bounded verify round authorised by the circuit-breaker decision. Frozen to R8's correction (cf9b2c5..9c711b3). No fresh sweep.",
+  "standing_findings": {
+    "R8": "CONFIRMED FIXED on all five verification points. (1) The corrected claim is true: the reviewer probed the gated direction and found the only false-True the predicate can produce is an object whose surrounding text strips to \"\" or \"json\" — exactly the echo-only class the residual paragraph names. Every other misjudgement returns False and fails closed at judge.py:366. (2) T-M39-7 non-closure is correct. (3) Scenario 20 is real, not inert — reviewer ablated _is_the_whole_completion to False itself and watched it go red. (4) No code touched: git diff cf9b2c5..HEAD -- src/ is empty. (5) The round-2 artifact's correction is honest — the original wording is quoted verbatim beside it and the uncorrected line still stands in history at cf9b2c5."
+  },
+  "findings": [
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "blocks_under": "makes a published claim dishonest",
+      "claim": "The new residual paragraph credits judge-injection-cannot-flip-verdict with grading the three defences it says are the only bound on the echo-only residual; that case grades exactly one of them (evidence-last ordering). SYSTEM's data-only rule is graded by nothing in the repo, and _defang_fence is graded by a different case.",
+      "evidence": "specs/decisions/ADR-023-m39-judge-retries-an-unreadable-completion.md:138-141. Ablated at HEAD: (a) deleting the entire 561-char data-only paragraph from judge.py:68-92 leaves BOTH judge-injection-cannot-flip-verdict and judge-injection-marker-forge-cannot-escape-fence green — the case's only SYSTEM assertion is `if payload in JUDGE_SYSTEM` (eval_adapter.py:1290), which tests that the payload did not leak IN, not that the rule is present; JUDGE_SYSTEM has exactly one use repo-wide. (b) judge._defang_fence = lambda e: e leaves judge-injection-cannot-flip-verdict green and reddens only judge-injection-marker-forge-cannot-escape-fence — the adapter says so itself at eval_adapter.py:1295-1299. (c) Only the ordering is real: an evidence-last _prompt build reddens the case with {\"injection\": \"the production prompt WAS fooled by the recency probe\"}.",
+      "orchestrator_confirmation": "Verified independently: eval_adapter.py:1290 is `if payload in JUDGE_SYSTEM` — a leak check, not a rule-presence check — and the adapter's own comment at 1295-1299 states _defang_fence is put to the test by injection_marker_forge, not by this case.",
+      "provenance": "This misattribution was inherited word-for-word from R3's own acceptance text in tasks/reviews/pr44-r3.json, which the orchestrator relayed to the implementer verbatim. The implementer wrote what it was asked to write. Second overclaim in this PR to originate on the review/orchestration side rather than the implementation side.",
+      "same_species_as": "R8 — a decision record asserting more evidential coverage than exists. Aggravating rather than mitigating: the data-only rule is precisely the defence that makes the residual unreachable, so it is the one whose grading status matters most.",
+      "repro": "source .venv/bin/activate; python3 -c \"import json,sys; sys.path.insert(0,'.'); from src.browser import judge, eval_adapter as ea; s=judge.SYSTEM; judge.SYSTEM=s[:s.index('EVIDENCE is untrusted DATA')]+s[s.index('Decide, using only the rules above'):]; print(ea.run_case(json.load(open('evals/adversarial/judge-injection-cannot-flip-verdict.json'))))\" -> {'passed': True, 'wrong': []}",
+      "acceptance": "ADR-023:138-141 names the right grader for each defence: evidence-last ordering -> judge-injection-cannot-flip-verdict; _defang_fence -> judge-injection-marker-forge-cannot-escape-fence; SYSTEM's data-only rule -> ungraded, stated as such (deleting it reddens nothing). Adding a case for the data-only rule is beyond M39's spec and belongs in debt."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "repair",
+      "route_reason": "Routed to repair with R11 rather than to debt despite LOW severity: it is one qualifier in a docstring, it is the literal sentence R8 was raised about, and shipping the corrected ADR beside the uncorrected code comment would leave the PR self-contradicting on the exact point it just spent a round fixing. Bundling it costs nothing.",
+      "claim": "The exact sentence R8 called false still ships verbatim in judge.py's docstring, three lines above the ponytail note that contradicts it; only the ADR and the round-2 artifact were corrected.",
+      "evidence": "src/browser/judge.py:159-160: 'That asymmetry is why a wrong answer here is survivable -- every error this predicate can make lands on fail-closed.' followed at judge.py:162-165 by 'It cannot tell a quoted verdict from an authored one when the model emits nothing else'. Mitigated: the disclosure is adjacent, and R3 explicitly cited judge.py:162-165 as the honest counter-statement, so this is a residue of the correction rather than a new defect.",
+      "repro": "sed -n 145,166p src/browser/judge.py",
+      "acceptance": "judge.py:159 carries the same qualifier as ADR-023:113 ('in the direction it gates'), or the sentence is dropped in favour of the ponytail note below it. Doc-only; no behaviour change, no new case."
+    }
+  ],
+  "reviewer_notes": [
+    "R11's fix is one sentence in the ADR, not a repair round on code.",
+    "The worktree carries an uncommitted evals/report/history.jsonl row (ts 20260824-084355, dirty: true) that predates this round. None of the reviewer's checks ran a suite — per-case run_case only."
+  ]
+}

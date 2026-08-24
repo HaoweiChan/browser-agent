@@ -15,8 +15,8 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260824-033233-fast.json",
-        "invariant": "20260824-033247-invariant.json",
+        "fast": "20260824-052304-fast.json",
+        "invariant": "20260824-052134-invariant.json",
         "live": "20260823-164737-live.json"
       }
     },
@@ -97,7 +97,15 @@
         "flags": false,
         "note": "the dropped-literal form this PR moved CLAUDE.md to; it cannot go stale, so it cannot be wrong"
       }
-    ]
+    ],
+    "analysis_section1": {
+      "doc": "docs/analysis.md",
+      "quotes": [
+        "{actions} browser actions in a `fast` run; **{with_browser} of the {total}** `fast` cases drive a real Chromium end to end",
+        "The\nremaining {remaining} are those refusals plus pure-code probes of a single"
+      ],
+      "why": "T-M39-5 / PR #44 R4: this pair sat three lines under a preamble saying every count in the section is current, read out of a report two trees old, while the split quote beside it was being kept honest. Recomputed from the headline report the same way, so it cannot drift again without going red."
+    }
   },
   "expect": {
     "note": "every count in README equals what the runner loads, README's \"Where it stands\" block equals the reports it cites, and no tracked markdown file (prompts/ included, tasks/ excluded and why is in provenance) asserts criterion 5 green — outside a struck-through span or across bold/italic/link markdown, whitespace-normalized — while docs/analysis.md §8a-3's post-merge evidence says red, and no `--suite` gate command in ANY markdown file in the tree — `tasks/` and dot-directories included, `.git`/`.venv` excluded as machinery, a wider set than the criterion-5 scan in this same sentence — publishes a wall-clock ceiling, anchored to `<=`/`ceiling`/`budget`/`wall clock`, that is not the one `evals/run.py` commits for that suite, with `ceiling_sweep_rows` pinning both directions including the true timing notes that must stay green"
