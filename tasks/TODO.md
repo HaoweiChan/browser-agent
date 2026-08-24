@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: in-progress]
+### T-M40-2 — the post-M32 planner targets `WebArea` (the document root) by page title, on every domain measured            [status: pr]
 Origin: PR #43 (M40) post-merge re-probe of the deployment, 2026-08-23
 Spec: M40 declared three live rows from 43 runs against the build deployed BEFORE PR #34 (M32).
 After M32 deployed, a re-probe of the same tasks shows a new dominant failure shape that none of
@@ -147,12 +147,40 @@ and it spends tokens.
 Acceptance: taken with T-M40-2-1 after T-M40-3's probe, or dropped if the probe shows the lint
 alone recovers the rows.
 
+### T-M40-2-7 — the fix for the restatement grader instantiates the figures it protects, one file over            [status: todo]
+Origin: PR #46 R8
+Spec: `_BAND_RESTATE`'s explanatory comment quotes a band bullet's real numbers in source, where
+item 9's check never looks — it scans the ADR text only. So on the next case-count move the ADR
+bullet, the ADR restatement and README all go red together while this comment silently keeps the
+old figures. This is the exact trap the implementer declared and avoided in ADR-019 §6 item 9
+("the form is described rather than shown, because a literal example here would be a third copy"),
+reintroduced one file over — which is the strongest evidence yet that "describe the form, never
+show it" needs to be enforced rather than remembered.
+Evidence: `src/browser/eval_adapter.py:510` — the comment instantiates `155 cases, 153/155`. The
+item-9 loop at :746-759 iterates `_BAND_RESTATE.finditer(adr)`, i.e. the ADR only; the region text
+is passed only to the item-8 reference loop at :826. The string sits inside the marked region but
+is read by no check.
+Repro: `.venv/bin/python -c "import re,pathlib;src=pathlib.Path('src/browser/eval_adapter.py').read_text();print(re.findall(r'\(restated — .(fast|invariant).: (\d+) cases, (\d+)/(\d+)\)',src))"` -> `[('fast','155','153','155')]`
+Acceptance: the comment describes the form without the figures (as §6 item 9 does), or
+`_BAND_RESTATE` is also run over `region` so the illustration is graded. Not a merge blocker: a
+source comment, not a published band.
+
+### T-M40-2-8 — a red truth-table row with a non-dict step cannot name itself            [status: todo]
+Origin: PR #46 R9
+Spec: `plan-gap-truth-table`'s failure-report comprehension calls `s.get` on every step of a
+failing plan, so a future regression on one of the non-dict rows surfaces as a bare AttributeError
+with no row named. The gate still goes red — only the diagnostic is useless, which is the half that
+costs someone an hour at the point they most need the row's identity.
+Evidence: `src/browser/eval_adapter.py:385` — `wrong = [{"task": t, "plan": [s.get("action") for s in p], ...}]`, where `p` is `[None]` / `['extract WebArea']` for the rows at :375-377 and :367-369.
+Repro: flip `(AGG, [None], True)` to `False` -> `[FAIL] plan-gap-truth-table (adversarial, 0.0s) AttributeError: 'NoneType' object has no attribute 'get'`, suite 59/60 with INVARIANT VIOLATION.
+Acceptance: the report builder tolerates a non-dict step (e.g. `s.get("action") if isinstance(s, dict) else s`) so a red row names its plan.
+
 ### T-M40-2-6 — a plan step that is not a dict kills `run_task` with an uncaught TypeError            [status: todo]
 Origin: PR #46 R6, 2026-08-24. `parse_plan` (src/browser/planner.py) validates that the top
 level is a list and nothing below it, so `[None]` or `["extract WebArea"]` is a plan as far as
 the executor is concerned. `plan_gap` no longer raises on those (both its clauses are guarded,
 `plan-gap-truth-table` rows), but the step loop then reads `step["action"]` at
-src/browser/agent.py:1013 and the TypeError propagates out of `run_task` — no status, no
+the `read_only = step["action"]` line in `run_task`'s step loop (agent.py:1024 at this commit — named by symbol because the number drifts; PR #46 R10 caught it already stale at :1013) and the TypeError propagates out of `run_task` — no status, no
 failure class, none of the taxonomy. `server.py:_execute` catches it into `failure:env`, so a
 deployed run reports SOMETHING; an eval-adapter caller gets the raw exception.
 Repro: any fixture case with `stub_plan: ["extract WebArea"]`.

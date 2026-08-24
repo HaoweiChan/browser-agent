@@ -1,0 +1,51 @@
+{
+  "pr": 46,
+  "round": 3,
+  "task": "T-M40-2",
+  "reviewer": "groundwork:pr-reviewer (repair diff c857fda..fb259ac + standing findings)",
+  "result": "APPROVED",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 3
+  },
+  "standing_findings_verified_fixed": [
+    "R5",
+    "R6",
+    "R7"
+  ],
+  "orchestrator_note": "APPROVED. All three new findings are LOW and the reviewer named each as debt, not a merge blocker. Routed to debt rather than folded in: rounds 1-2 folded LOW findings because a blocking finding forced a round anyway; here none does, so folding would CREATE a fourth round of unreviewed changes instead of converging. R10 is the one exception - it reported a stale line number inside a debt block this task wrote, corrected in place by naming the symbol instead of the number (R10's own preferred acceptance). Leaving a knowingly-wrong number in a committed tracker is the same restatement class this PR spent three rounds closing.",
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "became": "T-M40-2-7",
+      "claim": "The fix for R5 introduces a fresh ungraded copy of the two band figures it exists to protect - _BAND_RESTATE's explanatory comment instantiates '155 cases, 153/155' in source, where the new item-9 check never looks (it scans adr only).",
+      "evidence": "src/browser/eval_adapter.py:510 - the comment instantiates a band bullet's real numbers. The item-9 loop at :746-759 iterates _BAND_RESTATE.finditer(adr), i.e. the ADR text only; the region text is passed only to the item-8 reference loop at :826. So on the next case-count move the ADR bullet, the ADR restatement and README all go red together and this comment silently keeps the old figures. This is the exact trap the implementer declared and avoided in ADR-019 section 6 item 9 ('the form is described rather than shown, because a literal example here would be a third copy'), reintroduced one file over.",
+      "repro": "python3 -c \"import re,pathlib;src=pathlib.Path('src/browser/eval_adapter.py').read_text();print(re.findall(r'restated .*(fast|invariant).*cases',src))\"",
+      "acceptance": "The comment describes the form without the figures (as section 6 item 9 does), or _BAND_RESTATE is also run over region so the illustration is graded. Debt, not a merge blocker: a source comment, not a published band."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "became": "T-M40-2-8",
+      "claim": "The three new non-dict truth-table rows cannot report themselves: plan-gap-truth-table's failure-report comprehension calls s.get on every step of a failing plan, so a future regression on (AGG, [None], True) surfaces as a bare AttributeError with no row named.",
+      "evidence": "src/browser/eval_adapter.py:385 - wrong = [{'task': t, 'plan': [s.get('action') for s in p], ...}] where p is [None] / ['extract WebArea'] for the rows added at :375-377 and :367-369. Forced red by flipping (AGG, [None], True) to False: harness prints [FAIL] plan-gap-truth-table with AttributeError: 'NoneType' object has no attribute 'get' and the suite ends 59/60 with INVARIANT VIOLATION.",
+      "repro": "flip (AGG, [None], True) to False in src/browser/eval_adapter.py, run --suite invariant, then git checkout -- src/browser/eval_adapter.py",
+      "acceptance": "The report builder tolerates a non-dict step (e.g. s.get('action') if isinstance(s, dict) else s) so a red row names its plan. Debt: the gate still goes red, only the diagnostic is useless."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "fixed in place",
+      "became": null,
+      "claim": "The new debt block T-M40-2-6 cites a line number that this same commit invalidated: it points at src/browser/agent.py:1013, but the crash site moved to 1024 when the commit added 11 comment lines above it.",
+      "evidence": "tasks/TODO.md - the block named agent.py:1013; actual crash site grep -n 'read_only = step' src/browser/agent.py -> 1024. Line 1013 is now mid-comment about pending_recovery. The rest of the block checks out: the string-target claim (failure:task, reason 'unsupported target key(s) ...', TARGET_KEYS at agent.py:780) and the non-dict-step claim (TypeError at 1024, uncaught out of run_task, caught into failure:env at server.py:214-220) both reproduce.",
+      "repro": "run any fixture case with stub_plan [None] -> TypeError at agent.py:1024, not :1013",
+      "acceptance": "The debt block names 1024, or names the symbol (read_only = step['action'] in run_task's step loop) instead of a line that drifts.",
+      "resolution": "Taken as the symbol half, in place: T-M40-2-6 now names the symbol and marks the number as drifting."
+    }
+  ]
+}
