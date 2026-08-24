@@ -698,11 +698,17 @@ const EXAMPLES = {
     url: "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
     task: "What is the price of this book?"},                  // run ac69e850 → "£51.77"
   "news.ycombinator.com (live)": {label: "Title of an HN story",
-    url: "https://news.ycombinator.com/item?id=1",
-    // runs 97f2157d, 4453fae6 → "Y Combinator" (M37). Retired "Who submitted
-    // this story?" (run bcdc8f8a → "pg"): post-M35 it failed 5/5 on the
-    // deployment — 349e4839, e08b7627, bcae4fe7, 63b9d944, failure:locate,
-    // the planner targets link "pg" and the page has two.
+    url: "https://news.ycombinator.com/item?id=2",
+    // runs c0af867b, 6e537b01 → "A Student's Guide to Startups" (2/2, 2026-08-24).
+    // Moved off item?id=1, whose title is literally "Y Combinator" (runs
+    // 97f2157d, 4453fae6, correct answers): a right answer there is
+    // indistinguishable from the domain-name fallback a broken extractor
+    // would emit, so the example demonstrated nothing. Item 2 is the same
+    // frozen Oct-2006 shape with a title that can only have been read off
+    // the page. Retired "Who submitted this story?" (run bcdc8f8a → "pg"):
+    // post-M35 it failed 5/5 on the deployment — 349e4839, e08b7627,
+    // bcae4fe7, 63b9d944, failure:locate, the planner targets link "pg"
+    // and the page has two.
     task: "What is the title of this story?"},
   "quotes.toscrape.com (live)": {label: "First of the top ten tags",
     url: "https://quotes.toscrape.com/",
