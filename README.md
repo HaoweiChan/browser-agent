@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 158 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 159 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 9 cases, 4 real sites, still $0.00
 ```
@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260824-005609-fast.json`, with
-`evals/report/20260824-005457-invariant.json` and
+Latest offline baseline — `evals/report/20260824-013943-fast.json`, with
+`evals/report/20260824-013832-invariant.json` and
 `evals/report/20260823-164737-live.json`:
 
 ```
-fast  158/158    invariant  61/61    live  9/9    $0.0000    71.8s
+fast  159/159    invariant  62/62    live  9/9    $0.0000    70.3s
 recovery 8/8 verified (14 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 33/33 · 13 replans
 ```
@@ -170,8 +170,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 158 | 71.75s | 82.51 | **90s** |
-| `invariant` | 61 | 14.08s | 16.19 | **20s** |
+| `fast` | 159 | 71.0s | 81.65 | **90s** |
+| `invariant` | 62 | 13.63s | 15.67 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of one commit (`d173340`, 116 `fast` / 48 `invariant` cases, a smaller
@@ -410,7 +410,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 169 cases (158 of them in the offline gate), it
+The eval set is not weak; it is 170 cases (159 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

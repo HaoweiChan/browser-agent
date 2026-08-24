@@ -1,0 +1,50 @@
+{
+  "pr": 45,
+  "task": "T-M40-1",
+  "round": 1,
+  "reviewer": "pr-reviewer subagent, fresh context, no author reasoning",
+  "result": "REQUEST_CHANGES",
+  "gate_observed": "invariant 59/59 = 1.000 (13.64s / 20) · fast 154/154 = 1.000 (70.63s / 90); .eval-baseline.json unchanged by the diff",
+  "reviewer_verifications": [
+    "The new case goes red against origin/main's unguarded smoke_events (6 keys incl. slot_not_held_while_smoke_runs, readyz_ready_while_a_browser_is_up).",
+    "The new case goes red against PR #43's read-only guard with exactly the six keys tasks/reviews/pr-T-M40-1-smoke-guard-hunk.md claims.",
+    "25/25 and 25/25-under-load green, no flake.",
+    "The stub does NOT wedge the event loop: it parks on `await asyncio.sleep(0.005)` polling a threading.Event, not on Event.wait — so the case does not pass for the wrong reason.",
+    "asyncio.Semaphore on this repo's Python 3.12.13 confirms the check-then-acquire atomicity claim: locked() is True when _value == 0 or any live waiter exists, and acquire()'s uncontended path returns without a suspension point.",
+    "The busy-branch `return` is outside the `try`, so there is no over-release path (a spurious release would silently raise the concurrency limit to 2).",
+    "A real client disconnect mid-`launching` (raw socket, SO_LINGER 0) returned the slot in 0.00s — T-R82's logged debt is real but not currently exploitable."
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The console's new busy branch is coupled to the refusal message by `startsWith(\"busy\")`, but the eval only checks the message contains \"busy\" anywhere and checks the JS as a literal source substring — so rewording the server refusal silently restores the exact bug the branch was added to fix, with the gate green.",
+      "evidence": "src/browser/server.py:791-793 tests `String(ev.error || \"\").startsWith(\"busy\")` while server.py:960-963 emits `\"busy: the single run slot is taken — …\"`; the grader at src/browser/eval_adapter.py:2216 asserts only `any(\"busy\" in str(e.get(\"error\",\"\")) ...)` and at :2237 asserts only `exp[\"page_branch\"] in S.PAGE`. Mutating the server string to `\"the single run slot is busy — \"` (still contains \"busy\", no longer starts with it) leaves every assertion green while the panel renders \"chromium failed\" for a refusal in which no Chromium was ever launched — the case's own stated defect.",
+      "repro": "copy the tree to /tmp, replace `error=\"busy: the single run slot is taken — \"` with `error=\"the single run slot is busy — \"` in src/browser/server.py, then run `run_case()` on evals/adversarial/smoke-stream-takes-the-run-slot.json — observed {\"passed\": true, \"wrong\": {}}.",
+      "acceptance": "the case derives the console predicate and the server refusal from one place, or asserts the actual refusal string satisfies the actual page predicate (e.g. the observed `ev.error` must satisfy the `startsWith` prefix parsed out of PAGE), and that assertion is watched red against the reworded-message mutant.",
+      "route_reason": "MEDIUM and the case's advertised coverage is weaker than claimed — the PR body and the case's own assertion key `console_reports_a_busy_slot_as_a_browser_failure` present this branch as graded, and the reviewer demonstrated a mutant that is broken and green."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §3's new band paragraph states \"It is the only row at this count, so there is nothing to select and no least-slack choice to make\", which is false against the ledger committed in the same commit, and the row it published is not the slowest at that count — violating §3's own least-slack rule it cites two paragraphs earlier.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:133-139 publishes `invariant` at 59 cases, ts `20260824-002424`, 14.08s, 57/59. `git show HEAD:evals/report/history.jsonl` contains five rows at invariant/total=59: 002326 14.02s (57/59), 002424 14.08s (57/59), 002824 13.17s (58/59), 003025 14.16s (59/59), 003411 13.18s (59/59). 003025 is both slower (14.16 > 14.08, i.e. less slack) and green, and is the very report README's \"Where it stands\" cites. §2 by contrast did publish its true max (71.42 is the max of 71.42/70.80/70.82 at fast/154). Nothing catches it: `_band_wrong` item 3 is `rule(published) == rule(ledger max)` and both 14.08 and 14.16 derive 20 (src/browser/eval_adapter.py:489-560).",
+      "repro": "cd <worktree> && git show HEAD:evals/report/history.jsonl | python3 -c \"import sys,json;[print(r['ts'],r['wall_s'],r['passed']) for r in map(json.loads,sys.stdin) if r['suite']=='invariant' and r['total']==59]\" — five rows, max 14.16s, against the 14.08s published at ADR-019:133.",
+      "acceptance": "§3 publishes the slowest committed row at 59 cases (ts 20260824-003025, 14.16s, 59/59 — 14.16 × 1.15 = 16.28 → 20, same ceiling), or states the actual selection made among the five rows; the sentence claiming a single row is removed. README's band table moves with it.",
+      "route_reason": "MEDIUM and squarely a dishonest published claim — a committed ADR asserts a ledger fact contradicted by the ledger committed in the same commit. Independently re-verified by the orchestrator before routing.",
+      "orchestrator_verification": "Re-ran the repro against HEAD: five rows at invariant/total=59, walls 14.02/14.08/13.17/14.16/13.18, max 14.16 at ts 20260824-003025 (59/59). Confirmed. All five rows carry dirty: true, which is separately known debt (T-R53)."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The `/readyz` reason string the diff introduces is only negatively asserted (non-empty and free of the substring \"None\"), so the operator-facing wording it exists to fix is not actually pinned.",
+      "evidence": "src/browser/eval_adapter.py:2231-2233 — `if not during.get(\"reason\") or \"None\" in str(during.get(\"reason\"))`. A regression to `\"reason\": \"a run is executing\"` (no id interpolated) while a browser check holds the slot passes both halves and still sends an operator hunting a run that never existed, which server.py:868-871 names as the defect being fixed.",
+      "repro": "change server.py:870-871 to `\"reason\": \"a run is executing\" if busy else None` and run the case — `readyz_reason_names_a_run_that_does_not_exist` does not fire.",
+      "acceptance": "the assertion requires the browser-check wording when `active_run_id` is null (and the run wording when it is not), watched red against the mutant above.",
+      "route_reason": "LOW severity. Per the pr-loop scope boundary only HIGH/MEDIUM findings trigger REPAIR regardless of which PR introduced the line; logged as debt with the evidence carried verbatim."
+    }
+  ]
+}
