@@ -564,14 +564,8 @@ PAGE = r"""<!doctype html>
   .limits-summary li + li { margin-top:.35rem }
   a { color:var(--accent) }
   .chip { text-transform:none; letter-spacing:0; font-weight:600; font-size:12px; padding:.35rem .65rem }
-  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(17rem,1fr)); gap:.6rem }
-  .card { border:1px solid var(--line); border-radius:var(--radius); padding:.8rem .9rem;
-       background:var(--panel); display:flex; flex-direction:column; gap:.45rem }
-  .caps { list-style:none; margin:0; padding:0; font-size:13px }
-  .caps li + li { margin-top:.15rem }
-  .caps .supported { color:var(--ok) } .caps .unreliable { color:var(--warn) }
-  .caps .unsupported { color:var(--bad) } .caps .none { color:var(--dim) }
-  .card .try { align-self:flex-start }
+  .table-wrap { overflow:auto; padding:0 }
+  td .try { white-space:nowrap }
   .summary { margin:0 0 .7rem; display:flex; gap:.6rem; align-items:center; flex-wrap:wrap }
   .answer { font-size:17px; font-weight:700; white-space:pre-wrap; word-break:break-word;
        margin:.3rem 0 .8rem; padding:.8rem; background:var(--bg);
@@ -665,10 +659,18 @@ PAGE = r"""<!doctype html>
 <h2><span class="section-no">03</span> What works today</h2>
 <p class="note">Each status is declared by a human from eval evidence, never inferred from a
   pass rate. &ldquo;Try&rdquo; buttons are examples that were run against this deployment.</p>
-<div id="matrix" class="cards">loading&hellip;</div>
+<div id="matrix" class="panel table-wrap">loading&hellip;</div>
 
 <h2><span class="section-no">04</span> Known limits</h2>
 <div id="limits" class="panel">loading&hellip;</div>
+
+<h2><span class="section-no">05</span> Decisions</h2>
+<details class="panel" id="adrs">
+  <summary id="adrs-summary">Architecture decisions</summary>
+  <ol class="limits-summary" id="adr-list"></ol>
+  <p class="note" style="margin:.8rem 0 0">Full rulings, the reasoning and the eval cases that enforce
+    each one: <a href="https://github.com/HaoweiChan/browser-agent/blob/main/specs/decisions/INDEX.md">specs/decisions/</a></p>
+</details>
 </main>
 
 <footer><span>Browser Agent / reviewer evidence surface</span><span>amber = command · cyan = interaction / recovery</span></footer>
@@ -762,6 +764,41 @@ const LIMITS = [
   "Can pass verification with a wrong answer — known defect, fix in progress",
   "Login, payment, CAPTCHA, delete, download: refused",
 ];
+// Plain-English one-liners, hand-written same as LIMITS above. Full ruling +
+// reasoning + enforcing eval cases live one file per ADR in specs/decisions/,
+// linked below — this is the teaser, not a duplicate of the record. The
+// numbering has one gap (between 022 and 024): no file, nothing on record
+// skipped it on purpose.
+const ADRS = [
+  ["000", "specs/ holds only invariants, contracts and ADRs — the eval set itself is the spec, not prose"],
+  ["001", "docs/ may hold a bounded planning layer and a milestone TODO list; specs/ keeps its three-kind rule"],
+  ["002", "sets the pass/fail gate: 100% on invariants, no regression on the fast suite, zero spend, a measured time ceiling"],
+  ["003", "recovery runs on two ladders — relocate a lost element, replan a failed action — each capped and classified honestly when exhausted"],
+  ["004", "the live trace shows every attempted step, including ones a recovery superseded, and the support matrix is parsed live, never duplicated"],
+  ["005", "money comparisons check value/unit/currency separately; a replan can't skip a step that never touched the page; recovery must actually change something"],
+  ["006", "adds a proximity search (nearest labelled value to an anchor) and closes three ways a wrong answer used to score a silent pass"],
+  ["007", "“page loaded” means DOM ready plus a bounded best-effort wait, never a strict full-load wait — corrects an earlier live-coverage claim"],
+  ["008", "the “did we just dump the whole page” check is a ratio against real page size, calibrated on a 25-case hand-labeled sample"],
+  ["009", "the mutation catalogue is five capability-breaking cases, not six decorative ones; unrescuable failures are recorded honestly, never smoothed over"],
+  ["010", "the cost/model comparison ships as a mechanism with its results table committed empty — no number until it's actually measured on a live deploy"],
+  ["011", "/readyz reports whether the agent can take a new task right now and always answers 200; /healthz only proves the process is alive"],
+  ["012", "every eval run logs one history line unconditionally; a full per-case report is saved only when it's actually needed as evidence"],
+  ["013", "the fast suite shares one browser and is gated by a wall-clock ceiling measured from real runs, not guessed"],
+  ["014", "the reviewer UI adopts a terminal visual style without changing what it shows or how it's built"],
+  ["015", "A-freeze milestone: a held-out probe came back red (a wrong answer scored a pass) — fixed and pinned as a test before freezing"],
+  ["016", "a wrong-but-plausible answer is caught by comparing it against other pages the same run visited, not by guessing keywords in the task"],
+  ["017", "an LLM judge is the last check in the pipeline, called once per run, and fails closed on any error, timeout or missing key"],
+  ["018", "“cheapest/most/least” tasks must read the whole list in one step and rank in code — the model is never allowed to just pick a winner"],
+  ["019", "every eval suite gets its own measured wall-clock ceiling per environment (laptop vs. CI), derived from real run history"],
+  ["020", "the planner can ask to look closer at one part of a page it's already seen, without spending a new capability"],
+  ["021", "raises the local fast-suite time ceiling to what the suite actually measures, not a round number picked by hand"],
+  ["022", "a support-matrix row may be declared from real runs against the live deployment with no eval case behind it, if every run is cited honestly"],
+  ["024", "a plan that tries to “extract” the whole page as one blob is refused before it runs — that's never a real answer to a real question"],
+  ["025", "a probe's exact tasks, thresholds and pass/fail bar are written down before it runs, so results can't be graded after the fact"],
+  ["026", "when a target matches more than one element, the page is used to narrow it down under strict rules, instead of failing outright"],
+];
+$("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
+$("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;
 const EXPLAIN = {
   success: "Answer found and verified against the page.",
   "failure:locate": "Couldn't find the element the plan was looking for on the page.",
@@ -1162,18 +1199,38 @@ fetch("/support-matrix").then(r => r.json()).then(m => {
   // parse_matrix refuses to return zero rows, so rows[0] is always there.
   const TCS = Object.keys(m.rows[0].cells);
   const MARK = {supported: "✓", unreliable: "△", unsupported: "×"};
-  const SUFFIX = {unreliable: " — unreliable", unsupported: " — doesn't work"};
-  // Real sites only: the fixture rows stay in the doc, not on the page.
-  $("matrix").innerHTML = m.rows.filter(row => !/ fixture$/.test(row.domain)).map(row => {
-    const caps = TCS.filter(t => MARK[row.cells[t]]).map(t => `<li class="${row.cells[t]}">${
-      MARK[row.cells[t]]} ${esc(SUPPORT_LABELS[t] || t)}${SUFFIX[row.cells[t]] || ""}</li>`);
-    const ex = EXAMPLES[row.domain];
-    return `<div class="card"><div><b>${esc(row.domain.replace(/ \(live\)$/, ""))}</b></div>
-      <ul class="caps">${caps.join("") || '<li class="none">Not evaluated yet</li>'}</ul>
-      ${ex ? `<button class="ghost chip try" data-example="${esc(row.domain)}">Try: ${esc(ex.label)}</button>` : ""}
-      ${ex && ex.note ? `<p class="note" style="margin:0">${esc(ex.note)}</p>` : ""}
-    </div>`;
-  }).join("");
+  const RANK = {supported: 0, unreliable: 1, unsupported: 2};
+  // Real sites only: the fixture rows stay in the doc, not on the page. Sorted
+  // best-status-first (stable, so ties keep the doc's order) so the fully
+  // supported rows aren't buried under a page mostly showing "—"/unreliable —
+  // a sparse grid of warning words otherwise reads as "mostly broken" even
+  // though every "—" is just not-yet-evaluated, not a failure.
+  const worst = row => Math.max(0, ...TCS.map(t => RANK[row.cells[t]] ?? 0));
+  const liveRows = m.rows.filter(row => !/ fixture$/.test(row.domain))
+    .map((row, i) => ({row, i})).sort((a, b) => worst(a.row) - worst(b.row) || a.i - b.i)
+    .map(({row}) => row);
+  // Computed from the payload every render, never hardcoded, so it can't drift
+  // from docs/support-matrix.md: one sentence instead of a grid of marks.
+  const counts = {supported: 0, unreliable: 0, unsupported: 0};
+  liveRows.forEach(row => TCS.forEach(t => { if (row.cells[t] in counts) counts[row.cells[t]]++; }));
+  const summary = `<p class="note" style="margin:0 0 .6rem">${counts.supported} supported &middot; ${
+    counts.unreliable} unreliable &middot; ${counts.unsupported} unsupported &mdash; every status declared
+    by hand from eval evidence.</p>`;
+  $("matrix").innerHTML = summary + `<table><tr><th>Domain</th>${
+    TCS.map(t => `<th>${esc(SUPPORT_LABELS[t] || t)}</th>`).join("")}<th>Try it</th></tr>${
+    liveRows.map(row => {
+      const cells = TCS.map(t => {
+        const v = row.cells[t] || "—";
+        const cls = ["supported", "unreliable", "unsupported"].includes(v) ? v : "none";
+        return `<td class="${cls}">${MARK[v] ? MARK[v] + " " : ""}${esc(v)}</td>`;
+      }).join("");
+      const ex = EXAMPLES[row.domain];
+      const tryCell = ex
+        ? `<button class="ghost chip try" data-example="${esc(row.domain)}">Try: ${esc(ex.label)}</button>${
+            ex.note ? `<p class="note" style="margin:.3rem 0 0">${esc(ex.note)}</p>` : ""}`
+        : "";
+      return `<tr><td><b>${esc(row.domain.replace(/ \(live\)$/, ""))}</b></td>${cells}<td>${tryCell}</td></tr>`;
+    }).join("")}</table>`;
   $("limits").innerHTML = `<ul class="limits-summary">${
     LIMITS.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
     <p class="note" style="margin:.8rem 0 0">${m.limitations.length} declared limitations, each with

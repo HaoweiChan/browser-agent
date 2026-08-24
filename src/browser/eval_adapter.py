@@ -3796,7 +3796,14 @@ def _run_ui_style_case(case: dict) -> dict:
 # case sees the same page whichever runs first.
 _UI_MATRIX = {
     "rows": [
-        {"domain": "shop fixture", "cells": {"TC1": "supported", "TC2": "supported"}},
+        # All 5 TC keys, matching the real parse_matrix() shape (its TCS is a
+        # fixed 5-item constant, never derived from data) — rows[0] here is
+        # what the page's own TCS = Object.keys(rows[0].cells) reads its
+        # column set from, so a fixture row with a narrower key set than
+        # production would silently hide a real column from the render logic
+        # under test, not just from the fixture itself.
+        {"domain": "shop fixture", "cells": {
+            "TC1": "supported", "TC2": "supported", "TC3": "—", "TC4": "—", "TC5": "—"}},
         {"domain": "books.toscrape.com (live)", "cells": {"TC1": "—", "TC3": "unreliable"}},
         {"domain": "news.ycombinator.com (live)", "cells": {"TC1": "unreliable"}},  # M37: so its chip renders
         {"domain": "openlibrary.org (live)", "cells": {"TC1": "unreliable", "TC2": "unsupported"}},
@@ -3979,9 +3986,9 @@ def _run_ui_form_case(case: dict) -> dict:
             out.chips.push({key: chip.dataset.example, task: $("task").value,
                             url: $("url").value, calls: calls.slice(),
                             button: chip.textContent,
-                            in_card: !!chip.closest("#matrix .card")});
+                            in_card: !!chip.closest("#matrix tr:has(td)")});
           }
-          out.card_list = [...document.querySelectorAll("#matrix .card")].map(card => ({
+          out.card_list = [...document.querySelectorAll("#matrix tr:has(td)")].map(card => ({
             text: card.textContent, buttons: card.querySelectorAll("[data-example]").length,
             key: (card.querySelector("[data-example]") || {dataset: {}}).dataset.example}));
           return out;
@@ -4002,8 +4009,19 @@ def _run_ui_form_case(case: dict) -> dict:
     examples = got["examples"]
     # Cards are the only example surface: one card per real-site row, no fixture
     # rows, exactly one Try button per card, and a note where the example has one.
+    # Rows render best-status-first (stable), same rule as the page's own RANK.
     cards = got["card_list"]
-    want_cards = [r["domain"] for r in _UI_MATRIX["rows"] if not r["domain"].endswith(" fixture")]
+    # Mirrors the page's own TCS/RANK: TCS is rows[0]'s cell keys, matching how
+    # the real parse_matrix() always hands every row the same fixed 5-key set.
+    # _UI_MATRIX's fixture row (rows[0]) must carry all 5 keys for the same
+    # reason production always does — otherwise a status in a column the
+    # fixture row lacks goes invisible to the sort on both sides at once,
+    # which happened here once (a 2-key fixture row hid a real-row TC3).
+    _rank = {"supported": 0, "unreliable": 1, "unsupported": 2}
+    _tcs = list(_UI_MATRIX["rows"][0]["cells"].keys())
+    _worst = lambda r: max([_rank.get(r["cells"].get(t), 0) for t in _tcs], default=0)
+    want_cards = [r["domain"] for r in sorted(
+        (r for r in _UI_MATRIX["rows"] if not r["domain"].endswith(" fixture")), key=_worst)]
     if [c["key"] for c in cards] != want_cards or any(c["buttons"] != 1 for c in cards):
         wrong["cards"] = cards
     for c in cards:
