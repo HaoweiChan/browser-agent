@@ -1,0 +1,2593 @@
+{
+  "runs": [
+    {
+      "run_index": 1,
+      "task_id": 1,
+      "group": "regressed",
+      "site": "x-rates.com",
+      "task_text": "What is the current exchange rate from EUR to USD?",
+      "start_url": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+      "repetition": 1,
+      "submit_http_status": 200,
+      "run_id": "110e9e8f",
+      "timed_out": false,
+      "wall_time_s_wallclock": 15.8,
+      "final_payload": {
+        "status": "failure:semantic",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "step 2 (extract): replanned before execution \u2014 plan lint: the plan reads 'extract' off 'WebArea', the accessibility root of the document \u2014 the node `observe` lists first on every page, whose accessible name is the page title and whose text is the ENTIRE page. It cannot be the answer to anything, and it carries no other string to retarget by, so the page title is all a relocation could ask for next. Name the element that holds the value; if you can see a container but not its contents, `observe` that container first; StepError: identity anchor 'EUR to USD' absent from the page the answer was read from",
+        "verdict": null,
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 3227
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": null,
+                "name": null,
+                "text": "1.168062 USD",
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": "EUR to USD",
+              "rank": null,
+              "resolved": {
+                "tier": "text",
+                "description": "{'role': None, 'name': None, 'text': '1.168062 USD', 'near': None, 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": "semantic",
+              "note": "replanned before execution \u2014 plan lint: the plan reads 'extract' off 'WebArea', the accessibility root of the document \u2014 the node `observe` lists first on every page, whose accessible name is the page title and whose text is the ENTIRE page. It cannot be the answer to anything, and it carries no other string to retarget by, so the page title is all a relocation could ask for next. Name the element that holds the value; if you can see a container but not its contents, `observe` that container first; StepError: identity anchor 'EUR to USD' absent from the page the answer was read from",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 171
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "1.168062 USD",
+              "page_text": "Skip to Main Content\nHome\nCurrency Calculator\nGraphs\nRates Table\nMonthly Average\nHistoric Lookup\nHome > Currency Calculator\nEXCHANGE RATE EURO TO US DOLLAR\n1.00 EUR =\n1.168062 USD\nJan 01, 2026 02:54 UTC\nView EUR Rates Table\nView USD Rates Table\nView EUR / USD Graphs\n1. Configure Converter\namount\n\u00a0\u25ba\n\u2194\nChange Currency Calculator base currency\nArgentine Peso\nAustralian Dollar\nBahraini Dinar\nBotswana Pula\nBrazilian Real\nBruneian Dollar\nBulgarian Lev\nCanadian Dollar\nChilean Peso\nChinese Yuan Renminbi\nColombian Peso\nCroatian Kuna\nCzech Koruna\nDanish Krone\nEuro\nHong Kong Dollar\nHungarian Forint\nIcelandic Krona\nIndian Rupee\nIndonesian Rupiah\nIranian Rial\nIsraeli Shekel\nJapanese Yen\nKazakhstani Tenge\nSouth Korean Won\nKuwaiti Dinar\nLibyan Dinar\nMalaysian Ringgit\nMauritian Rupee\nMexican Peso\nNepalese Rupee\nNew Zealand Dollar\nNorwegian Krone\nOmani Rial\nPakistani Rupee\nPhilippine Peso\nPolish Zloty\nQatari Riyal\nRomanian New Leu\nRussian Ruble\nSaudi Arabian Riyal\nSingapore Dollar\nSouth African Rand\nSri Lankan Rupee\nSwedish Krona\nSwiss Franc\nTaiwan New Dollar\nThai Baht\nTrinidadian Dollar\nTurkish Lira\nEmirati Dirham\nBritish Pound\nUS Dollar\nVenezuelan Bolivar\n \nPercent Change in the Last 24 Hours\nEUR/USD\n-0.01725%\nUSD/JPY\n-0.06081%\nGBP/USD\n+0.03671%\nUSD/CHF\n-0.10739%\nUSD/CAD\n+0.20729%\nEUR/JPY\n-0.07805%\nAUD/USD\n-0.07352%\nCNY/USD\n-0.03179%\nJan 01, 2026 02:54 UTC\nAD\nUseful Links\nEuro Information\nFAQ\nFeedback\nTerms of Service\nPrivacy\nCookie Policy\nAdvertise on X-Rates\nFeedback\nFAQ\n\u00a9 X-Rates 2026\nDiscover more\nEnrolling In Online Math Courses\nEuro Exchange Rate\nCurrency Converter Widget",
+              "body_len": 1589,
+              "other_page_text": "",
+              "value_offset": 167
+            }
+          ],
+          "final_url": null,
+          "final_page_digest": null
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 3518,
+          "llm_usd": 0.0014567999999999998,
+          "replans": 1,
+          "ms": 14373,
+          "judge_calls": 0,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "step 2 (extract): replanned before execution \u2014 plan lint: the plan reads 'extract' off 'WebArea', the accessibility root of the document \u2014 the node `observe` lists first on every page, whose accessible name is the page title and whose text is the ENTIRE page. It cannot be the answer to anything, and it carries no other string to retarget by, so the page title is all a relocation could ask for next. Name the element that holds the value; if you can see a container but not its contents, `observe` that container first; StepError: identity anchor 'EUR to USD' absent from the page the answer was read from",
+      "verdict": null,
+      "cost_usd": 0.0014567999999999998,
+      "wall_ms_reported": 14373,
+      "actions": 2,
+      "replans": 1,
+      "final_url": null,
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 2,
+      "task_id": 2,
+      "group": "regressed",
+      "site": "multpl.com",
+      "task_text": "What is the current S&P 500 P/E ratio?",
+      "start_url": "https://www.multpl.com/s-p-500-pe-ratio",
+      "repetition": 1,
+      "submit_http_status": 200,
+      "run_id": "df42fa8f",
+      "timed_out": false,
+      "wall_time_s_wallclock": 21.5,
+      "final_payload": {
+        "status": "success",
+        "model": "openai/gpt-5.6-luna",
+        "answer": "\u2020 29.58",
+        "reason": null,
+        "verdict": {
+          "verdict": "PASS",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": true
+          },
+          "reason": null
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://www.multpl.com/s-p-500-pe-ratio",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 2574
+            },
+            {
+              "i": 2,
+              "action": "click",
+              "target": {
+                "role": "link",
+                "name": "Table",
+                "text": null,
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": null,
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'link', 'name': 'Table', 'text': None, 'near': None, 'index': None}"
+              },
+              "expected_state": {
+                "url_contains": "#table"
+              },
+              "postcondition_ok": false,
+              "failure_class": "act",
+              "note": "StepError: expected_state not reached: {'url_contains': '#table'}",
+              "retry_or_recovery": null,
+              "superseded_by": 3,
+              "page_changed": true,
+              "screenshot": "step_2.png",
+              "ms": 2527
+            },
+            {
+              "i": 3,
+              "action": "extract",
+              "target": {
+                "role": "cell",
+                "name": null,
+                "text": null,
+                "near": "Aug 21, 2026",
+                "index": null
+              },
+              "value": null,
+              "anchor": "S&P 500 PE Ratio",
+              "rank": null,
+              "resolved": {
+                "tier": "structural",
+                "description": "{'role': 'cell', 'name': None, 'text': None, 'near': 'Aug 21, 2026', 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": "replan #1 after act failure at step 2: 1 step(s) planned from the page as it actually is",
+              "retry_or_recovery": "recovery",
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_3.png",
+              "ms": 556
+            }
+          ],
+          "screenshots": [
+            "step_2.png",
+            "step_3.png"
+          ],
+          "extractions": [
+            {
+              "value": "\u2020 29.58",
+              "page_text": " S&P 500 PE Ratio Shiller PE Ratio 10 Year Treasury Rate S&P 500 Dividend Yield S&P 500 Earnings S&P 500 Historical Prices more multpl \nS&P 500 PE Ratio by Year\nChart Table\nShare\nShow:\nBy Year By Month\n\n\u2020 Estimate\n\nDate\tValue\nAug 21, 2026\t\u2020 29.58\nJan 1, 2026\t\u2002 27.98\nJan 1, 2025\t\u2002 28.16\nJan 1, 2024\t\u2002 25.01\nJan 1, 2023\t\u2002 22.82\nJan 1, 2022\t\u2002 23.11\nJan 1, 2021\t\u2002 35.96\nJan 1, 2020\t\u2002 24.88\nJan 1, 2019\t\u2002 19.60\nJan 1, 2018\t\u2002 24.97\nJan 1, 2017\t\u2002 23.59\nJan 1, 2016\t\u2002 22.18\nJan 1, 2015\t\u2002 20.02\nJan 1, 2014\t\u2002 18.15\nJan 1, 2013\t\u2002 17.03\nJan 1, 2012\t\u2002 14.87\nJan 1, 2011\t\u2002 16.30\nJan 1, 2010\t\u2002 20.70\nJan 1, 2009\t\u2002 70.91\nJan 1, 2008\t\u2002 21.46\nJan 1, 2007\t\u2002 17.36\nJan 1, 2006\t\u2002 18.07\nJan 1, 2005\t\u2002 19.99\nJan 1, 2004\t\u2002 22.73\nJan 1, 2003\t\u2002 31.43\nJan 1, 2002\t\u2002 46.17\nJan 1, 2001\t\u2002 27.55\nJan 1, 2000\t\u2002 29.04\nJan 1, 1999\t\u2002 32.92\nJan 1, 1998\t\u2002 24.29\nJan 1, 1997\t\u2002 19.53\nJan 1, 1996\t\u2002 18.08\nJan 1, 1995\t\u2002 14.89\nJan 1, 1994\t\u2002 21.34\nJan 1, 1993\t\u2002 22.50\nJan 1, 1992\t\u2002 25.93\nJan 1, 1991\t\u2002 15.35\nJan 1, 1990\t\u2002 15.13\nJan 1, 1989\t\u2002 11.82\nJan 1, 1988\t\u2002 14.02\nJan 1, 1987\t\u2002 18.01\nJan 1, 1986\t\u2002 14.28\nJan 1, 1985\t\u2002 10.36\nJan 1, 1984\t\u2002 11.52\nJan 1, 1983\t\u2002 11.48\nJan 1, 1982\t\u2002 7.73\nJan 1, 1981\t\u2002 9.02\nJan 1, 1980\t\u2002 7.39\nJan 1, 1979\t\u2002 7.88\nJan 1, 1978\t\u2002 8.28\nJan 1, 1977\t\u2002 10.41\nJan 1, 1976\t\u2002 11.82\nJan 1, 1975\t\u2002 8.30\nJan 1, 1974\t\u2002 11.68\nJan 1, 1973\t\u2002 18.09\nJan 1, 1972\t\u2002 18.01\nJan 1, 1971\t\u2002 18.12\nJan 1, 1970\t\u2002 15.76\nJan 1, 1969\t\u2002 17.65\nJan 1, 1968\t\u2002 17.71\nJan 1, 1967\t\u2002 15.31\nJan 1, 1966\t\u2002 17.81\nJan 1, 1965\t\u2002 18.75\nJan 1, 1964\t\u2002 18.77\nJan 1, 1963\t\u2002 17.66\nJan 1, 1962\t\u2002 21.25\nJan 1, 1961\t\u2002 18.60\nJan 1, 1960\t\u2002 17.12\nJan 1, 1959\t\u2002 18.77\nJan 1, 1958\t\u2002 12.49\nJan 1, 1957\t\u2002 13.34\nJan 1, 1956\t\u2002 12.12\nJan 1, 1955\t\u2002 12.56\nJan 1, 1954\t\u2002 10.09\nJan 1, 1953\t\u2002 10.86\nJan 1, 1952\t\u2002 9.97\nJan 1, 1951\t\u2002 7.48\nJan 1, 1950\t\u2002 7.22\nJan 1, 1949\t\u2002 6.62\nJan 1, 1948\t\u2002 9.02\nJan 1, 1947\t\u2002 13.46\nJan 1, 1946\t\u2002 19.17\nJan 1, 1945\t\u2002 14.35\nJan 1, 1944\t\u2002 12.65\nJan 1, 1943\t\u2002 9.67\nJan 1, 1942\t\u2002 7.97\nJan 1, 1941\t\u2002 10.02\nJan 1, 1940\t\u2002 13.23\nJan 1, 1939\t\u2002 18.84\nJan 1,",
+              "body_len": 3917,
+              "other_page_text": " S&P 500 PE Ratio Shiller PE Ratio 10 Year Treasury Rate S&P 500 Dividend Yield S&P 500 Earnings S&P 500 Historical Prices more multpl \nS&P 500 PE Ratio\nDiscover more\nStock valuation tools\nS&P 500 data\nPortfolio management software\nFinancial news subscription\nStock market analysis\nFinancial Markets News\nChart Table\nShare\nDiscover more\nInvestment strategy guide\nPE Ratio calculator\nS&P 500 reports\nFinancial modeling templates\nStocks & Bonds\nInvesting\nprice\nMarket trend analysis\nCurrent S&P 500 PE Ratio: 29.58 +0.12 (0.42%)\n4:00 PM EDT, Fri Aug 21\nMean:\t16.23\t\nMedian:\t15.08\t\nMin:\t5.31\t(Dec 1917)\nMax:\t123.73\t(May 2009)\n\nPrice to earnings ratio, based on trailing twelve month \u201cas\u00a0reported\u201d\u00a0earnings.\n\nCurrent PE is estimated from latest reported earnings and current market\u00a0price.\n\nSource: Robert Shiller and his book Irrational Exuberance for historic S&P 500 PE Ratio.\n\nSee also\nShiller PE Ratio\nS&P 500 Price to Book Value\nS&P 500 Earnings Yield\nS&P 500 Price to Sales Ratio\nInflation Adjusted S&P 500\nS&P 500 Earnings\nInformation is provided \u2018as is\u2019 and solely for informational purposes, not for trading purposes or advice, and may be delayed.\n\n\nCopyright \u00a9 2026 contact@multpl.com \n\u00a0",
+              "value_offset": 239
+            }
+          ],
+          "final_url": "https://www.multpl.com/s-p-500-pe-ratio/table/by-year",
+          "final_page_digest": " S&P 500 PE Ratio Shiller PE Ratio 10 Year Treasury Rate S&P 500 Dividend Yield S&P 500 Earnings S&P 500 Historical Prices more multpl \nS&P 500 PE Ratio by Year\nChart Table\nShare\nShow:\nBy Year By Month\n\n\u2020 Estimate\n\nDate\tValue\nAug 21, 2026\t\u2020 29.58\nJan 1, 2026\t\u2002 27.98\nJan 1, 2025\t\u2002 28.16\nJan 1, 2024\t\u2002 25.01\nJan 1, 2023\t\u2002 22.82\nJan 1, 2022\t\u2002 23.11\nJan 1, 2021\t\u2002 35.96\nJan 1, 2020\t\u2002 24.88\nJan 1, 2019\t\u2002 19.60\nJan 1, 2018\t\u2002 24.97\nJan 1, 2017\t\u2002 23.59\nJan 1, 2016\t\u2002 22.18\nJan 1, 2015\t\u2002 20.02\nJan 1, 2014\t\u2002"
+        },
+        "budgets_spent": {
+          "actions": 3,
+          "llm_tokens": 3702,
+          "llm_usd": 0.0016053999999999999,
+          "replans": 1,
+          "ms": 19745,
+          "judge_calls": 1,
+          "judge_tokens": 2159,
+          "judge_usd": 0.00033467
+        }
+      },
+      "status": "success",
+      "answer": "\u2020 29.58",
+      "reason": null,
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "cost_usd": 0.0016053999999999999,
+      "wall_ms_reported": 19745,
+      "actions": 3,
+      "replans": 1,
+      "final_url": "https://www.multpl.com/s-p-500-pe-ratio/table/by-year",
+      "metric_class": "correct",
+      "correctness_note": "multpl rep1: '\u2020 29.58' matches re-verified 29.58 (\u2020=Estimate marker, value correct)"
+    },
+    {
+      "run_index": 3,
+      "task_id": 3,
+      "group": "regressed",
+      "site": "quotes.toscrape.com",
+      "task_text": "When was this author born?",
+      "start_url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+      "repetition": 1,
+      "submit_http_status": 200,
+      "run_id": "c20b1fda",
+      "timed_out": false,
+      "wall_time_s_wallclock": 26.2,
+      "final_payload": {
+        "status": "failure:semantic",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "verifier FAIL: judge rejected: The candidate answer 'Description:' does not provide any information about the author's birth date.",
+        "verdict": {
+          "verdict": "FAIL",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": false
+          },
+          "reason": "judge rejected: The candidate answer 'Description:' does not provide any information about the author's birth date."
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://quotes.toscrape.com/author/Albert-Einstein/",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 1397
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "strong",
+                "name": null,
+                "text": null,
+                "near": "Born:"
+              },
+              "value": null,
+              "anchor": "Albert Einstein",
+              "rank": null,
+              "resolved": {
+                "tier": "structural",
+                "description": "{'role': 'strong', 'name': None, 'text': None, 'near': 'Born:'}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 200
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "Description:",
+              "page_text": "Quotes to Scrape\n\nLogin\n\nAlbert Einstein\n\nBorn: March 14, 1879 in Ulm, Germany\n\nDescription:\n\nIn 1879, Albert Einstein was born in Ulm, Germany. He completed his Ph.D. at the University of Zurich by 1909. His 1905 paper explaining the photoelectric effect, the basis of electronics, earned him the Nobel Prize in 1921. His first paper on Special Relativity Theory, also published in 1905, changed the world. After the rise of the Nazi party, Einstein made Princeton his permanent home, becoming a U.S. citizen in 1940. Einstein, a pacifist during World War I, stayed a firm proponent of social justice and responsibility. He chaired the Emergency Committee of Atomic Scientists, which organized to alert the public to the dangers of atomic warfare.At a symposium, he advised: \"In their struggle for the ethical good, teachers of religion must have the stature to give up the doctrine of a personal God, that is, give up that source of fear and hope which in the past placed such vast power in the hands of priests. In their labors they will have to avail themselves of those forces which are capable of cultivating the Good, the True, and the Beautiful in humanity itself. This is, to be sure a more difficult but an incomparably more worthy task . . . \" (\"Science, Philosophy and Religion, A Symposium,\" published by the Conference on Science, Philosophy and Religion in their Relation to the Democratic Way of Life, Inc., New York, 1941). In a letter to philosopher Eric Gutkind, dated Jan. 3, 1954, Einstein stated: \"The word god is for me nothing more than the expression and product of human weaknesses, the Bible a collection of honorable, but still primitive legends which are nevertheless pretty childish. No interpretation no matter how subtle can (for me) change this,\" (The Guardian, \"Childish superstition: Einstein's letter makes view of religion relatively clear,\" by James Randerson, May 13, 2008). D. 1955.While best known for his mass\u2013energy equivalence formula E = mc2 (which has be",
+              "body_len": 3971,
+              "other_page_text": "",
+              "value_offset": 80
+            }
+          ],
+          "final_url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+          "final_page_digest": "Quotes to Scrape\n\nLogin\n\nAlbert Einstein\n\nBorn: March 14, 1879 in Ulm, Germany\n\nDescription:\n\nIn 1879, Albert Einstein was born in Ulm, Germany. He completed his Ph.D. at the University of Zurich by 1909. His 1905 paper explaining the photoelectric effect, the basis of electronics, earned him the Nobel Prize in 1921. His first paper on Special Relativity Theory, also published in 1905, changed the world. After the rise of the Nazi party, Einstein made Princeton his permanent home, becoming a U.S"
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1196,
+          "llm_usd": 0.0004328,
+          "replans": 0,
+          "ms": 23090,
+          "judge_calls": 1,
+          "judge_tokens": 1016,
+          "judge_usd": 5.648e-05
+        }
+      },
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "verifier FAIL: judge rejected: The candidate answer 'Description:' does not provide any information about the author's birth date.",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": false
+        },
+        "reason": "judge rejected: The candidate answer 'Description:' does not provide any information about the author's birth date."
+      },
+      "cost_usd": 0.0004328,
+      "wall_ms_reported": 23090,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 4,
+      "task_id": 4,
+      "group": "regressed",
+      "site": "openlibrary.org",
+      "task_text": "Who is the author of this book?",
+      "start_url": "https://openlibrary.org/books/OL7025919M",
+      "repetition": 1,
+      "submit_http_status": 200,
+      "run_id": "bdd9ebf7",
+      "timed_out": false,
+      "wall_time_s_wallclock": 10.6,
+      "final_payload": {
+        "status": "failure:extract",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "step 2 (extract): StepError: extraction returned empty text",
+        "verdict": null,
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://openlibrary.org/books/OL7025919M",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 3153
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "link",
+                "name": "Cover of: The monk and the dancer by Smith, Arthur Cosslett, Smith, Arthur Cosslett",
+                "text": null,
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": "The monk and the dancer",
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'link', 'name': 'Cover of: The monk and the dancer by Smith, Arthur Cosslett, Smith, Arthur Cosslett', 'text': None, 'near': None, 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": "extract",
+              "note": "StepError: extraction returned empty text",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 158
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [],
+          "final_url": null,
+          "final_page_digest": null
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1632,
+          "llm_usd": 0.00058455,
+          "replans": 0,
+          "ms": 7254,
+          "judge_calls": 0,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "failure:extract",
+      "answer": null,
+      "reason": "step 2 (extract): StepError: extraction returned empty text",
+      "verdict": null,
+      "cost_usd": 0.00058455,
+      "wall_ms_reported": 7254,
+      "actions": 2,
+      "replans": 0,
+      "final_url": null,
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 5,
+      "task_id": 5,
+      "group": "control",
+      "site": "companiesmarketcap.com",
+      "task_text": "What is the market cap of this company?",
+      "start_url": "https://companiesmarketcap.com/apple/marketcap/",
+      "repetition": 1,
+      "submit_http_status": 200,
+      "run_id": "97677d75",
+      "timed_out": false,
+      "wall_time_s_wallclock": 57.5,
+      "final_payload": {
+        "status": "failure:semantic",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "verifier FAIL: judge unavailable, failing closed: JudgeError: malformed judge response: AttributeError: 'NoneType' object has no attribute 'strip'",
+        "verdict": {
+          "verdict": "FAIL",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_available": false
+          },
+          "reason": "judge unavailable, failing closed: JudgeError: malformed judge response: AttributeError: 'NoneType' object has no attribute 'strip'"
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://companiesmarketcap.com/apple/marketcap/",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 2693
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "heading",
+                "name": "Market cap: $4.514 Trillion USD",
+                "text": null,
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": "Apple",
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'heading', 'name': 'Market cap: $4.514 Trillion USD', 'text': None, 'near': None, 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 315
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "Market cap: $4.514 Trillion USD",
+              "page_text": "Companies: 11,275 \u00a0\u00a0\u00a0 total market cap: $155.152 T\nSign In \ud83c\uddfa\ud83c\uddf8 English  $ USD  \nGlobal ranking\nRanking by countries\nRanking by categories\nETFs\nApple \nAAPL\n#2\nRank\n$4.514 T\nMarketcap\n\ud83c\uddfa\ud83c\uddf8 United States\nCountry\n$309.35\nShare price\n-0.63%\nChange (1 day)\n36.18%\nChange (1 year)\n\ud83d\udc68\u200d\ud83d\udcbb Software\ud83d\udc69\u200d\ud83d\udcbb Tech\ud83d\udd0c Electronics\ud83c\uddfa\ud83c\uddf8 Dow jones\ud83d\udcbb Tech Hardware\ud83e\uddbe AI\nCategories\n\nApple Inc. is an American hardware and software developer and technology company that develops and sells computers, smartphones and consumer electronics as well as operating systems and application software. Apple also operates internet sales portals for music, films and software.\n\nMarket cap\nRevenue\nEarnings\nPrice history\nP/E ratio\nP/S ratio\nMore\nMarket capitalization of Apple (AAPL)\nMarket cap: $4.514 Trillion USD\n\nAs of August 2026 Apple has a market cap of $4.514 Trillion USD. This makes Apple the world's 2nd most valuable company by market cap according to our data. The market capitalization, commonly called market cap, is the total market value of a publicly traded company's outstanding shares and is commonly used to measure how much a company is worth.\n\nMarket cap history of Apple from 1996 to 2026\n2000\n2005\n2010\n2015\n2020\n2025\n$1T\n$2T\n$3T\n$4T\n$5T\n0\ncompaniesmarketcap.com\nEnd of year Market Cap\nYear\tMarketcap\tChange\n2026\t$4.514 T\t12.95%\n2025\t$3.997 T\t6.12%\n2024\t$3.766 T\t25.79%\n2023\t$2.994 T\t44.87%\n2022\t$2.066 T\t-28.77%\n2021\t$2.901 T\t28.62%\n2020\t$2.255 T\t75.2%\n2019\t$1.287 T\t72.59%\n2018\t$746.07 B\t-13.34%\n2017\t$860.88 B\t41.37%\n2016\t$608.96 B\t4.34%\n2015\t$583.61 B\t-9.25%\n2014\t$643.12 B\t28.43%\n2013\t$500.74 B\t0.21%\n2012\t$499.69 B\t32.36%\n2011\t$377.51 B\t27.07%\n2010\t$297.09 B\t55.56%\n2009\t$190.98 B\t151.3%\n2008\t$75.99 B\t-56.33%\n2007\t$174.03 B\t138.47%\n2006\t$72.98 B\t20.05%\n2005\t$60.79 B\t133.34%\n2004\t$26.05 B\t230.6%\n2003\t$7.88 B\t52.65%\n2002\t$5.16 B\t-33.12%\n2001\t$7.71 B\t50.27%\n2000\t$5.13 B\t-69.01%\n1999\t$16.57 B\t199.15%\n1998\t$5.54 B\t229.71%\n1997\t$1.68 B\t-35.38%\n1996\t$2.60 B\t\nEnd of Day market cap according to different sources\n\nOn Aug",
+              "body_len": 3208,
+              "other_page_text": "",
+              "value_offset": 736
+            }
+          ],
+          "final_url": "https://companiesmarketcap.com/apple/marketcap/",
+          "final_page_digest": "Companies: 11,275 \u00a0\u00a0\u00a0 total market cap: $155.152 T\nSign In \ud83c\uddfa\ud83c\uddf8 English  $ USD  \nGlobal ranking\nRanking by countries\nRanking by categories\nETFs\nApple \nAAPL\n#2\nRank\n$4.514 T\nMarketcap\n\ud83c\uddfa\ud83c\uddf8 United States\nCountry\n$309.35\nShare price\n-0.63%\nChange (1 day)\n36.18%\nChange (1 year)\n\ud83d\udc68\u200d\ud83d\udcbb Software\ud83d\udc69\u200d\ud83d\udcbb Tech\ud83d\udd0c Electronics\ud83c\uddfa\ud83c\uddf8 Dow jones\ud83d\udcbb Tech Hardware\ud83e\uddbe AI\nCategories\n\nApple Inc. is an American hardware and software developer and technology company that develops and sells computers, smartphones and consumer electronics"
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1563,
+          "llm_usd": 0.00049225,
+          "replans": 0,
+          "ms": 57094,
+          "judge_calls": 1,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "verifier FAIL: judge unavailable, failing closed: JudgeError: malformed judge response: AttributeError: 'NoneType' object has no attribute 'strip'",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_available": false
+        },
+        "reason": "judge unavailable, failing closed: JudgeError: malformed judge response: AttributeError: 'NoneType' object has no attribute 'strip'"
+      },
+      "cost_usd": 0.00049225,
+      "wall_ms_reported": 57094,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://companiesmarketcap.com/apple/marketcap/",
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 6,
+      "task_id": 6,
+      "group": "control",
+      "site": "bankofcanada.ca",
+      "task_text": "What is the current policy interest rate?",
+      "start_url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+      "repetition": 1,
+      "submit_http_status": 200,
+      "run_id": "ff4f793a",
+      "timed_out": false,
+      "wall_time_s_wallclock": 10.6,
+      "final_payload": {
+        "status": "success",
+        "model": "openai/gpt-5.6-luna",
+        "answer": "2.25",
+        "reason": null,
+        "verdict": {
+          "verdict": "PASS",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": true
+          },
+          "reason": null
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 1461
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "cell",
+                "name": null,
+                "text": null,
+                "near": "July 15, 2026",
+                "index": null
+              },
+              "value": null,
+              "anchor": "Policy interest rate",
+              "rank": null,
+              "resolved": {
+                "tier": "structural",
+                "description": "{'role': 'cell', 'name': None, 'text': None, 'near': 'July 15, 2026', 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 305
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "2.25",
+              "page_text": "SKIP TO CONTENT\nSearch the site\nSearch\nFR\nChange theme\nAbout us\nThe Bank and you\nCareers\nCore functions\nMarkets\nBank notes\nPublications\nResearch\nPress\nStatistics\nRegulatory oversight\nSearch the site\nHome  Core functions  Monetary policy\nPolicy interest rate\n\nThe Bank carries out monetary policy by influencing short-term interest rates. It does this by adjusting the target for the overnight rate on eight fixed dates each year.\n\nFor more information on the policy interest rate, see this explainer.\nRecent data\n0.2\n-0.4\n2.8\n2.6\n2.4\n2.2\n2.0\n1.8\n1.6\n1.4\n1.2\n1.0\n0.8\n0.6\n0.4\n0.2\n0\n-0.2\n3.0\nL\n2026-07-15\n2025-03-12\n2025-04-16\n2025-06-04\n2025-07-30\n2025-09-17\n2025-10-29\n2025-12-10\n2026-01-28\n2026-03-18\n2026-04-29\n2026-06-10\n2026-07-15\nDate*\tTarget (%)\tChange (%)\nJuly 15, 2026\t2.25\t---\nJune 10, 2026\t2.25\t---\nApril 29, 2026\t2.25\t---\nMarch 18, 2026\t2.25\t---\nJanuary 28, 2026\t2.25\t---\nDecember 10, 2025\t2.25\t---\nOctober 29, 2025\t2.25\t-0.25\nSeptember 17, 2025\t2.50\t-0.25\nJuly 30, 2025\t2.75\t---\nJune 4, 2025\t2.75\t---\nApril 16, 2025\t2.75\t---\nMarch 12, 2025\t2.75\t-0.25\n\n*As of 2021, a change takes effect the day after its announcement.\n\nMore data\n\nSee also Market Operations Indicators related to the implementation of monetary policy\u2014including the operating band, settlement balances and other Bank of Canada operations.\nSchedule for 2026\nDates\tPublications\nJanuary\u00a028\tInterest rate announcement and Monetary Policy Report\nMarch\u00a018\tInterest rate announcement\nApril\u00a029\tInterest rate announcement and Monetary Policy Report\nJune\u00a010\tInterest rate announcement\nJuly\u00a015\tInterest rate announcement and Monetary Policy Report\nSeptember\u00a02\tInterest rate announcement\nOctober\u00a028\tInterest rate announcement and Monetary Policy Report\nDecember\u00a09\tInterest rate announcement\nSchedule for 2027\nDates\tPublications\nJanuary\u00a027\tInterest rate announcement and Monetary Policy Report\nMarch\u00a03\tInterest rate announcement\nApril\u00a028\tInterest rate announcement and Monetary Policy Report\nJune\u00a02\tInterest rate announcement\nJuly\u00a021\tIn",
+              "body_len": 3084,
+              "other_page_text": "",
+              "value_offset": 776
+            }
+          ],
+          "final_url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+          "final_page_digest": "SKIP TO CONTENT\nSearch the site\nSearch\nFR\nChange theme\nAbout us\nThe Bank and you\nCareers\nCore functions\nMarkets\nBank notes\nPublications\nResearch\nPress\nStatistics\nRegulatory oversight\nSearch the site\nHome  Core functions  Monetary policy\nPolicy interest rate\n\nThe Bank carries out monetary policy by influencing short-term interest rates. It does this by adjusting the target for the overnight rate on eight fixed dates each year.\n\nFor more information on the policy interest rate, see this explainer."
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1596,
+          "llm_usd": 0.000586,
+          "replans": 0,
+          "ms": 9413,
+          "judge_calls": 1,
+          "judge_tokens": 1191,
+          "judge_usd": 0.000106704052
+        }
+      },
+      "status": "success",
+      "answer": "2.25",
+      "reason": null,
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "cost_usd": 0.000586,
+      "wall_ms_reported": 9413,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+      "metric_class": "correct",
+      "correctness_note": "bankofcanada rep1: '2.25' matches re-verified 2.25"
+    },
+    {
+      "run_index": 7,
+      "task_id": 1,
+      "group": "regressed",
+      "site": "x-rates.com",
+      "task_text": "What is the current exchange rate from EUR to USD?",
+      "start_url": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+      "repetition": 2,
+      "submit_http_status": 200,
+      "run_id": "48b60ee3",
+      "timed_out": false,
+      "wall_time_s_wallclock": 15.8,
+      "final_payload": {
+        "status": "failure:semantic",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "step 2 (extract): replanned before execution \u2014 plan lint: the plan reads 'extract' off 'WebArea', the accessibility root of the document \u2014 the node `observe` lists first on every page, whose accessible name is the page title and whose text is the ENTIRE page. It cannot be the answer to anything, and it carries no other string to retarget by, so the page title is all a relocation could ask for next. Name the element that holds the value; if you can see a container but not its contents, `observe` that container first; StepError: identity anchor 'EUR to USD' absent from the page the answer was read from",
+        "verdict": null,
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 3162
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": null,
+                "name": null,
+                "text": "1.168190 USD",
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": "EUR to USD",
+              "rank": null,
+              "resolved": {
+                "tier": "text",
+                "description": "{'role': None, 'name': None, 'text': '1.168190 USD', 'near': None, 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": "semantic",
+              "note": "replanned before execution \u2014 plan lint: the plan reads 'extract' off 'WebArea', the accessibility root of the document \u2014 the node `observe` lists first on every page, whose accessible name is the page title and whose text is the ENTIRE page. It cannot be the answer to anything, and it carries no other string to retarget by, so the page title is all a relocation could ask for next. Name the element that holds the value; if you can see a container but not its contents, `observe` that container first; StepError: identity anchor 'EUR to USD' absent from the page the answer was read from",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 174
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "1.168190 USD",
+              "page_text": "Skip to Main Content\nHome\nCurrency Calculator\nGraphs\nRates Table\nMonthly Average\nHistoric Lookup\nHome > Currency Calculator\nEXCHANGE RATE EURO TO US DOLLAR\n1.00 EUR =\n1.168190 USD\nJan 01, 2026 02:56 UTC\nView EUR Rates Table\nView USD Rates Table\nView EUR / USD Graphs\n1. Configure Converter\namount\n\u00a0\u25ba\n\u2194\nChange Currency Calculator base currency\nArgentine Peso\nAustralian Dollar\nBahraini Dinar\nBotswana Pula\nBrazilian Real\nBruneian Dollar\nBulgarian Lev\nCanadian Dollar\nChilean Peso\nChinese Yuan Renminbi\nColombian Peso\nCroatian Kuna\nCzech Koruna\nDanish Krone\nEuro\nHong Kong Dollar\nHungarian Forint\nIcelandic Krona\nIndian Rupee\nIndonesian Rupiah\nIranian Rial\nIsraeli Shekel\nJapanese Yen\nKazakhstani Tenge\nSouth Korean Won\nKuwaiti Dinar\nLibyan Dinar\nMalaysian Ringgit\nMauritian Rupee\nMexican Peso\nNepalese Rupee\nNew Zealand Dollar\nNorwegian Krone\nOmani Rial\nPakistani Rupee\nPhilippine Peso\nPolish Zloty\nQatari Riyal\nRomanian New Leu\nRussian Ruble\nSaudi Arabian Riyal\nSingapore Dollar\nSouth African Rand\nSri Lankan Rupee\nSwedish Krona\nSwiss Franc\nTaiwan New Dollar\nThai Baht\nTrinidadian Dollar\nTurkish Lira\nEmirati Dirham\nBritish Pound\nUS Dollar\nVenezuelan Bolivar\n \nPercent Change in the Last 24 Hours\nEUR/USD\n-0.00622%\nUSD/JPY\n-0.07037%\nGBP/USD\n+0.04648%\nUSD/CHF\n-0.11966%\nUSD/CAD\n+0.20398%\nEUR/JPY\n-0.07659%\nAUD/USD\n-0.06110%\nCNY/USD\n-0.02855%\nJan 01, 2026 02:56 UTC\nAD\nUseful Links\nEuro Information\nFAQ\nFeedback\nTerms of Service\nPrivacy\nCookie Policy\nAdvertise on X-Rates\nFeedback\nFAQ\n\u00a9 X-Rates 2026\nDiscover more\nReal-time Rate Alerts\nExchange Rate API\nCalculators & Reference Tools",
+              "body_len": 1581,
+              "other_page_text": "",
+              "value_offset": 167
+            }
+          ],
+          "final_url": null,
+          "final_page_digest": null
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 3412,
+          "llm_usd": 0.0013296,
+          "replans": 1,
+          "ms": 12470,
+          "judge_calls": 0,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "step 2 (extract): replanned before execution \u2014 plan lint: the plan reads 'extract' off 'WebArea', the accessibility root of the document \u2014 the node `observe` lists first on every page, whose accessible name is the page title and whose text is the ENTIRE page. It cannot be the answer to anything, and it carries no other string to retarget by, so the page title is all a relocation could ask for next. Name the element that holds the value; if you can see a container but not its contents, `observe` that container first; StepError: identity anchor 'EUR to USD' absent from the page the answer was read from",
+      "verdict": null,
+      "cost_usd": 0.0013296,
+      "wall_ms_reported": 12470,
+      "actions": 2,
+      "replans": 1,
+      "final_url": null,
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 8,
+      "task_id": 2,
+      "group": "regressed",
+      "site": "multpl.com",
+      "task_text": "What is the current S&P 500 P/E ratio?",
+      "start_url": "https://www.multpl.com/s-p-500-pe-ratio",
+      "repetition": 2,
+      "submit_http_status": 200,
+      "run_id": "86935b56",
+      "timed_out": false,
+      "wall_time_s_wallclock": 10.7,
+      "final_payload": {
+        "status": "failure:extract",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "empty answer or empty trace",
+        "verdict": {
+          "verdict": "FAIL",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": false,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true
+          },
+          "reason": "answer is empty"
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://www.multpl.com/s-p-500-pe-ratio",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 2668
+            },
+            {
+              "i": 2,
+              "action": "click",
+              "target": {
+                "role": "link",
+                "name": "Table",
+                "text": null,
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": null,
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'link', 'name': 'Table', 'text': None, 'near': None, 'index': None}"
+              },
+              "expected_state": {
+                "text_visible": "Date"
+              },
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": true,
+              "screenshot": "step_2.png",
+              "ms": 503
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [],
+          "final_url": "https://www.multpl.com/s-p-500-pe-ratio/table/by-year",
+          "final_page_digest": " S&P 500 PE Ratio Shiller PE Ratio 10 Year Treasury Rate S&P 500 Dividend Yield S&P 500 Earnings S&P 500 Historical Prices more multpl \nS&P 500 PE Ratio by Year\nChart Table\nShare\nShow:\nBy Year By Month\n\n\u2020 Estimate\n\nDate\tValue\nAug 21, 2026\t\u2020 29.58\nJan 1, 2026\t\u2002 27.98\nJan 1, 2025\t\u2002 28.16\nJan 1, 2024\t\u2002 25.01\nJan 1, 2023\t\u2002 22.82\nJan 1, 2022\t\u2002 23.11\nJan 1, 2021\t\u2002 35.96\nJan 1, 2020\t\u2002 24.88\nJan 1, 2019\t\u2002 19.60\nJan 1, 2018\t\u2002 24.97\nJan 1, 2017\t\u2002 23.59\nJan 1, 2016\t\u2002 22.18\nJan 1, 2015\t\u2002 20.02\nJan 1, 2014\t\u2002"
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1560,
+          "llm_usd": 0.0004839,
+          "replans": 0,
+          "ms": 6479,
+          "judge_calls": 0,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "failure:extract",
+      "answer": null,
+      "reason": "empty answer or empty trace",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty"
+      },
+      "cost_usd": 0.0004839,
+      "wall_ms_reported": 6479,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://www.multpl.com/s-p-500-pe-ratio/table/by-year",
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 9,
+      "task_id": 3,
+      "group": "regressed",
+      "site": "quotes.toscrape.com",
+      "task_text": "When was this author born?",
+      "start_url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+      "repetition": 2,
+      "submit_http_status": 200,
+      "run_id": "37fe5cec",
+      "timed_out": false,
+      "wall_time_s_wallclock": 15.9,
+      "final_payload": {
+        "status": "failure:semantic",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "verifier FAIL: judge rejected: The candidate answer 'Description:' does not provide any information about the author's birth date.",
+        "verdict": {
+          "verdict": "FAIL",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": false
+          },
+          "reason": "judge rejected: The candidate answer 'Description:' does not provide any information about the author's birth date."
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://quotes.toscrape.com/author/Albert-Einstein/",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 1373
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "strong",
+                "name": "",
+                "text": null,
+                "near": "Born:",
+                "index": null
+              },
+              "value": null,
+              "anchor": "Albert Einstein",
+              "rank": null,
+              "resolved": {
+                "tier": "structural",
+                "description": "{'role': 'strong', 'name': '', 'text': None, 'near': 'Born:', 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": "replanned before execution \u2014 plan lint: the plan reads 'extract' off 'WebArea', the accessibility root of the document \u2014 the node `observe` lists first on every page, whose accessible name is the page title and whose text is the ENTIRE page. It cannot be the answer to anything, and it carries no other string to retarget by, so the page title is all a relocation could ask for next. Name the element that holds the value; if you can see a container but not its contents, `observe` that container first",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 159
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "Description:",
+              "page_text": "Quotes to Scrape\n\nLogin\n\nAlbert Einstein\n\nBorn: March 14, 1879 in Ulm, Germany\n\nDescription:\n\nIn 1879, Albert Einstein was born in Ulm, Germany. He completed his Ph.D. at the University of Zurich by 1909. His 1905 paper explaining the photoelectric effect, the basis of electronics, earned him the Nobel Prize in 1921. His first paper on Special Relativity Theory, also published in 1905, changed the world. After the rise of the Nazi party, Einstein made Princeton his permanent home, becoming a U.S. citizen in 1940. Einstein, a pacifist during World War I, stayed a firm proponent of social justice and responsibility. He chaired the Emergency Committee of Atomic Scientists, which organized to alert the public to the dangers of atomic warfare.At a symposium, he advised: \"In their struggle for the ethical good, teachers of religion must have the stature to give up the doctrine of a personal God, that is, give up that source of fear and hope which in the past placed such vast power in the hands of priests. In their labors they will have to avail themselves of those forces which are capable of cultivating the Good, the True, and the Beautiful in humanity itself. This is, to be sure a more difficult but an incomparably more worthy task . . . \" (\"Science, Philosophy and Religion, A Symposium,\" published by the Conference on Science, Philosophy and Religion in their Relation to the Democratic Way of Life, Inc., New York, 1941). In a letter to philosopher Eric Gutkind, dated Jan. 3, 1954, Einstein stated: \"The word god is for me nothing more than the expression and product of human weaknesses, the Bible a collection of honorable, but still primitive legends which are nevertheless pretty childish. No interpretation no matter how subtle can (for me) change this,\" (The Guardian, \"Childish superstition: Einstein's letter makes view of religion relatively clear,\" by James Randerson, May 13, 2008). D. 1955.While best known for his mass\u2013energy equivalence formula E = mc2 (which has be",
+              "body_len": 3971,
+              "other_page_text": "",
+              "value_offset": 80
+            }
+          ],
+          "final_url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+          "final_page_digest": "Quotes to Scrape\n\nLogin\n\nAlbert Einstein\n\nBorn: March 14, 1879 in Ulm, Germany\n\nDescription:\n\nIn 1879, Albert Einstein was born in Ulm, Germany. He completed his Ph.D. at the University of Zurich by 1909. His 1905 paper explaining the photoelectric effect, the basis of electronics, earned him the Nobel Prize in 1921. His first paper on Special Relativity Theory, also published in 1905, changed the world. After the rise of the Nazi party, Einstein made Princeton his permanent home, becoming a U.S"
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 3069,
+          "llm_usd": 0.00131159,
+          "replans": 1,
+          "ms": 11804,
+          "judge_calls": 1,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "verifier FAIL: judge rejected: The candidate answer 'Description:' does not provide any information about the author's birth date.",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": false
+        },
+        "reason": "judge rejected: The candidate answer 'Description:' does not provide any information about the author's birth date."
+      },
+      "cost_usd": 0.00131159,
+      "wall_ms_reported": 11804,
+      "actions": 2,
+      "replans": 1,
+      "final_url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 10,
+      "task_id": 4,
+      "group": "regressed",
+      "site": "openlibrary.org",
+      "task_text": "Who is the author of this book?",
+      "start_url": "https://openlibrary.org/books/OL7025919M",
+      "repetition": 2,
+      "submit_http_status": 200,
+      "run_id": "b9e6ddd9",
+      "timed_out": false,
+      "wall_time_s_wallclock": 10.8,
+      "final_payload": {
+        "status": "failure:extract",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "step 2 (extract): StepError: extraction returned empty text",
+        "verdict": null,
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://openlibrary.org/books/OL7025919M",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 4603
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "link",
+                "name": "Cover of: The monk and the dancer by Smith, Arthur Cosslett, Smith, Arthur Cosslett",
+                "text": null,
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": "The monk and the dancer",
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'link', 'name': 'Cover of: The monk and the dancer by Smith, Arthur Cosslett, Smith, Arthur Cosslett', 'text': None, 'near': None, 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": "extract",
+              "note": "StepError: extraction returned empty text",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 180
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [],
+          "final_url": null,
+          "final_page_digest": null
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1570,
+          "llm_usd": 0.00050635,
+          "replans": 0,
+          "ms": 7198,
+          "judge_calls": 0,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "failure:extract",
+      "answer": null,
+      "reason": "step 2 (extract): StepError: extraction returned empty text",
+      "verdict": null,
+      "cost_usd": 0.00050635,
+      "wall_ms_reported": 7198,
+      "actions": 2,
+      "replans": 0,
+      "final_url": null,
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 11,
+      "task_id": 5,
+      "group": "control",
+      "site": "companiesmarketcap.com",
+      "task_text": "What is the market cap of this company?",
+      "start_url": "https://companiesmarketcap.com/apple/marketcap/",
+      "repetition": 2,
+      "submit_http_status": 200,
+      "run_id": "a93832c7",
+      "timed_out": false,
+      "wall_time_s_wallclock": 15.7,
+      "final_payload": {
+        "status": "success",
+        "model": "openai/gpt-5.6-luna",
+        "answer": "Market cap: $4.514 Trillion USD",
+        "reason": null,
+        "verdict": {
+          "verdict": "PASS",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": true
+          },
+          "reason": null
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://companiesmarketcap.com/apple/marketcap/",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 2558
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "heading",
+                "name": "Market cap: $4.514 Trillion USD",
+                "text": null,
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": "Apple",
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'heading', 'name': 'Market cap: $4.514 Trillion USD', 'text': None, 'near': None, 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 1311
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "Market cap: $4.514 Trillion USD",
+              "page_text": "Companies: 11,275 \u00a0\u00a0\u00a0 total market cap: $155.147 T\nSign In \ud83c\uddfa\ud83c\uddf8 English  $ USD  \nGlobal ranking\nRanking by countries\nRanking by categories\nETFs\nApple \nAAPL\n#2\nRank\n$4.514 T\nMarketcap\n\ud83c\uddfa\ud83c\uddf8 United States\nCountry\n$309.35\nShare price\n-0.63%\nChange (1 day)\n36.18%\nChange (1 year)\n\ud83d\udc68\u200d\ud83d\udcbb Software\ud83d\udc69\u200d\ud83d\udcbb Tech\ud83d\udd0c Electronics\ud83c\uddfa\ud83c\uddf8 Dow jones\ud83d\udcbb Tech Hardware\ud83e\uddbe AI\nCategories\n\nApple Inc. is an American hardware and software developer and technology company that develops and sells computers, smartphones and consumer electronics as well as operating systems and application software. Apple also operates internet sales portals for music, films and software.\n\nMarket cap\nRevenue\nEarnings\nPrice history\nP/E ratio\nP/S ratio\nMore\nMarket capitalization of Apple (AAPL)\nMarket cap: $4.514 Trillion USD\n\nAs of August 2026 Apple has a market cap of $4.514 Trillion USD. This makes Apple the world's 2nd most valuable company by market cap according to our data. The market capitalization, commonly called market cap, is the total market value of a publicly traded company's outstanding shares and is commonly used to measure how much a company is worth.\n\nMarket cap history of Apple from 1996 to 2026\n2000\n2005\n2010\n2015\n2020\n2025\n$1T\n$2T\n$3T\n$4T\n$5T\n0\ncompaniesmarketcap.com\nEnd of year Market Cap\nYear\tMarketcap\tChange\n2026\t$4.514 T\t12.95%\n2025\t$3.997 T\t6.12%\n2024\t$3.766 T\t25.79%\n2023\t$2.994 T\t44.87%\n2022\t$2.066 T\t-28.77%\n2021\t$2.901 T\t28.62%\n2020\t$2.255 T\t75.2%\n2019\t$1.287 T\t72.59%\n2018\t$746.07 B\t-13.34%\n2017\t$860.88 B\t41.37%\n2016\t$608.96 B\t4.34%\n2015\t$583.61 B\t-9.25%\n2014\t$643.12 B\t28.43%\n2013\t$500.74 B\t0.21%\n2012\t$499.69 B\t32.36%\n2011\t$377.51 B\t27.07%\n2010\t$297.09 B\t55.56%\n2009\t$190.98 B\t151.3%\n2008\t$75.99 B\t-56.33%\n2007\t$174.03 B\t138.47%\n2006\t$72.98 B\t20.05%\n2005\t$60.79 B\t133.34%\n2004\t$26.05 B\t230.6%\n2003\t$7.88 B\t52.65%\n2002\t$5.16 B\t-33.12%\n2001\t$7.71 B\t50.27%\n2000\t$5.13 B\t-69.01%\n1999\t$16.57 B\t199.15%\n1998\t$5.54 B\t229.71%\n1997\t$1.68 B\t-35.38%\n1996\t$2.60 B\t\nEnd of Day market cap according to different sources\n\nOn Aug",
+              "body_len": 3208,
+              "other_page_text": "",
+              "value_offset": 736
+            }
+          ],
+          "final_url": "https://companiesmarketcap.com/apple/marketcap/",
+          "final_page_digest": "Companies: 11,275 \u00a0\u00a0\u00a0 total market cap: $155.147 T\nSign In \ud83c\uddfa\ud83c\uddf8 English  $ USD  \nGlobal ranking\nRanking by countries\nRanking by categories\nETFs\nApple \nAAPL\n#2\nRank\n$4.514 T\nMarketcap\n\ud83c\uddfa\ud83c\uddf8 United States\nCountry\n$309.35\nShare price\n-0.63%\nChange (1 day)\n36.18%\nChange (1 year)\n\ud83d\udc68\u200d\ud83d\udcbb Software\ud83d\udc69\u200d\ud83d\udcbb Tech\ud83d\udd0c Electronics\ud83c\uddfa\ud83c\uddf8 Dow jones\ud83d\udcbb Tech Hardware\ud83e\uddbe AI\nCategories\n\nApple Inc. is an American hardware and software developer and technology company that develops and sells computers, smartphones and consumer electronics"
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1539,
+          "llm_usd": 0.00046345,
+          "replans": 0,
+          "ms": 10506,
+          "judge_calls": 1,
+          "judge_tokens": 1276,
+          "judge_usd": 8.74791e-05
+        }
+      },
+      "status": "success",
+      "answer": "Market cap: $4.514 Trillion USD",
+      "reason": null,
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "cost_usd": 0.00046345,
+      "wall_ms_reported": 10506,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://companiesmarketcap.com/apple/marketcap/",
+      "metric_class": "correct",
+      "correctness_note": "companiesmarketcap rep2: 'Market cap: $4.514 Trillion USD' matches re-verified $4.514T"
+    },
+    {
+      "run_index": 12,
+      "task_id": 6,
+      "group": "control",
+      "site": "bankofcanada.ca",
+      "task_text": "What is the current policy interest rate?",
+      "start_url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+      "repetition": 2,
+      "submit_http_status": 200,
+      "run_id": "4ea9ee33",
+      "timed_out": false,
+      "wall_time_s_wallclock": 10.6,
+      "final_payload": {
+        "status": "success",
+        "model": "openai/gpt-5.6-luna",
+        "answer": "2.25",
+        "reason": null,
+        "verdict": {
+          "verdict": "PASS",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": true
+          },
+          "reason": null
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 1481
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "cell",
+                "name": null,
+                "text": null,
+                "near": "July 15, 2026",
+                "index": null
+              },
+              "value": null,
+              "anchor": "Policy interest rate",
+              "rank": null,
+              "resolved": {
+                "tier": "structural",
+                "description": "{'role': 'cell', 'name': None, 'text': None, 'near': 'July 15, 2026', 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 335
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "2.25",
+              "page_text": "SKIP TO CONTENT\nSearch the site\nSearch\nFR\nChange theme\nAbout us\nThe Bank and you\nCareers\nCore functions\nMarkets\nBank notes\nPublications\nResearch\nPress\nStatistics\nRegulatory oversight\nSearch the site\nHome  Core functions  Monetary policy\nPolicy interest rate\n\nThe Bank carries out monetary policy by influencing short-term interest rates. It does this by adjusting the target for the overnight rate on eight fixed dates each year.\n\nFor more information on the policy interest rate, see this explainer.\nRecent data\n0.2\n-0.4\n2.8\n2.6\n2.4\n2.2\n2.0\n1.8\n1.6\n1.4\n1.2\n1.0\n0.8\n0.6\n0.4\n0.2\n0\n-0.2\n3.0\nL\n2026-07-15\n2025-03-12\n2025-04-16\n2025-06-04\n2025-07-30\n2025-09-17\n2025-10-29\n2025-12-10\n2026-01-28\n2026-03-18\n2026-04-29\n2026-06-10\n2026-07-15\nDate*\tTarget (%)\tChange (%)\nJuly 15, 2026\t2.25\t---\nJune 10, 2026\t2.25\t---\nApril 29, 2026\t2.25\t---\nMarch 18, 2026\t2.25\t---\nJanuary 28, 2026\t2.25\t---\nDecember 10, 2025\t2.25\t---\nOctober 29, 2025\t2.25\t-0.25\nSeptember 17, 2025\t2.50\t-0.25\nJuly 30, 2025\t2.75\t---\nJune 4, 2025\t2.75\t---\nApril 16, 2025\t2.75\t---\nMarch 12, 2025\t2.75\t-0.25\n\n*As of 2021, a change takes effect the day after its announcement.\n\nMore data\n\nSee also Market Operations Indicators related to the implementation of monetary policy\u2014including the operating band, settlement balances and other Bank of Canada operations.\nSchedule for 2026\nDates\tPublications\nJanuary\u00a028\tInterest rate announcement and Monetary Policy Report\nMarch\u00a018\tInterest rate announcement\nApril\u00a029\tInterest rate announcement and Monetary Policy Report\nJune\u00a010\tInterest rate announcement\nJuly\u00a015\tInterest rate announcement and Monetary Policy Report\nSeptember\u00a02\tInterest rate announcement\nOctober\u00a028\tInterest rate announcement and Monetary Policy Report\nDecember\u00a09\tInterest rate announcement\nSchedule for 2027\nDates\tPublications\nJanuary\u00a027\tInterest rate announcement and Monetary Policy Report\nMarch\u00a03\tInterest rate announcement\nApril\u00a028\tInterest rate announcement and Monetary Policy Report\nJune\u00a02\tInterest rate announcement\nJuly\u00a021\tIn",
+              "body_len": 3084,
+              "other_page_text": "",
+              "value_offset": 776
+            }
+          ],
+          "final_url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+          "final_page_digest": "SKIP TO CONTENT\nSearch the site\nSearch\nFR\nChange theme\nAbout us\nThe Bank and you\nCareers\nCore functions\nMarkets\nBank notes\nPublications\nResearch\nPress\nStatistics\nRegulatory oversight\nSearch the site\nHome  Core functions  Monetary policy\nPolicy interest rate\n\nThe Bank carries out monetary policy by influencing short-term interest rates. It does this by adjusting the target for the overnight rate on eight fixed dates each year.\n\nFor more information on the policy interest rate, see this explainer."
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1572,
+          "llm_usd": 0.00023612,
+          "replans": 0,
+          "ms": 6568,
+          "judge_calls": 1,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "success",
+      "answer": "2.25",
+      "reason": null,
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "cost_usd": 0.00023612,
+      "wall_ms_reported": 6568,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+      "metric_class": "correct",
+      "correctness_note": "bankofcanada rep2: '2.25' matches re-verified 2.25"
+    },
+    {
+      "run_index": 13,
+      "task_id": 1,
+      "group": "regressed",
+      "site": "x-rates.com",
+      "task_text": "What is the current exchange rate from EUR to USD?",
+      "start_url": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+      "repetition": 3,
+      "submit_http_status": 200,
+      "run_id": "591cf2dc",
+      "timed_out": false,
+      "wall_time_s_wallclock": 31.5,
+      "final_payload": {
+        "status": "success",
+        "model": "openai/gpt-5.6-luna",
+        "answer": "1.168293 USD",
+        "reason": null,
+        "verdict": {
+          "verdict": "PASS",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": true
+          },
+          "reason": null
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 2986
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": null,
+                "name": null,
+                "text": "1.168293 USD",
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": "EXCHANGE RATE EURO TO US DOLLAR",
+              "rank": null,
+              "resolved": {
+                "tier": "text",
+                "description": "{'role': None, 'name': None, 'text': '1.168293 USD', 'near': None, 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": "replanned before execution \u2014 plan lint: the plan reads 'extract' off 'WebArea', the accessibility root of the document \u2014 the node `observe` lists first on every page, whose accessible name is the page title and whose text is the ENTIRE page. It cannot be the answer to anything, and it carries no other string to retarget by, so the page title is all a relocation could ask for next. Name the element that holds the value; if you can see a container but not its contents, `observe` that container first",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 191
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "1.168293 USD",
+              "page_text": "Skip to Main Content\nHome\nCurrency Calculator\nGraphs\nRates Table\nMonthly Average\nHistoric Lookup\nHome > Currency Calculator\nEXCHANGE RATE EURO TO US DOLLAR\n1.00 EUR =\n1.168293 USD\nJan 01, 2026 02:58 UTC\nView EUR Rates Table\nView USD Rates Table\nView EUR / USD Graphs\n1. Configure Converter\namount\n\u00a0\u25ba\n\u2194\nChange Currency Calculator base currency\nArgentine Peso\nAustralian Dollar\nBahraini Dinar\nBotswana Pula\nBrazilian Real\nBruneian Dollar\nBulgarian Lev\nCanadian Dollar\nChilean Peso\nChinese Yuan Renminbi\nColombian Peso\nCroatian Kuna\nCzech Koruna\nDanish Krone\nEuro\nHong Kong Dollar\nHungarian Forint\nIcelandic Krona\nIndian Rupee\nIndonesian Rupiah\nIranian Rial\nIsraeli Shekel\nJapanese Yen\nKazakhstani Tenge\nSouth Korean Won\nKuwaiti Dinar\nLibyan Dinar\nMalaysian Ringgit\nMauritian Rupee\nMexican Peso\nNepalese Rupee\nNew Zealand Dollar\nNorwegian Krone\nOmani Rial\nPakistani Rupee\nPhilippine Peso\nPolish Zloty\nQatari Riyal\nRomanian New Leu\nRussian Ruble\nSaudi Arabian Riyal\nSingapore Dollar\nSouth African Rand\nSri Lankan Rupee\nSwedish Krona\nSwiss Franc\nTaiwan New Dollar\nThai Baht\nTrinidadian Dollar\nTurkish Lira\nEmirati Dirham\nBritish Pound\nUS Dollar\nVenezuelan Bolivar\n \nPercent Change in the Last 24 Hours\nEUR/USD\n+0.00259%\nUSD/JPY\n-0.06711%\nGBP/USD\n+0.05218%\nUSD/CHF\n-0.12776%\nUSD/CAD\n+0.20134%\nEUR/JPY\n-0.06452%\nAUD/USD\n-0.04982%\nCNY/USD\n-0.02901%\nJan 01, 2026 02:58 UTC\nAD\nUseful Links\nEuro Information\nFAQ\nFeedback\nTerms of Service\nPrivacy\nCookie Policy\nAdvertise on X-Rates\nFeedback\nFAQ\n\u00a9 X-Rates 2026\nDiscover more\ncurrency\nCurrency\nCalculators",
+              "body_len": 1541,
+              "other_page_text": "",
+              "value_offset": 167
+            }
+          ],
+          "final_url": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+          "final_page_digest": "Skip to Main Content\nHome\nCurrency Calculator\nGraphs\nRates Table\nMonthly Average\nHistoric Lookup\nHome > Currency Calculator\nEXCHANGE RATE EURO TO US DOLLAR\n1.00 EUR =\n1.168293 USD\nJan 01, 2026 02:58 UTC\nView EUR Rates Table\nView USD Rates Table\nView EUR / USD Graphs\n1. Configure Converter\namount\n\u00a0\u25ba\n\u2194\nChange Currency Calculator base currency\nArgentine Peso\nAustralian Dollar\nBahraini Dinar\nBotswana Pula\nBrazilian Real\nBruneian Dollar\nBulgarian Lev\nCanadian Dollar\nChilean Peso\nChinese Yuan Renminbi"
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 3489,
+          "llm_usd": 0.001422,
+          "replans": 1,
+          "ms": 26560,
+          "judge_calls": 1,
+          "judge_tokens": 1139,
+          "judge_usd": 8.61504e-05
+        }
+      },
+      "status": "success",
+      "answer": "1.168293 USD",
+      "reason": null,
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "cost_usd": 0.001422,
+      "wall_ms_reported": 26560,
+      "actions": 2,
+      "replans": 1,
+      "final_url": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+      "metric_class": "correct",
+      "correctness_note": "x-rates rep3: '1.168293 USD' -- continuously-moving rate; consistent with the observed drift across this probe's own runs (1.168023 curl -> 1.168062 r1 -> 1.168190 r7 -> 1.168293 r13), i.e. the live rate at run time, not a stale/invented number"
+    },
+    {
+      "run_index": 14,
+      "task_id": 2,
+      "group": "regressed",
+      "site": "multpl.com",
+      "task_text": "What is the current S&P 500 P/E ratio?",
+      "start_url": "https://www.multpl.com/s-p-500-pe-ratio",
+      "repetition": 3,
+      "submit_http_status": 200,
+      "run_id": "dbd3e3ca",
+      "timed_out": false,
+      "wall_time_s_wallclock": 10.9,
+      "final_payload": {
+        "status": "failure:extract",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "empty answer or empty trace",
+        "verdict": {
+          "verdict": "FAIL",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": false,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true
+          },
+          "reason": "answer is empty"
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://www.multpl.com/s-p-500-pe-ratio",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 2616
+            },
+            {
+              "i": 2,
+              "action": "click",
+              "target": {
+                "role": "link",
+                "name": "Table",
+                "text": null,
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": null,
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'link', 'name': 'Table', 'text': None, 'near': None, 'index': None}"
+              },
+              "expected_state": {
+                "url_contains": "s-p-500-pe-ratio"
+              },
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": true,
+              "screenshot": "step_2.png",
+              "ms": 538
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [],
+          "final_url": "https://www.multpl.com/s-p-500-pe-ratio/table/by-year",
+          "final_page_digest": " S&P 500 PE Ratio Shiller PE Ratio 10 Year Treasury Rate S&P 500 Dividend Yield S&P 500 Earnings S&P 500 Historical Prices more multpl \nS&P 500 PE Ratio by Year\nDiscover more\nEconomy News\nFinancial Markets News\nInvesting\nCompany Earnings\nTime & Calendars\nStocks & Bonds\nMathematics\nChart Table\nShare\nShow:\nBy Year By Month\n\n\u2020 Estimate\n\nDate\tValue\nAug 21, 2026\t\u2020 29.58\nJan 1, 2026\t\u2002 27.98\nJan 1, 2025\t\u2002 28.16\nJan 1, 2024\t\u2002 25.01\nJan 1, 2023\t\u2002 22.82\nJan 1, 2022\t\u2002 23.11\nJan 1, 2021\t\u2002 35.96\nJan 1, 2020\t"
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1531,
+          "llm_usd": 0.00047475,
+          "replans": 0,
+          "ms": 7538,
+          "judge_calls": 0,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "failure:extract",
+      "answer": null,
+      "reason": "empty answer or empty trace",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty"
+      },
+      "cost_usd": 0.00047475,
+      "wall_ms_reported": 7538,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://www.multpl.com/s-p-500-pe-ratio/table/by-year",
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 15,
+      "task_id": 3,
+      "group": "regressed",
+      "site": "quotes.toscrape.com",
+      "task_text": "When was this author born?",
+      "start_url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+      "repetition": 3,
+      "submit_http_status": 200,
+      "run_id": "2f12cf5e",
+      "timed_out": false,
+      "wall_time_s_wallclock": 16.0,
+      "final_payload": {
+        "status": "failure:semantic",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "verifier FAIL: judge rejected: The candidate answer only provides the label 'Born:' without the actual birth date, so it does not answer the question.",
+        "verdict": {
+          "verdict": "FAIL",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": false
+          },
+          "reason": "judge rejected: The candidate answer only provides the label 'Born:' without the actual birth date, so it does not answer the question."
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://quotes.toscrape.com/author/Albert-Einstein/",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 1555
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "strong",
+                "name": null,
+                "text": null,
+                "near": null,
+                "index": 0
+              },
+              "value": null,
+              "anchor": "Albert Einstein",
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'strong', 'name': None, 'text': None, 'near': None, 'index': 0}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 249
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "Born:",
+              "page_text": "Quotes to Scrape\n\nLogin\n\nAlbert Einstein\n\nBorn: March 14, 1879 in Ulm, Germany\n\nDescription:\n\nIn 1879, Albert Einstein was born in Ulm, Germany. He completed his Ph.D. at the University of Zurich by 1909. His 1905 paper explaining the photoelectric effect, the basis of electronics, earned him the Nobel Prize in 1921. His first paper on Special Relativity Theory, also published in 1905, changed the world. After the rise of the Nazi party, Einstein made Princeton his permanent home, becoming a U.S. citizen in 1940. Einstein, a pacifist during World War I, stayed a firm proponent of social justice and responsibility. He chaired the Emergency Committee of Atomic Scientists, which organized to alert the public to the dangers of atomic warfare.At a symposium, he advised: \"In their struggle for the ethical good, teachers of religion must have the stature to give up the doctrine of a personal God, that is, give up that source of fear and hope which in the past placed such vast power in the hands of priests. In their labors they will have to avail themselves of those forces which are capable of cultivating the Good, the True, and the Beautiful in humanity itself. This is, to be sure a more difficult but an incomparably more worthy task . . . \" (\"Science, Philosophy and Religion, A Symposium,\" published by the Conference on Science, Philosophy and Religion in their Relation to the Democratic Way of Life, Inc., New York, 1941). In a letter to philosopher Eric Gutkind, dated Jan. 3, 1954, Einstein stated: \"The word god is for me nothing more than the expression and product of human weaknesses, the Bible a collection of honorable, but still primitive legends which are nevertheless pretty childish. No interpretation no matter how subtle can (for me) change this,\" (The Guardian, \"Childish superstition: Einstein's letter makes view of religion relatively clear,\" by James Randerson, May 13, 2008). D. 1955.While best known for his mass\u2013energy equivalence formula E = mc2 (which has be",
+              "body_len": 3971,
+              "other_page_text": "",
+              "value_offset": 42
+            }
+          ],
+          "final_url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+          "final_page_digest": "Quotes to Scrape\n\nLogin\n\nAlbert Einstein\n\nBorn: March 14, 1879 in Ulm, Germany\n\nDescription:\n\nIn 1879, Albert Einstein was born in Ulm, Germany. He completed his Ph.D. at the University of Zurich by 1909. His 1905 paper explaining the photoelectric effect, the basis of electronics, earned him the Nobel Prize in 1921. His first paper on Special Relativity Theory, also published in 1905, changed the world. After the rise of the Nazi party, Einstein made Princeton his permanent home, becoming a U.S"
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1285,
+          "llm_usd": 0.00029764,
+          "replans": 0,
+          "ms": 11598,
+          "judge_calls": 1,
+          "judge_tokens": 968,
+          "judge_usd": 8.5424864e-05
+        }
+      },
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "verifier FAIL: judge rejected: The candidate answer only provides the label 'Born:' without the actual birth date, so it does not answer the question.",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": false
+        },
+        "reason": "judge rejected: The candidate answer only provides the label 'Born:' without the actual birth date, so it does not answer the question."
+      },
+      "cost_usd": 0.00029764,
+      "wall_ms_reported": 11598,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 16,
+      "task_id": 4,
+      "group": "regressed",
+      "site": "openlibrary.org",
+      "task_text": "Who is the author of this book?",
+      "start_url": "https://openlibrary.org/books/OL7025919M",
+      "repetition": 3,
+      "submit_http_status": 200,
+      "run_id": "b43acc40",
+      "timed_out": false,
+      "wall_time_s_wallclock": 10.7,
+      "final_payload": {
+        "status": "failure:extract",
+        "model": "openai/gpt-5.6-luna",
+        "answer": null,
+        "reason": "step 2 (extract): StepError: extraction returned empty text",
+        "verdict": null,
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://openlibrary.org/books/OL7025919M",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 2840
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "link",
+                "name": "Cover of: The monk and the dancer by Smith, Arthur Cosslett, Smith, Arthur Cosslett",
+                "text": null,
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": "The monk and the dancer",
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'link', 'name': 'Cover of: The monk and the dancer by Smith, Arthur Cosslett, Smith, Arthur Cosslett', 'text': None, 'near': None, 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": "extract",
+              "note": "StepError: extraction returned empty text",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 191
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [],
+          "final_url": null,
+          "final_page_digest": null
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1599,
+          "llm_usd": 0.00021306,
+          "replans": 0,
+          "ms": 6164,
+          "judge_calls": 0,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "failure:extract",
+      "answer": null,
+      "reason": "step 2 (extract): StepError: extraction returned empty text",
+      "verdict": null,
+      "cost_usd": 0.00021306,
+      "wall_ms_reported": 6164,
+      "actions": 2,
+      "replans": 0,
+      "final_url": null,
+      "metric_class": "loud_failure"
+    },
+    {
+      "run_index": 17,
+      "task_id": 5,
+      "group": "control",
+      "site": "companiesmarketcap.com",
+      "task_text": "What is the market cap of this company?",
+      "start_url": "https://companiesmarketcap.com/apple/marketcap/",
+      "repetition": 3,
+      "submit_http_status": 200,
+      "run_id": "98d9f1c7",
+      "timed_out": false,
+      "wall_time_s_wallclock": 10.7,
+      "final_payload": {
+        "status": "success",
+        "model": "openai/gpt-5.6-luna",
+        "answer": "Market cap: $4.514 Trillion USD",
+        "reason": null,
+        "verdict": {
+          "verdict": "PASS",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": true
+          },
+          "reason": null
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://companiesmarketcap.com/apple/marketcap/",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 1926
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "heading",
+                "name": "Market cap: $4.514 Trillion USD",
+                "text": null,
+                "near": null,
+                "index": null
+              },
+              "value": null,
+              "anchor": "Apple",
+              "rank": null,
+              "resolved": {
+                "tier": "role",
+                "description": "{'role': 'heading', 'name': 'Market cap: $4.514 Trillion USD', 'text': None, 'near': None, 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 337
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "Market cap: $4.514 Trillion USD",
+              "page_text": "Companies: 11,275 \u00a0\u00a0\u00a0 total market cap: $155.144 T\nSign In \ud83c\uddfa\ud83c\uddf8 English  $ USD  \nGlobal ranking\nRanking by countries\nRanking by categories\nETFs\nApple \nAAPL\n#2\nRank\n$4.514 T\nMarketcap\n\ud83c\uddfa\ud83c\uddf8 United States\nCountry\n$309.35\nShare price\n-0.63%\nChange (1 day)\n36.18%\nChange (1 year)\n\ud83d\udc68\u200d\ud83d\udcbb Software\ud83d\udc69\u200d\ud83d\udcbb Tech\ud83d\udd0c Electronics\ud83c\uddfa\ud83c\uddf8 Dow jones\ud83d\udcbb Tech Hardware\ud83e\uddbe AI\nCategories\n\nApple Inc. is an American hardware and software developer and technology company that develops and sells computers, smartphones and consumer electronics as well as operating systems and application software. Apple also operates internet sales portals for music, films and software.\n\nMarket cap\nRevenue\nEarnings\nPrice history\nP/E ratio\nP/S ratio\nMore\nMarket capitalization of Apple (AAPL)\nMarket cap: $4.514 Trillion USD\n\nAs of August 2026 Apple has a market cap of $4.514 Trillion USD. This makes Apple the world's 2nd most valuable company by market cap according to our data. The market capitalization, commonly called market cap, is the total market value of a publicly traded company's outstanding shares and is commonly used to measure how much a company is worth.\n\nMarket cap history of Apple from 1996 to 2026\n2000\n2005\n2010\n2015\n2020\n2025\n$1T\n$2T\n$3T\n$4T\n$5T\n0\ncompaniesmarketcap.com\nEnd of year Market Cap\nYear\tMarketcap\tChange\n2026\t$4.514 T\t12.95%\n2025\t$3.997 T\t6.12%\n2024\t$3.766 T\t25.79%\n2023\t$2.994 T\t44.87%\n2022\t$2.066 T\t-28.77%\n2021\t$2.901 T\t28.62%\n2020\t$2.255 T\t75.2%\n2019\t$1.287 T\t72.59%\n2018\t$746.07 B\t-13.34%\n2017\t$860.88 B\t41.37%\n2016\t$608.96 B\t4.34%\n2015\t$583.61 B\t-9.25%\n2014\t$643.12 B\t28.43%\n2013\t$500.74 B\t0.21%\n2012\t$499.69 B\t32.36%\n2011\t$377.51 B\t27.07%\n2010\t$297.09 B\t55.56%\n2009\t$190.98 B\t151.3%\n2008\t$75.99 B\t-56.33%\n2007\t$174.03 B\t138.47%\n2006\t$72.98 B\t20.05%\n2005\t$60.79 B\t133.34%\n2004\t$26.05 B\t230.6%\n2003\t$7.88 B\t52.65%\n2002\t$5.16 B\t-33.12%\n2001\t$7.71 B\t50.27%\n2000\t$5.13 B\t-69.01%\n1999\t$16.57 B\t199.15%\n1998\t$5.54 B\t229.71%\n1997\t$1.68 B\t-35.38%\n1996\t$2.60 B\t\nEnd of Day market cap according to different sources\n\nOn Aug",
+              "body_len": 3208,
+              "other_page_text": "",
+              "value_offset": 736
+            }
+          ],
+          "final_url": "https://companiesmarketcap.com/apple/marketcap/",
+          "final_page_digest": "Companies: 11,275 \u00a0\u00a0\u00a0 total market cap: $155.144 T\nSign In \ud83c\uddfa\ud83c\uddf8 English  $ USD  \nGlobal ranking\nRanking by countries\nRanking by categories\nETFs\nApple \nAAPL\n#2\nRank\n$4.514 T\nMarketcap\n\ud83c\uddfa\ud83c\uddf8 United States\nCountry\n$309.35\nShare price\n-0.63%\nChange (1 day)\n36.18%\nChange (1 year)\n\ud83d\udc68\u200d\ud83d\udcbb Software\ud83d\udc69\u200d\ud83d\udcbb Tech\ud83d\udd0c Electronics\ud83c\uddfa\ud83c\uddf8 Dow jones\ud83d\udcbb Tech Hardware\ud83e\uddbe AI\nCategories\n\nApple Inc. is an American hardware and software developer and technology company that develops and sells computers, smartphones and consumer electronics"
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1545,
+          "llm_usd": 0.00047065,
+          "replans": 0,
+          "ms": 7861,
+          "judge_calls": 1,
+          "judge_tokens": 1347,
+          "judge_usd": 0.00021154
+        }
+      },
+      "status": "success",
+      "answer": "Market cap: $4.514 Trillion USD",
+      "reason": null,
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "cost_usd": 0.00047065,
+      "wall_ms_reported": 7861,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://companiesmarketcap.com/apple/marketcap/",
+      "metric_class": "correct",
+      "correctness_note": "companiesmarketcap rep3: 'Market cap: $4.514 Trillion USD' matches re-verified $4.514T"
+    },
+    {
+      "run_index": 18,
+      "task_id": 6,
+      "group": "control",
+      "site": "bankofcanada.ca",
+      "task_text": "What is the current policy interest rate?",
+      "start_url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+      "repetition": 3,
+      "submit_http_status": 200,
+      "run_id": "6c247c24",
+      "timed_out": false,
+      "wall_time_s_wallclock": 5.7,
+      "final_payload": {
+        "status": "success",
+        "model": "openai/gpt-5.6-luna",
+        "answer": "2.25",
+        "reason": null,
+        "verdict": {
+          "verdict": "PASS",
+          "layer": 1,
+          "ground_truth": false,
+          "checks": {
+            "trace_nonempty": true,
+            "supersedes_resolve": true,
+            "no_failed_postcondition": true,
+            "answer_nonempty": true,
+            "actions_verified": true,
+            "grounded": true,
+            "not_a_dump": true,
+            "not_page_furniture": true,
+            "identity_anchors": true,
+            "aggregate_needs_comparison": true,
+            "judge_responsive": true
+          },
+          "reason": null
+        },
+        "evidence": {
+          "trace": [
+            {
+              "i": 1,
+              "action": "navigate",
+              "target": null,
+              "value": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+              "anchor": null,
+              "rank": null,
+              "resolved": null,
+              "expected_state": null,
+              "postcondition_ok": true,
+              "failure_class": null,
+              "note": "pre-plan observation",
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": null,
+              "ms": 1551
+            },
+            {
+              "i": 2,
+              "action": "extract",
+              "target": {
+                "role": "cell",
+                "name": null,
+                "text": null,
+                "near": "July 15, 2026",
+                "index": null
+              },
+              "value": null,
+              "anchor": "Policy interest rate",
+              "rank": null,
+              "resolved": {
+                "tier": "structural",
+                "description": "{'role': 'cell', 'name': None, 'text': None, 'near': 'July 15, 2026', 'index': None}"
+              },
+              "expected_state": null,
+              "postcondition_ok": null,
+              "failure_class": null,
+              "note": null,
+              "retry_or_recovery": null,
+              "superseded_by": null,
+              "page_changed": null,
+              "screenshot": "step_2.png",
+              "ms": 346
+            }
+          ],
+          "screenshots": [
+            "step_2.png"
+          ],
+          "extractions": [
+            {
+              "value": "2.25",
+              "page_text": "SKIP TO CONTENT\nSearch the site\nSearch\nFR\nChange theme\nAbout us\nThe Bank and you\nCareers\nCore functions\nMarkets\nBank notes\nPublications\nResearch\nPress\nStatistics\nRegulatory oversight\nSearch the site\nHome  Core functions  Monetary policy\nPolicy interest rate\n\nThe Bank carries out monetary policy by influencing short-term interest rates. It does this by adjusting the target for the overnight rate on eight fixed dates each year.\n\nFor more information on the policy interest rate, see this explainer.\nRecent data\n0.2\n-0.4\n2.8\n2.6\n2.4\n2.2\n2.0\n1.8\n1.6\n1.4\n1.2\n1.0\n0.8\n0.6\n0.4\n0.2\n0\n-0.2\n3.0\nL\n2026-07-15\n2025-03-12\n2025-04-16\n2025-06-04\n2025-07-30\n2025-09-17\n2025-10-29\n2025-12-10\n2026-01-28\n2026-03-18\n2026-04-29\n2026-06-10\n2026-07-15\nDate*\tTarget (%)\tChange (%)\nJuly 15, 2026\t2.25\t---\nJune 10, 2026\t2.25\t---\nApril 29, 2026\t2.25\t---\nMarch 18, 2026\t2.25\t---\nJanuary 28, 2026\t2.25\t---\nDecember 10, 2025\t2.25\t---\nOctober 29, 2025\t2.25\t-0.25\nSeptember 17, 2025\t2.50\t-0.25\nJuly 30, 2025\t2.75\t---\nJune 4, 2025\t2.75\t---\nApril 16, 2025\t2.75\t---\nMarch 12, 2025\t2.75\t-0.25\n\n*As of 2021, a change takes effect the day after its announcement.\n\nMore data\n\nSee also Market Operations Indicators related to the implementation of monetary policy\u2014including the operating band, settlement balances and other Bank of Canada operations.\nSchedule for 2026\nDates\tPublications\nJanuary\u00a028\tInterest rate announcement and Monetary Policy Report\nMarch\u00a018\tInterest rate announcement\nApril\u00a029\tInterest rate announcement and Monetary Policy Report\nJune\u00a010\tInterest rate announcement\nJuly\u00a015\tInterest rate announcement and Monetary Policy Report\nSeptember\u00a02\tInterest rate announcement\nOctober\u00a028\tInterest rate announcement and Monetary Policy Report\nDecember\u00a09\tInterest rate announcement\nSchedule for 2027\nDates\tPublications\nJanuary\u00a027\tInterest rate announcement and Monetary Policy Report\nMarch\u00a03\tInterest rate announcement\nApril\u00a028\tInterest rate announcement and Monetary Policy Report\nJune\u00a02\tInterest rate announcement\nJuly\u00a021\tIn",
+              "body_len": 3084,
+              "other_page_text": "",
+              "value_offset": 776
+            }
+          ],
+          "final_url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+          "final_page_digest": "SKIP TO CONTENT\nSearch the site\nSearch\nFR\nChange theme\nAbout us\nThe Bank and you\nCareers\nCore functions\nMarkets\nBank notes\nPublications\nResearch\nPress\nStatistics\nRegulatory oversight\nSearch the site\nHome  Core functions  Monetary policy\nPolicy interest rate\n\nThe Bank carries out monetary policy by influencing short-term interest rates. It does this by adjusting the target for the overnight rate on eight fixed dates each year.\n\nFor more information on the policy interest rate, see this explainer."
+        },
+        "budgets_spent": {
+          "actions": 2,
+          "llm_tokens": 1565,
+          "llm_usd": 0.00022772,
+          "replans": 0,
+          "ms": 4714,
+          "judge_calls": 1,
+          "judge_tokens": 0,
+          "judge_usd": 0.0
+        }
+      },
+      "status": "success",
+      "answer": "2.25",
+      "reason": null,
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "cost_usd": 0.00022772,
+      "wall_ms_reported": 4714,
+      "actions": 2,
+      "replans": 0,
+      "final_url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+      "metric_class": "correct",
+      "correctness_note": "bankofcanada rep3: '2.25' matches re-verified 2.25"
+    }
+  ],
+  "summary": {
+    "build_provenance": {
+      "before": {
+        "main_sha": "8183dc203241217cab95478ef3ae503cc3a1d363",
+        "deploy_smoke_run_id": "32683725839",
+        "deploy_smoke_status": "success",
+        "expected_match": true
+      },
+      "after": {
+        "main_sha": "8183dc203241217cab95478ef3ae503cc3a1d363",
+        "deploy_smoke_run_id": "32683725839",
+        "deploy_smoke_status": "success"
+      },
+      "main_moved_during_probe": false,
+      "new_deploy_smoke_during_probe": false,
+      "contaminated_run_ids": [],
+      "note": "main and deploy-smoke unchanged between pre- and post-probe checks; no runs flagged as build-contaminated."
+    },
+    "ground_truth_re_verified_at_probe_time": {
+      "1": {
+        "site": "x-rates.com",
+        "desc": "EUR->USD rate, continuously moving",
+        "value_at_probe_start": "1.168023 USD",
+        "snippet": "class=\"ccOutputRslt\">1.168</span... (023 trailer) from https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1"
+      },
+      "2": {
+        "site": "multpl.com",
+        "desc": "S&P 500 P/E ratio, as of Aug 21, 2026 close",
+        "value_at_probe_start": "29.58",
+        "snippet": "\"Current S&P 500 PE Ratio is 29.58, a change of +0.12 from previous market close.\" (meta description) and table row \"Aug 21, 2026\\t29.58\""
+      },
+      "3": {
+        "site": "quotes.toscrape.com",
+        "desc": "Albert Einstein birth (static fixture page)",
+        "value_at_probe_start": "March 14, 1879 in Ulm, Germany",
+        "snippet": "<strong>Born:</strong> <span class=\"author-born-date\">March 14, 1879</span> <span class=\"author-born-location\">in Ulm, Germany</span>"
+      },
+      "4": {
+        "site": "openlibrary.org",
+        "desc": "Author of book OL7025919M",
+        "value_at_probe_start": "Arthur Cosslett Smith (Smith, Arthur Cosslett)",
+        "snippet": "<title>The monk and the dancer by Smith, Arthur Cosslett | Open Library</title>; \"author\">Smith, Arthur Cosslett</a>"
+      },
+      "5": {
+        "site": "companiesmarketcap.com",
+        "desc": "Apple market cap, live/continuously changing",
+        "value_at_probe_start": "$4.514 Trillion USD",
+        "snippet": "\"Market cap: $4.514 Trillion USD\" heading and \"As of August 2026 Apple has a market cap of $4.514 Trillion USD.\""
+      },
+      "6": {
+        "site": "bankofcanada.ca",
+        "desc": "Current policy interest rate (target for overnight rate)",
+        "value_at_probe_start": "2.25",
+        "snippet": "target-table row: <th data-date=\"2026-07-15\">July 15, 2026</th><td>2.25</td> -- the most recent (top) row"
+      }
+    },
+    "per_task": {
+      "1": {
+        "site": "x-rates.com",
+        "group": "regressed",
+        "n_runs": 3,
+        "tally": {
+          "correct": 1,
+          "loud_failure": 2,
+          "wrong_success": 0,
+          "refusal": 0
+        },
+        "run_ids_by_class": {
+          "correct": [
+            "591cf2dc"
+          ],
+          "loud_failure": [
+            "110e9e8f",
+            "48b60ee3"
+          ],
+          "wrong_success": [],
+          "refusal": []
+        }
+      },
+      "2": {
+        "site": "multpl.com",
+        "group": "regressed",
+        "n_runs": 3,
+        "tally": {
+          "correct": 1,
+          "loud_failure": 2,
+          "wrong_success": 0,
+          "refusal": 0
+        },
+        "run_ids_by_class": {
+          "correct": [
+            "df42fa8f"
+          ],
+          "loud_failure": [
+            "86935b56",
+            "dbd3e3ca"
+          ],
+          "wrong_success": [],
+          "refusal": []
+        }
+      },
+      "3": {
+        "site": "quotes.toscrape.com",
+        "group": "regressed",
+        "n_runs": 3,
+        "tally": {
+          "correct": 0,
+          "loud_failure": 3,
+          "wrong_success": 0,
+          "refusal": 0
+        },
+        "run_ids_by_class": {
+          "correct": [],
+          "loud_failure": [
+            "c20b1fda",
+            "37fe5cec",
+            "2f12cf5e"
+          ],
+          "wrong_success": [],
+          "refusal": []
+        }
+      },
+      "4": {
+        "site": "openlibrary.org",
+        "group": "regressed",
+        "n_runs": 3,
+        "tally": {
+          "correct": 0,
+          "loud_failure": 3,
+          "wrong_success": 0,
+          "refusal": 0
+        },
+        "run_ids_by_class": {
+          "correct": [],
+          "loud_failure": [
+            "bdd9ebf7",
+            "b9e6ddd9",
+            "b43acc40"
+          ],
+          "wrong_success": [],
+          "refusal": []
+        }
+      },
+      "5": {
+        "site": "companiesmarketcap.com",
+        "group": "control",
+        "n_runs": 3,
+        "tally": {
+          "correct": 2,
+          "loud_failure": 1,
+          "wrong_success": 0,
+          "refusal": 0
+        },
+        "run_ids_by_class": {
+          "correct": [
+            "a93832c7",
+            "98d9f1c7"
+          ],
+          "loud_failure": [
+            "97677d75"
+          ],
+          "wrong_success": [],
+          "refusal": []
+        }
+      },
+      "6": {
+        "site": "bankofcanada.ca",
+        "group": "control",
+        "n_runs": 3,
+        "tally": {
+          "correct": 3,
+          "loud_failure": 0,
+          "wrong_success": 0,
+          "refusal": 0
+        },
+        "run_ids_by_class": {
+          "correct": [
+            "ff4f793a",
+            "4ea9ee33",
+            "6c247c24"
+          ],
+          "loud_failure": [],
+          "wrong_success": [],
+          "refusal": []
+        }
+      }
+    },
+    "group_tallies": {
+      "regressed": {
+        "correct": 2,
+        "loud_failure": 10,
+        "wrong_success": 0,
+        "refusal": 0,
+        "n_runs": 12
+      },
+      "control": {
+        "correct": 5,
+        "loud_failure": 1,
+        "wrong_success": 0,
+        "refusal": 0,
+        "n_runs": 6
+      }
+    },
+    "threshold_verdicts": {
+      "a_zero_wrong_success_hard": {
+        "pass": true,
+        "total_wrong_success": 0,
+        "detail": "HARD gate: any wrong-success anywhere fails the whole probe. No wrong-success observed across 18 runs."
+      },
+      "b_regressed_set_ge_50pct": {
+        "pass": false,
+        "correct": 2,
+        "n_runs": 12,
+        "rate": 0.1667,
+        "detail": "Regressed set (x-rates, multpl, quotes-author, openlibrary): 2/12 correct (16.7%) vs required >=50%. FAIL -- fix insufficient."
+      },
+      "c_controls_at_most_one_miss": {
+        "pass": true,
+        "per_control": {
+          "companiesmarketcap.com": {
+            "correct": 2,
+            "n": 3,
+            "misses": 1,
+            "prior_post_m32": "8/8",
+            "pass": true
+          },
+          "bankofcanada.ca": {
+            "correct": 3,
+            "n": 3,
+            "misses": 0,
+            "prior_post_m32": "3/3",
+            "pass": true
+          }
+        },
+        "detail": "PASS -- both controls within one miss of prior post-M32 rate."
+      },
+      "d_refusals_separate": {
+        "count": 0,
+        "detail": "Refusals counted separately, never rolled into (b) or (c). 0 refusal(s) observed (no status=='unsupported' run; no submit-time rejection -- all 18 POST /tasks returned HTTP 200)."
+      }
+    },
+    "overall_verdict": "FAIL on (b): fix insufficient -- regressed set did not reach 50% correct",
+    "totals": {
+      "n_runs": 18,
+      "total_cost_usd": 0.01259463,
+      "total_wall_time_reported_ms": 250429,
+      "total_wall_time_reported_min": 4.17,
+      "total_wall_time_actual_s": 307.2,
+      "total_wall_time_actual_min": 5.12,
+      "timed_out_runs": 0,
+      "service_error_runs": 0
+    },
+    "new_failure_shapes_observed": [
+      {
+        "shape": "plan-lint catches WebArea extract, replans, then the replanned step fails on 'identity anchor absent from the page' (x-rates.com, run_ids 110e9e8f, 48b60ee3)",
+        "note": "Distinct from the original D28 WebArea-dump shape: the ADR-024 refusal IS firing (no more raw page-title answers on this site) but the recovery path still can't land the value 2 of 3 times. Anticipated by ADR-024 SS2 / T-M40-2-4 (mid-run replan path deferred)."
+      },
+      {
+        "shape": "judge call raises AttributeError ('NoneType' object has no attribute 'strip') on a malformed judge response, fails closed (companiesmarketcap.com run_id 97677d75)",
+        "note": "The extraction itself was correct ('Market cap: $4.514 Trillion USD') but the run still failed loudly because the judge layer errored rather than certifying. New shape, not one of the four D28/regressed shapes -- worth its own adversarial case per CLAUDE.md rule 2."
+      },
+      {
+        "shape": "extraction lands on an adjacent label/heading instead of the value ('Description:' or bare 'Born:' on quotes.toscrape.com, run_ids c20b1fda, 37fe5cec, 2f12cf5e)",
+        "note": "Judge correctly rejects all three (label-without-value, per this probe's own strictness rule). Different failure surface from the original D28 'site title' shape on this same page."
+      },
+      {
+        "shape": "extraction returns empty text on openlibrary.org, 3/3 runs (run_ids bdd9ebf7, b9e6ddd9, b43acc40)",
+        "note": "0/3 correct, consistent 'StepError: extraction returned empty text' at step 2 every time -- looks like a stable new failure mode on this specific page/selector, not the WebArea shape."
+      }
+    ]
+  }
+}

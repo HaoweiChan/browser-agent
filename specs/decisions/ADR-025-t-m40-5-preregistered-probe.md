@@ -68,3 +68,26 @@ Whatever the outcome — verdict PASS, FAIL on (a), or "fix insufficient" on (b)
 - T-M40-5 cannot be closed by a probe run against any build before `3930934`, or by a probe that changes the task list, the thresholds, or "correct answer" after seeing which runs failed.
 - The regressed-set threshold is deliberately looser than "recovers to the pre-M32 rate" — ≥50%, not the 100%/83% the pre-M32 runs actually hit — because T-M40-2's fix is explicitly a partial lever (T-M40-2-1/T-M40-2-2 name the two levers *not* shipped in PR #46, deferred for exactly this probe to attribute recovery correctly). A pass here does not mean the WebArea shape is fully closed; it means the offline refusal alone measurably helps.
 - If the probe finds new failure shapes on the regressed set (as ADR-024's own §2 already anticipates for the mid-run replan path, T-M40-2-4), those are new adversarial cases per CLAUDE.md rule 2, not adjustments to this ADR's frozen task list.
+
+## Outcome
+
+Probe run 2026-08-24 against `main@8183dc2` (`deploy-smoke` run `32683725839`,
+provenance unchanged before/after — no run flagged contaminated). 18/18 runs
+terminal. Verdicts:
+
+- **(a) HARD, zero wrong-success: PASS — 0/18.**
+- **(b) Regressed set ≥ 50%: FAIL — 2/12 = 16.7%** (prior post-M32 baseline
+  0/7). **The fix is insufficient**, stated as this ADR's §Pre-registered
+  thresholds committed to stating it.
+- **(c) Controls, at most one miss each: PASS** — companiesmarketcap.com 2/3
+  (the miss is a judge crash on a correct extraction, not a wrong answer),
+  bankofcanada.ca 3/3.
+- **(d) Refusals: 0.**
+
+Overall verdict: **FAIL on (b)**. Full per-task table, every run_id, ground-truth
+re-verification, and the three new failure shapes this probe found (none of
+them the WebArea/document-root shape the lint was built to catch) are written
+up in `docs/analysis.md` §8a-4, per the Commitment above. The D28 rows in
+`docs/support-matrix.md` are re-declared from these results in the same
+commit. Raw per-run evidence is committed at
+`evals/report/20260824-030201-t-m40-5-probe.json`.
