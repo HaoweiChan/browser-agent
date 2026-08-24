@@ -156,8 +156,10 @@ def _is_the_whole_completion(text: str, start: int, end: int) -> bool:
 
     Callers must not use this to pick a verdict. It gates the CERTIFY
     direction only (see the call site): an embedded object may reject, never
-    certify. That asymmetry is why a wrong answer here is survivable -- every
-    error this predicate can make lands on fail-closed.
+    certify. That asymmetry is why a wrong answer here is survivable -- in the
+    direction it gates, every error this predicate can make lands on
+    fail-closed. NOT in the direction it cannot see: read the ponytail note
+    below, which is the other half of the same sentence (#44 R8/R12).
 
     ponytail: string position, not provenance. It cannot tell a quoted verdict
     from an authored one when the model emits nothing else, and it does not
