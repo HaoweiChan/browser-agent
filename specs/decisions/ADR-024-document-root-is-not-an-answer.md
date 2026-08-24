@@ -148,9 +148,9 @@ subject, not this one's.
   `WebArea — <the page title>` as element #1 of every page. Removing it from
   `observe` is the other half of the root cause and is deliberately not done
   here — it is a behaviour change on every run whose effect can only be measured
-  by a live probe, and doing it in the same PR would make the T-M40-3 re-probe
+  by a live probe, and doing it in the same PR would make the T-M40-5 re-probe
   unable to attribute a recovery to either lever. Logged as debt (T-M40-2-1),
   with the planner-prompt line (T-M40-2-2) beside it for the same reason.
 - No live claim is made here. This ADR ships an offline refusal and its
-  watched-red cases; the D28 rows stay as PR #43 declared them until T-M40-3
+  watched-red cases; the D28 rows stay as PR #43 declared them until T-M40-5
   re-probes a deployed build.

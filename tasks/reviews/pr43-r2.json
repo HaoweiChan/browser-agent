@@ -1,0 +1,55 @@
+{
+  "round": 2,
+  "pr": 43,
+  "result": "REQUEST_CHANGES",
+  "reviewers": [
+    "cold-reviewer (repair diff)"
+  ],
+  "findings": [
+    {
+      "id": "R15",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "A run the record says is still executing is painted as a terminal failure:env — the same lie as the spinner, pointed the other way, and worse because the run's real result is then never shown.",
+      "evidence": "src/browser/server.py es.onerror else-branch called lost(), which sets #progress[data-terminal]=failure and the failure colour. A proxy idle timeout or sleeping laptop over a live run is the ordinary case; stream_task's gen() has no keepalive.",
+      "repro": "a fourth submit({status:'running'}) in the case harness: terminal 'failure', status_class 'big failure'.",
+      "acceptance": "no verdict, no data-terminal, no spinner, buttons released; run id kept on screen."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The browser check's stream keeps its own handle and its own onerror, so the exact spinner-over-a-dead-run defect stayed open on the button beside the fixed one.",
+      "evidence": "src/browser/server.py — s is a const local inside smoke(); busy() closed only es; s.onerror did not reach a terminal state.",
+      "repro": "drive smoke() with an EventSource that errors: #status 'running', animationName 'spin', no data-terminal.",
+      "acceptance": "same treatment as the task stream; busy() owns both handles."
+    },
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The stale-poll assertion is vacuous — deleting both cross-run guards keeps the case green.",
+      "evidence": "src/browser/eval_adapter.py let the poll land before reassigning runId, then compared #status with itself (both sides 'stream lost').",
+      "repro": "delete the runId!==mine guards and run the case — passes.",
+      "acceptance": "hold the poll open across the reassignment; assert the old record never reaches #result and its screenshots never reach #pvshot."
+    },
+    {
+      "id": "R18",
+      "severity": "MEDIUM",
+      "route": "debt",
+      "claim": "SEM.locked() is a read, not an acquire, so two browser checks still launch two Chromiums and /readyz reports neither.",
+      "evidence": "src/browser/server.py smoke_events early return; /readyz reads SEM.locked() too.",
+      "repro": "two concurrent curl -N /smoke/stream — both reach 'launching'.",
+      "acceptance": "T-M40-1: the smoke path takes the same semaphore, pinned by a case."
+    },
+    {
+      "id": "R19",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The new case's restore block leaks runId, #status, #progress state and an unremovable unhandledrejection listener into the shared _ui_page render; inert today only by luck of case ordering.",
+      "evidence": "src/browser/eval_adapter.py restore block; ui-rendered-narrow happens to call resetProgress() first and happens to omit screenshot from its step payload.",
+      "repro": "add a screenshot key to ui-rendered-narrow's payload.",
+      "acceptance": "restore everything the case touched, and name the listener so it can be removed."
+    }
+  ]
+}
