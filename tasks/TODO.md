@@ -306,7 +306,20 @@ before the mode ships — without this a loop-mode `WebArea` extract is the
 T-M40-2 shape with no guard. The action
 vocabulary widens for both modes: `select_option`, `scroll`, `press`,
 `wait_for` (predicates reuse `check_state`), `go_back` — each with
-postcondition semantics and its own red-first case. Loop budgets: step cap,
+postcondition semantics and its own red-first case. Two more legs, added
+2026-08-26 from interviewer feedback ("畫面稍微複雜就可能看不到或點不到",
+"缺乏 harness 與自修復能力" — the 首頁↔dashboard loop, 18 LLM calls, 2
+repairs, still fail): (a) OBSERVATION REACH — `observe()` and the resolver
+today stop at the main frame's accessibility tree, so iframe content and
+shadow-DOM subtrees are structurally invisible and unclickable regardless of
+mode or vision (our own inspector's source pane is an iframe); frame-piercing
+observation and frame-scoped resolution land here, each with a fixture case
+watched red first (an iframe'd value, a shadow-DOM button). (b) NO-PROGRESS
+DETECTION — a step cap is not a harness: when the loop revisits the same
+(URL, page-signature) state N times with no new fact in the trace, the driver
+must force a strategy change or end the run loudly with that reason, never
+grind the budget down in a circle; pinned red-first by a stub-driven case
+that scripts a revisit loop. Loop budgets: step cap,
 token/USD ceilings at runaway-protection levels, recorded per run;
 `ALLOWED_MODELS` gains at least one frontier model (its own ADR line, price
 recorded — this is ADR-027's declared amendment to ADR-010's price ceiling,
@@ -324,6 +337,48 @@ cost visible in the trace/UI; an implementation ADR recording the tool schemas,
 new trace fields and caps; cold-reviewer + spec-drift before commit.
 Out of scope: vision (M43), matrix re-declaration (M44), making loop the live
 default (M44's evidence decides).
+
+### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: todo]
+Origin: interviewer feedback, 2026-08-26 — "使用者輸入中文搜尋或問答時,部署版
+會直接回傳 refused,甚至還沒開啟瀏覽器就結束", under the headline "中文都會
+失敗". No run ids came with the report. Priority note: sequence this AHEAD of
+M43 — the likely root cause is a few lines of regex plus probe evidence, the
+highest leverage-per-cost item in this queue, and it answers the single most
+damaging sentence in the feedback.
+Spec: the only pre-browser refusal in the pipeline is `screen()`'s
+`SCOPE_BLOCK` (`src/browser/agent.py`), and its CJK alternation is bare
+substring matching — `登入|密碼|驗證碼|付款|購買|刪除|下載` with no boundary
+and no context — while the English side earned word boundaries and determiner
+adjacency through two probe-driven repairs, each pinned
+(`screening-word-boundary`, `l5-refuse-delete-determiners`). A legitimate zh
+READ task that merely mentions 下載/付款/刪除 as subject matter refuses at
+$0.00. Whether that asymmetry is the whole of "中文都會失敗" is unmeasured:
+every live probe ever run (M40's four rounds) was English; every zh case in
+the suites is an offline fixture. Three legs, evidence first:
+(1) REPRODUCE — a zh probe set against the deployment: the interviewer's
+shapes (plain search, plain QA) plus zh phrasings of the M40 card tasks,
+3 reps each, run ids published, every failure triaged per
+`docs/evals/failure-taxonomy.md` BEFORE any code moves.
+(2) SCREENING PARITY — the CJK terms get the same precision work the English
+side got: per-term context conditions (刪除 + adjacent object the way
+`delete` requires a determiner; 下載/付款/購買 refusing as the task's VERB,
+not as mentioned subject matter), watched red first with legitimate-zh-read
+cases, while the negative direction is pinned too — real destructive/auth zh
+asks still refuse, `l5-refuse-destructive-zh` stays green, and the refusal
+POLICY is unchanged: only its zh false-positive rate moves.
+(3) DECLARE — the matrix carries the zh evidence (zh rows or per-row zh
+annotation, under ADR-022's live-declaration rule): "中文都會失敗" ends this
+milestone either fixed with cases or declared with named shapes, never
+unaddressed.
+Acceptance: probe run ids committed; every screening change pinned in both
+directions (a false-positive case that was red, a true-positive case that
+stayed green); zh live evidence visible in `docs/support-matrix.md`; the
+interviewer's exact phrasings among the probe tasks; gate green;
+cold-reviewer + spec-drift before commit.
+Out of scope: planner/judge zh answer quality beyond what the probe surfaces —
+new shapes found there become their own blocks (rule 2). Independent of
+M42/M43: mode B's screening is the same code path, so this neither waits for
+nor blocks the loop work.
 
 ### M43 — loop mode sees the page: screenshot observation for a vision model            [status: todo]
 Origin: ADR-027; postmortem S2 — the failure class "the answer is not the
@@ -353,7 +408,14 @@ ADR-025's task texts where applicable), the M40 card tasks, and the sec-10k
 inspector probe (M41's task list — M41 stays the inspector-side owner; run its
 probes under both modes and fold the results back into its matrix row) against
 the deployment in loop mode, 3 reps minimum per task (T-M40-5-3 is why one rep
-is not a read), every run id published. Declare per-mode matrix rows under the
+is not a read), every run id published. Added 2026-08-26 from interviewer
+feedback: the probe set also carries (a) zh phrasings alongside the English
+ones (M45 owns the screening fix; this row measures zh COMPLETION once tasks
+get past the screen), and (b) the interviewer's own reproduced flow — enter
+the SEC Extractor, submit INTC, wait for extraction, check the result — the
+multi-step shape that looped 首頁↔dashboard for 18 LLM calls and 2 repairs
+before failing, re-run under both modes so the A-vs-B table includes the
+exact failure the feedback cites. Declare per-mode matrix rows under the
 ADR-022 rule — a row says which mode it measures; no blending. Absorb M33: the
 same runs ARE the A-vs-B arm — report per-mode correct-rate, $/task, tokens,
 wall clock and planner calls in `docs/analysis.md` §9's table shape, from a
