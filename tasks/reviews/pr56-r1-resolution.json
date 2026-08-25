@@ -10,10 +10,12 @@
   "findings": [
     {
       "id": "R1",
-      "status": "fixed",
+      "status": "partially_fixed",
       "case": "docs-numbers-are-derived (new `probe_cost_column` clause)",
       "what": "The §8a-5 per-run cost column now carries planner+judge (`cost_usd`) and its 29 cells sum to $0.011195; the contradicting note at the foot of the table was rewritten to match. `docs-numbers-are-derived` grew a `probe_cost_column` clause that re-sums the published column out of docs/analysis.md and compares it to the probe report's own `summary.total_cost_usd`, so the label cannot drift from the data again.",
-      "red_first": "evals/report/20260825-182616-invariant.json era; captured directly: {'probe_cost_column_rows': 29, 'expected_rows': 29, 'column_sums_to': 0.009781, 'report_total': 0.011195}"
+      "red_first": "evals/report/20260825-182616-invariant.json era; captured directly: {'probe_cost_column_rows': 29, 'expected_rows': 29, 'column_sums_to': 0.009781, 'report_total': 0.011195}",
+      "corrected_2026_08_26": "Round 2 R10 showed this entry overstated what the fix achieved, and a resolution record that overstates a fix is the same class of defect this PR is about. The CELLS are fixed and pinned: they carry planner+judge and the new `probe_cost_column` clause re-sums them against the probe report's own total, so a mutated or deleted cell goes red. The HEADER is not pinned: flipping it back to \"Cost (planner only)\" — the exact label/data disagreement R1 filed — leaves the case green. So R1's stated acceptance, that the label \"cannot drift from the data again\", is NOT met. Tracked as M45-D7.",
+      "debt_id": "M45-D7"
     },
     {
       "id": "R2",

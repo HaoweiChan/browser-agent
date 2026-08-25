@@ -1,0 +1,46 @@
+{
+  "pr": 56,
+  "round": 2,
+  "task": "M45",
+  "resolved_by": "implementer, 2026-08-26",
+  "gate": {
+    "invariant": "67/67 = 1.000",
+    "fast": "182/182 = 1.000"
+  },
+  "context": "Every finding this round was fallout from one cause: round 1's revert took SCOPE_BLOCK back to base and four documents did not come with it.",
+  "findings": [
+    {
+      "id": "R6",
+      "status": "fixed",
+      "case": "docs-numbers-are-derived (new `forbidden_claims` group `asserts_this_pr_changes_scope_block`)",
+      "what": "docs/support-matrix.md's ADR-022 paragraph and M45-D5 now state the actual reason the shipping build differs from the measured build: merging moves `main` and the deployment follows it, so it is a different BUILD but not a different BEHAVIOUR — M45 ships no production code change. M45-D5's acceptance is INVERTED rather than dropped: B1/B2/B3 must still refuse at $0.00 with an empty trace, confirming D31's declared residual on the deployed build, and the block says in plain words that an earlier draft had it backwards and why that mattered.",
+      "red_first": "{'asserts_this_pr_changes_scope_block': ['the branch that publishes them changes `SCOPE_BLOCK`', 'the one code path this branch changes'], 'doc': 'docs/support-matrix.md'} and {'asserts_this_pr_changes_scope_block': [\"M45's screening fix\", 'must now RUN rather than refuse'], 'doc': 'tasks/TODO.md'}"
+    },
+    {
+      "id": "R7",
+      "status": "fixed",
+      "case": "docs-numbers-are-derived (new `forbidden_claims` group `claims_the_zh_screening_was_fixed`, scoped to ADR-028)",
+      "what": "ADR-028's Outcome now says the mention shape is declared, not repaired, names D31 and the case as where the shapes and the reasoning live, and adds the line that stops the next reader making the same inference: this document grades a probe, and what the code does about what the probe found is not its to certify. Guarded — and the guard is scoped to ADR-028 alone, which is the right shape: the round-1 exemption was correct for repair HISTORY and wrong as cover for a FORWARD claim, so the exemption now covers only the former.",
+      "red_first": "{'claims_the_zh_screening_was_fixed': [\"M45's leg 2 fixes\", 'leg 2 fixes'], 'doc': 'specs/decisions/ADR-028-m45-preregistered-zh-probe.md'}"
+    },
+    {
+      "id": "R8",
+      "status": "fixed",
+      "case": "docs-numbers-are-derived (new `block_must_contain` clause)",
+      "what": "Filed M45-D8 for the request-frame mechanism with its own gateable Acceptance (measure a question-vs-imperative rule against all 29 rows of screening-zh-term-inside-another-word plus l5-refuse-destructive-zh, screening-word-boundary and l5-refuse-delete-determiners; ships red-first if it strictly beats the bare terms, otherwise the universal claim is downgraded in all four surfaces to 'no NEIGHBOUR rule separates those'). Retargeted all four pointers from M45-D4 to M45-D8. M45-D4 keeps its own subject, the positive-adjacency form, which is a genuinely different mechanism. The new guard reads the pointer's TARGET — the heading must exist and its block must carry the words the pointer promises — so a concession cannot again be made by pointing somewhere that does not contain it. M45-D8 also records the catch that makes this a measurement rather than an afternoon: a frame rule keyed on 幫我/請/我要 fails open on the bare imperative 刪除所有郵件, an existing true-positive row.",
+      "red_first": "{'pointer_target_missing': '### M45-D8', 'doc': 'tasks/TODO.md'}"
+    },
+    {
+      "id": "R9",
+      "status": "debt",
+      "debt_id": "M45-D9",
+      "what": "Confirmed independently before filing, rather than taken on the reviewer's word. Ablation re-run on this tree: against `[購购][買买](?!力)` both 幫我購買力士洗髮精 and 帮我购买力度伸发泡锭 are ALLOWED; against `[購购][買买](?!力平[價价])` both are BLOCKED. So red-watch (2) cannot have been produced by any of the three documented lookaheads, and a fourth narrowing was run and never published. Logged with that ablation verbatim. The correction strengthens the published universal — four independent narrowings falsified, not three — which is why it is safe to defer but not to forget."
+    },
+    {
+      "id": "R10",
+      "status": "debt",
+      "debt_id": "M45-D7",
+      "what": "Logged with both mutations verbatim. Deliberately NOT fixed here despite being a one-word change (`.lower()`) plus one added literal: R10 was severity-routed to debt, and a repair round that quietly widens findings it was told to defer is how a review loop stops terminating. The case-sensitivity limit is now written into the clause itself as a `ponytail:` comment naming M45-D7, so the next reader meets the ceiling at the code rather than in a tracker. Separately, and not optional: the R1 entry in tasks/reviews/pr56-r1-resolution.json has been changed from `fixed` to `partially_fixed` with an explicit note that R1's stated acceptance is NOT met — cells pinned, header unpinned."
+    }
+  ]
+}

@@ -1338,7 +1338,7 @@ What might actually work is a rule about the REQUEST FRAME rather than about the
 term's neighbours: every false positive above is a question about a page (…是什麼？
 / …的定義 / …會保留多久？) and every false negative is an imperative (幫我… / 請… /
 我要…). That is a different mechanism, unprobed in either language, and it is
-filed as `tasks/TODO.md` M45-D4 rather than guessed at under a deadline.
+filed as `tasks/TODO.md` M45-D8 rather than guessed at under a deadline.
 
 The gap between "one screening clause over-refuses on three word shapes" and
 "中文都會失敗" is the reason leg 1 of this milestone ran before leg 2. Had the

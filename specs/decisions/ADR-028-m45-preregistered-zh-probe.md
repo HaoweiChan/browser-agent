@@ -222,8 +222,16 @@ search and plain QA shapes the interviewer named.** On this build those shapes
 pass in Chinese at a rate at least as good as English, measured pairwise on the
 same URLs the same evening. The reproducible part of the report is the *mention*
 shape — a Chinese task that merely names a blocked concept inside a longer word.
-That part is real, is three shapes wide, costs `$0.00` and no browser exactly as
-described, and is what M45's leg 2 fixes (`screening-zh-term-inside-another-word`).
+That part is real, is three shapes wide, and costs `$0.00` and no browser exactly
+as described. **It is declared, not repaired.** M45's leg 2 wrote a narrowing for
+each shape and every one of them was falsified by an ordinary Chinese sentence it
+un-refused, so `SCOPE_BLOCK` ships byte-for-byte as it was and the over-refusals
+stand as a declared limitation — `docs/support-matrix.md` D31 for the shapes and
+the reasoning, `screening-zh-term-inside-another-word` for the rows that pin
+every one of them. A reader arriving at this ADR for the probe's verdict should
+take away that the mention shape was MEASURED here, and nothing more: this
+document grades a probe, and what the code does about what the probe found is
+not its to certify.
 
 **Two corrections to this Outcome, made after the M45 spec-drift audit and
 recorded rather than silently applied.** (1) The cost figure, above. (2) Row A3's

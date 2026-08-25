@@ -111,7 +111,7 @@ PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, 
 # the term's neighbours — every false positive above is a question about a page
 # (…是什麼？ / …的定義 / …會保留多久？) and every false negative is an imperative
 # (幫我… / 請… / 我要…). That is a different mechanism, unprobed in either
-# language, and it is filed as tasks/TODO.md M45-D4 rather than guessed at here.
+# language, and it is filed as tasks/TODO.md M45-D8 rather than guessed at here.
 SCOPE_BLOCK = re.compile(
     r"\b(?:log|sign)(?:g?ed|g?ing)?[\s-]?in(?:to)?\b"
     r"|\b(?:password|captcha|payment|purchase|buy|pay|download)\b"
