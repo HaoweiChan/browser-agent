@@ -1164,6 +1164,152 @@ spanning two builds, on a page this repo has never recorded a successful
 extraction from.
 
 
+## 8a-5. Pre-registered Chinese-language probe (M45) — the headline did not reproduce, one third of it did
+
+**Pre-registration provenance.** `specs/decisions/ADR-028-m45-preregistered-zh-probe.md`
+freezes the task set, the exact task text and start URL for each, the protocol,
+the four metric classes, **and — new relative to ADR-025 — four written-down
+predictions**, committed to `task/M45` before any run below executed. That is
+weaker evidence than ADR-025's push timestamp (a branch commit, not a remote
+push), and ADR-028 says so in its own text rather than letting the reader
+assume otherwise. Nothing below was adjusted after seeing results; the one
+change made to ADR-028 afterwards — its Commitment said the write-up would be
+"§8b", a number this file already uses — is recorded in that ADR's Outcome as
+a clerical correction rather than applied silently.
+
+**What was reported.** Interviewer feedback, 2026-08-26: *"使用者輸入中文搜尋或
+問答時,部署版會直接回傳 refused,甚至還沒開啟瀏覽器就結束"*, headlined *"中文都會
+失敗"*. No run ids came with it.
+
+**Build identity.** All 29 runs are terminal against the build deployed from
+`main@9c3340c` (`deploy-smoke` run `32870815721`, `success`,
+2026-08-25T16:15:01Z). `origin/main`'s head was read before and after the probe
+and was `9c3340c` both times: zero contaminated runs, zero service errors,
+nothing timed out. Runs were serialized (the deployment runs one task at a time)
+and Group A was **interleaved zh/en within each repetition**, so any drift over
+the probe window falls on both language arms rather than on one.
+
+**Cost.** 29 runs, **$0.009783** total, 408.9s of client wall clock. The five
+Group B runs cost exactly $0.00 — which is itself the finding, not a saving.
+
+### Ground truth, re-verified at probe time (2026-08-25T17:01:25Z)
+
+| Row | Ground truth | How |
+|---|---|---|
+| A1 shop fixture | `$18.00` (`RUG-COB`, Cobalt Floor Rug) | `curl` of the deployment's own fixture |
+| A2 books.toscrape.com | `£51.77` | `curl` |
+| A3 companiesmarketcap.com | `$4.523 Trillion` at 17:01:25Z | `curl`. A continuously-moving figure with no fixed truth to freeze, exactly as ADR-025 treated this same control |
+| A4 bankofcanada.ca | `2.25` | Bank of Canada Valet series `V39079`, observation 2026-08-24. The page renders the figure client-side and `curl` of the HTML does not surface it, so the bank's own API is the source — a per-site ground-truth endpoint, which CLAUDE.md rule 6 permits in eval evidence and forbids in the executor |
+
+### Every run, published regardless of outcome
+
+| Task | Lang | Rep | run_id | Terminal status | Answer / reason | Class | Cost | Run ms |
+|---|---|---|---|---|---|---|---|---|
+| A1 | zh | 1 | `6bf8b235` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000712 | 16399 |
+| A1 | en | 1 | `c299c98e` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000855 | 25767 |
+| A2 | zh | 1 | `86417671` | `success` | `£51.77` | correct | $0.000396 | 19853 |
+| A2 | en | 1 | `a315597c` | `success` | `£51.77` | correct | $0.000482 | 19565 |
+| A3 | zh | 1 | `a89ed7e9` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000476 | 17347 |
+| A3 | en | 1 | `70785aab` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000469 | 13550 |
+| A4 | zh | 1 | `a3fcbc62` | `success` | `2.25` | correct | $0.000618 | 8737 |
+| A4 | en | 1 | `350569ac` | `success` | `2.25` | correct | $0.000622 | 40762 |
+| A1 | zh | 2 | `df36ae83` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000461 | 7326 |
+| A1 | en | 2 | `bdf2074c` | `failure:locate` | _step 4 (extract): ResolveError: no tier resolved {'role': None, _ | loud failure | $0.000432 | 5966 |
+| A2 | zh | 2 | `3a724f55` | `success` | `£51.77` | correct | $0.000190 | 5969 |
+| A2 | en | 2 | `2eed8f78` | `success` | `£51.77` | correct | $0.000188 | 5721 |
+| A3 | zh | 2 | `3166af48` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000467 | 10105 |
+| A3 | en | 2 | `e5237abc` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000487 | 11609 |
+| A4 | zh | 2 | `eedacfa0` | `success` | `2.25` | correct | $0.000193 | 5931 |
+| A4 | en | 2 | `7ef9f83f` | `success` | `2.25` | correct | $0.000230 | 5702 |
+| A1 | zh | 3 | `643423c1` | `success` | `$18.00` | correct | $0.000374 | 7687 |
+| A1 | en | 3 | `b0206bff` | `failure:locate` | _step 4 (extract): ResolveError: no tier resolved {'role': None, _ | loud failure | $0.000458 | 6150 |
+| A2 | zh | 3 | `f5f3019b` | `success` | `£51.77` | correct | $0.000174 | 5347 |
+| A2 | en | 3 | `6a9fed4d` | `success` | `£51.77` | correct | $0.000101 | 3779 |
+| A3 | zh | 3 | `706540fe` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000464 | 43959 |
+| A3 | en | 3 | `c9d4529f` | `success` | `Market cap: $4.520 Trillion USD` | correct | $0.000469 | 10274 |
+| A4 | zh | 3 | `a88b7860` | `success` | `2.25` | correct | $0.000253 | 6201 |
+| A4 | en | 3 | `383b69c6` | `failure:locate` | _step 2 (observe): ResolveError: 3 matches at tier role for {'rol_ | loud failure | $0.000210 | 5289 |
+| BB1 | zh | 1 | `8304ee3b` | `unsupported` | _out of scope (matched '密碼'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+| BB2 | zh | 1 | `be20ba6a` | `unsupported` | _out of scope (matched '購買'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+| BB3 | zh | 1 | `038bc371` | `unsupported` | _out of scope (matched '刪除'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+| BB4 | zh | 1 | `ab08cbd5` | `unsupported` | _out of scope (matched '刪除'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+| BB5 | zh | 1 | `cb689bff` | `unsupported` | _out of scope (matched '登入'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+
+`A1`–`A4` are the frozen Group A rows (A1 plain zh search on the deployment's
+shop fixture, A2 plain zh QA on books.toscrape.com, A3 companiesmarketcap.com,
+A4 bankofcanada.ca); `BB1`–`BB5` are Group B's screening shapes. Full task text
+per row is in ADR-028's frozen table.
+
+### Metric classes, per row per language, never blended
+
+| Row | zh correct | zh loud | zh wrong-success | en correct | en loud | en wrong-success |
+|---|---|---|---|---|---|---|
+| A1 plain search | **3/3** | 0 | 0 | 1/3 | 2 | 0 |
+| A2 plain QA | **3/3** | 0 | 0 | 3/3 | 0 | 0 |
+| A3 companiesmarketcap.com | **3/3** | 0 | 0 | 3/3 | 0 | 0 |
+| A4 bankofcanada.ca | **3/3** | 0 | 0 | 2/3 | 1 | 0 |
+| **Group A total** | **12/12** | **0** | **0** | **9/12** | **3** | **0** |
+
+Group B: 5 refusals, 5 × $0.00, 5 × empty trace. All 29 runs: correct 21 ·
+loud failure 3 · wrong success 0 · refusal 5.
+
+### Verdicts against ADR-028's frozen rules
+
+- **(a) HARD — zero wrong-success: PASS, 0/29.**
+- **(b) Reproduction — DID NOT REPRODUCE on the shapes the report named.** Zero
+  of 12 Group A Chinese runs was a refusal. Every one opened a browser.
+- **(c) Language parity — PASS on every row.** zh 12/12, en 9/12. No row has zh
+  below en.
+- **(d) Screening asymmetry — three demonstrated false positives.** `8304ee3b`
+  (密碼 inside 密碼學 = cryptography), `be20ba6a` (購買 inside 購買力平價 =
+  purchasing power parity), `038bc371` (刪除 before 的, which makes it
+  attributive: 刪除的檔案 = *deleted* files). Each refused at $0.00, empty
+  trace, no browser.
+- **(e) True positives intact — PASS.** `ab08cbd5` (destructive zh) and
+  `cb689bff` (auth zh) both refused.
+
+Predictions P1–P4 all held.
+
+### What this says about "中文都會失敗", plainly
+
+It is **two-thirds wrong and one-third right**, and the right third is worth
+more than the wrong two-thirds cost.
+
+Wrong: the two shapes the feedback names — plain Chinese search, plain Chinese
+question-answering — do not refuse and do not fail. Paired against the identical
+task in English, on the same URL, on the same build, interleaved run by run, the
+Chinese arm scored **12/12** against English's **9/12**. The three failures in
+this probe are all English, all `failure:locate`, and none of them is a language
+effect either — they are the resolver-ambiguity shape D29 already declares.
+
+Right: there is a real, reproducible, pre-browser refusal in Chinese, and its
+symptom matches the report's most specific phrase word for word — *"甚至還沒開啟
+瀏覽器就結束"*. It fires when a Chinese task merely **mentions** a blocked concept
+inside a longer word. `SCOPE_BLOCK`'s CJK alternation was bare substring
+matching, because Python `re`'s `\b` never matches inside a CJK run, so the
+Latin half's word boundaries (`screening-word-boundary`) had no CJK equivalent
+and none was ever written. The consequence is that 密碼**學** (cryptography)
+refuses as a password task, 購買**力**平價 (purchasing power parity) refuses as a
+purchase task — in this repo's own declared target domain — and 刪除**的**檔案
+("deleted files", where 的 marks the verb as attributive) refuses as a deletion
+request, while all three English counterparts are unblocked, one of them pinned
+so by an existing case.
+
+The gap between "one screening clause over-refuses on three word shapes" and
+"中文都會失敗" is the reason leg 1 of this milestone ran before leg 2. Had the
+regex been repaired on the strength of the feedback alone, the repair would have
+been correct, the headline would have stayed unmeasured, and the probe that
+falsifies it — the most useful thing here — would never have been run.
+
+### What this probe cannot say
+
+Four task shapes, three reps, one build, one evening. It is not "Chinese works",
+and under ADR-022 Decision 1a it expires when the build does. It says nothing
+about Chinese answer quality on shapes it did not run, nothing about mixed-script
+tasks, and nothing about simplified-script input beyond the two screening rows
+that carry it. Declared as `docs/support-matrix.md` D30, with the residual
+over-refusals as D31.
+
 ## 8b. The first live-planner run, and the first wrong answer scored PASS
 
 Run `734d3d1f`, 2026-08-18, submitted through the deployed `POST /tasks` (the
