@@ -71,12 +71,7 @@ repo's ledger and nothing else.
   and `published-band-matches-the-ledger` themselves, mid-refresh at the moment
   this row was recorded: the tree only reaches 182 cases while M45's
   `screening-zh-term-inside-another-word` is uncommitted, and this section's own
-  republication is what adding that case forces. (The parenthetical this
-  replaces narrated PR #44's merge at 181 cases — correct for the row it was
-  written for, stale the moment M45 republished the bullet above it. Nothing
-  grades these sentences — item 2 (cited-run), item 3 (same-ceiling), item 5
-  (derivation) and item 10 (restatement) all grade the bullet's four VALUES, not
-  the prose beside them, which is how the narrative went stale unnoticed.) The stamp is UTC, as
+  republication is what adding that case forces. The stamp is UTC, as
   every row written since §7 is. How many rows the ledger holds at
   this count, and what its maximum is, are deliberately not written here — see
   §3. This merge moved the count once more, past both the 164 this branch had

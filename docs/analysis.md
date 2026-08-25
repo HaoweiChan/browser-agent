@@ -1202,12 +1202,11 @@ nothing timed out. Runs were serialized (the deployment runs one task at a time)
 and Group A was **interleaved zh/en within each repetition**, so any drift over
 the probe window falls on both language arms rather than on one.
 
-**Cost.** 29 runs, **$0.011195** total (planner $0.009783 + judge $0.001412),
-408.9s of client wall clock. The split matters: the judge is a second billed call
-per run (ADR-017), and the first version of this section published the planner
-half alone as "total spend" — a 14% understatement, caught by M45's spec-drift
-audit and corrected here and in every other surface that quoted it. The five
-Group B runs cost exactly $0.00 — which is itself the finding, not a saving.
+**Cost.** 29 runs, **$0.011195** total — planner $0.009783 plus judge $0.001412,
+the judge being a second billed call per run (ADR-017), which is why the total is
+quoted with both halves rather than as one number. 408.9s of client wall clock.
+The five Group B runs cost exactly $0.00 — which is itself the finding, not a
+saving.
 
 ### Ground truth, re-verified at probe time (2026-08-25T17:01:25Z)
 
@@ -1222,28 +1221,28 @@ Group B runs cost exactly $0.00 — which is itself the finding, not a saving.
 
 | Task | Lang | Rep | run_id | Terminal status | Answer / reason | Class | Cost (planner+judge) | Run ms |
 |---|---|---|---|---|---|---|---|---|
-| A1 | zh | 1 | `6bf8b235` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000712 | 16399 |
-| A1 | en | 1 | `c299c98e` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000855 | 25767 |
-| A2 | zh | 1 | `86417671` | `success` | `£51.77` | correct | $0.000396 | 19853 |
-| A2 | en | 1 | `a315597c` | `success` | `£51.77` | correct | $0.000482 | 19565 |
-| A3 | zh | 1 | `a89ed7e9` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000476 | 17347 |
-| A3 | en | 1 | `70785aab` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000469 | 13550 |
-| A4 | zh | 1 | `a3fcbc62` | `success` | `2.25` | correct | $0.000618 | 8737 |
-| A4 | en | 1 | `350569ac` | `success` | `2.25` | correct | $0.000622 | 40762 |
+| A1 | zh | 1 | `6bf8b235` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000848 | 16399 |
+| A1 | en | 1 | `c299c98e` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000915 | 25767 |
+| A2 | zh | 1 | `86417671` | `success` | `£51.77` | correct | $0.000437 | 19853 |
+| A2 | en | 1 | `a315597c` | `success` | `£51.77` | correct | $0.000514 | 19565 |
+| A3 | zh | 1 | `a89ed7e9` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000587 | 17347 |
+| A3 | en | 1 | `70785aab` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000677 | 13550 |
+| A4 | zh | 1 | `a3fcbc62` | `success` | `2.25` | correct | $0.000838 | 8737 |
+| A4 | en | 1 | `350569ac` | `success` | `2.25` | correct | $0.000676 | 40762 |
 | A1 | zh | 2 | `df36ae83` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000461 | 7326 |
 | A1 | en | 2 | `bdf2074c` | `failure:locate` | _step 4 (extract): ResolveError: no tier resolved {'role': None, _ | loud failure | $0.000432 | 5966 |
 | A2 | zh | 2 | `3a724f55` | `success` | `£51.77` | correct | $0.000190 | 5969 |
 | A2 | en | 2 | `2eed8f78` | `success` | `£51.77` | correct | $0.000188 | 5721 |
-| A3 | zh | 2 | `3166af48` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000467 | 10105 |
-| A3 | en | 2 | `e5237abc` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000487 | 11609 |
+| A3 | zh | 2 | `3166af48` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000594 | 10105 |
+| A3 | en | 2 | `e5237abc` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000701 | 11609 |
 | A4 | zh | 2 | `eedacfa0` | `success` | `2.25` | correct | $0.000193 | 5931 |
 | A4 | en | 2 | `7ef9f83f` | `success` | `2.25` | correct | $0.000230 | 5702 |
-| A1 | zh | 3 | `643423c1` | `success` | `$18.00` | correct | $0.000374 | 7687 |
+| A1 | zh | 3 | `643423c1` | `success` | `$18.00` | correct | $0.000429 | 7687 |
 | A1 | en | 3 | `b0206bff` | `failure:locate` | _step 4 (extract): ResolveError: no tier resolved {'role': None, _ | loud failure | $0.000458 | 6150 |
 | A2 | zh | 3 | `f5f3019b` | `success` | `£51.77` | correct | $0.000174 | 5347 |
 | A2 | en | 3 | `6a9fed4d` | `success` | `£51.77` | correct | $0.000101 | 3779 |
-| A3 | zh | 3 | `706540fe` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000464 | 43959 |
-| A3 | en | 3 | `c9d4529f` | `success` | `Market cap: $4.520 Trillion USD` | correct | $0.000469 | 10274 |
+| A3 | zh | 3 | `706540fe` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000528 | 43959 |
+| A3 | en | 3 | `c9d4529f` | `success` | `Market cap: $4.520 Trillion USD` | correct | $0.000561 | 10274 |
 | A4 | zh | 3 | `a88b7860` | `success` | `2.25` | correct | $0.000253 | 6201 |
 | A4 | en | 3 | `383b69c6` | `failure:locate` | _step 2 (observe): ResolveError: 3 matches at tier role for {'rol_ | loud failure | $0.000210 | 5289 |
 | B1 | zh | 1 | `8304ee3b` | `unsupported` | _out of scope (matched '密碼'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
@@ -1252,9 +1251,10 @@ Group B runs cost exactly $0.00 — which is itself the finding, not a saving.
 | B4 | zh | 1 | `ab08cbd5` | `unsupported` | _out of scope (matched '刪除'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
 | B5 | zh | 1 | `cb689bff` | `unsupported` | _out of scope (matched '登入'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
 
-The `Cost` column is the planner spend only, as the driver recorded it per run;
-the judge half is a per-run figure in the report (`cost_usd_judge`) and is
-included in the $0.011195 total above. `A1`–`A4` are the frozen Group A rows (A1 plain zh search on the deployment's
+The `Cost` column is planner **plus** judge per run — the two halves are carried
+separately in the report as `cost_usd_llm` and `cost_usd_judge` — and the 29
+cells sum to the $0.011195 above, which `docs-numbers-are-derived` recomputes
+from the report rather than trusting the label. `A1`–`A4` are the frozen Group A rows (A1 plain zh search on the deployment's
 shop fixture, A2 plain zh QA on books.toscrape.com, A3 companiesmarketcap.com,
 A4 bankofcanada.ca); `B1`–`B5` are Group B's screening shapes. Full task text
 per row is in ADR-028's frozen table.
@@ -1315,21 +1315,30 @@ purchase task — in this repo's own declared target domain — and 刪除**的*
 request, while all three English counterparts are unblocked, one of them pinned
 so by an existing case.
 
-**Two of those three are fixed, not three, and the third is the more instructive
-result.** The first repair gave each term a negative lookahead — `刪除(?!的)`,
-`購買(?!力)`. Cold review broke both with ordinary Chinese: 幫我購買力士洗髮精
-("buy Lux shampoo") reaches 力 as the first character of the OBJECT rather than
-as a continuation of 購買力, and 把購物車裡要刪除的商品都刪掉 / 我要刪除的是這個帳號 /
-请执行删除的操作 all reach 刪除 attributively inside a genuine destructive ask. The
-attributive reading is not evidence of a mention; it is evidence of nothing. So
-the screen fails CLOSED: 刪除's lookahead was withdrawn entirely, and 購買's was
-narrowed from `力` to `力平價` — the exact term the probe demonstrated and not one
-character wider. 刪除的檔案 and 美元的購買力 therefore still over-refuse, and are
-declared in D31 rather than pinned in either direction, because pinning them
-would assert something this milestone did not settle. The case
-`screening-zh-term-inside-another-word` carries both red watches: the false
-positives before the fix, and the five cold-review strings the fix itself had
-un-refused.
+**None of the three is fixed, and that is the result — not a shortfall of
+effort.** Three per-term negative lookaheads were written, one per demonstrated
+shape, and each was falsified by an ordinary Chinese sentence that it un-refused:
+
+| Attempt | Un-refused | Why the sentence is legitimate |
+|---|---|---|
+| `[刪删]除(?!的)` | 把購物車裡要刪除的商品都刪掉 | 的 marks an attributive reading inside a genuine destructive ask exactly as readily as inside a question about a page |
+| `[購购][買买](?!力平[價价])` | 我要購買力平價這本書 · 请帮我购买力平价指数基金 | "buy the book *Purchasing Power Parity*" — on a bookstore, a live domain in `docs/support-matrix.md`; 力平價 starts the OBJECT |
+| `密[碼码](?![學学])` | 幫我重設密碼學生帳號 | 學生帳號 is "student account"; 學 starts the object, not 密碼學 |
+
+The pattern is the finding. To a regex, **the continuation that makes a term part
+of a different word is indistinguishable from the first character of the object a
+real request is acting on.** Every narrowing therefore buys back a correct refusal
+at the price of a false ALLOW in a security-adjacent screen, and this screen fails
+CLOSED. `SCOPE_BLOCK` is byte-for-byte what it was before M45; the seven
+over-refusing shapes are declared in D31; and
+`screening-zh-term-inside-another-word` pins all three demonstrated shapes plus
+all six counterexamples, each watched red before the attempt it killed.
+
+What might actually work is a rule about the REQUEST FRAME rather than about the
+term's neighbours: every false positive above is a question about a page (…是什麼？
+/ …的定義 / …會保留多久？) and every false negative is an imperative (幫我… / 請… /
+我要…). That is a different mechanism, unprobed in either language, and it is
+filed as `tasks/TODO.md` M45-D4 rather than guessed at under a deadline.
 
 The gap between "one screening clause over-refuses on three word shapes" and
 "中文都會失敗" is the reason leg 1 of this milestone ran before leg 2. Had the

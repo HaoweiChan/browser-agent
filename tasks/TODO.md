@@ -157,11 +157,10 @@ Out of scope: planner/judge zh answer quality beyond what the probe surfaces —
 new shapes found there become their own blocks (rule 2). Independent of
 M42/M43: mode B's screening is the same code path, so this neither waits for
 nor blocks the loop work.
-RESULT (2026-08-26): **the headline did not reproduce; one third of it did.**
+RESULT (2026-08-26): **the headline did not reproduce; the third of it that did
+is declared, not fixed.**
 Leg 1 — 29 runs against `main@9c3340c`, pre-registered in ADR-028, $0.011195
-(planner $0.009783 + judge $0.001412; the planner-only figure this line first
-carried was caught by spec-drift),
-every run_id in `docs/analysis.md` §8a-5 and
+(planner $0.009783 + judge $0.001412), every run_id in `docs/analysis.md` §8a-5 and
 `evals/report/20260826-011010-m45-zh-probe.json`. Paired zh/en on the same
 URLs, same build, interleaved: **Chinese 12/12 correct, English 9/12,
 wrong-success 0/29.** Zero of the twelve Chinese runs was a refusal — the
@@ -169,27 +168,29 @@ wrong-success 0/29.** Zero of the twelve Chinese runs was a refusal — the
 three failures in the probe are English `failure:locate` (the D29 shape).
 Leg 2 — what DID reproduce: the mention shape, three live refusals at $0.00
 with an empty trace (`8304ee3b` 密碼學, `be20ba6a` 購買力平價, `038bc371`
-刪除的檔案). two of `SCOPE_BLOCK`'s CJK terms now carry a
-per-term negative lookahead — the CJK equivalent of the `\b` the Latin half
-got — and the other five carry nothing, deliberately; pinned both ways by
-`screening-zh-term-inside-another-word`, watched red TWICE in opposite
-directions: first the false positives before the fix
-(`evals/report/20260825-170430-invariant.json`, invariant 64/67, six rows), then
-five strings cold review produced that the FIRST version of the fix had
-un-refused — 幫我購買力士洗髮精 (力士 = Lux, the object, not a continuation of
-購買力) and three destructive asks reaching the verb attributively through 的.
-No regex separates those from the false positives they mirror, so the screen
-fails closed: 刪除's lookahead was withdrawn entirely and 購買's narrowed from
-`力` to the exact `力平價` the probe demonstrated. Two shapes closed, one
-deliberately re-opened, the rest declared (D31). `l5-refuse-destructive-zh` and
-`screening-word-boundary` stayed green throughout, and the destructive/auth
-directions were re-confirmed LIVE (`ab08cbd5`, `cb689bff`).
+刪除的檔案). **It is declared, not fixed.** Three per-term negative lookaheads
+were written and all three were falsified by ordinary Chinese that they
+un-refused — `[刪删]除(?!的)` allowed 把購物車裡要刪除的商品都刪掉 (cold review);
+`[購购][買买](?!力平[價价])` allowed 我要購買力平價這本書 and
+请帮我购买力平价指数基金 (PR #56 R2); `密[碼码](?![學学])` allowed
+幫我重設密碼學生帳號 (PR #56 R2). To a regex the continuation that makes a term
+part of another word is indistinguishable from the first character of a real
+request's object, so the screen fails CLOSED and `SCOPE_BLOCK` ships
+byte-for-byte as it was. `screening-zh-term-inside-another-word` pins all three
+shapes and all six counterexamples, watched red three times through the harness
+(`evals/report/20260825-170430-invariant.json`,
+`evals/report/20260825-175345-invariant.json`,
+`evals/report/20260825-182616-invariant.json`).
+`l5-refuse-destructive-zh` and `screening-word-boundary` stayed green
+throughout, and the destructive/auth directions were re-confirmed LIVE
+(`ab08cbd5`, `cb689bff`).
 Leg 3 — `docs/support-matrix.md` gains a "Chinese-language (zh) evidence"
 section (four rows, run ids, repeat counts, paired English arm) plus D30/D31
-under ADR-022's live-declaration rule. The declared residual is real and named:
-密碼子 / 購買量 / 刪除按鈕 still over-refuse, and 下載/付款 over-refuse in BOTH
-languages — narrowing those would move the refusal policy, not close an
-asymmetry, so it was not done here.
+under ADR-022's live-declaration rule. D31 names all seven over-refusing shapes
+(密碼學, 購買力平價, 刪除的檔案, 美元的購買力, 密碼子, 購買量, 刪除按鈕) and
+separates out the two that are shared with English rather than Chinese defects:
+下載 and 付款 over-refuse in BOTH languages, and narrowing those would move the
+refusal policy rather than close an asymmetry.
 
 ### M43 — loop mode sees the page: screenshot observation for a vision model            [status: todo]
 Origin: ADR-027; postmortem S2 — the failure class "the answer is not the
@@ -269,6 +270,34 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### M45-D6 — mixed-script CJK spellings pass the scope screen in every term            [status: todo]
+Origin: PR #56 R4, 2026-08-26. Filed for the half of R4 that still exists.
+R4's other half — that folding 購買 into `[購购][買买]` newly BLOCKED mixed-script
+购買/購买, an un-pinned widening of the refusal policy — was removed by R2's fix,
+which reverted `SCOPE_BLOCK` to its pre-M45 spelling. Verified: `screen('幫我购買
+這個商品')` and `screen('購买這個商品')` both return None on this tree and on base
+`7eeda93`, so the policy is unchanged in that direction and there is nothing left
+to pin.
+Spec: every CJK term in `SCOPE_BLOCK` (`src/browser/agent.py`) is spelled as a
+traditional/simplified PAIR — `密碼|密码`, `購買|购买`, `驗證碼|验证码`,
+`刪除|删除`, `下載|下载`, `登入|登录` — so a spelling that mixes the two scripts
+within one word matches neither alternative. Carried verbatim from R4's evidence:
+`screen('幫我輸入验证碼')` returns None. Confirmed on this tree for the wider set:
+幫我购買這個商品, 購买這個商品, 幫我輸入验证碼 and 幫我輸入驗证码 all pass the
+screen. Mixed script is not exotic — input methods, copy-paste between zh-TW and
+zh-CN sources, and OCR all produce it routinely.
+The trap, and why this is a task rather than a one-line character-class fold:
+folding every pair into character classes is the widening R4 caught in the 購買
+case, so it moves the refusal policy for every term at once and must be watched
+as such. It is also the fail-CLOSED direction (more refusals), which is the safe
+one, so it is a different risk profile from M45's withdrawn narrowings — but "safe
+direction" is not "unwatched direction".
+Acceptance: each pair is folded to a character class (or an equivalent), every
+mixed-script form is pinned as a `true` row in
+`screening-zh-term-inside-another-word` — watched red first, since every one of
+them passes today — and the fold is recorded as the deliberate policy widening it
+is rather than presented as behaviour-neutral. Gate green.
 
 ### M45-D4 — 刪除's positive-adjacency form was never built or priced            [status: todo]
 Origin: M45 spec-drift audit, 2026-08-26, finding 5. M45's own spec asked for

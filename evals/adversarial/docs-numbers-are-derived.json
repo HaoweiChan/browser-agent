@@ -105,6 +105,32 @@
         "The\nremaining {remaining} are those refusals plus pure-code probes of a single"
       ],
       "why": "T-M39-5 / PR #44 R4: this pair sat three lines under a preamble saying every count in the section is current, read out of a report two trees old, while the split quote beside it was being kept honest. Recomputed from the headline report the same way, so it cannot drift again without going red."
+    },
+    "probe_cost_column": {
+      "doc": "docs/analysis.md",
+      "report": "20260826-011010-m45-zh-probe.json",
+      "section_start": "### Every run, published regardless of outcome",
+      "section_end": "### Metric classes, per row per language",
+      "row_re": "\\| (?:A\\d|B\\d) \\| (?:zh|en) \\| \\d \\| `([0-9a-f]{8})` \\|[^|]*\\|[^|]*\\|[^|]*\\| \\$([0-9.]+) \\|",
+      "rows": 29,
+      "why": "PR #56 R1: the column header said planner+judge, the cells carried planner-only, and the 29 cells summed to the superseded $0.009783. Nothing read either, so the label drifted from its own data inside one table."
+    },
+    "repair_history_forbidden": {
+      "docs": [
+        "docs/support-matrix.md",
+        "docs/analysis.md",
+        "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md"
+      ],
+      "phrases": [
+        "M45's spec-drift audit",
+        "the first published figure was",
+        "the first version of this section published",
+        "understatement",
+        "The parenthetical this replaces",
+        "deliberately re-opened",
+        "corrected after M45"
+      ],
+      "why": "PR #56 R3. Each phrase is a literal that appeared in one of these three documents and narrated this PR's own repair rounds rather than the shipped system. specs/decisions/ADR-028 is deliberately out of scope — its Outcome corrections are what pre-registration is for. The phrase list is scoped to M45's own narrative: a bare \"spec-drift audit\" is ordinary provenance and appears legitimately in D12 and a resolver row, so the literal carries the milestone name."
     }
   },
   "expect": {

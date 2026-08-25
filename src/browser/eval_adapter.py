@@ -4847,6 +4847,53 @@ def _run_doc_counts_case(case: dict) -> dict:
                               "should_flag": row["flags"], "got": got,
                               "why": row.get("note")})
 
+    # PR #56 R1: §8a-5's per-run cost column was labelled "planner+judge" and
+    # carried planner-only cells, so the column silently republished the exact
+    # figure M45's own audit had corrected — a label and its data disagreeing
+    # with nothing reading either. Recomputed here from the probe report, so the
+    # two cannot drift apart again: the cells are summed out of the document and
+    # must equal the report's own total to the cent.
+    pc = inp.get("probe_cost_column")
+    if pc:
+        doc = (RUN_ROOT / pc["doc"]).read_text(encoding="utf-8")
+        rep = json.loads((RUN_ROOT / "evals" / "report" / pc["report"]).read_text())
+        try:
+            seg = doc[doc.index(pc["section_start"]):doc.index(pc["section_end"])]
+        except ValueError:
+            wrong.append({"probe_cost_section_not_found": pc})
+        else:
+            cells = re.findall(pc["row_re"], seg)
+            total = round(sum(float(c) for _, c in cells), 6)
+            want = round(rep["summary"]["total_cost_usd"], 6)
+            if len(cells) != pc["rows"] or total != want:
+                wrong.append({"probe_cost_column_rows": len(cells),
+                              "expected_rows": pc["rows"],
+                              "column_sums_to": total, "report_total": want})
+
+    # PR #56 R3: this PR's own round-by-round repair story — what an earlier
+    # version of a number was, which audit caught it, which regex was tried and
+    # withdrawn — was written into docs/support-matrix.md, docs/analysis.md and
+    # ADR-019. Documents of record carry the CURRENT number and the CURRENT
+    # rationale; the history of how they got there belongs in tasks/reviews/ or
+    # the PR body, which is where a reader looks for it and where it does not
+    # age into a claim about the shipped system. Scoped to the three documents
+    # named, and deliberately NOT to specs/decisions/ADR-028: a pre-registration
+    # recording a correction to its own frozen figure is the entire point of
+    # pre-registering, and stripping that would destroy the evidence rather than
+    # tidy it. tasks/ is excluded for the reason criterion5 excludes it — a
+    # tracker quotes a forbidden phrase as the thing that must not be true.
+    rh = inp.get("repair_history_forbidden")
+    if rh:
+        for docrel in rh["docs"]:
+            # Whitespace-collapsed: these documents are hard-wrapped prose, so
+            # a phrase that straddles a line break is the SAME phrase and was
+            # invisible to a literal scan (found while watching this red — the
+            # ADR-019 sentence wrapped mid-phrase and reported clean).
+            text = " ".join((RUN_ROOT / docrel).read_text(encoding="utf-8").split())
+            hits = sorted(ph for ph in rh["phrases"] if ph in text)
+            if hits:
+                wrong.append({"carries_repair_history": hits, "doc": docrel})
+
     c5 = inp.get("criterion5")
     if c5:
         # Every tracked-looking markdown file, not a hardcoded allowlist
