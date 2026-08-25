@@ -33,6 +33,13 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 
 - T-M40-1 — a browser check takes the run slot instead of reading it (2026-08-24) — PR #45, trace in tasks/reviews/pr45-r*.json; 3 rounds, 1 circuit breaker (human ruled option B: R8/R9 shipped as T-R89/T-R90). Nine debt items T-R82..T-R90, renumbered from T-R73..T-R79 after the final merge found seven ids defined differently on both sides with tasks/TODO.md auto-merging clean
 - T-M40-2 — the document root is not an answer: the plan lint refuses it at both adoption points (2026-08-24) — ADR-024, PR #46, trace in tasks/reviews/pr46-r*.json; 3 rounds, approved
+- T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included (2026-08-24) — PR #40, trace in tasks/reviews/pr40-r1*.json
+- T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band (2026-08-24) — ADR-019 §7, PR #41, trace in tasks/reviews/pr41-r*.json; 4 rounds, final round routed entirely to debt
+- M38 — Resolver disambiguation: a target with several matches is narrowed, not failed (2026-08-24) — PR #42, trace in tasks/reviews/pr42-r*.json; 6 rounds, approved
+- M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for (2026-08-24) — PR #43, trace in tasks/reviews/pr43-r*.json
+- M39 — a malformed judge response is retried once before failing closed (2026-08-24) — PR #44, trace in tasks/reviews/pr44-r*.json; 5 rounds, approved
+- T-M40-4 — deploy-smoke cannot verify the browser while anyone is using the demo (2026-08-24) — PR #47
+- T-R61 — the task field's placeholder still advertises the retired HN prompt (2026-08-24) — closed inside M40's PR #43; acceptance's second half (a `ui-form` pin on placeholder text) explicitly not met, so it can regress silently
 
 ## B-floor exit criteria — final status
 
