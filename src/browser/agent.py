@@ -74,8 +74,43 @@ PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, 
 # synonyms nobody probed is exactly the unwatched widening this repo's
 # eval-first rule exists to prevent — D21, docs/support-matrix.md.
 #
-# Latin terms need \b (case screening-word-boundary: 'signing' contains 'signin');
-# CJK terms must stay boundary-free — \b never matches inside a CJK run.
+# Latin terms need \b (case screening-word-boundary: 'signing' contains 'signin').
+#
+# M45: the CJK half is the same defect, and it went unrepaired for as long as it
+# did because `\b` cannot state it — Python `re` puts no word boundary inside a
+# CJK run and there is no whitespace to lean on, so the comment that used to sit
+# here concluded CJK terms "must stay boundary-free". They must not: a CJK term
+# fires inside a LONGER word that means something else just as 'signin' fires
+# inside 'signing'. The repo's first live probe in Chinese (ADR-028,
+# docs/analysis.md §8a-5) refused three legitimate READ tasks at $0.00 with an
+# empty trace — 密碼 inside 密碼學 (cryptography, run 8304ee3b), 購買 inside
+# 購買力平價 (purchasing power parity, run be20ba6a), 刪除 inside 刪除的檔案
+# ("deleted files", run 038bc371).
+#
+# TWO of those three are fixed here, not three, and the boundary between them is
+# the whole lesson. Cold review attacked the first version of this line and
+# produced five natural Chinese strings it had un-refused:
+#
+#   購買力士洗髮精   "buy Lux shampoo"      — 力 starts the OBJECT (力士 = Lux),
+#                                             it does not continue 購買力
+#   要刪除的商品都刪掉 / 我要刪除的是這個帳號 / 请执行删除的操作
+#                                           — 的 marks an attributive reading in a
+#                                             genuine destructive ask exactly as
+#                                             readily as in a question about a page
+#
+# No regex separates those from the false positives they mirror, so the screen
+# fails CLOSED both times: 刪除 keeps no lookahead at all, and 購買's narrowed
+# from `力` to `力平價`, the exact four-character term the probe demonstrated and
+# nothing wider. What that costs is declared rather than hidden — 刪除的檔案 and
+# 美元的購買力 still over-refuse (docs/support-matrix.md D31), as do 密碼子 (codon)
+# and 刪除按鈕 (delete button), which no probe exercised.
+#
+# 下載 and 付款 get no lookahead AT ALL and that is deliberate: the English side
+# blocks "download statistics" as a bare word (screening-word-boundary pins it),
+# so narrowing 下載 would move the refusal POLICY rather than close an asymmetry.
+# The character classes fold the traditional/simplified pairs on the LAST line
+# only — 登入|登录, 驗證碼|验证码 and 下載|下载 are still spelled twice, because
+# folding a term buys nothing unless that term also needs a lookahead.
 SCOPE_BLOCK = re.compile(
     r"\b(?:log|sign)(?:g?ed|g?ing)?[\s-]?in(?:to)?\b"
     r"|\b(?:password|captcha|payment|purchase|buy|pay|download)\b"
@@ -83,7 +118,8 @@ SCOPE_BLOCK = re.compile(
     r"|\bcredit card\b"
     r"|\bplace (?:an?|the) order\b"
     r"|\bdelet(?:e|es|ed|ing)\s+(?:my|the|this|these|those|all|every|any|our)\b"
-    r"|登入|登录|密碼|密码|驗證碼|验证码|付款|購買|购买|刪除|删除|下載|下载",
+    r"|登入|登录|驗證碼|验证码|付款|下載|下载"
+    r"|密[碼码](?![學学])|[購购][買买](?!力平[價价])|[刪删]除",
     re.IGNORECASE,
 )
 

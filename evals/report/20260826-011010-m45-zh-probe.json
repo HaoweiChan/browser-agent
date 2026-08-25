@@ -188,9 +188,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.00071225,
+   "cost_usd": 0.0008484,
    "run_ms": 16399,
-   "trace_len": 0
+   "trace_len": 4,
+   "cost_usd_llm": 0.00071225,
+   "cost_usd_judge": 0.00013615
   },
   {
    "group": "A",
@@ -379,9 +381,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.0008553,
+   "cost_usd": 0.00091518,
    "run_ms": 25767,
-   "trace_len": 0
+   "trace_len": 4,
+   "cost_usd_llm": 0.0008553,
+   "cost_usd_judge": 5.9882228e-05
   },
   {
    "group": "A",
@@ -509,9 +513,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.0003965,
+   "cost_usd": 0.00043734,
    "run_ms": 19853,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.0003965,
+   "cost_usd_judge": 4.084e-05
   },
   {
    "group": "A",
@@ -639,9 +645,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.0004817,
+   "cost_usd": 0.00051411,
    "run_ms": 19565,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.0004817,
+   "cost_usd_judge": 3.2408e-05
   },
   {
    "group": "A",
@@ -767,9 +775,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.0004764,
+   "cost_usd": 0.00058676,
    "run_ms": 17347,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.0004764,
+   "cost_usd_judge": 0.000110355504
   },
   {
    "group": "A",
@@ -897,9 +907,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.00046945,
+   "cost_usd": 0.00067707,
    "run_ms": 13550,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00046945,
+   "cost_usd_judge": 0.00020762
   },
   {
    "group": "A",
@@ -1027,9 +1039,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.0006184,
+   "cost_usd": 0.00083816,
    "run_ms": 8737,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.0006184,
+   "cost_usd_judge": 0.00021976
   },
   {
    "group": "A",
@@ -1157,9 +1171,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.000622,
+   "cost_usd": 0.00067581,
    "run_ms": 40762,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.000622,
+   "cost_usd_judge": 5.3805e-05
   },
   {
    "group": "A",
@@ -1350,7 +1366,9 @@
    "metric_class": "correct",
    "cost_usd": 0.0004615,
    "run_ms": 7326,
-   "trace_len": 0
+   "trace_len": 4,
+   "cost_usd_llm": 0.0004615,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -1508,7 +1526,9 @@
    "metric_class": "loud_failure",
    "cost_usd": 0.00043152,
    "run_ms": 5966,
-   "trace_len": 0
+   "trace_len": 4,
+   "cost_usd_llm": 0.00043152,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -1638,7 +1658,9 @@
    "metric_class": "correct",
    "cost_usd": 0.00018952,
    "run_ms": 5969,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00018952,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -1768,7 +1790,9 @@
    "metric_class": "correct",
    "cost_usd": 0.00018832,
    "run_ms": 5721,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00018832,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -1896,9 +1920,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.0004668,
+   "cost_usd": 0.00059378,
    "run_ms": 10105,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.0004668,
+   "cost_usd_judge": 0.00012698
   },
   {
    "group": "A",
@@ -2026,9 +2052,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.00048745,
+   "cost_usd": 0.00070116,
    "run_ms": 11609,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00048745,
+   "cost_usd_judge": 0.00021371
   },
   {
    "group": "A",
@@ -2158,7 +2186,9 @@
    "metric_class": "correct",
    "cost_usd": 0.00019292,
    "run_ms": 5931,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00019292,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -2288,7 +2318,9 @@
    "metric_class": "correct",
    "cost_usd": 0.00023012,
    "run_ms": 5702,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00023012,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -2477,9 +2509,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.0003739,
+   "cost_usd": 0.00042885,
    "run_ms": 7687,
-   "trace_len": 0
+   "trace_len": 4,
+   "cost_usd_llm": 0.0003739,
+   "cost_usd_judge": 5.49472e-05
   },
   {
    "group": "A",
@@ -2637,7 +2671,9 @@
    "metric_class": "loud_failure",
    "cost_usd": 0.00045792,
    "run_ms": 6150,
-   "trace_len": 0
+   "trace_len": 4,
+   "cost_usd_llm": 0.00045792,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -2767,7 +2803,9 @@
    "metric_class": "correct",
    "cost_usd": 0.00017392,
    "run_ms": 5347,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00017392,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -2897,7 +2935,9 @@
    "metric_class": "correct",
    "cost_usd": 0.00010072,
    "run_ms": 3779,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00010072,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -3025,9 +3065,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.0004644,
+   "cost_usd": 0.0005283,
    "run_ms": 43959,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.0004644,
+   "cost_usd_judge": 6.39e-05
   },
   {
    "group": "A",
@@ -3155,9 +3197,11 @@
    },
    "service_error": false,
    "metric_class": "correct",
-   "cost_usd": 0.00046945,
+   "cost_usd": 0.00056061,
    "run_ms": 10274,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00046945,
+   "cost_usd_judge": 9.1161e-05
   },
   {
    "group": "A",
@@ -3287,7 +3331,9 @@
    "metric_class": "correct",
    "cost_usd": 0.00025292,
    "run_ms": 6201,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00025292,
+   "cost_usd_judge": 0
   },
   {
    "group": "A",
@@ -3387,7 +3433,9 @@
    "metric_class": "loud_failure",
    "cost_usd": 0.00020972,
    "run_ms": 5289,
-   "trace_len": 0
+   "trace_len": 2,
+   "cost_usd_llm": 0.00020972,
+   "cost_usd_judge": 0
   },
   {
    "group": "B",
@@ -3441,7 +3489,9 @@
    "metric_class": "refusal",
    "cost_usd": 0,
    "run_ms": 0,
-   "trace_len": 0
+   "trace_len": 0,
+   "cost_usd_llm": 0,
+   "cost_usd_judge": 0
   },
   {
    "group": "B",
@@ -3495,7 +3545,9 @@
    "metric_class": "refusal",
    "cost_usd": 0,
    "run_ms": 0,
-   "trace_len": 0
+   "trace_len": 0,
+   "cost_usd_llm": 0,
+   "cost_usd_judge": 0
   },
   {
    "group": "B",
@@ -3549,7 +3601,9 @@
    "metric_class": "refusal",
    "cost_usd": 0,
    "run_ms": 0,
-   "trace_len": 0
+   "trace_len": 0,
+   "cost_usd_llm": 0,
+   "cost_usd_judge": 0
   },
   {
    "group": "B",
@@ -3603,7 +3657,9 @@
    "metric_class": "refusal",
    "cost_usd": 0,
    "run_ms": 0,
-   "trace_len": 0
+   "trace_len": 0,
+   "cost_usd_llm": 0,
+   "cost_usd_judge": 0
   },
   {
    "group": "B",
@@ -3657,7 +3713,9 @@
    "metric_class": "refusal",
    "cost_usd": 0,
    "run_ms": 0,
-   "trace_len": 0
+   "trace_len": 0,
+   "cost_usd_llm": 0,
+   "cost_usd_judge": 0
   }
  ],
  "summary": {
@@ -3671,7 +3729,7 @@
    "deploy_smoke_created_at": "2026-08-25T16:15:01Z"
   },
   "total_runs": 29,
-  "total_cost_usd": 0.009783,
+  "total_cost_usd": 0.011195,
   "total_wall_time_s": 408.9,
   "stopped_early": false,
   "consecutive_service_errors_max": 0,
@@ -3730,31 +3788,31 @@
     "wrong_success": 0,
     "refusal": 0
    },
-   "BB1-zh": {
+   "B1": {
     "correct": 0,
     "loud_failure": 0,
     "wrong_success": 0,
     "refusal": 1
    },
-   "BB2-zh": {
+   "B2": {
     "correct": 0,
     "loud_failure": 0,
     "wrong_success": 0,
     "refusal": 1
    },
-   "BB3-zh": {
+   "B3": {
     "correct": 0,
     "loud_failure": 0,
     "wrong_success": 0,
     "refusal": 1
    },
-   "BB4-zh": {
+   "B4": {
     "correct": 0,
     "loud_failure": 0,
     "wrong_success": 0,
     "refusal": 1
    },
-   "BB5-zh": {
+   "B5": {
     "correct": 0,
     "loud_failure": 0,
     "wrong_success": 0,
@@ -3780,6 +3838,13 @@
    "P2": "held",
    "P3": "held",
    "P4": "held"
-  }
+  },
+  "total_cost_usd_breakdown": {
+   "planner_llm_usd": 0.009783,
+   "judge_llm_usd": 0.001412,
+   "note": "The first published figure was $0.009783 — the planner half only. The judge is a second billed call per run (ADR-017) and its spend belongs in the total. Corrected in-place after the M45 spec-drift audit caught it; the per-run fields now carry both halves separately."
+  },
+  "report_filename_timezone_note": "This file's name is stamped in LOCAL time (2026-08-26 01:10), while every timestamp inside it and every evals/run.py-written report name is UTC. The probe driver was ad-hoc, like T-M40-5's, and named its output by local clock. ts_utc below is authoritative.",
+  "group_b_label_note": "ADR-028 freezes these as B1-B5; an earlier version of this file wrote them BB1-BB5. Corrected to the frozen names."
  }
 }
