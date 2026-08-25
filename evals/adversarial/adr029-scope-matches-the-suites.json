@@ -1,0 +1,20 @@
+{
+  "id": "adr029-scope-matches-the-suites",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "invariant",
+    "check": "adr029-scope-matches-the-suites"
+  },
+  "expect": {
+    "note": "every `N/N` gate figure ADR-029 §2 publishes to scope this branch's evidence equals the size of the suite it names, as the runner counts it."
+  },
+  "provenance": "PR #56 R14, and the class R14/R15/R16 share. The paragraph whose entire job is scoping this branch's gate evidence honestly published `invariant 71/71, fast 207/207` against a tree of 73 and 211 — stale by four cases and two commits, in the one place where being stale is the same as being wrong, because that paragraph is the disclosure R7 rests on. Nothing graded it: `published-band-matches-the-ledger` reads ADR-019's band lines only and `adr029-variance-cites-the-ledger` is scoped to §1's seconds. The pattern is the milestone's most persistent: R5 was a scalar in prose that nothing graded, R5's own repair produced R14, R15 and R16, and hand-editing three more scalars would produce three more. So the numbers that must stay are graded and the rest are replaced by the relation they describe.",
+  "triage": {
+    "class": "ungraded-scalar",
+    "note": "a number a human retypes is a number that drifts; a number a case reads back cannot"
+  }
+}

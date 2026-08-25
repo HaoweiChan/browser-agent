@@ -1,10 +1,10 @@
-# ADR-029: the local `fast` ceiling moves 90 → 105, because 26 cases moved the tree and the rule says so
+# ADR-029: the local `fast` ceiling moves 90 → 105, because the cases M42 adds moved the tree and the rule says so
 
 Date: 2026-08-26
 Status: accepted
 
 **Ruling**: `WALL_BUDGET_S["fast"]` moves from 90s to **105s** for the LOCAL environment only, taken from ADR-013 Decision 3's rule applied to this tree's own committed ledger rather than chosen; CI's `EVAL_WALL_BUDGET_S_FAST` **stays at 90** because nothing in this change measured CI, and ADR-019 §5's four CI numbers are hand-read off a named workflow run — a number I cannot take from here is a number I may not write; `invariant` is untouched at 20s, which its own ledger rows still derive.
-**Because**: M42 added 26 cases to `fast`, which is growth in CASE COUNT and not in per-case cost — the exact condition ADR-021 named when it said "if a future gap comes from per-case cost the answer is removing waste (T-M32-3), not another raise"; the tree measured 73.06s at 181 cases and the new cases cost ~7s of real browser work between them, so the band crosses a ceiling step and ADR-013's rule derives 105 from it.
+**Because**: M42's additions grew `fast`, which is growth in CASE COUNT and not in per-case cost — the exact condition ADR-021 named when it said "if a future gap comes from per-case cost the answer is removing waste (T-M32-3), not another raise"; the tree measured 73.06s at 181 cases and the new cases cost ~7s of real browser work between them, so the band crosses a ceiling step and ADR-013's rule derives 105 from it.
 **Enforced by**: `published-band-matches-the-ledger` (items 3, 4 and 5 are what force this file to exist rather than letting the band be re-typed), `fast-wall-clock-budget` (whose boundary rows move to 105.00/105.01 in the same change, watched red first), `evals/run.py`'s `over_budget()`.
 
 ---
@@ -17,9 +17,11 @@ computed out of `evals/report/history.jsonl`. ADR-021 last moved the local
 `fast` number, 80 → 90, on a band at 146 cases.
 
 At 181 cases the tree measured 73.06s, which derives 85 and sat one step under
-the committed 90. M42 adds 26 cases — twenty-one from the milestone itself, five
-more from its review round — and every one of them that drives a browser costs
-real wall clock. The band moves past the step boundary, and `published-band-
+the committed 90. M42 adds cases — from the milestone itself and from each
+review round after it — and every one of them that drives a browser costs real
+wall clock. How many is deliberately not written here: three documents published
+three different values for that one quantity, and `git diff main --stat` answers
+it without any of them (PR #56 R16). The band moves past the step boundary, and `published-band-
 matches-the-ledger` items 3 and 4 refuse a band whose derived ceiling is above
 the committed one. That refusal is the mechanism working: a suite that got
 slower has to say so, in the document of record, before the gate goes green
@@ -65,7 +67,7 @@ no CI measurement of this tree, so I have no number to derive one from, and
 publish CI's ceiling from drifting apart on a number nobody measured.
 
 **Stated rather than discovered later**: CI is likely to breach 90 on this
-branch. It measured 74.25s at 152 cases; this tree is 207, and main's last
+branch. It measured 74.25s at 152 cases; this tree is larger, and main's last
 recorded CI `fast` run was already 89.62s under the same 90s ceiling
 (`fast-wall-clock-budget`'s own row). Extrapolating is not deriving, so no
 number is written on the strength of it — but a reader should expect the PR's
@@ -79,8 +81,11 @@ R7): **CI's `fast` ceiling for this tree is UNMEASURED.** `.github/workflows/
 eval.yml` still declares 90s, untouched by this branch, because raising it to a
 guessed number is the one thing ADR-013's rule forbids and
 `ci-numbers-are-derived` exists to refuse. The branch's gate evidence —
-`invariant` 71/71, `fast` 207/207 — is **local only**, and no document, PR body
-or report on this branch may say the gate is green without that scope. One of
+`invariant` 74/74, `fast` 213/213 — is **local only**, and no document, PR body
+or report on this branch may say the gate is green without that scope. Those two
+figures are read back against the suites by `adr029-scope-matches-the-suites`,
+because this paragraph published a four-case-stale pair for one round (PR #56
+R14) and a disclosure that is wrong about its own evidence is not a disclosure. One of
 the two gated environments has not run this tree at all: at the time of writing
 the push to `origin` was denied by the harness permission classifier, so no PR
 and no CI run exist yet. When one does, its workflow-run id is cited in ADR-019
@@ -103,7 +108,7 @@ ADR pays the cost openly instead.
 
 ## Consequences
 
-- The local gate has ~15% headroom again at 207 cases, where it had ~5% before
+- The local gate has headroom again at this tree's size, where it had ~5% before
   this change and would have had none after it.
 - A wider ceiling catches drift later. That is the real cost of every raise, and
   ADR-021 named it first: the answer to per-case cost growth is removing waste,

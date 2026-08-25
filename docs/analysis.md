@@ -57,10 +57,10 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-222 distinct cases (21 golden + 201 adversarial).
-373 browser actions in a `fast` run; **134 of the 211** `fast` cases drive a real Chromium end to end — counted here as
+224 distinct cases (21 golden + 203 adversarial).
+376 browser actions in a `fast` run; **135 of the 213** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260825-192110-fast.json` rather than tallied by hand (the
+`evals/report/20260825-195709-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number; PR #56 R4 caught the next
 variant of the same defect — the two figures WERE recomputed, from the headline
@@ -69,7 +69,7 @@ and 109 browser cases, so the paragraph was arithmetically true and evidentially
 false. `docs-numbers-are-derived` now checks the citation as well as the
 arithmetic). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 77 are those refusals plus pure-code probes of a single
+remaining 78 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the

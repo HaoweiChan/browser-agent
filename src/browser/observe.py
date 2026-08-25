@@ -132,15 +132,31 @@ async def page_text(page, frames: bool = True) -> str:
     detaches mid-read contributes nothing rather than killing the step, since
     this is evidence capture and the postcondition is the gate.
 
-    `frames=False` reads the main document (and its shadow roots) only, and one
-    caller wants it: the before/after comparison behind `page_changed`. That
-    field is the sole evidence behind mode B's anti-laundering guard, and it was
-    calibrated on main-frame text — a third-party iframe with a ticking clock,
-    a rotating ad or a chat bubble would flip it to True on every step and
-    unlatch the guard, letting a replan drop a failed action and read the page
-    as though it had worked (cold review 4). Widening EVIDENCE to every frame is
-    the milestone's point; widening a calibrated guard's input is not, and the
-    two are different questions asked of the same function."""
+    `frames=False` reads the main document (and its shadow roots) only. It exists
+    for the before/after comparison behind `page_changed` and, as of PR #56 R13,
+    **no caller uses it** — the argument is kept because the trade-off it names
+    is real and the next reader will re-derive it otherwise:
+
+      * frames-BLIND misses a step whose only effect is inside an iframe. That
+        is an inspector's source pane, the shape M42 leg (a) exists for, and it
+        made the anti-laundering guard refuse a legitimate replan and kill the
+        run with a reason asserting as fact that the step changed nothing
+        (`replan-after-an-iframe-only-change-is-not-laundering`).
+      * frames-AWARE — what `page_changed` now uses — can be flipped true by a
+        frame nobody acted on: a third-party iframe with a ticking clock, a
+        rotating ad, a chat bubble. That unlatches the same guard in the other
+        direction, letting a replan drop a failed action and read the page as
+        though it had worked.
+
+    Both costs are declared, which is the part that was missing: the false
+    positive was documented and the false negative was not. The second hazard
+    has never been reproduced in this repo and the first was, so the evidence
+    picks the direction (T-M42-14 carries the repro that would reopen it —
+    a fixture with a frame that mutates on its own).
+
+    ponytail: kept as a parameter with no caller rather than deleted, because
+    deleting it deletes the question. Remove it if T-M42-14 closes the other
+    way."""
     parts = []
     sources = getattr(page, "frames", None) or [page]
     for frame in (sources if frames else sources[:1]):

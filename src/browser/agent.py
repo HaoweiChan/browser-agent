@@ -1219,7 +1219,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # Did this action change anything at all? The only evidence that
                 # separates a replan legitimately skipping work already done from
                 # one laundering an action that did nothing (replan-cannot-launder-noop-action).
-                before = (await page_text(page, frames=False)
+                before = (await page_text(page)
                           if not step["action"].startswith("extract")
                           and step["action"] not in READ_ONLY_ACTIONS else None)
                 # Where this step's evidence starts, so a step that FAILS can be
@@ -1245,25 +1245,38 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         # after the submitted URL passed (url-guard-holds-after-navigation).
                         raise StepError("task", f"navigated to blocked URL: {page.url!r}")
                     if before is not None:
-                        # The SAME scope `before` was read at. Reading `before`
-                        # main-frame-only and `after` across every frame made
-                        # `page_changed` true on every step of any page carrying
-                        # a text-bearing iframe — which disarms `changed_nothing`
-                        # (the whole evidence behind the anti-laundering guard,
-                        # in BOTH modes) and tells the loop driver a step that
-                        # changed nothing did something. It reproduced on this
-                        # repo's own `frames-host.html` while the identical plan
-                        # on `shop.html` stayed correct, which is why no case saw
-                        # it (PR #56 R1,
-                        # `replan-cannot-launder-noop-action-in-a-frame`).
+                        # The SAME scope `before` was read at, and that scope
+                        # is every frame. Two findings pin the pair, and neither
+                        # alone constrains this line:
                         #
-                        # `frames=False` on both sides rather than True on both:
-                        # `observe.page_text`'s own docstring gives the argument,
-                        # and it was already made — a third-party iframe with a
-                        # ticking clock, a rotating ad or a chat bubble flips a
-                        # cross-frame comparison on every step. The asymmetry was
-                        # the bug; the calibration was right.
-                        after = await page_text(page, frames=False)
+                        #   * asymmetric (`before` main-only, `after` all frames)
+                        #     made every step of any framed page read as changed,
+                        #     disarming `changed_nothing` — the whole evidence
+                        #     behind the anti-laundering guard, in BOTH modes —
+                        #     and telling the loop driver a no-op did something
+                        #     (PR #56 R1,
+                        #     `replan-cannot-launder-noop-action-in-a-frame`);
+                        #   * symmetric-but-frames-BLIND flipped the sign instead
+                        #     of removing the defect: a control whose only effect
+                        #     is inside an iframe — an inspector's source pane,
+                        #     the exact shape M42 leg (a) exists for — recorded
+                        #     `false`, so the guard refused a legitimate replan
+                        #     and the run died stating as fact that a step which
+                        #     had just loaded a document ID "changed nothing on
+                        #     the page" (PR #56 R13,
+                        #     `replan-after-an-iframe-only-change-is-not-laundering`).
+                        #
+                        # Symmetric and frames-aware is the only setting under
+                        # which both cases are green, and they are the same page
+                        # shape with and without a real effect. The hazard the
+                        # previous comment cited — a third-party iframe with a
+                        # ticking clock flipping this true on every step — is
+                        # real but has never been demonstrated here, while the
+                        # false negative was; this repo widens on what a probe
+                        # found, not on what someone imagined. Declared as the
+                        # accepted cost in `observe.page_text` and tracked as
+                        # T-M42-14 with the repro that would close it.
+                        after = await page_text(page)
                         rec["page_changed"] = after != before
                         page_bodies[page.url] = after
                     checked = await check_state(page, step.get("expected_state"))

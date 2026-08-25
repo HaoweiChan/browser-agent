@@ -1,0 +1,72 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff e9cf6bc..HEAD plus standing findings; not a fresh full-diff sweep",
+  "note": "PR number 56 is the expected number; the push to origin remains blocked by the harness permission classifier, so the PR still does not exist and CI has still never run this tree.",
+  "gate": {
+    "invariant": "73/73 = 1.000, wall 14.16s, $0.0000",
+    "fast": "211/211 = 1.000, wall 85.99s, $0.0000",
+    "run_by": "orchestrator, independently, on a clean tree",
+    "baseline_file": "unchanged from main",
+    "scope": "local environment only; CI unmeasured (R7)"
+  },
+  "round_1_outcome": "7 repaired, 0 rejected, 5 routed to debt (T-M42-9..T-M42-13). R1, R2, R3, R4, R5, R6 verified fixed this round; R7 remains open and blocked outside the author's control.",
+  "findings": [
+    {
+      "id": "R13",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R1's fix flipped the bug's sign rather than removing it: with `before` and `after` both read `frames=False`, a click that genuinely changes only iframe content is now recorded `page_changed: false`, so the anti-laundering guard falsely refuses a legitimate replan and the run dies `failure:act` with a reason that states a falsehood — on exactly the page shape (source pane in an iframe) M42's leg (a) was built for.",
+      "evidence": "src/browser/agent.py:1266 (`after = await page_text(page, frames=False)`) feeding `changed_nothing()` at agent.py:189/1757 and the loop driver's `moved` message at agent.py:1445-1447. Trigger: a main-frame control whose only effect is inside an iframe, plus a postcondition that does not hold. Observed on a 6-line fixture (main-frame button swaps the iframe's `srcdoc` to a pane containing `NIMBUS-10K-2025`): HEAD returns `status: failure:act`, `answer: None`, `reason: \"step 2 (click): ... replan would skip a failed action that changed nothing on the page\"`, with `page_changed: [(1,'navigate',None), (2,'click',False)]` — the click loaded the document ID. The identical run with the pre-repair line (`after = await page_text(page)`) returns `status: success`, `answer: 'NIMBUS-10K-2025'`, `replans: 1`, `recovery_rungs: 1`, verdict PASS. No case in evals/ exercises an iframe-only mutation in either direction: `src/browser/fixtures/frames-host.html` has no interaction that changes frame content, and `replan-cannot-launder-noop-action-in-a-frame` only pins the no-op direction. ADR-028:305-309 declares only the false-positive hazard; the false-negative this creates is undeclared and unlogged as debt.",
+      "repro": "Reviewer's self-contained script: serves a temp fixture whose main-frame button swaps the iframe srcdoc, calls `_run_agent` with a two-plan stub, prints status/answer/reason and per-step `page_changed`. Red on HEAD today.",
+      "acceptance": "A case in evals/adversarial pins the iframe-only-change direction and was watched red before the fix (it is red on HEAD today), so `page_changed` is true for a step that changed an iframe and the replan that reads the newly-loaded pane is a recovery, not a refusal — or, if the frames-blind calibration is kept deliberately, ADR-028 and `observe.page_text`'s docstring state the accepted cost in the false-negative direction, a `T-M42-*` debt row carries this repro, and a case pins that the refusal reason is not claimed as fact."
+    },
+    {
+      "id": "R14",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R7 disclosure paragraph in ADR-029 section 2 — the artifact whose whole job is to scope this branch's gate evidence accurately — states gate figures that no run of this tree produced: `invariant` 71/71 and `fast` 207/207, against a tree that ships 73 and 211 cases.",
+      "evidence": "specs/decisions/ADR-029-local-fast-ceiling-105.md:82 (\"The branch's gate evidence — `invariant` 71/71, `fast` 207/207 — is **local only**\"), :68 (\"this tree is 207\") and :106 (\"~15% headroom again at 207 cases\"). At HEAD the tree is 211 `fast` / 73 `invariant` — ADR-019:74/:109 says 211 and 209/211, README.md:173 says 211, `docs-numbers-are-derived` computes {fast: 211, invariant: 73}, and the only 207/207 and 71/71 rows in `evals/report/history.jsonl` (ts 20260825-184740 / 184613) are at sha a305a33, four cases and two commits ago. Nothing grades this prose: `published-band-matches-the-ledger` reads ADR-019's band lines only, and `adr029-variance-cites-the-ledger` is scoped to section 1's seconds literals. Confirmed independently by the orchestrator: lines 68, 82, 106 all carry 207.",
+      "repro": "grep -n '207\\|71/71' specs/decisions/ADR-029-local-fast-ceiling-105.md -> lines 68, 82, 106. Compare against the orchestrator's own gate run: invariant 73/73, fast 211/211.",
+      "acceptance": "ADR-029 section 2's scope paragraph quotes the gate result this tree actually recorded (`invariant` 73/73, `fast` 211/211, with the ledger ts) and its case counts match `docs-numbers-are-derived`'s computed counts; ideally the counts in that paragraph are graded the way section 1's seconds now are, so the disclosure cannot drift again silently."
+    },
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The new R7 paragraph in ADR-019 section 2 attributes 152 `fast` cases to section 5's four CI attempts, contradicting section 5 of the same document, which says those four attempts ran 116 — 152 belongs to a different CI run entirely.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:64 (\"section 5's four attempts ran 152 `fast` cases and this tree has 207\") vs the same file:386 (\"eval-gate run 32561162459 on commit `d173340` — 116 `fast`, 48 `invariant`\") and README.md:176 (\"`d173340`, 116 `fast` / 48 `invariant` cases\"). 152 is ADR-021:107's CI run 32639577041 on `07e3d34` (74.25s, 152/152), a different commit and a different workflow run. The same line also repeats the stale 207. `ci-numbers-are-derived` grades section 5's eight table cells and README's four values, not this sentence, so nothing reddens. Confirmed independently by the orchestrator.",
+      "repro": "grep -n '152 `fast`\\|116 `fast`' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md -> :64 says 152, :386 says 116.",
+      "acceptance": "ADR-019:64 names the case count section 5 actually records for run 32561162459 (116) and this tree's actual count (211), or cites run 32639577041 by id if it means that run — so the sentence is checkable against section 5's own table without contradicting it."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R5 repair reintroduces R5's own defect: ADR-019 section 2 now carries two mutually inconsistent counts of the same quantity — 'M42's 26 cases' and 'M42 added 31 cases to `fast` in total' — and neither matches the tree, which grew `fast` from 181 to 211, i.e. by 30.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:81 (\"Here the addition is M42's 26 cases\") and :233 (\"M42 added 31 cases to `fast` in total\"), both inside section 2. Measured: `main` has 181 `fast`-tagged cases, HEAD has 211 (30 added); 26 was true only at e9cf6bc (207); 31 appears to count `docs-numbers-are-derived`, which was extended rather than added, as a new case. ADR-029:1/:7/:20, INDEX.md:38 and ADR-019:10 all still say 26, so the tree now publishes three different values for one number. Confirmed independently by the orchestrator: counting `fast`-tagged case files at each ref gives main 181, HEAD 211, growth 30.",
+      "repro": "Count `fast`-tagged JSON case files under evals/golden and evals/adversarial at `main` and at `HEAD` -> 181 and 211, growth 30. Then grep the three published values: ADR-019:81 (26), ADR-019:233 (31), ADR-029:1/:7/:20 + INDEX.md:38 + ADR-019:10 (26).",
+      "acceptance": "One number for M42's `fast` growth, equal to `count(HEAD) - count(main)`, appears everywhere it is stated (ADR-019 section 2 both places, ADR-029 title/section, INDEX.md), or the sentence names the relation instead of the scalar so it cannot drift with the next case."
+    },
+    {
+      "id": "R17",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The R6 repair fixed the false causal claim in the code comment but left the identical claim standing in the ADR of record, and no ADR mentions `no_abandoned_failure` at all.",
+      "evidence": "specs/decisions/ADR-028-loop-mode-implementation.md:294-297 still reads \"**(2) and (3) share one fix**: a failed loop call is superseded by whatever the model does next ... with `final_answer` excluded, so a model that gives up right after a failure is still graded on that failure\" — the exact attribution R6 falsified (the exclusion alone graded nothing; `verifier.py:483` `no_abandoned_failure` is what provides the property). ADR-028:8's `Enforced by` list of 26 cases does not include `loop-abandoned-failure-is-not-a-success`, and `grep -rn no_abandoned_failure specs/` returns nothing, so the cross-mode grading rule added to `verify` has no record in specs/.",
+      "repro": "grep -n \"gives up right after a failure is still graded\" specs/decisions/ADR-028-loop-mode-implementation.md ; grep -rn no_abandoned_failure specs/",
+      "acceptance": "ADR-028 (or a new ADR line) records that a graded step carrying `failure_class` fails the run whatever it failed at, names `no_abandoned_failure` and `loop-abandoned-failure-is-not-a-success`, and the 294-297 sentence credits the mechanism that actually holds the property."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new red-first ledger section makes a claim its own case file contradicts: it says neither of the two wrong-success reds is detectable without an iframe, but `loop-abandoned-failure-is-not-a-success` runs on `shop.html`, which has none.",
+      "evidence": "docs/evals/m42-red-first-ledger.md:197 (\"Neither is detectable on any fixture without an iframe\") closes the paragraph about R1 and R6; evals/adversarial/loop-abandoned-failure-is-not-a-success.json:8 sets `\"fixture\": \"shop.html\"`, and reverting `verifier.py`'s `no_abandoned_failure` block reproduces that red on shop.html (status `success`, answer `Meridian Wall Clock`, verdict PASS). The same sentence is repeated in tasks/reviews/pr56-r1-resolution.json's closing note.",
+      "repro": "grep -n '\"fixture\"' evals/adversarial/loop-abandoned-failure-is-not-a-success.json ; grep -n 'Neither is detectable' docs/evals/m42-red-first-ledger.md",
+      "acceptance": "The sentence scopes the iframe claim to R1 (the only one of the two that needs a framed fixture), so a reader auditing the ledger against the case files finds no contradiction."
+    }
+  ]
+}

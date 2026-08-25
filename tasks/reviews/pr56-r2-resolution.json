@@ -1,0 +1,65 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "round": 2,
+  "reviewed": "the round-1 repair diff",
+  "gate": {
+    "invariant": "74/74 = 1.000, wall 13.94s, $0.0000",
+    "fast": "213/213 = 1.000, wall 88.27s, $0.0000",
+    "environment": "LOCAL ONLY — CI has not run this tree (R7, still open, not mine)",
+    "baseline_file": "unchanged from main"
+  },
+  "counts": {
+    "fixed": 4,
+    "rejected": 0,
+    "debt": 2
+  },
+  "findings": {
+    "R13": {
+      "state": "fixed",
+      "case": "replan-after-an-iframe-only-change-is-not-laundering",
+      "resolution_chosen": "(a) — page_changed is frames-AWARE on both sides",
+      "red_observed": "failure:act, answer None, reason 'replan would skip a failed action that changed nothing on the page' about a click that had just loaded the document ID",
+      "change": "agent.py — both sides read `page_text(page)`. That is the only setting under which BOTH committed directions are green, and they are the same page shape with and without a real effect. New fixture `frames-swap.html` (main-frame button, iframe-only mutation).",
+      "cost_declared": "The false positive this accepts — a frame mutating on its own — is now stated in observe.page_text's docstring, in the `attempt` comment and in T-M42-14 with the repro that would reopen it. The reviewer's condition was that the trade-off may not be declared in one direction only; both are declared."
+    },
+    "R14": {
+      "state": "fixed",
+      "case": "adr029-scope-matches-the-suites",
+      "red_observed": "adr029_section_2_says 207/207 and 71/71; suites are 213 and 74",
+      "change": "ADR-029 §2's gate figures corrected AND graded — every N/M a suite name introduces in §2 must equal that suite's size. Fixing R14 is fixing R7's disclosure, as the orchestrator noted."
+    },
+    "R15": {
+      "state": "fixed",
+      "case": null,
+      "change": "ADR-019:64's case-count scalar DELETED — the sentence now refers to §5's own table instead of re-typing it, and records that it said 152 for one round, which is ADR-021's run 32639577041 and not §5's 32561162459.",
+      "why_no_case": "The structural fix removes the number rather than correcting it, so there is nothing left to grade; the class is covered by `adr029-scope-matches-the-suites` and `adr029-variance-cites-the-ledger` where a number must stay."
+    },
+    "R16": {
+      "state": "fixed",
+      "case": null,
+      "change": "Every published count of M42's `fast` growth deleted rather than corrected — ADR-019 (×3 including the amended-by line), ADR-029 (title, Because, §1), ADR-028 (×2), INDEX.md. The relation is stated; the scalar is republished nowhere.",
+      "why_no_case": "Taking the structural option R16's own acceptance names. Correcting the scalars is the operation that produced R14/R15/R16 out of R5's repair and would have produced R19-R21 out of this one."
+    },
+    "R17": {
+      "state": "debt",
+      "t_id": "T-M42-15"
+    },
+    "R18": {
+      "state": "debt",
+      "t_id": "T-M42-16"
+    }
+  },
+  "new_cases": [
+    "replan-after-an-iframe-only-change-is-not-laundering (fast)",
+    "adr029-scope-matches-the-suites (fast, invariant)"
+  ],
+  "new_debt": [
+    "T-M42-14 (R13's accepted cost, logged as the ruling required)",
+    "T-M42-15 (R17)",
+    "T-M42-16 (R18)"
+  ],
+  "open_not_mine": {
+    "R7": "CI has not run this tree. The push is still denied by the harness permission classifier, so no PR and no CI run exists. CI's ceiling left at 90, not raised, not guessed. Every gate claim on this branch is scoped LOCAL ONLY in ADR-029 §2 and ADR-019 §5, and that scoping paragraph is now graded so it cannot drift again."
+  }
+}

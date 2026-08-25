@@ -7,7 +7,7 @@ Status: accepted
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `evals/run.py` `over_budget()`
 
-**Amended by**: ADR-029 (Decision 2's local `fast` ceiling 90 -> 105, on the number `published-band-matches-the-ledger` derived after M42 grew the suite by 26 cases; CI's stays 90 because nothing in that change measured CI) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
+**Amended by**: ADR-029 (Decision 2's local `fast` ceiling 90 -> 105, on the number `published-band-matches-the-ledger` derived after M42 grew the suite (the count is `git diff main --stat` away and is published nowhere, because three documents published three different values for it — PR #56 R16); CI's stays 90 because nothing in that change measured CI) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 80) and ADR-002 Decision 4 (a second suite now has a ceiling)
 
@@ -61,8 +61,13 @@ decision that amends it.
 wall clock, and this ADR does not make one: §7 says why, and labels them for what
 they are, hand-read off the log of a named workflow run so a reader can re-read
 it. **They are also, as of 2026-08-26, measurements of a SMALLER tree than the
-one shipping**: §5's four attempts ran 152 `fast` cases and this tree has 207,
-so CI's committed 90s ceiling is a number no run of this tree has tested.
+one shipping**: §5's four attempts ran the case count §5's own table records,
+on the commit it names, and this tree is larger — so CI's committed 90s ceiling
+is a number no run of this tree has tested. The count is not repeated here: this
+sentence said 152 for one round, which is ADR-021's run `32639577041` on
+`07e3d34`, not §5's `32561162459` on `d173340`, and a document contradicting
+itself about which run it means is worse than one that makes the reader look
+(PR #56 R15).
 ADR-029 §2 carries the ruling — the ceiling is not raised on an extrapolation,
 and until a CI run of this tree exists and is cited here by workflow-run id,
 every gate-green claim on that branch is scoped to the local environment
@@ -71,14 +76,14 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 211 cases, ts `20260825-191834`, **85.44s**, 209/211
-  (`evals/report/20260825-191834-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 213 cases, ts `20260825-195505`, **88.42s**, 211/213
+  (`evals/report/20260825-195505-fast.json`; `dirty: true`, for the reason the
   next paragraph gives, and red — the two failures are `docs-numbers-are-derived`
   and `published-band-matches-the-ledger` themselves, mid-refresh at the moment
   this row was recorded. That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
-  the addition forces. Here the addition is M42's 26 cases. The stamp is UTC, as
+  the addition forces. Here the addition is the cases M42 adds. The stamp is UTC, as
   every row written since §7 is. How many rows the ledger holds at this count,
   and what its maximum is, are deliberately not written here — see §3. Each
   re-derivation of this section is exactly the cost `T-M39-11` names, and PR #56
@@ -106,8 +111,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 211 cases, 209/211) and
-(restated — `invariant`: 73 cases, 71/73) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 213 cases, 211/213) and
+(restated — `invariant`: 74 cases, 72/74) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -227,11 +232,10 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 85.44 × 1.15 = 98.26 → **100**, one step BELOW the
+five — gives 88.42 × 1.15 = 101.68 → **105**, which is exactly the
 committed 105. The ceiling was moved 90 → 105 by ADR-029, derived
 from the slowest row this tree has recorded (87.96s at 207 cases, still in the
-ledger); M42 added 31 cases to `fast` in total, which is growth in case COUNT
-and not in per-case cost — the condition ADR-021 named when it said the answer
+ledger); M42's growth is in case COUNT and not in per-case cost — the condition ADR-021 named when it said the answer
 to per-case growth is removing waste rather than another raise. Item 5
 (derivation) grades the arrow against the RULE and never against the committed
 ceiling, which is why an arrow one step under the heading's number is green and
@@ -251,14 +255,14 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 73 cases, ts `20260825-191709`, **14.05s**, 71/73
+- Band source — local `invariant` at 74 cases, ts `20260825-195336`, **14.18s**, 72/74
   (`dirty: true`, and red, for the same structural reason §2's is and stated the
   same general way: a tree reaches its new case count only while the cases are
   uncommitted, so 71 exists only while M42's invariant-tagged additions are, and
   the two red cases — `docs-numbers-are-derived` and
   `published-band-matches-the-ledger` — are the two this republish clears; the
   run is red, so ADR-012 wrote a per-case report for it and this bullet cites
-  the file the way §2's does — `evals/report/20260825-191709-invariant.json`.
+  the file the way §2's does — `evals/report/20260825-195336-invariant.json`.
   As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
@@ -317,7 +321,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 14.05 × 1.15 = 16.16 → **20**, which is the committed
+The same rule gives 14.18 × 1.15 = 16.31 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Source pane — Nimbus Inspector</title>
+<h1>Source pane</h1>
+<p>The pane below is an iframe, and the button changes what is inside it —
+nothing in the main document moves. This is the shape PR #56 R13 found: an
+inspector whose source pane is a frame, which is what M42's leg (a) was built
+for in the first place.</p>
+<button type="button" aria-label="Load filing source">Load filing source</button>
+<iframe title="Source pane" srcdoc="<p>No filing loaded.</p>" width="520" height="120"></iframe>
+<script>
+  // Fixture code may know its own DOM (CLAUDE.md rule 6); none of it reaches
+  // the executor. The main document is byte-identical before and after — only
+  // the frame's content changes, which is the whole point of the fixture.
+  document.querySelector('[aria-label="Load filing source"]').addEventListener('click', function () {
+    document.querySelector('iframe').srcdoc =
+      '<p>Document ID: <output role="status" aria-label="Document identifier">' +
+      'NIMBUS-10K-2025</output></p>';
+  });
+</script>

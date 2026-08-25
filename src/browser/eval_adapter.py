@@ -5314,7 +5314,51 @@ def _check_adr029_variance_cites_the_ledger() -> dict:
             "got": {"quoted": sorted(quoted), "ledger_rows": len(measured)}}
 
 
+def _check_adr029_scope_matches_the_suites() -> dict:
+    """ADR-029 §2's gate figures equal the suites the runner actually loads.
+
+    §2 is the paragraph that scopes this branch's evidence — it is what says the
+    gate is green LOCALLY and that CI has not run this tree, which is the whole
+    of R7's disclosure. It published `invariant 71/71, fast 207/207` against a
+    tree of 73 and 211: stale by four cases and two commits, in the one place
+    where stale and wrong are the same thing (PR #56 R14).
+
+    This is the third instance of one class in one milestone — a scalar in prose
+    that nothing reads back — and the second produced by repairing the first.
+    Everywhere else the answer was to state the relation instead of the number;
+    here the number has to stay, because "the gate was green on THIS tree" is a
+    claim about a specific pair of totals. So it is graded instead: every `N/M`
+    a suite name introduces in §2 must be that suite's size, twice over (a gate
+    result is all-pass by definition of being cited here).
+
+    Deliberately narrow, for the reason `adr029-variance-cites-the-ledger` is
+    narrow: §2 also carries CI's figures, which are hand-read off a named
+    workflow run and measure a different tree on purpose (ADR-019 §5, §7). Only
+    a figure attached to `fast` or `invariant` by name is claimed to be this
+    tree's, and only those are read back.
+    """
+    import re as _re
+
+    from evals.run import load_cases
+
+    adr = next((Path(__file__).parents[2] / "specs" / "decisions").glob("ADR-029-*.md"))
+    text = adr.read_text(encoding="utf-8")
+    two = text[text.index("### 2."):]
+    two = two[:two.index("\n### ")] if "\n### " in two else two
+    two = _re.sub(r"~~.*?~~", "", two, flags=_re.DOTALL)  # struck history, as everywhere here
+    wrong = []
+    for suite in ("fast", "invariant"):
+        want = len(load_cases(suite))
+        for passed, total in _re.findall(rf"`{suite}`\s+(\d+)/(\d+)", two):
+            if (int(passed), int(total)) != (want, want):
+                wrong.append({"suite": suite, "adr029_section_2_says": f"{passed}/{total}",
+                              "suite_is": f"{want}/{want}"})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {s: len(load_cases(s)) for s in ("fast", "invariant")}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
+              "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
               "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
               "adr029-variance-cites-the-ledger": _check_adr029_variance_cites_the_ledger,
               "driver-tools-match-the-executor": _check_driver_tools_match_the_executor,

@@ -209,3 +209,38 @@ reads a section's numbers back against the ledger; the residue —
 around them — is real and is stated rather than pinned. R7 cannot be pinned from
 here at all: it is a claim about an environment that has not run this tree, and
 inventing a case for it would be inventing the measurement.
+
+## PR #56, review round 2 — two more cases, both watched red
+
+Round 2 read the repair diff and found that one repair had flipped a bug's sign
+and three had re-created the class they were repairing.
+
+| case | red observed (pre-fix) | finding | greened by |
+|---|---|---|---|
+| `replan-after-an-iframe-only-change-is-not-laundering` | `failure:act`, `answer None`, reason `"replan would skip a failed action that changed nothing on the page"` — about a click that had just loaded `NIMBUS-10K-2025` into the source pane. R1's repair made both sides of the `page_changed` comparison frames-BLIND, which cured the false positive by creating a false negative on the exact page shape M42 leg (a) exists for | R13 | `M42: PR #56 round-2 repairs` |
+| `adr029-scope-matches-the-suites` | `unknown invariant check`; then `[{"suite": "fast", "adr029_section_2_says": "207/207", "suite_is": "213/213"}, {"suite": "invariant", "adr029_section_2_says": "71/71", "suite_is": "74/74"}]` | R14 | `M42: PR #56 round-2 repairs` |
+
+### `page_changed` has no right answer, so it now has two cases
+
+Frames-blind and frames-aware each cost something, and the milestone had
+declared only one of the two costs. `replan-cannot-launder-noop-action-in-a-frame`
+(no-op on a framed page → false) and
+`replan-after-an-iframe-only-change-is-not-laundering` (real effect inside the
+frame → true) are the same page shape with and without an effect, and together
+they are the specification of the field; neither alone constrains it. Symmetric
+frames-AWARE is the only setting under which both are green. The cost that buys
+— a frame that mutates on its own reading as a change nobody caused — is
+undemonstrated here while the false negative was demonstrated on a six-line
+fixture, so the evidence picks the direction and T-M42-14 carries the repro that
+would reopen it.
+
+### The class R14/R15/R16 share, and why three edits were not the fix
+
+All three are one defect: a scalar published in prose that nothing reads back.
+R16 is R5's defect reintroduced by R5's own repair, and by then the tree
+published three different values (26, 31, neither) for one quantity. Hand-editing
+three scalars is the operation that produced them, so instead: every published
+count of M42's growth is **deleted**, not corrected — the number is
+`git diff main --stat` away and is republished nowhere — and the one figure that
+had to stay, ADR-029 §2's gate result, is now graded against the suites the
+runner loads. A number a human retypes drifts; a number a case reads back cannot.

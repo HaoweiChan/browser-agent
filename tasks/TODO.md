@@ -459,6 +459,86 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M42-14 — `page_changed` is frames-aware, and the false positive that buys is undemonstrated but real            [status: todo]
+Origin: PR #56 R13, 2026-08-26. The accepted cost of the chosen direction, logged
+because R13's own ruling is that a trade-off may not be declared in one direction
+and left silent in the other.
+Spec: `page_changed` compares `page_text(page)` before and after an acting step —
+every frame, both sides. That is the only setting under which both committed
+directions are correct: `replan-after-an-iframe-only-change-is-not-laundering`
+(a control whose only effect is inside an iframe really did something) and
+`replan-cannot-launder-noop-action-in-a-frame` (a no-op on a framed page really
+did not). The cost is a page carrying a frame that mutates on its OWN — a ticking
+clock, a rotating ad, a chat bubble — where `page_changed` reads true for a step
+that did nothing, unlatching the anti-laundering guard and letting a replan drop
+a failed action and read the page as though it had worked.
+Why it is not fixed: the hazard has never been reproduced in this repo, and the
+false negative it would trade back for was reproduced on a six-line fixture. This
+repo's rule is to widen on what a probe found rather than on what someone
+imagined (D21), and both halves are now declared — in `observe.page_text`'s
+docstring, in the `attempt` comment, and in ADR-028.
+Repro that would reopen it: a fixture whose iframe rewrites its own content on a
+timer, driven by the `replan-cannot-launder-noop-action` plan shape — a no-op
+click, a postcondition that does not hold, and a replan that reads without
+acting. Green today only because no such fixture exists.
+Acceptance: that fixture, watched red, and then a rule that distinguishes "a
+frame the step touched" from "a frame that moved on its own" — which needs the
+executor to record which document `resolve` returned from, the same trace field
+T-M42-4 needs and ADR-028 §7 currently forbids. The two debts close together or
+not at all.
+
+### T-M42-15 — ADR-028 still credits the mechanism R6 falsified, and no ADR records `no_abandoned_failure`            [status: todo]
+Origin: PR #56 R17 (LOW).
+Spec, the finding verbatim: "The R6 repair fixed the false causal claim in the
+code comment but left the identical claim standing in the ADR of record, and no
+ADR mentions `no_abandoned_failure` at all."
+Evidence, verbatim: "specs/decisions/ADR-028-loop-mode-implementation.md:294-297
+still reads '**(2) and (3) share one fix**: a failed loop call is superseded by
+whatever the model does next ... with `final_answer` excluded, so a model that
+gives up right after a failure is still graded on that failure' — the exact
+attribution R6 falsified (the exclusion alone graded nothing; `verifier.py:483`
+`no_abandoned_failure` is what provides the property). ADR-028:8's `Enforced by`
+list of 26 cases does not include `loop-abandoned-failure-is-not-a-success`, and
+`grep -rn no_abandoned_failure specs/` returns nothing, so the cross-mode grading
+rule added to `verify` has no record in specs/."
+Repro, verbatim: "grep -n \"gives up right after a failure is still graded\"
+specs/decisions/ADR-028-loop-mode-implementation.md ; grep -rn
+no_abandoned_failure specs/"
+Why it is debt and not a repair: the property itself holds and is pinned
+(`loop-abandoned-failure-is-not-a-success`, red-first); what is missing is the
+record. Routed by the orchestrator, and worth taking as one edit with the ADR-028
+rewrite T-M42-15's sibling findings imply rather than as a third patch to the
+same paragraph in three rounds.
+Acceptance, verbatim: "ADR-028 (or a new ADR line) records that a graded step
+carrying `failure_class` fails the run whatever it failed at, names
+`no_abandoned_failure` and `loop-abandoned-failure-is-not-a-success`, and the
+294-297 sentence credits the mechanism that actually holds the property."
+
+### T-M42-16 — the red-first ledger's iframe claim is contradicted by one of the two cases it describes            [status: todo]
+Origin: PR #56 R18 (LOW).
+Spec, the finding verbatim: "The new red-first ledger section makes a claim its
+own case file contradicts: it says neither of the two wrong-success reds is
+detectable without an iframe, but `loop-abandoned-failure-is-not-a-success` runs
+on `shop.html`, which has none."
+Evidence, verbatim: "docs/evals/m42-red-first-ledger.md:197 ('Neither is
+detectable on any fixture without an iframe') closes the paragraph about R1 and
+R6; evals/adversarial/loop-abandoned-failure-is-not-a-success.json:8 sets
+`\"fixture\": \"shop.html\"`, and reverting `verifier.py`'s
+`no_abandoned_failure` block reproduces that red on shop.html (status `success`,
+answer `Meridian Wall Clock`, verdict PASS). The same sentence is repeated in
+tasks/reviews/pr56-r1-resolution.json's closing note."
+Repro, verbatim: "grep -n '\"fixture\"'
+evals/adversarial/loop-abandoned-failure-is-not-a-success.json ; grep -n
+'Neither is detectable' docs/evals/m42-red-first-ledger.md"
+Why it is debt and not a repair: it is a sentence in a narrative section of the
+ledger, and the ledger's graded content — the case ids and the red lines — is
+correct. It is worth a row anyway because the ledger's whole value is being
+auditable against the case files, and this is the one sentence in it that fails
+that audit. Routed by the orchestrator.
+Acceptance, verbatim: "The sentence scopes the iframe claim to R1 (the only one
+of the two that needs a framed fixture), so a reader auditing the ledger against
+the case files finds no contradiction."
+
 ### T-M42-9 — both loop-budget ceiling cases describe numbers they no longer script            [status: todo]
 Origin: PR #56 R8 (LOW).
 Spec, the finding verbatim: "Both loop-budget ceiling cases carry `provenance`
