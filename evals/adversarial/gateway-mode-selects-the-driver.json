@@ -1,0 +1,41 @@
+{
+  "id": "gateway-mode-selects-the-driver",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "kind": "gateway-model",
+    "task": "read the headline of example.com",
+    "checks": [
+      {
+        "mode": null,
+        "http": 200,
+        "planner_model": "openai/gpt-5.6-luna",
+        "factory": "planner"
+      },
+      {
+        "mode": "plan",
+        "http": 200,
+        "planner_model": "openai/gpt-5.6-luna",
+        "factory": "planner"
+      },
+      {
+        "mode": "loop",
+        "http": 200,
+        "planner_model": "openai/gpt-5.6-luna",
+        "factory": "driver"
+      },
+      {
+        "mode": "sideways",
+        "http": 422,
+        "planner_model": null,
+        "detail_contains": "mode must be one of"
+      }
+    ]
+  },
+  "expect": {
+    "note": "`POST /tasks` takes a per-task mode flag (ADR-027 Decision 1). Absent means the env default, which is mode B; `loop` reaches `live_driver` and not `live_planner`; anything else is refused before a run exists. The factories are recorded from the eval side \u2014 a flag that is accepted and silently ignored looks identical over HTTP to one that works, which is exactly how the M9 ablation nearly measured one model four times (PR #15)."
+  },
+  "provenance": "M42/ADR-028. The `factory` column is the half nothing else can see: without it this case would pass with the mode field parsed, validated and dropped."
+}

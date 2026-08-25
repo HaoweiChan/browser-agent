@@ -1,0 +1,36 @@
+{
+  "id": "loop-aggregate-single-read-at-answer-assembly",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "shop.html",
+    "task": "Which product in the catalogue is the cheapest one?",
+    "stub_calls": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "Nimbus Wall Clock"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "reason_contains": "read the page exactly once, with `extract_all`"
+  },
+  "provenance": "ADR-027 Decision 5, second re-homed guard. ADR-018's aggregate single-read rule is enforced at plan adoption; loop mode has none, so it is enforced at ANSWER ASSEMBLY over the executed trace instead \u2014 the last moment before an answer exists. Two `extract` calls and no `extract_all` on a which-one task is the unranked-candidate-list shape ADR-018 exists to stop, and it is refused after the reads rather than before them because in loop mode there is no plan to read ahead of time. The gap text is `plan_gap`'s own: one rule, two anchors."
+}

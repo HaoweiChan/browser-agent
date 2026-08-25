@@ -272,6 +272,19 @@ async def resolve(page, target: dict, many: bool = False,
     tiers = []
     role, name, text = target.get("role"), target.get("name"), target.get("text")
     index, near = target.get("index"), target.get("near")
+    # Frame-scoped resolution (M42, ADR-028). A Playwright locator never
+    # crosses a frame boundary, so before this every element inside an iframe
+    # was unreachable at every tier -- `no tier resolved`, measured on
+    # `fixtures/frames-host.html`, in both modes and regardless of vision. A
+    # Frame exposes the same locator API a Page does, so the fix is to build
+    # the SAME tiers in each scope rather than to add a tier.
+    #
+    # Main frame first, and its tiers before any child frame's, so a page with
+    # no iframes resolves byte-identically to how it did before M42 and a page
+    # with them prefers the document the task landed on. `page.frames[0]` IS
+    # the main frame; `page` is used for it so nothing about the existing path
+    # changes shape.
+    scopes = [page, *(getattr(page, "frames", None) or [page])[1:]]
     # May this run settle an ambiguity the plan left open? Two refusals, and
     # they gate EVERY rung M38 added — the two below and the loosened anchor
     # passes inside `_nearest`, which sit above them in the `near` branch and
@@ -281,20 +294,26 @@ async def resolve(page, target: dict, many: bool = False,
     # exact=True: planner names come from the observation verbatim; substring
     # matching resolved absent targets to superstring siblings and extracted
     # the wrong element as a success (case resolver-substring-name).
-    if role:
-        loc = page.get_by_role(role, name=name, exact=True) if name else page.get_by_role(role)
-        tiers.append(("role", loc))
-    if text:
-        tiers.append(("text", page.get_by_text(text, exact=True)))
+    for scope in scopes:
+        if role:
+            loc = (scope.get_by_role(role, name=name, exact=True) if name
+                   else scope.get_by_role(role))
+            tiers.append(("role", loc, scope))
+        if text:
+            tiers.append(("text", scope.get_by_text(text, exact=True), scope))
 
     ambiguous = None
-    for tier, loc in tiers:
+    for tier, loc, scope in tiers:
         if near is not None:
             # Proximity is a relation between elements, not a property of one,
             # so the winning tier is `structural` however the candidates were
             # gathered — the taxonomy's last-resort rung (failure-taxonomy.md),
             # and the first one any run has ever emitted.
-            i, how = await _nearest(page, loc, near, loose=may_narrow)
+            # `scope`, not `page`: proximity is measured among the anchors and
+            # candidates of ONE document. Passing the page would search the main
+            # frame for an anchor whose candidates live in a child frame, find
+            # none, and report the frame's content as unreachable-by-proximity.
+            i, how = await _nearest(scope, loc, near, loose=may_narrow)
             if i == AMBIGUOUS:
                 raise ResolveError(
                     "ambiguous-match", f"proximity to {near!r} does not identify one element for {target}")

@@ -72,9 +72,40 @@ ABLATION_MODELS = [
 # the default moved. It is NOT in the allowlist any more — a public endpoint
 # should not accept a model this system deliberately stopped paying for.
 #
+# --- M42 loop mode (ADR-027 Decision 4, ADR-028) -----------------------------
+#
+# The declared amendment to ADR-010's price ceiling, and the whole of it. ADR-027
+# rules that the ceiling STAYS for the ablation arms and for mode B's default,
+# and is lifted only for loop-mode additions, each allowlisted by explicit id
+# with its price recorded. So this is a THIRD list, not a widening of either
+# existing one:
+#   * it is NOT in ABLATION_MODELS, so `gateway-model-reaches-planner`'s ceiling
+#     sweep — which runs over the ablation set — is untouched and still refuses
+#     any ablated model priced above CEILING_MODEL;
+#   * it IS in ALLOWED_MODELS, so `POST /tasks` accepts it by name, and the same
+#     case's containment check therefore requires it to be frozen evidence like
+#     every other accepted id (evals/labels/openrouter-models-20260820.json,
+#     amended 2026-08-26 with this entry read from the live endpoint that day).
+# `loop-models-are-declared-not-ablated` grades exactly that split: an id that
+# leaks into the ablation set, or that is allowlisted without frozen evidence,
+# is red.
+#
+# Why a frontier model at all: loop mode calls the model once per STEP with a
+# fresh observation, and M43 will hand it screenshots. The two capabilities that
+# buys are native tool-calling and vision. No price literal here for the reason
+# CEILING_MODEL carries none — the snapshot holds the numbers, and a figure
+# re-typed into code drifted 11% inside one working session once already.
+LOOP_MODELS = ["anthropic/claude-opus-5"]
+
+# The loop driver's default. Named separately from DEFAULT_MODEL because the two
+# answer different questions: DEFAULT_MODEL is what mode B plans with and is the
+# ablation's own pick under a ceiling this model is deliberately above.
+DEFAULT_LOOP_MODEL = LOOP_MODELS[0]
+
 # dict.fromkeys, not a set: the default is also an ablated model now, so the two
-# lists overlap, and order is the display order §9 and the ADR both use.
-ALLOWED_MODELS = list(dict.fromkeys([DEFAULT_MODEL, *ABLATION_MODELS]))
+# lists overlap, and order is the display order §9 and the ADR both use. The loop
+# additions come last so that order stays the one ADR-010 published.
+ALLOWED_MODELS = list(dict.fromkeys([DEFAULT_MODEL, *ABLATION_MODELS, *LOOP_MODELS]))
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
 Each step: {"action": "navigate|click|fill|extract|extract_all|observe",
@@ -215,19 +246,24 @@ def build_user(task: str, url: str | None, observation: dict | None = None,
     return user
 
 
+def _openrouter(key: str, payload: dict) -> dict:
+    """One POST to OpenRouter. Shared by the planner and the loop driver so a
+    header, a timeout or an endpoint change lands in both — there is no version
+    of this system where one of the two callers should be sending something
+    different."""
+    req = urllib.request.Request(
+        OPENROUTER_URL,
+        data=json.dumps(payload).encode(),
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return json.load(resp)
+
+
 def live_planner(model: str = DEFAULT_MODEL):
     key = os.environ.get("OPENROUTER_API_KEY")
     if not key:
         raise PlanError("OPENROUTER_API_KEY is not set")
-
-    def _call(payload: dict) -> dict:
-        req = urllib.request.Request(
-            OPENROUTER_URL,
-            data=json.dumps(payload).encode(),
-            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            return json.load(resp)
 
     async def plan(task: str, url: str | None, observation: dict | None = None, note: str | None = None):
         user = build_user(task, url, observation, note)
@@ -239,7 +275,7 @@ def live_planner(model: str = DEFAULT_MODEL):
             ],
             "usage": {"include": True},
         }
-        data = await asyncio.to_thread(_call, payload)
+        data = await asyncio.to_thread(_openrouter, key, payload)
         # Usage first: this completion is billed whatever it contains, and
         # building it after `parse_plan` meant a prose answer threw its own cost
         # away (PR #15, R10).
@@ -287,3 +323,269 @@ def live_planner(model: str = DEFAULT_MODEL):
         return steps, usage
 
     return plan
+
+
+# --- Loop mode: the model chooses every step (ADR-027, ADR-028) --------------
+#
+# A driver is `async (task, url, observation, trace, found, note) -> (call, usage)`,
+# the same injection-boundary shape a planner has and stubbed the same way. It
+# differs from a planner in cadence and in nothing else: one call, one action,
+# then a fresh observation. The executor's action implementations, the resolver,
+# the trace schema, the verifier and the judge are shared with mode B.
+#
+# `found` is what the run has extracted so far. It is passed rather than read
+# out of the trace because the trace records what was ATTEMPTED, not what came
+# back, and a loop that cannot see its own readings cannot compare two of them.
+# The alternative — writing extracted values into the trace `note` — would move
+# mode B's evidence shape for a loop-mode need, which is the change no case asks
+# for.
+
+STEP_KEYS = {"target", "value", "anchor", "rank", "expected_state"}
+
+_TARGET_SCHEMA = {
+    "type": "object",
+    "description": "A SEMANTIC target: ARIA role plus accessible name, exactly as they appear "
+                   "in the observation. Never a CSS selector, an id, or a DOM path.",
+    "properties": {
+        "role": {"type": "string"}, "name": {"type": "string"}, "text": {"type": "string"},
+        "near": {"type": "string", "description": "a visible string the element sits beside"},
+        "index": {"type": "integer", "description": "0-based, picks the k-th match"},
+    },
+}
+_EXPECTED_SCHEMA = {
+    "type": "object",
+    "description": "The machine-checkable consequence. Every key given must hold; assert one "
+                   "thing you are sure of rather than two you are hoping for.",
+    "properties": {
+        "url_contains": {"type": "string"},
+        "text_visible": {"type": "string"},
+        "role_visible": {"type": "object",
+                         "properties": {"role": {"type": "string"}, "name": {"type": "string"}}},
+    },
+}
+_PARAM = {
+    "target": _TARGET_SCHEMA,
+    "expected_state": _EXPECTED_SCHEMA,
+    "value": {"type": "string"},
+    "anchor": {"type": "string",
+               "description": "the distinguishing name of the entity the task is about; the run "
+                              "fails if it is absent from the page the answer was read from"},
+    "rank": {"type": "boolean",
+             "description": "true when the task wants ONE item out of the set, false when it "
+                            "wants the set itself. Code does the comparison, not you."},
+}
+
+# action -> (description, parameter names, required parameter names). One entry
+# per executor action, so the vocabulary the model is offered cannot drift from
+# the vocabulary the executor implements — `driver-tools-match-the-executor`
+# reads both and reddens if they disagree.
+TOOL_TABLE = {
+    "navigate": ("Load a URL. Put the URL in `value`.", ["value"], ["value"]),
+    "click": ("Click one element. MUST carry an expected_state — a click whose consequence "
+              "nobody can check is a click nobody can verify.", ["target", "expected_state"],
+              ["target", "expected_state"]),
+    "fill": ("Type `value` into a field. Verifies itself by readback; no expected_state needed.",
+             ["target", "value"], ["target", "value"]),
+    "select_option": ("Choose an option of a <select> by its visible label (or its value). "
+                      "Verifies itself by reading back what ended up selected.",
+                      ["target", "value"], ["target", "value"]),
+    "scroll": ("Scroll. With a `target`, bring that element into view; without one, scroll the "
+               "window by `value` pixels (negative scrolls up). Fails if nothing moved.",
+               ["target", "value"], []),
+    "press": ("Send one key (e.g. \"Enter\") to `target`, or to the page when no target is "
+              "given. Changes state like a click, so it MUST carry an expected_state.",
+              ["target", "value", "expected_state"], ["value", "expected_state"]),
+    "wait_for": ("Wait until an expected_state holds. Use it when an action's result is painted "
+                 "later than the action returns. Fails loudly if it never holds.",
+                 ["expected_state"], ["expected_state"]),
+    "go_back": ("Go back one entry in this tab's history. Carries an expected_state like any "
+                "state-changing step.", ["expected_state"], ["expected_state"]),
+    "extract": ("Read one element's text as the answer. Never target the accessibility document "
+                "root (WebArea): its text is the whole page and it answers nothing.",
+                ["target", "anchor"], ["target"]),
+    "extract_all": ("Read EVERY match and return them as a list — use it whenever the task "
+                    "compares, ranks or counts across many items. MUST declare `rank`.",
+                    ["target", "rank"], ["target", "rank"]),
+    "observe": ("Look closer at one container: you are shown that subtree alone, all of its "
+                "elements and more of its text. Costs a step like anything else.",
+                ["target"], ["target"]),
+    "final_answer": ("Stop: what the task asked for has been extracted. The answer is assembled "
+                     "in code from what you extracted, so extract it before calling this — a "
+                     "final_answer with nothing read is a failed run.", [], []),
+}
+
+TOOLS = [{"type": "function",
+          "function": {"name": action, "description": desc,
+                       "parameters": {"type": "object",
+                                      "properties": {p: _PARAM[p] for p in params},
+                                      "required": list(required)}}}
+         for action, (desc, params, required) in TOOL_TABLE.items()]
+
+DRIVER_SYSTEM = """You are driving a real browser, one action at a time. After every action you
+are shown the page as it is NOW, plus everything you have done so far. Call exactly one tool per
+turn; do not narrate.
+Targets are semantic (ARIA role + accessible name) and must name something in the observation you
+were just given — never a CSS selector and never a role you did not see. The observation is capped,
+so when the answer is inside a container you can see but whose contents you cannot, `observe` that
+container.
+The answer is assembled in code from what you `extract`, never from what you say: read the element
+that HOLDS the value, then call `final_answer`. Never extract the accessibility document root
+(WebArea) — its text is the whole page, and that read is refused as you emit it. For a task that
+asks which item of a set ranks highest or lowest, read the page exactly once with `extract_all` and
+declare `rank: true`; the comparison is done in code.
+A page painted after an action is the normal case, not an error: if what you expect is not there
+yet, `wait_for` it rather than reading an empty element. If the same page keeps coming back
+unchanged, change strategy — repeating an action that changed nothing will end the run."""
+
+
+def build_driver_user(task: str, url: str | None, observation: dict | None = None,
+                      trace: list | None = None, found: list | None = None,
+                      note: str | None = None) -> str:
+    """The user message a real driver is sent. Module-level and pure, so it can
+    be graded without a key, a network call or a token — the half of the mode B
+    prompt that went ungraded for two milestones (PR #29 R11).
+
+    The note goes in verbatim, for the same reason `build_user` adds no framing
+    of its own: the CALLER knows whether this is a refusal, a failed step or a
+    no-progress stop, and one shared sentence here would misdescribe two of the
+    three."""
+    from .observe import render
+
+    out = [f"Task: {task}", f"Start URL: {url or 'none — choose one via navigate'}"]
+    out.append("\nWhat you have done so far:\n" + trace_digest(trace))
+    if found:
+        out.append("\nWhat you have extracted so far:\n"
+                   + "\n".join(f"- {v!r}" for v in found))
+    if observation:
+        out.append("\nThe page RIGHT NOW:\n" + render(observation))
+    if note:
+        out.append("\n" + note)
+    return "\n".join(out)
+
+
+def trace_digest(trace: list | None, keep: int = 12) -> str:
+    """The executed trace as the driver sees it: what ran, and how it went.
+
+    Bounded like every other thing sent to a model. The tail rather than the
+    head, because a loop that has run long is deciding what to do NEXT, and the
+    first navigation is the least useful line in the list."""
+    lines = []
+    for s in (trace or [])[-keep:]:
+        bits = [f"{s['i']}. {s['action']}"]
+        if s.get("target"):
+            bits.append(str(s["target"]))
+        if s.get("value") is not None:
+            bits.append(f"value={s['value']!r}")
+        bits.append(f"FAILED ({s['failure_class']}): {s.get('note') or ''}"
+                    if s.get("failure_class") else
+                    f"ok, postcondition={s.get('postcondition_ok')}")
+        lines.append(" — ".join(bits))
+    return "\n".join(lines) or "(nothing has run yet)"
+
+
+def parse_tool_call(message: dict) -> dict:
+    """One provider message -> one executor step. Raises PlanError when the
+    MODEL did not produce a call, which is the same discriminator every layer
+    above already uses for "the response arrived and was not a plan".
+
+    Closed-world about arguments, the ruling `resolver-unknown-target-key`
+    already made one level down: an argument this executor does not implement
+    stops the step loudly instead of being dropped, because a dropped argument
+    is a plan quietly reinterpreted and a run that reports on the weaker task it
+    actually did."""
+    calls = message.get("tool_calls") or []
+    if not calls:
+        raise PlanError("driver returned no tool call: "
+                        f"{str(message.get('content'))[:200]}")
+    fn = calls[0].get("function") or {}
+    name = fn.get("name")
+    if name not in TOOL_TABLE:
+        raise PlanError(f"driver called unknown tool {name!r}")
+    try:
+        args = json.loads(fn.get("arguments") or "{}")
+        assert isinstance(args, dict)
+    except Exception as e:
+        raise PlanError(f"driver tool arguments are not a JSON object: {e}")
+    if unknown := set(args) - STEP_KEYS:
+        raise PlanError(f"driver sent unsupported argument(s) {sorted(unknown)} to {name!r}")
+    return {"action": name, **args}
+
+
+def stub_driver(calls: list):
+    """Deterministic driver for the fast suite: one scripted tool call per turn.
+
+    The same shape as `stub_planner` and `stub_judge`, injected at the same
+    boundary, so the loop driver, every new action, budget exhaustion and the
+    trace shape are all graded at $0.00 in `fast` (ADR-027's Invariants: this
+    IS the eval-first cost of loop mode). The last entry repeats, so a script
+    that runs past its end keeps offering the same call — which is what the
+    no-progress harness is supposed to notice.
+
+    `_usage` on a scripted call is what that turn cost. It exists so a case can
+    exhaust a token or USD ceiling without making 400,000 tokens of real calls,
+    which is the only way to grade runaway protection offline.
+    """
+    i = [0]
+
+    async def drive(task, url, observation=None, trace=None, found=None, note=None):
+        drive.notes.append(note)
+        drive.observations.append(observation)
+        call = dict(calls[min(i[0], len(calls) - 1)])
+        i[0] += 1
+        usage = call.pop("_usage", None) or {"llm_tokens": 0, "llm_usd": 0.0}
+        return call, usage
+
+    # Everything the driver was handed, in call order — the stub discards it
+    # when choosing what to return (that is what makes it deterministic), so
+    # without this record nothing could grade the message a real driver gets.
+    drive.notes, drive.observations = [], []
+    return drive
+
+
+def live_driver(model: str = DEFAULT_LOOP_MODEL):
+    """OpenRouter native tool-calling, one call per step.
+
+    Stateless by construction: every turn is rebuilt from (task, observation,
+    trace, extractions, note) rather than from an accumulated message list.
+    That costs prompt tokens — accepted by ADR-027's mandate, and recorded per
+    run like everything else — and buys the property ADR-027 asks for by name:
+    the trace IS the state, so nothing about a loop run lives in a place the
+    reviewer UI, the verifier and the judge cannot read.
+    """
+    key = os.environ.get("OPENROUTER_API_KEY")
+    if not key:
+        raise PlanError("OPENROUTER_API_KEY is not set")
+
+    async def drive(task, url, observation=None, trace=None, found=None, note=None):
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": DRIVER_SYSTEM},
+                {"role": "user", "content": build_driver_user(
+                    task, url, observation, trace, found, note)},
+            ],
+            "tools": TOOLS,
+            "tool_choice": "required",
+            "usage": {"include": True},
+        }
+        data = await asyncio.to_thread(_openrouter, key, payload)
+        # Usage first, for the reason `live_planner` takes it first: the
+        # provider bills this completion whatever it contains.
+        u = data.get("usage", {})
+        usage = {"llm_tokens": u.get("total_tokens", 0),
+                 "llm_usd": float(u.get("cost", 0.0))}
+        if data.get("error"):
+            raise RuntimeError(f"provider error: {data['error']}")
+        try:
+            message = data["choices"][0]["message"]
+            assert isinstance(message, dict)
+        except Exception as e:
+            raise RuntimeError(
+                f"unreadable driver response envelope: {type(e).__name__}: {e}") from e
+        try:
+            return parse_tool_call(message), usage
+        except PlanError as e:
+            e.usage = usage
+            raise
+
+    return drive

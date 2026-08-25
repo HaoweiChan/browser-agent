@@ -1,0 +1,38 @@
+{
+  "id": "loop-token-ceiling-stops-the-run-loudly",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "hello.html",
+    "task": "What does the greeting page say?",
+    "stub_calls": [
+      {
+        "action": "observe",
+        "target": {
+          "role": "heading",
+          "name": "Hello, browser agent"
+        },
+        "_usage": {
+          "llm_tokens": 500000,
+          "llm_usd": 0.0
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:env",
+    "reason_contains": "budget exhausted",
+    "trace_actions": [
+      "navigate",
+      "observe"
+    ]
+  },
+  "provenance": "ADR-027 Decision 4 makes loop budgets runaway protection, not a cost gate \u2014 but they must still STOP the run. The stub driver reports 500k tokens on its first call, over LOOP_BUDGETS['llm_tokens']; the second iteration of the loop hits `budget_stop` before the driver is called again, so the scripted `final_answer` never runs and the trace ends at the observe. INV-3's shape (budget exhaustion is loud) for the new mode; tagged invariant for that reason."
+}

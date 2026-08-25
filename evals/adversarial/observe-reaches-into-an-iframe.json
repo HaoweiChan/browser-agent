@@ -1,0 +1,33 @@
+{
+  "id": "observe-reaches-into-an-iframe",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "fixture": "frames-host.html",
+    "task": "What inventory turnover does the inspector's source pane report?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Inventory turnover"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "4.82",
+    "planner_saw": [
+      {
+        "has": [
+          "Inventory turnover",
+          "Source pane"
+        ]
+      }
+    ]
+  },
+  "provenance": "M42 leg (a), interviewer feedback 2026-08-26 (\u300e\u756b\u9762\u7a0d\u5fae\u8907\u96dc\u5c31\u53ef\u80fd\u770b\u4e0d\u5230\u6216\u9ede\u4e0d\u5230\u300f). Measured before the fix, on this fixture: `page.accessibility.snapshot()` returns `Iframe \u2014 Source pane` and NOTHING inside it, and `resolve` raises `no tier resolved` for every element in the frame \u2014 iframe content was structurally invisible and unclickable in BOTH modes, regardless of vision. Our own sec-10k inspector renders its source pane as an iframe, so this is the demo's page shape, not a hypothetical. `planner_saw` grades the DISCLOSURE, not the hand-written plan: the frame's contents have to be in the observation the model is shown, or a real model could never have named them."
+}
