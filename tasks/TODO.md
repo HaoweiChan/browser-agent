@@ -116,7 +116,7 @@ new trace fields and caps; cold-reviewer + spec-drift before commit.
 Out of scope: vision (M43), matrix re-declaration (M44), making loop the live
 default (M44's evidence decides).
 
-### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: done]
+### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: pr]
 Origin: interviewer feedback, 2026-08-26 — "使用者輸入中文搜尋或問答時,部署版
 會直接回傳 refused,甚至還沒開啟瀏覽器就結束", under the headline "中文都會
 失敗". No run ids came with the report. Priority note: sequence this AHEAD of
@@ -295,9 +295,23 @@ and 帮我购买力度伸发泡锭 as its counterexamples; the counts "three att
 counterexample rows the case actually pins; and the strengthened claim — four
 independent narrowings falsified, not three — is stated where the universal is
 made. No code change. Gate green.
+Surfaces carrying the count, enumerated so closing this block by its own
+checklist cannot leave a wrong one behind (PR #56 R12): `docs/analysis.md`
+§8a-5's attempts table, `docs/support-matrix.md` D31, the M45 RESULT block in
+this file, the `triage.note` of `screening-zh-term-inside-another-word`, and
+**M45-D5's Acceptance in this file** — which R12 caught stating "three" in the
+same commit that filed this block saying "four". D5 has since been written
+count-free ("one of the narrowings M45 withdrew"), which is why it needs no
+number when this block is closed; it stays on the list so a future edit that
+re-introduces a count there is caught by the same checklist.
 
-### M45-D7 — both PR #56 guards are narrower than their resolution claimed            [status: todo]
-Origin: PR #56 R10, 2026-08-26. Routed to debt as LOW. It partially reopens
+### M45-D7 — all three PR #56 guards are narrower than their resolution claimed            [status: todo]
+Origin: PR #56 R10 and PR #56 R11, 2026-08-26. Both routed to debt as LOW,
+and filed together because they are one defect with three instances: a guard
+written in a repair round is red-capable for the literal thing that round was
+about, and its resolution record then describes it as covering the CLASS. The
+loop hit this three times, which is the signal that guard-scope claims in this
+repo need pinning rather than more guards. It partially reopens
 round 1's R1, whose acceptance said the cost label "cannot drift from the data
 again" — it demonstrably still can, and `tasks/reviews/pr56-r1-resolution.json`
 has been corrected so its R1 entry no longer reads a clean `fixed`.
@@ -312,11 +326,26 @@ a review loop stops terminating. The clause carries a `ponytail:` comment saying
 exactly that. (2) `probe_cost_column` sums the published cells against the probe
 report's own total but never reads the column HEADER, which was the actual R1
 defect: flipping it back to "Cost (planner only)" leaves the case green while
-re-creating the label/data disagreement R1 filed.
+re-creating the label/data disagreement R1 filed. (3) `block_must_contain`
+(PR #56 R11) never reads the pointers it exists to protect: it hardcodes the
+target heading, so it verifies that `### M45-D8` exists and carries "request
+frame"/"imperative", and verifies nothing about the four surfaces that point at
+it. Mutation carried verbatim from R11: `perl -pi -e 's/M45-D8/M45-D4/g'
+src/browser/agent.py docs/analysis.md docs/support-matrix.md
+evals/adversarial/screening-zh-term-inside-another-word.json` — the literal R8
+state, all four pointers aimed at a block with no request-frame content — leaves
+`docs-numbers-are-derived` GREEN. Control, confirming coverage rather than
+vacuity: renaming the heading to `### M45-D10` yields
+`{'pointer_target_missing': '### M45-D8'}`. As with (1), R11's record-correction
+half was NOT deferred — `tasks/reviews/pr56-r2-resolution.json`'s R8 entry is
+annotated to say the guard pins the target's contents and not the pointers.
 Acceptance: `forbidden_claims` lowercases both sides and the mutation
 "Corrected after M45" goes red; `probe_cost_column` gains the header literal to
-its checked set and the mutation "Cost (planner only)" goes red. Both watched
-red first, on those exact two mutations. Gate green.
+its checked set and the mutation "Cost (planner only)" goes red;
+`block_must_contain` resolves the debt id it actually finds at each pointer
+site (doc + surrounding literal) rather than taking the heading from its own
+config, so R11's four-pointer retarget goes red. All three watched red first, on
+those exact three mutations. Gate green.
 
 ### M45-D8 — the request-frame rule is the untried path, and nothing measured it            [status: todo]
 Origin: PR #56 R8, 2026-08-26. M45 published a universal claim — that no regex
@@ -437,7 +466,7 @@ residual on the deployed build. That direction is deliberate and worth stating,
 because an earlier draft of this block had it backwards — it asked them to RUN,
 which would have made this probe's pass condition the opposite of what M45
 shipped, and handed whoever ran it either a phantom regression or a reason to
-ship one of the three narrowings M45 withdrew on purpose.
+ship one of the narrowings M45 withdrew on purpose.
 Cost ceiling: 15 runs, roughly $0.006 at the rate M45 measured.
 
 ### M45-D3 — the auth block covers two of the five Chinese spellings of "log in"            [status: todo]

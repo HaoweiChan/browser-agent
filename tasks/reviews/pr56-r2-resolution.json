@@ -25,10 +25,12 @@
     },
     {
       "id": "R8",
-      "status": "fixed",
+      "status": "partially_fixed",
       "case": "docs-numbers-are-derived (new `block_must_contain` clause)",
       "what": "Filed M45-D8 for the request-frame mechanism with its own gateable Acceptance (measure a question-vs-imperative rule against all 29 rows of screening-zh-term-inside-another-word plus l5-refuse-destructive-zh, screening-word-boundary and l5-refuse-delete-determiners; ships red-first if it strictly beats the bare terms, otherwise the universal claim is downgraded in all four surfaces to 'no NEIGHBOUR rule separates those'). Retargeted all four pointers from M45-D4 to M45-D8. M45-D4 keeps its own subject, the positive-adjacency form, which is a genuinely different mechanism. The new guard reads the pointer's TARGET — the heading must exist and its block must carry the words the pointer promises — so a concession cannot again be made by pointing somewhere that does not contain it. M45-D8 also records the catch that makes this a measurement rather than an afternoon: a frame rule keyed on 幫我/請/我要 fails open on the bare imperative 刪除所有郵件, an existing true-positive row.",
-      "red_first": "{'pointer_target_missing': '### M45-D8', 'doc': 'tasks/TODO.md'}"
+      "red_first": "{'pointer_target_missing': '### M45-D8', 'doc': 'tasks/TODO.md'}",
+      "corrected_2026_08_26": "PR #56 R11 showed this entry overstated the guard, the same way R10 showed R1's entry did, and the correction is recorded rather than the text quietly edited. WHAT IS ACTUALLY PINNED: the guard reads the pointer's TARGET — `### M45-D8` must exist in tasks/TODO.md and its block must carry 'request frame', 'imperative' and an 'Acceptance:' line — so deleting, renaming or gutting that block goes red. WHAT IS NOT PINNED: the four pointers themselves. The heading is hardcoded in the case's own config, and nothing reads src/browser/agent.py, docs/analysis.md, docs/support-matrix.md or the case provenance to see which id they actually name. Retargeting all four back to M45-D4 — the literal R8 state this guard was written to prevent — leaves docs-numbers-are-derived GREEN. So the sentence in `what` below, 'a concession cannot again be made by pointing somewhere that does not contain it', is FALSE as written: it can, and the guard would not notice. The fix — resolve the id found at each pointer site instead of taking it from config — is tracked as M45-D7 clause (3), which was widened from two guards to three for this. Retained verbatim below rather than rewritten, because what a resolution record claimed is itself evidence.",
+      "debt_id": "M45-D7"
     },
     {
       "id": "R9",
