@@ -1906,3 +1906,4 @@
 {"ts": "20260825-195728", "suite": "invariant", "sha": "efa607c", "dirty": true, "env": "local", "passed": 73, "total": 74, "score": 0.986486, "wall_s": 13.92, "cost_usd": 2e-06, "report": "20260825-195728-invariant.json", "p95_s": 2.27}
 {"ts": "20260825-195803", "suite": "invariant", "sha": "efa607c", "dirty": true, "env": "local", "passed": 74, "total": 74, "score": 1.0, "wall_s": 13.94, "cost_usd": 2e-06, "report": null, "p95_s": 2.29}
 {"ts": "20260825-195937", "suite": "fast", "sha": "efa607c", "dirty": true, "env": "local", "passed": 213, "total": 213, "score": 1.0, "wall_s": 88.27, "cost_usd": 2e-06, "report": null, "p95_s": 2.33, "recovery": "9/9", "mutation": "9/11"}
+{"ts": "20260825-200210", "suite": "fast", "sha": "efa607c", "dirty": true, "env": "local", "passed": 213, "total": 213, "score": 1.0, "wall_s": 88.01, "cost_usd": 2e-06, "report": null, "p95_s": 2.33, "recovery": "9/9", "mutation": "9/11"}
