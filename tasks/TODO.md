@@ -234,7 +234,208 @@ the obvious fix for the dominant live failure shape and it would turn
 changing what that case can observe rather than fixing what it grades. Isolating the cell
 stays T-R66/M28.
 
+### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: todo]
+Origin: live demo, 2026-08-24 — asked to drive Task 2's deployed inspector
+(https://whaleforce-sec10k.zeabur.app) and answer from it, the agent failed.
+No run ids survive (`RUNS` is in-memory, D19), so the failure analysis is a
+static shape analysis, not a replayed trace. **Read
+`docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md` before taking
+this** — it holds the four predicted failure shapes (S1 fetch-then-render
+page, S2 answers-not-accessible-names, S3 three identical "Extract" buttons,
+S4 unauthored async settle), each mapped to the existing evidence (D7/D28,
+T-M40-2, M38's Origin, T-M40-5-3) with file:line receipts on both repos.
+The same demo's OTHER failure line (wrong extractions at conf 0.95) belongs
+to sec-10k-extract and is tracked there (its Demo-remediation track, D6–D9).
+Spec: treat the inspector as a new live domain under the M40 method. Probe
+the deployment with small-value tasks ("what is the doc_status of the
+aapl-2025 fixture?", "how many items are extracted?") at 3 reps per task
+(ADR-025's protocol — T-M40-5-3 is why one rep is not a read); every failure
+shape becomes an adversarial case watched red first (rule 2), with a
+committed fixture snapshot of the inspector page for the offline cases.
+Ground truth routes through the inspector's `/api/extract/fixture` — the
+per-site ground-truth endpoint rule 6 explicitly allows — for the verifier
+and eval adapter only, never the planner or executor. No site-specific
+selector, DOM path or navigation recipe enters `src/browser/` (rule 6; owning
+the target site is not an exemption). Capability gaps stay with their owners:
+S3 is M38's existing queue block; S4's default post-click settle and the
+select-option action both moved to M42 under ADR-027 (in mode B the authored
+`expected_state` path stands) — the postmortem's "deferred as YAGNI" line
+predates that ADR and is superseded by it.
+Cross-repo dependency, stated rather than hidden: sec-10k-extract's
+Demo-remediation track carries the page-side row (deep-link query params so a
+parameterised start URL lands on an already-rendered page — start URL is
+allowed per-site data — plus `role="status"` on the banner, a labelled region
+on the extracted-text pane, distinct Extract button names). Probing before
+that row deploys measures the old page: probe once for the red baseline, but
+declare the matrix row only against the page shape that will stay deployed.
+Update 2026-08-25 (ADR-027): loop mode (M42) is now queued and directly
+targets this block's S1/S4 shapes. Sequencing guidance, not a hard Depends:
+the red-baseline probe is still worth running under mode B (it pins the
+failure shapes as cases either way), but the DECLARED matrix row should wait
+for M42 and be probed under both modes — M44 owns folding the loop-mode
+results back into this row.
+Acceptance: a `docs/support-matrix.md` row for whaleforce-sec10k.zeabur.app
+declared under the report-assisted rule, carrying run ids, repeat counts, and
+BOTH build shas — this deployment's and the inspector's (`/api/meta` serves
+`git_sha`; D28's expiry rule applies to the target site's build too). Every
+demo failure shape either fixed with its case green, or declared as a
+limitation citing its case. Gate green; cold-reviewer + spec-drift before the
+commit (repo memory: review subagents run even when the harness says no).
+
+### M42 — loop mode: the model chooses every step, and the machinery that grades it does not move            [status: todo]
+Origin: owner, 2026-08-25 — interviewer mandate relayed verbatim in intent:
+"complete the task by any means necessary, cost is not a constraint." Decision
+recorded as ADR-027 (read it first — its Invariants section is the boundary of
+"any means": zero wrong-success, rule 6, eval-first and the single trace
+pipeline are NOT reachable by the mandate). M33's mechanism spec is the seed;
+its decision criterion is superseded by fiat.
+Spec: a per-step tool-calling driver in `src/browser/agent.py`, selected per
+task (`POST /tasks` flag + env default; mode B stays the offline default).
+OpenRouter native `tools=[…]`: each of the executor's actions is a function
+definition; after every executed call the model receives a fresh observation
+(per-call element budget, `observe` drill still available) plus the trace so
+far, and emits the next call or a final answer. The executor's action
+implementations, the resolver, the trace schema, the verifier and the judge are
+shared with mode B — the loop replaces planning cadence only. The
+plan-adoption-anchored guards are re-homed, not lost (ADR-027 Decision 5):
+ADR-024's document-root refusal and ADR-018's aggregate single-read rule have
+no adoption point to run at in loop mode, so they become tool-call-time
+refusals (a root-target extract call refused as emitted; the aggregate rule
+enforced at answer assembly over the trace), each watched red in loop mode
+before the mode ships — without this a loop-mode `WebArea` extract is the
+T-M40-2 shape with no guard. The action
+vocabulary widens for both modes: `select_option`, `scroll`, `press`,
+`wait_for` (predicates reuse `check_state`), `go_back` — each with
+postcondition semantics and its own red-first case. Two more legs, added
+2026-08-26 from interviewer feedback ("畫面稍微複雜就可能看不到或點不到",
+"缺乏 harness 與自修復能力" — the 首頁↔dashboard loop, 18 LLM calls, 2
+repairs, still fail): (a) OBSERVATION REACH — `observe()` and the resolver
+today stop at the main frame's accessibility tree, so iframe content and
+shadow-DOM subtrees are structurally invisible and unclickable regardless of
+mode or vision (our own inspector's source pane is an iframe); frame-piercing
+observation and frame-scoped resolution land here, each with a fixture case
+watched red first (an iframe'd value, a shadow-DOM button). (b) NO-PROGRESS
+DETECTION — a step cap is not a harness: when the loop revisits the same
+(URL, page-signature) state N times with no new fact in the trace, the driver
+must force a strategy change or end the run loudly with that reason, never
+grind the budget down in a circle; pinned red-first by a stub-driven case
+that scripts a revisit loop. Loop budgets: step cap,
+token/USD ceilings at runaway-protection levels, recorded per run;
+`ALLOWED_MODELS` gains at least one frontier model (its own ADR line, price
+recorded — this is ADR-027's declared amendment to ADR-010's price ceiling,
+scoped to loop-mode additions, and `gateway-model-reaches-planner` is extended
+in the same change, watched red first, so the graded ceiling is the amended
+rule). Offline evaluability is the hard part and is in scope, not deferred:
+a scripted tool-call stub (`stub_planner`'s injection-boundary shape) drives
+the loop driver in `fast` at $0 — the driver, each new action, budget
+exhaustion, and the trace shape all get stub-driven cases watched red first.
+Acceptance: `fast`/`invariant` green with the new cases and no network/token
+spend added to either suite; a live smoke against the deployment (3 reps, run
+ids published) on one task mode B verifiably fails — the postmortem's S1 shape,
+e.g. a fetch-then-render page — answering correctly under loop mode; per-run
+cost visible in the trace/UI; an implementation ADR recording the tool schemas,
+new trace fields and caps; cold-reviewer + spec-drift before commit.
+Out of scope: vision (M43), matrix re-declaration (M44), making loop the live
+default (M44's evidence decides).
+
+### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: todo]
+Origin: interviewer feedback, 2026-08-26 — "使用者輸入中文搜尋或問答時,部署版
+會直接回傳 refused,甚至還沒開啟瀏覽器就結束", under the headline "中文都會
+失敗". No run ids came with the report. Priority note: sequence this AHEAD of
+M43 — the likely root cause is a few lines of regex plus probe evidence, the
+highest leverage-per-cost item in this queue, and it answers the single most
+damaging sentence in the feedback.
+Spec: the only pre-browser refusal in the pipeline is `screen()`'s
+`SCOPE_BLOCK` (`src/browser/agent.py`), and its CJK alternation is bare
+substring matching — `登入|密碼|驗證碼|付款|購買|刪除|下載` with no boundary
+and no context — while the English side earned word boundaries and determiner
+adjacency through two probe-driven repairs, each pinned
+(`screening-word-boundary`, `l5-refuse-delete-determiners`). A legitimate zh
+READ task that merely mentions 下載/付款/刪除 as subject matter refuses at
+$0.00. Whether that asymmetry is the whole of "中文都會失敗" is unmeasured:
+every live probe ever run (M40's four rounds) was English; every zh case in
+the suites is an offline fixture. Three legs, evidence first:
+(1) REPRODUCE — a zh probe set against the deployment: the interviewer's
+shapes (plain search, plain QA) plus zh phrasings of the M40 card tasks,
+3 reps each, run ids published, every failure triaged per
+`docs/evals/failure-taxonomy.md` BEFORE any code moves.
+(2) SCREENING PARITY — the CJK terms get the same precision work the English
+side got: per-term context conditions (刪除 + adjacent object the way
+`delete` requires a determiner; 下載/付款/購買 refusing as the task's VERB,
+not as mentioned subject matter), watched red first with legitimate-zh-read
+cases, while the negative direction is pinned too — real destructive/auth zh
+asks still refuse, `l5-refuse-destructive-zh` stays green, and the refusal
+POLICY is unchanged: only its zh false-positive rate moves.
+(3) DECLARE — the matrix carries the zh evidence (zh rows or per-row zh
+annotation, under ADR-022's live-declaration rule): "中文都會失敗" ends this
+milestone either fixed with cases or declared with named shapes, never
+unaddressed.
+Acceptance: probe run ids committed; every screening change pinned in both
+directions (a false-positive case that was red, a true-positive case that
+stayed green); zh live evidence visible in `docs/support-matrix.md`; the
+interviewer's exact phrasings among the probe tasks; gate green;
+cold-reviewer + spec-drift before commit.
+Out of scope: planner/judge zh answer quality beyond what the probe surfaces —
+new shapes found there become their own blocks (rule 2). Independent of
+M42/M43: mode B's screening is the same code path, so this neither waits for
+nor blocks the loop work.
+
+### M43 — loop mode sees the page: screenshot observation for a vision model            [status: todo]
+Origin: ADR-027; postmortem S2 — the failure class "the answer is not the
+accessible name of any small element" (T-M40-2, D28) is unfixable by better
+ARIA targeting alone, and production agents do not have it because they look.
+Depends: M42.
+Spec: in loop mode, each per-step observation may carry a viewport screenshot
+(and on drill, an element-scoped one) alongside the a11y/text observation;
+`ALLOWED_MODELS` gains a vision-capable frontier model; the executor gains a
+coordinate-click action usable ONLY from a screenshot-bearing observation, so
+a plan cannot invent coordinates it never saw (same closed-world rule as
+unknown target keys). Screenshots enter the trace as the step evidence the UI
+already renders (ADR-022's page view precedent). Offline: stub-driven cases
+grade the plumbing (screenshot captured, attached, traced; coordinate-click
+resolves and records) on fixtures at $0; vision quality itself is graded by
+M44's live probes, stated as such.
+Acceptance: the S2 fixture shape — a value in a bare `<div>`/`<pre>` with no
+role/name, unreachable by role tier by construction — answered under loop mode
+with vision in a live smoke (3 reps, run ids published), while mode B's
+documented failure on the same fixture is pinned as the contrast case; suites
+green at $0; implementation ADR; cold-reviewer + spec-drift before commit.
+
+### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
+Origin: ADR-027. Depends: M42 (M43 for the vision rows, marked as such).
+Spec: re-run the D28 domain set (the four regressed groups + two controls,
+ADR-025's task texts where applicable), the M40 card tasks, and the sec-10k
+inspector probe (M41's task list — M41 stays the inspector-side owner; run its
+probes under both modes and fold the results back into its matrix row) against
+the deployment in loop mode, 3 reps minimum per task (T-M40-5-3 is why one rep
+is not a read), every run id published. Added 2026-08-26 from interviewer
+feedback: the probe set also carries (a) zh phrasings alongside the English
+ones (M45 owns the screening fix; this row measures zh COMPLETION once tasks
+get past the screen), and (b) the interviewer's own reproduced flow — enter
+the SEC Extractor, submit INTC, wait for extraction, check the result — the
+multi-step shape that looped 首頁↔dashboard for 18 LLM calls and 2 repairs
+before failing, re-run under both modes so the A-vs-B table includes the
+exact failure the feedback cites. Declare per-mode matrix rows under the
+ADR-022 rule — a row says which mode it measures; no blending. Absorb M33: the
+same runs ARE the A-vs-B arm — report per-mode correct-rate, $/task, tokens,
+wall clock and planner calls in `docs/analysis.md` §9's table shape, from a
+committed report, and record the default-mode decision for live traffic as an
+ADR ("numbers decide" survives; the mandate moved which numbers matter).
+Acceptance: matrix rows updated with run ids, repeat counts, both build shas
+where the target is our own deploy (postmortem §2); the cost table committed
+and guarded the way §9 already is; zero wrong-success across all published
+loop-mode runs — one wrong-success is a stop-ship finding routed back to M42,
+not a row footnote; an ADR recording the live default.
+
 ### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
+Update 2026-08-25 (ADR-027): absorbed, not deleted. The interviewer mandate
+makes the loop a deliverable (M42–M44), so this block's QUESTION is answered by
+fiat; its MEASUREMENT is still owed and runs as M44's A-vs-B arm — take M44,
+not this, and close this block when M44's per-mode table commits. One declared
+substitution (ADR-027 Decision 6): M44's arm runs on the D28/M40-card/
+inspector probe set, not this block's M9 task set — if the M9-set comparison
+is still wanted it is a separate, unqueued ask. Kept for its mechanism spec,
+which M42 builds on.
 Origin: `prompts/015` — "would an MCP / tool-calling loop raise completion?"
 `docs/architecture/task1-overview.md` chose B over A (LLM-per-step) on
 reasoning, never on a measurement; M9's ablation mechanism (ADR-010,
@@ -257,6 +458,46 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: todo]
+Origin: the ADR-027 planning commit, 2026-08-25, on a worktree of this branch.
+Observed live, then backed out rather than committed.
+Spec: T-M39-11 records the cost of republishing a band when the CASE COUNT
+moves. This is a different, sharper shape at an UNCHANGED count, and it ends in
+a deadlock rather than a cost. Session verification runs of an uncommitted
+docs-only change (5 fast runs at 181 cases, all `dirty`) included one at
+74.11s — across the 85→90 ceiling-step boundary (73.91s) that every other row
+at that count sits below. Had that row been committed,
+`published-band-matches-the-ledger` would be permanently red on this tree: item
+3 (same-ceiling) compares the published number's derived ceiling against the
+GLOBAL ledger maximum's (85 ≠ 90); item 2 (cited-run) forbids citing the 74.11
+row (dirty, and a clean row — `20260824-052903`, 73.18s — predates it, judged
+as-of the cited ts, so the refusal never expires); and the only clean row
+derives 85. No publishable citation exists until machine variance happens to
+deliver a POST-COMMIT clean run inside the (73.91, 78.26] window. The as-of
+rule exists to stop later CLEAN rows retroactively reddening a band; a later
+dirty row retroactively reddens it through item 3 instead — the same treadmill
+arriving through the other item.
+What was done instead, and why it is worth a rule: the five session rows were
+NOT committed — `evals/report/history.jsonl` restored to HEAD before the
+commit, the one red report file (written by the blocked gate run) removed with
+it. This is the T-M38-5 practice (probe rows are kept out of the committed
+ledger by hand while the `--no-history` opt-out remains unbuilt) applied to
+verification runs of an uncommitted tree; declared here and in the commit
+message rather than done silently. The unresolved question this leaves: which
+runs are LEDGER runs? Today "whatever the session chose to stage" is the
+answer, and it is not a rule.
+Repro: append a fast row at the current count with `wall_s` just past the
+current band's ceiling-step boundary and `dirty: true`, dated after any clean
+row at that count; run `published-band-matches-the-ledger` and observe there is
+no edit to ADR-019 §2 that turns it green.
+Acceptance: a ruling, recorded as an ADR-019 amendment (it can ride T-M39-11's
+or T-M38-5's decision), on either (a) which rows enter the committed ledger —
+e.g. only gate/CI runs, with the T-M38-5 opt-out built so everything else
+cannot append — or (b) item 3 comparing against the clean maximum (or the
+maximum as-of the cited row) so a dirty outlier cannot make the band
+unrepublishable; whichever way, a case pins the deadlock shape red first,
+using the Repro above.
 
 ### T-M39-12 — the judge's unreadable-completion retry may not reach a MISSING body, only a malformed one            [status: todo]
 Origin: T-M40-5 probe, 2026-08-24, `run_id 97677d75`, build `8183dc2`
