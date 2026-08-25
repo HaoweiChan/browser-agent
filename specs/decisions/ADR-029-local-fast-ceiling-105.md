@@ -37,12 +37,24 @@ answer. It comes out at **105s**: 87.96s measured, × 1.15 = 101.15, rounded up
 to a multiple of five.
 
 Two steps, not one, and the second step is machine variance rather than case
-count. The same tree measured 84.83s and 88.87s within the hour, and the 73.06s
-this band replaces was recorded in a quieter session on the same laptop — which
-is exactly the property ADR-013's rule is built around (SLOWEST observed, not
-median) and exactly what T-M39-13 warns makes a band fragile. Publishing the
-median would be choosing rather than deriving, and would leave the next honest
-gate run red.
+count: the committed rows at this count span **82.18s to 87.96s** while the
+73.06s this band replaces was recorded in a quieter session on the same laptop.
+That spread is the property ADR-013's rule is built around — SLOWEST observed,
+not median — and exactly what T-M39-13 warns makes a band fragile. Publishing
+the median would be choosing rather than deriving, and would leave the next
+honest gate run red.
+
+~~The same tree measured 84.83s and 88.87s within the hour~~ — struck 2026-08-26
+(PR #56 R3). Those were real runs of this tree taken while three eval processes
+contended for the machine, and they were discarded with the probe rows they
+belonged to under the T-M38-5 practice, so no reader can read them back. A
+document of record may not argue from evidence that no longer exists, which is
+the class ADR-019 §6 exists to close and T-M39-14 names; the sentence above now
+argues from rows the ledger actually holds.
+`adr029-variance-cites-the-ledger` reads every seconds literal in this section
+back against the committed local `fast` rows, so this cannot recur silently.
+The rows were NOT committed after the fact to fit the sentence — that is the
+other way to close a finding like this, and it is the dishonest one.
 
 ### 2. CI stays at 90, and that is a statement about evidence, not about speed
 
@@ -53,12 +65,26 @@ no CI measurement of this tree, so I have no number to derive one from, and
 publish CI's ceiling from drifting apart on a number nobody measured.
 
 **Stated rather than discovered later**: CI is likely to breach 90 on this
-branch. It measured 74.25s at 152 cases; this tree is 207. Extrapolating is not
-deriving, so no number is written on the strength of it — but a reader should
-expect the PR's own CI run to be the measurement that settles CI's ceiling, and
-should treat a red CI wall clock on this branch as the expected next step rather
-than as a surprise. That is the ADR-021 pattern exactly: its CI figures came
-from a run that had already happened, cited by id.
+branch. It measured 74.25s at 152 cases; this tree is 207, and main's last
+recorded CI `fast` run was already 89.62s under the same 90s ceiling
+(`fast-wall-clock-budget`'s own row). Extrapolating is not deriving, so no
+number is written on the strength of it — but a reader should expect the PR's
+own CI run to be the measurement that settles CI's ceiling, and should treat a
+red CI wall clock on this branch as the expected next step rather than as a
+surprise. That is the ADR-021 pattern exactly: its CI figures came from a run
+that had already happened, cited by id.
+
+**Therefore, and this scopes every green-gate claim this branch makes** (PR #56
+R7): **CI's `fast` ceiling for this tree is UNMEASURED.** `.github/workflows/
+eval.yml` still declares 90s, untouched by this branch, because raising it to a
+guessed number is the one thing ADR-013's rule forbids and
+`ci-numbers-are-derived` exists to refuse. The branch's gate evidence —
+`invariant` 71/71, `fast` 207/207 — is **local only**, and no document, PR body
+or report on this branch may say the gate is green without that scope. One of
+the two gated environments has not run this tree at all: at the time of writing
+the push to `origin` was denied by the harness permission classifier, so no PR
+and no CI run exist yet. When one does, its workflow-run id is cited in ADR-019
+§5 and CI's ceiling is derived from it there, before merge.
 
 ### 3. What was NOT done, and why the offer was refused
 

@@ -1,0 +1,46 @@
+{
+  "id": "loop-abandoned-failure-is-not-a-success",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "shop.html",
+    "task": "Name the wall clock in the catalogue and its warranty period.",
+    "stub_calls": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "Meridian Wall Clock"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Warranty period"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "answer_null": true,
+    "trace_actions": [
+      "navigate",
+      "extract",
+      "extract",
+      "final_answer"
+    ]
+  },
+  "provenance": "PR #56 R6 (MEDIUM). M42's own comment claimed that excluding `final_answer` from the supersede pointer meant \"a model that gives up right after a failure is still graded on that failure\". It was false for every verb that is not state-changing: `verify` reaches a step only through `no_failed_postcondition` (`postcondition_ok is False`) and `actions_verified` (STATE_CHANGING with a null postcondition), and a `locate`/`extract` failure carries `failure_class` with `postcondition_ok: None` — invisible to both. The run answered from the earlier successful read and reported `success`, verdict PASS, with an unsuperseded failure sitting in its own trace. `loop-recovered-failure-still-verifies` covers the opposite direction and together they are the whole rule: a failure the model RECOVERED from is not graded, a failure it ABANDONED is. That is the same line `superseded_by` has always drawn (`verifier-superseded-not-a-loophole`); M42 added a way to leave a failure unsuperseded and no way for the verifier to notice.",
+  "triage": {
+    "class": "wrong-success",
+    "note": "a comment asserting a property the code does not have is worse than the property being absent — it reads as covered"
+  }
+}

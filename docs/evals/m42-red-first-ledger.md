@@ -166,3 +166,46 @@ Three more cases changed as consequences of those fixes, each red first:
 reaching the ordering it exists to pin. Recorded because it is the failure mode
 this whole file exists to prevent: a green case proves nothing until you know
 why it is green, and the same is true of a red one.
+
+## PR #56, review round 1 — five more cases, all watched red
+
+A fresh-context reviewer falsified the diff and returned twelve findings; seven
+routed to repair. Five of those seven are pinned by a case that was red before
+the fix, and the two reds that matter most are **wrong-success on this repo's
+own fixtures**, both invisible to every case that existed:
+
+| case | red observed (pre-fix) | finding | greened by |
+|---|---|---|---|
+| `replan-cannot-launder-noop-action-in-a-frame` | `status "success"`, `answer "NIMBUS-10K-2025"` — the laundering replan was ACCEPTED. `page_changed` was computed from `before = page_text(frames=False)` against `after = page_text(frames=True)`, so on any framed page every step read as having changed something and `changed_nothing()` was disarmed in both modes | R1 (HIGH) | `M42: PR #56 round-1 repairs` |
+| `loop-abandoned-failure-is-not-a-success` | `status "success"`, `answer "Meridian Wall Clock"`, verdict PASS — with `step 3 extract failure_class=locate superseded_by=None` in its own trace. `verify` could reach a step only through `postcondition_ok is False` or a state-changing verb with a null postcondition; a `locate`/`extract` failure was invisible to both | R6 (MEDIUM) | `M42: PR #56 round-1 repairs` |
+| `ui-adrs-cover-every-decision` | `unknown invariant check ui-adrs-cover-every-decision` — then, once written, the real red: a four-element row against a two-element destructure, plus ADR-023 absent since M39 and 027/028/029 never listed | R2 (MEDIUM) | `M42: PR #56 round-1 repairs` |
+| `adr029-variance-cites-the-ledger` | `unknown invariant check` — then `{"quoted_in_adr029_section_1_but_in_no_local_fast_row": [84.83, 88.87]}` against a ledger holding 87.96 / 87.05 / 82.18 / 83.4 / 83.1 | R3 (MEDIUM) | `M42: PR #56 round-1 repairs` |
+| `docs-numbers-are-derived` (extended) | `{"analysis_section1_does_not_cite": "20260825-183605-fast.json", "note": "§1's figures are derived from this report; the prose credits another"}` | R4 (MEDIUM) | `M42: PR #56 round-1 repairs` |
+
+### What the two HIGH-consequence reds have in common
+
+Both are the same failure of imagination as the first review round, one level
+out. That round's lesson was *mode B ends the run at the first failed step, so a
+failed step's side effects never outlived it*. These two are what that lesson
+looks like once the fix is in: M42 gave a failed call a way to be **recorded and
+survived**, and two guards that had only ever seen a run die at the first
+failure — the anti-laundering guard and the verifier — were never re-read
+against a trace where failure is routine. R1 is the same shape a third time,
+from the other side: `page_text` grew a deliberately narrower variant for one
+caller and the other half of that caller's own comparison did not get it.
+
+Neither is detectable on any fixture without an iframe, and `frames-host.html`
+— the fixture this milestone added and documented as the sec-10k inspector's
+shape — is what made R1 reproducible at all.
+
+### R5 and R7: repairs with nothing to pin
+
+R5 (a band bullet carrying the previous milestone's explanation under new
+numbers — 207 cases on one line, 181 four lines later) and R7 (CI's ceiling
+unmeasured for this tree) are prose findings about documents of record. R5's
+class now has a partial guard through `adr029-variance-cites-the-ledger`, which
+reads a section's numbers back against the ledger; the residue —
+`published-band-matches-the-ledger` grading scalars and never the sentences
+around them — is real and is stated rather than pinned. R7 cannot be pinned from
+here at all: it is a claim about an environment that has not run this tree, and
+inventing a case for it would be inventing the measurement.

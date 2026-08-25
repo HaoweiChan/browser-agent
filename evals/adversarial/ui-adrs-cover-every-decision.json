@@ -1,0 +1,20 @@
+{
+  "id": "ui-adrs-cover-every-decision",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "invariant",
+    "check": "ui-adrs-cover-every-decision"
+  },
+  "expect": {
+    "note": "every `specs/decisions/ADR-*.md` id appears exactly once in the reviewer page's `ADRS` digest, and every row is a 2-tuple of (id, one-liner)."
+  },
+  "provenance": "PR #56 R2 (MEDIUM). M42 widened the digest with a blind `\"026\",` -> `\"026\", \"027\", \"028\",` substitution, producing a FOUR-element row against a `([n, line])` destructure: the page rendered \"ADR-026 — 027\", ADR-026's real one-liner was dropped, ADR-027/028/029 never reached a visitor, and `${ADRS.length}` undercounted. Nothing read `ADRS` — `grep -n ADRS src/browser/eval_adapter.py` returned zero — so a public page's summary of this repo's decisions was ungraded prose. The check also finds ADR-023 missing since M39, which is why it is a COVERAGE check and not a shape check: the malformed row is the visible half of the problem.",
+  "triage": {
+    "class": "ungraded-publication",
+    "note": "the reviewer UI is how a reader without the repo sees this project"
+  }
+}

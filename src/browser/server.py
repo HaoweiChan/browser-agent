@@ -839,7 +839,11 @@ const ADRS = [
   ["022", "a support-matrix row may be declared from real runs against the live deployment with no eval case behind it, if every run is cited honestly"],
   ["024", "a plan that tries to “extract” the whole page as one blob is refused before it runs — that's never a real answer to a real question"],
   ["025", "a probe's exact tasks, thresholds and pass/fail bar are written down before it runs, so results can't be graded after the fact"],
-  ["026", "027", "028", "when a target matches more than one element, the page is used to narrow it down under strict rules, instead of failing outright"],
+  ["023", "an unreadable answer from the grader model buys exactly one retry — a reasoned rejection buys none"],
+  ["026", "when a target matches more than one element, the page is used to narrow it down under strict rules, instead of failing outright"],
+  ["027", "completing the task outranks its cost — a second mode where the model picks every step is worth building, but not at the price of honesty"],
+  ["028", "that second mode ships: the model chooses each action after seeing the page again, and every check that grades a run is shared with the first mode"],
+  ["029", "the offline time ceiling moves to what the grown suite actually measures on this machine — and says plainly that CI's is not yet measured"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

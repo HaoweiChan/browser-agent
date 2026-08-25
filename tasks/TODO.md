@@ -459,6 +459,143 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M42-9 — both loop-budget ceiling cases describe numbers they no longer script            [status: todo]
+Origin: PR #56 R8 (LOW).
+Spec, the finding verbatim: "Both loop-budget ceiling cases carry `provenance`
+prose describing numbers the case files no longer contain, so the recorded
+rationale cannot be re-derived from the case."
+Evidence, verbatim: "`evals/adversarial/loop-token-ceiling-stops-the-run-loudly.json`
+`provenance`: 'The stub driver reports 9 tokens on its first call against an
+injected 5-token cap' — the file scripts `_usage.llm_tokens: 2` against
+`loop_budgets.llm_tokens: 1`. `evals/adversarial/loop-usd-ceiling-stops-the-run-loudly.json`
+`provenance`: '3 tokens trip a $0.01 cap here' — the file scripts `llm_usd: 2e-06`
+against a `1e-06` cap and `llm_tokens: 0`."
+Repro, verbatim: "diff the `_usage`/`loop_budgets` blocks of both files against
+their own `provenance` strings."
+Why it is debt and not a repair: the cases grade the right thing and grade it
+correctly — the caps trip, the budgets are asserted through `expect.budgets`, and
+both were watched red. What rotted is the sentence beside them, which was written
+against the first (500,000-token / $99) version and then against the second
+(9/5) before the third (2/1, 2e-06/1e-06) landed. It is a documentation defect
+inside a case file, which is exactly the class this repo keeps finding and
+exactly the class that is cheapest to fix badly under time pressure.
+Acceptance, verbatim: "The provenance sentences quote the numbers the case
+actually scripts, so a reader can check the cap arithmetic from the file alone."
+Plus, because this is the third revision of the same two sentences: prefer
+wording that names the RELATION (usage exceeds the injected cap by one unit)
+over wording that re-types both scalars, so the next cap change cannot restage it.
+
+### T-M42-10 — `trace_note_contains` was broadened for loop mode and five older cases inherited the looser rule            [status: todo]
+Origin: PR #56 R9 (LOW).
+Spec, the finding verbatim: "`trace_note_contains` was broadened to search
+superseded steps for every case in the suite, which weakens five pre-existing
+resolver cases that were written against the narrower semantics, and no case
+pins that the note must be on a live step."
+Evidence, verbatim: "src/browser/eval_adapter.py, the `trace_note_contains`
+block: `for s in trace if not s.get('superseded_by')` became `for s in trace`.
+Affected pre-existing cases: evals/adversarial/resolver-narrows-singular-noun-ending-in-s.json,
+resolver-narrows-identical-matches.json, resolver-narrows-by-anchor-proximity.json,
+resolver-near-normalises-typography.json, probe3-quotes-most-quoted-author.json
+— each asserts a `narrowed: ...` note that, after this change, can now be
+satisfied by a superseded (i.e. discarded) attempt."
+Repro, verbatim: "grep -rln trace_note_contains evals/golden evals/adversarial ;
+then read the block in src/browser/eval_adapter.py — the loop-mode need is
+served by the same key that grades the five older cases."
+Why it is debt and not a repair: the broadening was itself forced by a real
+finding (`loop-refuses-a-document-root-extract` ends `success`, and the refusal
+it must show is on a step the recovery superseded), and no case regressed — but
+"no case regressed" is the argument this repo distrusts most, because the five
+affected cases would pass either way on their current fixtures. The reviewer is
+right that one key now serves two different questions.
+Acceptance, verbatim: "Either the loop-mode need gets its own key (e.g.
+`trace_note_contains_any` vs `trace_note_contains_live`), or a case demonstrates
+that a note appearing ONLY on a superseded step is still a red — watched red
+before the broadening."
+
+### T-M42-11 — T-M42-4's own limitation claim is falsified by a fixture already in the tree            [status: todo]
+Origin: PR #56 R10 (LOW). Compounds T-M42-4 rather than replacing it.
+Spec, the finding verbatim: "T-M42-4's declared HIGH (a postcondition earned by
+a document the action never touched) is demonstrable on a fixture that is
+already in the tree, not only in principle — so 'nothing offline can see it' is
+already false."
+Evidence, verbatim: "tasks/TODO.md T-M42-4 says 'Nothing offline can see it:
+every fixture with a frame in this repo has exactly one, and it is the frame the
+task is about.' src/browser/agent.py:478 `text_visible` -> `page_text(page)`
+(all frames). On src/browser/fixtures/frames-host.html a `press \"Shift\"` that
+touches only the main document, asserting `{\"text_visible\": \"Reported
+inventory turnover\"}` (a string that exists only inside the iframe), records
+`postcondition_ok=True`."
+Repro, verbatim: "Run `run_task` with `stub_planner([[{\"action\":\"press\",
+\"value\":\"Shift\",\"expected_state\":{\"text_visible\":\"Reported
+inventory turnover\"}}]])` against `/fixtures/frames-host.html`; trace.jsonl
+shows `step 2 press postcondition_ok=True`."
+Why it is debt and not a repair: the FIX is still the scoping decision T-M42-4
+describes and still needs a trace field ADR-028 §7 currently forbids — that has
+not changed. What this finding kills is the excuse attached to it. It is also
+the third time in this repo's history that a declared limitation was falsified
+by a fixture already committed, which is the pattern worth carrying forward more
+than the row itself.
+Acceptance, verbatim: "T-M42-4 carries this repro (it is the red-first case its
+own acceptance asks for), and the 'nothing offline can see it' sentence is
+corrected — the guard against declaring a limitation that a committed fixture
+already falsifies."
+
+### T-M42-12 — the offline suites now append a nonzero `cost_usd` that nothing asserts is stub-only            [status: todo]
+Origin: PR #56 R11 (LOW).
+Spec, the finding verbatim: "`fast` and `invariant` now append `cost_usd: 2e-06`
+to the committed ledger while the headline prints `$0.0000`, and nothing asserts
+that either suite's spend is zero — so a future real sub-$0.00005 call is no
+longer distinguishable from the stub baseline."
+Evidence, verbatim: "evals/report/history.jsonl:1883-1893 (`\"cost_usd\": 2e-06`
+on every new row, where every prior row is `0.0`), from
+evals/adversarial/loop-usd-ceiling-stops-the-run-loudly.json's scripted
+`_usage.llm_usd: 2e-06`; evals/run.py:275 prints `cost ${...:.4f}`, which renders
+2e-06 as `$0.0000`. No case in evals/ asserts a suite-level `llm_usd == 0`."
+Repro, verbatim: "tail -4 evals/report/history.jsonl ; grep -rn 'llm_usd'
+evals/adversarial/*.json | grep -v loop- (no suite-level zero-spend assertion)."
+Why it is debt and not a repair: this is the direct consequence of the choice
+that closed the last round's own finding — the ceiling cases stopped simulating
+$99 of spend and started declaring the smallest amount that can trip a cap. The
+cost-discipline claim ("`fast` makes zero paid calls") was never checked by
+anything even when every row read 0.0, so the finding is really about a gap this
+milestone made visible rather than one it opened. Fixing it properly means
+deciding what the claim IS — zero paid calls, or zero spend — and that is a
+cost-discipline ruling, not an edit.
+Acceptance, verbatim: "Either the USD ceiling case trips on a cap without
+declaring nonzero spend (e.g. a cap of 0.0 with `>=`), or an invariant case
+asserts that the `fast`/`invariant` totals' `llm_usd` equals exactly the sum of
+stub-declared usage — so the `$0` claim is checked rather than displayed."
+
+### T-M42-13 — the red-first ledger names a commit that does not exist            [status: todo]
+Origin: PR #56 R12 (LOW).
+Spec, the finding verbatim: "Six rows of the red-first ledger name a 'greened by'
+commit that does not exist in the branch history, so their red->green ordering is
+attested only by the ledger's prose (the reds themselves do reproduce — audited,
+see repro)."
+Evidence, verbatim: "docs/evals/m42-red-first-ledger.md:147-152 lists `M42:
+review-round repairs` as the greening commit for
+`loop-refused-anchor-is-not-an-answer`,
+`loop-failed-enumeration-does-not-disarm-rank`,
+`extract-all-refuses-matches-in-two-documents`,
+`loop-recovered-failure-still-verifies`, `driver-tools-match-the-executor`.
+`git log --oneline main..task/M42` has four commits and no such subject; those
+case files and their fixes both land in 1ac8a19."
+Repro, verbatim: "git log --oneline main..task/M42 (no `review-round` commit).
+Audit performed by the reviewer: the leg-4 reds reproduce verbatim against
+`main` + the two case files + the two fixtures, and
+`loop-refused-anchor-is-not-an-answer`'s claimed red reproduces exactly by
+ablating the rollback line at src/browser/agent.py:1260. So the ledger is honest;
+only the commit reference is unresolvable."
+Why it is debt and not a repair: the label was written before the commits were
+squashed under CLAUDE.md rule 7, and the reviewer independently reproduced every
+red it names, so nothing about the evidence is in doubt. It is a naming defect in
+a document whose whole value is checkability, which is why it is worth a row
+rather than a silent edit — and worth fixing in the same pass that decides how a
+ledger written before a commit exists should reference it at all.
+Acceptance, verbatim: "The 'greened by' column names a commit that exists (or
+says 'folded into 1ac8a19 under CLAUDE.md rule 7'), so every row is checkable
+from `git log` without trusting the prose."
+
 ### T-M42-4 — a postcondition can be satisfied by a document the action never touched            [status: todo]
 Origin: M42 cold review, finding 4 (HIGH), 2026-08-26. Accepted deliberately as
 the cost of leg (a); logged rather than fixed because the fix is a scoping

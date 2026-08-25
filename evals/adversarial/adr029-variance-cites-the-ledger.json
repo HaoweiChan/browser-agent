@@ -1,0 +1,20 @@
+{
+  "id": "adr029-variance-cites-the-ledger",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "invariant",
+    "check": "adr029-variance-cites-the-ledger"
+  },
+  "expect": {
+    "note": "every wall-clock measurement ADR-029 §1 quotes in support of the ceiling it sets is a `wall_s` on a committed local `fast` row — the section that argues from numbers may only argue from numbers a reader can read back."
+  },
+  "provenance": "PR #56 R3 (MEDIUM). ADR-029 §1 justified the second ceiling step with \"the same tree measured 84.83s and 88.87s within the hour\". Neither number exists in any committed report or ledger row: the local `fast` rows for that hour are 87.96 / 87.05 / 82.18 / 83.4 / 83.1. They were real measurements taken during the milestone and then discarded with the probe rows they belonged to (the T-M38-5 practice), which is exactly how a document ends up citing evidence nothing can read back — the class ADR-019 §6 exists to close and T-M39-14 names. Scoped to §1 because that section argues about the LOCAL band; §2's CI figures are hand-read off a named workflow run by ADR-019 §5's own ruling and are deliberately not in this ledger.",
+  "triage": {
+    "class": "unreadable-citation",
+    "note": "the fix is to argue from rows that exist, never to commit rows after the fact to fit a sentence"
+  }
+}

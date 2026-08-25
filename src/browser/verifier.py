@@ -464,6 +464,25 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     )
     check("answer_nonempty", bool(answer), "answer is empty")
 
+    # A step that FAILED and was never replaced is graded, whatever it failed
+    # at. `no_failed_postcondition` below reaches a step only through
+    # `postcondition_ok is False`, and `actions_verified` only through a
+    # state-changing verb with a null postcondition — so a `locate` or `extract`
+    # failure, which carries `failure_class` and leaves `postcondition_ok` None,
+    # was invisible to both. That was harmless while mode B ended the run at the
+    # first failed step; loop mode made a failed call routine, and a run whose
+    # last real call failed unsuperseded reported `success` with verdict PASS
+    # and the failure sitting in its own trace (PR #56 R6,
+    # `loop-abandoned-failure-is-not-a-success`).
+    #
+    # The line is the one `superseded_by` has always drawn, now applied to every
+    # class rather than to postconditions alone: a failure the run RECOVERED
+    # from is not graded (`verifier-superseded-not-a-loophole`,
+    # `loop-recovered-failure-still-verifies`), a failure it ABANDONED is.
+    abandoned = [s.get("i") for s in graded if s.get("failure_class")]
+    check("no_abandoned_failure", not abandoned,
+          f"step(s) {abandoned} failed and nothing replaced them")
+
     # A click changes state; an unverified state change is not a verified one.
     # `postcondition_ok is None` means "nothing was checked" — distinct from
     # False, and it must not read as success (case postcondition-unverified-click).

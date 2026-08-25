@@ -4887,6 +4887,18 @@ def _run_doc_counts_case(case: dict) -> dict:
         for q in s1["quotes"]:
             if (want := q.format(**vals)) not in text:
                 wrong.append({"analysis_section1_does_not_say": want})
+        # ...and the prose has to NAME the report those values came from. The
+        # numbers were derived here from the headline report while the sentence
+        # beside them credited a different file — "read out of the committed
+        # report X rather than tallied by hand", where X held 181 results, 287
+        # actions and 109 browser cases against the 207/367/132 printed next to
+        # it (PR #56 R4). Deriving a number and citing a source are two claims,
+        # and only the first was graded, so the sentence that makes the whole
+        # paragraph checkable was the one nothing checked.
+        if s1.get("cites_report") and (rid := ws["reports"][ws["headline"]]) not in text:
+            wrong.append({"analysis_section1_does_not_cite": rid,
+                          "note": "§1's figures are derived from this report; the prose credits "
+                                  "another"})
 
     cov = inp.get("analysis_coverage")
     domains: dict[str, int] = {}
@@ -5216,7 +5228,95 @@ def _check_driver_tools_match_the_executor() -> dict:
             "got": {"tools": sorted(tools), "actions": sorted(actions)}}
 
 
+def _check_ui_adrs_cover_every_decision() -> dict:
+    """The reviewer page's ADR digest lists every decision, once, as a 2-tuple.
+
+    `ADRS` is how a reader without the repo sees what this project decided, and
+    nothing read it: M42 widened it with a blind `"026",` -> `"026", "027",
+    "028",` substitution and produced a FOUR-element row against a
+    `([n, line])` destructure, so the page rendered "ADR-026 — 027", ADR-026's
+    real one-liner vanished, ADR-027/028/029 never reached a visitor, and
+    `${ADRS.length}` undercounted (PR #56 R2). The shape defect is the visible
+    half; the coverage defect is the one that had been there since M39, with
+    ADR-023 simply absent.
+
+    Read out of the page source rather than from a second list, for the reason
+    `_check_examples_cover_matrix` reads the EXAMPLES keys out of the page: a
+    copy maintained beside the thing it describes is the copy that drifts.
+    """
+    import re as _re
+
+    src = (Path(__file__).with_name("server.py")).read_text(encoding="utf-8")
+    block = src[src.index("const ADRS = ["):]
+    block = block[:block.index("\n];")]
+    rows = [_re.findall(r'"((?:[^"\\]|\\.)*)"', line)
+            for line in block.splitlines() if line.strip().startswith('["')]
+    wrong = []
+    # Shape first: a row that is not (id, one-liner) makes every id claim below
+    # unreadable, and it is what a destructure silently swallows.
+    if malformed := [r for r in rows if len(r) != 2]:
+        wrong.append({"rows_that_are_not_id_plus_one_liner": malformed})
+    listed = [r[0] for r in rows if r]
+    if dupes := sorted({n for n in listed if listed.count(n) > 1}):
+        wrong.append({"listed_more_than_once": dupes})
+    have = sorted(p.name[4:7] for p in
+                  (Path(__file__).parents[2] / "specs" / "decisions").glob("ADR-*.md"))
+    if missing := [n for n in have if n not in listed]:
+        wrong.append({"decisions_the_page_never_mentions": missing})
+    if extra := [n for n in listed if n not in have]:
+        wrong.append({"listed_but_no_such_adr": extra})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"listed": len(listed), "adr_files": len(have)}}
+
+
+def _check_adr029_variance_cites_the_ledger() -> dict:
+    """Every wall clock ADR-029 §1 argues from is a row a reader can read back.
+
+    §1 justified a second ceiling step with "the same tree measured 84.83s and
+    88.87s within the hour" — two numbers in no committed report and no ledger
+    row (PR #56 R3). They were real measurements, discarded with the probe rows
+    they belonged to under the T-M38-5 practice, which is exactly how a document
+    ends up arguing from evidence nothing can check: the honest handling is to
+    argue from the rows that survived, not to commit rows after the fact to fit
+    a sentence.
+
+    Scoped to §1, and that scope is the ruling rather than a convenience: §1
+    argues about the LOCAL band, which this ledger holds, while §2's CI figures
+    are hand-read off a named workflow run by ADR-019 §5 and are deliberately
+    not here (§7, T-R51). A check that demanded ledger backing for those would
+    be demanding the impossible and would be switched off within a week.
+
+    A `seconds` literal only — `101.15` in "x 1.15 = 101.15" carries no unit and
+    is arithmetic over a cited number, not a measurement of its own.
+    """
+    import json as _json
+    import re as _re
+
+    from evals.run import HISTORY
+
+    adr = next((Path(__file__).parents[2] / "specs" / "decisions").glob("ADR-029-*.md"))
+    text = adr.read_text(encoding="utf-8")
+    one = text[text.index("### 1."):]
+    one = one[:one.index("\n### ")] if "\n### " in one else one
+    rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
+    measured = {r["wall_s"] for r in rows
+                if r["suite"] == "fast" and r.get("env", "local") == "local"}
+    # Struck spans come out first, the same convention  and the
+    # criterion-5 sweep apply and for the same reason: this repo strikes a
+    # falsified claim in place with a dated pointer rather than deleting it, and
+    # a guard that reddens on preserved history is a guard someone turns off.
+    one = _re.sub(r"~~.*?~~", "", one, flags=_re.DOTALL)
+    quoted = {float(m) for m in _re.findall(r"(?<![\d.])(\d+\.\d+)s(?![\d.])", one)}
+    unreadable = sorted(q for q in quoted if q not in measured)
+    return {"passed": not unreadable,
+            "wrong": [{"quoted_in_adr029_section_1_but_in_no_local_fast_row": unreadable}]
+            if unreadable else [],
+            "got": {"quoted": sorted(quoted), "ledger_rows": len(measured)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
+              "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
+              "adr029-variance-cites-the-ledger": _check_adr029_variance_cites_the_ledger,
               "driver-tools-match-the-executor": _check_driver_tools_match_the_executor,
               "examples-cover-matrix": _check_examples_cover_matrix,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,

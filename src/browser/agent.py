@@ -1245,7 +1245,25 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         # after the submitted URL passed (url-guard-holds-after-navigation).
                         raise StepError("task", f"navigated to blocked URL: {page.url!r}")
                     if before is not None:
-                        after = await page_text(page)
+                        # The SAME scope `before` was read at. Reading `before`
+                        # main-frame-only and `after` across every frame made
+                        # `page_changed` true on every step of any page carrying
+                        # a text-bearing iframe — which disarms `changed_nothing`
+                        # (the whole evidence behind the anti-laundering guard,
+                        # in BOTH modes) and tells the loop driver a step that
+                        # changed nothing did something. It reproduced on this
+                        # repo's own `frames-host.html` while the identical plan
+                        # on `shop.html` stayed correct, which is why no case saw
+                        # it (PR #56 R1,
+                        # `replan-cannot-launder-noop-action-in-a-frame`).
+                        #
+                        # `frames=False` on both sides rather than True on both:
+                        # `observe.page_text`'s own docstring gives the argument,
+                        # and it was already made — a third-party iframe with a
+                        # ticking clock, a rotating ad or a chat bubble flips a
+                        # cross-frame comparison on every step. The asymmetry was
+                        # the bug; the calibration was right.
+                        after = await page_text(page, frames=False)
                         rec["page_changed"] = after != before
                         page_bodies[page.url] = after
                     checked = await check_state(page, step.get("expected_state"))
@@ -1406,8 +1424,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         # being read as the run's ranking declaration (cold
                         # review 2). `attempt` writes the pointer only once a
                         # replacement exists and never for `final_answer`, so a
-                        # model that gives up right after a failure is still
-                        # graded on that failure.
+                        # model that gives up right after a failure leaves it
+                        # unsuperseded — and `verify`'s `no_abandoned_failure`
+                        # is what makes that mean anything. The two halves have
+                        # to ship together: this exclusion asserted the property
+                        # for a round while the verifier could not see a
+                        # `locate` or `extract` failure at all, so the run
+                        # reported success with the failure in its own trace
+                        # (PR #56 R6).
                         pending_supersede.append(rec)
                         # `page_changed` is THREE-valued and null means "never
                         # compared", not "nothing moved" — every failure raised

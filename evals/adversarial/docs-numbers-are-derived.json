@@ -15,8 +15,8 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260825-183605-fast.json",
-        "invariant": "20260825-183631-invariant.json",
+        "fast": "20260825-192110-fast.json",
+        "invariant": "20260825-192130-invariant.json",
         "live": "20260823-164737-live.json"
       }
     },
@@ -104,7 +104,8 @@
         "{actions} browser actions in a `fast` run; **{with_browser} of the {total}** `fast` cases drive a real Chromium end to end",
         "The\nremaining {remaining} are those refusals plus pure-code probes of a single"
       ],
-      "why": "T-M39-5 / PR #44 R4: this pair sat three lines under a preamble saying every count in the section is current, read out of a report two trees old, while the split quote beside it was being kept honest. Recomputed from the headline report the same way, so it cannot drift again without going red."
+      "why": "T-M39-5 / PR #44 R4: this pair sat three lines under a preamble saying every count in the section is current, read out of a report two trees old, while the split quote beside it was being kept honest. Recomputed from the headline report the same way, so it cannot drift again without going red. PR #56 R4 added the citation half: the two figures were recomputed correctly from the headline report while the sentence carrying them credited `20260824-052304-fast.json`, a 181-case report holding 287 actions and 109 browser cases. Deriving a number and naming its source are two claims; grading only the first is how a paragraph stays arithmetically true and evidentially false.",
+      "cites_report": true
     }
   },
   "expect": {

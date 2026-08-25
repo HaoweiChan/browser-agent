@@ -1,0 +1,93 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "round": 1,
+  "reviewed_sha": "a305a33",
+  "gate": {
+    "invariant": "73/73 = 1.000, wall 13.84s, $0.0000",
+    "fast": "211/211 = 1.000, wall 85.68s, $0.0000",
+    "environment": "LOCAL ONLY — CI has not run this tree; see R7",
+    "baseline_file": "unchanged from main (.eval-baseline.json = {\"fast\": 1.0})"
+  },
+  "counts": {
+    "fixed": 7,
+    "rejected": 0,
+    "debt": 5
+  },
+  "findings": {
+    "R1": {
+      "state": "fixed",
+      "case": "replan-cannot-launder-noop-action-in-a-frame",
+      "red_observed": "status 'success', answer 'NIMBUS-10K-2025' — the laundering replan was accepted because page_changed read true on every step of a framed page",
+      "change": "src/browser/agent.py — `after = await page_text(page, frames=False)`, the same scope `before` is read at. `frames=False` on both sides rather than True on both: observe.page_text's docstring already carries the argument (a third-party iframe with a ticking clock unlatches the guard), so the asymmetry was the defect and the calibration was right.",
+      "now": "failure:act — 'replan would skip a failed action that changed nothing'"
+    },
+    "R2": {
+      "state": "fixed",
+      "case": "ui-adrs-cover-every-decision",
+      "red_observed": "unknown invariant check; then, once written, a four-element row against a two-element destructure plus ADR-023/027/028/029 absent",
+      "change": "src/browser/server.py — the corrupted row split back into ADR-026's own entry, and 023/027/028/029 given one-liners. New invariant reads the ADRS block out of the page source and requires every specs/decisions/ADR-*.md id exactly once, as a 2-tuple.",
+      "now": "30 rows, 30 ADR files, no malformed row"
+    },
+    "R3": {
+      "state": "fixed",
+      "case": "adr029-variance-cites-the-ledger",
+      "red_observed": "{'quoted_in_adr029_section_1_but_in_no_local_fast_row': [84.83, 88.87]}",
+      "change": "ADR-029 §1's variance argument now runs on 82.18s-87.96s, both committed rows; the two unreadable numbers are STRUCK in place with a dated pointer (the repo's convention for a falsified claim) rather than deleted. New invariant reads every seconds literal in §1 back against the committed local `fast` rows, stripping struck spans the way the other document sweeps do. The two runs were deliberately NOT committed after the fact to fit the sentence — that is the other way to close this finding and it is the dishonest one.",
+      "now": "quoted [73.06, 82.18, 87.96], all in the ledger"
+    },
+    "R4": {
+      "state": "fixed",
+      "case": "docs-numbers-are-derived (extended with `analysis_section1.cites_report`)",
+      "red_observed": "{'analysis_section1_does_not_cite': '20260825-183605-fast.json', 'note': \"§1's figures are derived from this report; the prose credits another\"}",
+      "change": "docs/analysis.md §1 cites the report its figures come from; the check now grades the citation as well as the arithmetic. Deriving a number and naming its source are two claims and only the first was graded."
+    },
+    "R5": {
+      "state": "fixed",
+      "case": null,
+      "why_no_case": "A prose contradiction inside one bullet. The nearest guard this round adds is `adr029-variance-cites-the-ledger`, which reads a section's numbers back against the ledger; the residue — `published-band-matches-the-ledger` grading scalars and never the sentences around them — is stated in the ledger note rather than pinned, because a general prose-consistency grader over ADR text is the unpricable sweep T-M32-9 already rejected.",
+      "change": "Both band bullets (§2 and §3) now give the reason a band republish is dirty and red in the GENERAL form that is true for every republish, then name this tree's addition. No bullet carries two case counts for one run."
+    },
+    "R6": {
+      "state": "fixed",
+      "case": "loop-abandoned-failure-is-not-a-success",
+      "red_observed": "status 'success', answer 'Meridian Wall Clock', verdict PASS, with step 3 extract failure_class=locate superseded_by=None in its own trace",
+      "change": "Ruling taken: GRADE the unsuperseded failure. verifier.verify gains `no_abandoned_failure` over `graded` — the same line `superseded_by` has always drawn, now applied to every failure class rather than to postconditions alone: a failure the run RECOVERED from is not graded, a failure it ABANDONED is. The agent.py comment that asserted the property now names what enforces it.",
+      "now": "failure:semantic — 'step(s) [3] failed and nothing replaced them'"
+    },
+    "R7": {
+      "state": "fixed",
+      "case": null,
+      "why_no_case": "The finding is that an environment has no measurement. A case cannot be written for it without inventing the measurement, which is the thing the finding forbids.",
+      "change": "CI's ceiling left at 90 and NOT raised. ADR-029 §2 now states outright that CI's `fast` ceiling for this tree is UNMEASURED, that the branch's gate evidence is local only, and that no document or PR body on this branch may claim the gate is green without that scope; it also records that the push to origin was denied by the harness permission classifier, so no PR and no CI run exist yet. ADR-019 §5 now says its four CI numbers measure a 152-case tree against this 211-case one. The workflow-run id is cited in §5 and CI's ceiling derived from it when the run exists.",
+      "open": "Blocked on the push. Carries forward to a later round."
+    },
+    "R8": {
+      "state": "debt",
+      "t_id": "T-M42-9"
+    },
+    "R9": {
+      "state": "debt",
+      "t_id": "T-M42-10"
+    },
+    "R10": {
+      "state": "debt",
+      "t_id": "T-M42-11"
+    },
+    "R11": {
+      "state": "debt",
+      "t_id": "T-M42-12"
+    },
+    "R12": {
+      "state": "debt",
+      "t_id": "T-M42-13"
+    }
+  },
+  "new_cases": [
+    "replan-cannot-launder-noop-action-in-a-frame (fast)",
+    "loop-abandoned-failure-is-not-a-success (fast)",
+    "ui-adrs-cover-every-decision (fast, invariant)",
+    "adr029-variance-cites-the-ledger (fast, invariant)"
+  ],
+  "note": "Two of the five reds were wrong-success on this repo's own fixtures, and both are the previous round's lesson one level out: M42 gave a failed call a way to be recorded and SURVIVED, and two guards that had only ever seen a run die at the first failure — the anti-laundering guard and the verifier — were never re-read against a trace where failure is routine. R1 is the same shape from the other side: `page_text` grew a deliberately narrower variant for one caller and the other half of that caller's own comparison did not get it. Neither is detectable on any fixture without an iframe."
+}

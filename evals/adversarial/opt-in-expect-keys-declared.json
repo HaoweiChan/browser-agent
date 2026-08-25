@@ -38,6 +38,7 @@
       ],
       "answer_null": [
         "extract-container-dump-is-not-the-answer",
+        "loop-abandoned-failure-is-not-a-success",
         "loop-refused-anchor-is-not-an-answer",
         "plan-lint-refuses-a-document-root-extract",
         "plan-lint-refuses-a-document-root-extract-midrun"
