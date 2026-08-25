@@ -282,7 +282,7 @@ demo failure shape either fixed with its case green, or declared as a
 limitation citing its case. Gate green; cold-reviewer + spec-drift before the
 commit (repo memory: review subagents run even when the harness says no).
 
-### M42 — loop mode: the model chooses every step, and the machinery that grades it does not move            [status: todo]
+### M42 — loop mode: the model chooses every step, and the machinery that grades it does not move            [status: in-progress]
 Origin: owner, 2026-08-25 — interviewer mandate relayed verbatim in intent:
 "complete the task by any means necessary, cost is not a constraint." Decision
 recorded as ADR-027 (read it first — its Invariants section is the boundary of
@@ -458,6 +458,175 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M42-4 — a postcondition can be satisfied by a document the action never touched            [status: todo]
+Origin: M42 cold review, finding 4 (HIGH), 2026-08-26. Accepted deliberately as
+the cost of leg (a); logged rather than fixed because the fix is a scoping
+decision, not a repair.
+Spec: `check_state`'s `text_visible` now reads `observe.page_text`, and its
+`role_visible` iterates `[page, *frames[1:]]`. Both are what make an iframe'd
+page verifiable at all — and both mean a click's `expected_state` can be earned
+by an element in a completely unrelated document: a consent iframe, a chat
+widget, a `display:none` tracking iframe (still in `page.frames`, still
+evaluable). The step then records `postcondition_ok: true` for an action that
+did nothing, which is the one thing a postcondition exists to make impossible.
+Nothing offline can see it: every fixture with a frame in this repo has exactly
+one, and it is the frame the task is about.
+Why not fixed here: the honest fix is to scope a postcondition to the document
+its action touched, which needs the executor to record which scope `resolve`
+returned from — a trace field, and ADR-028 §7 rules that the trace gains no
+fields in this milestone. It is also not obviously right: `wait_for` on a page
+that paints into an iframe legitimately wants the frame, and a `url_contains`
+predicate is page-level by nature. That is a decision with two defensible
+answers, which makes it an ADR rather than a patch.
+Acceptance: a ruling on whether a postcondition is document-scoped, and if so
+a `resolved.scope` (or equivalent) on the trace step plus the ADR-028 §7
+amendment that allows it — with a fixture carrying a decoy iframe whose text
+satisfies a predicate the main document does not, watched red first.
+
+### T-M42-5 — `not_a_dump`'s denominator and `evidence_window`'s offset now disagree about what "the page" is            [status: todo]
+Origin: M42 cold review, finding 4 (same finding, different consequence),
+2026-08-26. Related to but distinct from T-M42-3, which is about the offset
+alone.
+Spec: `body_len` is `len(page_text(page))` — every frame concatenated — while
+ADR-008 calibrated `not_a_dump`'s 0.35 ratio on main-frame `innerText` over a
+25-record pinned confusion matrix. Any page with a substantial iframe now has an
+inflated denominator, so a value that IS a dump of its own document can pass. No
+committed case moves, because no fixture in the calibration set has a frame; the
+ratio was measured on pages that do not exist any more in the shape it was
+measured on.
+Why not fixed here: raising or re-deriving DUMP_RATIO is an ADR-008 amendment
+and needs the confusion matrix re-run on framed pages, which needs framed pages
+in the labelled set (`evals/labels/`). That is a measurement task, and guessing
+a new ratio is exactly what ADR-008 exists to prevent.
+Acceptance: either `body_len` becomes the length of the document the value was
+read FROM (the narrower, probably-correct answer, and it composes with T-M42-3's
+per-frame offsets — one change, two debts closed), or ADR-008 is amended with a
+re-derived ratio over a labelled set that includes framed pages. Red-first case:
+a framed fixture where a main-document dump passes today.
+
+### T-M42-6 — the no-progress harness cannot see a run that repeats one call on one page            [status: todo]
+Origin: M42 cold review, finding 7, 2026-08-26. The `ponytail:` comment in
+`agent.drive_loop` names this ceiling; this block is the tracked version of it.
+Spec: a visit is an ARRIVAL — `if state != last_state: st["visits"] += 1` — so
+a model that emits the same call on the same page forever never advances the
+counter and dies at the step cap with "budget exhausted": the symptom-not-cause
+failure the harness exists to replace. Arrival-counting is what stopped the
+harness killing legitimate multi-step work (select → click → wait is three turns
+on one page), so it is not simply wrong, but it covers one of the two shapes.
+The second, cheap-looking fix — count a repeated (state, call) pair — was left
+out on purpose rather than added speculatively: nothing has produced the shape,
+and this milestone already shipped one harness that misfired on its own golden
+case.
+Acceptance: a stub-driven case scripting the same call on an unchanged page
+until the run ends, watched red (it currently ends `budget exhausted: actions
+40/40`, naming a resource rather than a cause), then a (state, call-intent)
+repeat counter sharing `LOOP_REVISIT_CAP`'s threshold.
+
+### T-M42-7 — `ADR-022`'s file is titled `ADR-020`            [status: todo]
+Origin: M42 spec-drift audit, finding 13, 2026-08-26. Pre-existing, unrelated to
+M42; logged rather than fixed under the debt rule.
+Spec: `specs/decisions/ADR-022-m40-declaring-a-domain-from-live-runs.md` opens
+with `# ADR-020: Declaring a domain from live runs…`, so two ADRs claim number
+020 by title (`ADR-020-m32-observation-drill-down.md` is the real one).
+`adr-header-and-index` passes because it keys on filenames and INDEX entries and
+never on the H1, so this rots in silence in both directions — and ADR-027 and
+ADR-028 both lean on ADR-022 by number.
+Acceptance: the H1 corrected, and `adr-header-and-index` extended to require the
+H1's number to match the filename's — watched red against the current file,
+which is what makes the fix stick.
+
+### T-M42-8 — the reviewer UI cannot select loop mode and describes mode B's guards to every visitor            [status: todo]
+Origin: M42 spec-drift audit, finding 14, 2026-08-26.
+Spec: `POST /tasks` takes `mode` (ADR-028), but `submitTask` in the reviewer page
+never sends it, so loop mode is reachable only by raw HTTP or the
+`BROWSER_AGENT_MODE` env default. Separately, the `#guards` line reads "up to 30
+actions and 2 replans per run · a run costs about $0.001 in model tokens" — mode
+B's numbers, printed unconditionally, so under `BROWSER_AGENT_MODE=loop` every
+visitor is shown the wrong ceilings for the run they are watching (40 actions, 0
+replans, a $5.00 ceiling, a frontier model). ADR-028 names the USD ceiling as
+the only bound on a public unauthenticated endpoint, which makes the sentence a
+visitor reads the wrong one to have wrong.
+Why not fixed here: M42's acceptance is "per-run cost visible in the trace/UI",
+which the budgets line already satisfies (it renders `llm_usd` per run, and loop
+runs populate it). A mode SELECTOR is a product decision that belongs with M44's
+"does loop mode earn default-ness" evidence, not ahead of it.
+Acceptance: the guards line reads from the mode the run actually used (the
+result now carries `mode`), and either a mode control in the UI or an explicit
+note that mode is deployment-level — decided with M44's evidence.
+
+### T-M42-1 — mode B's planner prompt still advertises six actions while the executor implements eleven            [status: todo]
+Origin: M42 implementation, 2026-08-26. Found while widening the vocabulary;
+deliberately not fixed in that PR.
+Spec: ADR-027 Decision 2 widens the action vocabulary for BOTH modes, and
+`agent.ACTIONS` now implements `select_option`, `scroll`, `press`, `wait_for`
+and `go_back` for both. But `planner.SYSTEM` — the mode B prompt — still lists
+`navigate|click|fill|extract|extract_all|observe` and nothing else, so a live
+mode B planner will never emit any of the five. The capability is real and
+graded (five red-first cases, all mode B fixture runs with hand-written plans);
+what is missing is that the live planner is told about it.
+Why it was not done in M42: adding five verbs to `SYSTEM` changes what every
+live mode B run plans, and this repo's rule for that is a measurement, not an
+edit — the M9 ablation, the M40 probe set and D28's declared rows are all
+statements about the planner as it is prompted today. Doing it inside a
+milestone whose acceptance is a LOOP-mode smoke would move mode B's behaviour
+under cover of a change about the other mode, and no case in `fast` can see the
+difference because every offline plan is hand-written (`stub_planner`).
+Acceptance: `SYSTEM` gains the five verbs with their postcondition obligations
+stated (`press`/`go_back` must carry `expected_state`; `wait_for` needs a
+predicate; `extract_all` unchanged), `planner-prompt-carries-the-note`'s sibling
+check is extended to pin that the advertised vocabulary equals
+`agent.ACTIONS` minus `final_answer` — watched red first against today's
+`SYSTEM` — and the change lands with a live probe under the ADR-022/ADR-025
+protocol showing the regressed set did not move, because that is the only thing
+that can tell "the planner can now wait" from "the planner now waits instead of
+planning".
+
+### T-M42-2 — `live_driver` is unexercised: no case, offline or live, has ever called it            [status: todo]
+Origin: M42 implementation, 2026-08-26.
+Spec: `planner.live_driver` builds the OpenRouter tool-calling payload, sends
+it, and turns the response into a step through `parse_tool_call`. Its pure
+parts are reachable and partly graded — `build_driver_user`, `trace_digest`,
+`TOOLS`, `parse_tool_call` are all module-level and pure — but the function
+itself has been executed exactly zero times, offline or live, because
+`OPENROUTER_API_KEY` is not set in this environment and no `full`-tagged case
+asks for `driver: "live"`. The eval adapter accepts `input.driver == "live"`,
+so the hook exists; nothing pulls it. This is the same epistemic split ADR-027
+declares for the loop generally ("what the stub cannot grade is the live
+model's step choices"), but it is WIDER than that sentence admits: what is
+ungraded here is not only the model's choices, it is whether the request this
+code builds is one OpenRouter accepts at all — a wrong `tools` shape, a
+provider that ignores `tool_choice: "required"`, or a `tool_calls` envelope
+shaped differently from the assumption in `parse_tool_call` would each be
+invisible until the first live run.
+Acceptance: a `full`-tagged case with `driver: "live"` against a fixture, run
+manually with a key, its run id and cost published — plus, if the first attempt
+finds an envelope mismatch, an adversarial case pinning that shape through
+`parse_tool_call` at $0. Blocked on a key, not on design; M42's live smoke is
+the natural place it gets exercised for the first time.
+
+### T-M42-3 — `evidence_window`'s DOM offset hint is computed per frame but consumed against the concatenated page text            [status: todo]
+Origin: M42 implementation, 2026-08-26. A known, bounded imprecision introduced
+by `observe.page_text`, not a defect anything has produced.
+Spec: `agent.TEXT_OFFSET_JS` walks up from the extracted element to its own
+`<body>`, so the offset it returns is relative to THAT FRAME's text. Since M42,
+`page_text` concatenates the main frame's text with each child frame's, so for
+an element inside an iframe the hint is short by the length of everything
+before that frame. `_closest_occurrence` uses the hint only to choose among
+multiple occurrences of the same string, so the cost is bounded: on a page
+where a value occurs once (most extractions) nothing changes at all, and on one
+where it occurs twice the evidence window can centre on the wrong occurrence —
+which degrades evidence selection, never the verdict, since a value absent from
+the window fails the grounding check either way.
+Repro: an iframe'd page carrying the same value in the main document and in the
+frame, extracted from the frame; the window centres on the main document's copy.
+No fixture has this shape.
+Acceptance: either the hint is offset by the running length of the frames
+already concatenated (the fix is a few lines in `page_text` returning per-frame
+lengths, and `execute` adding the frame's base), or a declared support-matrix
+row saying evidence-window selection is main-frame-accurate only — whichever
+way, with a fixture carrying the duplicated value across a frame boundary and
+the case watched red first.
 
 ### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: todo]
 Origin: the ADR-027 planning commit, 2026-08-25, on a worktree of this branch.

@@ -1,12 +1,12 @@
 {
-  "_what": "Frozen evidence for ADR-010 Decision 2: the five ids POST /tasks accepts (the incumbent default first, then the four the M9 ablation runs), as https://openrouter.ai/api/v1/models returned them.",
+  "_what": "Frozen evidence for ADR-010 Decision 2 and ADR-028: the ids POST /tasks accepts (the superseded incumbent first \u2014 kept as the evidence for Decision 6's exclusion and no longer accepted \u2014 then the four the M9 ablation runs, then M42's loop-mode addition), as https://openrouter.ai/api/v1/models returned them.",
   "_source": "https://openrouter.ai/api/v1/models",
   "_read_on": "2026-08-20",
   "_refrozen_on": "2026-08-20, later the same session",
   "_why_refrozen": "`deepseek/deepseek-v4-pro` \u2014 the model that DEFINES the owner's price ceiling \u2014 moved from 0.00000144/0.00000288 to 0.0000016/0.0000032 per token inside a single working session. Caught by review round 3 (PR #15, R16) comparing this file against the live endpoint. The other four entries were unchanged to the digit and _total_models_in_response was 414 in both reads, so this is real supplier drift, not a transcription error \u2014 and it is the strongest possible argument for the snapshot existing at all: a list price quoted in prose goes stale in hours.",
   "_ceiling_model": "deepseek/deepseek-v4-pro",
   "_ceiling_rule": "The owner's ruling (2026-08-20) is that the CEILING IS THE MODEL, NOT THE NUMBER: `deepseek/deepseek-v4-pro` stays in the ablation set at whatever it lists for, and every other ablated model must price at or under it on both prompt and completion. `planner.CEILING_MODEL` names it; the effective ceiling is derived from this file's entry for it, so a number here and a number in code can no longer disagree.",
-  "_total_models_in_response": 414,
+  "_total_models_in_response": 418,
   "_selection_source": "https://openrouter.ai/rankings#leaderboard-table, 'Usage data through Aug 19, 2026'. That page states: 'These rankings measure adoption, not quality. They do not rank models by accuracy, reasoning ability, or benchmark performance' \u2014 verified first-hand. The rank positions in ADR-010 come from the coordinating session's in-app browser read; the table itself is script-rendered and not readable here.",
   "models": [
     {
@@ -87,6 +87,29 @@
         "input_cache_read": "0.000000028"
       },
       "_role": "ablation set"
+    },
+    {
+      "id": "anthropic/claude-opus-5",
+      "name": "Claude Opus 5",
+      "context_length": 1000000,
+      "pricing": {
+        "prompt": "0.000005",
+        "completion": "0.000025",
+        "web_search": "0.01",
+        "input_cache_read": "0.0000005",
+        "input_cache_write": "0.00000625",
+        "input_cache_write_1h": "0.00001"
+      },
+      "_role": "M42 loop-mode addition (ADR-027 Decision 4, ADR-028). Accepted by POST /tasks, NOT ablated, and above the ADR-010 ceiling by construction \u2014 that is the declared amendment, not a drift. Vision- and tool-capable, which is what loop mode and M43 need.",
+      "_read_on": "2026-08-26",
+      "_input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "_supports_tools": true
     }
-  ]
+  ],
+  "_amended_on": "2026-08-26",
+  "_why_amended": "M42/ADR-028 adds one loop-mode model to ALLOWED_MODELS. ADR-027 Decision 4 lifts ADR-010's price ceiling for loop-mode additions only, each allowlisted by explicit id with its price recorded \u2014 so the entry is appended here (read from the live endpoint on the date above, never typed) rather than the ceiling being raised. It is deliberately absent from ABLATION_MODELS, which is where the ceiling sweep runs; `gateway-model-reaches-planner`'s loop-model clause reddens if it ever leaks in."
 }

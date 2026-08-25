@@ -413,6 +413,12 @@ def answers_match(got, want) -> bool:
     return normalize(got) == normalize(want)
 
 
+# Verbs that change the page and cannot verify themselves. The comment at the
+# `unverified` check inside `verify` carries the argument for every inclusion
+# and every omission.
+STATE_CHANGING = {"click", "press", "go_back"}
+
+
 def verify(*, trace, extractions, answer, expect=None, state=None, task=None) -> dict:
     """Return {"verdict": PASS|FAIL|INCONCLUSIVE, "layer", "checks", "reason"}.
 
@@ -461,8 +467,17 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     # A click changes state; an unverified state change is not a verified one.
     # `postcondition_ok is None` means "nothing was checked" — distinct from
     # False, and it must not read as success (case postcondition-unverified-click).
+    #
+    # M42 widens this from `click` alone to every verb that changes state
+    # without verifying itself. `fill`, `select_option` and `scroll` each read
+    # back what the browser holds and set their own `postcondition_ok`, so they
+    # need no authored assertion; `press` and `go_back` change state exactly the
+    # way a click does and would otherwise have had exactly a click's hole.
+    # `navigate` is deliberately out: its consequence is the URL it was handed,
+    # and requiring an assertion for it would fail every plan in this repo that
+    # begins by going somewhere.
     unverified = [s["i"] for s in graded
-                  if s.get("action") == "click" and s.get("postcondition_ok") is None]
+                  if s.get("action") in STATE_CHANGING and s.get("postcondition_ok") is None]
     check(
         "actions_verified",
         not unverified,

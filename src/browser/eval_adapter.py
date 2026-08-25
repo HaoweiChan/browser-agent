@@ -44,7 +44,7 @@ from pathlib import Path
 
 from .agent import assemble_result, run_task
 from .judge import live_judge, stub_judge
-from .planner import live_planner, stub_planner
+from .planner import live_driver, live_planner, stub_driver, stub_planner
 from .verifier import verify
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -1441,8 +1441,16 @@ def _run_schema_case(case: dict) -> dict:
     emitted (M2 close-out)."""
     inp = case["input"]
     fixture_url = f"{_base_url()}/fixtures/{inp['fixture']}"
-    steps = _subst(inp["stub_plan"], fixture_url)
-    result = _run_agent(inp["task"], fixture_url, stub_planner([steps]))
+    # M42: the same conformance check for a LOOP run. ADR-027's "the trace stays
+    # the evidence" is a claim that loop mode emits the SAME TraceStep with no
+    # loop-only fields and no second evidence pipeline, and a claim about a
+    # schema is worth exactly what checks it.
+    if inp.get("mode") == "loop":
+        result = _run_agent(inp["task"], fixture_url, None, mode="loop",
+                            driver=stub_driver(_subst(inp["stub_calls"], fixture_url)))
+    else:
+        steps = _subst(inp["stub_plan"], fixture_url)
+        result = _run_agent(inp["task"], fixture_url, stub_planner([steps]))
 
     got = {
         "result": list(result),
@@ -2008,6 +2016,17 @@ def _run_fixture_case(case: dict) -> dict:
     # the case fails loudly; stubbing it would grade a capability nobody ran
     # (CLAUDE.md rule 4).
     planner = live_planner() if inp.get("planner") == "live" else stub_planner(plans)
+    # M42 loop mode (ADR-027/ADR-028). `stub_calls` scripts one tool call per
+    # model turn at the SAME injection boundary `stub_plans` uses, so the loop
+    # driver, every new action, budget exhaustion and the trace shape are all
+    # graded at $0.00 offline — the eval-first cost ADR-027 names as the real
+    # engineering price of loop mode. `driver: "live"` is the same opt-in shape
+    # `planner: "live"` is, and only a `full`-tagged case may ask for it.
+    mode = inp.get("mode", "plan")
+    driver = None
+    if mode == "loop":
+        driver = (live_driver() if inp.get("driver") == "live"
+                  else stub_driver(_subst(inp["stub_calls"], fixture_url or "")))
     # What the planner was actually SHOWN, per call. A stub plan is hand-written
     # (every plan in this repo is), so a case whose point is "the planner could
     # not have known this string" proves nothing from the plan alone — the M32
@@ -2020,6 +2039,10 @@ def _run_fixture_case(case: dict) -> dict:
         shown.append(observation)
         return await planner(task, url, observation, note)
 
+    async def recording_driver(task, url, observation=None, trace=None, found=None, note=None):
+        shown.append(observation)
+        return await driver(task, url, observation, trace, found, note)
+
     # M36: `judge: "live"` is the same opt-in shape as `planner: "live"` --
     # only a `full`-tagged case may spend real tokens on it. `judge_verdicts`
     # (mirrors `stub_plans`) lets a case script certify/reject/"error" per
@@ -2027,9 +2050,12 @@ def _run_fixture_case(case: dict) -> dict:
     # is what every case written before M36 needs to keep meaning what it did.
     judge = (live_judge() if inp.get("judge") == "live"
              else stub_judge(inp["judge_verdicts"]) if "judge_verdicts" in inp else None)
-    result = _run_agent(inp["task"], inp.get("url", fixture_url), recording_planner,
+    result = _run_agent(inp["task"], inp.get("url", fixture_url),
+                        None if mode == "loop" else recording_planner,
                         url_guard=guard, own_browser=inp.get("own_browser", False),
-                        judge=judge)
+                        judge=judge, mode=mode,
+                        driver=recording_driver if mode == "loop" else None,
+                        loop_budgets=inp.get("loop_budgets"))
 
     # Re-verify with ground truth the runtime cannot have: hand labels, identity
     # anchors, and the fixture's own record of what it received.
@@ -2122,10 +2148,46 @@ def _run_fixture_case(case: dict) -> dict:
     if "planner_note_contains" in exp:
         checks["planner_note_contains"] = any(
             exp["planner_note_contains"] in (n or "") for n in getattr(planner, "notes", []))
+    # The loop's half of the same claim: what the DRIVER was told between turns.
+    # Two of M42's mechanisms exist only in that message — the re-homed refusal
+    # the model is expected to recover from, and the forced strategy change the
+    # no-progress harness sends before it gives up — and neither is visible in
+    # the trace or the status. Without this key a harness that silently gave up
+    # without ever telling the model would pass
+    # (`loop-no-progress-revisit-ends-the-run-loudly`).
+    if "driver_note_contains" in exp:
+        checks["driver_note_contains"] = any(
+            exp["driver_note_contains"] in (n or "") for n in getattr(driver, "notes", []))
+    # `postcondition_ok` per step, in trace order, as a list — true / false /
+    # null, where null means nothing was asserted and is NOT true. M42 adds five
+    # verbs and the whole of what distinguishes them from a no-op is what they
+    # verify, so the postcondition column is asserted rather than described:
+    # `select_option` reads back what is selected, `scroll` reads back the
+    # position, `wait_for` IS its predicate, and `press`/`go_back` carry an
+    # authored one. Deleting any of those readbacks turns a case here red
+    # instead of leaving a green run that checked nothing.
+    if "trace_postconditions" in exp:
+        checks["trace_postconditions"] = [
+            s.get("postcondition_ok") for s in trace] == exp["trace_postconditions"]
+    # A substring of the terminal `reason`. Used where the STATUS is not the
+    # claim: three different guards can end a run `failure:env`, and a
+    # no-progress stop that reported a step cap would be exactly the symptom-
+    # not-cause failure the harness exists to replace.
+    if "reason_contains" in exp:
+        checks["reason_contains"] = exp["reason_contains"] in (result["reason"] or "")
+    # Every step, superseded ones included. It skipped superseded steps until
+    # M42, which was invisible while the only writers of `superseded_by` were
+    # mode B's ladders — there, a superseded note IS stale, replaced by the
+    # attempt that followed. Loop mode supersedes a REFUSED call with the
+    # recovery the model chose, and the refusal is exactly the thing the trace
+    # has to be able to show: `loop-refuses-a-document-root-extract` ends
+    # `success`, so nothing but this record distinguishes "the root read was
+    # refused and the model recovered" from "the root read was quietly allowed".
+    # Broadening only ever finds more, so every case written against the old
+    # semantics means what it always did.
     if "trace_note_contains" in exp:
         checks["trace_note_contains"] = any(
-            exp["trace_note_contains"] in (s.get("note") or "")
-            for s in trace if not s.get("superseded_by"))
+            exp["trace_note_contains"] in (s.get("note") or "") for s in trace)
     # Generic budgets_spent probe (M36): a case names the fields it cares
     # about and their exact expected values, e.g. `{"judge_calls": 1,
     # "judge_usd": 0.0}` to prove the judge ran exactly once and the fast
@@ -2930,12 +2992,25 @@ def _run_gateway_model_case(case: dict) -> dict:
     from . import server as S
 
     seen: list = []
+    factories: list = []
 
     def recorder(model=None):
         seen.append(model)
+        factories.append("planner")
         raise RuntimeError("eval recorder: planner never constructed")
 
+    def driver_recorder(model=None):
+        # M42: the loop mode's factory gets the same treatment, and for the same
+        # reason — a `mode` field that is accepted, validated and then dropped
+        # looks identical over HTTP to one that selects the driver. It must also
+        # be swapped for the $0 property to hold: without it a `mode: "loop"`
+        # row would construct a real driver and open a real browser.
+        seen.append(model)
+        factories.append("driver")
+        raise RuntimeError("eval recorder: driver never constructed")
+
     base, prev = _base_url(), S.live_planner
+    prev_driver = S.live_driver
     wrong = []
     # The allowlist and the frozen verification evidence must name the same four
     # models. Without this the ADR's "every id verified against OpenRouter on
@@ -2956,6 +3031,27 @@ def _run_gateway_model_case(case: dict) -> dict:
         if unfrozen := [m for m in ALLOWED_MODELS if m not in snap_ids]:
             wrong.append({"allowlisted_but_not_in_the_verified_snapshot": unfrozen,
                           "verified_snapshot": snap_ids, "read_on": snap.get("_read_on")})
+        # M42/ADR-028: the loop-mode additions are ADR-027's declared amendment
+        # to ADR-010's price ceiling, and an amendment is only as narrow as
+        # something checks. ADR-027 scopes it: the ceiling STAYS for the
+        # ablation arms and for mode B's default, and is lifted ONLY for
+        # loop-mode ids, each allowlisted explicitly with its price recorded.
+        # Three properties, because dropping any one of them turns "a declared
+        # amendment" back into "the ceiling drifted": a loop model must be
+        # accepted by the endpoint, must be frozen evidence like every other
+        # accepted id (the containment check above already sees it), and must
+        # NOT be in the ablation set — where the ceiling sweep below runs, and
+        # where its presence would either break the sweep or quietly raise the
+        # bar for every ablated model.
+        from .planner import LOOP_MODELS
+
+        for mid in LOOP_MODELS:
+            if mid not in ALLOWED_MODELS:
+                wrong.append({"loop_model_not_accepted_by_the_endpoint": mid})
+            if mid in ABLATION_MODELS:
+                wrong.append({"loop_model_leaked_into_the_ablation_set": mid,
+                              "note": "ADR-027 lifts ADR-010's ceiling for loop mode ONLY; an "
+                                      "id in the ablation set is measured under that ceiling"})
         if SUPERSEDED_INCUMBENT in ALLOWED_MODELS:
             wrong.append({"superseded_incumbent_still_accepted": SUPERSEDED_INCUMBENT})
         if SUPERSEDED_INCUMBENT not in snap_ids:
@@ -3021,9 +3117,12 @@ def _run_gateway_model_case(case: dict) -> dict:
     # recorder still installed, breaking every later case in the same process and
     # attributing the damage to unrelated cases (PR #15, R6).
     S.live_planner = recorder
+    S.live_driver = driver_recorder
     try:
         for chk in case["input"]["checks"]:
             payload = {"task": case["input"]["task"]}
+            if chk.get("mode") is not None:
+                payload["mode"] = chk["mode"]
             # `model: null` in a case file means "omit the field"; the sentinel is
             # how a case says "send an explicit JSON null", which is a different
             # request and, since PR #15 R8, a pinned one.
@@ -3052,6 +3151,9 @@ def _run_gateway_model_case(case: dict) -> dict:
                 got["detail"] = body.get("detail")
             got["planner_model"] = seen[before] if len(seen) > before else None
             want = {"http": chk["http"], "planner_model": chk["planner_model"]}
+            if "factory" in chk:
+                got["factory"] = factories[before] if len(factories) > before else None
+                want["factory"] = chk["factory"]
             if chk.get("detail_contains"):
                 want["detail"] = chk["detail_contains"]
                 got["detail"] = chk["detail_contains"] if chk["detail_contains"] in str(
@@ -3061,7 +3163,9 @@ def _run_gateway_model_case(case: dict) -> dict:
                               "got": {k: got.get(k) for k in want}})
     finally:
         S.live_planner = prev
-    return {"passed": not wrong, "wrong": wrong, "recorded_models": seen}
+        S.live_driver = prev_driver
+    return {"passed": not wrong, "wrong": wrong, "recorded_models": seen,
+            "recorded_factories": factories}
 
 
 def _run_ablation_run_one_case(case: dict) -> dict:
@@ -5063,7 +5167,57 @@ def _check_narrowing_fails_closed() -> dict:
             "got": {"signature": str(inspect.signature(_nearest))}}
 
 
+def _check_driver_tools_match_the_executor() -> dict:
+    """The tools the loop driver OFFERS and the actions the executor IMPLEMENTS
+    are the same set, and every declared parameter is a key the executor reads.
+
+    `planner.py` asserted this in a comment naming a case id that existed
+    nowhere in the tree (spec-drift audit, finding 1B). The two lists agreed
+    only because one person wrote them in one sitting, which is the weakest
+    guarantee this repo accepts for anything.
+
+    Both directions fail, and they fail differently. A tool the executor does
+    not implement is a run that dies `failure:task` on a call the model was
+    invited to make. An action the tools omit is a capability the model cannot
+    reach at all — and no offline case would ever notice, because every offline
+    call is hand-scripted, so the stub can call an action the real driver was
+    never told about.
+
+    `navigate` is in both. `final_answer` is a tool AND an executor action
+    (it takes a trace record like every other call), so no carve-out is needed
+    in either direction.
+    """
+    from .agent import ACTIONS, NEEDS_TARGET
+    from .planner import STEP_KEYS, TOOL_TABLE, TOOLS
+
+    wrong = []
+    tools, actions = set(TOOL_TABLE), set(ACTIONS)
+    if extra := sorted(tools - actions):
+        wrong.append({"offered_to_the_model_but_not_implemented": extra})
+    if missing := sorted(actions - tools):
+        wrong.append({"only_the_executor_implements": missing})
+    # A declared parameter the executor never reads is a plan the model is
+    # invited to write and the executor silently reinterprets — the shape
+    # `resolver-unknown-target-key` rules on one level down.
+    for action, (_desc, params, required) in TOOL_TABLE.items():
+        if unknown := sorted(set(params) - STEP_KEYS):
+            wrong.append({"tool": action, "declares_a_parameter_no_step_carries": unknown})
+        if missing_req := sorted(set(required) - set(params)):
+            wrong.append({"tool": action, "requires_a_parameter_it_does_not_declare": missing_req})
+        # An action that cannot run without a resolved element must ask for one.
+        if action in NEEDS_TARGET and "target" not in required:
+            wrong.append({"tool": action, "needs_a_target_but_does_not_require_one": True})
+    # The JSON schema list is generated from the table, so it must not drift
+    # from it either — a hand-edited TOOLS entry is the third way to disagree.
+    if [t["function"]["name"] for t in TOOLS] != list(TOOL_TABLE):
+        wrong.append({"tools_schema_names": [t["function"]["name"] for t in TOOLS],
+                      "table": list(TOOL_TABLE)})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"tools": sorted(tools), "actions": sorted(actions)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
+              "driver-tools-match-the-executor": _check_driver_tools_match_the_executor,
               "examples-cover-matrix": _check_examples_cover_matrix,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,

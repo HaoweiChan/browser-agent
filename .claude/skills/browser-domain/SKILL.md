@@ -56,7 +56,25 @@ this function without re-reading them is how it went wrong the first time.
 
 Known holes, both declared in the support matrix: `near` degenerates inside
 shadow DOM (`querySelectorAll('*')` doesn't pierce open shadow roots, so
-`indexOf` is -1 and everything ties), and no fixture has one.
+`indexOf` is -1 and everything ties). **A fixture now has one** —
+`frames-host.html`, added by M42 — so the second half of that sentence is no
+longer the reason it is unfixed; `NEAREST_JS` simply has not been touched.
+
+**Frames (M42, ADR-028).** A locator never crosses a frame boundary and
+`page.accessibility.snapshot()` stops at one, so before M42 an iframe's contents
+were in no observation at any budget and resolved at no tier. `observe()` now
+continues into every child frame via Playwright's own `aria_snapshot()`, and
+`resolve()` builds the same tiers in each scope, main frame first. `near` is
+scoped to the frame its candidates are in.
+
+**Shadow roots are two different questions, and only one was broken.** An open
+shadow root is already in the accessibility tree and already resolvable —
+`observe` listed the button and `resolve` clicked it before M42. What was blind
+was the EVIDENCE: `page.inner_text("body")` does not traverse shadow roots, so a
+correct read was failed as ungrounded, `text_visible` could never hold over
+shadow content, and `page_changed` could not see a shadow-only mutation. Read
+the page through `observe.page_text(page)` — never `page.inner_text("body")` —
+and that stays fixed.
 
 **Narrowing (M38, ADR-026) is where an ambiguity goes before it fails.** Same
 warning as `near:` — three rungs, each bought with a deployment run, and the

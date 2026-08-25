@@ -13,14 +13,14 @@
         "action": "extract",
         "target": {
           "role": "WebArea",
-          "name": "Hello \u2014 browser agent"
+          "name": "Hello Fixture"
         }
       },
       {
         "action": "extract",
         "target": {
           "role": "heading",
-          "name": "Hello, browser agent"
+          "name": "Hello Fixture"
         }
       },
       {
@@ -30,7 +30,7 @@
   },
   "expect": {
     "status": "success",
-    "answer": "Hello, browser agent",
+    "answer": "Hello Fixture",
     "trace_actions": [
       "navigate",
       "extract",

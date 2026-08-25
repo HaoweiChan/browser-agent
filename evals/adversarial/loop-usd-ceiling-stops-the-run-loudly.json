@@ -14,17 +14,22 @@
         "action": "observe",
         "target": {
           "role": "heading",
-          "name": "Hello, browser agent"
+          "name": "Hello Fixture"
         },
         "_usage": {
-          "llm_tokens": 10,
-          "llm_usd": 99.0
+          "llm_tokens": 0,
+          "llm_usd": 2e-06
         }
       },
       {
         "action": "final_answer"
       }
-    ]
+    ],
+    "loop_budgets": {
+      "actions": 40,
+      "llm_tokens": 400000,
+      "llm_usd": 1e-06
+    }
   },
   "expect": {
     "status": "failure:env",
@@ -32,7 +37,11 @@
     "trace_actions": [
       "navigate",
       "observe"
-    ]
+    ],
+    "budgets": {
+      "llm_tokens": 0,
+      "llm_usd": 2e-06
+    }
   },
-  "provenance": "The other half of ADR-027 Decision 4: a USD ceiling, not only a token one. A frontier model's price is the reason tokens alone stop being the right meter (ADR-010's ceiling is a MODEL, and loop mode is allowed above it), so the runaway guard has to be able to trip on dollars. Mode B's RUN_BUDGETS has no llm_usd key and is unchanged."
+  "provenance": "The other half of ADR-027 Decision 4: a USD ceiling, not only a token one. Mode B plans once with a model held under ADR-010's price ceiling, so tokens are a faithful meter for it; loop mode calls a frontier model once per step, where the same token count can be two orders of magnitude apart in money \u2014 3 tokens trip a $0.01 cap here while 400,000 would not have moved the token cap at all, which is precisely the asymmetry the second meter exists for. Mode B's RUN_BUDGETS has no llm_usd key and is unchanged."
 }

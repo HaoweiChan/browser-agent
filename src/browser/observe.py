@@ -81,14 +81,29 @@ NAME_PROHIBITED = {"definition", "term", "code", "emphasis", "strong", "caption"
 # case ever cares.
 PAGE_TEXT_JS = """() => {
   const parts = [document.body ? document.body.innerText : ''];
+  // Depth-first over the shadow subtree, skipping any element the page is not
+  // rendering AND everything under it. Checking only the root's direct children
+  // was the first version and it was structurally inert on the shape shadow DOM
+  // actually takes in the wild — one wrapper <div> with hidden panels inside —
+  // so hidden text grounded answers, satisfied `text_visible` postconditions
+  // and inflated `not_a_dump`'s denominator (cold review 4). Text nodes are
+  // read per element rather than via textContent so a hidden descendant cannot
+  // ride in on a visible ancestor's text.
+  const text = (root, out) => {
+    for (const el of root.children) {
+      if (el.checkVisibility && !el.checkVisibility()) continue;
+      for (const n of el.childNodes) {
+        if (n.nodeType === 3 && n.textContent.trim()) out.push(n.textContent.trim());
+      }
+      text(el, out);
+    }
+  };
   const walk = (r) => {
     for (const el of r.querySelectorAll('*')) {
       if (!el.shadowRoot) continue;
-      for (const child of el.shadowRoot.children) {
-        if (child.checkVisibility && !child.checkVisibility()) continue;
-        const t = (child.textContent || '').trim();
-        if (t) parts.push(t);
-      }
+      const out = [];
+      text(el.shadowRoot, out);
+      if (out.length) parts.push(out.join(' '));
       walk(el.shadowRoot);
     }
   };
@@ -101,7 +116,7 @@ PAGE_TEXT_JS = """() => {
 _ARIA_LINE = re.compile(r'^\s*-\s+([A-Za-z][\w-]*)(?:\s+"((?:[^"\\]|\\.)*)")?')
 
 
-async def page_text(page) -> str:
+async def page_text(page, frames: bool = True) -> str:
     """Everything on the page a reader can read, main frame first.
 
     The ONE place the system asks what the page says: the evidence window an
@@ -115,9 +130,20 @@ async def page_text(page) -> str:
     Main frame first and in frame order, because `evidence_window` centres on a
     character offset into this string. Frames are read best-effort: one that
     detaches mid-read contributes nothing rather than killing the step, since
-    this is evidence capture and the postcondition is the gate."""
+    this is evidence capture and the postcondition is the gate.
+
+    `frames=False` reads the main document (and its shadow roots) only, and one
+    caller wants it: the before/after comparison behind `page_changed`. That
+    field is the sole evidence behind mode B's anti-laundering guard, and it was
+    calibrated on main-frame text — a third-party iframe with a ticking clock,
+    a rotating ad or a chat bubble would flip it to True on every step and
+    unlatch the guard, letting a replan drop a failed action and read the page
+    as though it had worked (cold review 4). Widening EVIDENCE to every frame is
+    the milestone's point; widening a calibrated guard's input is not, and the
+    two are different questions asked of the same function."""
     parts = []
-    for frame in getattr(page, "frames", None) or [page]:
+    sources = getattr(page, "frames", None) or [page]
+    for frame in (sources if frames else sources[:1]):
         try:
             parts.append(await frame.evaluate(PAGE_TEXT_JS))
         except Exception:

@@ -9,6 +9,7 @@ import hashlib
 import html
 import ipaddress
 import json
+import os
 import re
 import uuid
 from pathlib import Path
@@ -23,7 +24,8 @@ from pydantic import BaseModel
 from .agent import assemble_result, run_task
 from .judge import live_judge
 from .mutate import apply_mutation
-from .planner import ALLOWED_MODELS, DEFAULT_MODEL, live_planner
+from .planner import (ALLOWED_MODELS, DEFAULT_LOOP_MODEL, DEFAULT_MODEL, live_driver,
+                      live_planner)
 
 app = FastAPI(title="browser-agent")
 FIXTURE_DIR = (Path(__file__).parent / "fixtures").resolve()
@@ -173,9 +175,34 @@ def url_ok(u: str) -> bool:
                 or ip.is_reserved or ip.is_multicast or ip.is_unspecified)
 
 
+# ADR-027 Decision 1: loop mode is a peer mode, selected per task, and mode B
+# stays the default. Two spellings and no more — an unknown mode is refused at
+# the boundary rather than silently defaulting, because a flag that is accepted
+# and ignored looks identical over HTTP to one that works
+# (`gateway-mode-selects-the-driver`).
+MODES = ("plan", "loop")
+MODE_ENV = "BROWSER_AGENT_MODE"
+
+
+def default_mode() -> str:
+    """The env default for `POST /tasks`'s mode flag.
+
+    Falls back to mode B on anything unrecognised rather than refusing to boot.
+    The quiet direction is usually the wrong one in this repo, and this is the
+    exception that proves the rule: the fallback is the SAFE, cheap, fully
+    graded mode, so a typo in a deployment variable costs a run that plans
+    instead of looping — not a service that will not start, and never a run
+    that spends more than it was asked to.
+    """
+    return m if (m := os.environ.get(MODE_ENV, "").strip().lower()) in MODES else "plan"
+
+
 class TaskIn(BaseModel):
     task: str
     url: str | None = None
+    # Absent means `default_mode()`. Same `is not None` treatment `model` gets:
+    # an explicit JSON null IS the absent value for an optional field.
+    mode: str | None = None
     # The M9 ablation's independent variable. Absent means the default; anything
     # else must be on `planner.ALLOWED_MODELS` — the ablation set plus the
     # incumbent default, which stays reachable by explicit name even though it is
@@ -187,15 +214,15 @@ class TaskIn(BaseModel):
     model: str | None = None
 
 
-def _env_failure(reason: str, model: str | None = None) -> dict:
+def _env_failure(reason: str, model: str | None = None, mode: str = "plan") -> dict:
     """A contract-shaped result for a run that never got off the ground."""
     return assemble_result(
         [], None,
         {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0},
-        failure="env", reason=reason, model=model)
+        failure="env", reason=reason, model=model, mode=mode)
 
 
-async def _execute(run_id: str, task: str, url: str | None, model: str):
+async def _execute(run_id: str, task: str, url: str | None, model: str, mode: str = "plan"):
     global ACTIVE_RUN
     q = STREAMS[run_id]
     result = None
@@ -203,7 +230,13 @@ async def _execute(run_id: str, task: str, url: str | None, model: str):
         ACTIVE_RUN = run_id
         try:
             result = await run_task(
-                task, url, live_planner(model), RUN_ROOT / run_id,
+                task, url,
+                # Exactly one of the two factories is constructed: each
+                # validates the API key on the way in, so building the unused
+                # one would raise on a deployment that only meant to use the
+                # other.
+                None if mode == "loop" else live_planner(model), RUN_ROOT / run_id,
+                mode=mode, driver=live_driver(model) if mode == "loop" else None,
                 judge=live_judge(), url_guard=url_ok,
                 # Echoed back on the record so a committed ablation report is
                 # self-attributing rather than trusting the driver's loop variable.
@@ -219,14 +252,14 @@ async def _execute(run_id: str, task: str, url: str | None, model: str):
             # frontend renders both (gateway-error-contract-shape). Empty trace is
             # correct — live_planner() validates the key before a browser opens,
             # so nothing was attempted; only the shape was ever wrong.
-            result = _env_failure(f"{type(e).__name__}: {e}", model)
+            result = _env_failure(f"{type(e).__name__}: {e}", model, mode)
         finally:
             # A run must always reach a terminal state. When the error path
             # itself raised (a NameError, once), the record stayed "running" and
             # the SSE stream never closed — a hung connection on a public
             # endpoint, and a reviewer watching a spinner with no end.
             if result is None:
-                result = _env_failure("run ended without producing a result", model)
+                result = _env_failure("run ended without producing a result", model, mode)
             RUNS[run_id] = result
             ACTIVE_RUN = None
             q.put_nowait({"event": "done", "result": result})
@@ -246,11 +279,22 @@ async def submit_task(t: TaskIn):
     if t.model is not None and t.model not in ALLOWED_MODELS:
         raise HTTPException(422, "model blocked: allowlisted models only — "
                                  + ", ".join(ALLOWED_MODELS))
+    if t.mode is not None and t.mode not in MODES:
+        raise HTTPException(422, "mode must be one of " + ", ".join(MODES))
     run_id = uuid.uuid4().hex[:8]
     RUNS[run_id] = {"status": "running"}
     STREAMS[run_id] = asyncio.Queue()
+    # The default model is the MODE's default, not one global one. Passing
+    # `DEFAULT_MODEL` whatever the mode drove the loop with the model ADR-010's
+    # cost ablation picked under a ceiling ADR-027 deliberately lifted for this
+    # mode — and one never verified to support the tool-calling the driver
+    # requires (spec-drift audit, `gateway-mode-selects-the-driver`). An
+    # explicit `model` still wins over both: the ablation and any A/B have to be
+    # able to pin it.
+    mode = t.mode or default_mode()
     asyncio.get_event_loop().create_task(
-        _execute(run_id, t.task, t.url, t.model or DEFAULT_MODEL))
+        _execute(run_id, t.task, t.url,
+                 t.model or (DEFAULT_LOOP_MODEL if mode == "loop" else DEFAULT_MODEL), mode))
     return {"run_id": run_id}
 
 
@@ -795,7 +839,7 @@ const ADRS = [
   ["022", "a support-matrix row may be declared from real runs against the live deployment with no eval case behind it, if every run is cited honestly"],
   ["024", "a plan that tries to “extract” the whole page as one blob is refused before it runs — that's never a real answer to a real question"],
   ["025", "a probe's exact tasks, thresholds and pass/fail bar are written down before it runs, so results can't be graded after the fact"],
-  ["026", "when a target matches more than one element, the page is used to narrow it down under strict rules, instead of failing outright"],
+  ["026", "027", "028", "when a target matches more than one element, the page is used to narrow it down under strict rules, instead of failing outright"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

@@ -1,0 +1,43 @@
+{
+  "id": "extract-all-refuses-matches-in-two-documents",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "fixture": "frames-host.html",
+    "task": "List every status value the inspector reports.",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Reveal audit code"
+        },
+        "expected_state": {
+          "text_visible": "Audit code"
+        }
+      },
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "status"
+        },
+        "rank": false
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate",
+    "trace_actions": [
+      "navigate",
+      "click",
+      "extract_all"
+    ]
+  },
+  "provenance": "Cold review of M42, finding 3 (HIGH). Frame-scoped resolution was written first-win per document, which is right for a unique match and silently wrong for `extract_all`: 'the first document with ANY match wins' truncates an enumeration to whichever document matched first. On this fixture the host has exactly one `role=status` after the reveal (the shadow-DOM audit code) and the iframe has two, so 'list every status value' answered `['NBX-7741']` — `success`, verdict PASS, one row of three, wrong by omission and silently so. `grounded` cannot catch it because `page_text` now concatenates every frame, and nothing in `verify` checks enumeration COMPLETENESS. An enumeration spanning two documents is refused loudly instead: a Playwright locator cannot span a frame boundary, so there is no union to return, and this repo's ruling everywhere else is that an ambiguity the page does not settle is a loud `locate` failure rather than a guess. The same scoping bug had a second half — a main-frame ambiguity being settled by a unique match in a child frame — which is fixed by resolving each document to completion before moving on.",
+  "triage": {
+    "class": "wrong-by-omission",
+    "note": "the answer to a different question"
+  }
+}

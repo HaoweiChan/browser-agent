@@ -15,8 +15,8 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260824-052304-fast.json",
-        "invariant": "20260824-052134-invariant.json",
+        "fast": "20260825-183605-fast.json",
+        "invariant": "20260825-183631-invariant.json",
         "live": "20260823-164737-live.json"
       }
     },
@@ -63,12 +63,12 @@
         "note": "'ceiling' anchors it as surely as '<='"
       },
       {
-        "line": "python3 -m evals.run --suite fast   # wall clock <= 90s",
+        "line": "python3 -m evals.run --suite fast   # wall clock <= 105s",
         "flags": false,
         "note": "the committed ceiling, stated"
       },
       {
-        "line": "python3 -m evals.run --suite fast   # wall clock <= 90 seconds",
+        "line": "python3 -m evals.run --suite fast   # wall clock <= 105 seconds",
         "flags": false,
         "note": "spelled out; the unit alternation is not decoration"
       },
@@ -116,5 +116,6 @@
     "class": "doc-drift",
     "note": "tagged invariant — a hand-maintained count is wrong again by the next milestone, and this repo has already burned a review round on three documents carrying three different totals for the same thing (PR #15, R19). The failure mode this closes is not the wrong number, it is the number that nothing recomputes. Adding a case to the suite now turns this red until README is updated, which is the intended cost. D8's cited reports are immutable artifacts, so its assertion is stable; moving the range means citing the runs it was measured from. The block cites report files rather than recomputing 'the latest run' on purpose: a report is immutable, so the assertion is stable, and moving the block means citing the runs it was measured from — the same contract D8's retired half had. The M29 half is the same shape one level up: a milestone's own ADR asserted its gate criterion was green-pending, and the milestone after it is the one that knows whether pending resolved true or false — nothing forced that resolution back into the ADR until this case checked for it. PR #28 R3 (LOW, routed to debt, tasks/TODO.md T-R33): prompts/ is append-only — a curated file records what was known and decided on its date and is never rewritten to look right in hindsight (the same principle ADR-015's own struck-not-deleted amendments follow, stated explicitly for prompts/ in prompts/README.md). prompts/014-a-freeze.md keeping its original 'green offline, pending' wording is correct by that convention, not a defect — a live reader who wants the current status reads specs/decisions/ADR-015-a-freeze.md, which this M29/M28 work keeps current, not a dated prompt record. PR #28 R4/R5: the markdown-strip ceiling is now literal and stated precisely (bold/italic/link unwrapped, underscore emphasis deliberately not — a real gap, named rather than implied), and the `prompts/` carve-out from R3 turned out to be the same mistake as the original 5-file allowlist one level down — excluding a directory is just a coarser allowlist. The general lesson, stated once rather than per-finding: for a guard whose job is 'does prose currently assert X', the safe move is to strike/fix the false claim, not to stop looking at the file that contains it. The T-M32-9 half grades a form, not a number and not a file: prose narrating a past ceiling is indistinguishable from prose publishing a live one by any pattern cheap enough to keep, so this reaches only the gate-command form and says so. Residual, named rather than implied: a live ceiling published in any other shape — an ADR Ruling, an INDEX one-liner, a support-matrix row — is invisible here. ADR-019's Ruling is covered separately by `published-band-matches-the-ledger` item 6 (ruling); ADR-002's is now covered by having no literal left to drift.",
     "watched_red": "PR #35 R6, red against the tree as this PR shipped it, no mutation needed: {cites_a_report_of_a_different_tree: 20260823-000232-fast.json, report_cases: 132, suite_now: 133} and {cites_a_report_of_a_different_tree: 20260823-000031-invariant.json, report_cases: 51, suite_now: 52}. Growing a suite without touching the docs is now exactly this red. R14 watched red against the pre-fix scoping, with `live` grown by one case: {cites_a_report_of_a_different_tree: 20260823-000337-live.json, report_cases: 9, suite_now: 10} -- unreachable offline. With the scoping in place the same mutation leaves only {readme_does_not_say: \"--suite live        # 10 cases\"}, a text edit. R15/R16 watched red against the tree as round 3 shipped it, no mutation needed: {describes_a_deleted_rule: \"the ceiling that maximum derives in the ADR's prose must be the ceiling\", doc: README.md}, {describes_a_deleted_rule: \"nothing uncommitted in the tree\", doc: specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md} and {describes_a_deleted_rule: \"must multiply the published maximum and land on the ceiling\", doc: same}. The README one was not in the review's evidence -- it came out of the class sweep."
-  }
+  },
+  "provenance_m42_2026_08_26": "M42 re-points the block at this milestone's own runs: the suite grew by 26 cases, the local  ceiling moved 90 -> 105 (ADR-029), and the diagnosis count moved with the new failure-class cases. The fixed point this case documents applied again — the first run of the resized suite cannot cite a green report of that suite, because none exists until a run of the resized tree is taken, and that run is red on this very check; it went through that state and out of it once the band was republished and the counts agreed."
 }

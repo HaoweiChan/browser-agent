@@ -7,7 +7,7 @@
   "input": {
     "mode": "loop",
     "fixture": "shop.html",
-    "task": "Which product in the catalogue is the cheapest one?",
+    "task": "Which product in the catalogue has the lowest price?",
     "stub_calls": [
       {
         "action": "extract_all",

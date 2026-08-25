@@ -19,25 +19,25 @@
       },
       {
         "suite": "fast",
-        "wall_seconds": 90.0,
+        "wall_seconds": 105.0,
         "over": false
       },
       {
         "suite": "fast",
-        "wall_seconds": 90.01,
+        "wall_seconds": 105.01,
         "over": true
       },
       {
         "suite": "fast",
         "wall_seconds": 89.62,
         "over": false,
-        "note": "main's first CI fast run — over the 60s ceiling of its day, over the 80 that replaced it, inside the 90 in force since ADR-021"
+        "note": "main's first CI fast run — over the 60s ceiling of its day, over the 80 that replaced it, inside the 90 ADR-021 set and the 105 ADR-029 derived. It is a CI number and CI's ceiling is still 90, which is the point of keeping it here: the two environments no longer publish the same figure."
       },
       {
         "suite": "fast",
         "wall_seconds": 120.0,
         "over": true,
-        "note": "well clear of the ceiling in either direction, so this row survives a re-derivation"
+        "note": "well clear of the ceiling in either direction — it survived the 60→80→90 re-derivations and it survives 105, which is what a boundary row is for"
       },
       {
         "suite": "invariant",
@@ -78,7 +78,7 @@
     "env_override": [
       {
         "value": null,
-        "budget": 90,
+        "budget": 105,
         "note": "unset — the committed local ruling (ADR-019, re-measured at PR #29 R21)"
       },
       {
@@ -93,27 +93,27 @@
       },
       {
         "value": "",
-        "budget": 90,
+        "budget": 105,
         "note": "set but empty — a shell expanding an unset var"
       },
       {
         "value": "banana",
-        "budget": 90,
+        "budget": 105,
         "note": "garbage"
       },
       {
         "value": "60s",
-        "budget": 90,
+        "budget": 105,
         "note": "a unit suffix, which float() will not take"
       },
       {
         "value": "0",
-        "budget": 90,
+        "budget": 105,
         "note": "zero is not 'no ceiling', it is a typo"
       },
       {
         "value": "-5",
-        "budget": 90,
+        "budget": 105,
         "note": "negative is not 'no ceiling' either"
       }
     ],
@@ -123,7 +123,7 @@
         "exit": 0
       },
       {
-        "wall_seconds": 90.01,
+        "wall_seconds": 105.01,
         "exit": 1
       }
     ],
@@ -148,7 +148,7 @@
     ]
   },
   "expect": {
-    "max_wall_seconds": 90,
+    "max_wall_seconds": 105,
     "suites_with_a_ceiling": [
       "fast",
       "invariant"
@@ -164,5 +164,6 @@
     "note": "grades a rule and the place it is applied, because holes have appeared at both. `_main_exit_code` drives the real `evals.run.main()` with `load_cases`/`run_case` stubbed to a single result of a chosen duration — no case runs, no report is written, stdout and stderr are swallowed — so what is graded is the value `main()` RETURNS. One line short of the path CI takes: `evals/run.py`'s `if __name__ == \"__main__\": sys.exit(main())` tail is what turns that value into a process exit code, `_main_exit_code` calls `main()` in-process and never goes through it, and changing the tail to a bare `main()` would disable this ceiling — and the invariant and regression rules with it — with this case still green (PR #20 R13, Debt T-R13). The suite-key check is a set comparison rather than a row per suite name: rows can only ever cover the suites someone thought to list, and `full` was the one missing when `WALL_BUDGET_S[\"full\"] = 1` was shown to slip through green (PR #20 R11). The env-override rows are all fallback except two, for the same reason: the dangerous direction is an override that quietly switches the gate off, not one that fails to apply. The override is one variable per suite as of ADR-019 (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`): one variable could not carry two suites' numbers, and scoping the single one to `fast` — the first attempt — left `invariant` unable to have a CI-measured number at all, which is how CI came to enforce a locally-derived 15s it had never run (PR #29 R15). CI's numbers are 90 and 20, measured on CI.",
     "not_covered": "it grades total wall clock only — a case that gets 10s slower while another gets 10s faster is invisible to it; per-case timings are in every committed report for anyone looking. It does not drive `evals/run.py` as a process, so the module tail described above is ungraded. It does not exercise the `--update-baseline` path, which returns before the ceiling is consulted and reports nothing about it (PR #20 R12, Debt T-R12). Slower hardware is answered rather than uncovered: `EVAL_WALL_BUDGET_S` gives an environment its own measured ceiling, and this case grades the override's fallbacks and the value the workflow declares — but nothing here checks that a declared number was ever measured. This case cannot tell a measured ceiling from an invented one; only an ADR-013 amendment with runs behind it can. It does not read a citation's body either: `adr-header-and-index` resolves the ADR references in this file — including the identifier spellings (`adr019`, `ADR_019`) that hid the fifth T-R52 miscitation, which was one of this case's own key names until PR #36 R4 — but only that the decision and any section it names exist, never that the decision rules on the subject (T-R57).",
     "watched_red_adr019": "both new assertions were watched red against the mutation each rules out. Removing the `if suite != 'fast': return base` scoping from `wall_budget`: wrong [{env: '80', suite: 'invariant', expected_ceiling: 15, got: 80.0}] — the CI override raising invariant's ceiling to five times what that suite costs. Removing `invariant` from WALL_BUDGET_S entirely: wrong [{suite: 'invariant', wall_seconds: 15.01, over: true}, {suite: 'invariant', wall_seconds: 999.0, over: true}, {env: '80', suite: 'invariant', expected_ceiling: 15, got: None}, {env: None, ...}, {ruling: 'suites', ...}] — the unbounded-relief-valve state this PR shipped one round ago."
-  }
+  },
+  "provenance_m42_2026_08_26": "ADR-029 moves the LOCAL `fast` ceiling 90 -> 105, so the boundary rows move with it: the case has to test the boundary, not a number the boundary used to be. `ci_wall_seconds` stays 90 and that is the interesting half — local and CI now publish different `fast` ceilings for the first time, which ADR-019 §4's per-environment rule always allowed and nothing had yet exercised. Watched red against the pre-ADR-029 tree: with `max_wall_seconds: 105` and `WALL_BUDGET_S['fast']` still 90, the rows at 105.00 and 105.01 both report `over: true` against an expectation of false/true respectively."
 }

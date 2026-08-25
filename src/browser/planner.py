@@ -86,9 +86,8 @@ ABLATION_MODELS = [
 #     case's containment check therefore requires it to be frozen evidence like
 #     every other accepted id (evals/labels/openrouter-models-20260820.json,
 #     amended 2026-08-26 with this entry read from the live endpoint that day).
-# `loop-models-are-declared-not-ablated` grades exactly that split: an id that
-# leaks into the ablation set, or that is allowlisted without frozen evidence,
-# is red.
+# `gateway-model-reaches-planner` grades exactly that split: an id that leaks
+# into the ablation set, or that is allowlisted without frozen evidence, is red.
 #
 # Why a frontier model at all: loop mode calls the model once per STEP with a
 # fresh observation, and M43 will hand it screenshots. The two capabilities that
@@ -378,7 +377,7 @@ _PARAM = {
 # action -> (description, parameter names, required parameter names). One entry
 # per executor action, so the vocabulary the model is offered cannot drift from
 # the vocabulary the executor implements — `driver-tools-match-the-executor`
-# reads both and reddens if they disagree.
+# reads both, in both directions, and reddens if they disagree.
 TOOL_TABLE = {
     "navigate": ("Load a URL. Put the URL in `value`.", ["value"], ["value"]),
     "click": ("Click one element. MUST carry an expected_state — a click whose consequence "
@@ -389,8 +388,10 @@ TOOL_TABLE = {
     "select_option": ("Choose an option of a <select> by its visible label (or its value). "
                       "Verifies itself by reading back what ended up selected.",
                       ["target", "value"], ["target", "value"]),
-    "scroll": ("Scroll. With a `target`, bring that element into view; without one, scroll the "
-               "window by `value` pixels (negative scrolls up). Fails if nothing moved.",
+    "scroll": ("Scroll. With a `target`, bring that element into view — this fails only if the "
+               "element is still not visible afterwards, so it is safe on an element already in "
+               "view. Without a target, scroll the window by `value` pixels (negative scrolls "
+               "up); that form fails if the position did not move.",
                ["target", "value"], []),
     "press": ("Send one key (e.g. \"Enter\") to `target`, or to the page when no target is "
               "given. Changes state like a click, so it MUST carry an expected_state.",

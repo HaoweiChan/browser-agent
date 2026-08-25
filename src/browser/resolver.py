@@ -294,14 +294,61 @@ async def resolve(page, target: dict, many: bool = False,
     # exact=True: planner names come from the observation verbatim; substring
     # matching resolved absent targets to superstring siblings and extracted
     # the wrong element as a success (case resolver-substring-name).
-    for scope in scopes:
+    def scope_tiers(scope):
+        out = []
         if role:
-            loc = (scope.get_by_role(role, name=name, exact=True) if name
-                   else scope.get_by_role(role))
-            tiers.append(("role", loc, scope))
+            out.append(("role", (scope.get_by_role(role, name=name, exact=True) if name
+                                 else scope.get_by_role(role)), scope))
         if text:
-            tiers.append(("text", scope.get_by_text(text, exact=True), scope))
+            out.append(("text", scope.get_by_text(text, exact=True), scope))
+        return out
 
+    # One DOCUMENT at a time, finished before the next is opened. A flat tier
+    # list across every scope made resolution first-win per document, which is
+    # right for a unique match and silently wrong twice over: `extract_all`
+    # returned whichever document matched first (an enumeration truncated to one
+    # frame), and a main-frame ambiguity fell through to a unique match in a
+    # child frame, letting an ad or a consent iframe settle a question the page
+    # the task landed on did not settle. Resolving each document to completion
+    # keeps "prefer the document the task landed on" true for ambiguity as well
+    # as for uniqueness.
+    hits = []
+    for scope in scopes:
+        got = await _resolve_in(scope, scope_tiers(scope), target, many=many, index=index,
+                                near=near, anchor=anchor, may_narrow=may_narrow)
+        if got is None:
+            continue
+        if not many:
+            return got
+        # `extract_all` wants EVERY match, and a Playwright locator cannot span
+        # a frame boundary — there is no union to return. Returning the first
+        # document that matched is what this did first, and it answers a
+        # different question than the one asked: on the iframe fixture, "list
+        # every status value" came back as one row of three, `success`, verdict
+        # PASS, wrong by omission and silently so, because nothing in `verify`
+        # checks enumeration completeness and `grounded` passes now that
+        # `page_text` concatenates every frame. So it is refused loudly, which
+        # is this file's ruling for every ambiguity a page does not settle
+        # (`extract-all-refuses-matches-in-two-documents`).
+        hits.append((got, scope))
+    if len(hits) > 1:
+        raise ResolveError(
+            "ambiguous-match",
+            f"{target} matches in {len(hits)} separate documents (the page and "
+            f"{len(hits) - 1} frame(s)); an enumeration cannot span a frame boundary, so name "
+            "the one you mean — a container inside a single document")
+    if hits:
+        return hits[0][0]
+    raise ResolveError("element-not-found", f"no tier resolved {target}")
+
+
+async def _resolve_in(page, tiers, target, *, many, index, near, anchor, may_narrow):
+    """Resolve `target` within ONE document, or return None if it is not there.
+
+    Everything below is M1-M38's resolution, unchanged, with the scope made
+    explicit. `page` here is a Page or a Frame — both expose the same locator
+    API, and every call in this function is one of the two.
+    """
     ambiguous = None
     for tier, loc, scope in tiers:
         if near is not None:
@@ -327,7 +374,7 @@ async def resolve(page, target: dict, many: bool = False,
         if many:
             if n:
                 return loc, tier, None
-            continue
+            continue  # nothing here; the caller tries the next document
         if index is not None:
             if n > index:
                 return loc.nth(index), tier, None
@@ -373,7 +420,11 @@ async def resolve(page, target: dict, many: bool = False,
         # (AMBIGUOUS) falls through to the next rung instead of raising —
         # loudness belongs to what the plan actually asked for.
         if anchor:
-            i, _ = await _nearest(page, loc, anchor, loose=True)
+            # `scope`, not `page`: `loc` may belong to a child frame, and a
+            # cross-frame element handle into `page.evaluate` raises a bare
+            # Playwright error that `classify` calls `act` — a locate problem
+            # diagnosed as an action failure and sent down the wrong ladder.
+            i, _ = await _nearest(scope, loc, anchor, loose=True)
             if i is not None and i >= 0:
                 return loc.nth(i), "structural", "anchor-proximity"
         # Rung 2. The first match in document order, and ONLY where that choice
@@ -393,10 +444,10 @@ async def resolve(page, target: dict, many: bool = False,
         # between candidates that differ, from evidence the plan carries; a rung
         # that may only pick between identical elements is not a proximity rung
         # at all (PR #42 R1's second half, declined for that reason).
-        if await page.evaluate(INTERCHANGEABLE_JS, await loc.element_handles()):
+        if await scope.evaluate(INTERCHANGEABLE_JS, await loc.element_handles()):
             return loc.first, tier, "document-order"
         raise ResolveError("ambiguous-match", f"{n} matches at tier {tier} for {target}")
-    raise ResolveError("element-not-found", f"no tier resolved {target}")
+    return None
 
 
 def relocation_candidates(target: dict, obs: dict) -> list[dict]:

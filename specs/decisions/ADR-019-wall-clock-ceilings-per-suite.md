@@ -3,11 +3,11 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → **90s** (ADR-021), local `invariant` **20s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → **105s** (ADR-021, then ADR-029), local `invariant` **20s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `evals/run.py` `over_budget()`
 
-**Amended by**: ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
+**Amended by**: ADR-029 (Decision 2's local `fast` ceiling 90 -> 105, on the number `published-band-matches-the-ledger` derived after M42 grew the suite by 26 cases; CI's stays 90 because nothing in that change measured CI) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 80) and ADR-002 Decision 4 (a second suite now has a ceiling)
 
@@ -65,8 +65,8 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 181 cases, ts `20260824-051337`, **73.06s**, 179/181
-  (`evals/report/20260824-051337-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 207 cases, ts `20260825-183300`, **87.96s**, 205/207
+  (`evals/report/20260825-183300-fast.json`; `dirty: true`, for the reason the
   next paragraph gives, and red — the two failures are `docs-numbers-are-derived`
   and `published-band-matches-the-ledger` themselves, mid-refresh at the moment
   this row was recorded: the tree only reaches 181 cases while PR #44's merge of
@@ -97,8 +97,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 181 cases, 179/181) and
-(restated — `invariant`: 66 cases, 64/66) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 207 cases, 205/207) and
+(restated — `invariant`: 71 cases, 69/71) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -218,13 +218,13 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 73.06 × 1.15 = 84.02 → **85**, which is BELOW the committed 90 and
-does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
-slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
-band is a short sample and therefore a lower bound on what the tree costs. The
-handful of runs at 181 cases is exactly that short sample. Item 5 (derivation) grades the
-arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
-that says 90 is green and declared rather than a contradiction. The band
+five — gives 87.96 × 1.15 = 101.15 → **105**, and this time it
+MOVES the committed ceiling: ADR-029 takes 90 → 105 on exactly this number. M42 added
+26 cases to `fast`, which is growth in case COUNT and not in per-case cost — the
+condition ADR-021 named when it said the answer to per-case growth is removing
+waste rather than another raise. Item 5 (derivation) grades the arrow against
+the RULE, and the arrow and the committed ceiling now agree because the rule is
+what set the ceiling. The band
 published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has
@@ -238,7 +238,7 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 66 cases, ts `20260824-051159`, **13.54s**, 64/66
+- Band source — local `invariant` at 71 cases, ts `20260825-183149`, **15.04s**, 69/71
   (`dirty: true`, and red, for the same structural reason §2's is: PR #44's merge
   of `origin/main` (65 cases) into `task/M39` brings T-M40-1's
   `smoke-stream-takes-the-run-slot` and `origin/main`'s own M38 additions
@@ -246,7 +246,7 @@ commit that changed nothing but JSON.
   uncommitted, and the two red cases — `docs-numbers-are-derived` and
   `published-band-matches-the-ledger` — are the two this republish clears; the
   run is red, so ADR-012 wrote a per-case report for it and this bullet cites
-  the file the way §2's does — `evals/report/20260824-051159-invariant.json`.
+  the file the way §2's does — `evals/report/20260825-183149-invariant.json`.
   As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
@@ -305,7 +305,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.54 × 1.15 = 15.57 → **20**, which is the committed
+The same rule gives 15.04 × 1.15 = 17.3 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
