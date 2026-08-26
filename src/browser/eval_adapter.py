@@ -2823,6 +2823,19 @@ REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
 # here on purpose: writing the literal path in a comment near the regex would
 # make the comment itself a dangling citation.)
 REPORT_CITATION_SKIP = ("29991231-235959-fast.json",)
+# Directories inside the scope above that hold PAGES rather than prose. The M41
+# inspector snapshot is a capture of another project's deployed UI, and that UI
+# renders that project's own capability table — including the name of a
+# benchmark report in ITS `evals/report/`, which does not exist here. Quoting a
+# page is not this repo claiming evidence, and the alternative (editing the
+# capture until the regex is happy) would make the fixture a fiction.
+#
+# A directory prefix is exactly the shape R20 of PR #20 caught blinding this
+# guard, so it is pinned rather than trusted: the case carries
+# `expect.exclude_exactly` and a widened prefix is red before it is green. That
+# is the only defence available — widening a scan silently REMOVES findings, so
+# nothing else here can notice.
+REPORT_CITATION_EXCLUDE = ("src/browser/fixtures",)
 
 
 def _run_report_citations_case(case: dict) -> dict:
@@ -2848,7 +2861,8 @@ def _run_report_citations_case(case: dict) -> dict:
     for rel in REPORT_CITATION_SCOPE:
         p = root / rel
         for f in ([p] if p.is_file() else p.rglob("*") if p.is_dir() else []):
-            if not f.is_file():
+            if not f.is_file() or any(f.is_relative_to(root / d)
+                                      for d in REPORT_CITATION_EXCLUDE):
                 continue
             cited |= set(REPORT_CITATION.findall(f.read_text(encoding="utf-8", errors="ignore")))
     cited -= set(REPORT_CITATION_SKIP)
@@ -2860,8 +2874,13 @@ def _run_report_citations_case(case: dict) -> dict:
     got_skip = sorted(REPORT_CITATION_SKIP)
     if want_skip and got_skip != want_skip:
         wrong["skip"] = {"want": want_skip, "got": got_skip}
+    want_excl = sorted(case.get("expect", {}).get("exclude_exactly", []))
+    got_excl = sorted(REPORT_CITATION_EXCLUDE)
+    if want_excl and got_excl != want_excl:
+        wrong["exclude"] = {"want": want_excl, "got": got_excl}
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"citations": len(cited), "skip": got_skip}}
+            "got": {"citations": len(cited), "skip": got_skip,
+                    "exclude": got_excl}}
 
 
 def _run_gateway_error_case(case: dict) -> dict:
@@ -4679,11 +4698,41 @@ def _run_doc_counts_case(case: dict) -> dict:
 
     inp, wrong = case["input"], []
     counts = {s: len(load_cases(s)) for s in ("fast", "invariant", "live", "full", "all")}
+    # How many distinct real sites the live suite touches. Published in prose in
+    # two documents and in neither of them derived, so both said "four real
+    # sites" for the whole of the PR that took it to five (PR #58 R1) — the same
+    # defect this check exists for, one sentence over from the counts it already
+    # reads back. A `domain` tag is what the coverage half of this case already
+    # trusts to mean "a real site", so it is what this counts.
+    counts["live_sites"] = len({c["domain"] for c in load_cases("live") if c.get("domain")})
+    # How many conjuncts the rule-6 boundary invariant actually enforces. Two
+    # documents describe that guard in prose and both said "three" for a whole
+    # round after a fourth shipped (PR #58 R6) — the third instance in this PR
+    # of a multi-artifact correction leaving a document behind, which is the
+    # argument for deriving it instead of re-typing it.
+    #
+    # ponytail: the count is `len(wrong)`, one key per conjunct, because that is
+    # the shape the check already returns and no second registry is worth
+    # keeping in sync with it. Two ceilings, both real: `bool(cases)` — the
+    # non-vacuity precondition that stops the scan passing on an empty set — is
+    # NOT a conjunct and carries no key, so it is deliberately not counted; and
+    # a future conjunct that folds into an existing key would be invisible here.
+    # Upgrade if either bites: name the conjuncts in a tuple the check returns.
+    counts["gt_conjuncts"] = len(_check_ground_truth_endpoint_eval_only()["wrong"])
     readme = (RUN_ROOT / "README.md").read_text(encoding="utf-8")
     for quote in inp.get("readme_quotes", []):
         want = quote.format(**counts)
         if want not in readme:
             wrong.append({"readme_does_not_say": want})
+    # The same, for any other document of record. README got its own key first
+    # and every later count landed there by default; the stale sentence R1 found
+    # was in docs/analysis.md, outside anything this case could reach.
+    for entry in inp.get("doc_quotes", []):
+        text = (RUN_ROOT / entry["doc"]).read_text(encoding="utf-8")
+        for quote in entry["quotes"]:
+            want = quote.format(**counts)
+            if want not in text:
+                wrong.append({"doc_does_not_say": want, "doc": entry["doc"]})
 
     ws = inp.get("where_it_stands")
     if ws:
@@ -5063,6 +5112,101 @@ def _check_narrowing_fails_closed() -> dict:
             "got": {"signature": str(inspect.signature(_nearest))}}
 
 
+def _check_ground_truth_endpoint_eval_only() -> dict:
+    """The inspector's ground-truth endpoint is reachable from the eval side and
+    from nowhere else (M41, CLAUDE.md rule 6).
+
+    Rule 6 allows exactly three pieces of per-site data anywhere: a start URL, a
+    rate limit, and a ground-truth API endpoint. M41 uses the third — the
+    sec-10k inspector's `/api/extract/fixture` supplies the hand-labelled values
+    behind the `sec10k-*` and `live-sec10k-*` cases. The rule that makes that
+    legitimate rather than a hole is WHERE it may be reached from: the eval
+    adapter and the case files, never the code that decides what the agent
+    does. An executor that could ask a site's API what the answer is would
+    "pass" every case on that domain without reading the page, and no other
+    check here would notice.
+
+    Two different claims, because the two strings are allowed in different
+    places. The ENDPOINT path may appear only in `eval_adapter.py` among the
+    package's modules. The HOST may additionally appear in `server.py`, which
+    carries a start URL per declared matrix row in `EXAMPLES` — a start URL is
+    the FIRST thing rule 6 allows, and `ui-examples-cover-matrix` requires one
+    for every live row. Everywhere else under `src/browser/` it is a leak.
+
+    Both rules are ALLOWLISTS, not denylists, and that is the repair a cold
+    review earned: the host rule first named the six execution-policy modules
+    explicitly, which left `cli.py` and `mutate.py` free to carry per-site
+    knowledge with nothing red — and the host is the string a navigation recipe
+    would travel in. Naming what may is a rule a new module cannot walk around;
+    naming what may not is a list somebody forgets to extend.
+
+    Data, not code: the committed page snapshot under `fixtures/` is a fixture
+    like `shop.html`, and `glob("*.py")` never reaches it.
+    """
+    ENDPOINT, HOST = "/api/extract/", "whaleforce-sec10k.zeabur.app"
+    ENDPOINT_OK = {"eval_adapter.py"}
+    HOST_OK = {"eval_adapter.py", "server.py"}
+    pkg = Path(__file__).parent
+    endpoint_leaks, host_leaks = [], []
+    for f in sorted(pkg.glob("*.py")):
+        text = f.read_text(encoding="utf-8")
+        if ENDPOINT in text and f.name not in ENDPOINT_OK:
+            endpoint_leaks.append(f.name)
+        if HOST in text and f.name not in HOST_OK:
+            host_leaks.append(f.name)
+    # The other direction, and the reason this is not a one-sided ban: the
+    # ground truth still has to come from somewhere a reader can retrace. Every
+    # inspector case has to name the endpoint its expected value came from, so a
+    # `sec10k-*` case whose ground truth is hand-waved is red here before it can
+    # be green in a run. An assertion that never sees the string it governs is
+    # decoration.
+    # Keyed on the case's own `domain` tag, not on its filename: a filename
+    # pattern is a naming convention, and renaming a case to `inspector-*.json`
+    # would have dropped it out of this scan in silence while `bool(cases)`
+    # still passed on the rest (cold review). And only the cases that CARRY a
+    # hand-labelled value — an observation-shape case asserts what the planner
+    # was shown and has no ground truth to source.
+    cases, fed_to_the_executor = [], []
+    for c in sorted((Path(__file__).parents[2] / "evals").rglob("*.json")):
+        raw = c.read_text(encoding="utf-8")
+        try:
+            case = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        # The direction the module scan cannot see, and the one the rule is
+        # actually about (PR #58 R2). A case's `input` is what the RUN is given:
+        # `url`, `stub_plan[].value`, `target`, the task text. Put the
+        # ground-truth endpoint there and the executor fetches the answer
+        # instead of reading the page — every verifier check passes, because the
+        # value really is on the "page" — while this check stayed green and the
+        # third conjunct below actively rewarded the string's presence. Scanning
+        # the whole `input` subtree rather than an allowlist of field names, for
+        # the same reason the two scans above became allowlists: a new field a
+        # future case shape adds is inside `input` and needs no maintenance
+        # here. Everything else in a case file — `provenance`, `triage`,
+        # `expect` — is a record for a reader and is untouched.
+        fed = json.dumps(case.get("input", {}))
+        if ENDPOINT in fed or f"{HOST}/api/" in fed:
+            fed_to_the_executor.append(c.name)
+        if case.get("domain") == HOST and "answer" in case.get("expect", {}):
+            cases.append((c.name, raw))
+    uncited = [n for n, raw in cases if "/api/extract/fixture" not in raw]
+    # One key per conjunct, and that is load-bearing outside this function:
+    # `len(wrong)` is published as `gt_conjuncts` by `_run_doc_counts_case` and
+    # quoted back out of ADR-030 §The ground-truth-endpoint boundary and
+    # support-matrix D30, so a NEW conjunct needs its own key or the count those
+    # two documents are graded against silently stays put (PR #58 R10).
+    # `bool(cases)` below is the non-vacuity precondition, not a conjunct: it
+    # carries no key and is deliberately not counted.
+    return {"passed": not endpoint_leaks and not host_leaks and not fed_to_the_executor
+                      and bool(cases) and not uncited,
+            "wrong": {"endpoint_in_production_module": endpoint_leaks,
+                      "host_outside_the_allowlist": host_leaks,
+                      "ground_truth_endpoint_fed_to_the_executor": fed_to_the_executor,
+                      "cases_not_citing_the_ground_truth_endpoint": uncited},
+            "got": {"cases_scanned": len(cases)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "examples-cover-matrix": _check_examples_cover_matrix,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
@@ -5078,7 +5222,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
-              "narrowing-fails-closed": _check_narrowing_fails_closed}
+              "narrowing-fails-closed": _check_narrowing_fails_closed,
+              "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

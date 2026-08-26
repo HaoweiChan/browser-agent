@@ -1,0 +1,28 @@
+{
+  "pr": 58,
+  "task": "M41",
+  "round": 4,
+  "result": "APPROVED",
+  "reviewer": "pr-loop/pr-reviewer (fresh context, repair diff 7858a98..746b6d2 + the three standing acceptance clauses)",
+  "date": "2026-08-26",
+  "context": "Final round. The circuit breaker fired after round 3 and the human authorised exactly one bounded repair round (option A), with the standing condition that a further prose finding in the same paragraph ends the loop and ships as debt rather than triggering a fifth round.",
+  "standing_findings_verdict": {
+    "R8": "adequately repaired — both originals verbatim, `correction_2` appended in pr58-r1-resolution.json R1 and `correction` appended in pr58-r2-resolution.json R8; the new text states what the code does and the surviving KeyError reason was checked against the code and holds.",
+    "R9": "adequately repaired — resolved by naming the conjunct instead of numbering it, which satisfies the clause rather than evading it: with no ordinal left, the two documents cannot drift apart on a number neither derives. The replacement sentence was verified true of the code, and the derived count still grades BOTH documents after the rewrite (confirmed by perturbation).",
+    "R10": "adequately repaired — the comment sits at the `wrong` literal where a maintainer adding a conjunct would be typing, says what the clause requires, and carries the caveat that it is not a substitute for a grader rather than overclaiming."
+  },
+  "findings": [
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M41-8",
+      "blocker": false,
+      "claim": "Outside the three clauses and non-blocking: a third copy of the same ordinal-drift R9 was filed against survives in code — the comment at src/browser/eval_adapter.py:5181-5182 calls the citation conjunct 'the third conjunct below', while it is the FOURTH `wrong` key and ADR-030:160 (rewritten this round) now calls the same conjunct 'the last'.",
+      "evidence": "src/browser/eval_adapter.py:5181-5182 'while this check stayed green and the third conjunct below actively rewarded the string's presence' — the conjunct that rewards the endpoint string is `cases_not_citing_the_ground_truth_endpoint`, key 4 of 4 in the `wrong` dict at :5201-5204 (key order: endpoint_in_production_module, host_outside_the_allowlist, ground_truth_endpoint_fed_to_the_executor, cases_not_citing_the_ground_truth_endpoint). No counting basis makes it third: counting `wrong` keys it is fourth; counting only conjuncts textually below the comment it is second. Introduced in db54986 (round-1 repair), so it predates the round-3 diff and is outside R9's acceptance clause, which names only ADR-030 and support-matrix D30.",
+      "repro": "grep -n \"third conjunct below\" src/browser/eval_adapter.py; grep -n \"last conjunct REWARDS\" specs/decisions/ADR-030-m41-sec10k-inspector-probe.md; source .venv/bin/activate && python3 -c \"import src.browser.eval_adapter as ea; print(list(ea._check_ground_truth_endpoint_eval_only()['wrong']))\"",
+      "acceptance": "The comment names the conjunct instead of numbering it (e.g. 'the citation conjunct below'), matching what ADR-030 and support-matrix D30 now do; suites stay green. Debt is an acceptable route — it is a comment, nothing grades it."
+    }
+  ],
+  "orchestrator_note": "R11 is routed to debt on three independent grounds, any one sufficient: it is LOW; the reviewer itself scoped it outside the three acceptance clauses and named debt as an acceptable route; and it predates the round-3 diff (introduced in db54986). It is also exactly the condition the human attached to option A. Filed as T-M41-8."
+}

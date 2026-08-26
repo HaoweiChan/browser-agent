@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEC 10-K Extractor</title>
+<meta name="theme-color" content="#0a0d14">
+<noscript></noscript>
+<style>
+/* TinBoker 終端機 terminal style. Dark is the default look; light is the
+   "paper terminal". Token names are the page's originals — only the values
+   moved, so every rule below still reads the way it did. */
+:root{
+  --bg:hsl(220 34% 4%); --panel:hsl(218 30% 7%); --ink:hsl(210 22% 90%);
+  --dim:hsl(213 15% 60%); --line:hsl(213 28% 15%); --muted:hsl(216 26% 11%);
+  --amber:hsl(38 96% 56%); --on-amber:hsl(220 40% 6%);
+  /* amber as FILL vs amber as INK are different colors. On near-black the same
+     value does both; on the light "paper terminal" a 56%/44% amber reads at
+     2.4:1 as text, so ink darkens while the fill stays brand-amber. */
+  --amber-ink:var(--amber);
+  --accent:hsl(190 92% 56%);                 /* cyan — interactive only */
+  /* --bad is lifted off the palette's 61%: as the st-missing badge on a
+     SELECTED row (amber wash over --panel) that measured 4.21:1. */
+  --ok:hsl(145 66% 47%); --bad:hsl(0 80% 66%);
+  --warn:var(--amber-ink); --amb:var(--amber-ink);
+  --grid:hsl(213 28% 15% / .5);
+  --r:.2rem;                                 /* squared terminal corners */
+  --mono:'JetBrains Mono','Noto Sans TC',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+  /* this diff made dark the DEFAULT, so UA-drawn control internals must be
+     told: without it the file input's ::file-selector-button and the
+     scrollbars stay light-painted on a near-black canvas. */
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root{
+  --bg:hsl(214 16% 89%); --panel:hsl(210 16% 95%); --ink:hsl(216 38% 14%);
+  --dim:hsl(215 14% 38%);  /* 40% was 4.33:1 on --muted, the .it:hover ground */
+  --line:hsl(214 14% 80%); --muted:hsl(214 13% 86%);
+  --amber:hsl(33 92% 44%); --amber-ink:hsl(30 100% 26%);
+  /* --on-amber stays the dark near-black: white on a 44% amber fill is 3.1:1 */
+  --accent:hsl(198 94% 29%);   /* same reason: cyan-as-link-text, not cyan-as-ring */
+  --ok:hsl(152 72% 23%); --bad:hsl(0 74% 38%);  /* darkened from the palette's
+     fill values: these carry status as TEXT here, and 32%/50% land under 4.5:1 */
+  --grid:hsl(213 20% 86% / .7);
+  color-scheme:light;
+}}
+*{box-sizing:border-box}
+*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 35%,transparent) transparent}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.55 var(--mono);
+  font-feature-settings:'tnum' 1,'zero' 1,'calt' 1;letter-spacing:-.01em;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px),
+    repeating-linear-gradient(0deg,hsl(0 0% 100% / .012) 0 1px,transparent 1px 3px),
+    radial-gradient(1100px 700px at 50% -10%,hsl(190 90% 30% / .06),transparent 60%);
+  background-size:44px 44px,44px 44px,100% 3px,100% 100%;background-attachment:fixed}
+@media (prefers-color-scheme:light){body{
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:44px 44px}}
+/* amber -> cyan keyline pinned to the top of the viewport */
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:2px;z-index:100;
+  pointer-events:none;opacity:.9;
+  background:linear-gradient(90deg,var(--amber),var(--accent),var(--amber))}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button,select,input,.it,a{transition:background-color var(--t),border-color var(--t),color var(--t)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* min() over a bare px value so the shell still shrinks to fit a viewport
+   narrower than the cap (round 1's 1500px read cramped at 1920+; 94vw keeps
+   a margin on anything skinnier than that rather than hard-clipping). */
+header{max-width:min(1400px,94vw);margin-inline:auto;padding:22px 20px 26px;
+  border-bottom:1px solid color-mix(in srgb,var(--line) 65%,var(--ink))}
+h1{font-size:40px;margin:0;font-weight:800;letter-spacing:-.01em}
+h1::before{content:"> ";color:var(--amber-ink)}
+.subtitle{margin:10px 0 0;font-size:13px;font-weight:400;color:var(--dim)}
+.sha{font:12px var(--mono);color:var(--dim)}
+main{max-width:min(1400px,94vw);margin-inline:auto;padding:24px 20px 16px}
+fieldset{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;
+  margin:0 0 14px;background:var(--panel)}
+legend{font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;
+  color:var(--amber-ink);padding:0 6px}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+.mode{display:flex;flex-direction:column;gap:7px}
+.mode label{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:600}
+.row{display:flex;gap:7px}
+select,input[type=text],input[type=file]{flex:1;min-width:0;padding:7px 9px;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--bg);
+  color:var(--ink);font-size:14px;font-family:inherit}
+select:hover,input[type=text]:hover,input[type=file]:hover{border-color:color-mix(in srgb,var(--ink) 20%,transparent)}
+button{padding:7px 14px;border:1px solid var(--amber);border-radius:var(--r);
+  background:var(--amber);color:var(--on-amber);font-size:13px;cursor:pointer;
+  font-family:inherit;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+/* :not(.it) matters — the item rows are buttons too, and this selector would
+   otherwise outrank their own hover/selected rules and paint them solid amber */
+button:not(.it):hover:not(:disabled){background:color-mix(in srgb,var(--amber) 88%,var(--bg))}
+button:disabled{opacity:.5;cursor:default}
+.hint{font-size:12px;color:var(--dim)}
+/* S8: the exclusion toggle sits under the three modes, not inside one — it
+   applies to whichever mode is used, and a copy per mode is three checkboxes
+   that can disagree. */
+.opt{display:flex;gap:7px;align-items:center;flex-wrap:wrap;cursor:pointer;
+  margin-top:13px;font-size:13px}
+
+#banner{padding:11px 14px;border-radius:var(--r);margin-bottom:12px;font-weight:600;
+  border:1px solid;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#banner .src{font-weight:400;font-size:13px;font-family:var(--mono)}
+/* D7 (postmortem §8 gap 1, display half). Its own line inside the banner:
+   the coverage figure is a sentence with a caveat, not a chip, and #banner
+   is flex-wrap, so without a full-basis it would be stranded beside the
+   counts and its caveat clipped. Type comes from `.src` above, which the
+   element also carries and which OUTRANKS this rule (id+class beats id) —
+   so only the one declaration `.src` does not make is set here. It inherits
+   the banner's doc_status colour deliberately: it is a statement about the
+   same document. */
+#coverage{flex-basis:100%}
+.s-success{color:var(--ok);border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--bg))}
+.s-success_with_warning{color:var(--warn);border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--bg))}
+.s-ambiguous{color:var(--amb);border-color:var(--amb);background:color-mix(in srgb,var(--amb) 12%,var(--bg))}
+.s-unsupported,.s-failed{color:var(--bad);border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--bg))}
+.s-idle{color:var(--dim);border-color:var(--line)}
+
+#warnings{margin-bottom:12px}
+.warn{border:1px solid var(--line);border-left:3px solid var(--warn);
+  border-radius:var(--r);padding:8px 11px;margin-bottom:6px;background:var(--panel)}
+.warn code{font:12px var(--mono);color:var(--warn);font-weight:700}
+.warn .msg{font-size:14px;margin-top:2px}
+.none{color:var(--dim);font-size:13px}
+
+/* D5 (debt row: the compare pane still shows chrome while the extracted pane
+   hides it). Above the split rather than inside either pane: it is a statement
+   about BOTH panes, and #pane/#source are height-locked columns whose content
+   tops and bottoms are made to coincide (S5 amendment (3)/(7)) — an in-flow
+   band inside either one would break that alignment to say it. Borrowed from
+   .warn on purpose (same shape, ambiguous rather than warning accent): this is
+   a stated limit of the display, not a validator firing. */
+#bp-note{border:1px solid var(--line);border-left:3px solid var(--amb);
+  border-radius:var(--r);padding:8px 11px;margin-bottom:12px;background:var(--panel);
+  font-size:13px;color:var(--dim)}
+#bp-note code{font:12px var(--mono);color:var(--amber-ink)}
+
+.split{display:grid;grid-template-columns:290px 1fr 1fr;gap:14px;align-items:start}
+/* D5 (debt row V5): the SIDEBAR narrows first, so #pane and #source stay in
+   one row down to 1024. The old @media(max-width:1100px) dropped #source to
+   grid-column:1/-1 and stacked it BELOW #pane, which is the whole compare
+   feature gone on a 1024-wide screen — measured at 1024x860 on c13aa5c:
+   #pane top 507, #source top 1157, 650px apart on an 860px viewport. It was
+   the fixed 290px sidebar that ran the two panes out of width, not the panes,
+   so that is what gives way. Below 1000 they do still stack, and there
+   syncStacked() disables the sync-scroll control and labels it inactive —
+   two panes that are never on screen together have nothing to sync. */
+@media(max-width:1180px){.split{grid-template-columns:196px 1fr 1fr}}
+@media(max-width:1000px){.split{grid-template-columns:196px 1fr}#source{grid-column:1/-1}}
+@media(max-width:820px){.split{grid-template-columns:1fr}}
+/* One shared height so the three columns' tops (already equal via the grid's
+   own align-items:start) AND bottoms line up (S5 round 3) — #sidebar used to
+   grow with the item count while #pane/#source were capped internally at
+   520px, leaving the row ragged. vh over a px figure so it scales with the
+   viewport instead of wasting half a tall screen or clipping a short one. */
+#sidebar,#pane,#source{height:74vh}
+#sidebar{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  overflow-y:auto;overflow-x:hidden}
+.it{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);
+  background:var(--panel);color:var(--ink);padding:8px 11px;cursor:pointer;font-weight:400;
+  font-family:inherit;font-size:14px;text-transform:none;letter-spacing:-.01em;border-radius:0}
+.it:hover{background:var(--muted)}
+/* opaque both ends on purpose: transitioning background-color from transparent
+   to a translucent color-mix leaves it stuck opaque mid-interpolation */
+.it[aria-current=true]{background:color-mix(in srgb,var(--amber) 12%,var(--panel));
+  box-shadow:inset 3px 0 0 var(--amber)}
+.it .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.it .code{font:13px var(--mono);font-weight:700;color:var(--amber-ink)}
+/* S5 round 3: was --dim at the smallest declared size, so "Business" /
+   "Risk Factors" read as grey noise beside the amber item code. --ink is the
+   page's body-text token in BOTH schemes (light's is a dark navy — this is
+   deliberately "the page's ink colour", not literally the word white). */
+.it .ttl{font-size:12px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badges{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap}
+.b{font:11px var(--mono);padding:1px 5px;border-radius:var(--r);border:1px solid var(--line);
+  color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.b.st-extracted{color:var(--ok);border-color:var(--ok)}
+.b.st-missing{color:var(--bad);border-color:var(--bad)}
+.b.st-incorporated_by_reference{color:var(--accent);border-color:var(--accent)}
+.b.st-omitted{color:var(--dim)}
+.b.lo{color:var(--warn);border-color:var(--warn)}
+/* PR #53 R3. `lo` keeps the meaning it had before D7 — amber TEXT means THIS
+   item's own validators fired. D7 first made it fire for a warned DOCUMENT
+   too, which repainted all 23 jpm-2024 badges identically and erased the one
+   signal that found item 15. The document-level qualifier gets its own token
+   instead: amber BORDER over the badge's resting `--dim` text. The border
+   says "this document is warned"; amber text stays reserved for an item a
+   validator actually hit. One declaration, and both tokens are already
+   proven against this badge's grounds by ui-contrast-and-specificity. */
+.b.docw{border-color:var(--warn)}
+
+/* S5 round 3 (debt row V4): #pane used to stack an <h2>, a hint line and the
+   evidence <dl> ABOVE pre.text, so the extracted text started ~136px below
+   the source iframe and a head-to-head read never lined up. #pane is now a
+   flex column, exactly like #source: a `.src-hdr` band (reused verbatim, not
+   a near-duplicate rule, so the two heights cannot drift apart) holding the
+   item code/title/status on one compact line, then pre.text filling the
+   rest — the same first-flex-child position #source-body's iframe already
+   sits at. The old h2/hint/evidence block still exists, as `.pane-meta`
+   below; round 3 put it in-flow after pre.text, which fixed the TOP
+   alignment but broke the BOTTOM one (it stole ~65px of pre.text's flex
+   share) — round 4 (amendment (7)) takes it out of flow instead. position:
+   relative here is what anchors that overlay. */
+#pane{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  display:flex;flex-direction:column;overflow:hidden;position:relative}
+.ev{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;
+  border-top:1px solid var(--line);padding:10px 13px 13px;margin:0}
+.ev dt{color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+.ev dd{margin:0;font-family:var(--mono);font-size:12px;word-break:break-word}
+/* margin:0 top AND bottom is load-bearing, not decoration (S5 amendment
+   (7)): pre.text's top edge sits flush against #pane's .src-hdr band, and
+   its BOTTOM edge sits flush against #pane's own bottom, the same way
+   #source-body's iframe fills flush to #source's edges on both sides —
+   that flush placement on all four sides is WHY the two scrollable content
+   regions share both a top AND a bottom Y. Left/right keep their 14px gutter
+   (that axis was never the alignment problem). padding-bottom leaves room
+   so the floating .pane-meta bar below never sits directly over the last
+   line of text at rest. */
+pre.text{white-space:pre-wrap;word-wrap:break-word;font:13px/1.6 var(--mono);
+  background:var(--bg);border:1px solid var(--line);border-radius:var(--r);
+  padding:11px 11px 42px;margin:0 14px;flex:1;min-height:0;overflow:auto}
+/* S9 (ADR-032): the Markdown-rendered item body. Same box, same flush edges
+   and bottom padding as pre.text above — it is the same pane in a second
+   mode — but proportional text, real headings, real tables. Colours are the
+   page's existing tokens only (ink, dim, line, bg): no new pair to measure. */
+.text.md{font:14px/1.6 var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);
+  border-radius:var(--r);padding:11px 14px 42px;margin:0 14px;flex:1;min-height:0;overflow:auto;
+  overflow-wrap:anywhere}
+.text.md p{margin:0 0 .9em}
+.text.md h1,.text.md h2,.text.md h3,.text.md h4,.text.md h5,.text.md h6{margin:1.1em 0 .5em;line-height:1.3;color:var(--ink)}
+.text.md h1{font-size:1.25em}.text.md h2{font-size:1.15em}.text.md h3,.text.md h4,.text.md h5,.text.md h6{font-size:1em}
+.text.md ul,.text.md ol{margin:0 0 .9em;padding-left:1.6em}
+.text.md table{border-collapse:collapse;margin:0 0 1em;font-size:13px;display:block;max-width:100%;overflow-x:auto}
+.text.md th,.text.md td{border:1px solid var(--line);padding:3px 8px;text-align:left;vertical-align:top;
+  overflow-wrap:normal;word-break:normal}
+.text.md th{font-weight:700}
+.text.md pre{margin:0 0 .9em;white-space:pre-wrap;word-break:break-word;font:13px/1.5 var(--mono)}
+details{margin-top:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+/* S5 amendment (5)+(7): heading/offsets/evidence is real evidence (INV-S2's
+   proof, not jargon to delete) but meaningless to an interviewer at a
+   glance, so it stays collapsed and relabelled in plain language — and it
+   must not compete with pre.text for #pane's fixed height the way an
+   in-flow trailing <details> did (that was the 65px content-bottom gap: the
+   human measured pre.text's bottom sitting 65px above #source's). Taking it
+   out of flow with position:absolute, pinned to #pane's own edges with a
+   14px inset (never flush — the human's other ask), is what makes pre.text
+   get ALL of #pane's remaining height again, same as #source-body. Closed,
+   it is just the summary bar floating over the last line of text; open, it
+   overlays rather than displacing, per the human's own two accepted options. */
+.pane-meta{position:absolute;left:14px;right:14px;bottom:14px;margin:0;
+  box-shadow:0 -6px 16px hsl(0 0% 0% / .35);z-index:1}
+.pane-meta[open]{max-height:260px;overflow:auto}
+summary{padding:9px 13px;cursor:pointer;font-size:12px;font-weight:600;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.1em}
+summary:hover{color:var(--accent)}
+details pre{margin:0;padding:0 13px 13px;font:12px/1.5 var(--mono);
+  white-space:pre-wrap;word-break:break-word;max-height:440px;overflow:auto}
+.meta-chrome{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;
+  padding:9px 13px 0}
+#source{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  overflow:hidden;display:flex;flex-direction:column}
+/* shared by #source's own header AND #pane's (S5 round 3) — one rule, so the
+   two bands cannot drift a pixel apart the way a second near-duplicate rule
+   eventually would. */
+.src-hdr{padding:9px 13px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;
+  color:var(--dim);text-transform:uppercase;letter-spacing:.1em;display:flex;
+  justify-content:space-between;align-items:center;gap:10px}
+.src-hdr label{font-size:12px;text-transform:none;letter-spacing:0;font-weight:400;
+  display:flex;gap:5px;align-items:center;cursor:pointer}
+.src-hdr .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#anchor-status{font-size:11px;text-transform:none;letter-spacing:0;font-weight:400;
+  color:var(--warn)}
+/* min-height:0 overrides flexbox's default min-height:auto, which would
+   otherwise refuse to shrink #source-body below its content's natural size
+   and silently defeat height:100% on #src-frame. */
+#source-body{flex:1;min-height:0}
+#src-frame{width:100%;height:100%;border:0;display:block;background:var(--bg)}
+.cap{padding:12px 13px}
+.cap h3{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--amber-ink);font-weight:600}
+.cap h3:first-child{margin-top:0}
+table.cap-t{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+table.cap-t th,table.cap-t td{border:1px solid var(--line);padding:6px 8px;
+  text-align:left;vertical-align:top}
+table.cap-t th{background:var(--muted);color:var(--dim);text-transform:uppercase;
+  letter-spacing:.06em;font-size:11px;font-weight:600}
+table.cap-diff td:first-child{width:26%;font-weight:600;color:var(--ink)}
+.cap-decisions{margin-top:2px}
+.cap-decisions ul{margin:0;padding:0 13px 10px 26px;font-size:12px;color:var(--dim)}
+.cap-decisions li{margin-bottom:4px}
+footer{max-width:min(1400px,94vw);margin-inline:auto;padding:14px 20px 40px;color:var(--dim);font-size:13px}
+footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>SEC 10-K Extractor</h1>
+  <p class="subtitle">Item-level extraction from SEC 10-K filings, with the evidence for every span.</p>
+</header>
+
+<main>
+<fieldset>
+  <legend>filing input</legend>
+  <div class="modes">
+    <div class="mode">
+      <label for="fx">select a committed fixture</label>
+      <div class="row"><select id="fx"><option>aapl-2025</option><option>aapl-2026-10q</option><option>amended-cover-2021</option><option>axp-2008</option><option>ba-2003</option><option>bac-2006</option><option>caps-cover-2016</option><option>cat-2023</option><option>comma-cover-2016</option><option>cvx-2015</option><option>fy2021-item9c</option><option>ge-1994</option><option>gs-2002</option><option>heading-unnumbered</option><option>ibm-1997</option><option>ibr-pointer-first</option><option>ibr-security-holders</option><option>intc-2002</option><option>interior-span-dominates</option><option>items-stripped</option><option>jnj-2016</option><option>jpm-2024</option><option>ko-1997</option><option>ksb-2007</option><option>malformed-html</option><option>msft-2013</option><option>nike-2006</option><option>nvda-2024</option><option>premier-pacific-2016</option><option>reac-2015</option><option>sandston-2021</option><option>sgrp-2019</option><option>spaced-letter-heading</option><option>spans-transposed</option><option>spatz-2014</option><option>textron-2001</option><option>tgt-2002</option><option>toc-titled</option><option>truncated-download</option><option>wfc-2008</option><option>wmt-2010</option><option>xom-2021</option></select><button id="go-fx" aria-label="Extract the selected committed fixture">Extract</button></div>
+      <span class="hint">Filings committed to the eval set, with provenance.</span>
+    </div>
+    <div class="mode">
+      <label for="up">upload a filing (.htm / .html / .txt)</label>
+      <div class="row"><input type="file" id="up" accept=".htm,.html,.txt"><button id="go-up" aria-label="Extract the uploaded filing">Extract</button></div>
+      <span class="hint">No network, no SEC dependency. Use this for your own filings.</span>
+    </div>
+    <div class="mode">
+      <label for="url">EDGAR document URL</label>
+      <div class="row"><input type="text" id="url" placeholder="https://www.sec.gov/Archives/edgar/data/…"><button id="go-url" aria-label="Extract from the EDGAR document URL">Extract</button></div>
+      <span class="hint">Best-effort: EDGAR can block datacenter IPs. Upload is the reliable path.</span>
+    </div>
+  </div>
+  <label class="opt"><input type="checkbox" id="exclude-bp"> exclude boilerplate
+    <span class="hint">— hides detected running heads, page numbers and EDGAR
+    table furniture from the extracted-item pane. Display only: the offsets and
+    character count stay those of the full span (ADR-026).</span></label>
+  <label class="opt"><input type="checkbox" id="render-md"> render as Markdown
+    <span class="hint">— shows the extracted item as headings, paragraphs and
+    tables derived from the filing's block structure instead of the flat text
+    run. Display only: the offsets and character count stay those of the raw
+    slice, which the compare pane still shows (ADR-032).</span></label>
+</fieldset>
+
+<!-- D10: the page's ONE status region. JS rewrites it after every extraction
+     (render(), busy()), so role=status — a polite live region — is what this
+     element actually is, not an agent affordance; the aria-label names it so
+     doc_status belongs to something instead of to an anonymous `generic`. -->
+<div id="banner" class="s-success" role="status" aria-label="doc_status">doc_status: success <span class="src">— 18 extracted · 5 incorporated_by_reference</span> <span class="src">fixture: aapl-2025</span></div>
+<div id="warnings"><div class="none">No warnings — every validator stayed silent.</div></div>
+<!-- D5: shown only while the response on screen actually HAD something hidden
+     — render() assigns .hidden from `v.boilerplate_applied` (PR #46 R1). That
+     is deliberately NOT the field the pane header reads: `hdrRight` and the
+     .pane-meta boilerplate <dd> below key on `boilerplate_excluded`, which is
+     True whenever the flag was merely asked for. This note ASSERTS the two
+     panes differ, so it needs the field that says one of them changed. It
+     states the limit; it does not fix it, and must not read as if it did. -->
+<div id="bp-note" hidden="">Boilerplate exclusion applies to the
+  derived <code>normalized_text</code> only. The compare pane serves the raw
+  filing bytes, so it still shows every page break and running head the
+  extracted pane drops — the two panes will not agree while this is on. That is
+  what exclusion accounts for, and only that: with Markdown rendering on the
+  extracted pane also differs in form, which is ADR-032's separate derived view
+  and is stated in the pane's own evidence. There is
+  no raw-to-normalized offset map in this pipeline (ADR-026 §a), so this is a
+  known limit of the compare view, not a fault in either pane.</div>
+
+<div class="split">
+  <div id="sidebar"><button class="it" data-i="0" aria-current="false">
+      <div class="top"><span class="code">1</span>
+      <span class="ttl">Business</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">16,053 ch</span>
+      </div></button><button class="it" data-i="1" aria-current="false">
+      <div class="top"><span class="code">1A</span>
+      <span class="ttl">Risk Factors</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">68,162 ch</span>
+      </div></button><button class="it" data-i="2" aria-current="false">
+      <div class="top"><span class="code">1B</span>
+      <span class="ttl">Unresolved Staff Comments</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">43 ch</span>
+      </div></button><button class="it" data-i="3" aria-current="false">
+      <div class="top"><span class="code">1C</span>
+      <span class="ttl">Cybersecurity</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">2,704 ch</span>
+      </div></button><button class="it" data-i="4" aria-current="false">
+      <div class="top"><span class="code">2</span>
+      <span class="ttl">Properties</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">520 ch</span>
+      </div></button><button class="it" data-i="5" aria-current="false">
+      <div class="top"><span class="code">3</span>
+      <span class="ttl">Legal Proceedings</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">5,408 ch</span>
+      </div></button><button class="it" data-i="6" aria-current="true">
+      <div class="top"><span class="code">4</span>
+      <span class="ttl">Mine Safety Disclosures</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">93 ch</span>
+      </div></button><button class="it" data-i="7" aria-current="false">
+      <div class="top"><span class="code">5</span>
+      <span class="ttl">Market for Registrant's Common Equity, Related Stockholder Matters and Issuer Purchases of Equity Securities</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">2,685 ch</span>
+      </div></button><button class="it" data-i="8" aria-current="false">
+      <div class="top"><span class="code">6</span>
+      <span class="ttl">[Reserved]</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">54 ch</span>
+      </div></button><button class="it" data-i="9" aria-current="false">
+      <div class="top"><span class="code">7</span>
+      <span class="ttl">Management's Discussion and Analysis of Financial Condition and Results of Operations</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">18,144 ch</span>
+      </div></button><button class="it" data-i="10" aria-current="false">
+      <div class="top"><span class="code">7A</span>
+      <span class="ttl">Quantitative and Qualitative Disclosures About Market Risk</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">3,037 ch</span>
+      </div></button><button class="it" data-i="11" aria-current="false">
+      <div class="top"><span class="code">8</span>
+      <span class="ttl">Financial Statements and Supplementary Data</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">61,402 ch</span>
+      </div></button><button class="it" data-i="12" aria-current="false">
+      <div class="top"><span class="code">9</span>
+      <span class="ttl">Changes in and Disagreements with Accountants on Accounting and Financial Disclosure</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">101 ch</span>
+      </div></button><button class="it" data-i="13" aria-current="false">
+      <div class="top"><span class="code">9A</span>
+      <span class="ttl">Controls and Procedures</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">4,511 ch</span>
+      </div></button><button class="it" data-i="14" aria-current="false">
+      <div class="top"><span class="code">9B</span>
+      <span class="ttl">Other Information</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">574 ch</span>
+      </div></button><button class="it" data-i="15" aria-current="false">
+      <div class="top"><span class="code">9C</span>
+      <span class="ttl">Disclosure Regarding Foreign Jurisdictions that Prevent Inspections</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">105 ch</span>
+      </div></button><button class="it" data-i="16" aria-current="false">
+      <div class="top"><span class="code">10</span>
+      <span class="ttl">Directors, Executive Officers and Corporate Governance</span></div>
+      <div class="badges">
+        <span class="b st-incorporated_by_reference">incorporated_by_reference</span>
+        <span class="b">conf 0.85</span>
+        <span class="b">heading_strict</span>
+        <span class="b">400 ch</span>
+      </div></button><button class="it" data-i="17" aria-current="false">
+      <div class="top"><span class="code">11</span>
+      <span class="ttl">Executive Compensation</span></div>
+      <div class="badges">
+        <span class="b st-incorporated_by_reference">incorporated_by_reference</span>
+        <span class="b">conf 0.85</span>
+        <span class="b">heading_strict</span>
+        <span class="b">159 ch</span>
+      </div></button><button class="it" data-i="18" aria-current="false">
+      <div class="top"><span class="code">12</span>
+      <span class="ttl">Security Ownership of Certain Beneficial Owners and Management and Related Stockholder Matters</span></div>
+      <div class="badges">
+        <span class="b st-incorporated_by_reference">incorporated_by_reference</span>
+        <span class="b">conf 0.85</span>
+        <span class="b">heading_strict</span>
+        <span class="b">231 ch</span>
+      </div></button><button class="it" data-i="19" aria-current="false">
+      <div class="top"><span class="code">13</span>
+      <span class="ttl">Certain Relationships and Related Transactions, and Director Independence</span></div>
+      <div class="badges">
+        <span class="b st-incorporated_by_reference">incorporated_by_reference</span>
+        <span class="b">conf 0.85</span>
+        <span class="b">heading_strict</span>
+        <span class="b">210 ch</span>
+      </div></button><button class="it" data-i="20" aria-current="false">
+      <div class="top"><span class="code">14</span>
+      <span class="ttl">Principal Accountant Fees and Services</span></div>
+      <div class="badges">
+        <span class="b st-incorporated_by_reference">incorporated_by_reference</span>
+        <span class="b">conf 0.85</span>
+        <span class="b">heading_strict</span>
+        <span class="b">218 ch</span>
+      </div></button><button class="it" data-i="21" aria-current="false">
+      <div class="top"><span class="code">15</span>
+      <span class="ttl">Exhibits, Financial Statement Schedules</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">11,898 ch</span>
+      </div></button><button class="it" data-i="22" aria-current="false">
+      <div class="top"><span class="code">16</span>
+      <span class="ttl">Form 10-K Summary</span></div>
+      <div class="badges">
+        <span class="b st-extracted">extracted</span>
+        <span class="b">conf 0.95</span>
+        <span class="b">heading_strict</span>
+        <span class="b">69 ch</span>
+      </div></button></div>
+  <div id="pane">
+    <div class="src-hdr"><span class="lbl">Item 4 — Mine Safety Disclosures</span>
+      <span class="lbl">Part I · extracted · conf 0.95 · via heading_strict</span></div>
+    <pre class="text" role="region" aria-label="Item 4 extracted text">Item 4. Mine Safety Disclosures
+
+Not applicable.
+
+Apple Inc. | 2025 Form 10-K | 18
+
+PART II
+
+</pre>
+    <details class="pane-meta"><summary>where this text came from</summary>
+      <dl class="ev">
+        
+        
+        
+        <dt>heading matched</dt><dd>Item 4. Mine Safety Disclosures</dd>
+        <dt>offsets</dt><dd>[101,534, 101,627)</dd>
+        <dt>evidence</dt><dd>{"title_similarity":1,"chars":93,"warnings":[],"confidence_base":0.95}</dd>
+      </dl>
+    </details></div>
+  <div id="source">
+    <div class="src-hdr"><span>original filing</span>
+      <span id="anchor-status"></span>
+      <label><input type="checkbox" id="sync-scroll" checked=""> sync scroll<span id="sync-state"></span></label>
+    </div>
+    <div id="source-body"></div>
+  </div>
+</div>
+
+<!-- S5 amendment (6): capabilities leads — it's the panel worth an interviewer
+     reading; trace/meta are evidence for someone who goes looking, so they
+     follow rather than lead. Open by default since it now leads: nothing
+     stood between the split and this panel before, and a closed lead panel
+     right under the split reads like nothing is there. -->
+<details id="cap-box" open=""><summary>Capabilities — what works, what doesn't</summary>
+  <div class="cap" id="cap-content"><h3>what works well</h3><table class="cap-t "><thead><tr><th>Stratum</th><th>Examples</th><th>Result</th></tr></thead><tbody><tr><td>Modern iXBRL (2019+)</td><td>AAPL FY2025, NVDA FY2024, CAT FY2023</td><td>success, full item sets (23 items)</td></tr><tr><td>Mid-era HTML (2001–2019)</td><td>MSFT FY2013, NIKE FY2006, JNJ FY2016</td><td>success. JNJ is the filer whose bare-block headings once cost 18 of 21 items (ADR-013)</td></tr><tr><td>Plain-text submissions (1993–2001)</td><td>GE FY1993, IBM FY1997</td><td>success_with_warning; the txt era was kept in scope, its stop-loss never invoked (ADR-007)</td></tr><tr><td>10-K405 checkbox variant</td><td>Textron FY2001, IBM FY1997</td><td>handled; the form cross-check compares families, not strings (ADR-006)</td></tr><tr><td>Shell / tiny filers</td><td>Sandston FY2021, Premier Pacific FY2016</td><td>success, including correct omitted for absent optional items</td></tr><tr><td>Table-of-contents traps</td><td>toc-titled (synthetic hard form)</td><td>TOC suppressed, body headings win</td></tr><tr><td>Non-10-K input</td><td>Apple Q1 FY2026 10-Q</td><td>refused as unsupported, zero items</td></tr><tr><td>Truncated download</td><td>0 normalized chars</td><td>refused as failed, with the right diagnosis (ADR-010)</td></tr><tr><td>Large filings</td><td>JPM FY2024, 12.25 MiB</td><td>0.58 s (median of 3, evals/report/20260823-185707-bench.json; 0.72 s with tables=True), and it flags its own boundary problem</td></tr></tbody></table><h3>what is difficult, unreliable, or unsupported</h3><table class="cap-t cap-diff"><thead><tr><th>Limitation</th><th>Concrete case</th><th>Status</th></tr></thead><tbody><tr><td>Legally-permitted omissions are reported as missing</td><td>Exxon FY2021 drops Item 6, allowed since a 2021 rule change, but the extractor can't tell that apart from a real gap</td><td>Known, unfixed — honest but imprecise</td></tr><tr><td>An appendix placed after the last item inflates that item's span</td><td>JPM FY2024: the financial appendix sits after the last item's exhibit index, so that item's span swallows 83% of the document</td><td>A validator catches it and flags the filing ambiguous — loud, but the boundary is still wrong</td></tr><tr><td>One validation rule can never actually fire on a real filing</td><td>Spans are built from their own heading text by construction, so the check it would catch can't occur</td><td>Proven correct in code instead of by example</td></tr><tr><td>A handful of validation checks were recently proven able to fail, but not yet tuned</td><td>3 of 4 checks once thought unfailable can now go red on hand-built test cases</td><td>The logic is proven; per-case sensitivity tuning is still open</td></tr><tr><td>The "silent failure" rate is measured on a partial sample</td><td>0% measured, but only across 109 of 490 high-confidence items — the rest weren't checked</td><td>Disclosed as a narrow measurement, not a full guarantee</td></tr><tr><td>The historical item-numbering table was fragile around a 2002–2003 SEC rule change</td><td>Three different filings from that window broke numbering before the table was corrected</td><td>Fixed — kept here because the fragility itself is structural</td></tr><tr><td>Out of scope by design</td><td>Non-10-K forms (10-Q, 8-K, 20-F), scanned/image/PDF filings, 10-K/A amendments, 10-KSB, and inputs with no detectable 10-K document</td><td>Refused outright — a refusal names the form and returns the raw text; it never fakes items</td></tr></tbody></table><details class="cap-decisions"><summary>design-decision log</summary><ul><li><a href="/api/decisions/ADR-010-g1-corrections.md" target="_blank">ADR-010</a> — fixed four bugs that were failing silently, including the 9C boundary and a date-parsing bug.</li><li><a href="/api/decisions/ADR-013-heading-shape-and-escalation.md" target="_blank">ADR-013</a> — rule for headings with no body text, and when a filing gets flagged ambiguous for missing too many items.</li><li><a href="/api/decisions/ADR-015-transitional-era-and-trailing-index.md" target="_blank">ADR-015</a> — the 2002–2003 numbering-transition fix, plus a rule for trailing index pages that echo earlier items.</li><li><a href="/api/decisions/ADR-016-validator-provability.md" target="_blank">ADR-016</a> — every validator and eval check was individually proven either fixture-testable, unit-testable, or provably-can't-fire.</li><li><a href="/api/decisions/ADR-019-silent-failure-rate.md" target="_blank">ADR-019</a> — the silent-failure rate was measured directly on a sampled, audited set of items.</li><li><a href="/api/decisions/ADR-024-10ka-out-of-scope.md" target="_blank">ADR-024</a> — 10-K/A amendments ruled out of scope, with the refusal enforced on two independent code paths.</li></ul></details></div>
+</details>
+<details id="trace-box"><summary>Pipeline trace (JSON)</summary><pre id="trace">[
+ {
+  "layer": "acquisition",
+  "path": "filing.htm",
+  "bytes": 1520208
+ },
+ {
+  "layer": "select+normalize",
+  "form_type": "10-K",
+  "period_end": "2025-09-27",
+  "form_type_declared": null,
+  "form_type_sniffed": "10-K",
+  "format_era": "ixbrl",
+  "n_blocks": 0,
+  "block_types": [],
+  "document_selected": "whole file (no &lt;DOCUMENT&gt; blocks)",
+  "raw_chars": 1520208,
+  "norm_chars": 207482,
+  "input_sha256": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a"
+ },
+ {
+  "layer": "candidates",
+  "found": 46,
+  "survived": 23,
+  "toc_manifest": [
+   "1",
+   "1A",
+   "1B",
+   "1C",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "7A",
+   "8",
+   "9",
+   "9A",
+   "9B",
+   "9C",
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16"
+  ],
+  "rejected": [
+   {
+    "item": "1",
+    "start": 5292,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "1A",
+    "start": 5314,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "1B",
+    "start": 5341,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "1C",
+    "start": 5382,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "2",
+    "start": 5411,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "3",
+    "start": 5436,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "4",
+    "start": 5468,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "5",
+    "start": 5515,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "6",
+    "start": 5638,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "7",
+    "start": 5663,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "7A",
+    "start": 5763,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "8",
+    "start": 5837,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "9",
+    "start": 5895,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "9A",
+    "start": 5994,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "9B",
+    "start": 6033,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "9C",
+    "start": 6066,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "10",
+    "start": 6159,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "11",
+    "start": 6229,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "12",
+    "start": 6267,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "13",
+    "start": 6377,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "14",
+    "start": 6466,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "15",
+    "start": 6529,
+    "why": "table-of-contents cluster"
+   },
+   {
+    "item": "16",
+    "start": 6586,
+    "why": "table-of-contents cluster"
+   }
+  ]
+ },
+ {
+  "layer": "status",
+  "counts": {
+   "incorporated_by_reference": 5,
+   "extracted": 18
+  }
+ },
+ {
+  "layer": "validate",
+  "checks_fired": []
+ }
+]</pre></details>
+<details id="meta-box"><summary>meta &amp; timings</summary>
+  <div class="meta-chrome"><span class="sha" id="sha">build 6b37ffa99d05</span>
+    <span class="sha"><a href="/edgar-check" target="_blank">/edgar-check</a></span></div>
+  <pre id="meta">{
+ "meta": {
+  "extractor_version": "0.8.0-d4",
+  "form_type": "10-K",
+  "period_end": "2025-09-27",
+  "form_type_declared": null,
+  "form_type_sniffed": "10-K",
+  "format_era": "ixbrl",
+  "n_blocks": 0,
+  "block_types": [],
+  "document_selected": "whole file (no &lt;DOCUMENT&gt; blocks)",
+  "raw_chars": 1520208,
+  "norm_chars": 207482,
+  "input_sha256": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a",
+  "taxonomy_era": "modern",
+  "toc_manifest": [
+   "1",
+   "1A",
+   "1B",
+   "1C",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "7A",
+   "8",
+   "9",
+   "9A",
+   "9B",
+   "9C",
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16"
+  ]
+ },
+ "timings": {
+  "total_ms": 227.6
+ },
+ "cost": {
+  "llm_calls": 0,
+  "tokens": 0,
+  "usd": 0
+ },
+ "normalized_chars": 207482
+}</pre>
+</details>
+</main>
+
+<footer>
+  Item text is rendered from <code>start</code>/<code>end</code> offsets into the extractor's
+  normalized text — there is no second copy to drift (INV-S2).
+</footer>
+
+
+
+
+</body></html>
