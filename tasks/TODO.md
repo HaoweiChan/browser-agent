@@ -41,15 +41,41 @@ central live demonstration does not reproduce. Both modes die at the same step:
 resolving the fixture `<select>`. Loop:
 `no tier resolved {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}`.
 Mode B: the same target through the text tier after a relocation.
-What is NOT yet established is WHY. The visible label is CSS-uppercased while
-the DOM carries `<label for="fx">select a committed fixture</label>`, but case
-alone should not defeat the resolver — `resolver.py:169,182` match with
-`re.IGNORECASE`. A likelier line of enquiry: the served markup is
-`<select id="fx"></select>`, EMPTY, its options painted by `fetch()`. The run
-evidence carries screenshots but no observation dump, so the tier-by-tier
-failure cannot be reconstructed from outside the run. Do not fix on the case
-hypothesis without reproducing first — it was asserted once already and does not
-survive reading the resolver.
+Update 2026-08-26 — ROOT CAUSE FOUND, and it is the hypothesis this block
+first dismissed. The dismissal was wrong and cited the wrong code: the
+`re.IGNORECASE` at `resolver.py:169,182` belongs to `_PLURAL_ASK` (a plural-
+phrasing detector) and `_loose()` (the `near` typography tolerance) — neither
+touches name matching. The role tier is `resolver.py:300`
+`get_by_role(role, name=name, exact=True)`, and Playwright's `exact=True` is
+CASE-SENSITIVE whole-string; the text tier (`:303`, `get_by_text(text, exact=True)`)
+fails identically, which is why the relocation rung retargeting `{text: <name>}`
+dies the same way. Found by the planning session and reproduced independently
+here against the live deployment with the repo's own primitives ($0, no LLM):
+  - `observe()` reports the control as role `combobox`, name
+    `'SELECT A COMMITTED FIXTURE'` — UPPERCASE, because Chromium's
+    `accessibility.snapshot()` applies the page's CSS `text-transform: uppercase`
+    to the accessible name.
+  - `resolve({role: combobox, name: 'SELECT A COMMITTED FIXTURE'})` -> ResolveError
+    "no tier resolved". `resolve({..., name: 'select a committed fixture'})` ->
+    RESOLVED, tier `role`.
+  - 43 `<option>`s were in the DOM at observation time, so this is NOT the
+    empty-at-load race this block guessed at second.
+So the defect is two different accessible-name computations disagreeing:
+Chromium's snapshot applies CSS `text-transform`, Playwright's locator engine
+does not. `resolver.py:294`'s own comment — "planner names come from the
+observation verbatim" — is exactly the assumption this breaks. In loop mode every
+re-observation reproduces the same uppercase name, nothing resolves, no page
+change is recorded, and the no-progress harness fires at the 4th revisit: the six
+run records above are fully consistent with this and need no other explanation.
+Proposed fix (site-agnostic, rule 6 clean, smallest diff): keep whole-string
+semantics and relax only case — the role tier passes an anchored case-insensitive
+regex when a name is present,
+`get_by_role(role, name=re.compile(rf"^{re.escape(name)}$", re.IGNORECASE))`,
+and the text tier gets the same treatment. `exact=True`'s reason to exist
+(refusing substring-ambiguity, case `resolver-substring-name`) survives because
+the regex is anchored. Two names differing only by case now collide into M38's
+existing ambiguity machinery, which is the honest outcome rather than a silent
+pick.
 Two things did work and must not be lost when this is fixed: the no-progress
 harness fired on all three loop runs — its first live firing — ending each at
 the 4th revisit of the same page state with the reason named, after a forced
@@ -57,9 +83,12 @@ strategy change failed to move it, rather than grinding the budget in a circle;
 and per-run cost is visible in the trace, which is its own clause and IS met.
 Also recorded, not a defect: loop mode cost 100-300x mode B per run
 ($0.4830-$0.9166 vs $0.0015-$0.0043). Total smoke spend ~$1.90.
-Acceptance: a fixture reproducing the shape offline — a `<select>` that is
-EMPTY at load and whose options arrive by `fetch()`, with a CSS-uppercased
-label — watched red first; the root cause named and fixed; the same live smoke
+Acceptance: TWO red-first cases, both red today, both required (rule 2):
+(a) a fixture whose label carries `text-transform: uppercase`, where the case
+feeds the OBSERVED name back into `resolve` — this is the root cause above;
+(b) a `<select>` EMPTY at load whose options arrive by `fetch()` — the separate
+S1 half this block's "finding behind the finding" names, still uncovered.
+Then the fix above; the same live smoke
 re-run at 3 reps with loop mode answering `2024-01-28` and run ids published;
 `tasks/DONE.md:44` amended to say what M42 did and did not demonstrate live.
 Out of scope: mode B answering this task (D28's declared boundary — S1 is why
