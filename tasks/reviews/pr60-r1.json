@@ -1,0 +1,98 @@
+{
+  "task": "T-M42-20",
+  "branch": "task/T-M42-20-fix",
+  "pr": 60,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "note": "Every finding was EXECUTED by the reviewer, not inferred. Repro fields are condensed to their operative call; the full scripts were relayed verbatim to the implementer in the round-1 repair message.",
+  "gate": {
+    "invariant": "76/76 = 1.000, wall 14.56s",
+    "fast": "222/222 = 1.000, wall 89.42s",
+    "baseline_file": "unchanged from main",
+    "run_by": "orchestrator, independently, on committed fbe304b"
+  },
+  "routing_note": "R3/R4/R5/R6 are defects in THIS PR's own work \u2014 its new case's grader, its case note, its half-applied fix, its regression \u2014 so they block. R2/R7/R8 are pre-existing defects the review surfaced; the debt rule sends those to Debt regardless of severity. R2 is a CONFIRMED wrong-success and is flagged to the human for promotion rather than buried.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "CONFIRMED: `_whole_string` widens both name tiers to case-insensitive, but the `index` and `near` branches return before the uniqueness/ambiguity check, so a page carrying case-twin controls now silently resolves to a DIFFERENT element than before this PR \u2014 no `ambiguous-match`, no `narrowed:` note, and the docstring/ADR-026 claim that case twins 'collide as an ambiguity and go to M38's narrowing rungs' is false on those two paths.",
+      "evidence": "resolver.py:334,337 (`_whole_string`) feeding :412-415 (`if index is not None: ... return loc.nth(index)`) and :397-405 (`near` returns `loc.nth(i)`), both BEFORE the `n == 1` check at :416 and the `ambiguous` bookkeeping at :418-419. Input 1 (index): `<a id=promo>ADD TO CART</a>` before `<a id=rowcta>Add to cart</a>`, target `{'role':'link','name':'Add to cart','index':0}`, action `click` \u2014 base 6b016b5 returns id=rowcta, HEAD returns id=promo, tier=role, narrowed=None. Input 2 (near): `<a id=twin>SAVE FOR LATER</a>` inside the row holding anchor 'Widget A', `<a id=real>Save for later</a>` elsewhere, target `{'role':'link','name':'Save for later','near':'Widget A'}` \u2014 base returns id=real, HEAD returns id=twin, tier=structural, narrowed=None. `extract_all` grows the same way (`{'text':'Great'}` over `<p>Great</p>`/`<p>GREAT</p>`: base ['p1'], HEAD ['p1','p2']). No adversarial case in the diff covers this direction.",
+      "repro": "git worktree add /tmp/base 6b016b5 --detach; then call resolve({'role':'link','name':'Add to cart','index':0}, action='click') against both trees on a page with `<a id=promo>ADD TO CART</a>` before `<a id=rowcta>Add to cart</a>` \u2014 base returns rowcta, HEAD returns promo. Full script in the round-1 review relay.",
+      "acceptance": "A new adversarial case (watched red on `fbe304b`) that puts two case-twin controls on one fixture and asserts that an `index`/`near` target either raises `ambiguous-match` or records a narrowing label \u2014 plus either a code guard that runs the uniqueness/ambiguity check before `index`/`near` select, or the `_whole_string` docstring, ADR-026 and browser-domain/SKILL.md corrected to say the collision promise holds only on the `n == 1` path."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "debt",
+      "claim": "CONFIRMED: `select_option` matches the requested string against `[value, label]` by list membership, so a value string that happens to equal a DIFFERENT option's value is selected, and an absent/empty `value` matches an empty-valued placeholder \u2014 both record `postcondition_ok: True` and report `success`.",
+      "evidence": "agent.py:1130 `match = next((o for o in opts if want in o), None)` with readback at :1138 comparing to `match[0]` (self-consistent by construction). Executed: on `<option value=''>Choose a filing\u2026</option><option value='2024'>FY 2023</option><option value='2025'>FY 2024</option>`, `want='2024'` -> matched `['2024','FY 2023']`, selected value `'2024'`, postcondition_ok=True, page fires change to the FY 2023 filing. `want=''` (step omits `value`; :1100 `step.get('value') or ''`) -> matched `['','Choose a filing\u2026']`, postcondition_ok=True \u2014 a filter never applied, recorded as applied. `press` refuses the same shape at :1145-1146; `select_option` does not, and nothing in `plan_gap`/:1002-1015 type-checks or requires the value. `loop-lab.html:11` ships exactly the `<option value=''>` placeholder shape. PRE-EXISTING: shipped with M42's select_option, not introduced by this PR.",
+      "repro": "Resolve the combobox, evaluate OPTIONS_JS, then `next((o for o in opts if want in o), None)` for want='2024' and want='' \u2014 both return a match whose readback passes.",
+      "acceptance": "Two adversarial cases, both watched red first: (i) a `<select>` whose option values collide with another option's label, asserting the step either selects the intended option or fails loudly rather than reporting success; (ii) a `select_option` step with no `value`, asserting a `task`-class refusal in the shape `press` already uses. Alternatively a declared limitation in docs/support-matrix.md naming both shapes."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: the new `resolve_advertised` check records only whether `resolve` RAISED, never whether it landed on the element the name was advertised for \u2014 so the round trip the case exists to close grades green when the observation's name resolves onto a different element.",
+      "evidence": "eval_adapter.py:2075-2089 \u2014 the loop calls `await resolve(page, target)` inside `try/except` and discards the returned locator; `passed` at :2122 only reads `not unresolvable`. Executed: a host page with `<button id=HOST-BTN>Continue</button>` and an iframe containing `<button id=INNER-BTN>Continue</button>` \u2014 `observe()` advertises TWO `{'role':'button','name':'Continue'}` entries (one per frame), and `resolve` returns `id=HOST-BTN` for BOTH because resolver.py:318 puts the main frame first; grader output `advertised_name_did_not_resolve = []`, `passed: True`. Same call site passes `task=''`/`action=''`, so `may_narrow` is False (resolver.py:324) \u2014 stricter than the executor for `extract` and still blind to identity. The new case names only 'combobox', so one element of the 60 in the observation is graded.",
+      "repro": "Build a host page with a same-named button in the main frame and in an iframe; loop observe()'s button entries through resolve() and print the resolved element id \u2014 both resolve to HOST-BTN while the grader reports passed.",
+      "acceptance": "`resolve_advertised` compares the resolved handle to the element the observation advertised (element handle identity, not just 'did not raise'), the check is exercised by a case that is red when a name round-trips onto the wrong element, and the `task`/`action` passed to `resolve` match what the executor would pass for that element's likely action."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: the two cases the new case's `note` names as the wait's ablations never enter the new branch, and the 'options never arrive' path \u2014 10.0s per step with the TimeoutError swallowed \u2014 has no eval case at all.",
+      "evidence": "agent.py:1108-1129 (`if not opts:` ... `except Exception: pass`). Both named ablations, `action-select-option-refuses-an-absent-option.json` and `action-select-option-verifies-by-readback.json`, run against `loop-lab.html:10-14`, whose `<select id='fx'>` carries three in-document `<option>`s \u2014 so `opts` is non-empty and the branch is dead in both. Measured on a `<select>` that never fills: waited 10.0s, `swallowed: TimeoutError`, `opts=[]`. The new case only exercises the success side (options arrive at 1.0s). The commoner real shape \u2014 a placeholder `<option>` replaced by fetch \u2014 has `opts != []` and never enters the branch either.",
+      "repro": "Resolve a combobox on `<select id=f aria-label=Filing></select>` that never fills, run the branch's wait, and time it: 10.0s, TimeoutError swallowed, opts=[].",
+      "acceptance": "An adversarial case on a `<select>` whose options never arrive, watched red first, asserting the loud `act` failure AND bounding the wall clock it costs (or a shorter timeout justified against the `fast` band); plus the `note` in `action-select-option-waits-for-fetch-painted-options.json` corrected \u2014 the two cases it names are not ablations of this branch."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: the PR's own invariant \u2014 a name the observation advertises is a name `resolve` accepts \u2014 is enforced only for the `name`/`text` tiers; a `near` anchor quoted verbatim from the same observation is still matched case-sensitively at `_nearest`'s exact pass and degrades to the substring pass the docstring itself calls risky, with no narrowing label.",
+      "evidence": "resolver.py:265 `passes = [('exact', lambda: page.get_by_text(near, exact=True)), ('substring', lambda: page.get_by_text(near))]` \u2014 untouched by this PR. Executed on `<style>th{text-transform:uppercase}</style>` with rows `Total`/`10` and `Subtotal of Total line`/`99`: `observe()` advertises the anchor as 'TOTAL' (the only spelling a planner can quote), and `{'role':'cell','near':'TOTAL'}` raises `ResolveError: proximity to 'TOTAL' does not identify one element` because the exact pass finds 0 and the substring pass finds 2, while `{'role':'cell','near':'Total'}` \u2014 a string nothing in the observation contains \u2014 resolves cleanly to '10'. The new `resolve_advertised` key only feeds `{role, name}`, so no case covers the `near` half of the round trip.",
+      "repro": "On the uppercase-th table, resolve `{'role':'cell','near':'TOTAL'}` (the observed spelling) and `{'role':'cell','near':'Total'}` \u2014 the observed one raises, the unobservable one resolves.",
+      "acceptance": "Either `_nearest`'s exact pass uses the same whole-string case-insensitive matcher (with a case pinning it red first), or `resolve_advertised` is extended to feed advertised names back as `near` anchors and the residual asymmetry is declared in docs/support-matrix.md."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: `_whole_string` calls `.split()` unguarded, so a non-string `name`/`text` raises `AttributeError` before any Playwright call and the step's failure class regresses from `locate` to `act` \u2014 a graded output (INV-1 diagnosis accuracy).",
+      "evidence": "resolver.py:199 `r'\\s+'.join(re.escape(w) for w in s.split())`, reached from :334/:337. Input `{'text': 4.82}` (a JSON number; agent.py:1002-1003 validates target KEYS only). Base 6b016b5: `ResolveError: no tier resolved {'text': 4.82}` -> `agent.classify` at agent.py:226-227 returns 'locate'. HEAD: `AttributeError: 'float' object has no attribute 'split'` -> falls to agent.py:228 and is labelled 'act' for any non-navigate action. REGRESSION INTRODUCED BY THIS PR.",
+      "repro": "Call resolve(page, {'text': 4.82}, action='extract') on both trees and pass the exception to agent.classify \u2014 base gives 'locate', HEAD gives 'act'.",
+      "acceptance": "An adversarial case with a non-string `name`/`text` target, watched red first, asserting failure class `locate` (or a `task`-class plan refusal in the shape `unsupported target key(s)` uses) \u2014 not `act`."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "CONFIRMED (pre-existing, untouched, now inconsistent with the invariant this PR establishes): `check_state`'s `role_visible` postcondition uses `get_by_role(role, name=<str>)` with neither `exact` nor `_whole_string`, i.e. case-insensitive SUBSTRING, so a postcondition is satisfied by an element the plan did not name.",
+      "evidence": "agent.py:526-527. Executed: on `<h1>Shopping Cart is empty</h1>`, `check_state(page, {'role_visible': {'role':'heading','name':'Cart'}})` returns True. The whole argument of resolver.py:325-330 \u2014 'substring matching resolved absent targets to superstring siblings and extracted the wrong element as a success' \u2014 applies verbatim to a postcondition, which is what `verify` treats as proof the action landed.",
+      "repro": "check_state(pg, {'role_visible': {'role':'heading','name':'Cart'}}) on a page whose only heading reads 'Shopping Cart is empty' returns True.",
+      "acceptance": "Either `role_visible` uses `_whole_string` too, pinned by a case that is red on the 'Cart' vs 'Shopping Cart is empty' input, or a debt item naming the asymmetry so the next reader does not assume the matcher is shared."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "CONFIRMED (pre-existing, untouched): a custom ARIA combobox (`<div role='combobox'>` + listbox) has no `el.options`, so `OPTIONS_JS` returns null and a correctly-resolved element is reported as a `locate` failure.",
+      "evidence": "agent.py:1101-1107. Executed: `<div role=combobox aria-label='Filing' tabindex=0>Choose</div>` resolves at tier `role`, `loc.evaluate(OPTIONS_JS)` returns None, and the step raises `StepError('locate', 'resolved element has no options to select: ...')` \u2014 a locate class for an element the resolver located correctly. No case covers the shape.",
+      "repro": "Resolve the custom ARIA combobox and evaluate OPTIONS_JS \u2014 tier is role, OPTIONS_JS returns None.",
+      "acceptance": "Either the class becomes `act`/`task` for a resolved-but-unsupported control with a case pinning it, or the shape is declared in docs/support-matrix.md as a known misdiagnosis."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`T-M42-20-D3` misstates the ledger it derives from: it says three runs are recorded at 222 cases, but the committed `history.jsonl` at HEAD holds five, including the band-source run (90.25s) and the final clean run (90.27s) that the block itself relies on elsewhere.",
+      "evidence": "tasks/TODO.md (T-M42-20-D3): 'The three runs recorded at this count measured 89.60 / 90.08 / 90.49s.' The committed ledger holds 20260826-165306 90.25, 20260826-165845 90.08, 20260826-170244 89.6, 20260826-170822 90.49, 20260826-171550 90.27 \u2014 five rows. The arithmetic conclusion is unaffected and correct: `_band_rule` gives 105 for x <= 91.30 (105/1.15 = 91.304), so max 90.49 leaves 0.81s; `published-band-slack-is-declared` independently reports headroom_s {fast: 1.05} and is green. No graded check reads TODO.md prose, so this drifted unnoticed.",
+      "repro": "Filter history.jsonl to suite=fast, total=222 and print (ts, wall_s) \u2014 five rows, not three.",
+      "acceptance": "D3 enumerates every 222-case row the committed ledger holds (or cites the ledger rather than restating it), so the debt item's own evidence matches the file it points at."
+    }
+  ]
+}
