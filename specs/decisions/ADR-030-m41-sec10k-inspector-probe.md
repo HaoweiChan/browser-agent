@@ -147,9 +147,12 @@ counted as a fifth: it stops the last conjunct passing on an empty set, it is
 not a claim about the boundary, and the count above is derived from the check's
 own `wrong` keys rather than re-typed here.
 
-**The third conjunct is the one that was missing, and it is the one the rule is
-actually about (PR #58 R2).** The first three all scanned MODULES; none looked
-at what a case FEEDS a run. A case with `input.url` and a `navigate` step
+**The `input`-scan conjunct is the one that was missing, and it is the one the
+rule is actually about (PR #58 R2).** Named rather than numbered, because two
+documents describe this list and an ordinal is a number neither of them derives
+— PR #58 R9 caught exactly that drift here. The other three read FILES and stop
+there: two scan `src/browser/` modules, one scans the eval case files for the
+ground-truth citation, and none of them reads what a case FEEDS a run. A case with `input.url` and a `navigate` step
 pointing at `.../api/extract/fixture?fixture=aapl-2025` made the executor fetch
 the answer instead of reading a page, and every downstream guard passed
 honestly — the value really is in that response's text — while this check

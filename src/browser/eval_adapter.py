@@ -5191,6 +5191,13 @@ def _check_ground_truth_endpoint_eval_only() -> dict:
         if case.get("domain") == HOST and "answer" in case.get("expect", {}):
             cases.append((c.name, raw))
     uncited = [n for n, raw in cases if "/api/extract/fixture" not in raw]
+    # One key per conjunct, and that is load-bearing outside this function:
+    # `len(wrong)` is published as `gt_conjuncts` by `_run_doc_counts_case` and
+    # quoted back out of ADR-030 §The ground-truth-endpoint boundary and
+    # support-matrix D30, so a NEW conjunct needs its own key or the count those
+    # two documents are graded against silently stays put (PR #58 R10).
+    # `bool(cases)` below is the non-vacuity precondition, not a conjunct: it
+    # carries no key and is deliberately not counted.
     return {"passed": not endpoint_leaks and not host_leaks and not fed_to_the_executor
                       and bool(cases) and not uncited,
             "wrong": {"endpoint_in_production_module": endpoint_leaks,

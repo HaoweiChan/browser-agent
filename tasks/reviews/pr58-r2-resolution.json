@@ -35,7 +35,14 @@
       "what": "`tasks/reviews/pr58-r1-resolution.json` R1 gains a `correction` object. The original claim is left standing verbatim above it, per the orchestrator's constraint: the correction states that `docs/analysis.md` was already reachable by `analysis_section1` (since PR #44 R4) and `analysis_coverage`, both configured in the same case file, and gives the real reason `doc_quotes` was needed — `analysis_section1` formats against `vals` (`actions`/`with_browser`/`total`/`remaining`, all report-derived), so `{live}`/`{live_sites}` raise KeyError there.",
       "red_first": "none possible — this is a claim in a review record about the state of the code, not a property of the tree. Verified by reading: `_run_doc_counts_case`'s `analysis_section1` block reads `(RUN_ROOT / s1['doc'])` and formats against `vals`, which has no suite-count key.",
       "found_while_checking": "not part of the finding, recorded because it strengthens the conclusion: `analysis_section1` is also gated on a non-red headline report (`if s1 and (head := ...)`), so a suite count parked in that hook would stop being graded exactly when the cited report goes red — which is when prose is most likely to be stale. That is a second reason `doc_quotes` is the right hook, and it makes R8's alternative acceptance (fold into the existing hook) the worse of the two options offered.",
-      "note": "Third instance of the same pattern in this PR, and the entry is left as evidence of that rather than tidied: a multi-artifact correction leaving a document behind. R6 is the first one closed by derivation instead of by hand."
+      "note": "Third instance of the same pattern in this PR, and the entry is left as evidence of that rather than tidied: a multi-artifact correction leaving a document behind. R6 is the first one closed by derivation instead of by hand.",
+      "correction": {
+        "raised_by": "PR #58 R8 (re-reported at round 3)",
+        "date": "2026-08-26",
+        "claim_corrected": "`found_while_checking` above is false, and is left standing for the same reason the round-1 R1 note is: this file records what was claimed at the time. It says `analysis_section1` is gated on a non-red headline report.",
+        "what_is_actually_true": "it is gated on the headline report existing and parsing. The walrus at `src/browser/eval_adapter.py:4826` re-reads `reports[...]`, so the `head = None` set at :4786 when `headline_report_is_red` fires never reaches it; that `None` only suppresses the README wall-clock and metric quotes below it. Verified with the orchestrator's committed repro (`tasks/reviews/pr58-r3-repro-R8.py`): `headline_report_is_red: True` and `analysis_section1_does_not_say: True` print together.",
+        "consequence": "the sentence in commit d6e6cff's message calling the fold 'the worse of the two options' rests partly on this and is correspondingly weaker. `doc_quotes` remains the right hook on the surviving argument — one namespace and one gate per kind of number — and on the KeyError, which is verified and unchanged."
+      }
     }
   ]
 }
