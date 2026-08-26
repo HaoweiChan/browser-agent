@@ -3,7 +3,25 @@
 The planner must never plan blind: it references only roles/names that exist
 in this observation. Kept compact — raw DOM dumps blow token budgets
 (browser-domain skill).
+
+M42 widens the REACH of that observation, in the two directions measured blind
+on `fixtures/frames-host.html` before the change (ADR-028):
+
+  * an IFRAME's contents were absent entirely. `page.accessibility.snapshot()`
+    reports the frame as one node (`Iframe — Source pane`) and stops at its
+    boundary, so a value inside it was in no observation at any budget and
+    `resolve` raised `no tier resolved` for it in both modes, vision or not.
+    Our own sec-10k inspector renders its source pane as an iframe.
+  * an open SHADOW ROOT was already in the accessibility tree and already
+    resolvable — that half needed no fix and the milestone's premise was wrong
+    about it. What was blind was the EVIDENCE: `page.inner_text("body")` does
+    not traverse shadow roots, so a correctly read shadow value was failed as
+    ungrounded by the verifier, a `text_visible` postcondition over shadow
+    content could never hold, and `page_changed` could not see a shadow-only
+    mutation. `page_text` below is the one place that is fixed.
 """
+
+import re
 
 SKIP_ROLES = {"generic", "none", "InlineTextBox", "LineBreak", "StaticText", "text",
               "paragraph", "LabelText", "ListMarker"}
@@ -39,6 +57,143 @@ MAX_CHROME = 20
 # observe-name-prohibited-roles). Show the element, hide the unusable name.
 NAME_PROHIBITED = {"definition", "term", "code", "emphasis", "strong", "caption",
                    "deletion", "insertion", "mark", "subscript", "superscript", "time"}
+
+# One evaluate per FRAME: the frame's own rendered body text, plus the text of
+# every open shadow root inside it. Two things, one round trip, because this
+# runs on the hot path -- `attempt` reads the page before and after every
+# acting step, so a second evaluate per read is ~1000 extra round trips across
+# the `fast` suite (ADR-028, measured before it was merged into one).
+#
+# `innerText` is deliberately the base: it is what every existing evidence
+# window, dump ratio and `text_visible` postcondition was calibrated against
+# (ADR-008's ratio, agent.PAGE_TEXT_KEEP), and a switch to `textContent` would
+# move all of them at once. The shadow half cannot use it -- a shadow host's
+# own `innerText` is "" (measured) and `document.body.innerText` stops at the
+# shadow boundary -- so it walks each root's DIRECT children and takes their
+# text, skipping the ones the page is not rendering (`checkVisibility`), which
+# is what keeps a `hidden` shadow subtree from grounding an answer nobody can
+# see. On a page with no shadow root this returns exactly `body.innerText`, so
+# every case written before M42 reads the same string it always did.
+#
+# ponytail: a nested shadow host's text is counted twice (once inside its
+# parent root's child, once by the recursion). Harmless for grounding, which
+# asks whether a value is present; fix by skipping hosts in the child scan if a
+# case ever cares.
+PAGE_TEXT_JS = """() => {
+  const parts = [document.body ? document.body.innerText : ''];
+  // Depth-first over the shadow subtree, skipping any element the page is not
+  // rendering AND everything under it. Checking only the root's direct children
+  // was the first version and it was structurally inert on the shape shadow DOM
+  // actually takes in the wild — one wrapper <div> with hidden panels inside —
+  // so hidden text grounded answers, satisfied `text_visible` postconditions
+  // and inflated `not_a_dump`'s denominator (cold review 4). Text nodes are
+  // read per element rather than via textContent so a hidden descendant cannot
+  // ride in on a visible ancestor's text.
+  const text = (root, out) => {
+    for (const el of root.children) {
+      if (el.checkVisibility && !el.checkVisibility()) continue;
+      for (const n of el.childNodes) {
+        if (n.nodeType === 3 && n.textContent.trim()) out.push(n.textContent.trim());
+      }
+      text(el, out);
+    }
+  };
+  const walk = (r) => {
+    for (const el of r.querySelectorAll('*')) {
+      if (!el.shadowRoot) continue;
+      const out = [];
+      text(el.shadowRoot, out);
+      if (out.length) parts.push(out.join(' '));
+      walk(el.shadowRoot);
+    }
+  };
+  walk(document);
+  return parts.filter(Boolean).join('\\n');
+}"""
+
+# One line of Playwright's ARIA snapshot: `- button "Reload source"`,
+# `- status "Inventory turnover": 4.82`, `- text: "Document ID:"`.
+_ARIA_LINE = re.compile(r'^\s*-\s+([A-Za-z][\w-]*)(?:\s+"((?:[^"\\]|\\.)*)")?')
+
+
+async def page_text(page, frames: bool = True) -> str:
+    """Everything on the page a reader can read, main frame first.
+
+    The ONE place the system asks what the page says: the evidence window an
+    extraction is judged in, `check_state`'s `text_visible`, the before/after
+    comparison behind `page_changed`, and the final digest all come through
+    here. That is the point -- `page.inner_text("body")` was called from five
+    places, each of them blind to iframes and shadow roots in the same way, and
+    fixing the one a bug report names leaves the other four broken (the lesson
+    `reads_without_acting` already carries).
+
+    Main frame first and in frame order, because `evidence_window` centres on a
+    character offset into this string. Frames are read best-effort: one that
+    detaches mid-read contributes nothing rather than killing the step, since
+    this is evidence capture and the postcondition is the gate.
+
+    `frames=False` reads the main document (and its shadow roots) only. It exists
+    for the before/after comparison behind `page_changed` and, as of PR #57 R13,
+    **no caller uses it** — the argument is kept because the trade-off it names
+    is real and the next reader will re-derive it otherwise:
+
+      * frames-BLIND misses a step whose only effect is inside an iframe. That
+        is an inspector's source pane, the shape M42 leg (a) exists for, and it
+        made the anti-laundering guard refuse a legitimate replan and kill the
+        run with a reason asserting as fact that the step changed nothing
+        (`replan-after-an-iframe-only-change-is-not-laundering`).
+      * frames-AWARE — what `page_changed` now uses — can be flipped true by a
+        frame nobody acted on: a third-party iframe with a ticking clock, a
+        rotating ad, a chat bubble. That unlatches the same guard in the other
+        direction, letting a replan drop a failed action and read the page as
+        though it had worked.
+
+    Both costs are declared, which is the part that was missing: the false
+    positive was documented and the false negative was not. The second hazard
+    has never been reproduced in this repo and the first was, so the evidence
+    picks the direction (T-M42-14 carries the repro that would reopen it —
+    a fixture with a frame that mutates on its own).
+
+    ponytail: kept as a parameter with no caller rather than deleted, because
+    deleting it deletes the question. Remove it if T-M42-14 closes the other
+    way."""
+    parts = []
+    sources = getattr(page, "frames", None) or [page]
+    for frame in (sources if frames else sources[:1]):
+        try:
+            parts.append(await frame.evaluate(PAGE_TEXT_JS))
+        except Exception:
+            continue
+    return "\n".join(p for p in parts if p)
+
+
+async def _frame_elements(frame, budget: int) -> list[dict]:
+    """A CHILD frame's elements, in document order, as this module's {role, name}.
+
+    Playwright's own ARIA snapshot rather than a hand-rolled walker: the roles
+    and names are computed by the same engine `get_by_role` matches with, so
+    what the observation advertises is what the resolver can reach. It is used
+    ONLY for child frames -- `page.accessibility.snapshot()` cannot reach them
+    (it returns None for a cross-frame root, measured) while it remains the
+    main frame's observation unchanged, so no case written before M42 sees a
+    different element list.
+    """
+    try:
+        snap = await frame.locator("body").aria_snapshot()
+    except Exception:
+        return []  # a frame can detach, or refuse; it is not this page's failure
+    out: list[dict] = []
+    for line in snap.splitlines():
+        if len(out) >= budget:
+            break
+        m = _ARIA_LINE.match(line)
+        if not m:
+            continue
+        role, name = m.group(1), (m.group(2) or "").strip()
+        if role in SKIP_ROLES:
+            continue
+        out.append({"role": role, "name": "" if role in NAME_PROHIBITED else name})
+    return out
 
 
 async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
@@ -89,12 +244,22 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
             walk(child, in_chrome)
 
     walk(snap)
+    # Frame-piercing (M42): a page-level observation continues into every child
+    # frame, with whatever is left of the SAME element budget -- an iframe does
+    # not buy the page a second one, which is the D7 lesson applied to reach
+    # instead of depth. A drill-down (`root is not None`) is scoped to one
+    # subtree by construction and is not widened here.
+    if root is None:
+        for frame in page.frames[1:]:
+            if len(elems) >= MAX_ELEMS:
+                break
+            elems += await _frame_elements(frame, MAX_ELEMS - len(elems))
     return {
         "url": page.url,
         "title": await page.title(),
         "elements": elems,
         "text_head": (await (root.inner_text() if root is not None
-                             else page.inner_text("body")))[:text_head],
+                             else page_text(page)))[:text_head],
     }
 
 

@@ -1,0 +1,84 @@
+{
+  "id": "contract-trace-schema-loop-mode",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "schema",
+    "mode": "loop",
+    "fixture": "hello.html",
+    "task": "What is the greeting?",
+    "stub_calls": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello Fixture"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "keys": {
+      "result": [
+        "status",
+        "mode",
+        "model",
+        "answer",
+        "reason",
+        "verdict",
+        "evidence",
+        "budgets_spent"
+      ],
+      "evidence": [
+        "trace",
+        "screenshots",
+        "extractions",
+        "final_url",
+        "final_page_digest"
+      ],
+      "verdict": [
+        "verdict",
+        "layer",
+        "ground_truth",
+        "checks",
+        "reason"
+      ],
+      "budgets_spent": [
+        "actions",
+        "llm_tokens",
+        "llm_usd",
+        "replans",
+        "ms",
+        "judge_calls",
+        "judge_tokens",
+        "judge_usd"
+      ],
+      "trace_step": [
+        "i",
+        "action",
+        "target",
+        "value",
+        "anchor",
+        "rank",
+        "resolved",
+        "expected_state",
+        "postcondition_ok",
+        "failure_class",
+        "note",
+        "retry_or_recovery",
+        "superseded_by",
+        "page_changed",
+        "screenshot",
+        "ms"
+      ]
+    }
+  },
+  "provenance": "ADR-027's 'the trace stays the evidence': loop mode emits the SAME TraceStep, with no second evidence pipeline and no loop-only fields, so the reviewer UI, the verifier and the judge read a loop run unchanged. `contract-trace-schema` grades mode B; this is its loop twin, and it is the case that goes red the day someone adds a loop-only key.",
+  "provenance_drift_2026_08_26": "Spec-drift audit finding 9, watched red on BOTH schema cases: a loop run and a mode B run of the same task on the same model produced byte-identical result shapes, and the only way to tell them apart was counting `final_answer` steps in the trace. specs/001 gives `model` its own field for exactly this reason — 'a run record is self-attributing' — and M44's entire job is comparing the two modes from committed run records. ADR-028 §7 rules that the TRACE gains no fields and that is unchanged; `mode` is a property of the run, not of a step, so it belongs beside `model` on the result."
+}

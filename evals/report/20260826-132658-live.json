@@ -1,0 +1,600 @@
+{
+  "suite": "live",
+  "score": 1.0,
+  "totals": {
+    "actions": 27,
+    "llm_tokens": 0,
+    "llm_usd": 0.0,
+    "replans": 0,
+    "ms": 21437,
+    "judge_calls": 9,
+    "judge_tokens": 0,
+    "judge_usd": 0.0,
+    "wall_seconds": 21.65,
+    "latency_p50": 1.5,
+    "latency_p95": 4.43,
+    "cases_with_budgets": 11
+  },
+  "metrics": {
+    "verdict_evaluated": 9,
+    "judge_invoked": 9,
+    "judge_certified": 9,
+    "recovery_rungs": 1,
+    "diagnosis_cases": 2,
+    "diagnosis_correct": 2
+  },
+  "results": [
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {
+        "verdict_evaluated": 1,
+        "judge_invoked": 1,
+        "judge_certified": 1
+      },
+      "tiers": [
+        "role",
+        "structural"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "ce60436f52c5ee68",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2177,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 2.37,
+      "id": "live-books-detail-upc",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {
+        "verdict_evaluated": 1,
+        "judge_invoked": 1,
+        "judge_certified": 1
+      },
+      "tiers": [
+        "role",
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "\u00a345.17",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2138,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 2.14,
+      "id": "live-books-travel-price",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {
+        "verdict_evaluated": 1,
+        "judge_invoked": 1,
+        "judge_certified": 1
+      },
+      "tiers": [
+        "structural"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "pg",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1024,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 1.02,
+      "id": "live-hn-item1-submitter",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {
+        "verdict_evaluated": 1,
+        "judge_invoked": 1,
+        "judge_certified": 1
+      },
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "Y Combinator",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1013,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 1.01,
+      "id": "live-hn-item1-title",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {
+        "verdict_evaluated": 1,
+        "judge_invoked": 1,
+        "judge_certified": 1
+      },
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "The monk and the dancer",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 4427,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 4.43,
+      "id": "live-ol-edition-title",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true,
+        "planner_saw": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {
+        "verdict_evaluated": 1,
+        "judge_invoked": 1,
+        "judge_certified": 1
+      },
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "doc_status: success\n\u2014 18 extracted \u00b7 5 incorporated_by_reference\nfixture: aapl-2025",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1268,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 1.27,
+      "id": "live-sec10k-authored-wait-reaches-the-doc-status",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true,
+        "planner_saw": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {
+        "verdict_evaluated": 1,
+        "judge_invoked": 1,
+        "judge_certified": 1
+      },
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "doc_status: success\n\u2014 18 extracted \u00b7 5 incorporated_by_reference\nfixture: aapl-2025",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2047,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 2.05,
+      "id": "live-sec10k-authored-wait-reaches-the-item-count",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "no_abandoned_failure": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty; step(s) [3] failed and nothing replaced them"
+      },
+      "metrics": {
+        "recovery_rungs": 1,
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "text"
+      ],
+      "got": {
+        "status": "failure:locate",
+        "answer": null,
+        "reason": "step 3 (fill): relocation after locate failure: retargeting as {'text': 'Search'}; StepError: resolved element is not fillable: {'text': 'Search'}"
+      },
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 3167,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 3.17,
+      "id": "live-ol-search-a11y-invisible",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "no_abandoned_failure": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty; step(s) [2] failed and nothing replaced them"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [],
+      "got": {
+        "status": "failure:locate",
+        "answer": null,
+        "reason": "step 2 (extract): ResolveError: no tier resolved {'text': 'J.K. Rowling'}"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1381,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 1.39,
+      "id": "live-quotes-js-delayed-empty",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {
+        "verdict_evaluated": 1,
+        "judge_invoked": 1,
+        "judge_certified": 1
+      },
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "Next \u2192",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1497,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "known_wrong_ground_truth": "expect.answer pins the WRONG answer this build produces; a PASS here means 'the agent reproduced the known-wrong answer', never 'the answer is correct'",
+      "seconds": 1.5,
+      "id": "live-quotes-js-role-tier-blind",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "verdict": true
+      },
+      "audit": {
+        "verdict": "PASS",
+        "layer": 2,
+        "ground_truth": true,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "answer_matches": true
+        },
+        "reason": null
+      },
+      "metrics": {
+        "verdict_evaluated": 1,
+        "judge_invoked": 1,
+        "judge_certified": 1
+      },
+      "tiers": [
+        "text"
+      ],
+      "got": {
+        "status": "success",
+        "answer": "J.K. Rowling",
+        "reason": null
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 1298,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 1.3,
+      "id": "live-quotes-js-text-tier-reaches",
+      "kind": "adversarial"
+    }
+  ]
+}

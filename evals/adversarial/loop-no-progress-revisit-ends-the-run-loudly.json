@@ -1,0 +1,84 @@
+{
+  "id": "loop-no-progress-revisit-ends-the-run-loudly",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "shop.html",
+    "task": "Find the warranty policy for the Aurora Desk Lamp.",
+    "stub_calls": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "url_contains": "shop-lamp-std"
+        }
+      },
+      {
+        "action": "go_back",
+        "expected_state": {
+          "url_contains": "shop.html"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "url_contains": "shop-lamp-std"
+        }
+      },
+      {
+        "action": "go_back",
+        "expected_state": {
+          "url_contains": "shop.html"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "url_contains": "shop-lamp-std"
+        }
+      },
+      {
+        "action": "go_back",
+        "expected_state": {
+          "url_contains": "shop.html"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "url_contains": "shop-lamp-std"
+        }
+      },
+      {
+        "action": "go_back",
+        "expected_state": {
+          "url_contains": "shop.html"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:env",
+    "reason_contains": "no progress",
+    "driver_note_contains": "NO PROGRESS"
+  },
+  "provenance": "M42 leg (b), interviewer feedback 2026-08-26 (\u300e\u7f3a\u4e4f harness \u8207\u81ea\u4fee\u5fa9\u80fd\u529b\u300f): the observed failure was a \u9996\u9801\u2194dashboard loop that burned 18 LLM calls and 2 repairs and still failed. A step cap is not a harness \u2014 it lets the run grind its whole budget down in a circle and then report a resource failure, which names the symptom and not the cause. This scripts exactly that circle: the same two (URL, page-signature) states, no new fact entering the trace. The driver is first FORCED to change strategy (a `NO PROGRESS` note it cannot ignore, graded by `driver_note_contains`), and when the same state comes back again the run ends with that reason rather than at the step cap. `env` for the same reason the drill-down's no-progress guard uses it: a ladder that could not help is the failure, and the run really did run out of a resource \u2014 the difference is that the reason now says WHY."
+}

@@ -43,6 +43,19 @@
         "model": "deepseek/deepseek-v4-flash-0731",
         "http": 200,
         "planner_model": "deepseek/deepseek-v4-flash-0731"
+      },
+      {
+        "model": "anthropic/claude-opus-5",
+        "http": 200,
+        "planner_model": "anthropic/claude-opus-5",
+        "factory": "planner"
+      },
+      {
+        "model": "anthropic/claude-opus-5",
+        "mode": "loop",
+        "http": 200,
+        "planner_model": "anthropic/claude-opus-5",
+        "factory": "driver"
       }
     ],
     "verified_ids_file": "evals/labels/openrouter-models-20260820.json",
@@ -56,5 +69,6 @@
     "class": "silent-drop",
     "note": "tagged invariant for the same reason as the refusal half: this is what makes the ablation's independent variable actually independent, and it is unobservable from the HTTP response. Row 1 pins the no-model default so M9 cannot change the default model as a side effect (ADR-010 Decision 6 — the default is unchanged in this PR because no data exists yet). `verified_ids_file` pins `planner.ALLOWED_MODELS` — order included — against the frozen snapshot of the OpenRouter response it was verified from, so editing either list without re-verifying is a red case rather than a stale ADR sentence. `price_ceiling` grades the owner's constraint itself: every ablated model must be at or under `deepseek/deepseek-v4-pro`'s list price on BOTH prompt and completion, and the incumbent default must be OVER it — the second half is what makes ADR-010's 'no cell measures the incumbent' a graded fact rather than a sentence that can go stale when prices move."
   },
-  "provenance_2026_08_21": "Three rows moved when the ablation's data arrived (ADR-010 Decision 16). The two default rows (absent `model`, explicit null) now expect `openai/gpt-5.6-luna`: every candidate tied on correctness, so Decision 5's pre-committed rule fell to its cost tie-breaker and this is the cheapest cell. The third row is the interesting one — it used to assert that `anthropic/claude-sonnet-4.5` stayed reachable by explicit name while being priced out of the comparison, and it now asserts the opposite, a 422. Once the ablation picked a replacement, an allowlist that still accepted the superseded incumbent would leave a public endpoint able to spend on the model this system deliberately stopped paying for. The id is kept in the frozen snapshot, and the adapter now requires it to stay there and to stay over the ceiling: Decision 6 excluded it on price, and an exclusion nothing re-checks is a claim, not a guard."
+  "provenance_2026_08_21": "Three rows moved when the ablation's data arrived (ADR-010 Decision 16). The two default rows (absent `model`, explicit null) now expect `openai/gpt-5.6-luna`: every candidate tied on correctness, so Decision 5's pre-committed rule fell to its cost tie-breaker and this is the cheapest cell. The third row is the interesting one — it used to assert that `anthropic/claude-sonnet-4.5` stayed reachable by explicit name while being priced out of the comparison, and it now asserts the opposite, a 422. Once the ablation picked a replacement, an allowlist that still accepted the superseded incumbent would leave a public endpoint able to spend on the model this system deliberately stopped paying for. The id is kept in the frozen snapshot, and the adapter now requires it to stay there and to stay over the ceiling: Decision 6 excluded it on price, and an exclusion nothing re-checks is a claim, not a guard.",
+  "provenance_m42_2026_08_26": "ADR-027 Decision 4 lifts ADR-010's price ceiling for loop-mode additions ONLY, each allowlisted by explicit id with its price recorded, and rules that this case must be extended IN THE SAME CHANGE that widens the list, watched red first, 'so the graded ceiling is the amended rule and not a fiction'. `anthropic/claude-opus-5` is the addition: tool-capable and vision-capable (both recorded in the frozen snapshot beside its price), and 0.000005/0.000025 against the ADR-010 ceiling model's 0.0000016/0.0000032 — 3.1x and 7.8x over, i.e. over by construction, which is exactly why the amendment has to be declared rather than absorbed. Three properties are now graded and each fails on its own: the id is ACCEPTED by POST /tasks and reaches the factory (the two rows above); it is frozen evidence (the existing containment check, which is what went red first — 'allowlisted_but_not_in_the_verified_snapshot: [anthropic/claude-opus-5]' — before the snapshot was amended from the live endpoint); and it is NOT in ABLATION_MODELS, so the ceiling sweep that keeps every ablated model at or under CEILING_MODEL is untouched and still runs over exactly the ids it always did. The second row is the one nothing else can see: the same id under mode 'loop' must reach `live_driver`, not `live_planner`. Without the `factory` column both rows pass with the mode field parsed, validated and dropped."
 }

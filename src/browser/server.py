@@ -9,6 +9,7 @@ import hashlib
 import html
 import ipaddress
 import json
+import os
 import re
 import uuid
 from pathlib import Path
@@ -23,7 +24,8 @@ from pydantic import BaseModel
 from .agent import assemble_result, run_task
 from .judge import live_judge
 from .mutate import apply_mutation
-from .planner import ALLOWED_MODELS, DEFAULT_MODEL, live_planner
+from .planner import (ALLOWED_MODELS, DEFAULT_LOOP_MODEL, DEFAULT_MODEL, live_driver,
+                      live_planner)
 
 app = FastAPI(title="browser-agent")
 FIXTURE_DIR = (Path(__file__).parent / "fixtures").resolve()
@@ -173,9 +175,34 @@ def url_ok(u: str) -> bool:
                 or ip.is_reserved or ip.is_multicast or ip.is_unspecified)
 
 
+# ADR-027 Decision 1: loop mode is a peer mode, selected per task, and mode B
+# stays the default. Two spellings and no more — an unknown mode is refused at
+# the boundary rather than silently defaulting, because a flag that is accepted
+# and ignored looks identical over HTTP to one that works
+# (`gateway-mode-selects-the-driver`).
+MODES = ("plan", "loop")
+MODE_ENV = "BROWSER_AGENT_MODE"
+
+
+def default_mode() -> str:
+    """The env default for `POST /tasks`'s mode flag.
+
+    Falls back to mode B on anything unrecognised rather than refusing to boot.
+    The quiet direction is usually the wrong one in this repo, and this is the
+    exception that proves the rule: the fallback is the SAFE, cheap, fully
+    graded mode, so a typo in a deployment variable costs a run that plans
+    instead of looping — not a service that will not start, and never a run
+    that spends more than it was asked to.
+    """
+    return m if (m := os.environ.get(MODE_ENV, "").strip().lower()) in MODES else "plan"
+
+
 class TaskIn(BaseModel):
     task: str
     url: str | None = None
+    # Absent means `default_mode()`. Same `is not None` treatment `model` gets:
+    # an explicit JSON null IS the absent value for an optional field.
+    mode: str | None = None
     # The M9 ablation's independent variable. Absent means the default; anything
     # else must be on `planner.ALLOWED_MODELS` — the ablation set plus the
     # incumbent default, which stays reachable by explicit name even though it is
@@ -187,15 +214,15 @@ class TaskIn(BaseModel):
     model: str | None = None
 
 
-def _env_failure(reason: str, model: str | None = None) -> dict:
+def _env_failure(reason: str, model: str | None = None, mode: str = "plan") -> dict:
     """A contract-shaped result for a run that never got off the ground."""
     return assemble_result(
         [], None,
         {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0},
-        failure="env", reason=reason, model=model)
+        failure="env", reason=reason, model=model, mode=mode)
 
 
-async def _execute(run_id: str, task: str, url: str | None, model: str):
+async def _execute(run_id: str, task: str, url: str | None, model: str, mode: str = "plan"):
     global ACTIVE_RUN
     q = STREAMS[run_id]
     result = None
@@ -203,7 +230,13 @@ async def _execute(run_id: str, task: str, url: str | None, model: str):
         ACTIVE_RUN = run_id
         try:
             result = await run_task(
-                task, url, live_planner(model), RUN_ROOT / run_id,
+                task, url,
+                # Exactly one of the two factories is constructed: each
+                # validates the API key on the way in, so building the unused
+                # one would raise on a deployment that only meant to use the
+                # other.
+                None if mode == "loop" else live_planner(model), RUN_ROOT / run_id,
+                mode=mode, driver=live_driver(model) if mode == "loop" else None,
                 judge=live_judge(), url_guard=url_ok,
                 # Echoed back on the record so a committed ablation report is
                 # self-attributing rather than trusting the driver's loop variable.
@@ -219,14 +252,14 @@ async def _execute(run_id: str, task: str, url: str | None, model: str):
             # frontend renders both (gateway-error-contract-shape). Empty trace is
             # correct — live_planner() validates the key before a browser opens,
             # so nothing was attempted; only the shape was ever wrong.
-            result = _env_failure(f"{type(e).__name__}: {e}", model)
+            result = _env_failure(f"{type(e).__name__}: {e}", model, mode)
         finally:
             # A run must always reach a terminal state. When the error path
             # itself raised (a NameError, once), the record stayed "running" and
             # the SSE stream never closed — a hung connection on a public
             # endpoint, and a reviewer watching a spinner with no end.
             if result is None:
-                result = _env_failure("run ended without producing a result", model)
+                result = _env_failure("run ended without producing a result", model, mode)
             RUNS[run_id] = result
             ACTIVE_RUN = None
             q.put_nowait({"event": "done", "result": result})
@@ -246,11 +279,22 @@ async def submit_task(t: TaskIn):
     if t.model is not None and t.model not in ALLOWED_MODELS:
         raise HTTPException(422, "model blocked: allowlisted models only — "
                                  + ", ".join(ALLOWED_MODELS))
+    if t.mode is not None and t.mode not in MODES:
+        raise HTTPException(422, "mode must be one of " + ", ".join(MODES))
     run_id = uuid.uuid4().hex[:8]
     RUNS[run_id] = {"status": "running"}
     STREAMS[run_id] = asyncio.Queue()
+    # The default model is the MODE's default, not one global one. Passing
+    # `DEFAULT_MODEL` whatever the mode drove the loop with the model ADR-010's
+    # cost ablation picked under a ceiling ADR-027 deliberately lifted for this
+    # mode — and one never verified to support the tool-calling the driver
+    # requires (spec-drift audit, `gateway-mode-selects-the-driver`). An
+    # explicit `model` still wins over both: the ablation and any A/B have to be
+    # able to pin it.
+    mode = t.mode or default_mode()
     asyncio.get_event_loop().create_task(
-        _execute(run_id, t.task, t.url, t.model or DEFAULT_MODEL))
+        _execute(run_id, t.task, t.url,
+                 t.model or (DEFAULT_LOOP_MODEL if mode == "loop" else DEFAULT_MODEL), mode))
     return {"run_id": run_id}
 
 
@@ -564,14 +608,8 @@ PAGE = r"""<!doctype html>
   .limits-summary li + li { margin-top:.35rem }
   a { color:var(--accent) }
   .chip { text-transform:none; letter-spacing:0; font-weight:600; font-size:12px; padding:.35rem .65rem }
-  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(17rem,1fr)); gap:.6rem }
-  .card { border:1px solid var(--line); border-radius:var(--radius); padding:.8rem .9rem;
-       background:var(--panel); display:flex; flex-direction:column; gap:.45rem }
-  .caps { list-style:none; margin:0; padding:0; font-size:13px }
-  .caps li + li { margin-top:.15rem }
-  .caps .supported { color:var(--ok) } .caps .unreliable { color:var(--warn) }
-  .caps .unsupported { color:var(--bad) } .caps .none { color:var(--dim) }
-  .card .try { align-self:flex-start }
+  .table-wrap { overflow:auto; padding:0 }
+  td .try { white-space:nowrap }
   .summary { margin:0 0 .7rem; display:flex; gap:.6rem; align-items:center; flex-wrap:wrap }
   .answer { font-size:17px; font-weight:700; white-space:pre-wrap; word-break:break-word;
        margin:.3rem 0 .8rem; padding:.8rem; background:var(--bg);
@@ -665,10 +703,18 @@ PAGE = r"""<!doctype html>
 <h2><span class="section-no">03</span> What works today</h2>
 <p class="note">Each status is declared by a human from eval evidence, never inferred from a
   pass rate. &ldquo;Try&rdquo; buttons are examples that were run against this deployment.</p>
-<div id="matrix" class="cards">loading&hellip;</div>
+<div id="matrix" class="panel table-wrap">loading&hellip;</div>
 
 <h2><span class="section-no">04</span> Known limits</h2>
 <div id="limits" class="panel">loading&hellip;</div>
+
+<h2><span class="section-no">05</span> Decisions</h2>
+<details class="panel" id="adrs">
+  <summary id="adrs-summary">Architecture decisions</summary>
+  <ol class="limits-summary" id="adr-list"></ol>
+  <p class="note" style="margin:.8rem 0 0">Full rulings, the reasoning and the eval cases that enforce
+    each one: <a href="https://github.com/HaoweiChan/browser-agent/blob/main/specs/decisions/INDEX.md">specs/decisions/</a></p>
+</details>
 </main>
 
 <footer><span>Browser Agent / reviewer evidence surface</span><span>amber = command · cyan = interaction / recovery</span></footer>
@@ -723,6 +769,18 @@ const EXAMPLES = {
     // this agent needs and the page cannot always offer.
     task: "Which tag is listed first under Top Ten tags?",
     note: "3/3 on this task. The author-name tasks are 1/6 — the same value appears three times and the resolver will not guess; the declared failure is the JS-rendered /js/ pages."},
+  "whaleforce-sec10k.zeabur.app (live)": {label: "doc_status of a filing",
+    // This project's OTHER deployment — Task 2's sec-10K inspector, and the
+    // site the 2026-08-24 demo failed against. The URL is a DEEP LINK, which is
+    // per-site data rule 6 allows (a start URL) and nothing more: the page
+    // preloads that fixture and extracts on load, so a run lands on a rendered
+    // page instead of hunting for one of three "Extract" buttons. 4/6 on the
+    // pre-registered probe, ADR-030 (a413fbf9, 1e43220d, 5da0441b, 81172a2f
+    // correct; e996cc7d answered "Extracting..." and the judge rejected it;
+    // 79c8dc32 died on the drill-down's no-progress guard).
+    url: "https://whaleforce-sec10k.zeabur.app/?fixture=aapl-2025&run=1",
+    task: "What is the doc_status of the aapl-2025 fixture?",
+    note: "Declared unreliable, 4/6 — the page renders after load, so a run that reaches the banner before the extraction lands reads a progress message instead of the answer."},
   "openlibrary.org (live)": {label: "See a failure: author of a book",
     url: "https://openlibrary.org/books/OL7025919M",
     task: "Who is the author of this book?",   // run f1ecf157 → failure:extract (015b6778, 65af344f too: loud, never wrong)
@@ -762,6 +820,51 @@ const LIMITS = [
   "Can pass verification with a wrong answer — known defect, fix in progress",
   "Login, payment, CAPTCHA, delete, download: refused",
 ];
+// Plain-English one-liners, hand-written same as LIMITS above. Full ruling +
+// reasoning + enforcing eval cases live one file per ADR in specs/decisions/,
+// linked below — this is the teaser, not a duplicate of the record.
+//
+// This list is hand-kept and nothing grades it, which is exactly how it went
+// two decisions stale: it claimed "one gap, between 022 and 024" while 023 was
+// on `main` and 027 had merged. Both are added here with 030, and the claim is
+// removed rather than re-typed — a hand-written digest cannot honestly assert a
+// property of a directory it does not read. `tasks/TODO.md` T-M41-6.
+const ADRS = [
+  ["000", "specs/ holds only invariants, contracts and ADRs — the eval set itself is the spec, not prose"],
+  ["001", "docs/ may hold a bounded planning layer and a milestone TODO list; specs/ keeps its three-kind rule"],
+  ["002", "sets the pass/fail gate: 100% on invariants, no regression on the fast suite, zero spend, a measured time ceiling"],
+  ["003", "recovery runs on two ladders — relocate a lost element, replan a failed action — each capped and classified honestly when exhausted"],
+  ["004", "the live trace shows every attempted step, including ones a recovery superseded, and the support matrix is parsed live, never duplicated"],
+  ["005", "money comparisons check value/unit/currency separately; a replan can't skip a step that never touched the page; recovery must actually change something"],
+  ["006", "adds a proximity search (nearest labelled value to an anchor) and closes three ways a wrong answer used to score a silent pass"],
+  ["007", "“page loaded” means DOM ready plus a bounded best-effort wait, never a strict full-load wait — corrects an earlier live-coverage claim"],
+  ["008", "the “did we just dump the whole page” check is a ratio against real page size, calibrated on a 25-case hand-labeled sample"],
+  ["009", "the mutation catalogue is five capability-breaking cases, not six decorative ones; unrescuable failures are recorded honestly, never smoothed over"],
+  ["010", "the cost/model comparison ships as a mechanism with its results table committed empty — no number until it's actually measured on a live deploy"],
+  ["011", "/readyz reports whether the agent can take a new task right now and always answers 200; /healthz only proves the process is alive"],
+  ["012", "every eval run logs one history line unconditionally; a full per-case report is saved only when it's actually needed as evidence"],
+  ["013", "the fast suite shares one browser and is gated by a wall-clock ceiling measured from real runs, not guessed"],
+  ["014", "the reviewer UI adopts a terminal visual style without changing what it shows or how it's built"],
+  ["015", "A-freeze milestone: a held-out probe came back red (a wrong answer scored a pass) — fixed and pinned as a test before freezing"],
+  ["016", "a wrong-but-plausible answer is caught by comparing it against other pages the same run visited, not by guessing keywords in the task"],
+  ["017", "an LLM judge is the last check in the pipeline, called once per run, and fails closed on any error, timeout or missing key"],
+  ["018", "“cheapest/most/least” tasks must read the whole list in one step and rank in code — the model is never allowed to just pick a winner"],
+  ["019", "every eval suite gets its own measured wall-clock ceiling per environment (laptop vs. CI), derived from real run history"],
+  ["020", "the planner can ask to look closer at one part of a page it's already seen, without spending a new capability"],
+  ["021", "raises the local fast-suite time ceiling to what the suite actually measures, not a round number picked by hand"],
+  ["022", "a support-matrix row may be declared from real runs against the live deployment with no eval case behind it, if every run is cited honestly"],
+  ["023", "when the judge returns something unreadable the run retries it once, and two unreadable answers in a row fail the run closed"],
+  ["024", "a plan that tries to “extract” the whole page as one blob is refused before it runs — that's never a real answer to a real question"],
+  ["025", "a probe's exact tasks, thresholds and pass/fail bar are written down before it runs, so results can't be graded after the fact"],
+  ["026", "when a target matches more than one element, the page is used to narrow it down under strict rules, instead of failing outright"],
+  ["027", "completing the task outranks its cost — a second mode where the model picks every step is worth building, but not at the price of honesty"],
+  ["028", "that second mode ships: the model chooses each action after seeing the page again, and every check that grades a run is shared with the first mode"],
+  ["029", "the offline time ceiling moves to what the grown suite actually measures on this machine — and says plainly that CI's is not yet measured"],
+  ["030", "the sec-10k inspector probe's tasks and pass bar are frozen in a commit before it runs; that site's own API may supply ground truth to the eval side and to nothing else; the row it declares says it measures one execution mode"],
+  ["031", "the Chinese-language probe's tasks, its paired English arm and its pass bar are frozen before it runs, so \u201c中文都會失敗” is graded against criteria fixed in advance"],
+];
+$("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
+$("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;
 const EXPLAIN = {
   success: "Answer found and verified against the page.",
   "failure:locate": "Couldn't find the element the plan was looking for on the page.",
@@ -1162,18 +1265,38 @@ fetch("/support-matrix").then(r => r.json()).then(m => {
   // parse_matrix refuses to return zero rows, so rows[0] is always there.
   const TCS = Object.keys(m.rows[0].cells);
   const MARK = {supported: "✓", unreliable: "△", unsupported: "×"};
-  const SUFFIX = {unreliable: " — unreliable", unsupported: " — doesn't work"};
-  // Real sites only: the fixture rows stay in the doc, not on the page.
-  $("matrix").innerHTML = m.rows.filter(row => !/ fixture$/.test(row.domain)).map(row => {
-    const caps = TCS.filter(t => MARK[row.cells[t]]).map(t => `<li class="${row.cells[t]}">${
-      MARK[row.cells[t]]} ${esc(SUPPORT_LABELS[t] || t)}${SUFFIX[row.cells[t]] || ""}</li>`);
-    const ex = EXAMPLES[row.domain];
-    return `<div class="card"><div><b>${esc(row.domain.replace(/ \(live\)$/, ""))}</b></div>
-      <ul class="caps">${caps.join("") || '<li class="none">Not evaluated yet</li>'}</ul>
-      ${ex ? `<button class="ghost chip try" data-example="${esc(row.domain)}">Try: ${esc(ex.label)}</button>` : ""}
-      ${ex && ex.note ? `<p class="note" style="margin:0">${esc(ex.note)}</p>` : ""}
-    </div>`;
-  }).join("");
+  const RANK = {supported: 0, unreliable: 1, unsupported: 2};
+  // Real sites only: the fixture rows stay in the doc, not on the page. Sorted
+  // best-status-first (stable, so ties keep the doc's order) so the fully
+  // supported rows aren't buried under a page mostly showing "—"/unreliable —
+  // a sparse grid of warning words otherwise reads as "mostly broken" even
+  // though every "—" is just not-yet-evaluated, not a failure.
+  const worst = row => Math.max(0, ...TCS.map(t => RANK[row.cells[t]] ?? 0));
+  const liveRows = m.rows.filter(row => !/ fixture$/.test(row.domain))
+    .map((row, i) => ({row, i})).sort((a, b) => worst(a.row) - worst(b.row) || a.i - b.i)
+    .map(({row}) => row);
+  // Computed from the payload every render, never hardcoded, so it can't drift
+  // from docs/support-matrix.md: one sentence instead of a grid of marks.
+  const counts = {supported: 0, unreliable: 0, unsupported: 0};
+  liveRows.forEach(row => TCS.forEach(t => { if (row.cells[t] in counts) counts[row.cells[t]]++; }));
+  const summary = `<p class="note" style="margin:0 0 .6rem">${counts.supported} supported &middot; ${
+    counts.unreliable} unreliable &middot; ${counts.unsupported} unsupported &mdash; every status declared
+    by hand from eval evidence.</p>`;
+  $("matrix").innerHTML = summary + `<table><tr><th>Domain</th>${
+    TCS.map(t => `<th>${esc(SUPPORT_LABELS[t] || t)}</th>`).join("")}<th>Try it</th></tr>${
+    liveRows.map(row => {
+      const cells = TCS.map(t => {
+        const v = row.cells[t] || "—";
+        const cls = ["supported", "unreliable", "unsupported"].includes(v) ? v : "none";
+        return `<td class="${cls}">${MARK[v] ? MARK[v] + " " : ""}${esc(v)}</td>`;
+      }).join("");
+      const ex = EXAMPLES[row.domain];
+      const tryCell = ex
+        ? `<button class="ghost chip try" data-example="${esc(row.domain)}">Try: ${esc(ex.label)}</button>${
+            ex.note ? `<p class="note" style="margin:.3rem 0 0">${esc(ex.note)}</p>` : ""}`
+        : "";
+      return `<tr><td><b>${esc(row.domain.replace(/ \(live\)$/, ""))}</b></td>${cells}<td>${tryCell}</td></tr>`;
+    }).join("")}</table>`;
   $("limits").innerHTML = `<ul class="limits-summary">${
     LIMITS.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
     <p class="note" style="margin:.8rem 0 0">${m.limitations.length} declared limitations, each with

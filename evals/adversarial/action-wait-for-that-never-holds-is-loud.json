@@ -1,0 +1,34 @@
+{
+  "id": "action-wait-for-that-never-holds-is-loud",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "fixture": "hello.html",
+    "task": "What is the greeting?",
+    "stub_plan": [
+      {
+        "action": "wait_for",
+        "expected_state": {
+          "text_visible": "Extraction complete."
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello, browser agent"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "trace_actions": [
+      "navigate",
+      "wait_for"
+    ]
+  },
+  "provenance": "The ablation for `wait_for`: a wait whose predicate never holds must fail `act` within the same settle budget a postcondition gets, never hang and never pass through. A `wait_for` that cannot fail is a sleep, and this repo's own domain skill says never sleep \u2014 always assert the postcondition."
+}

@@ -1,0 +1,57 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "round": 4,
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "FIRED AGAIN — round 4 was the human-authorised bounded round (option A) after the round-3 breaker. It closed R19 and the graded check but did not converge: R20 is partly unrepaired and its replacement sentence introduced R21. Escalated to the human a second time; no round 5 without a human ruling.",
+  "scope": "bounded to the three authorised items plus regression from the repair; not a full sweep",
+  "note": "PR number 56 is the expected number; the push to origin remains denied by the harness permission classifier, so the PR still does not exist and CI has never run this tree.",
+  "gate": {
+    "invariant": "74/74 = 1.000, $0.0000",
+    "fast": "213/213 = 1.000, $0.0000",
+    "run_by": "orchestrator, independently, on a clean tree",
+    "baseline_file": "unchanged from main",
+    "scope": "local environment only; CI unmeasured (R7)"
+  },
+  "closed_this_round": ["R19", "item 3 (adr029-variance-cites-the-ledger scoped to the shipped case count)"],
+  "open_standing": ["R7"],
+  "root_cause_note": "R20, R21, R22 and R23 share one root cause: ADR-029 section 1 and INDEX.md retype a band figure that ADR-019 section 2 owns and that is graded there. Every derived fact about a growing ledger (its maximum, its spread) self-falsifies as gate runs append rows — including the orchestrator's own verification runs. This is the fifth crop of the class that produced R5, R14, R15, R16, R19 and R20.",
+  "findings": [
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R20 is only partly repaired: `specs/decisions/INDEX.md:38` still publishes the stale 207-case derivation `87.96s x 1.15 = 101.15` for ADR-029, the exact figure and arithmetic the repair corrected to 88.42 / 101.68 everywhere else.",
+      "evidence": "specs/decisions/INDEX.md:38 reads \"the number ADR-013 Decision 3's rule derives from this tree's own committed ledger (87.96s x 1.15 = 101.15)\". 87.96 is a local `fast` row at 207 cases only; the shipped count is 213 and the committed rows there are [87.95, 88.01, 88.22, 88.27, 88.33, 88.40, 88.40, 88.42, 89.54]. `git diff 5ffe36f..HEAD -- specs/decisions/INDEX.md` is empty — the repair did not touch this file — and nothing grades band figures in it: `_check_published_band_slack` (src/browser/eval_adapter.py:913-919) sweeps INDEX.md only for the 4.35s slack scalar, and `adr029-variance-cites-the-ledger` is scoped to ADR-029 section 1. Confirmed independently by the orchestrator.",
+      "repro": "grep -n '87.96\\|101.15' specs/decisions/INDEX.md -> one hit at :38, while the invariant suite is 74/74 green.",
+      "acceptance": "INDEX.md's ADR-029 digest no longer retypes a wall clock — either it cites ADR-019 section 2's band source the way ADR-019:237 now does, or it carries 88.42 / 101.68 and a check reads that copy back against the ledger at `len(load_cases(\"fast\"))` so the next band move cannot leave it stale again."
+    },
+    {
+      "id": "R21",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The sentence the repair substituted for the deleted literal at ADR-019:237-238 asserts something the committed ledger falsifies and that ADR-019's own band bullet refuses to state: the band source is NOT the ledger maximum at the shipped case count.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:237-238 now reads \"derived from the slowest row this tree has recorded (the band source section 2 cites above, which is the ledger maximum at the shipped case count by construction)\". The band source is 88.42s (:79). The maximum local `fast` row at 213 cases in the committed ledger is 89.54s (ts 20260826-045717), already committed at the repair commit 7cb2094. So neither \"the slowest row this tree has recorded\" nor \"the ledger maximum ... by construction\" is true. The \"by construction\" claim also contradicts the grader: `_band_wrong` item 3 (same-ceiling) is `_band_rule(said) != _band_rule(slowest)` (src/browser/eval_adapter.py:665), and `_check_published_band_slack`'s docstring (src/browser/eval_adapter.py:885-888) says that a published number BELOW the ledger's maximum is green and that this is a decision. It further contradicts ADR-019:84-85, which says \"How many rows the ledger holds at this count, and what its maximum is, are deliberately not written here\". No check reads this sentence, so the suite stays green on it. Confirmed independently by the orchestrator: rows at 213 are [87.95 ... 89.54], max 89.54; both 88.42 and 89.54 derive the same committed 105 (101.68 and 102.97), so the CEILING is unaffected — only the claim about it is false.",
+      "repro": "Filter evals/report/history.jsonl to suite=fast, env=local, total=213 and take the max -> 89.54, against the 88.42 the sentence calls the maximum.",
+      "acceptance": "ADR-019:237-238 states only what is true and graded — that the band source is a cited row at the shipped count whose derived ceiling equals the one the ledger maximum derives (item 3 same-ceiling) — with no claim that it IS the maximum, and no residual contradiction with the band bullet's \"its maximum is deliberately not written here\"."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The literal-free replacement sentence in ADR-029 section 1 mis-describes the spread it is arguing from: the committed rows at 213 span 1.59s, not \"most of a second\".",
+      "evidence": "specs/decisions/ADR-029-local-fast-ceiling-105.md:42 reads \"the committed rows at this count are spread across most of a second\". Local `fast` rows at total=213 run 87.95 -> 89.54, a spread of 1.59s, and 89.54 was already committed at the repair commit 7cb2094. The sentence was written specifically to replace the deleted 82.18s-87.96s endpoints, so it is the load-bearing description of the variance the two-step argument rests on. Confirmed independently by the orchestrator.",
+      "repro": "sed -n '42p' specs/decisions/ADR-029-local-fast-ceiling-105.md, against the row list [87.95 ... 89.54].",
+      "acceptance": "The sentence describes the spread in a form the ledger supports and that does not falsify itself as rows accumulate — prefer a relation, or drop the magnitude entirely."
+    },
+    {
+      "id": "R23",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The repaired `adr029-variance-cites-the-ledger` reddens correctly on a wrong-case-count literal (verified) but is still satisfied by the WRONG row at the right count, so ADR-029 section 1's copy of the band source can drift from ADR-019 section 2's and break its own arithmetic while the gate stays green.",
+      "evidence": "src/browser/eval_adapter.py:5310-5314 only requires each `\\d+\\.\\d+s` literal in section 1 to be a member of {local `fast` rows at total==len(load_cases(\"fast\"))}. Nothing ties ADR-029:38's \"88.42s measured, x 1.15 = 101.68\" to ADR-019:79's cited band source, and `_BAND_DERIVATION` (src/browser/eval_adapter.py:536) only matches the arrow form, which ADR-029 section 1 does not use. Substituting 88.01s (a real 213-case row) leaves the published arithmetic wrong (88.01 x 1.15 = 101.21, not 101.68) and the suite green. The other enumerated trivial paths ARE closed: a 207-case literal reddens (reproduced: `{\"unreadable\": [73.06, 82.18, 87.96], ...}` on the 5ffe36f text, matching the red-first ledger row exactly), the filter pins suite==fast and env==local, and `now` is `len(load_cases(\"fast\"))` rather than a hardcoded 213.",
+      "repro": "Copy the tree to a scratch dir, substitute `88.01s measured` for `88.42s measured` in ADR-029, run the invariant suite -> 74/74 = 1.000 (verified by the reviewer).",
+      "acceptance": "Either section 1 stops retyping the band source (cite ADR-019 section 2 the way ADR-019:237 now cites it) or the check additionally requires section 1's literal to equal the `wall` of ADR-019's `fast` band bullet, with a case watched red on the 88.01 substitution."
+    }
+  ]
+}

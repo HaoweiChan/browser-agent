@@ -1,0 +1,40 @@
+{
+  "id": "shadow-dom-value-is-reachable-and-grounded",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "fixture": "frames-host.html",
+    "task": "Reveal the audit code in the inspector's control panel and report it.",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Reveal audit code"
+        },
+        "expected_state": {
+          "text_visible": "Audit code"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Audit code"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "NBX-7741",
+    "trace_actions": [
+      "navigate",
+      "click",
+      "extract"
+    ]
+  },
+  "provenance": "M42 leg (a), the shadow-DOM half \u2014 and the measurement corrected a premise. An OPEN shadow root is ALREADY in Chromium's accessibility tree and Playwright's locators already pierce it, so `observe` listed the button and `resolve` clicked it before this milestone. What was structurally blind was the EVIDENCE pipeline: `page.inner_text('body')` does not traverse shadow roots (measured: `'NBX-7741' in body` -> False while the same value read back off the locator), so a correct shadow read was failed as ungrounded by the verifier, `check_state`'s `text_visible` could never see shadow content, and `page_changed` was blind to a shadow-only mutation. A correct answer graded wrong is the same run-killer as an unreachable element and a worse one to debug."
+}

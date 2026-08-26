@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nimbus Inspector</title>
+<h1>Nimbus Inspector</h1>
+<p>The source pane below is an iframe — the same shape our own sec-10k
+inspector renders its source pane with (M42 observation reach).</p>
+<iframe src="/fixtures/frames-inner.html" title="Source pane" width="600" height="240"></iframe>
+
+<h2>Controls</h2>
+<div id="panel"></div>
+<script>
+  // An OPEN shadow root: a button and a value that live in a shadow subtree.
+  // Fixture code may know its own DOM; nothing here reaches the executor.
+  var host = document.getElementById('panel');
+  var root = host.attachShadow({mode: 'open'});
+  root.innerHTML =
+    '<p>Shadow control panel</p>' +
+    '<button type="button" aria-label="Reveal audit code">Reveal audit code</button>' +
+    '<p id="code" hidden>Audit code: ' +
+    '<output role="status" aria-label="Audit code">NBX-7741</output></p>';
+  root.querySelector('button').addEventListener('click', function () {
+    root.getElementById('code').hidden = false;
+  });
+</script>

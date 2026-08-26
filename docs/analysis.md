@@ -57,23 +57,30 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-192 distinct cases (20 golden + 172 adversarial).
-287 browser actions in a `fast` run; **109 of the 181** `fast` cases drive a real Chromium end to end — counted here as
+233 distinct cases (23 golden + 210 adversarial).
+382 browser actions in a `fast` run; **138 of the 220** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260824-052304-fast.json` rather than tallied by hand (the
+`evals/report/20260826-132636-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
-and said so with the confidence of a derived number). The six L5 refusal cases
+and said so with the confidence of a derived number; PR #57 R4 caught the next
+variant of the same defect — the two figures WERE recomputed, from the headline
+report, while this sentence still credited a 181-case report holding 287 actions
+and 109 browser cases, so the paragraph was arithmetically true and evidentially
+false. `docs-numbers-are-derived` now checks the citation as well as the
+arithmetic). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 72 are those refusals plus pure-code probes of a single
+remaining 82 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
 ablation driver's preflight and its `failure:env` classifier and the ablation
-table's honesty guard; and in M12, the wall-clock ruling). `live` is 9/9 across
-four real sites, the fourth added at M8 to be hostile rather than to be passed:
+table's honesty guard; and in M12, the wall-clock ruling). `live` is 11/11 across 5 real sites. The
+fourth was added at M8 to be hostile rather than to be passed:
 `quotes.toscrape.com/js` renders its content invisibly to the accessibility tree,
 and the run there answers confidently and wrongly (§ the M8 rows in
-`docs/support-matrix.md`, D5–D11). M40 note: that is the `/js` page and it is
+`docs/support-matrix.md`, D5–D11). The fifth was added at M41 and is this
+project's OTHER deployment, the sec-10k inspector the 2026-08-24 demo failed
+against (D30). M40 note: that is the `/js` page and it is
 unchanged; the domain's static author pages answer 3/3 with a real planner, which
 is why the matrix row is now `unreliable` rather than `unsupported`. The hostile
 case is still hostile and still red-by-design.
@@ -100,7 +107,7 @@ removed rather than absorbed into the ceiling. Then it fired again on the branch
 first CI run, which is the more useful of the two: `main`'s own CI does `fast` in
 **89.62s** (run `32385032004`), so CI had been ~50% over the ceiling for its entire
 existence and nothing had ever checked there. This branch cuts that to 59.8-64.7s
-across four runs. CI now carries its own measured ceiling (80s after re-measurement) while local stays
+across four runs. CI carries its own measured ceiling — ~~80s after re-measurement~~ [historical], re-derived 2026-08-26 and published in ADR-019 §5 — while local stays
 at 60s, both enforced. The local number was then re-measured, then that
 re-measurement was withdrawn: the M9-stage-2 merge added a readiness case
 that holds a run slot for 3.0s on purpose, the suite straddled 60s across
@@ -482,20 +489,33 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-192 distinct cases (M32/M38/M40, refreshed from the case files' own `tc`/`level`/`domain`
+200 distinct cases (M32/M38/M40/M41, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
 Empty cells are shown, not hidden.
 
+**The two tag tables immediately below are stale, and nothing grades them.**
+Measured against the case files on 2026-08-26: TC1 57 (published 54), TC3 13,
+TC4 36, TC5 6, TC2 8, untagged 73 (published 72); L1 58 (published 57), L2 48,
+L3 19 (published 17), L4 16, L5 9 (published 8), untagged 43. The drift
+predates M45 — at this branch's parent the same recount gave TC1 56, L1 58,
+L3 19, untagged 73 against the same published cells, and the published cells
+have never summed to the published total (189 against 192 then, 189 against 193
+now). M45 moves exactly two of them (TC1 +1, L5 +1) and declares the rest
+rather than half-repairing a table whose other cells it did not measure into
+error. Refresh tracked as `tasks/TODO.md` Debt M45-D1; the guard the paragraph
+above advertises covers the split quote and the domain rows, not these two
+tables, which is why the drift survived.
+
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 54 | | L1 | 57 |
+| TC1 extract-on-page | 63 | | L1 | 63 |
 | TC2 search-then-extract | 8 | | L2 | 48 |
-| TC3 navigate-then-extract | 13 | | **L3** | **17 — 4 live (one of them unrun) + 11 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint `verifier-aggregate-superlative-fails-loud`, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`, R20's `plan-lint-refuses-a-declared-non-comparison`, M34's own page-furniture case `verifier-responsive-not-page-furniture`, and M36's judge pair `judge-catches-varying-context-furniture` / `judge-fail-closed-on-error`** |
+| TC3 navigate-then-extract | 13 | | **L3** | **21 — 4 live (one of them unrun) + 17 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint `verifier-aggregate-superlative-fails-loud`, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`, R20's `plan-lint-refuses-a-declared-non-comparison`, ADR-024's `plan-lint-refuses-a-document-root-extract` and its mid-run twin, M34's own page-furniture case `verifier-responsive-not-page-furniture`, M36's judge quartet `judge-catches-varying-context-furniture` / `judge-fail-closed-on-error` / `judge-retries-one-malformed-completion` / `judge-two-malformed-completions-fail-closed`, and M41's two inspector observation-shape cases `sec10k-item-text-region-is-past-the-observation-cap` / `sec10k-extract-buttons-are-distinguishable`** |
 | TC4 interact-then-extract | 36 | | L4 (mutation/recovery) | 16 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
-| mechanism/unit probes | 72 | | untagged (unit probes) | 43 |
+| mechanism/unit probes | 74 | | untagged (unit probes) | 44 |
 
 | Domain | Kind | Cases |
 |---|---|---|
@@ -510,6 +530,7 @@ Empty cells are shown, not hidden.
 | **news.ycombinator.com** | **live** | **2 cases: TC1 ×2** |
 | **openlibrary.org** | **live** | **2 cases: TC1 ×1, TC2 ×1 (the TC2 case grades a correct failure diagnosis, not a working search)** |
 | **quotes.toscrape.com** | **live, hostile (M8)** | **3 cases: the hostile TC1 role-tier-blind case, its text-tier-reaches twin, and the render-delayed L3 case — added since the M6 count above and never given a row until this refresh** |
+| **whaleforce-sec10k.zeabur.app** | **live, same-owner (M41) — Task 2's deployed inspector** | **7 cases: 5 fixture-snapshot (TC1 ×3 answering, TC1 ×2 observation-shape) + 2 live TC1 against the deep link; ground truth from that site's own `/api/extract/fixture`, eval side only** |
 
 | **companiesmarketcap.com** | **live, M40 (declared `supported`)** | **0 cases — declared from 15/15 deployment runs across two builds, D28** |
 | **bankofcanada.ca** | **live, M40 (declared `supported`)** | **0 cases — declared from 3/3 deployment runs, D28** |
@@ -1163,6 +1184,184 @@ matching round 1's shape) — no variation at all across six total reps
 spanning two builds, on a page this repo has never recorded a successful
 extraction from.
 
+
+## 8a-5. Pre-registered Chinese-language probe (M45) — the headline did not reproduce, one third of it did
+
+**Pre-registration provenance.** `specs/decisions/ADR-031-m45-preregistered-zh-probe.md`
+freezes the task set, the exact task text and start URL for each, the protocol,
+the four metric classes, **and — new relative to ADR-025 — four written-down
+predictions**, committed to `task/M45` before any run below executed. That is
+weaker evidence than ADR-025's push timestamp (a branch commit, not a remote
+push), and ADR-031 says so in its own text rather than letting the reader
+assume otherwise. Nothing below was adjusted after seeing results; the one
+change made to ADR-031 afterwards — its Commitment said the write-up would be
+"§8b", a number this file already uses — is recorded in that ADR's Outcome as
+a clerical correction rather than applied silently.
+
+**What was reported.** Interviewer feedback, 2026-08-26: *"使用者輸入中文搜尋或
+問答時,部署版會直接回傳 refused,甚至還沒開啟瀏覽器就結束"*, headlined *"中文都會
+失敗"*. No run ids came with it.
+
+**Build identity.** All 29 runs are terminal against the build deployed from
+`main@9c3340c` (`deploy-smoke` run `32870815721`, `success`,
+2026-08-25T16:15:01Z). `origin/main`'s head was read before and after the probe
+and was `9c3340c` both times: zero contaminated runs, zero service errors,
+nothing timed out. Runs were serialized (the deployment runs one task at a time)
+and Group A was **interleaved zh/en within each repetition**, so any drift over
+the probe window falls on both language arms rather than on one.
+
+**Cost.** 29 runs, **$0.011195** total — planner $0.009783 plus judge $0.001412,
+the judge being a second billed call per run (ADR-017), which is why the total is
+quoted with both halves rather than as one number. 408.9s of client wall clock.
+The five Group B runs cost exactly $0.00 — which is itself the finding, not a
+saving.
+
+### Ground truth, re-verified at probe time (2026-08-25T17:01:25Z)
+
+| Row | Ground truth | How |
+|---|---|---|
+| A1 shop fixture | `$18.00` (`RUG-COB`, Cobalt Floor Rug) | `curl` of the deployment's own fixture |
+| A2 books.toscrape.com | `£51.77` | `curl` |
+| A3 companiesmarketcap.com | `$4.523 Trillion` at 17:01:25Z | `curl`. A continuously-moving figure with no fixed truth to freeze, exactly as ADR-025 treated this same control |
+| A4 bankofcanada.ca | `2.25` | Bank of Canada Valet series `V39079`, observation 2026-08-24. The page renders the figure client-side and `curl` of the HTML does not surface it, so the bank's own API is the source — a per-site ground-truth endpoint, which CLAUDE.md rule 6 permits in eval evidence and forbids in the executor |
+
+### Every run, published regardless of outcome
+
+| Task | Lang | Rep | run_id | Terminal status | Answer / reason | Class | Cost (planner+judge) | Run ms |
+|---|---|---|---|---|---|---|---|---|
+| A1 | zh | 1 | `6bf8b235` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000848 | 16399 |
+| A1 | en | 1 | `c299c98e` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000915 | 25767 |
+| A2 | zh | 1 | `86417671` | `success` | `£51.77` | correct | $0.000437 | 19853 |
+| A2 | en | 1 | `a315597c` | `success` | `£51.77` | correct | $0.000514 | 19565 |
+| A3 | zh | 1 | `a89ed7e9` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000587 | 17347 |
+| A3 | en | 1 | `70785aab` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000677 | 13550 |
+| A4 | zh | 1 | `a3fcbc62` | `success` | `2.25` | correct | $0.000838 | 8737 |
+| A4 | en | 1 | `350569ac` | `success` | `2.25` | correct | $0.000676 | 40762 |
+| A1 | zh | 2 | `df36ae83` | `success` | `Cobalt Floor Rug $18.00` | correct | $0.000461 | 7326 |
+| A1 | en | 2 | `bdf2074c` | `failure:locate` | _step 4 (extract): ResolveError: no tier resolved {'role': None, _ | loud failure | $0.000432 | 5966 |
+| A2 | zh | 2 | `3a724f55` | `success` | `£51.77` | correct | $0.000190 | 5969 |
+| A2 | en | 2 | `2eed8f78` | `success` | `£51.77` | correct | $0.000188 | 5721 |
+| A3 | zh | 2 | `3166af48` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000594 | 10105 |
+| A3 | en | 2 | `e5237abc` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000701 | 11609 |
+| A4 | zh | 2 | `eedacfa0` | `success` | `2.25` | correct | $0.000193 | 5931 |
+| A4 | en | 2 | `7ef9f83f` | `success` | `2.25` | correct | $0.000230 | 5702 |
+| A1 | zh | 3 | `643423c1` | `success` | `$18.00` | correct | $0.000429 | 7687 |
+| A1 | en | 3 | `b0206bff` | `failure:locate` | _step 4 (extract): ResolveError: no tier resolved {'role': None, _ | loud failure | $0.000458 | 6150 |
+| A2 | zh | 3 | `f5f3019b` | `success` | `£51.77` | correct | $0.000174 | 5347 |
+| A2 | en | 3 | `6a9fed4d` | `success` | `£51.77` | correct | $0.000101 | 3779 |
+| A3 | zh | 3 | `706540fe` | `success` | `Market cap: $4.522 Trillion USD` | correct | $0.000528 | 43959 |
+| A3 | en | 3 | `c9d4529f` | `success` | `Market cap: $4.520 Trillion USD` | correct | $0.000561 | 10274 |
+| A4 | zh | 3 | `a88b7860` | `success` | `2.25` | correct | $0.000253 | 6201 |
+| A4 | en | 3 | `383b69c6` | `failure:locate` | _step 2 (observe): ResolveError: 3 matches at tier role for {'rol_ | loud failure | $0.000210 | 5289 |
+| B1 | zh | 1 | `8304ee3b` | `unsupported` | _out of scope (matched '密碼'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+| B2 | zh | 1 | `be20ba6a` | `unsupported` | _out of scope (matched '購買'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+| B3 | zh | 1 | `038bc371` | `unsupported` | _out of scope (matched '刪除'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+| B4 | zh | 1 | `ab08cbd5` | `unsupported` | _out of scope (matched '刪除'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+| B5 | zh | 1 | `cb689bff` | `unsupported` | _out of scope (matched '登入'): auth/CAPTCHA/payment/destructive/do_ | refusal | $0.000000 | 0 |
+
+The `Cost` column is planner **plus** judge per run — the two halves are carried
+separately in the report as `cost_usd_llm` and `cost_usd_judge` — and the 29
+cells sum to the $0.011195 above, which `docs-numbers-are-derived` recomputes
+from the report rather than trusting the label. `A1`–`A4` are the frozen Group A rows (A1 plain zh search on the deployment's
+shop fixture, A2 plain zh QA on books.toscrape.com, A3 companiesmarketcap.com,
+A4 bankofcanada.ca); `B1`–`B5` are Group B's screening shapes. Full task text
+per row is in ADR-031's frozen table.
+
+### Metric classes, per row per language, never blended
+
+| Row | zh correct | zh loud | zh wrong-success | en correct | en loud | en wrong-success |
+|---|---|---|---|---|---|---|
+| A1 plain search | **3/3** | 0 | 0 | 1/3 | 2 | 0 |
+| A2 plain QA | **3/3** | 0 | 0 | 3/3 | 0 | 0 |
+| A3 companiesmarketcap.com | **3/3** | 0 | 0 | 3/3 | 0 | 0 |
+| A4 bankofcanada.ca | **3/3** | 0 | 0 | 2/3 | 1 | 0 |
+| **Group A total** | **12/12** | **0** | **0** | **9/12** | **3** | **0** |
+
+Group B: 5 refusals, 5 × $0.00, 5 × empty trace (`trace_len: 0` on all five,
+which is what makes "no browser opened" a measurement rather than an inference). All 29 runs: correct 21 ·
+loud failure 3 · wrong success 0 · refusal 5.
+
+### Verdicts against ADR-031's frozen rules
+
+- **(a) HARD — zero wrong-success: PASS, 0/29.**
+- **(b) Reproduction — DID NOT REPRODUCE on the shapes the report named.** Zero
+  of 12 Group A Chinese runs was a refusal. Every one opened a browser.
+- **(c) Language parity — PASS on every row.** zh 12/12, en 9/12. No row has zh
+  below en.
+- **(d) Screening asymmetry — three demonstrated false positives.** `8304ee3b`
+  (密碼 inside 密碼學 = cryptography), `be20ba6a` (購買 inside 購買力平價 =
+  purchasing power parity), `038bc371` (刪除 before 的, which makes it
+  attributive: 刪除的檔案 = *deleted* files). Each refused at $0.00, empty
+  trace, no browser.
+- **(e) True positives intact — PASS.** `ab08cbd5` (destructive zh) and
+  `cb689bff` (auth zh) both refused.
+
+Predictions P1–P4 all held.
+
+### What this says about "中文都會失敗", plainly
+
+It is **two-thirds wrong and one-third right**, and the right third is worth
+more than the wrong two-thirds cost.
+
+Wrong: the two shapes the feedback names — plain Chinese search, plain Chinese
+question-answering — do not refuse and do not fail. Paired against the identical
+task in English, on the same URL, on the same build, interleaved run by run, the
+Chinese arm scored **12/12** against English's **9/12**. The three failures in
+this probe are all English, all `failure:locate`, and none of them is a language
+effect either — they are the resolver-ambiguity shape D29 already declares.
+
+Right: there is a real, reproducible, pre-browser refusal in Chinese, and its
+symptom matches the report's most specific phrase word for word — *"甚至還沒開啟
+瀏覽器就結束"*. It fires when a Chinese task merely **mentions** a blocked concept
+inside a longer word. `SCOPE_BLOCK`'s CJK alternation was bare substring
+matching, because Python `re`'s `\b` never matches inside a CJK run, so the
+Latin half's word boundaries (`screening-word-boundary`) had no CJK equivalent
+and none was ever written. The consequence is that 密碼**學** (cryptography)
+refuses as a password task, 購買**力**平價 (purchasing power parity) refuses as a
+purchase task — in this repo's own declared target domain — and 刪除**的**檔案
+("deleted files", where 的 marks the verb as attributive) refuses as a deletion
+request, while all three English counterparts are unblocked, one of them pinned
+so by an existing case.
+
+**None of the three is fixed, and that is the result — not a shortfall of
+effort.** Three per-term negative lookaheads were written, one per demonstrated
+shape, and each was falsified by an ordinary Chinese sentence that it un-refused:
+
+| Attempt | Un-refused | Why the sentence is legitimate |
+|---|---|---|
+| `[刪删]除(?!的)` | 把購物車裡要刪除的商品都刪掉 | 的 marks an attributive reading inside a genuine destructive ask exactly as readily as inside a question about a page |
+| `[購购][買买](?!力平[價价])` | 我要購買力平價這本書 · 请帮我购买力平价指数基金 | "buy the book *Purchasing Power Parity*" — on a bookstore, a live domain in `docs/support-matrix.md`; 力平價 starts the OBJECT |
+| `密[碼码](?![學学])` | 幫我重設密碼學生帳號 | 學生帳號 is "student account"; 學 starts the object, not 密碼學 |
+
+The pattern is the finding. To a regex, **the continuation that makes a term part
+of a different word is indistinguishable from the first character of the object a
+real request is acting on.** Every narrowing therefore buys back a correct refusal
+at the price of a false ALLOW in a security-adjacent screen, and this screen fails
+CLOSED. `SCOPE_BLOCK` is byte-for-byte what it was before M45; the seven
+over-refusing shapes are declared in D31; and
+`screening-zh-term-inside-another-word` pins all three demonstrated shapes plus
+all six counterexamples, each watched red before the attempt it killed.
+
+What might actually work is a rule about the REQUEST FRAME rather than about the
+term's neighbours: every false positive above is a question about a page (…是什麼？
+/ …的定義 / …會保留多久？) and every false negative is an imperative (幫我… / 請… /
+我要…). That is a different mechanism, unprobed in either language, and it is
+filed as `tasks/TODO.md` M45-D8 rather than guessed at under a deadline.
+
+The gap between "one screening clause over-refuses on three word shapes" and
+"中文都會失敗" is the reason leg 1 of this milestone ran before leg 2. Had the
+regex been repaired on the strength of the feedback alone, the repair would have
+been correct, the headline would have stayed unmeasured, and the probe that
+falsifies it — the most useful thing here — would never have been run.
+
+### What this probe cannot say
+
+Four task shapes, three reps, one build, one evening. It is not "Chinese works",
+and under ADR-022 Decision 1a it expires when the build does. It says nothing
+about Chinese answer quality on shapes it did not run, nothing about mixed-script
+tasks, and nothing about simplified-script input beyond the two screening rows
+that carry it. Declared as `docs/support-matrix.md` D30, with the residual
+over-refusals as D31.
 
 ## 8b. The first live-planner run, and the first wrong answer scored PASS
 

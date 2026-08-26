@@ -1,0 +1,49 @@
+{
+  "id": "loop-mode-b-cannot-read-the-un-awaited-result",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "fixture": "loop-lab.html",
+    "task": "In the Filing lab, what inventory turnover does the Apple FY2025 filing report?",
+    "stub_plan": [
+      {
+        "action": "select_option",
+        "target": {
+          "role": "combobox",
+          "name": "Filing"
+        },
+        "value": "Apple FY2025"
+      },
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Extract filing"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Inventory turnover"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:extract",
+    "trace_actions": [
+      "navigate",
+      "select_option",
+      "click",
+      "extract"
+    ]
+  },
+  "provenance": "The A/B twin of loop-drives-a-fetch-then-render-page, on the same fixture with the same action vocabulary. This plan is everything a planner CAN author from the pre-click observation: the turnover element is in that observation (named, empty), the click's consequence is not \u2014 the completion banner's wording does not exist on the page yet, and planner.SYSTEM forbids inventing expected text. So mode B extracts the placeholder and the run dies `failure:extract`. What separates the two runs is not the verb (`wait_for` is shared) but the cadence: loop mode SEES the un-settled page and can decide to wait. Postmortem S4.",
+  "triage": {
+    "class": "declared-boundary",
+    "note": "mode B's failure is pinned, not asserted in prose \u2014 ADR-027 Consequences."
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "round": 3,
+  "authorised_by": "human ruling: option A, one more bounded round after the circuit breaker fired",
+  "scope": "frozen — exactly the three items handed down; nothing else touched",
+  "gate": {
+    "invariant": "74/74 = 1.000, wall 14.06s, $0.0000",
+    "fast": "213/213 = 1.000, wall 88.33s, $0.0000",
+    "environment": "LOCAL ONLY — CI has not run this tree (R7, open, not mine)",
+    "baseline_file": "unchanged from main"
+  },
+  "counts": { "fixed": 3, "rejected": 0, "debt": 0 },
+  "findings": {
+    "R19": {
+      "state": "fixed",
+      "case": "no new case — the graded artifact is ADR-028's own Enforced-by list",
+      "change": "ADR-028 item 5 rewritten: the withdrawn ruling (`page_changed` stays main-frame-only) is recorded AS withdrawn rather than deleted, the shipped ruling is stated with the three settings tried and a table of what each does in both directions, the accepted false positive is named and pointed at T-M42-14, and `replan-cannot-launder-noop-action-in-a-frame` + `replan-after-an-iframe-only-change-is-not-laundering` join the Enforced-by list. tasks/TODO.md:479's pointer now names the item and says it withdraws the opposite ruling, instead of sending a reader at the rejected position.",
+      "note": "The reviewer's point that the pair IS the specification is why they belong in the ADR: neither case alone constrains the line, which is precisely how round 1's repair flipped the sign and stayed green."
+    },
+    "R20": {
+      "state": "fixed",
+      "case": "adr029-variance-cites-the-ledger (extended)",
+      "change": "ADR-029:38's derivation now reads 88.42s x 1.15 = 101.68 (the cited band source at the shipped count). ADR-029:42's span endpoints and the earlier tree's 73.06s are DELETED, not corrected: endpoints move with every gate run, so a literal for them falsifies itself on the next commit, and a wall clock carried across case counts is the defect itself. ADR-019:237 now refers to the band source §2 cites instead of re-typing a figure. The 105 ruling is untouched, as instructed — both derivations round to 105.",
+      "class_note": "Applied the preference order given: delete the restated fact, else state the relation, else grade it. One literal survives in §1 and it is the cited band source, graded by two checks."
+    },
+    "check": {
+      "state": "fixed",
+      "case": "adr029-variance-cites-the-ledger (extended)",
+      "red_observed": "{\"quoted_in_adr029_section_1_but_in_no_local_fast_row_at\": 213, \"unreadable\": [73.06, 82.18, 87.96], \"rows_at_that_count\": [87.95, 88.01, 88.27, 88.4, 88.42]}",
+      "change": "The check matched a seconds literal against local `fast` rows at ANY case count. It now scopes to `len(load_cases('fast'))` — the shipped count — which is the same rule `published-band-matches-the-ledger` item 1 (count) applies to the band itself, applied to the prose that argues for it. 87.96s and 82.18s were real rows of the 207-case tree, which is exactly why a band lifted from a smaller suite sailed through.",
+      "red_first": "Watched red on today's text BEFORE the literals were corrected, as instructed; the red output above is that run."
+    }
+  },
+  "open_not_mine": {
+    "R7": "CI has not run this tree; push still denied. CI's ceiling left at 90, not guessed. Every gate claim scoped LOCAL ONLY and graded by `adr029-scope-matches-the-suites`."
+  },
+  "nothing_deferred": "No item was half-closed and no new debt was opened this round. Nothing outside the three items was touched."
+}

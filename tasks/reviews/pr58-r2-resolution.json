@@ -1,0 +1,48 @@
+{
+  "pr": 58,
+  "task": "M41",
+  "round": 2,
+  "date": "2026-08-26",
+  "responder": "pr-loop/implementer",
+  "gate_after": {
+    "invariant": "67/67 = 1.000",
+    "fast": "187/187 = 1.000, $0.0000, 73.89s"
+  },
+  "note": "Three findings: R6 fixed and now graded, R7 filed as debt, R8 corrected as a marked correction rather than a rewrite. R6's third-instance pattern is closed by derivation, not by another hand fix — that was the point of raising it.",
+  "resolutions": [
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "resolution": "fixed",
+      "covered_by": "docs-numbers-are-derived",
+      "what": "Both prose descriptions now state 4 conjuncts and name the fourth (no eval case feeds the endpoint, or any `/api/` path on that host, to a run through its `input` block), with the PR #58 R2 red-first evidence cited beside the other three: the probe case's green `{'passed': True, ..., 'cases_scanned': 6}` on a rule-6 violation, then `{'ground_truth_endpoint_fed_to_the_executor': ['zz-tmp-leak-probe.json']}`. AND the count is derived, not re-typed: `docs-numbers-are-derived` gains `counts['gt_conjuncts'] = len(_check_ground_truth_endpoint_eval_only()['wrong'])`, one key per conjunct, quoted back out of ADR-030 §The ground-truth-endpoint boundary and support-matrix D30 through the `doc_quotes` block R1 added.",
+      "red_first": "two directions, both run. (1) Grader extended, prose still stale: {'doc_does_not_say': 'enforces\\n4 conjuncts, each watched red before it was green', 'doc': 'specs/decisions/ADR-030-m41-sec10k-inspector-probe.md'} and {'doc_does_not_say': '`sec10k-ground-truth-endpoint-eval-only`, 4 conjuncts each watched red', 'doc': 'docs/support-matrix.md'} — the exact two sentences the reviewer named. (2) The direction that matters for recurrence: with the invariant stubbed to return five `wrong` keys, both documents redden at '5 conjuncts' without either being touched. A conjunct added in code now reddens the prose before the commit that adds it can go green.",
+      "note": "The count is `len(wrong)` because that is the shape the check already returns and a second registry would be one more thing to keep in sync. Two ceilings, both in the code comment and one of them in the ADR prose: `bool(cases)` — the non-vacuity precondition that stops the last conjunct passing on an empty set — carries no `wrong` key and is deliberately NOT counted, which is why the number is 4 and not 5; and a future conjunct that folds into an existing key would be invisible. Upgrade named in the comment: have the check return the conjunct names as a tuple."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "resolution": "debt",
+      "became": "T-M41-7",
+      "what": "Filed under `## Debt` in tasks/TODO.md as `### T-M41-7 — the live SITE count is published three times and derived twice`, `Origin: PR #58 R7`, with the review's evidence and acceptance carried verbatim including the perturbation check (`live_sites` forced to 6 reddens README:204 and analysis:72, never line 41).",
+      "note": "One line added beyond the review's framing, because the block should carry the decision and not just the instance: `readme_quotes` matches by SUBSTRING, so every quote in that list — not only line 41's — stops grading at its last character. Whether the fix is three more characters in one string or anchoring each quote to end-of-line is what T-M41-7 has to decide. Not decided here: that is scope this round does not have."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "resolution": "fixed",
+      "covered_by": "hand fix — a record, not a gradeable sentence",
+      "what": "`tasks/reviews/pr58-r1-resolution.json` R1 gains a `correction` object. The original claim is left standing verbatim above it, per the orchestrator's constraint: the correction states that `docs/analysis.md` was already reachable by `analysis_section1` (since PR #44 R4) and `analysis_coverage`, both configured in the same case file, and gives the real reason `doc_quotes` was needed — `analysis_section1` formats against `vals` (`actions`/`with_browser`/`total`/`remaining`, all report-derived), so `{live}`/`{live_sites}` raise KeyError there.",
+      "red_first": "none possible — this is a claim in a review record about the state of the code, not a property of the tree. Verified by reading: `_run_doc_counts_case`'s `analysis_section1` block reads `(RUN_ROOT / s1['doc'])` and formats against `vals`, which has no suite-count key.",
+      "found_while_checking": "not part of the finding, recorded because it strengthens the conclusion: `analysis_section1` is also gated on a non-red headline report (`if s1 and (head := ...)`), so a suite count parked in that hook would stop being graded exactly when the cited report goes red — which is when prose is most likely to be stale. That is a second reason `doc_quotes` is the right hook, and it makes R8's alternative acceptance (fold into the existing hook) the worse of the two options offered.",
+      "note": "Third instance of the same pattern in this PR, and the entry is left as evidence of that rather than tidied: a multi-artifact correction leaving a document behind. R6 is the first one closed by derivation instead of by hand.",
+      "correction": {
+        "raised_by": "PR #58 R8 (re-reported at round 3)",
+        "date": "2026-08-26",
+        "claim_corrected": "`found_while_checking` above is false, and is left standing for the same reason the round-1 R1 note is: this file records what was claimed at the time. It says `analysis_section1` is gated on a non-red headline report.",
+        "what_is_actually_true": "it is gated on the headline report existing and parsing. The walrus at `src/browser/eval_adapter.py:4826` re-reads `reports[...]`, so the `head = None` set at :4786 when `headline_report_is_red` fires never reaches it; that `None` only suppresses the README wall-clock and metric quotes below it. Verified with the orchestrator's committed repro (`tasks/reviews/pr58-r3-repro-R8.py`): `headline_report_is_red: True` and `analysis_section1_does_not_say: True` print together.",
+        "consequence": "the sentence in commit d6e6cff's message calling the fold 'the worse of the two options' rests partly on this and is correspondingly weaker. `doc_quotes` remains the right hook on the surviving argument — one namespace and one gate per kind of number — and on the KeyError, which is verified and unchanged."
+      }
+    }
+  ]
+}
