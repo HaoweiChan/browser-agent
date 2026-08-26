@@ -460,7 +460,7 @@ with the fast-suite/inspectability cost of A stated either way.
 ## Debt
 
 ### T-M42-14 — `page_changed` is frames-aware, and the false positive that buys is undemonstrated but real            [status: todo]
-Origin: PR #56 R13, 2026-08-26. The accepted cost of the chosen direction, logged
+Origin: PR #57 R13, 2026-08-26. The accepted cost of the chosen direction, logged
 because R13's own ruling is that a trade-off may not be declared in one direction
 and left silent in the other.
 Spec: `page_changed` compares `page_text(page)` before and after an acting step —
@@ -478,7 +478,7 @@ repo's rule is to widen on what a probe found rather than on what someone
 imagined (D21), and both halves are now declared — in `observe.page_text`'s
 docstring, in the `attempt` comment, and in ADR-028 item 5, which records the
 shipped ruling and withdraws the opposite one it argued for before the reversal
-(PR #56 R19: that pointer sent a reader at the rejected position for a round).
+(PR #57 R19: that pointer sent a reader at the rejected position for a round).
 Repro that would reopen it: a fixture whose iframe rewrites its own content on a
 timer, driven by the `replan-cannot-launder-noop-action` plan shape — a no-op
 click, a postcondition that does not hold, and a replan that reads without
@@ -490,7 +490,7 @@ T-M42-4 needs and ADR-028 §7 currently forbids. The two debts close together or
 not at all.
 
 ### T-M42-15 — ADR-028 still credits the mechanism R6 falsified, and no ADR records `no_abandoned_failure`            [status: todo]
-Origin: PR #56 R17 (LOW).
+Origin: PR #57 R17 (LOW).
 Spec, the finding verbatim: "The R6 repair fixed the false causal claim in the
 code comment but left the identical claim standing in the ADR of record, and no
 ADR mentions `no_abandoned_failure` at all."
@@ -517,7 +517,7 @@ carrying `failure_class` fails the run whatever it failed at, names
 294-297 sentence credits the mechanism that actually holds the property."
 
 ### T-M42-16 — the red-first ledger's iframe claim is contradicted by one of the two cases it describes            [status: todo]
-Origin: PR #56 R18 (LOW).
+Origin: PR #57 R18 (LOW).
 Spec, the finding verbatim: "The new red-first ledger section makes a claim its
 own case file contradicts: it says neither of the two wrong-success reds is
 detectable without an iframe, but `loop-abandoned-failure-is-not-a-success` runs
@@ -528,7 +528,7 @@ R6; evals/adversarial/loop-abandoned-failure-is-not-a-success.json:8 sets
 `\"fixture\": \"shop.html\"`, and reverting `verifier.py`'s
 `no_abandoned_failure` block reproduces that red on shop.html (status `success`,
 answer `Meridian Wall Clock`, verdict PASS). The same sentence is repeated in
-tasks/reviews/pr56-r1-resolution.json's closing note."
+tasks/reviews/pr57-r1-resolution.json's closing note."
 Repro, verbatim: "grep -n '\"fixture\"'
 evals/adversarial/loop-abandoned-failure-is-not-a-success.json ; grep -n
 'Neither is detectable' docs/evals/m42-red-first-ledger.md"
@@ -542,7 +542,7 @@ of the two that needs a framed fixture), so a reader auditing the ledger against
 the case files finds no contradiction."
 
 ### T-M42-9 — both loop-budget ceiling cases describe numbers they no longer script            [status: todo]
-Origin: PR #56 R8 (LOW).
+Origin: PR #57 R8 (LOW).
 Spec, the finding verbatim: "Both loop-budget ceiling cases carry `provenance`
 prose describing numbers the case files no longer contain, so the recorded
 rationale cannot be re-derived from the case."
@@ -568,7 +568,7 @@ wording that names the RELATION (usage exceeds the injected cap by one unit)
 over wording that re-types both scalars, so the next cap change cannot restage it.
 
 ### T-M42-10 — `trace_note_contains` was broadened for loop mode and five older cases inherited the looser rule            [status: todo]
-Origin: PR #56 R9 (LOW).
+Origin: PR #57 R9 (LOW).
 Spec, the finding verbatim: "`trace_note_contains` was broadened to search
 superseded steps for every case in the suite, which weakens five pre-existing
 resolver cases that were written against the narrower semantics, and no case
@@ -595,7 +595,7 @@ that a note appearing ONLY on a superseded step is still a red — watched red
 before the broadening."
 
 ### T-M42-11 — T-M42-4's own limitation claim is falsified by a fixture already in the tree            [status: todo]
-Origin: PR #56 R10 (LOW). Compounds T-M42-4 rather than replacing it.
+Origin: PR #57 R10 (LOW). Compounds T-M42-4 rather than replacing it.
 Spec, the finding verbatim: "T-M42-4's declared HIGH (a postcondition earned by
 a document the action never touched) is demonstrable on a fixture that is
 already in the tree, not only in principle — so 'nothing offline can see it' is
@@ -623,7 +623,7 @@ corrected — the guard against declaring a limitation that a committed fixture
 already falsifies."
 
 ### T-M42-12 — the offline suites now append a nonzero `cost_usd` that nothing asserts is stub-only            [status: todo]
-Origin: PR #56 R11 (LOW).
+Origin: PR #57 R11 (LOW).
 Spec, the finding verbatim: "`fast` and `invariant` now append `cost_usd: 2e-06`
 to the committed ledger while the headline prints `$0.0000`, and nothing asserts
 that either suite's spend is zero — so a future real sub-$0.00005 call is no
@@ -649,7 +649,7 @@ asserts that the `fast`/`invariant` totals' `llm_usd` equals exactly the sum of
 stub-declared usage — so the `$0` claim is checked rather than displayed."
 
 ### T-M42-13 — the red-first ledger names a commit that does not exist            [status: todo]
-Origin: PR #56 R12 (LOW).
+Origin: PR #57 R12 (LOW).
 Spec, the finding verbatim: "Six rows of the red-first ledger name a 'greened by'
 commit that does not exist in the branch history, so their red->green ordering is
 attested only by the ledger's prose (the reds themselves do reproduce — audited,

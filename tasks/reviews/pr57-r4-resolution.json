@@ -38,5 +38,5 @@
   "open_not_mine": {
     "R7": "CI is running this tree for the first time now that the push is unblocked. Not acted on, not guessed; .github/workflows/eval.yml untouched and CI's ceiling still 90."
   },
-  "note_for_the_orchestrator_sweep": "New prose in ADR-029 §1 cites this class as 'PR #56 R5, R14-R16, R19-R23', matching every existing artifact and the `Origin: PR #56` lines in tasks/TODO.md. Left consistent with the tree rather than half-renamed, for the #56 -> #57 sweep you said you would run yourself."
+  "note_for_the_orchestrator_sweep": "New prose in ADR-029 §1 cites this class as 'PR #57 R5, R14-R16, R19-R23', matching every existing artifact and the `Origin: PR #57` lines in tasks/TODO.md. Left consistent with the tree rather than half-renamed, for the #56 -> #57 sweep you said you would run yourself."
 }

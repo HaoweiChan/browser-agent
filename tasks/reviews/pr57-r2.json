@@ -64,7 +64,7 @@
       "severity": "LOW",
       "route": "debt",
       "claim": "The new red-first ledger section makes a claim its own case file contradicts: it says neither of the two wrong-success reds is detectable without an iframe, but `loop-abandoned-failure-is-not-a-success` runs on `shop.html`, which has none.",
-      "evidence": "docs/evals/m42-red-first-ledger.md:197 (\"Neither is detectable on any fixture without an iframe\") closes the paragraph about R1 and R6; evals/adversarial/loop-abandoned-failure-is-not-a-success.json:8 sets `\"fixture\": \"shop.html\"`, and reverting `verifier.py`'s `no_abandoned_failure` block reproduces that red on shop.html (status `success`, answer `Meridian Wall Clock`, verdict PASS). The same sentence is repeated in tasks/reviews/pr56-r1-resolution.json's closing note.",
+      "evidence": "docs/evals/m42-red-first-ledger.md:197 (\"Neither is detectable on any fixture without an iframe\") closes the paragraph about R1 and R6; evals/adversarial/loop-abandoned-failure-is-not-a-success.json:8 sets `\"fixture\": \"shop.html\"`, and reverting `verifier.py`'s `no_abandoned_failure` block reproduces that red on shop.html (status `success`, answer `Meridian Wall Clock`, verdict PASS). The same sentence is repeated in tasks/reviews/pr57-r1-resolution.json's closing note.",
       "repro": "grep -n '\"fixture\"' evals/adversarial/loop-abandoned-failure-is-not-a-success.json ; grep -n 'Neither is detectable' docs/evals/m42-red-first-ledger.md",
       "acceptance": "The sentence scopes the iframe claim to R1 (the only one of the two that needs a framed fixture), so a reader auditing the ledger against the case files finds no contradiction."
     }

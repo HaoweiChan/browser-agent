@@ -62,7 +62,7 @@ its own report beside it.
 cases that actually recorded browser actions, read out of the committed report
 `evals/report/20260825-195709-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
-and said so with the confidence of a derived number; PR #56 R4 caught the next
+and said so with the confidence of a derived number; PR #57 R4 caught the next
 variant of the same defect — the two figures WERE recomputed, from the headline
 report, while this sentence still credited a 181-case report holding 287 actions
 and 109 browser cases, so the paragraph was arithmetically true and evidentially

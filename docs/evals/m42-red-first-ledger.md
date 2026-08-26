@@ -167,7 +167,7 @@ reaching the ordering it exists to pin. Recorded because it is the failure mode
 this whole file exists to prevent: a green case proves nothing until you know
 why it is green, and the same is true of a red one.
 
-## PR #56, review round 1 — five more cases, all watched red
+## PR #57, review round 1 — five more cases, all watched red
 
 A fresh-context reviewer falsified the diff and returned twelve findings; seven
 routed to repair. Five of those seven are pinned by a case that was red before
@@ -176,11 +176,11 @@ own fixtures**, both invisible to every case that existed:
 
 | case | red observed (pre-fix) | finding | greened by |
 |---|---|---|---|
-| `replan-cannot-launder-noop-action-in-a-frame` | `status "success"`, `answer "NIMBUS-10K-2025"` — the laundering replan was ACCEPTED. `page_changed` was computed from `before = page_text(frames=False)` against `after = page_text(frames=True)`, so on any framed page every step read as having changed something and `changed_nothing()` was disarmed in both modes | R1 (HIGH) | `M42: PR #56 round-1 repairs` |
-| `loop-abandoned-failure-is-not-a-success` | `status "success"`, `answer "Meridian Wall Clock"`, verdict PASS — with `step 3 extract failure_class=locate superseded_by=None` in its own trace. `verify` could reach a step only through `postcondition_ok is False` or a state-changing verb with a null postcondition; a `locate`/`extract` failure was invisible to both | R6 (MEDIUM) | `M42: PR #56 round-1 repairs` |
-| `ui-adrs-cover-every-decision` | `unknown invariant check ui-adrs-cover-every-decision` — then, once written, the real red: a four-element row against a two-element destructure, plus ADR-023 absent since M39 and 027/028/029 never listed | R2 (MEDIUM) | `M42: PR #56 round-1 repairs` |
-| `adr029-variance-cites-the-ledger` | `unknown invariant check` — then `{"quoted_in_adr029_section_1_but_in_no_local_fast_row": [84.83, 88.87]}` against a ledger holding 87.96 / 87.05 / 82.18 / 83.4 / 83.1 | R3 (MEDIUM) | `M42: PR #56 round-1 repairs` |
-| `docs-numbers-are-derived` (extended) | `{"analysis_section1_does_not_cite": "20260825-183605-fast.json", "note": "§1's figures are derived from this report; the prose credits another"}` | R4 (MEDIUM) | `M42: PR #56 round-1 repairs` |
+| `replan-cannot-launder-noop-action-in-a-frame` | `status "success"`, `answer "NIMBUS-10K-2025"` — the laundering replan was ACCEPTED. `page_changed` was computed from `before = page_text(frames=False)` against `after = page_text(frames=True)`, so on any framed page every step read as having changed something and `changed_nothing()` was disarmed in both modes | R1 (HIGH) | `M42: PR #57 round-1 repairs` |
+| `loop-abandoned-failure-is-not-a-success` | `status "success"`, `answer "Meridian Wall Clock"`, verdict PASS — with `step 3 extract failure_class=locate superseded_by=None` in its own trace. `verify` could reach a step only through `postcondition_ok is False` or a state-changing verb with a null postcondition; a `locate`/`extract` failure was invisible to both | R6 (MEDIUM) | `M42: PR #57 round-1 repairs` |
+| `ui-adrs-cover-every-decision` | `unknown invariant check ui-adrs-cover-every-decision` — then, once written, the real red: a four-element row against a two-element destructure, plus ADR-023 absent since M39 and 027/028/029 never listed | R2 (MEDIUM) | `M42: PR #57 round-1 repairs` |
+| `adr029-variance-cites-the-ledger` | `unknown invariant check` — then `{"quoted_in_adr029_section_1_but_in_no_local_fast_row": [84.83, 88.87]}` against a ledger holding 87.96 / 87.05 / 82.18 / 83.4 / 83.1 | R3 (MEDIUM) | `M42: PR #57 round-1 repairs` |
+| `docs-numbers-are-derived` (extended) | `{"analysis_section1_does_not_cite": "20260825-183605-fast.json", "note": "§1's figures are derived from this report; the prose credits another"}` | R4 (MEDIUM) | `M42: PR #57 round-1 repairs` |
 
 ### What the two HIGH-consequence reds have in common
 
@@ -210,15 +210,15 @@ around them — is real and is stated rather than pinned. R7 cannot be pinned fr
 here at all: it is a claim about an environment that has not run this tree, and
 inventing a case for it would be inventing the measurement.
 
-## PR #56, review round 2 — two more cases, both watched red
+## PR #57, review round 2 — two more cases, both watched red
 
 Round 2 read the repair diff and found that one repair had flipped a bug's sign
 and three had re-created the class they were repairing.
 
 | case | red observed (pre-fix) | finding | greened by |
 |---|---|---|---|
-| `replan-after-an-iframe-only-change-is-not-laundering` | `failure:act`, `answer None`, reason `"replan would skip a failed action that changed nothing on the page"` — about a click that had just loaded `NIMBUS-10K-2025` into the source pane. R1's repair made both sides of the `page_changed` comparison frames-BLIND, which cured the false positive by creating a false negative on the exact page shape M42 leg (a) exists for | R13 | `M42: PR #56 round-2 repairs` |
-| `adr029-scope-matches-the-suites` | `unknown invariant check`; then `[{"suite": "fast", "adr029_section_2_says": "207/207", "suite_is": "213/213"}, {"suite": "invariant", "adr029_section_2_says": "71/71", "suite_is": "74/74"}]` | R14 | `M42: PR #56 round-2 repairs` |
+| `replan-after-an-iframe-only-change-is-not-laundering` | `failure:act`, `answer None`, reason `"replan would skip a failed action that changed nothing on the page"` — about a click that had just loaded `NIMBUS-10K-2025` into the source pane. R1's repair made both sides of the `page_changed` comparison frames-BLIND, which cured the false positive by creating a false negative on the exact page shape M42 leg (a) exists for | R13 | `M42: PR #57 round-2 repairs` |
+| `adr029-scope-matches-the-suites` | `unknown invariant check`; then `[{"suite": "fast", "adr029_section_2_says": "207/207", "suite_is": "213/213"}, {"suite": "invariant", "adr029_section_2_says": "71/71", "suite_is": "74/74"}]` | R14 | `M42: PR #57 round-2 repairs` |
 
 ### `page_changed` has no right answer, so it now has two cases
 
@@ -245,14 +245,14 @@ count of M42's growth is **deleted**, not corrected — the number is
 had to stay, ADR-029 §2's gate result, is now graded against the suites the
 runner loads. A number a human retypes drifts; a number a case reads back cannot.
 
-## PR #56, review round 3 — the check is the deliverable
+## PR #57, review round 3 — the check is the deliverable
 
 Round 3 found the class's fourth crop and, more usefully, found why the guard
 built for it in round 1 did not catch it.
 
 | check | red observed (pre-fix) | finding | greened by |
 |---|---|---|---|
-| `adr029-variance-cites-the-ledger` (extended) | `{"quoted_in_adr029_section_1_but_in_no_local_fast_row_at": 213, "unreadable": [73.06, 82.18, 87.96], "rows_at_that_count": [87.95, 88.01, 88.27, 88.4, 88.42]}` | round 3, item 3 | `M42: PR #56 round-3 repairs` |
+| `adr029-variance-cites-the-ledger` (extended) | `{"quoted_in_adr029_section_1_but_in_no_local_fast_row_at": 213, "unreadable": [73.06, 82.18, 87.96], "rows_at_that_count": [87.95, 88.01, 88.27, 88.4, 88.42]}` | round 3, item 3 | `M42: PR #57 round-3 repairs` |
 
 The hole was one clause: the check asked whether a seconds literal matched
 *some* local `fast` row at *any* case count. 87.96s and 82.18s really were local

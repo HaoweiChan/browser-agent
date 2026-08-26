@@ -7,7 +7,7 @@ Status: accepted
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `evals/run.py` `over_budget()`
 
-**Amended by**: ADR-029 (Decision 2's local `fast` ceiling 90 -> 105, on the number `published-band-matches-the-ledger` derived after M42 grew the suite (the count is `git diff main --stat` away and is published nowhere, because three documents published three different values for it — PR #56 R16); CI's stays 90 because nothing in that change measured CI) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
+**Amended by**: ADR-029 (Decision 2's local `fast` ceiling 90 -> 105, on the number `published-band-matches-the-ledger` derived after M42 grew the suite (the count is `git diff main --stat` away and is published nowhere, because three documents published three different values for it — PR #57 R16); CI's stays 90 because nothing in that change measured CI) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 80) and ADR-002 Decision 4 (a second suite now has a ceiling)
 
@@ -67,11 +67,11 @@ is a number no run of this tree has tested. The count is not repeated here: this
 sentence said 152 for one round, which is ADR-021's run `32639577041` on
 `07e3d34`, not §5's `32561162459` on `d173340`, and a document contradicting
 itself about which run it means is worse than one that makes the reader look
-(PR #56 R15).
+(PR #57 R15).
 ADR-029 §2 carries the ruling — the ceiling is not raised on an extrapolation,
 and until a CI run of this tree exists and is cited here by workflow-run id,
 every gate-green claim on that branch is scoped to the local environment
-(PR #56 R7). They stay ungraded by `published-band-matches-the-ledger`, which reads this
+(PR #57 R7). They stay ungraded by `published-band-matches-the-ledger`, which reads this
 repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
@@ -86,7 +86,7 @@ repo's ledger and nothing else.
   the addition forces. Here the addition is the cases M42 adds. The stamp is UTC, as
   every row written since §7 is. How many rows the ledger holds at this count,
   and what its maximum is, are deliberately not written here — see §3. Each
-  re-derivation of this section is exactly the cost `T-M39-11` names, and PR #56
+  re-derivation of this section is exactly the cost `T-M39-11` names, and PR #57
   R5 is what it costs when the numbers are refreshed and the sentence explaining
   them is not: this bullet carried M39's tree as its explanation under M42's
   row, saying 207 cases on one line and 181 four lines later, with

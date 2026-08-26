@@ -21,7 +21,7 @@ the committed 90. M42 adds cases — from the milestone itself and from each
 review round after it — and every one of them that drives a browser costs real
 wall clock. How many is deliberately not written here: three documents published
 three different values for that one quantity, and `git diff main --stat` answers
-it without any of them (PR #56 R16). The band moves past the step boundary, and `published-band-
+it without any of them (PR #57 R16). The band moves past the step boundary, and `published-band-
 matches-the-ledger` items 3 and 4 refuse a band whose derived ceiling is above
 the committed one. That refusal is the mechanism working: a suite that got
 slower has to say so, in the document of record, before the gate goes green
@@ -48,7 +48,7 @@ that difference is given, no endpoint is named, and no wall clock is retyped.
 The ledger gains a row on every gate run — including the verification runs of
 the review loop that read this sentence — so any prose describing its maximum,
 its spread or its endpoints is falsified by the act of checking it. Five rounds
-of findings in this class (PR #56 R5, R14-R16, R19-R23) all reduce to that one
+of findings in this class (PR #57 R5, R14-R16, R19-R23) all reduce to that one
 sentence. `adr029-variance-cites-the-ledger` is what keeps this section from
 acquiring such a literal again. That difference is the property ADR-013's rule is built around — SLOWEST observed,
 not median — and exactly what T-M39-13 warns makes a band fragile. Publishing
@@ -56,7 +56,7 @@ the median would be choosing rather than deriving, and would leave the next
 honest gate run red.
 
 ~~The same tree measured 84.83s and 88.87s within the hour~~ — struck 2026-08-26
-(PR #56 R3). Those were real runs of this tree taken while three eval processes
+(PR #57 R3). Those were real runs of this tree taken while three eval processes
 contended for the machine, and they were discarded with the probe rows they
 belonged to under the T-M38-5 practice, so no reader can read them back. A
 document of record may not argue from evidence that no longer exists, which is
@@ -85,7 +85,7 @@ red CI wall clock on this branch as the expected next step rather than as a
 surprise. That is the ADR-021 pattern exactly: its CI figures came from a run
 that had already happened, cited by id.
 
-**Therefore, and this scopes every green-gate claim this branch makes** (PR #56
+**Therefore, and this scopes every green-gate claim this branch makes** (PR #57
 R7): **CI's `fast` ceiling for this tree is UNMEASURED.** `.github/workflows/
 eval.yml` still declares 90s, untouched by this branch, because raising it to a
 guessed number is the one thing ADR-013's rule forbids and
@@ -93,7 +93,7 @@ guessed number is the one thing ADR-013's rule forbids and
 `invariant` 74/74, `fast` 213/213 — is **local only**, and no document, PR body
 or report on this branch may say the gate is green without that scope. Those two
 figures are read back against the suites by `adr029-scope-matches-the-suites`,
-because this paragraph published a four-case-stale pair for one round (PR #56
+because this paragraph published a four-case-stale pair for one round (PR #57
 R14) and a disclosure that is wrong about its own evidence is not a disclosure. One of
 the two gated environments has not run this tree at all: at the time of writing
 the push to `origin` was denied by the harness permission classifier, so no PR
