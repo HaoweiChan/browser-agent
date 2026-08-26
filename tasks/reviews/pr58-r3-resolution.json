@@ -1,0 +1,43 @@
+{
+  "pr": 58,
+  "task": "M41",
+  "round": 3,
+  "date": "2026-08-26",
+  "responder": "pr-loop/implementer",
+  "scope_note": "Bounded round, human option A. Three fixes, all prose or comment, no grading machinery added and none of the existing machinery touched. Nothing was found beyond the three findings, so no Debt block is filed this round.",
+  "gate_after": {
+    "invariant": "67/67 = 1.000",
+    "fast": "187/187 = 1.000, $0.0000, 73.85s"
+  },
+  "resolutions": [
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "resolution": "fixed",
+      "covered_by": "hand fix — prose; the count beside it stays graded by docs-numbers-are-derived",
+      "what": "Took the reviewer's suggested route: the prose names the conjunct instead of numbering it, in both documents. ADR-030 now reads \"**The `input`-scan conjunct is the one that was missing…**\" and says what the other three actually do — two scan `src/browser/` modules, one scans the eval case files for the ground-truth citation, and none of them reads what a case FEEDS a run. Support-matrix D30 names it the same way instead of \"the fourth\". Each says in-line why it is named rather than numbered.",
+      "why_names_not_ordinals": "the ordinal was the defect, not the value of the ordinal. The count (4) is derived and graded; the POSITION is not derived by anything, so two documents were free to disagree with each other and with `wrong` key order — which is what happened within one commit of the count being graded. A name cannot drift out of order. This also satisfies the acceptance's stricter branch for free: with no ordinals left, there is nothing to keep matching `wrong` key order.",
+      "the_false_sentence_itself": "both readings were wrong and both are fixed. Under the ADR's own ordering the input-scan conjunct IS third, so \"the first three all scanned MODULES\" contradicted the list four lines above it; under the chronological reading it was wrong too, because the pre-existing citation conjunct scans `evals/**/*.json`. The replacement asserts the property that is actually true of all three — they read files and stop there.",
+      "note": "The graded strings were left byte-identical on purpose: \"enforces\\n4 conjuncts, each watched red before it was green\" and \"`sec10k-ground-truth-endpoint-eval-only`, 4 conjuncts each watched red\" both still match, so R6's derivation keeps grading both documents across this edit."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "resolution": "fixed",
+      "covered_by": "hand fix — a claim in a review record, not a property of the tree",
+      "what": "A SECOND correction, appended and marked, in both places the false claim appears: `pr58-r1-resolution.json` R1 gains `correction_2` beside the existing `correction`, and `pr58-r2-resolution.json` R8 gains a `correction` beside its `found_while_checking`. Neither original is rewritten. Both state what the code does: `analysis_section1` is gated on the headline report EXISTING and parsing, not on it being green — the walrus at eval_adapter.py:4826 re-reads `reports[...]`, so the `head = None` set at :4786 never reaches it, and that `None` only suppresses the README wall-clock and metric quotes below it.",
+      "verified": "by running the orchestrator's committed repro rather than by reading: `PYTHONPATH=. python3 tasks/reviews/pr58-r3-repro-R8.py` prints `headline_report_is_red: True` and `analysis_section1_does_not_say: True` together. The claim was mine and it was wrong; the repro settles it.",
+      "what_survives": "the KeyError reason is untouched and remains the whole of why `doc_quotes` exists: `analysis_section1` formats against `vals` (`actions`/`with_browser`/`total`/`remaining`, all report-derived), so `{live}`/`{live_sites}` raise there.",
+      "what_it_costs_the_earlier_conclusion": "stated in both correction objects rather than left for a reader to work out: `why_not_folded_into_the_existing_hook` rested on two arguments and one is gone. The surviving one — one namespace and one gate per kind of number — still holds and `doc_quotes` is still the right hook, but the choice is less lopsided than that paragraph and than commit d6e6cff's message make it sound. The commit message is history and is left alone; this artifact is where the correction lives.",
+      "note": "Second false claim in the same field, and the field now shows both. Recorded as the pattern it is: the two corrections are cheap, and what is expensive is that both false claims were about code in the same function I was editing at the time."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "resolution": "fixed",
+      "covered_by": "hand fix — a comment; the property it describes is graded by docs-numbers-are-derived",
+      "what": "Five comment lines immediately above `_check_ground_truth_endpoint_eval_only`'s `return`, where the `wrong` literal a maintainer would edit actually is: `len(wrong)` is published as `gt_conjuncts` and quoted back out of ADR-030 §The ground-truth-endpoint boundary and support-matrix D30, so a new conjunct needs its own key or the count those two documents are graded against silently stays put. The `bool(cases)` non-vacuity precondition is named there as not-a-conjunct, so the two ceilings now sit together at the point of edit instead of one being 400 lines away in the consumer and the other only in the ADR.",
+      "note": "No grader added, per the round's constraint. Worth being explicit that this comment is NOT a substitute for one: if a future conjunct folds into an existing key the count does not move and nothing goes red — the comment is the only thing standing between that and a silently stale number in two documents. The upgrade named in the code, unchanged, is to have the check return its conjunct names."
+    }
+  ]
+}

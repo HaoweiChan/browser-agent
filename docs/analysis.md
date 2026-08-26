@@ -57,10 +57,10 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-224 distinct cases (21 golden + 203 adversarial).
-376 browser actions in a `fast` run; **135 of the 213** `fast` cases drive a real Chromium end to end — counted here as
+232 distinct cases (23 golden + 209 adversarial).
+382 browser actions in a `fast` run; **138 of the 219** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260825-195709-fast.json` rather than tallied by hand (the
+`evals/report/20260826-130830-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number; PR #57 R4 caught the next
 variant of the same defect — the two figures WERE recomputed, from the headline
@@ -69,16 +69,18 @@ and 109 browser cases, so the paragraph was arithmetically true and evidentially
 false. `docs-numbers-are-derived` now checks the citation as well as the
 arithmetic). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 78 are those refusals plus pure-code probes of a single
+remaining 81 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
 ablation driver's preflight and its `failure:env` classifier and the ablation
-table's honesty guard; and in M12, the wall-clock ruling). `live` is 9/9 across
-four real sites, the fourth added at M8 to be hostile rather than to be passed:
+table's honesty guard; and in M12, the wall-clock ruling). `live` is 11/11 across 5 real sites. The
+fourth was added at M8 to be hostile rather than to be passed:
 `quotes.toscrape.com/js` renders its content invisibly to the accessibility tree,
 and the run there answers confidently and wrongly (§ the M8 rows in
-`docs/support-matrix.md`, D5–D11). M40 note: that is the `/js` page and it is
+`docs/support-matrix.md`, D5–D11). The fifth was added at M41 and is this
+project's OTHER deployment, the sec-10k inspector the 2026-08-24 demo failed
+against (D30). M40 note: that is the `/js` page and it is
 unchanged; the domain's static author pages answer 3/3 with a real planner, which
 is why the matrix row is now `unreliable` rather than `unsupported`. The hostile
 case is still hostile and still red-by-design.
@@ -487,7 +489,7 @@ a gate rather than an option.
 
 ## 6. Coverage
 
-192 distinct cases (M32/M38/M40, refreshed from the case files' own `tc`/`level`/`domain`
+200 distinct cases (M32/M38/M40/M41, refreshed from the case files' own `tc`/`level`/`domain`
 tags rather than recounted by hand — `docs-numbers-are-derived` grades the
 golden/adversarial split and the domain rows below against those same tags, so
 a case added without a doc refresh is what turns this section's guard red).
@@ -495,12 +497,12 @@ Empty cells are shown, not hidden.
 
 | Task class | Cases | | Difficulty | Cases |
 |---|---|---|---|---|
-| TC1 extract-on-page | 54 | | L1 | 57 |
+| TC1 extract-on-page | 63 | | L1 | 63 |
 | TC2 search-then-extract | 8 | | L2 | 48 |
-| TC3 navigate-then-extract | 13 | | **L3** | **17 — 4 live (one of them unrun) + 11 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint `verifier-aggregate-superlative-fails-loud`, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`, R20's `plan-lint-refuses-a-declared-non-comparison`, M34's own page-furniture case `verifier-responsive-not-page-furniture`, and M36's judge pair `judge-catches-varying-context-furniture` / `judge-fail-closed-on-error`** |
+| TC3 navigate-then-extract | 13 | | **L3** | **21 — 4 live (one of them unrun) + 17 fixture: the M10 aggregate-superlative twin now caught by M31's plan lint `verifier-aggregate-superlative-fails-loud`, its green twin `probe3-quotes-most-quoted-author`, `extract-all-refuses-a-selector`, `plan-lint-holds-across-a-midrun-replan`, `extract-all-cheapest-wording-still-reduces`, the PR #29 R16 pair `extract-all-declared-intent-beats-wording` / `extract-all-undeclared-intent-fails-loud`, R20's `plan-lint-refuses-a-declared-non-comparison`, ADR-024's `plan-lint-refuses-a-document-root-extract` and its mid-run twin, M34's own page-furniture case `verifier-responsive-not-page-furniture`, M36's judge quartet `judge-catches-varying-context-furniture` / `judge-fail-closed-on-error` / `judge-retries-one-malformed-completion` / `judge-two-malformed-completions-fail-closed`, and M41's two inspector observation-shape cases `sec10k-item-text-region-is-past-the-observation-cap` / `sec10k-extract-buttons-are-distinguishable`** |
 | TC4 interact-then-extract | 36 | | L4 (mutation/recovery) | 16 |
 | TC5 form submission | 6 | | L5 (refusal) | 8 |
-| mechanism/unit probes | 72 | | untagged (unit probes) | 43 |
+| mechanism/unit probes | 74 | | untagged (unit probes) | 44 |
 
 | Domain | Kind | Cases |
 |---|---|---|
@@ -515,6 +517,7 @@ Empty cells are shown, not hidden.
 | **news.ycombinator.com** | **live** | **2 cases: TC1 ×2** |
 | **openlibrary.org** | **live** | **2 cases: TC1 ×1, TC2 ×1 (the TC2 case grades a correct failure diagnosis, not a working search)** |
 | **quotes.toscrape.com** | **live, hostile (M8)** | **3 cases: the hostile TC1 role-tier-blind case, its text-tier-reaches twin, and the render-delayed L3 case — added since the M6 count above and never given a row until this refresh** |
+| **whaleforce-sec10k.zeabur.app** | **live, same-owner (M41) — Task 2's deployed inspector** | **7 cases: 5 fixture-snapshot (TC1 ×3 answering, TC1 ×2 observation-shape) + 2 live TC1 against the deep link; ground truth from that site's own `/api/extract/fixture`, eval side only** |
 
 | **companiesmarketcap.com** | **live, M40 (declared `supported`)** | **0 cases — declared from 15/15 deployment runs across two builds, D28** |
 | **bankofcanada.ca** | **live, M40 (declared `supported`)** | **0 cases — declared from 3/3 deployment runs, D28** |

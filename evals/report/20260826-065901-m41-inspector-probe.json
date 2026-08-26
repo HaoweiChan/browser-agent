@@ -1,0 +1,193 @@
+{
+  "probe": "m41-inspector",
+  "adr": "ADR-030",
+  "ts": "2026-08-26T06:59:01.921414Z",
+  "agent_deployment": "https://whaleforce-browser-agent.zeabur.app",
+  "agent_build": "main@9c3340c (deploy-smoke 32926527916)",
+  "inspector": "https://whaleforce-sec10k.zeabur.app",
+  "inspector_git_sha_before": "6b37ffa99d05",
+  "inspector_git_sha_after": "6b37ffa99d05",
+  "start_url": "https://whaleforce-sec10k.zeabur.app/?fixture=aapl-2025&run=1",
+  "ground_truth": {
+    "doc_status": "success",
+    "counts": {
+      "extracted": 18,
+      "incorporated_by_reference": 5
+    },
+    "n_items": 23
+  },
+  "reps_per_task": 3,
+  "runs": [
+    {
+      "task_no": 1,
+      "task": "What is the doc_status of the aapl-2025 fixture?",
+      "rep": 1,
+      "run_id": "a413fbf9",
+      "status": "success",
+      "answer": "doc_status: success\n— 18 extracted · 5 incorporated_by_reference\nfixture: aapl-2025",
+      "reason": null,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 1798,
+        "llm_usd": 0.00014978,
+        "replans": 0,
+        "ms": 4502,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "wall_s": 6.51,
+      "steps": [
+        "navigate",
+        "extract"
+      ]
+    },
+    {
+      "task_no": 1,
+      "task": "What is the doc_status of the aapl-2025 fixture?",
+      "rep": 2,
+      "run_id": "1e43220d",
+      "status": "success",
+      "answer": "doc_status: success\n— 18 extracted · 5 incorporated_by_reference\nfixture: aapl-2025",
+      "reason": null,
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 1793,
+        "llm_usd": 0.00014378,
+        "replans": 0,
+        "ms": 3916,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "wall_s": 6.56,
+      "steps": [
+        "navigate",
+        "extract"
+      ]
+    },
+    {
+      "task_no": 1,
+      "task": "What is the doc_status of the aapl-2025 fixture?",
+      "rep": 3,
+      "run_id": "e996cc7d",
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "judge rejected: The candidate answer 'Extracting…' does not provide the doc_status of the aapl-2025 fixture; it appears to be a progress message.",
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 1951,
+        "llm_usd": 0.00033338,
+        "replans": 0,
+        "ms": 6343,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "wall_s": 6.55,
+      "steps": [
+        "navigate",
+        "click",
+        "extract"
+      ]
+    },
+    {
+      "task_no": 2,
+      "task": "How many items are extracted?",
+      "rep": 1,
+      "run_id": "79c8dc32",
+      "status": "failure:env",
+      "answer": null,
+      "reason": "step 3 asked to observe {'role': 'main', 'name': None, 'text': None, 'near': None, 'index': None} and the replan made no progress (identical or empty plan)",
+      "budgets": {
+        "actions": 3,
+        "llm_tokens": 4385,
+        "llm_usd": 0.00117442,
+        "replans": 0,
+        "ms": 9845,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "wall_s": 12.77,
+      "steps": [
+        "navigate",
+        "click",
+        "observe"
+      ]
+    },
+    {
+      "task_no": 2,
+      "task": "How many items are extracted?",
+      "rep": 2,
+      "run_id": "5da0441b",
+      "status": "success",
+      "answer": "doc_status: success\n— 18 extracted · 5 incorporated_by_reference\nfixture: aapl-2025",
+      "reason": null,
+      "budgets": {
+        "actions": 4,
+        "llm_tokens": 4278,
+        "llm_usd": 0.00105742,
+        "replans": 1,
+        "ms": 9949,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "wall_s": 12.96,
+      "steps": [
+        "navigate",
+        "click",
+        "observe",
+        "extract"
+      ]
+    },
+    {
+      "task_no": 2,
+      "task": "How many items are extracted?",
+      "rep": 3,
+      "run_id": "81172a2f",
+      "status": "success",
+      "answer": "doc_status: success\n— 18 extracted · 5 incorporated_by_reference\nfixture: aapl-2025",
+      "reason": null,
+      "budgets": {
+        "actions": 5,
+        "llm_tokens": 7128,
+        "llm_usd": 0.0018831399999999997,
+        "replans": 2,
+        "ms": 18051,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "wall_s": 19.2,
+      "steps": [
+        "navigate",
+        "click",
+        "observe",
+        "observe",
+        "extract"
+      ]
+    }
+  ],
+  "aborted_harness_attempt": {
+    "what_happened": "the first harness attempt was killed by a 2-minute local shell timeout before it could write anything. It had already submitted runs against the same frozen tasks and start URL.",
+    "recovered": [
+      {
+        "run_id": "6045555d",
+        "status": "failure:semantic",
+        "reason": "judge rejected: The candidate answer does not specify the number of items extracted.",
+        "answer": null,
+        "llm_usd": 0.00131975,
+        "ms": 66023,
+        "steps": [
+          "navigate",
+          "click",
+          "extract"
+        ],
+        "how": "read off /readyz's active_run_id while it was still executing"
+      }
+    ],
+    "unrecoverable": "any other run the aborted attempt submitted. RUNS is in-memory (support-matrix D19) and the deployment exposes no listing endpoint, so their ids are gone. Recorded rather than passed over: threshold (a) below is graded on the runs listed here, and the lost runs cannot be inspected either way."
+  }
+}

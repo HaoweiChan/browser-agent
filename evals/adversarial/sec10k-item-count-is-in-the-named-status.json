@@ -1,0 +1,36 @@
+{
+  "id": "sec10k-item-count-is-in-the-named-status",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "fixture": "sec10k-inspector.html",
+    "task": "How many items are extracted?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "doc_status"
+        },
+        "anchor": "aapl-2025"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "doc_status: success\n— 18 extracted · 5 incorporated_by_reference\nfixture: aapl-2025",
+    "anchors": [
+      "aapl-2025"
+    ]
+  },
+  "provenance": "M41, the second of the two small-value probe tasks the M41 block names verbatim. Same element and same answer string as `sec10k-doc-status-is-a-named-status`; what this case adds is the TASK TEXT. `How many items are extracted?` is a counting question, and two guards read task text and could refuse it: `verifier.is_aggregate` (ADR-018's plan lint — a superlative ask must read the page once with `extract_all`) and the resolver's `_PLURAL_ASK` narrowing refusal (ADR-026/D29). Neither fires on this phrasing — `_AGGREGATE` wants `(which|what|who) … (most|least|highest|…)` and this task has neither half, and the target resolves uniquely so no narrowing rung is reached. **Stated plainly after cold review: that means this case does NOT pin either guard.** Delete `is_aggregate` and `_PLURAL_ASK` outright and this case stays green, because what it records is that a counting phrasing is LEGAL for a one-read plan, not that anything refuses. The guards keep their own pins (`verifier-aggregate-superlative-fails-loud`, `resolver-refuses-plural-wording` and the D29 set); this case is coverage of a task shape, and the earlier wording read like an ablation claim it cannot support. Ground truth `counts.extracted = 18` from the inspector's `/api/extract/fixture`, re-verified 2026-08-26 against `git_sha` `6b37ffa99d05`. Watched RED first with `expect.answer` set to the bare string `18`: `answer_matches: false`, reason `answer 'doc_status: success\\n— 18 extracted · 5 incorporated_by_reference\\nfixture: aapl-2025' != expected '18'` — which is also the honest limitation this case publishes: the agent returns the whole status line, not the isolated count. **Build provenance, corrected after cold review — three shas are involved and only two of them are the same thing.** `/api/meta` answered `5a44758598f5` when this milestone started and `6b37ffa99d05` at probe time. But the captured page's own footer — which the page fills from that same `/api/meta` field, one line of its own script — already read `build 6b37ffa99d05` in the FIRST capture, taken while `curl` to the same endpoint was still answering `5a44758598f5`. The two reads disagreed inside one session, which is what a rolling deploy across containers looks like; that explanation is INFERRED, not measured, and is written as an inference on purpose. What is measured: the committed snapshot is a capture of the build that reported itself as `6b37ffa99d05`, which is the same build ADR-030's probe ran against, so the fixture and the probe agree on one build rather than straddling two. The capture was re-taken later, after `/api/meta` had caught up, and diffed against the committed one — identical apart from a single `total_ms` figure inside the extraction evidence (227.6 -> 221.1), which is what that agreement looks like from the other side. The first version of this note claimed the capture was taken at `5a44758598f5`; the page says otherwise and the page is the artifact. Nothing in this repo reads either sha back — `tasks/TODO.md` T-M41-3 is the debt block for that, and D28's build-expiry rule is why it matters.",
+  "triage": {
+    "class": "coverage",
+    "note": "The answer is the banner LINE, not the number. `not_a_dump` passes (79 characters against a page of thousands) and the judge certifies, but a caller who wanted `18` gets a sentence containing it. Declared in docs/support-matrix.md D30 rather than papered over; isolating the count needs either a page-side element per number or a reading step the executor does not have."
+  }
+}

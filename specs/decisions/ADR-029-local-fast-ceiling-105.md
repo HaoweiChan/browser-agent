@@ -77,7 +77,7 @@ because no CI run appends to this repo's ledger (§7, T-R51, T-R73).
 **The measurement exists and it is four attempts, not one.** eval-gate run
 [32937020758](https://github.com/HaoweiChan/browser-agent/actions/runs/32937020758)
 on commit `14a6a7b` ran this tree on CI four times. Every attempt was
-correctness-green — `fast` 213/213, `invariant` 74/74, in the environment that
+correctness-green — `fast` 219/219, `invariant` 75/75, in the environment that
 guards `main` — and every attempt was over the 90s `fast` ceiling then declared.
 The wall clocks are not reprinted here: CI wall clocks are published in ADR-019
 §5, which `ci-numbers-are-derived` grades, and nowhere else (the one-publisher
@@ -103,7 +103,7 @@ paragraph: a disclosure that quietly drops its own previous claim is not a
 disclosure.
 
 **Where that leaves the evidence**: correctness is green in both environments —
-locally `invariant` 74/74 and `fast` 213/213, and on CI `fast` 213/213 across
+locally `invariant` 75/75 and `fast` 219/219, and on CI `fast` 219/219 across
 four attempts — and the wall-clock gate is now derived, not breached, in both.
 The local pair is read back against the suites by
 `adr029-scope-matches-the-suites`, because this paragraph once published a

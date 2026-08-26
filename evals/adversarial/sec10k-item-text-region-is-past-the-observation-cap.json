@@ -1,0 +1,29 @@
+{
+  "id": "sec10k-item-text-region-is-past-the-observation-cap",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L3",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "kind": "observe",
+    "fixture": "sec10k-inspector.html"
+  },
+  "expect": {
+    "must_include_names": [
+      "doc_status"
+    ],
+    "must_exclude_names": [
+      "Item 4 extracted text"
+    ],
+    "note": "the named status line survives the MAX_ELEMS cap; the named extracted-text region does not"
+  },
+  "provenance": "M41. The postmortem's lesser shape — \"the capabilities `<details open>` table competes for the observation's MAX_ELEMS element budget\" — measured on the deployed page and found to be worse than predicted, in a different place. The committed-fixture `<select>` contributes 42 `option` elements to the accessibility tree (`/api/meta` `fixtures` list, `git_sha` `6b37ffa99d05`), and with `observe.MAX_ELEMS = 60` the page-level observation ends two sidebar buttons past the status line: the last elements are `status — 'doc_status'`, `button — '1 Business …'`, `button — '1A Risk Factors …'`. The extracted-text region that `sec10k-item-text-region-resolves` proves is reachable is therefore never SHOWN to a planner. This is `observe-cap-hides-the-answer-element` / D27's shape on a real deployed page rather than on `deep-spec.html`. Watched RED first by raising `observe.MAX_ELEMS` from 60 to 200 — see `triage.red_first` for the recorded output. **Build provenance, corrected after cold review — three shas are involved and only two of them are the same thing.** `/api/meta` answered `5a44758598f5` when this milestone started and `6b37ffa99d05` at probe time. But the captured page's own footer — which the page fills from that same `/api/meta` field, one line of its own script — already read `build 6b37ffa99d05` in the FIRST capture, taken while `curl` to the same endpoint was still answering `5a44758598f5`. The two reads disagreed inside one session, which is what a rolling deploy across containers looks like; that explanation is INFERRED, not measured, and is written as an inference on purpose. What is measured: the committed snapshot is a capture of the build that reported itself as `6b37ffa99d05`, which is the same build ADR-030's probe ran against, so the fixture and the probe agree on one build rather than straddling two. The capture was re-taken later, after `/api/meta` had caught up, and diffed against the committed one — identical apart from a single `total_ms` figure inside the extraction evidence (227.6 -> 221.1), which is what that agreement looks like from the other side. The first version of this note claimed the capture was taken at `5a44758598f5`; the page says otherwise and the page is the artifact. Nothing in this repo reads either sha back — `tasks/TODO.md` T-M41-3 is the debt block for that, and D28's build-expiry rule is why it matters.",
+  "triage": {
+    "class": "declared-limitation",
+    "red_first": "with MAX_ELEMS raised 60 -> 200 the case reports {\"inside_the_cap_after_all\": [\"Item 4 extracted text\"], \"n_elements\": 174} and fails, which is the assertion working: the exclusion is a claim about the CAP, not about the page.",
+    "note": "Declared, not fixed. Raising MAX_ELEMS is the fix this repo has already refused twice (observe.py's own comment, ADR-020): it moves the cliff to the next larger page and spends planner tokens on a dropdown nobody asked about. The routes that exist are M32's drill-down (`observe`) and, for a model that can look instead of read ARIA, M43. Neither is exercised here and neither is claimed. Ceiling of the harness, named after cold review: `must_exclude_names` is set membership over exact strings, so this exclusion goes VACUOUSLY true if the next inspector build rewords that aria-label — it would stop being a claim about the cap and start being a claim about a string that is gone. `tasks/TODO.md` T-M41-4 is the debt block."
+  }
+}

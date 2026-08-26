@@ -1,0 +1,79 @@
+{
+  "pr": 58,
+  "task": "M41",
+  "round": 1,
+  "date": "2026-08-26",
+  "responder": "pr-loop/implementer",
+  "gate_after": {
+    "invariant": "67/67 = 1.000",
+    "fast": "187/187 = 1.000, $0.0000",
+    "live": "11/11 = 1.000, $0.0000"
+  },
+  "note": "Five findings, five repairs, nothing rejected and nothing routed to debt. Three of the five are now read back by the gate rather than by a reader: R1 extends `docs-numbers-are-derived` (two documents, a derived site count), R2 adds a fourth conjunct to `sec10k-ground-truth-endpoint-eval-only`. R3, R4 and R5 are hand fixes and the reason each could not be graded is stated per entry, per the round's own rule.",
+  "resolutions": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "resolution": "fixed",
+      "covered_by": "docs-numbers-are-derived",
+      "what": "`docs-numbers-are-derived` now derives the live SITE count (`counts['live_sites']` = distinct `domain` tags among live-tagged cases) and reads quoted sentences back out of documents other than README, through a new `doc_quotes` input block. Both stale sentences are then fixed: `README.md` \"`live 11/11` covers 5 real sites.\" and `docs/analysis.md` \"`live` is 11/11 across 5 real sites\", the latter's \"the fourth added at M8\" clause rewritten and the fifth site named.",
+      "red_first": "with the grader extended and the sentences still stale: {'docs': [{'readme_does_not_say': '`live 11/11` covers 5 real sites.'}, {'doc_does_not_say': '`live` is 11/11 across 5 real sites', 'doc': 'docs/analysis.md'}]} — the exact two sentences the reviewer named, reddened before either was touched.",
+      "note": "This is the recurrence-stopper the acceptance asked for: the site count was published in two documents and derived in neither, which is why it survived a PR that changed the number. `docs/analysis.md` was also outside anything this case could reach at all — `readme_quotes` was the only text hook — so `doc_quotes` closes that half too. T-M41-1 (the ungraded §6 coverage TABLES) is a different, still-open shape and is not closed by this.",
+      "correction": {
+        "raised_by": "PR #58 R8",
+        "date": "2026-08-26",
+        "claim_corrected": "the `note` above says \"`docs/analysis.md` was also outside anything this case could reach at all — `readme_quotes` was the only text hook\". That is false and is left standing above rather than rewritten, because this file is a record of what was claimed at the time.",
+        "what_is_actually_true": "`docs/analysis.md` was already reachable by TWO hooks in the same grader and had been since PR #44 R4: `analysis_section1` reads `(RUN_ROOT / s1[\"doc\"])` over that file with the same `{doc, quotes}` shape `doc_quotes` uses, and `analysis_coverage` reads it for the split quote and the §6 domain sweep. Both are configured in this same case file, a few lines from the block that was added.",
+        "the_real_reason_doc_quotes_was_needed": "narrower, and worth stating precisely because the wrong reason made the addition look more necessary than it was: `analysis_section1` formats its quotes against `vals` — `{actions, with_browser, total, remaining}`, all four derived from the headline REPORT — so `{live}` and `{live_sites}` raise KeyError there and the new quote could not be added to that hook. A second reason found while checking this one, and not part of the finding: `analysis_section1` is gated on a non-red headline report (`if s1 and (head := ...)`), so a suite count parked there would stop being graded whenever the cited report went red — which is exactly when prose is most likely to be stale.",
+        "why_not_folded_into_the_existing_hook": "the alternative acceptance offered by R8. Not taken: widening `analysis_section1`'s namespace to carry suite counts would put report-derived and suite-derived numbers behind one gate and one `head` guard, which is the coupling the paragraph above describes as the problem. `doc_quotes` formats against `counts`, is ungated, and works for any document — ADR-030 and docs/support-matrix.md joined it one round later under R6."
+      },
+      "correction_2": {
+        "raised_by": "PR #58 R9/R8 (re-reported)",
+        "date": "2026-08-26",
+        "why_this_field_exists": "the second false claim in the same place, appended rather than folded into `correction` above. Both are left legible on the orchestrator's constraint and on this repo's own convention (ADR-025 §Correction, D28): a clean-looking sentence would hide that the field was wrong twice, which is the more useful fact about it.",
+        "claim_corrected": "`correction.the_real_reason_doc_quotes_was_needed` ends with \"`analysis_section1` is gated on a non-red headline report (`if s1 and (head := ...)`), so a suite count parked there would stop being graded whenever the cited report went red\". That is FALSE.",
+        "what_is_actually_true": "`analysis_section1` is gated on the headline report EXISTING and parsing, not on it being green. The walrus at `src/browser/eval_adapter.py:4826` re-reads the parsed report out of `reports`, so the `head = None` assigned at :4786 when `headline_report_is_red` fires never reaches it — that `None` only suppresses the README wall-clock and metric quotes in the block directly below it. A red headline report yields a truthy `head` and `analysis_section1` formats and grades exactly as usual. Verified by running the orchestrator's committed repro, `PYTHONPATH=. python3 tasks/reviews/pr58-r3-repro-R8.py`, which prints `headline_report_is_red: True` and `analysis_section1_does_not_say: True` together.",
+        "what_survives": "the verified reason, unchanged and unaffected: `analysis_section1` formats its quotes against `vals` — `{actions, with_browser, total, remaining}`, all four derived from the headline report — so `{live}` and `{live_sites}` raise KeyError there and the new quote could not be added to that hook. That is the whole of why `doc_quotes` exists.",
+        "what_it_costs_the_earlier_conclusion": "`why_not_folded_into_the_existing_hook` above rests on two arguments and one of them is now gone. The surviving one — that folding would put report-derived and suite-derived numbers behind one gate and one namespace — still holds, and `doc_quotes` is still the right hook, but the choice is less lopsided than the paragraph above makes it sound and it should be read that way."
+      }
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "resolution": "fixed",
+      "covered_by": "sec10k-ground-truth-endpoint-eval-only",
+      "what": "A fourth conjunct: no eval case may carry the ground-truth endpoint — or any `/api/` path on that host — anywhere inside its `input` block. `input` is scanned whole rather than through a list of field names, so `url`, `start_url`, `stub_plan[].value`, `target` and the task text are covered and a field a future case shape adds needs no maintenance; `provenance`, `triage` and `expect` are untouched, which is where a reader's record belongs and where conjunct 3 still REQUIRES the endpoint to appear.",
+      "red_first": "the reviewer's probe reproduced first, to see the defect: with `evals/adversarial/zz-tmp-leak-probe.json` present (domain whaleforce-sec10k.zeabur.app, `input.url` and a navigate step pointing at `.../api/extract/fixture?fixture=aapl-2025`), the invariant returned {'passed': True, ..., 'cases_scanned': 6} — green on a rule-6 violation. With the conjunct added and the same file still present: {'passed': False, 'ground_truth_endpoint_fed_to_the_executor': ['zz-tmp-leak-probe.json']}. Probe then removed and the check is green at cases_scanned 5.",
+      "note": "The probe case is deliberately NOT committed — it is a rule-6 violation by construction, so committing it would leave the invariant permanently red; the ablation is recorded in the case's `provenance` the way this repo records every other ablation. Declared ceiling, in the case's `triage`: a substring scan, so a URL assembled from parts or reached through a redirect still passes."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "resolution": "fixed",
+      "covered_by": "hand fix — not gradeable, see note",
+      "what": "ADR-019 §2's explanatory sentence no longer names a figure. It now states the residue rule in general, says plainly that it does NOT apply to the current band (the rule's answer and the committed ceiling are the same number), and records that the 181-case band did carry it and that the figure went stale in place when the section was republished.",
+      "red_first": "none — see note. The falsity was quoted from the tree and corrected: `sed -n '218,226p'` showed a paragraph deriving **90** and then explaining why 85 was acceptable, with no 85 left anywhere in §2.",
+      "note": "Stated in one line as the round's rule requires: this sentence cannot honestly be graded. `_check_published_band` reads the `(x, product, ceiling)` triple, and the only mechanical rule that would have caught this — 'no bare integer in the derivation paragraph outside {said, product, ceiling, cases}' — false-positives on dates, on `1.15`, and on the ordinals in the prose around it. Writing the sentence without a concrete figure is what makes it un-stale-able, which is the acceptance criterion's own first option."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route_note": "routed repair by the orchestrator; not disputed",
+      "resolution": "fixed",
+      "covered_by": "hand fix — not gradeable, see note",
+      "what": "ADR-030's artifact-honesty note now says FIVE of the six runs report `judge_calls: 1`, names `79c8dc32` as the sixth, and gives the reason it is correctly 0 — it died on the drill-down's no-progress guard before an answer existed, so there was nothing for a judge to grade.",
+      "red_first": "quoted from the committed artifact: [('a413fbf9', 1), ('1e43220d', 1), ('e996cc7d', 1), ('79c8dc32', 0), ('5da0441b', 1), ('81172a2f', 1)].",
+      "note": "Not gradeable without inventing a prose-to-JSON grader for one sentence of one ADR, which is the thing the round's rule forbids. The severity disagreement is left in the reviewer's artifact rather than argued with: the orchestrator's reason for repairing it — a line in this PR's own decision record contradicting an artifact committed in the same PR — is the right one."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route_note": "routed repair by the orchestrator; not disputed",
+      "resolution": "fixed",
+      "covered_by": "hand fix — not gradeable, see note",
+      "what": "Two lines in ADR-030. §Outcome verdict (d) no longer calls `5a44758598f5` \"the capture sha\": it says `6b37ffa99d05` is also the build the snapshot captures, and that `5a44758598f5` was the reading `curl` got from `/api/meta` at capture time, not the build captured. §Context's present-tense `/api/meta` line is marked as the state at pre-registration and is deliberately not edited away — it is what was true when the frozen section was written, and §Outcome carries the correction.",
+      "red_first": "`grep -n 5a44758598f5` over the tree: every other document and all seven case `provenance` blocks say `6b37ffa99d05`; ADR-030 was the only file still carrying the corrected-away value as a live label.",
+      "note": "Not gradeable for the same reason as R4. Worth recording as a pattern rather than an incident: this is the SECOND round in which a scripted multi-document correction left the originating document behind, and both times the file left behind was the one the script's author was reading from."
+    }
+  ]
+}

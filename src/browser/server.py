@@ -769,6 +769,18 @@ const EXAMPLES = {
     // this agent needs and the page cannot always offer.
     task: "Which tag is listed first under Top Ten tags?",
     note: "3/3 on this task. The author-name tasks are 1/6 — the same value appears three times and the resolver will not guess; the declared failure is the JS-rendered /js/ pages."},
+  "whaleforce-sec10k.zeabur.app (live)": {label: "doc_status of a filing",
+    // This project's OTHER deployment — Task 2's sec-10K inspector, and the
+    // site the 2026-08-24 demo failed against. The URL is a DEEP LINK, which is
+    // per-site data rule 6 allows (a start URL) and nothing more: the page
+    // preloads that fixture and extracts on load, so a run lands on a rendered
+    // page instead of hunting for one of three "Extract" buttons. 4/6 on the
+    // pre-registered probe, ADR-030 (a413fbf9, 1e43220d, 5da0441b, 81172a2f
+    // correct; e996cc7d answered "Extracting..." and the judge rejected it;
+    // 79c8dc32 died on the drill-down's no-progress guard).
+    url: "https://whaleforce-sec10k.zeabur.app/?fixture=aapl-2025&run=1",
+    task: "What is the doc_status of the aapl-2025 fixture?",
+    note: "Declared unreliable, 4/6 — the page renders after load, so a run that reaches the banner before the extraction lands reads a progress message instead of the answer."},
   "openlibrary.org (live)": {label: "See a failure: author of a book",
     url: "https://openlibrary.org/books/OL7025919M",
     task: "Who is the author of this book?",   // run f1ecf157 → failure:extract (015b6778, 65af344f too: loud, never wrong)
@@ -810,9 +822,13 @@ const LIMITS = [
 ];
 // Plain-English one-liners, hand-written same as LIMITS above. Full ruling +
 // reasoning + enforcing eval cases live one file per ADR in specs/decisions/,
-// linked below — this is the teaser, not a duplicate of the record. The
-// numbering has one gap (between 022 and 024): no file, nothing on record
-// skipped it on purpose.
+// linked below — this is the teaser, not a duplicate of the record.
+//
+// This list is hand-kept and nothing grades it, which is exactly how it went
+// two decisions stale: it claimed "one gap, between 022 and 024" while 023 was
+// on `main` and 027 had merged. Both are added here with 030, and the claim is
+// removed rather than re-typed — a hand-written digest cannot honestly assert a
+// property of a directory it does not read. `tasks/TODO.md` T-M41-6.
 const ADRS = [
   ["000", "specs/ holds only invariants, contracts and ADRs — the eval set itself is the spec, not prose"],
   ["001", "docs/ may hold a bounded planning layer and a milestone TODO list; specs/ keeps its three-kind rule"],
@@ -837,13 +853,14 @@ const ADRS = [
   ["020", "the planner can ask to look closer at one part of a page it's already seen, without spending a new capability"],
   ["021", "raises the local fast-suite time ceiling to what the suite actually measures, not a round number picked by hand"],
   ["022", "a support-matrix row may be declared from real runs against the live deployment with no eval case behind it, if every run is cited honestly"],
+  ["023", "when the judge returns something unreadable the run retries it once, and two unreadable answers in a row fail the run closed"],
   ["024", "a plan that tries to “extract” the whole page as one blob is refused before it runs — that's never a real answer to a real question"],
   ["025", "a probe's exact tasks, thresholds and pass/fail bar are written down before it runs, so results can't be graded after the fact"],
-  ["023", "an unreadable answer from the grader model buys exactly one retry — a reasoned rejection buys none"],
   ["026", "when a target matches more than one element, the page is used to narrow it down under strict rules, instead of failing outright"],
   ["027", "completing the task outranks its cost — a second mode where the model picks every step is worth building, but not at the price of honesty"],
   ["028", "that second mode ships: the model chooses each action after seeing the page again, and every check that grades a run is shared with the first mode"],
   ["029", "the offline time ceiling moves to what the grown suite actually measures on this machine — and says plainly that CI's is not yet measured"],
+  ["030", "the sec-10k inspector probe's tasks and pass bar are frozen in a commit before it runs; that site's own API may supply ground truth to the eval side and to nothing else; the row it declares says it measures one execution mode"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

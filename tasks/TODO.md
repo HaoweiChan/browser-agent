@@ -12,129 +12,6 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included            [status: pr]
-Promoted from Debt to Queue 2026-08-23 by the owner.
-Origin: PR #34 R19, extended by PR #34 R27. Same provenance gap as T-M32-8 —
-routed to debt in round 4, never written into this file until round 5.
-Spec: `evals/run.py:91` commits `WALL_BUDGET_S = {"fast": 90, "invariant": 20}`
-locally. Publications that disagree: (1) **`CLAUDE.md`'s Gate and Commands
-blocks** — the repo's stated working contract — still say `invariant` "wall
-clock <= 15s" and `fast` "wall clock <= 75s", so every committed `fast` run on
-this tree (73.9-74.8s local, 88.39s on CI) reads as a breach against the
-contract while passing the gate it actually has; (2) `INDEX.md`'s ADR-017 line
-publishes "fast 75s local"; (3) `fast-wall-clock-budget.json`'s `expect.note`
-says the override "falls back to the committed 80 for everything else" while
-every `env_override` row in the same case now expects 90. (1) and (2) are
-byte-identical to `origin/main` and predate this branch; (3) was introduced
-with ADR-021. `evals/run.py:304` also still labels the ceiling's source
-"ADR-002 Decision 4" when ADR-019 and ADR-021 are the live rulings.
-Repro: `grep -n '75s\|15s' CLAUDE.md specs/decisions/INDEX.md` against
-`evals/run.py:91`; the suites stay green.
-Acceptance: all three publications state the enforced pair, or drop the
-literals for "the ceiling `evals/run.py` enforces" — CLAUDE.md's Gate and
-Commands blocks named explicitly, since that is the file a new contributor
-reads as the contract. Nothing graded changes; if it can be graded cheaply
-(one sweep over tracked markdown for a ceiling literal that is not the
-committed one), do that instead and watch it red on CLAUDE.md first.
-Update 2026-08-23: done, with two corrections to the spec above. Leg (2) does
-not reproduce — `INDEX.md` carries no "75s local" on this tree or on
-`origin/main`; that text was PR #29 R5's finding and was fixed there, by
-dropping the literal, which is the same shape used here. A fourth site the spec
-does not name was found by the sweep and fixed: `ADR-002`'s Ruling published
-"`fast` 80s local ... `invariant` has had its own 15s ceiling since ADR-019",
-two wrong numbers in one sentence (this is also T-R35's third leg — see
-T-M32-17). Literals dropped rather than corrected in CLAUDE.md and ADR-002;
-`fast-wall-clock-budget`'s note and `evals/run.py`'s OVER BUDGET source label
-corrected in place. Graded by `docs-numbers-are-derived`'s new
-`commands_publish_the_committed_ceiling` sweep, watched red on CLAUDE.md first;
-its deliberate narrowness is T-M32-16.
-Update 2026-08-23, PR #40 round 1: fixing ADR-002's Ruling and stopping there
-was not enough, and the wording above ("literals dropped ... in ADR-002") read
-as if that file were done. It was not: the Status line three lines above the
-Ruling still published "**60s locally, 80s on CI** ... both measured and both
-enforced" (R2), and a THIRD file nobody had enumerated — `ADR-013`'s Ruling,
-"**80s since ADR-019**" under an explicit "at the time of writing" — was 10s
-stale and graded by nothing (R3). Both fixed here the same way, by dropping the
-literal. Round 1 also falsified the grader's precision: it matched any duration,
-not a ceiling, so "# ~71s on an M-series laptop" reddened the gate on a true
-sentence (R1), and its scope was narrower than its published claim, skipping
-`tasks/` and every dot-directory including a second publication of the gate
-commands in `.claude/skills/finish-task/SKILL.md` (R5). Both fixed, both pinned
-by `ceiling_sweep_rows`.
-
-
-### T-R44 — `published-band-matches-the-ledger` mixes environments: CI's own invariant row reddens a locally-measured band            [status: pr]
-Origin: PR #32 CI run 32626835735 (M31's check)
-Spec: `published-band-matches-the-ledger` reads every `history.jsonl` row the
-process can see. CI's eval-gate job runs `--suite invariant` first, which
-appends its row to the job's copy of the ledger (16.02s at 52 cases on run
-32626835735 — CI is slower than the machine the band was measured on), then
-`--suite fast`, whose band check now compares ADR-019's published invariant
-slowest (12.92s at 52 cases, 8 local runs → rule 15) against a ledger whose
-slowest at 52 cases is CI's 16.02s → rule 20 → FAIL (`fast 132/133`), while
-the same tree is green locally. Main passes only because at 51 cases the
-published slowest happens to be 14.12s → 20 == CI's 16s → 20. The fast band
-cannot trip this way (its row is written after the fast run), so the defect
-is: any PR that grows the invariant suite by one case and republishes the band
-from local runs is red on CI unless some committed local run happens to derive
-the same ceiling CI's machine does. ADR-019 itself rules that ceilings are per
-(suite, environment); the grader is not.
-Repro: on a tree whose invariant case count differs from ADR-019's published
-band count, run `--suite invariant` on a slower machine, then `--suite fast` on
-the same ledger: `published-band-matches-the-ledger` reports
-`{"suite": "invariant", "published_slowest": 12.92, "derives_ceiling": 15,
-"ledger_slowest": 16.02, "ledger_derives": 20}`.
-Note (2026-08-23, implementer): **the Repro above is correct and stands.** It was
-struck by an earlier revision of this block and then restored, and the reason it
-was struck is worth more than the strike: a correct record removed as
-unevidenced, because the person checking could not see the evidence. "This record
-does not observe X" is not "X did not happen." The evidence for this Repro lives
-on a CI run nobody had opened at the time, so a second run's mechanism — real,
-correctly diagnosed, on a different sha — was generalised onto this one and the
-Repro was struck for disagreeing with it. Concretely, the strike argued that item
-2 (cited-run)'s dirty allowance and a naive-local `ts` were what reddened run
-32626835735. That was a different run's mechanism transplanted onto this one:
-PR #32's head is `434a98d`, and `git show 434a98d:src/browser/eval_adapter.py`
-has no `_band_wrong` and no `cited_a_dirty_run` — its `_BAND_LINE` carries no
-timestamp group at all, so no clause in that tree could read a `ts` or a `dirty`
-flag. What fired there is exactly what the Repro says: item 3 (same-ceiling), on
-the wall clock, 12.92s published against CI's 16.02s. The `ts` mechanism is real
-and belongs to run 32637648447 (sha `11545a1`, `task/M32`, T-M32-13); this PR
-fixes that too, separately, by stamping `ts` in UTC. ADR-019 §7 keeps the two
-runs and the two clauses apart. One correction to the Repro's own wording: item 4
-(committed-ceiling) did NOT fire on 32626835735 — 20 against `rule(16.02)` = 20
-holds — so item 3 (same-ceiling) is the whole of it.
-Acceptance: rows carry their environment (e.g. the effective
-`EVAL_WALL_BUDGET_S_*` or an env tag) and the check compares a published band
-only against rows from the same environment; a case pins that a slower
-foreign-environment row does not redden the band. Until then, M35 moved its
-one new invariant case to `fast` (it is a pure-code doc check) so the
-invariant band stays the 51-case band main measured.
-
-Folds in T-R51 (same root cause — the ledger has no environment dimension, and no
-CI wall clock ever reaches it):
-> ADR-019 §5 and README's CI paragraph publish four measured numbers (`invariant`
-> 14.80-16.47s, `fast` 69.37-74.06s) and derive 20/90 from them. None of those values is in
-> `evals/report/history.jsonl`, and none can be: `.github/workflows/eval.yml` checks out, runs
-> the two suites and stops — no step commits a history row. `_BAND_LINE` has a group for the
-> suite and none for the environment, so `published-band-matches-the-ledger` parses only the
-> two local sentences. T-R34 scoped both blanket claims down to "every LOCAL band" rather than
-> leave them false, but the CI band is still unfalsifiable prose deriving a live ceiling.
-> Compounding: README publishes the CI band twice and incompatibly — `59.77 / 60.84 / 64.61 /
-> 64.67s` in the M12 paragraph and `69.37-74.06s` in the ADR-019 paragraph, where 64.61 is in
-> the ledger twice as a LOCAL run. Applying README's own rule to README's own first CI band
-> gives 75, not the 90 it publishes.
-> Acceptance (T-R51): either CI's runs land in the ledger (a job step that appends and commits,
-> or an artifact the check reads) and the band grader learns the environment dimension, or §5
-> and README's CI numbers are labelled as hand-read log values with the workflow run ids that
-> produced them, and README's older CI band is struck. Watched red either way.
-
-Why these two together: one fix serves both. If rows carry their environment and the
-check compares like with like, T-R44's cross-environment red cannot happen and T-R51's
-CI band becomes falsifiable from the same field. If instead CI's numbers are labelled
-hand-read, T-R44 still needs the environment tag, so the tag is the common floor.
-
-
 ### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: in-progress]
 Origin: post-deploy receipt rounds for PR #32/#37/#38 (2026-08-23). `349e4839`,
 `e08b7627`, `bcae4fe7`, `63b9d944` (HN item 1, "Who submitted this story?"):
@@ -161,126 +38,6 @@ pins that matches differing in role are NOT auto-picked; `ui-no-url-guard`/
 after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
-
-### M39 — A malformed judge response is retried once before failing closed            [status: pr]
-Origin: post-deploy receipt round for PR #38 (2026-08-23). Run `7787f9c9`
-(HN item 1, "What is the title of this story?"): extraction `"Y Combinator"`
-was correct, every L1 predicate passed, and the run ended `failure:semantic`
-with reason `judge unavailable, failing closed: JudgeError: malformed judge
-response: JSONDecodeError: Expecting value: line 1 column 1 (char 0)`. The
-next two runs of the same task (`833bd511`, `6c66bdd4`) passed. ADR-017's
-fail-closed rule is right — a judge that cannot be read must not certify —
-but one transient malformed completion currently costs a correct run outright.
-Spec: on `JudgeError` caused by an unparseable/empty completion (NOT on a
-missing key, NOT on a refusal, NOT on a reasoned FAIL), `judge()` retries the
-same call exactly once with the same prompt; the second failure fails closed
-exactly as today. Both attempts' usage is billed and recorded; the verdict
-records `judge_attempts`. Bounded: one retry, no backoff loop, no model
-switch; the retry stays inside the run's token/USD budget and ADR-017's
-fail-closed semantics are otherwise unchanged.
-Acceptance: a stub-judge case pins the shape red first (first completion
-malformed, second well-formed → PASS with `judge_attempts: 2`); a negative
-case pins that two malformed completions still fail closed with the existing
-reason and `judge_attempts: 2`; `judge-fail-closed-on-*` cases stay green;
-`docs/analysis.md` cost section states the worst-case extra judge call per
-run; gate green under the ADR-019 ceiling.
-Out of scope: judge prompt/model changes; retrying a reasoned FAIL.
-
-### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: pr]
-Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
-two Try examples produce nothing, five cards should be eight, the running stage should
-show it is running, a right-hand panel should show what the browser saw so a reviewer can
-check the scraped content, and the covered domains should include the investment sites an
-investment firm actually uses.
-**Process note, recorded rather than tidied away:** this block was written AFTER the work
-started, at the owner's instruction mid-session ("make sure you update TODO before
-implementation"). CLAUDE.md's per-feature loop puts plan → ADR → cases first; on this task
-the probing came first and the block second. Written down because the ordering is exactly
-what this file exists to make visible, and because the probe results below are what a plan
-written first would have had to guess at.
-Spec: four frontend asks, one that is not. The four are `src/browser/server.py`'s inline
-PAGE — a CSS-only spinner on the current phase (the progress case forbids timers in the
-script, and a phase advancing on a clock is a progress bar that lies about the trace), a
-right-hand page view carrying the step screenshot the executor already takes plus, after
-the run, every extraction with the page text it was read from, and an EXAMPLES/matrix set
-that reaches eight real-site rows. The fifth — "support investment sites" — cannot be
-answered by writing code; it is answered by running the deployment and declaring what came
-back, under the same report-assisted/human-declared rule as every other row.
-Acceptance:
-- Every Try example and every live-declared row is re-run against the build being
-  shipped, immediately before merge (added mid-task — see ADR-022 Decision 1a; the
-  first three rows declared here expired when the deployment was replaced).
-- The page view shows the page ITSELF, scrollable, not only a screenshot (owner
-  amendment mid-task) — and the proxy that requires is graded as the SSRF surface
-  it is, watched red per property.
-- No Try example cites a run shape that no longer reproduces. Each card's example is
-  re-run against the deployment and its status matches what happened, including the one
-  card that is deliberately a failure demo.
-- Eight non-fixture rows in `docs/support-matrix.md`, each with an EXAMPLES entry
-  (`ui-examples-cover-matrix` already grades set equality in both directions).
-- The new live-declared rows carry their run ids, their repeat counts, and a declared
-  limitation naming the page shapes that failed — not a pass rate thresholded into a word.
-- Every new UI hook is pinned by the UI cases, watched red against the pre-M40 page.
-- Cold review and spec-drift both run before the commit; every finding either lands as a
-  fix with a case, or as a declared limitation. No finding is closed by rewording alone.
-Rebased onto main 2026-08-23 after PR #34/#39 merged: this block was written as M38 and
-renamed to M40 — main had already queued M38 (resolver disambiguation) and M39. The
-collision is worth noting rather than silently renumbering, because main's M38 is the fix
-for one of the two broken Try examples this task found by hand: `e985e048`/`e6768ee0` in
-its Origin are the same quotes.toscrape.com ambiguity this task hit as `eefae1b8`.
-Not in scope, and why: a plan-lint clause refusing container-role `extract` targets. It is
-the obvious fix for the dominant live failure shape and it would turn
-`extract-container-dump-is-not-the-answer` red by ending the run before anything is read —
-changing what that case can observe rather than fixing what it grades. Isolating the cell
-stays T-R66/M28.
-
-### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: todo]
-Origin: live demo, 2026-08-24 — asked to drive Task 2's deployed inspector
-(https://whaleforce-sec10k.zeabur.app) and answer from it, the agent failed.
-No run ids survive (`RUNS` is in-memory, D19), so the failure analysis is a
-static shape analysis, not a replayed trace. **Read
-`docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md` before taking
-this** — it holds the four predicted failure shapes (S1 fetch-then-render
-page, S2 answers-not-accessible-names, S3 three identical "Extract" buttons,
-S4 unauthored async settle), each mapped to the existing evidence (D7/D28,
-T-M40-2, M38's Origin, T-M40-5-3) with file:line receipts on both repos.
-The same demo's OTHER failure line (wrong extractions at conf 0.95) belongs
-to sec-10k-extract and is tracked there (its Demo-remediation track, D6–D9).
-Spec: treat the inspector as a new live domain under the M40 method. Probe
-the deployment with small-value tasks ("what is the doc_status of the
-aapl-2025 fixture?", "how many items are extracted?") at 3 reps per task
-(ADR-025's protocol — T-M40-5-3 is why one rep is not a read); every failure
-shape becomes an adversarial case watched red first (rule 2), with a
-committed fixture snapshot of the inspector page for the offline cases.
-Ground truth routes through the inspector's `/api/extract/fixture` — the
-per-site ground-truth endpoint rule 6 explicitly allows — for the verifier
-and eval adapter only, never the planner or executor. No site-specific
-selector, DOM path or navigation recipe enters `src/browser/` (rule 6; owning
-the target site is not an exemption). Capability gaps stay with their owners:
-S3 is M38's existing queue block; S4's default post-click settle and the
-select-option action both moved to M42 under ADR-027 (in mode B the authored
-`expected_state` path stands) — the postmortem's "deferred as YAGNI" line
-predates that ADR and is superseded by it.
-Cross-repo dependency, stated rather than hidden: sec-10k-extract's
-Demo-remediation track carries the page-side row (deep-link query params so a
-parameterised start URL lands on an already-rendered page — start URL is
-allowed per-site data — plus `role="status"` on the banner, a labelled region
-on the extracted-text pane, distinct Extract button names). Probing before
-that row deploys measures the old page: probe once for the red baseline, but
-declare the matrix row only against the page shape that will stay deployed.
-Update 2026-08-25 (ADR-027): loop mode (M42) is now queued and directly
-targets this block's S1/S4 shapes. Sequencing guidance, not a hard Depends:
-the red-baseline probe is still worth running under mode B (it pins the
-failure shapes as cases either way), but the DECLARED matrix row should wait
-for M42 and be probed under both modes — M44 owns folding the loop-mode
-results back into this row.
-Acceptance: a `docs/support-matrix.md` row for whaleforce-sec10k.zeabur.app
-declared under the report-assisted rule, carrying run ids, repeat counts, and
-BOTH build shas — this deployment's and the inspector's (`/api/meta` serves
-`git_sha`; D28's expiry rule applies to the target site's build too). Every
-demo failure shape either fixed with its case green, or declared as a
-limitation citing its case. Gate green; cold-reviewer + spec-drift before the
-commit (repo memory: review subagents run even when the harness says no).
 
 ### M42 — loop mode: the model chooses every step, and the machinery that grades it does not move            [status: in-progress]
 Origin: owner, 2026-08-25 — interviewer mandate relayed verbatim in intent:
@@ -922,6 +679,188 @@ lengths, and `execute` adding the frame's base), or a declared support-matrix
 row saying evidence-window selection is main-frame-accurate only — whichever
 way, with a fixture carrying the duplicated value across a frame boundary and
 the case watched red first.
+### T-M41-1 — the coverage tables in `docs/analysis.md` §6 drift because nothing grades their cells            [status: todo]
+Origin: M41, 2026-08-26. Found while republishing §6 for M41's eight new
+inspector cases (seven of them domain-tagged, which is the count §6's domain
+row carries; the eighth is the untagged invariant): the published task-class and difficulty tables were stale by
+up to nine in a single cell — TC1 published at 54 against an actual 63, L3 at
+17 against 21, "mechanism/unit probes" at 72 against 74 — while the split
+quote and the domain rows two lines below them were current, because those
+two ARE graded and the tables are not. `docs-numbers-are-derived`'s
+`analysis_coverage` block recomputes `{total} distinct cases ({golden} golden
++ {adversarial} adversarial)` from the case files and requires a row per
+live domain, and stops there; the cells are hand-typed and were never read
+back. This is the same defect that check was built for, one table lower.
+Spec: recompute both count tables from the case files' own `tc`/`level` tags
+the way the split quote already is — a `class_counts` / `level_counts` list
+of `{"label": ..., "tag": ...}` rows the grader formats and requires
+verbatim, so a re-typed cell is red. The L3 cell is prose plus a count and
+only its count is mechanically checkable; grade the count and leave the
+enumeration to the human, stating that split rather than pretending the
+sentence is derived. Watched red by re-typing one cell.
+Out of scope: the L3 enumeration's completeness, and the `— 4 live (one of
+them unrun) + 17 fixture` breakdown, which no tag carries.
+
+### T-M41-2 — an extraction answers with the LINE the value sits on, not the value            [status: todo]
+Origin: M41, 2026-08-26, ADR-030's probe and its two offline twins. Both
+frozen probe tasks — `What is the doc_status of the aapl-2025 fixture?` and
+`How many items are extracted?` — are answered from one status line,
+`doc_status: success — 18 extracted · 5 incorporated_by_reference fixture:
+aapl-2025`. ADR-030 froze "an answer that carries the ground-truth value is
+correct" BEFORE the runs, so this is not a threshold moved after the fact and
+the probe's numbers stand; but a caller who asked how many items were
+extracted got a sentence containing 18, not 18. Every guard passes honestly:
+`not_a_dump` sees 79 characters against a page of thousands, `grounded` and
+`identity_anchors` hold, and the judge certifies. Pinned as published
+behaviour by `sec10k-item-count-is-in-the-named-status` and
+`live-sec10k-authored-wait-reaches-the-item-count`, both of which carry the
+whole line as `expect.answer`, and declared in `docs/support-matrix.md` D30.
+Spec: decide whether answer granularity is this repo's problem at all, and
+record the decision either way. Two routes exist and one is a trap. The
+page-side route (an element per number) is not available in general and is
+not a capability of this agent. The executor-side route — a step that reduces
+an extracted string to the part the task asked for — is where the trap is:
+any pattern taken from the page is site-specific knowledge in the execution
+policy (rule 6), and any pattern taken from the task text is the
+`_AGGREGATE`/`SCOPE_BLOCK` ceiling D21 already names. A third possibility is
+that this is correctly the judge's business and not the executor's. No code
+until that is decided, and whatever is decided lands with its own red-first
+case.
+Out of scope: widening `extract`'s target vocabulary, which is M42's.
+
+### T-M41-3 — nothing detects that the committed inspector snapshot has stopped matching the deployed page            [status: todo]
+Origin: M41, 2026-08-26. `src/browser/fixtures/sec10k-inspector.html` is a
+rendered capture of `whaleforce-sec10k.zeabur.app` at the build the page
+reported as `6b37ffa99d05`, and five `fast` cases grade the page shape against
+it. The sha is recorded in every one of those cases' `provenance` and in
+`docs/support-matrix.md` D30, and NOTHING reads it back — which this milestone
+demonstrated the hard way: `/api/meta` answered a DIFFERENT sha by `curl` at
+capture time than the page's own footer showed, and it took a cold review of the
+committed file to notice that every document had recorded the wrong one. When the inspector
+redeploys, the offline cases keep passing against a page that no longer
+exists and the two `live` cases start failing for a reason nobody will
+attribute correctly — which is D28's build-expiry finding arriving from the
+target's side, exactly as the demo postmortem §2 predicted it would.
+Spec: a `live`-tagged case that reads `/api/meta` and compares `git_sha` to
+the sha the snapshot was taken at, failing loudly with both values when they
+differ. It belongs in `live`, not `fast`: `fast` must stay offline and $0
+with no network call, and a stale snapshot is a declaration problem, not a
+gate regression. Cheap — one GET, no browser. Watched red by comparing
+against a wrong sha.
+Out of scope: re-capturing the snapshot automatically. A capture is evidence
+about a build and re-taking it is a decision, the same way declaring a live
+row is (ADR-022).
+
+### T-M41-4 — the observe harness compares NAMES as a set, so it cannot see the ambiguity S3 was            [status: todo]
+Origin: M41 cold review, 2026-08-26. `_run_observe_case`
+(`src/browser/eval_adapter.py`) builds `names` and `roles` as SETS of the
+observation's elements and grades `must_include_names` / `must_exclude_names` by
+membership. Two consequences, one in each direction, and both land on M41's own
+cases. (1) `sec10k-extract-buttons-are-distinguishable` claims the three Extract
+buttons are distinguishable, but the demo shape S3 was three ELEMENTS sharing one
+name — an ambiguity `resolve()` reports as "3 matches at tier role" — and set
+membership is blind to multiplicity: give a second element one of the three
+labels and the case stays green while a plan naming that button resolves to two
+matches. What the case actually supports is "all three labels are present and
+differ from each other", which is weaker than what its name suggests. (2)
+`must_exclude_names` is exact-string membership, so
+`sec10k-item-text-region-is-past-the-observation-cap` goes VACUOUSLY true the day
+the target site rewords that aria-label — it stops being a claim about the
+observation cap without going red.
+Spec: give the observe harness a `name_counts` expectation — `{"<name>": n}`
+graded against a Counter over the observation's elements, so a case can say
+"exactly one element carries this name" and a second one reddens it. For the
+exclusion direction, an `must_exclude_names_present_on_page` companion (the name
+must be absent from the observation AND resolvable on the page) turns a vacuous
+pass into a red. Both watched red first: add a duplicate-labelled button to the
+snapshot for the first, reword the region label for the second.
+Out of scope: changing what the M41 cases claim — their triage notes already
+state these two ceilings; this block is the harness change that would let them
+claim more.
+
+### T-M41-5 — ADR-022's file names one number and its title another            [status: todo]
+Origin: M41 spec-drift audit, 2026-08-26; pre-existing, found while auditing this
+milestone rather than caused by it. `specs/decisions/ADR-022-m40-declaring-a-
+domain-from-live-runs.md` opens `# ADR-020:`. `adr-header-and-index` reads the
+NUMBER off the filename and the header shape off the body, so a body that
+announces a different number is unguarded, and every reader who quotes the title
+propagates the wrong one — M41 nearly did, attributing a mode-labelling rule to
+ADR-022 that ADR-022 does not contain.
+Spec: fix the title, and add the one-line conjunct that would have caught it —
+the first heading's number must equal the filename's. Watched red by flipping a
+digit in any ADR's title.
+Out of scope: whether ADR-020 and ADR-022 should be merged or cross-referenced;
+they are different decisions and only the heading is wrong.
+
+### T-M41-6 — the reviewer UI's decision digest is hand-kept and nothing grades it            [status: todo]
+Origin: M41 spec-drift audit, 2026-08-26. `src/browser/server.py`'s `ADRS` array
+renders "N architecture decisions" to every visitor and had gone two decisions
+stale — no 023 (on `main` since M39), no 027 (merged) — while a comment beside it
+asserted the numbering had exactly one gap. M41 added the three missing lines and
+deleted the false claim, which fixes today and not tomorrow: the next ADR
+reddens nothing.
+Spec: grade the digest the way `ui-examples-cover-matrix` grades the demo cards —
+the set of numbers in `ADRS` must equal the set of `specs/decisions/ADR-*.md`
+files, in both directions. One `parse`-free check, no browser. Watched red by
+deleting a line from the array. Deliberately does NOT grade the one-liner's
+CONTENT: whether a plain-English teaser is an honest compression is the same
+human-judgment act as an INDEX.md ruling line, and `adr-header-and-index` already
+declines to grade that.
+Out of scope: whether the digest should be generated from INDEX.md instead of
+hand-written — that is a bigger change and the check above makes either choice safe.
+
+### T-M41-7 — the live SITE count is published three times and derived twice            [status: todo]
+Origin: PR #58 R7, 2026-08-26. Routed to debt rather than repair because the
+line is TRUE today — it fails no honesty test — and R1's acceptance made this
+extra hook explicitly optional ("ideally").
+Evidence, carried verbatim from the review: the live SITE count is published
+three times but derived twice: `README.md:41` carries a third copy that the
+extended `docs-numbers-are-derived` quote does not cover, so the
+recurrence-stopper R1 installed still leaves one publication of the same number
+free to go stale. `README.md:41` reads
+`python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00`,
+but the graded quote in `evals/adversarial/docs-numbers-are-derived.json` is
+only `"--suite live        # {live} cases"` — a prefix that matches whatever
+follows the comma. Verified: with `counts['live_sites']` forced to 6,
+`README.md:204` and `docs/analysis.md:72` go red (`readme_does_not_say` /
+`doc_does_not_say`) while line 41's `5 real sites` is never inspected.
+Acceptance: the README:41 quote in `readme_quotes` becomes
+`--suite live        # {live} cases, {live_sites} real sites` (or line 41 drops
+the site count), watched red against the current text with `live_sites`
+perturbed, and the fast suite stays green.
+Worth one line beyond the review's own framing: a prefix quote that silently
+tolerates whatever follows it is a general shape, not a one-line defect —
+`readme_quotes` matches by substring, so EVERY quote in that list stops grading
+at its last character. Whether that wants a general fix (anchor each quote to
+end-of-line) or three more characters in one string is the decision this block
+carries.
+
+### T-M41-8 — an ordinal in a code comment drifted the same way R9's ADR ordinals did            [status: todo]
+Origin: PR #58 R11
+Spec: `src/browser/eval_adapter.py:5181-5182` reads "while this check stayed
+green and the third conjunct below actively rewarded the string's presence".
+The conjunct that rewards the endpoint string is
+`cases_not_citing_the_ground_truth_endpoint`, key 4 of 4 in the `wrong` dict at
+:5201-5204 (order: `endpoint_in_production_module`,
+`host_outside_the_allowlist`, `ground_truth_endpoint_fed_to_the_executor`,
+`cases_not_citing_the_ground_truth_endpoint`). No counting basis makes it
+third: counting `wrong` keys it is fourth; counting only conjuncts textually
+below the comment it is second. ADR-030:160, rewritten in PR #58's round-3
+repair, now calls that same conjunct "the last". This is the third instance of
+the ordinal drift R9 was filed against — the count is derived and graded, the
+POSITION is derived by nothing — surviving in the one place R9's acceptance
+clause did not name, because that clause named only ADR-030 and D30.
+Introduced in `db54986` (PR #58 round-1 repair), so it predates the round-3
+diff; routed to debt rather than repaired because it is LOW, out of scope for
+the three clauses the human's bounded round authorised, and nothing grades it.
+Repro: `grep -n "third conjunct below" src/browser/eval_adapter.py`;
+`grep -n "last conjunct REWARDS" specs/decisions/ADR-030-m41-sec10k-inspector-probe.md`;
+`python3 -c "import src.browser.eval_adapter as ea; print(list(ea._check_ground_truth_endpoint_eval_only()['wrong']))"`
+Acceptance: the comment names the conjunct instead of numbering it (e.g. "the
+citation conjunct below"), matching what ADR-030 and support-matrix D30 now do;
+`invariant` and `fast` stay green. Worth deciding once for the repo rather than
+per site: an ordinal into a list nothing derives is a re-typed number, and this
+is the fourth one this PR found.
 
 ### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: todo]
 Origin: the ADR-027 planning commit, 2026-08-25, on a worktree of this branch.
@@ -1581,27 +1520,6 @@ owner's call, and it needs its own watched-red, not an inference from someone el
 it does not claim CI will now be green — the demonstration above is a constructed ledger on a
 laptop, and that CI tags its rows `ci` at all is still asserted rather than graded (T-R74). The
 second branch of the acceptance is therefore still available and may still be the better one.
-
-### T-M40-4 — deploy-smoke cannot verify the browser while anyone is using the demo            [status: pr]
-Origin: PR #43 (M40) post-merge, deploy-smoke run 32677457166
-Spec: M40 made `/smoke/stream` refuse while `SEM` is held, so a browser check can never launch a
-second Chromium beside a run. deploy-smoke's last step greps for `"event": "done"` and so failed
-the first time a run happened to be in flight — which, on a public demo URL, is whenever anyone is
-looking at it. It failed on the merge commit itself, against this session's own card-verification
-run (`e26da76d`).
-Fixed here by retrying six times and treating "refused because a run is executing" as
-not-a-failure, while ANY other error still fails immediately. Exhausting the retries emits a
-GitHub warning saying in those words that real-Chromium-on-the-deployment went UNCHECKED — the
-job stays green because the deployment answered and serialised correctly, but the property is not
-claimed as verified when it was not.
-What is still open, and is the reason this block exists rather than just a workflow edit: on a
-service with concurrency 1 and a public URL, a scheduled smoke check and a visitor are in a race
-that the visitor should win. The honest fix is a check that does not need the browser slot — a
-`/version` endpoint compared against `GITHUB_SHA` (already named as the fix for this workflow's
-other declared ceiling), plus a browser check that runs against a slot this job owns.
-Acceptance: deploy-smoke does not fail on a busy deployment, never passes silently on a broken
-browser, and the unchecked case is visible in the run log — plus a follow-up that removes the race
-rather than tolerating it.
 
 ### T-R91 — the pre-commit hook reports a missing interpreter as an eval regression, and points at `--update-baseline`            [status: todo]
 Origin: PR #49, hit while committing the T-M40-1 DONE.md line
@@ -2307,24 +2225,6 @@ because it is narrative about a ceiling that no longer exists, not a band anythi
 from, so striking it was outside T-R44's acceptance.
 Acceptance: the figure carries the workflow run id that produced it, or it is cut to the
 claim that survives ("CI had been ~50% over the same ceiling with nothing checking").
-
-### T-R61 — the task field's placeholder still advertises the retired HN prompt            [status: pr]
-Origin: M37 implementer
-Spec: M37 swapped `EXAMPLES["news.ycombinator.com (live)"]` off "Who submitted this story?"
-because it failed 5/5 on the deployment (349e4839, e08b7627, bcae4fe7, 63b9d944 —
-failure:locate, two "pg" links). The form's `#task` placeholder in `src/browser/server.py`
-(`placeholder="e.g. Who submitted this story?"`) is the same prompt, unchanged because M37's
-acceptance reads "No other page text changes" and nothing grades placeholder text. A visitor
-who types the placeholder verbatim against the HN card's URL reproduces the retired failure.
-Acceptance: the placeholder becomes a prompt with a cited correct run (the new HN example's
-"What is the title of this story?" is the obvious one), pinned by the ui-form case the way
-`expected_examples` pins a chip — or a note that placeholders are illustrative only.
-Closed by M40: the placeholder is now "What is the market cap of this company?" — the
-`companiesmarketcap.com` example's task, 7/7 on the deployment (D28), the strongest cited run
-in the set rather than the HN one. It sits two lines above the EXAMPLES map M40 rewrote, so
-fixing it there rather than in its own PR is the shorter diff. The acceptance's second half is
-NOT met and is not claimed to be: nothing grades placeholder text, so this can regress silently
-again — the `ui-form` pin stays open work.
 
 ### T-R50 — the band ledger is filtered to the exact current case count, so a fresh band is a short sample            [status: todo]
 Origin: T-R34, restated after PR #35 R4 (renumbered from T-R39 during the M35 merge — main had allocated that id independently)
