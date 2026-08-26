@@ -318,6 +318,48 @@ with vision in a live smoke (3 reps, run ids published), while mode B's
 documented failure on the same fixture is pinned as the contrast case; suites
 green at $0; implementation ADR; cold-reviewer + spec-drift before commit.
 
+### M46 — plan-then-loop escalation: mode B is the fast path, loop mode is the fallback, one RunResult carries both            [status: todo]
+Depends: T-M42-20
+Origin: owner, 2026-08-26 — after PR #59's smoke measured both modes dying on
+the same task, the owner asked whether plan mode and loop mode should be
+integrated, naming LangGraph as a candidate. Ruling: integrate as an escalation
+POLICY in this codebase, no orchestration framework — a framework adds no
+observation, no action and no verification, would re-wire the offline stub
+boundary the 220-case suite depends on, and the capability gaps the interviewers
+named (vision, frame reach, resolver fixes, model) are all things an
+orchestrator cannot provide. The implementation ADR comes with the milestone,
+per the per-feature loop.
+Spec: a third execution policy, `escalate` (its own `POST /tasks` flag; neither
+existing mode's behaviour changes): run mode B once; if it ends in ANY failure
+class, re-run the same task in loop mode, seeding the loop's opening note with
+mode B's terminal evidence — which step died, on which target, with which
+failure class. Trace facts only, never site knowledge (rule 6 untouched). One
+RunResult: both legs' traces concatenated under the existing supersede semantics
+(the B leg is superseded, never hidden — ADR-004/ADR-005), budgets and cost
+summed and reported per-leg plus total, verifier and judge run once on the final
+leg's answer, unchanged.
+The cost argument is PR #59's own six runs, quoted at the range they actually
+recorded: the B attempt cost **$0.0015-$0.0043** across 3-4 actions, against
+loop's **$0.4830-$0.9166** across 17-31. So B-first prices the fallback at well
+under 1% overhead on tasks the loop would have needed anyway, and saves two
+orders of magnitude on tasks B can already do. (Those figures are this task's
+justification, not a published ceiling — the run ids behind them are in
+T-M42-20, which is the one place they are recorded.)
+Acceptance: stub-driven cases watched red first — (a) B succeeds -> the loop
+never starts, one leg in the trace; (b) B fails -> escalation fires, the loop leg
+carries the seeded note, the RunResult totals both legs; (c) budget exhaustion
+mid-escalation stays INV-3 loud; (d) the seeded note cannot smuggle an
+instruction — the same injection-boundary shape the planner note path already
+has. M44 gains `escalate` as a third arm in its A-vs-B table, same probe set,
+same 3-rep protocol.
+Why the dependency is hard, not bookkeeping: on today's build BOTH legs die on
+the same resolver bug (T-M42-20's `text-transform` name mismatch), so escalation
+would only pay twice for one failure. Measuring the policy before that fix lands
+would measure the bug, not the policy.
+Out of scope: LangGraph or any orchestration dependency (the ruling above); mode
+auto-selection beyond "B first, loop on failure" — a task-difficulty classifier
+is speculative until M44's table shows which tasks actually need the loop.
+
 ### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
 Origin: ADR-027. Depends: M42 (M43 for the vision rows, marked as such).
 Spec: re-run the D28 domain set (the four regressed groups + two controls,
