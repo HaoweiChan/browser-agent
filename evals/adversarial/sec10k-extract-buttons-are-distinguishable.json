@@ -1,0 +1,28 @@
+{
+  "id": "sec10k-extract-buttons-are-distinguishable",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L3",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "kind": "observe",
+    "fixture": "sec10k-inspector.html"
+  },
+  "expect": {
+    "must_include_names": [
+      "Extract the selected committed fixture",
+      "Extract the uploaded filing",
+      "Extract from the EDGAR document URL"
+    ],
+    "note": "the three input modes' Extract buttons carry three different accessible names"
+  },
+  "provenance": "M41, postmortem shape S3: at demo time the inspector's three input modes each rendered a button whose role and accessible name were exactly `button` / \"Extract\", so any plan targeting it resolved to 3 matches — the ambiguity shape M38 owns. sec-10k-extract's legibility row gave the three buttons distinct `aria-label`s, and this case measures that on the snapshot of the build that is deployed (`git_sha` `5a44758598f5`): three names, three elements, nothing to narrow. Watched RED first by stripping the three `aria-label` attributes out of the fixture, which is the demo page shape: `{\"starved_by_chrome\": [\"Extract the selected committed fixture\", \"Extract the uploaded filing\", \"Extract from the EDGAR document URL\"]}` — see `triage.red_first`.",
+  "triage": {
+    "class": "coverage",
+    "red_first": "with the three `aria-label` attributes removed from the fixture — the demo page shape, three buttons all named \"Extract\" — the case reports {\"starved_by_chrome\": [\"Extract the selected committed fixture\", \"Extract the uploaded filing\", \"Extract from the EDGAR document URL\"], \"n_elements\": 60} and fails.",
+    "note": "S3 is fixed PAGE-SIDE on this one page, and this case pins only that. The capability gap behind it — what the resolver does when a real page offers three identical accessible names — is unchanged and stays with M38/ADR-026, whose own cases (`resolver-refuses-narrowing-a-click` and the D29 set) grade it. Nothing in `src/browser/` moved for this case, and nothing should have (CLAUDE.md rule 6: owning the target site is not an exemption)."
+  }
+}

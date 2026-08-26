@@ -2477,7 +2477,17 @@ def _run_adr_header_index_case(case: dict) -> dict:
                    if p.is_file()
                    and p.suffix in (".py", ".md", ".yml", ".yaml", ".json")
                    and "__pycache__" not in p.parts
-                   and not p.is_relative_to(root / "evals" / "report")]
+                   and not p.is_relative_to(root / "evals" / "report")
+                   # ...and `src/browser/fixtures/` for the same reason one step
+                   # further out: those files are PAGES, not prose this repo
+                   # wrote. `sec10k-inspector.html` (M41) is a captured snapshot
+                   # of another project's deployed UI, and that UI renders its
+                   # own repo's decision log and its own ADR numbers into
+                   # visible text — one of them, 032, exists there and not here.
+                   # Reading a third party's citations as this repo's is a false
+                   # positive by construction, and the alternative (editing the
+                   # capture so it passes) would make the fixture a fiction.
+                   and not p.is_relative_to(root / "src" / "browser" / "fixtures")]
     dangling, bad_section, resolved = [], [], 0
     for p in sorted(citing):
         text = p.read_text(encoding="utf-8", errors="ignore")
@@ -2848,7 +2858,12 @@ def _run_report_citations_case(case: dict) -> dict:
     for rel in REPORT_CITATION_SCOPE:
         p = root / rel
         for f in ([p] if p.is_file() else p.rglob("*") if p.is_dir() else []):
-            if not f.is_file():
+            # Fixtures are pages, not citations — same exclusion and same reason
+            # as `adr-header-index`'s: the M41 inspector snapshot renders the
+            # OTHER repo's capability table, which names a benchmark report in
+            # that repo's `evals/report/`. It is a quotation of a page, not a
+            # claim by this repo about its own evidence.
+            if not f.is_file() or f.is_relative_to(root / "src" / "browser" / "fixtures"):
                 continue
             cited |= set(REPORT_CITATION.findall(f.read_text(encoding="utf-8", errors="ignore")))
     cited -= set(REPORT_CITATION_SKIP)
@@ -5063,6 +5078,64 @@ def _check_narrowing_fails_closed() -> dict:
             "got": {"signature": str(inspect.signature(_nearest))}}
 
 
+def _check_ground_truth_endpoint_eval_only() -> dict:
+    """The inspector's ground-truth endpoint is reachable from the eval side and
+    from nowhere else (M41, CLAUDE.md rule 6).
+
+    Rule 6 allows exactly three pieces of per-site data anywhere: a start URL, a
+    rate limit, and a ground-truth API endpoint. M41 uses the third — the
+    sec-10k inspector's `/api/extract/fixture` supplies the hand-labelled values
+    behind the `sec10k-*` and `live-sec10k-*` cases. The rule that makes that
+    legitimate rather than a hole is WHERE it may be reached from: the eval
+    adapter and the case files, never the code that decides what the agent
+    does. An executor that could ask a site's API what the answer is would
+    "pass" every case on that domain without reading the page, and no other
+    check here would notice.
+
+    Two different claims, because the two strings are allowed in different
+    places. The ENDPOINT path may appear only in `eval_adapter.py` among the
+    package's modules. The HOST may additionally appear in `server.py`, which
+    carries a start URL per declared matrix row in `EXAMPLES` — a start URL is
+    the FIRST thing rule 6 allows, and `examples-cover-matrix` requires one for
+    every live row. What it may not do is reach the execution policy: the
+    planner, the executor, the observer, the resolver, the verifier or the
+    judge. Data, not code: the committed page snapshot under `fixtures/` is a
+    fixture like `shop.html` and is not scanned.
+    """
+    ENDPOINT, HOST = "/api/extract/", "whaleforce-sec10k.zeabur.app"
+    POLICY = {"agent.py", "planner.py", "observe.py", "resolver.py",
+              "verifier.py", "judge.py"}
+    pkg = Path(__file__).parent
+    endpoint_leaks, host_leaks = [], []
+    for f in sorted(pkg.glob("*.py")):
+        if f.name == "eval_adapter.py":
+            continue
+        text = f.read_text(encoding="utf-8")
+        if ENDPOINT in text:
+            endpoint_leaks.append(f.name)
+        if HOST in text and f.name in POLICY:
+            host_leaks.append(f.name)
+    # The other direction, and the reason this is not a one-sided ban: the
+    # ground truth still has to come from somewhere a reader can retrace. Every
+    # inspector case has to name the endpoint its expected value came from, so a
+    # `sec10k-*` case whose ground truth is hand-waved is red here before it can
+    # be green in a run. An assertion that never sees the string it governs is
+    # decoration.
+    # Only the cases that CARRY a hand-labelled value: an observation-shape case
+    # asserts what the planner was shown and has no ground truth to source.
+    cases = []
+    for c in sorted((Path(__file__).parents[2] / "evals").rglob("*sec10k*.json")):
+        raw = c.read_text(encoding="utf-8")
+        if "answer" in json.loads(raw).get("expect", {}):
+            cases.append((c.name, raw))
+    uncited = [n for n, raw in cases if "/api/extract/fixture" not in raw]
+    return {"passed": not endpoint_leaks and not host_leaks and bool(cases) and not uncited,
+            "wrong": {"endpoint_in_production_module": endpoint_leaks,
+                      "host_in_execution_policy": host_leaks,
+                      "cases_not_citing_the_ground_truth_endpoint": uncited},
+            "got": {"cases_scanned": len(cases)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "examples-cover-matrix": _check_examples_cover_matrix,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
@@ -5078,7 +5151,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
-              "narrowing-fails-closed": _check_narrowing_fails_closed}
+              "narrowing-fails-closed": _check_narrowing_fails_closed,
+              "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

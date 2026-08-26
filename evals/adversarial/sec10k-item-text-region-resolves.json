@@ -1,0 +1,37 @@
+{
+  "id": "sec10k-item-text-region-resolves",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "fixture": "sec10k-inspector.html",
+    "task": "What does Item 4 of the aapl-2025 filing say?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "region",
+          "name": "Item 4 extracted text"
+        },
+        "anchor": "Mine Safety Disclosures"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Item 4. Mine Safety Disclosures\n\nNot applicable.\n\nApple Inc. | 2025 Form 10-K | 18\n\nPART II",
+    "anchors": [
+      "Mine Safety Disclosures"
+    ]
+  },
+  "provenance": "M41, the second half of postmortem shape S2. The per-item extracted text was a bare `<pre class=\"text\">` — role `generic`, dropped by `observe.SKIP_ROLES` — so the largest output region on the page was unreachable by the role tier. sec-10k-extract's legibility row gives it `role=\"region\" aria-label=\"Item <n> extracted text\"` in BOTH view modes (that repo's own Markdown-view decision, and its D10). This case measures that a plan naming that region resolves and extracts the item text. Fixture `src/browser/fixtures/sec10k-inspector.html` is the rendered snapshot described in `sec10k-doc-status-is-a-named-status`, captured with item index 6 (\"4 — Mine Safety Disclosures\") selected because it is the smallest extracted item on aapl-2025 at 93 characters — a fixture carrying Item 1A's 68,162 would be a 68KB file grading nothing extra. Ground truth from `/api/extract/fixture` (rule 6 per-site ground-truth endpoint, eval side only), re-verified 2026-08-26 against `git_sha` `5a44758598f5`: item `4`, status `extracted`, `chars` 93. Watched RED first two ways: (1) `expect.answer` a placeholder — `answer_matches: false`, reason `answer 'Item 4. Mine Safety Disclosures\\n\\nNot applicable.\\n\\nApple Inc. | 2025 Form 10-K | 18\\n\\nPART II' != expected 'PLACEHOLDER'`; (2) with `role=\"region\" aria-label=\"Item 4 extracted text\"` stripped from the fixture's `<pre class=\"text\">` — the pre-legibility shape, recorded verbatim in this file's `triage.red_first`.",
+  "triage": {
+    "class": "coverage",
+    "red_first": "with `role=\"region\" aria-label=\"Item 4 extracted text\"` removed from the fixture's `<pre class=\"text\">`, the run is `failure:locate`: `step 3 (extract): relocation after locate failure: retargeting as {'text': 'Item 4 extracted text'}; ResolveError: no tier resolved {'text': 'Item 4 extracted text'}`. The relocation rung retargets on the accessible name it was denied, and a name that only ever existed as an `aria-label` is not page text, so nothing resolves — exactly the shape the postmortem predicted for the demo.",
+    "note": "This case says the region RESOLVES, not that a planner could have named it: the page-level observation stops before it, which is what `sec10k-item-text-region-is-past-the-observation-cap` pins. The pair is the finding, the same way `live-quotes-js-role-tier-blind` and `live-quotes-js-text-tier-reaches` are a pair."
+  }
+}

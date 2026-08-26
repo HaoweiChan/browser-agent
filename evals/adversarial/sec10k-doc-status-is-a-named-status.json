@@ -1,0 +1,46 @@
+{
+  "id": "sec10k-doc-status-is-a-named-status",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "fixture": "sec10k-inspector.html",
+    "task": "What is the doc_status of the aapl-2025 fixture?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "doc_status"
+        },
+        "anchor": "aapl-2025"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "doc_status: success\n— 18 extracted · 5 incorporated_by_reference\nfixture: aapl-2025",
+    "anchors": [
+      "aapl-2025"
+    ],
+    "planner_saw": [
+      {
+        "has": [
+          "status — 'doc_status'"
+        ],
+        "lacks": [
+          "Item 4 extracted text"
+        ]
+      }
+    ]
+  },
+  "provenance": "M41, postmortem shape S2 (`docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md` §1): at demo time the inspector's status line was a bare `<div id=\"banner\">`, accessibility role `generic`, dropped by `observe.SKIP_ROLES` — the answer was not the accessible name of any element a plan could target. sec-10k-extract's legibility row (its build `5a44758598f5`) gave it `role=\"status\" aria-label=\"doc_status\"`. This case measures that the fix lands where it has to land: the observation the planner is shown carries `status — 'doc_status'`, and a plan naming it extracts the banner. Fixture is `src/browser/fixtures/sec10k-inspector.html`, a rendered snapshot of `https://whaleforce-sec10k.zeabur.app/?fixture=aapl-2025&run=1` taken 2026-08-26 against `/api/meta` `git_sha` `5a44758598f5`, with `<script>` and the source `<iframe>` removed so the page is static and the `fast` suite makes no network call. Ground truth for the value is the inspector's own `/api/extract/fixture` (CLAUDE.md rule 6's per-site ground-truth endpoint, eval side only): `POST {\"fixture\":\"aapl-2025\"}` returns `doc_status: \"success\"`, `counts: {extracted: 18, incorporated_by_reference: 5}`, re-verified 2026-08-26. Watched RED first two ways: (1) with `expect.answer` set to a placeholder, `answer_matches: false`, reason `answer 'doc_status: success\\n— 18 extracted · 5 incorporated_by_reference\\nfixture: aapl-2025' != expected 'PLACEHOLDER'`; (2) with `role=\"status\" aria-label=\"doc_status\"` stripped from the fixture's banner — the pre-legibility shape — `failure:locate`, reason `step 3 (extract): relocation after locate failure: retargeting as {'text': 'doc_status'}; ResolveError: no tier resolved {'text': 'doc_status'}` — the relocation rung retargets on the name and the page has no such text, which is the demo shape itself (both cases go red this way).",
+  "triage": {
+    "class": "coverage",
+    "note": "This is the OFFLINE half. It cannot measure S1 (fetch-then-render), because a rendered snapshot is post-render by construction — S1 is measured live by `live-sec10k-deep-link-observation-races-the-extraction`, which finds it unfixed. The `planner_saw.lacks` clause is not decoration: the same observation does NOT reach the extracted-text region, and `sec10k-item-text-region-is-past-the-observation-cap` is the case for that."
+  }
+}

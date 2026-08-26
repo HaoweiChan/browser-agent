@@ -1,0 +1,36 @@
+{
+  "id": "sec10k-item-count-is-in-the-named-status",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "fixture": "sec10k-inspector.html",
+    "task": "How many items are extracted?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "doc_status"
+        },
+        "anchor": "aapl-2025"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "doc_status: success\n— 18 extracted · 5 incorporated_by_reference\nfixture: aapl-2025",
+    "anchors": [
+      "aapl-2025"
+    ]
+  },
+  "provenance": "M41, the second of the two small-value probe tasks the M41 block names verbatim. Same element and same answer string as `sec10k-doc-status-is-a-named-status`; what this case adds is the TASK TEXT. `How many items are extracted?` is a counting question, and two guards read task text and could refuse it: `verifier.is_aggregate` (ADR-018's plan lint — a superlative ask must read the page once with `extract_all`) and the resolver's `_PLURAL_ASK` narrowing refusal (ADR-026/D29). Neither fires here — `_AGGREGATE` wants `(which|what|who) … (most|least|highest|…)` and this phrasing has neither half, and the target resolves uniquely so no narrowing rung is reached — so the count is answered from the same named status line. Ground truth `counts.extracted = 18` from the inspector's `/api/extract/fixture`, re-verified 2026-08-26 against `git_sha` `5a44758598f5`. Watched RED first with `expect.answer` set to the bare string `18`: `answer_matches: false`, reason `answer 'doc_status: success\\n— 18 extracted · 5 incorporated_by_reference\\nfixture: aapl-2025' != expected '18'` — which is also the honest limitation this case publishes: the agent returns the whole status line, not the isolated count.",
+  "triage": {
+    "class": "coverage",
+    "note": "The answer is the banner LINE, not the number. `not_a_dump` passes (79 characters against a page of thousands) and the judge certifies, but a caller who wanted `18` gets a sentence containing it. Declared in docs/support-matrix.md D30 rather than papered over; isolating the count needs either a page-side element per number or a reading step the executor does not have."
+  }
+}
