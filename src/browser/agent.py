@@ -99,7 +99,43 @@ PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, 
 # eval-first rule exists to prevent — D21, docs/support-matrix.md.
 #
 # Latin terms need \b (case screening-word-boundary: 'signing' contains 'signin');
-# CJK terms must stay boundary-free — \b never matches inside a CJK run.
+# CJK terms have no boundary to lean on — Python `re` puts no `\b` inside a CJK
+# run and there is no whitespace — so they match as bare substrings and fire
+# inside a LONGER word that means something else.
+#
+# M45 measured that, tried to fix it three times, and shipped none of the three.
+# The measurement is real: the repo's first live probe in Chinese (ADR-031,
+# docs/analysis.md §8a-5) refused three legitimate READ tasks at $0.00 with an
+# empty trace — 密碼 inside 密碼學 (cryptography, run 8304ee3b), 購買 inside
+# 購買力平價 (purchasing power parity, run be20ba6a, a read task in this repo's
+# own target domain), 刪除 inside 刪除的檔案 ("deleted files", run 038bc371).
+#
+# Each attempted repair was a per-term negative lookahead, and each was falsified
+# by an ordinary Chinese sentence that the lookahead un-refused:
+#
+#   [刪删]除(?!的)          把購物車裡要刪除的商品都刪掉   (cold review)
+#                           — 的 marks an attributive reading in a genuine
+#                             destructive ask as readily as in a question
+#   [購购][買买](?!力平[價价])  我要購買力平價這本書           (PR #56 R2)
+#                           — "buy the book Purchasing Power Parity"; 力平價
+#                             starts the OBJECT, on a bookstore, which is a
+#                             live domain in docs/support-matrix.md
+#   密[碼码](?![學学])      幫我重設密碼學生帳號           (PR #56 R2)
+#                           — 學生帳號 ("student account") begins with 學
+#
+# The pattern is the finding: the continuation that makes a term part of a
+# different word is indistinguishable, to a regex, from the first character of
+# the object a real request is acting on. Every narrowing therefore trades a
+# false refusal for a false ALLOW in a security-adjacent screen, and this screen
+# fails CLOSED. So the alternation below is byte-for-byte what it was before
+# M45, and M45's contribution here is the measurement, the cases that pin every
+# falsified attempt, and the residual declared in docs/support-matrix.md D31.
+#
+# What might actually work is a rule about the REQUEST FRAME rather than about
+# the term's neighbours — every false positive above is a question about a page
+# (…是什麼？ / …的定義 / …會保留多久？) and every false negative is an imperative
+# (幫我… / 請… / 我要…). That is a different mechanism, unprobed in either
+# language, and it is filed as tasks/TODO.md M45-D8 rather than guessed at here.
 SCOPE_BLOCK = re.compile(
     r"\b(?:log|sign)(?:g?ed|g?ing)?[\s-]?in(?:to)?\b"
     r"|\b(?:password|captcha|payment|purchase|buy|pay|download)\b"

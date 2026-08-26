@@ -80,14 +80,14 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 219 cases, ts `20260826-125916`, **89.03s**, 216/219
-  (`evals/report/20260826-125916-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 220 cases, ts `20260826-132151`, **88.81s**, 217/220
+  (`evals/report/20260826-132151-fast.json`; `dirty: true`, for the reason the
   next paragraph gives, and red — the two failures are `docs-numbers-are-derived`
   and `published-band-matches-the-ledger` themselves, mid-refresh at the moment
   this row was recorded. That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
-  the addition forces. Here the addition is M41's inspector cases and M42's loop-mode cases arriving together, in the merge of PR #58 and PR #57. The stamp is UTC, as
+  the addition forces. Here the addition is M45's zh cases arriving on top of M41's inspector cases and M42's loop-mode cases, in the merge of PR #56. The stamp is UTC, as
   every row written since §7 is. How many rows the ledger holds at this count,
   and what its maximum is, are deliberately not written here — see §3. Each
   re-derivation of this section is exactly the cost `T-M39-11` names, and PR #57
@@ -115,8 +115,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 219 cases, 216/219) and
-(restated — `invariant`: 75 cases, 72/75) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 220 cases, 217/220) and
+(restated — `invariant`: 76 cases, 73/76) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -236,7 +236,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 89.03 × 1.15 = 102.38 → **105**, which is exactly the
+five — gives 88.81 × 1.15 = 102.13 → **105**, which is exactly the
 committed 105. The ceiling was moved 90 → 105 by ADR-029, derived
 from the band source cited above — a committed row at the shipped case count
 whose derived ceiling is the one the ledger's maximum derives, which is item 3
@@ -261,14 +261,14 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 75 cases, ts `20260826-125709`, **14.94s**, 72/75
+- Band source — local `invariant` at 76 cases, ts `20260826-132022`, **13.76s**, 73/76
   (`dirty: true`, and red, for the same structural reason §2's is and stated the
   same general way: a tree reaches its new case count only while the cases are
-  uncommitted, so 75 exists only while M41's and M42's invariant-tagged additions are, and
+  uncommitted, so 76 exists only while M45's invariant-tagged addition is, and
   the two red cases — `docs-numbers-are-derived` and
   `published-band-matches-the-ledger` — are the two this republish clears; the
   run is red, so ADR-012 wrote a per-case report for it and this bullet cites
-  the file the way §2's does — `evals/report/20260826-125709-invariant.json`.
+  the file the way §2's does — `evals/report/20260826-132022-invariant.json`.
   As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
@@ -327,7 +327,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 14.94 × 1.15 = 17.18 → **20**, which is the committed
+The same rule gives 13.76 × 1.15 = 15.82 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

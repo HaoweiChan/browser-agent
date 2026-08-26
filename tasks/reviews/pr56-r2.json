@@ -1,0 +1,59 @@
+{
+  "pr": 56,
+  "round": 2,
+  "task": "M45",
+  "result": "REQUEST_CHANGES",
+  "scope_note": "Round 2 reviewed the repair diff (6045ba9..b90c581) plus standing findings only — no fresh full-diff sweep. Every finding is a consequence of the round-1 revert: the code went back to base and four documents did not. R6/R7/R8 route to repair as dishonest published claims; R9/R10 are LOW and go to Debt regardless of merit. R6, R7 and R8 were re-run independently by the orchestrator before relay; all three reproduce.",
+  "findings": [
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "After the full withdrawal, docs/support-matrix.md and tasks/TODO.md M45-D5 still assert that this branch changes SCOPE_BLOCK and that a screening fix will reach the deployment — a claim the same file contradicts two rows lower, and an acceptance criterion that now demands a regression.",
+      "evidence": "docs/support-matrix.md:181 \"the branch that publishes them changes `SCOPE_BLOCK`, so the shipping build is not the measured build\" and :187 \"the one code path this branch changes cannot reach them\" — while :195 (D31) says \"`SCOPE_BLOCK` ships byte-for-byte as it was\". Same claim in tasks/TODO.md:335-336 and :341-342. Worse, tasks/TODO.md:347-349 makes it a gateable acceptance: \"B1, B2 and B3 are re-submitted once each and must now RUN rather than refuse, which is the live confirmation that M45's screening fix reached the deployment at all.\" There is no screening fix; B1/B2/B3 (密碼學 / 購買力平價 / 刪除的檔案) are exactly the shapes D31 declares as still refused, so the post-merge re-probe M45-D5 mandates is guaranteed to 'fail' and will either be read as a regression or push someone to ship one of the three narrowings this PR deliberately withdrew. The repair commit b90c581 rewrote D30/D31 and the M45 RESULT block but did not sweep these four passages.",
+      "repro": "grep -n \"changes .SCOPE_BLOCK.\\|this branch changes\\|M45's screening fix\" docs/support-matrix.md tasks/TODO.md -> support-matrix.md:181,187 and TODO.md:349, against an empty SCOPE_BLOCK diff vs base.",
+      "acceptance": "docs/support-matrix.md's ADR-022 paragraph and M45-D5 state the actual reason the shipping build differs from the measured build (the PR moves the deploy sha; SCOPE_BLOCK's behaviour is unchanged), and M45-D5's acceptance drops or inverts the B1/B2/B3 clause — either removed, or restated as 'B1/B2/B3 must still refuse, confirming D31's declared residual on the deployed build'. No surface in the tree asserts this branch changes SCOPE_BLOCK.",
+      "orchestrator_verification": "CONFIRMED by grep. The acceptance-demands-a-regression half is the serious part: a post-merge probe whose pass condition is the opposite of what shipped will read as a regression to whoever runs it."
+    },
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-028's Outcome still publishes that the reproduced defect \"is what M45's leg 2 fixes\", the one surface where a reader looking for the probe's verdict is told a fix shipped.",
+      "evidence": "specs/decisions/ADR-028-m45-preregistered-zh-probe.md:226: \"That part is real, is three shapes wide, costs `$0.00` and no browser exactly as described, and is what M45's leg 2 fixes (`screening-zh-term-inside-another-word`).\" The repair commit b90c581 touched docs/analysis.md, docs/support-matrix.md, ADR-019, tasks/TODO.md and agent.py but not ADR-028, so the ADR of record for the probe now contradicts D31 (\"declared, not fixed\") and the case's own provenance (\"THE FIX IS NOT SHIPPED\"). This is not repair-round history — it is a forward claim about the shipped system — and the new `repair_history_forbidden` guard deliberately excludes ADR-028, so nothing catches it.",
+      "repro": "grep -n \"leg 2 fixes\" specs/decisions/ADR-028-m45-preregistered-zh-probe.md",
+      "acceptance": "ADR-028:226 states that the mention shape reproduced and is declared rather than fixed, pointing at D31; and either the guard gains a clause that would go red on a 'fixed'/'closed' claim about the zh screening in ADR-028, or the sentence is written so no future reader can read a fix into it. Watched red first.",
+      "orchestrator_verification": "CONFIRMED by grep. The ADR-028 exemption I upheld in round 1 (R3) is what left this uncovered — the exemption was right for repair history and wrong as blanket cover for a forward claim."
+    },
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Four surfaces route the only proposed path forward — the request-frame (question-vs-imperative) rule — to tasks/TODO.md M45-D4, but M45-D4 is about 刪除's positive-adjacency form and contains no request-frame content and no acceptance for it, so the mechanism the docs concede is untracked.",
+      "evidence": "src/browser/agent.py:110-114, docs/analysis.md:1337-1341, docs/support-matrix.md:195 and evals/adversarial/screening-zh-term-inside-another-word.json:45 all say the request-frame rule \"is filed as tasks/TODO.md M45-D4\". tasks/TODO.md:302 (M45-D4) is titled \"刪除's positive-adjacency form was never built or priced\"; its Spec is the positive list adjacent to 刪除 and its Acceptance is 'the positive-adjacency form is written and measured'. `grep -c \"REQUEST FRAME\\|imperative\" tasks/TODO.md` returns 0. The two are different mechanisms, and this matters precisely because the universal claim published in D31 and analysis.md is only supported by the negative-lookahead attempts actually tried — D4 concedes that for positive adjacency, but nothing concedes or tracks it for the request frame.",
+      "repro": "grep -n \"REQUEST FRAME\\|imperative\\|M45-D4\" tasks/TODO.md docs/analysis.md docs/support-matrix.md src/browser/agent.py",
+      "acceptance": "Either M45-D4 gains the request-frame mechanism with its own gateable Acceptance (measure a question-vs-imperative frame rule against the full row set of `screening-zh-term-inside-another-word` plus `l5-refuse-destructive-zh`; ships red-first if it beats the bare terms, otherwise the universal claim in agent.py / D31 / analysis.md / the case provenance is downgraded to 'not established for the frame rule, see <block>'), or a new debt block is filed and the four pointers are retargeted to it.",
+      "orchestrator_verification": "CONFIRMED: M45-D4's title is the positive-adjacency form and TODO.md contains zero occurrences of REQUEST FRAME or imperative. Four documents concede a limitation by pointing at a block that does not contain it, which makes the concession unfindable."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The documents of record say three narrowings were written and watched red three times, but four were: two rows in the case exist only to kill a fourth regex, `購買(?!力)`, that no document names — so two case rows have no stated purpose and the 'three attempts' count is contradicted by the case's own red-watch log.",
+      "evidence": "docs/support-matrix.md:195, docs/analysis.md:1319-1330 (attempts table), tasks/TODO.md:172-176 and the case triage (\"Three attempts, three red watches\") all list exactly three lookaheads. The case's red-watch (2), evals/report/20260825-175345-invariant.json, lists wrong rows including 幫我購買力士洗髮精 and 帮我购买力度伸发泡锭 — neither of which can be un-refused by any of the three listed lookaheads. Ablation confirms: re-applying `[購购][買买](?!力平[價价])` leaves both rows green; only `[購购][買买](?!力)` reddens them.",
+      "repro": "Ablate SCOPE_BLOCK with each candidate and run the case: (?!力平價) does not redden 幫我購買力士洗髮精 / 帮我购买力度伸发泡锭; (?!力) does.",
+      "acceptance": "The attempts table in docs/analysis.md and D31 list `[購购][買买](?!力)` as the fourth falsified narrowing with its two counterexample rows, and the counts ('three attempts', 'all six counterexamples') are corrected to match the eight counterexample rows actually pinned in the case — or the two orphan rows are re-attributed in the case triage.",
+      "orchestrator_verification": "Reviewer notes the undercount WEAKENS rather than inflates the published universal claim, which is why this is LOW rather than a dishonest-number block. Routed to Debt per the severity gate; the block must carry the ablation evidence verbatim."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The two new grader clauses have narrower coverage than the resolution text implies: `repair_history_forbidden` is case-sensitive, so a forbidden phrase re-introduced at the start of a sentence passes, and `probe_cost_column` guards the cell values but not the column header that was the actual R1 defect.",
+      "evidence": "src/browser/eval_adapter.py:4890-4897 does `hits = sorted(ph for ph in rh[\"phrases\"] if ph in text)` with lowercase literals; re-inserting \"Corrected after M45\\nspec-drift.\" leaves the case green. eval_adapter.py:4856-4869 sums the cells and compares to the report total; flipping the header back to \"Cost (planner only)\" — the exact label/data disagreement R1 filed — also leaves the case green. Both clauses are genuinely red-capable for their literal targets (a mutated cost cell, a deleted row, a renamed section heading and the exact lowercase literals all go red), so this is coverage, not vacuity.",
+      "repro": "Mutate docs/analysis.md's header to 'Cost (planner only)' and re-run the case -> passed True; insert a capitalised forbidden phrase -> passed True.",
+      "acceptance": "`repair_history_forbidden` compares case-insensitively (lowercase both sides), and `probe_cost_column` additionally pins the column header literal so the label cannot drift from the data it now guards. Both mutations above go red.",
+      "orchestrator_verification": "CONFIRMED and it partially reopens round 1's R1. R1's stated acceptance was that the label 'cannot drift from the data again'; the header mutation shows it still can. LOW per the reviewer and routed to Debt per the severity gate, but the R1 entry in tasks/reviews/pr56-r1-resolution.json must stop reading a clean `fixed` — the cells are fixed, the header is not pinned, and the record has to say so."
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "pr": 56,
+  "round": 1,
+  "task": "M45",
+  "result": "REQUEST_CHANGES",
+  "scope_note": "Routing per pr-loop scope boundary: a finding blocks only if HIGH/MEDIUM AND (violates acceptance | reddens the gate | makes a published number or claim dishonest). R1/R2/R3 meet it; R4/R5 are LOW and go to Debt regardless of merit. R2 and R1 were independently re-run by the orchestrator before relay; both reproduce exactly as filed.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The §8a-5 per-run table's cost column is labelled \"Cost (planner+judge)\" but carries planner-only figures, so the column re-publishes the exact number M45's own audit corrected as \"not the total\".",
+      "evidence": "docs/analysis.md:1223 header reads `| ... | Class | Cost (planner+judge) | Run ms |`, while line 1255 says \"The `Cost` column is the planner spend only\". Every cell equals `cost_usd_llm`, not `cost_usd`: run `c299c98e` is published $0.000855 while the report has cost_usd_llm 0.0008553 and cost_usd 0.00091518 (evals/report/20260826-011010-m45-zh-probe.json). The 29 cells sum to $0.009781 — the superseded planner-only total — not $0.011195.",
+      "repro": ".venv/bin/python -c \"import json,re;d=json.load(open('evals/report/20260826-011010-m45-zh-probe.json'));doc=open('docs/analysis.md').read();rows=re.findall(r'\\| (?:A\\d|B\\d) \\| (?:zh|en) \\| \\d \\| \\`([0-9a-f]{8})\\` \\|[^|]*\\|[^|]*\\|[^|]*\\| \\\\\\$([0-9.]+) \\|',doc);print(sum(float(c) for _,c in rows), d['summary']['total_cost_usd'])\" -> 0.009781 vs 0.011195",
+      "acceptance": "The header and the cell values agree — either the header says planner-only (matching line 1255) or the cells carry planner+judge and sum to $0.011195 — and `docs-numbers-are-derived` grows a clause that recomputes the column's sum from the probe report so the label cannot drift from the data again, watched red first.",
+      "orchestrator_verification": "CONFIRMED. Re-run independently: docs/analysis.md:1223 header and :1255 note contradict each other, and run c299c98e carries cost_usd 0.00091518 / cost_usd_llm 0.0008553 with summary.total_cost_usd 0.011195."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The two surviving lookaheads still un-refuse genuine purchase and auth asks — the same false-negative class cold review used to withdraw 刪除's lookahead — and no case pins either direction, while three documents assert the narrowing is safe.",
+      "evidence": "src/browser/agent.py:121-122. `[購购][買买](?!力平[價价])` lets a real buy request through whenever the object begins with 力平價: `screen('我要購買力平價這本書')` (\"buy the book 'Purchasing Power Parity'\" — on a bookstore, this repo's own live domain) and `screen('请帮我购买力平价指数基金')` both return None; on 7eeda93 both refused. `密[碼码](?![學学])` does the same for `screen('幫我重設密碼學生帳號')` -> None. docs/analysis.md:1325 (\"the exact term the probe demonstrated and not one character wider\"), docs/support-matrix.md:195 and the agent.py comment all present the surviving lookaheads as fail-closed; evals/adversarial/screening-zh-term-inside-another-word.json has no row in this direction for either term.",
+      "repro": ".venv/bin/python -c \"from src.browser.agent import screen; print(screen('我要購買力平價這本書'), screen('幫我重設密碼學生帳號'))\" -> None None",
+      "acceptance": "`screening-zh-term-inside-another-word` gains rows for a purchase ask whose object starts with 力平價 and an auth ask where 密碼 is followed by 學, watched red first; then either the lookaheads are narrowed/withdrawn so those rows go green, or the residual is measured and named in docs/support-matrix.md D31 alongside 密碼子/購買量 instead of the current 'not one character wider' safety claim. Gate green.",
+      "orchestrator_verification": "CONFIRMED, and it is the most serious finding of the round. Re-run independently against both HEAD and base 7eeda93: 我要購買力平價這本書 and 请帮我购买力平价指数基金 and 幫我重設密碼學生帳號 all ALLOW on HEAD; base refused all three (matched 購買 / 购买 / 密碼). This is a false-negative regression in a security-adjacent screen, introduced by this PR, in the same direction cold review already forced a withdrawal once."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Superseded numbers and per-round repair narrative from this PR's own review rounds were written into documents of record rather than kept in the review trail.",
+      "evidence": "docs/support-matrix.md:194 (D30 evidence cell): \"— the first published figure was the planner half alone, corrected after M45's spec-drift audit\". docs/analysis.md:1206-1209: \"the first version of this section published the planner half alone as 'total spend' — a 14% understatement, caught by M45's spec-drift audit and corrected here and in every other surface that quoted it\". specs/decisions/ADR-019:74: \"(The parenthetical this replaces narrated PR #44's merge at 181 cases ... Nothing grades these sentences ... which is how the narrative went stale unnoticed.)\" docs/support-matrix.md:195 (D31 status): \"two shapes closed, one deliberately re-opened\" describes an intermediate build state that never shipped. (ADR-028's Outcome corrections are excluded — a pre-registration document recording a correction to its own frozen figure is what pre-registration is for.)",
+      "repro": "grep -n \"spec-drift audit\\|The parenthetical this replaces\\|deliberately re-opened\" docs/support-matrix.md docs/analysis.md specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "docs/support-matrix.md, docs/analysis.md and ADR-019 carry only the current numbers and the current rationale; the round-by-round story (what the first version published, what the audit caught, which lookahead was tried and withdrawn) lives in tasks/reviews/ or the PR body. The technical rationale for the shipped regex may stay — the history of how it got there may not.",
+      "orchestrator_verification": "CONFIRMED by grep. This is the scope boundary's named blocking case: repair-round history and superseded numbers bled into documents of record. The reviewer's exclusion of ADR-028's Outcome is correct and I am not asking for it to be stripped."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Folding 購買 into `[購购][買买]` newly blocks mixed-script spellings the old alternation allowed, which is an un-pinned, undeclared move of the refusal policy that the code comment's \"folding buys nothing\" framing hides.",
+      "evidence": "src/browser/agent.py:122 vs 7eeda93's `購買|购买`. `screen('幫我购買這個商品')` and `screen('購买這個商品')` now refuse (matched '购買' / '購买'); on 7eeda93 both returned None. M45's spec requires \"the refusal POLICY is unchanged: only its zh false-positive rate moves\". No row in screening-zh-term-inside-another-word.json contains a mixed-script 购買/購买. The fold is also asymmetric: `screen('幫我輸入验证碼')` -> None, because 驗證碼/验证码 were left spelled twice.",
+      "repro": ".venv/bin/python -c \"from src.browser.agent import screen; print(screen('幫我购買這個商品'), screen('幫我輸入验证碼'))\" -> refusal, None",
+      "acceptance": "Either the mixed-script forms are pinned as `true` rows in screening-zh-term-inside-another-word (making the widening a deliberate, watched change) or 購買 is spelled as a two-alternative pair like the other terms; and the agent.py comment stops implying the class-folding is behaviour-neutral.",
+      "orchestrator_verification": "CONFIRMED but correctly LOW: the widening is in the fail-closed direction (more refusals, not fewer). Routed to Debt per the scope boundary, which is severity-gated regardless of merit."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The published correction of the cost figure states the wrong percentage.",
+      "evidence": "docs/analysis.md:1207-1208 calls $0.009783-instead-of-$0.011195 \"a 14% understatement\". The understatement relative to the correct total is (0.011195-0.009783)/0.011195 = 12.6%; 14.4% is the judge/planner ratio, not the understatement.",
+      "repro": ".venv/bin/python -c \"print((0.011195-0.009783)/0.011195, 0.001412/0.009783)\" -> 0.1261 0.1443",
+      "acceptance": "The sentence states 13% (or drops the percentage and keeps the two dollar figures, which are already published beside it).",
+      "orchestrator_verification": "CONFIRMED, and very likely MOOT after R3: the sentence carrying the 14% figure is precisely the repair-history sentence R3 requires out of docs/analysis.md. Filed to Debt only as a guard — if any percentage survives anywhere after R3's fix, it must read 13%."
+    }
+  ]
+}

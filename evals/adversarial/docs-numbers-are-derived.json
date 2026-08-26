@@ -16,9 +16,9 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260826-130830-fast.json",
-        "invariant": "20260826-130701-invariant.json",
-        "live": "20260826-130853-live.json"
+        "fast": "20260826-132636-fast.json",
+        "invariant": "20260826-132508-invariant.json",
+        "live": "20260826-132658-live.json"
       }
     },
     "d8_retired_2026_08_21": "The d8 half graded support-matrix D8 while D8 was an OPEN wall-clock breach: it recomputed the published range from the reports the row cited and required the row to cite them. M12 (PR #20, ADR-013) then CLOSED D8 — the row no longer publishes a breach range, so there is nothing left for this half to recompute, and it was failing on a row that had legitimately changed rather than on a defect. Retired rather than re-pointed because the number it protected is now gated directly and better: `fast-wall-clock-budget` asserts the suite's own wall clock against the ceiling (60s local, 80s CI) and `wall-clock-probe-history-isolated` covers the history side, so a regression reddens the gate itself instead of a prose range. The reports it cited (20260821-215759/215923-fast.json) were measured pre-M12 and are now uncited; they are prune candidates under ADR-012. The README-counts half stays — nothing else derives those, and it reddens the moment a case is added.",
@@ -127,7 +127,76 @@
           "`sec10k-ground-truth-endpoint-eval-only`, {gt_conjuncts} conjuncts each watched red"
         ]
       }
-    ]
+    ],
+    "block_must_contain": [
+      {
+        "doc": "tasks/TODO.md",
+        "heading": "### M45-D8",
+        "phrases": [
+          "request frame",
+          "imperative",
+          "Acceptance:"
+        ],
+        "why": "PR #56 R8. agent.py, docs/analysis.md, docs/support-matrix.md D31 and this case's own provenance all concede that the request-frame rule is the untried path forward and file it at a debt id. The pointer is only worth what its target says, so the target is read."
+      }
+    ],
+    "forbidden_claims": [
+      {
+        "label": "carries_repair_history",
+        "docs": [
+          "docs/support-matrix.md",
+          "docs/analysis.md",
+          "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md"
+        ],
+        "phrases": [
+          "M45's spec-drift audit",
+          "the first published figure was",
+          "the first version of this section published",
+          "understatement",
+          "The parenthetical this replaces",
+          "deliberately re-opened",
+          "corrected after M45"
+        ],
+        "why": "PR #56 R3. Each phrase is a literal that appeared in one of these three documents and narrated this PR's own repair rounds rather than the shipped system. specs/decisions/ADR-031 is deliberately out of scope — its Outcome corrections are what pre-registration is for. The phrase list is scoped to M45's own narrative: a bare \"spec-drift audit\" is ordinary provenance and appears legitimately in D12 and a resolver row, so the literal carries the milestone name."
+      },
+      {
+        "label": "asserts_this_pr_changes_scope_block",
+        "docs": [
+          "docs/support-matrix.md",
+          "docs/analysis.md",
+          "tasks/TODO.md",
+          "specs/decisions/ADR-031-m45-preregistered-zh-probe.md"
+        ],
+        "phrases": [
+          "the branch that publishes them changes `SCOPE_BLOCK`",
+          "the one code path this branch changes",
+          "M45's screening fix",
+          "must now RUN rather than refuse"
+        ],
+        "why": "PR #56 R6. M45 withdrew every narrowing, so SCOPE_BLOCK ships byte-for-byte as it was; four passages still said otherwise, and M45-D5's acceptance had become a post-merge probe whose pass condition was the opposite of what shipped — it would have read as a regression, or pushed someone to ship one of the withdrawn narrowings."
+      },
+      {
+        "label": "claims_the_zh_screening_was_fixed",
+        "docs": [
+          "specs/decisions/ADR-031-m45-preregistered-zh-probe.md"
+        ],
+        "phrases": [
+          "M45's leg 2 fixes",
+          "leg 2 fixes",
+          "and is what M45 fixes"
+        ],
+        "why": "PR #56 R7. ADR-031 is the document of record for the probe, so it is where a reader looks for the verdict. Its Outcome corrections are legitimately exempt from the repair-history group — a pre-registration recording a correction to its own frozen figure is the point of pre-registering — but that exemption is not cover for a forward claim that a fix shipped."
+      }
+    ],
+    "probe_cost_column": {
+      "doc": "docs/analysis.md",
+      "report": "20260826-011010-m45-zh-probe.json",
+      "section_start": "### Every run, published regardless of outcome",
+      "section_end": "### Metric classes, per row per language",
+      "row_re": "\\| (?:A\\d|B\\d) \\| (?:zh|en) \\| \\d \\| `([0-9a-f]{8})` \\|[^|]*\\|[^|]*\\|[^|]*\\| \\$([0-9.]+) \\|",
+      "rows": 29,
+      "why": "PR #56 R1: the column header said planner+judge, the cells carried planner-only, and the 29 cells summed to the superseded $0.009783. Nothing read either, so the label drifted from its own data inside one table."
+    }
   },
   "expect": {
     "note": "every count in README equals what the runner loads, README's \"Where it stands\" block equals the reports it cites, and no tracked markdown file (prompts/ included, tasks/ excluded and why is in provenance) asserts criterion 5 green — outside a struck-through span or across bold/italic/link markdown, whitespace-normalized — while docs/analysis.md §8a-3's post-merge evidence says red, and no `--suite` gate command in ANY markdown file in the tree — `tasks/` and dot-directories included, `.git`/`.venv` excluded as machinery, a wider set than the criterion-5 scan in this same sentence — publishes a wall-clock ceiling, anchored to `<=`/`ceiling`/`budget`/`wall clock`, that is not the one `evals/run.py` commits for that suite, with `ceiling_sweep_rows` pinning both directions including the true timing notes that must stay green"

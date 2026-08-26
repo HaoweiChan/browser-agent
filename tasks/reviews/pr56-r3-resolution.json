@@ -1,0 +1,31 @@
+{
+  "pr": 56,
+  "round": 3,
+  "task": "M45",
+  "result_received": "APPROVED — 0 HIGH / 0 MEDIUM / 2 LOW",
+  "resolved_by": "implementer, 2026-08-26",
+  "note": "Closeout, not a repair round. No guard was fixed, no scope widened, SCOPE_BLOCK untouched.",
+  "gate": {
+    "invariant": "67/67 = 1.000",
+    "fast": "182/182 = 1.000"
+  },
+  "findings": [
+    {
+      "id": "R11",
+      "status": "debt",
+      "debt_id": "M45-D7 (widened from two guards to three)",
+      "what": "Filed by widening M45-D7 rather than opening a new block, per the orchestrator's preference and because it is literally the same defect: a guard written in a repair round is red-capable for that round's literal target, and its resolution record then describes it as covering the class. The block's title moves from 'both PR #56 guards' to 'all three', its Spec gains clause (3) carrying R11's mutation verbatim (the perl retarget of all four pointers to M45-D4 leaves the case GREEN) plus the control that proves coverage rather than vacuity (renaming the heading to ### M45-D10 goes red), and its Acceptance gains the fix: resolve the id found at each pointer SITE instead of taking the heading from the case's own config. NOT fixed here — R11 is LOW and routed to debt, and the record-correction half was done instead."
+    },
+    {
+      "id": "R12",
+      "status": "fixed",
+      "tracked_in": "M45-D9 Acceptance",
+      "what": "Took the shorter diff the orchestrator preferred: tasks/TODO.md M45-D5's Acceptance is now count-free — 'one of the narrowings M45 withdrew' — so the known-wrong 'three' no longer has a fourth home. Also extended M45-D9's Acceptance to ENUMERATE every surface carrying the count (analysis.md's attempts table, D31, the M45 RESULT block, the case triage, and M45-D5 itself), so closing D9 by its own checklist cannot leave a wrong count behind, which was the substance of the finding. D5 stays on that list even though it is now count-free, so a future edit that re-introduces a number there is caught by the same checklist. No separate debt block: the count problem already has one, and a near-duplicate of M45-D9 would be the kind of bookkeeping this loop is trying to avoid."
+    }
+  ],
+  "required_record_correction": {
+    "target": "tasks/reviews/pr56-r2-resolution.json, finding R8",
+    "done": true,
+    "what": "R8 moves from `fixed` to `partially_fixed` with a dated correction, the same treatment R10 forced on R1 a round earlier. It states what IS pinned (the target block must exist and carry 'request frame' / 'imperative' / 'Acceptance:', so deleting or gutting M45-D8 goes red) and what is NOT (the four pointers — the heading is hardcoded in config, and retargeting all four back to M45-D4 leaves the case green). It names the original claim as FALSE as written and points at M45-D7 clause (3). The original `what` text is retained verbatim rather than rewritten, because what a resolution record claimed is itself evidence."
+  }
+}

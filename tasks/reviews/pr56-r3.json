@@ -1,0 +1,29 @@
+{
+  "pr": 56,
+  "round": 3,
+  "task": "M45",
+  "result": "APPROVED",
+  "scope_note": "Round 3 reviewed the repair diff (5acf0f3..d4fae85) plus standing findings only. 0 HIGH / 0 MEDIUM / 2 LOW: no finding meets the blocking bar (HIGH/MEDIUM and one of: violates acceptance | reddens the gate | makes a published claim dishonest), so the reviewer APPROVES and both findings route to Debt. R11 was re-run independently by the orchestrator and reproduces. Note both are the same class the loop has now hit three times — a new guard is red-capable for its literal target but narrower than its resolution record claims (R10/M45-D7, now R11) — which is itself the signal that guard-scope claims in this repo need pinning, not more guards.",
+  "findings": [
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new `block_must_contain` clause never reads the pointers it exists to protect — it hardcodes the target heading, so the exact R8 failure mode (all four surfaces pointing at a block that lacks the request-frame content) recurs green, and pr56-r2-resolution.json's R8 entry overstates the guard as making that impossible.",
+      "evidence": "src/browser/eval_adapter.py:4912-4927 iterates `inp.get(\"block_must_contain\")`, whose only entry is `{doc: tasks/TODO.md, heading: \"### M45-D8\", phrases: [...]}` (evals/adversarial/docs-numbers-are-derived.json:166-172). Nothing reads the pointer literal out of src/browser/agent.py:114, docs/analysis.md:1341, docs/support-matrix.md:199 or the case's own provenance (screening-zh-term-inside-another-word.json:45). Retargeting all four pointers back to M45-D4 — the literal R8 state — leaves the case green, because the M45-D8 block still exists and still carries the words. tasks/reviews/pr56-r2-resolution.json R8 claims \"so a concession cannot again be made by pointing somewhere that does not contain it.\" The clause IS red-capable in the other direction (renaming the heading to `### M45-D10` yields `{'pointer_target_missing': '### M45-D8'}`), so this is coverage, not vacuity — the same class as R10/M45-D7.",
+      "repro": "perl -pi -e 's/M45-D8/M45-D4/g' src/browser/agent.py docs/analysis.md docs/support-matrix.md evals/adversarial/screening-zh-term-inside-another-word.json; then run docs-numbers-are-derived via eval_adapter.run_case -> passed True. Control: rename the heading to ### M45-D10 -> passed False, pointer_target_missing.",
+      "acceptance": "Either the clause takes the pointer's source (doc + surrounding literal) and resolves the id it actually finds there, so retargeting the four pointers to a block without 'request frame'/'imperative' goes red; or M45-D7 is widened from 'both PR #56 guards' to all three, carrying this mutation verbatim, and the R8 entry in tasks/reviews/pr56-r2-resolution.json is corrected to say the guard pins the target's contents but not the pointers — the same record correction R10 forced on R1.",
+      "orchestrator_verification": "CONFIRMED. Re-ran the repro in the worktree: retargeting all four pointers to M45-D4 leaves docs-numbers-are-derived green (passed True); tree restored afterwards. Routed to Debt on the severity gate, BUT the record-correction half of its acceptance is required at closeout, not deferred — leaving a resolution record that overstates a fix is the precedent R10 already forced on R1, and applying it to R1 and not R8 would be worse than never setting it."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The repair commit adds a new sentence restating the narrowing count as three at the same time as it files M45-D9 saying the count is four, and M45-D5 is not among the surfaces M45-D9's Acceptance enumerates for correction — so the known-wrong count acquires a fourth home that its own debt block does not track.",
+      "evidence": "tasks/TODO.md:440 (added by d4fae85, in the rewritten M45-D5 Acceptance): \"...or a reason to ship one of the three narrowings M45 withdrew on purpose.\" tasks/TODO.md:327 (added by the same commit, M45-D8): \"...and all four were falsified.\" M45-D9's Acceptance (tasks/TODO.md:291-296) names only docs/analysis.md's attempts table, D31 and the case triage, plus the literals \"three attempts\" and \"all six counterexamples\" — none of which matches the D5 wording, so a reader closing D9 by its own checklist leaves tasks/TODO.md:440 saying three.",
+      "repro": "grep -n \"three narrowings M45 withdrew\\|all four were falsified\" tasks/TODO.md -> 440 and 327 in the same file, both introduced by d4fae85.",
+      "acceptance": "M45-D9's Acceptance enumerates every surface carrying the count, tasks/TODO.md M45-D5 included (or D5:440 is written count-free, e.g. 'one of the narrowings M45 withdrew'), so closing M45-D9 leaves no 'three' behind.",
+      "orchestrator_verification": "CONFIRMED by grep: lines 327 and 440 of the same file, added by the same commit, disagree on the count. Routed to Debt; M45-D9's Acceptance must enumerate D5 so closing D9 does not leave the wrong count behind."
+    }
+  ]
+}

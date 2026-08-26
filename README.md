@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 219 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 220 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00
 ```
@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260826-130830-fast.json`, with
-`evals/report/20260826-130701-invariant.json` and
-`evals/report/20260826-130853-live.json`:
+Latest offline baseline — `evals/report/20260826-132636-fast.json`, with
+`evals/report/20260826-132508-invariant.json` and
+`evals/report/20260826-132658-live.json`:
 
 ```
-fast  219/219    invariant  75/75    live  11/11    $0.0000    88.8s
+fast  220/220    invariant  76/76    live  11/11    $0.0000    88.4s
 recovery 9/9 verified (19 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 60/60 · 14 replans
 ```
@@ -179,8 +179,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 219 | 89.03s | 102.38 | **105s** |
-| `invariant` | 75 | 14.94s | 17.18 | **20s** |
+| `fast` | 220 | 88.81s | 102.13 | **105s** |
+| `invariant` | 76 | 13.76s | 15.82 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of one run (`14a6a7b`, 213 `fast` / 74 `invariant` cases, the tree this
@@ -422,7 +422,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 232 cases (219 of them in the offline gate), it
+The eval set is not weak; it is 233 cases (220 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

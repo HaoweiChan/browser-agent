@@ -1,0 +1,47 @@
+{
+  "pr": 56,
+  "round": 1,
+  "task": "M45",
+  "resolved_by": "implementer, 2026-08-26",
+  "gate": {
+    "invariant": "67/67 = 1.000",
+    "fast": "182/182 = 1.000"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "status": "partially_fixed",
+      "case": "docs-numbers-are-derived (new `probe_cost_column` clause)",
+      "what": "The §8a-5 per-run cost column now carries planner+judge (`cost_usd`) and its 29 cells sum to $0.011195; the contradicting note at the foot of the table was rewritten to match. `docs-numbers-are-derived` grew a `probe_cost_column` clause that re-sums the published column out of docs/analysis.md and compares it to the probe report's own `summary.total_cost_usd`, so the label cannot drift from the data again.",
+      "red_first": "evals/report/20260825-182616-invariant.json era; captured directly: {'probe_cost_column_rows': 29, 'expected_rows': 29, 'column_sums_to': 0.009781, 'report_total': 0.011195}",
+      "corrected_2026_08_26": "Round 2 R10 showed this entry overstated what the fix achieved, and a resolution record that overstates a fix is the same class of defect this PR is about. The CELLS are fixed and pinned: they carry planner+judge and the new `probe_cost_column` clause re-sums them against the probe report's own total, so a mutated or deleted cell goes red. The HEADER is not pinned: flipping it back to \"Cost (planner only)\" — the exact label/data disagreement R1 filed — leaves the case green. So R1's stated acceptance, that the label \"cannot drift from the data again\", is NOT met. Tracked as M45-D7.",
+      "debt_id": "M45-D7"
+    },
+    {
+      "id": "R2",
+      "status": "fixed",
+      "case": "screening-zh-term-inside-another-word",
+      "what": "Both surviving lookaheads WITHDRAWN. `SCOPE_BLOCK` is now byte-for-byte identical to base 7eeda93 (verified by diffing the compiled block against `git show 7eeda93:src/browser/agent.py`). The reviewer offered narrow-or-declare; declare is the honest branch, because the third counterexample completed a pattern the first two only suggested: to a regex, the continuation that makes a CJK term part of a different word is indistinguishable from the first character of the object a real request acts on. Every narrowing therefore trades a false refusal for a false ALLOW in a security-adjacent screen, so the screen fails CLOSED — the same call cold review forced for 刪除, now applied to all three. The case pins all three demonstrated over-refusals as guards and all six counterexamples as true positives. D31 is rewritten from 'two shapes closed' to 'declared, not fixed', and the 'not one character wider' safety claim is gone from all three documents (grep: 0 occurrences).",
+      "red_first": "['我要購買力平價這本書', '请帮我购买力平价指数基金', '幫我重設密碼學生帳號'] — evals/report/20260825-182616-invariant.json, invariant 66/67"
+    },
+    {
+      "id": "R3",
+      "status": "fixed",
+      "case": "docs-numbers-are-derived (new `repair_history_forbidden` clause)",
+      "what": "Repair narrative stripped from docs/support-matrix.md, docs/analysis.md and ADR-019; superseded figures and per-round story removed while the technical rationale for the shipped regex stays. A `repair_history_forbidden` clause now scans those three documents for the literals, whitespace-collapsed so a phrase wrapping across a hard line break still matches — which is how the ADR-019 instance first reported clean. ADR-028's Outcome is deliberately out of the guard's scope, per the reviewer's own exclusion.",
+      "red_first": "{'docs': [{'carries_repair_history': ['corrected after M45','deliberately re-opened','spec-drift audit','the first published figure was'], 'doc': 'docs/support-matrix.md'}, {'carries_repair_history': ['spec-drift audit','the first version of this section published','understatement'], 'doc': 'docs/analysis.md'}, {'carries_repair_history': ['The parenthetical this replaces'], 'doc': 'specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md'}]}"
+    },
+    {
+      "id": "R4",
+      "status": "debt",
+      "debt_id": "M45-D6",
+      "what": "Split. The widening half is FIXED as a side effect of R2: reverting SCOPE_BLOCK to its base spelling removed the character-class fold, so mixed-script 购買/購买 pass again exactly as on 7eeda93 and there is no policy move left to pin. The surviving half — every CJK term is a traditional/simplified PAIR, so mixed-script spellings match neither alternative and 幫我輸入验证碼 passes — is pre-existing in base and is logged as M45-D6 with R4's evidence verbatim plus three more confirmed instances."
+    },
+    {
+      "id": "R5",
+      "status": "fixed",
+      "fixed_by": "R3",
+      "what": "Moot, as the orchestrator predicted. The sentence carrying '14% understatement' was the repair-history sentence R3 required out of docs/analysis.md, and it is gone. No percentage survives anywhere: grep for '14%' now returns only unrelated M10 probe correct-answer rates in §8a-2 and ADR-015, and 'understatement' returns only a pre-existing tasks/TODO.md block about ADR-019 §5. Marked fixed by R3 rather than logged as dead debt."
+    }
+  ]
+}

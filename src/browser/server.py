@@ -861,6 +861,7 @@ const ADRS = [
   ["028", "that second mode ships: the model chooses each action after seeing the page again, and every check that grades a run is shared with the first mode"],
   ["029", "the offline time ceiling moves to what the grown suite actually measures on this machine — and says plainly that CI's is not yet measured"],
   ["030", "the sec-10k inspector probe's tasks and pass bar are frozen in a commit before it runs; that site's own API may supply ground truth to the eval side and to nothing else; the row it declares says it measures one execution mode"],
+  ["031", "the Chinese-language probe's tasks, its paired English arm and its pass bar are frozen before it runs, so \u201c中文都會失敗” is graded against criteria fixed in advance"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

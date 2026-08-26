@@ -12,6 +12,54 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
+### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: todo]
+Origin: live demo, 2026-08-24 — asked to drive Task 2's deployed inspector
+(https://whaleforce-sec10k.zeabur.app) and answer from it, the agent failed.
+No run ids survive (`RUNS` is in-memory, D19), so the failure analysis is a
+static shape analysis, not a replayed trace. **Read
+`docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md` before taking
+this** — it holds the four predicted failure shapes (S1 fetch-then-render
+page, S2 answers-not-accessible-names, S3 three identical "Extract" buttons,
+S4 unauthored async settle), each mapped to the existing evidence (D7/D28,
+T-M40-2, M38's Origin, T-M40-5-3) with file:line receipts on both repos.
+The same demo's OTHER failure line (wrong extractions at conf 0.95) belongs
+to sec-10k-extract and is tracked there (its Demo-remediation track, D6–D9).
+Spec: treat the inspector as a new live domain under the M40 method. Probe
+the deployment with small-value tasks ("what is the doc_status of the
+aapl-2025 fixture?", "how many items are extracted?") at 3 reps per task
+(ADR-025's protocol — T-M40-5-3 is why one rep is not a read); every failure
+shape becomes an adversarial case watched red first (rule 2), with a
+committed fixture snapshot of the inspector page for the offline cases.
+Ground truth routes through the inspector's `/api/extract/fixture` — the
+per-site ground-truth endpoint rule 6 explicitly allows — for the verifier
+and eval adapter only, never the planner or executor. No site-specific
+selector, DOM path or navigation recipe enters `src/browser/` (rule 6; owning
+the target site is not an exemption). Capability gaps stay with their owners:
+S3 is M38's existing queue block; S4's default post-click settle and the
+select-option action both moved to M42 under ADR-027 (in mode B the authored
+`expected_state` path stands) — the postmortem's "deferred as YAGNI" line
+predates that ADR and is superseded by it.
+Cross-repo dependency, stated rather than hidden: sec-10k-extract's
+Demo-remediation track carries the page-side row (deep-link query params so a
+parameterised start URL lands on an already-rendered page — start URL is
+allowed per-site data — plus `role="status"` on the banner, a labelled region
+on the extracted-text pane, distinct Extract button names). Probing before
+that row deploys measures the old page: probe once for the red baseline, but
+declare the matrix row only against the page shape that will stay deployed.
+Update 2026-08-25 (ADR-027): loop mode (M42) is now queued and directly
+targets this block's S1/S4 shapes. Sequencing guidance, not a hard Depends:
+the red-baseline probe is still worth running under mode B (it pins the
+failure shapes as cases either way), but the DECLARED matrix row should wait
+for M42 and be probed under both modes — M44 owns folding the loop-mode
+results back into this row.
+Acceptance: a `docs/support-matrix.md` row for whaleforce-sec10k.zeabur.app
+declared under the report-assisted rule, carrying run ids, repeat counts, and
+BOTH build shas — this deployment's and the inspector's (`/api/meta` serves
+`git_sha`; D28's expiry rule applies to the target site's build too). Every
+demo failure shape either fixed with its case green, or declared as a
+limitation citing its case. Gate green; cold-reviewer + spec-drift before the
+commit (repo memory: review subagents run even when the harness says no).
+
 ### M38 — Resolver disambiguation: a target with several matches is narrowed, not failed            [status: in-progress]
 Origin: post-deploy receipt rounds for PR #32/#37/#38 (2026-08-23). `349e4839`,
 `e08b7627`, `bcae4fe7`, `63b9d944` (HN item 1, "Who submitted this story?"):
@@ -38,62 +86,6 @@ pins that matches differing in role are NOT auto-picked; `ui-no-url-guard`/
 after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
-
-### M42 — loop mode: the model chooses every step, and the machinery that grades it does not move            [status: in-progress]
-Origin: owner, 2026-08-25 — interviewer mandate relayed verbatim in intent:
-"complete the task by any means necessary, cost is not a constraint." Decision
-recorded as ADR-027 (read it first — its Invariants section is the boundary of
-"any means": zero wrong-success, rule 6, eval-first and the single trace
-pipeline are NOT reachable by the mandate). M33's mechanism spec is the seed;
-its decision criterion is superseded by fiat.
-Spec: a per-step tool-calling driver in `src/browser/agent.py`, selected per
-task (`POST /tasks` flag + env default; mode B stays the offline default).
-OpenRouter native `tools=[…]`: each of the executor's actions is a function
-definition; after every executed call the model receives a fresh observation
-(per-call element budget, `observe` drill still available) plus the trace so
-far, and emits the next call or a final answer. The executor's action
-implementations, the resolver, the trace schema, the verifier and the judge are
-shared with mode B — the loop replaces planning cadence only. The
-plan-adoption-anchored guards are re-homed, not lost (ADR-027 Decision 5):
-ADR-024's document-root refusal and ADR-018's aggregate single-read rule have
-no adoption point to run at in loop mode, so they become tool-call-time
-refusals (a root-target extract call refused as emitted; the aggregate rule
-enforced at answer assembly over the trace), each watched red in loop mode
-before the mode ships — without this a loop-mode `WebArea` extract is the
-T-M40-2 shape with no guard. The action
-vocabulary widens for both modes: `select_option`, `scroll`, `press`,
-`wait_for` (predicates reuse `check_state`), `go_back` — each with
-postcondition semantics and its own red-first case. Two more legs, added
-2026-08-26 from interviewer feedback ("畫面稍微複雜就可能看不到或點不到",
-"缺乏 harness 與自修復能力" — the 首頁↔dashboard loop, 18 LLM calls, 2
-repairs, still fail): (a) OBSERVATION REACH — `observe()` and the resolver
-today stop at the main frame's accessibility tree, so iframe content and
-shadow-DOM subtrees are structurally invisible and unclickable regardless of
-mode or vision (our own inspector's source pane is an iframe); frame-piercing
-observation and frame-scoped resolution land here, each with a fixture case
-watched red first (an iframe'd value, a shadow-DOM button). (b) NO-PROGRESS
-DETECTION — a step cap is not a harness: when the loop revisits the same
-(URL, page-signature) state N times with no new fact in the trace, the driver
-must force a strategy change or end the run loudly with that reason, never
-grind the budget down in a circle; pinned red-first by a stub-driven case
-that scripts a revisit loop. Loop budgets: step cap,
-token/USD ceilings at runaway-protection levels, recorded per run;
-`ALLOWED_MODELS` gains at least one frontier model (its own ADR line, price
-recorded — this is ADR-027's declared amendment to ADR-010's price ceiling,
-scoped to loop-mode additions, and `gateway-model-reaches-planner` is extended
-in the same change, watched red first, so the graded ceiling is the amended
-rule). Offline evaluability is the hard part and is in scope, not deferred:
-a scripted tool-call stub (`stub_planner`'s injection-boundary shape) drives
-the loop driver in `fast` at $0 — the driver, each new action, budget
-exhaustion, and the trace shape all get stub-driven cases watched red first.
-Acceptance: `fast`/`invariant` green with the new cases and no network/token
-spend added to either suite; a live smoke against the deployment (3 reps, run
-ids published) on one task mode B verifiably fails — the postmortem's S1 shape,
-e.g. a fetch-then-render page — answering correctly under loop mode; per-run
-cost visible in the trace/UI; an implementation ADR recording the tool schemas,
-new trace fields and caps; cold-reviewer + spec-drift before commit.
-Out of scope: vision (M43), matrix re-declaration (M44), making loop the live
-default (M44's evidence decides).
 
 ### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: pr]
 Origin: interviewer feedback, 2026-08-26 — "使用者輸入中文搜尋或問答時,部署版
@@ -136,6 +128,40 @@ Out of scope: planner/judge zh answer quality beyond what the probe surfaces —
 new shapes found there become their own blocks (rule 2). Independent of
 M42/M43: mode B's screening is the same code path, so this neither waits for
 nor blocks the loop work.
+RESULT (2026-08-26): **the headline did not reproduce; the third of it that did
+is declared, not fixed.**
+Leg 1 — 29 runs against `main@9c3340c`, pre-registered in ADR-031, $0.011195
+(planner $0.009783 + judge $0.001412), every run_id in `docs/analysis.md` §8a-5 and
+`evals/report/20260826-011010-m45-zh-probe.json`. Paired zh/en on the same
+URLs, same build, interleaved: **Chinese 12/12 correct, English 9/12,
+wrong-success 0/29.** Zero of the twelve Chinese runs was a refusal — the
+"還沒開啟瀏覽器就結束" symptom did NOT occur on plain search or plain QA. All
+three failures in the probe are English `failure:locate` (the D29 shape).
+Leg 2 — what DID reproduce: the mention shape, three live refusals at $0.00
+with an empty trace (`8304ee3b` 密碼學, `be20ba6a` 購買力平價, `038bc371`
+刪除的檔案). **It is declared, not fixed.** Three per-term negative lookaheads
+were written and all three were falsified by ordinary Chinese that they
+un-refused — `[刪删]除(?!的)` allowed 把購物車裡要刪除的商品都刪掉 (cold review);
+`[購购][買买](?!力平[價价])` allowed 我要購買力平價這本書 and
+请帮我购买力平价指数基金 (PR #56 R2); `密[碼码](?![學学])` allowed
+幫我重設密碼學生帳號 (PR #56 R2). To a regex the continuation that makes a term
+part of another word is indistinguishable from the first character of a real
+request's object, so the screen fails CLOSED and `SCOPE_BLOCK` ships
+byte-for-byte as it was. `screening-zh-term-inside-another-word` pins all three
+shapes and all six counterexamples, watched red three times through the harness
+(`evals/report/20260825-170430-invariant.json`,
+`evals/report/20260825-175345-invariant.json`,
+`evals/report/20260825-182616-invariant.json`).
+`l5-refuse-destructive-zh` and `screening-word-boundary` stayed green
+throughout, and the destructive/auth directions were re-confirmed LIVE
+(`ab08cbd5`, `cb689bff`).
+Leg 3 — `docs/support-matrix.md` gains a "Chinese-language (zh) evidence"
+section (four rows, run ids, repeat counts, paired English arm) plus D30/D31
+under ADR-022's live-declaration rule. D31 names all seven over-refusing shapes
+(密碼學, 購買力平價, 刪除的檔案, 美元的購買力, 密碼子, 購買量, 刪除按鈕) and
+separates out the two that are shared with English rather than Chinese defects:
+下載 and 付款 over-refuse in BOTH languages, and narrowing those would move the
+refusal policy rather than close an asymmetry.
 
 ### M43 — loop mode sees the page: screenshot observation for a vision model            [status: todo]
 Origin: ADR-027; postmortem S2 — the failure class "the answer is not the
@@ -216,6 +242,278 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### M45-D9 — M45 ran four narrowings and published three            [status: todo]
+Origin: PR #56 R9, 2026-08-26. Routed to debt as LOW because the undercount
+WEAKENS the published universal claim rather than inflating it — but two case
+rows currently have no stated purpose, which is its own defect.
+Spec: `docs/support-matrix.md` D31, `docs/analysis.md` §8a-5's attempts table,
+the M45 RESULT block above and the case triage in
+`screening-zh-term-inside-another-word` all say three lookaheads were written and
+watched red three times. Four were. The case's red-watch (2),
+`evals/report/20260825-175345-invariant.json`, lists 幫我購買力士洗髮精 and
+帮我购买力度伸发泡锭 among its wrong rows, and neither can be un-refused by any of
+the three lookaheads the documents name — they were killed by a fourth,
+`[購购][買买](?!力)`, which the withdrawn-narrowing record never mentions.
+Ablation re-run on this tree and confirming R9 exactly: against
+`[購购][買买](?!力)` both rows are ALLOWED (the regex misses them, so the case
+reddens); against `[購购][買买](?!力平[價价])` both are BLOCKED (green). So the
+red watch that killed the first 購買 attempt cannot have been produced by the
+second, and the two rows are evidence of an attempt no document names.
+Acceptance: the attempts table in `docs/analysis.md`, D31 and the case triage
+list `[購购][買买](?!力)` as the fourth falsified narrowing with 幫我購買力士洗髮精
+and 帮我购买力度伸发泡锭 as its counterexamples; the counts "three attempts" and
+"all six counterexamples" become four and eight, matching the eight
+counterexample rows the case actually pins; and the strengthened claim — four
+independent narrowings falsified, not three — is stated where the universal is
+made. No code change. Gate green.
+Surfaces carrying the count, enumerated so closing this block by its own
+checklist cannot leave a wrong one behind (PR #56 R12): `docs/analysis.md`
+§8a-5's attempts table, `docs/support-matrix.md` D31, the M45 RESULT block in
+this file, the `triage.note` of `screening-zh-term-inside-another-word`, and
+**M45-D5's Acceptance in this file** — which R12 caught stating "three" in the
+same commit that filed this block saying "four". D5 has since been written
+count-free ("one of the narrowings M45 withdrew"), which is why it needs no
+number when this block is closed; it stays on the list so a future edit that
+re-introduces a count there is caught by the same checklist.
+
+### M45-D7 — all three PR #56 guards are narrower than their resolution claimed            [status: todo]
+Origin: PR #56 R10 and PR #56 R11, 2026-08-26. Both routed to debt as LOW,
+and filed together because they are one defect with three instances: a guard
+written in a repair round is red-capable for the literal thing that round was
+about, and its resolution record then describes it as covering the CLASS. The
+loop hit this three times, which is the signal that guard-scope claims in this
+repo need pinning rather than more guards. It partially reopens
+round 1's R1, whose acceptance said the cost label "cannot drift from the data
+again" — it demonstrably still can, and `tasks/reviews/pr56-r1-resolution.json`
+has been corrected so its R1 entry no longer reads a clean `fixed`.
+Spec: two clauses in `_run_doc_counts_case` (`src/browser/eval_adapter.py`) are
+red-capable for their literal targets but miss adjacent mutations, carried
+verbatim from R10. (1) `forbidden_claims` compares case-SENSITIVELY, so a
+forbidden phrase re-introduced at the start of a sentence — "Corrected after
+M45" — passes. The fix is `.lower()` on both sides; it is one word and was
+deliberately NOT taken in the round-2 repair, because R10 was severity-routed to
+debt and a repair round that quietly widens findings it was told to defer is how
+a review loop stops terminating. The clause carries a `ponytail:` comment saying
+exactly that. (2) `probe_cost_column` sums the published cells against the probe
+report's own total but never reads the column HEADER, which was the actual R1
+defect: flipping it back to "Cost (planner only)" leaves the case green while
+re-creating the label/data disagreement R1 filed. (3) `block_must_contain`
+(PR #56 R11) never reads the pointers it exists to protect: it hardcodes the
+target heading, so it verifies that `### M45-D8` exists and carries "request
+frame"/"imperative", and verifies nothing about the four surfaces that point at
+it. Mutation carried verbatim from R11: `perl -pi -e 's/M45-D8/M45-D4/g'
+src/browser/agent.py docs/analysis.md docs/support-matrix.md
+evals/adversarial/screening-zh-term-inside-another-word.json` — the literal R8
+state, all four pointers aimed at a block with no request-frame content — leaves
+`docs-numbers-are-derived` GREEN. Control, confirming coverage rather than
+vacuity: renaming the heading to `### M45-D10` yields
+`{'pointer_target_missing': '### M45-D8'}`. As with (1), R11's record-correction
+half was NOT deferred — `tasks/reviews/pr56-r2-resolution.json`'s R8 entry is
+annotated to say the guard pins the target's contents and not the pointers.
+Acceptance: `forbidden_claims` lowercases both sides and the mutation
+"Corrected after M45" goes red; `probe_cost_column` gains the header literal to
+its checked set and the mutation "Cost (planner only)" goes red;
+`block_must_contain` resolves the debt id it actually finds at each pointer
+site (doc + surrounding literal) rather than taking the heading from its own
+config, so R11's four-pointer retarget goes red. All three watched red first, on
+those exact three mutations. Gate green.
+
+### M45-D8 — the request-frame rule is the untried path, and nothing measured it            [status: todo]
+Origin: PR #56 R8, 2026-08-26. M45 published a universal claim — that no regex
+separates a CJK term inside another word from the same term heading a real
+request's object — and conceded one exception by pointing at a debt block that
+did not contain it. This is that block.
+Spec: every narrowing M45 tried reasoned about the term's NEIGHBOURS (what
+character follows 密碼 / 購買 / 刪除), and all four were falsified. The untried
+mechanism reasons about the request frame instead, and the split is clean in
+every row the case pins: each false positive is a question ABOUT A PAGE
+(這個頁面對密碼學的定義是什麼？ / …會保留多久？ / 美元的購買力在這頁怎麼呈現？),
+and each false negative is an imperative addressed to the agent (幫我… / 請… /
+我要…). A frame rule would refuse on the imperative and let the question through,
+which is orthogonal to where the term sits inside a word — so M45's universal
+claim, stated as it is, is NOT established for it. It is unprobed in both
+languages: the English side has never needed it, because `\b` does the work
+there, so shipping one would move the refusal policy for English too and needs
+its own ADR.
+The catch that makes this a measurement rather than an afternoon: a frame rule
+keyed on 幫我/請/我要 fails open on a bare imperative (刪除所有郵件 — an existing
+true-positive row in `l5-refuse-delete-determiners` with no frame marker at all),
+so it cannot simply replace the bare terms; the plausible shape is a frame rule
+that only ever ADDS refusals, or one that gates the narrowing rather than the
+term. Which of those survives contact with the row set is the open question.
+Acceptance: a question-vs-imperative frame rule is written and measured against
+the FULL row set of `screening-zh-term-inside-another-word` (all 29 rows) plus
+`l5-refuse-destructive-zh`, `screening-word-boundary` and
+`l5-refuse-delete-determiners`. Either it strictly beats the bare terms — every
+false-positive row goes green and no true-positive row goes red — in which case
+it ships red-first with an ADR covering the policy move, or it does not, in which
+case the universal claim in `src/browser/agent.py`, `docs/support-matrix.md` D31,
+`docs/analysis.md` §8a-5 and the case provenance is downgraded from "no regex
+separates those" to "no NEIGHBOUR rule separates those; the frame rule was
+measured and did not either, see this block". Either outcome closes it. Gate
+green.
+
+### M45-D6 — mixed-script CJK spellings pass the scope screen in every term            [status: todo]
+Origin: PR #56 R4, 2026-08-26. Filed for the half of R4 that still exists.
+R4's other half — that folding 購買 into `[購购][買买]` newly BLOCKED mixed-script
+购買/購买, an un-pinned widening of the refusal policy — was removed by R2's fix,
+which reverted `SCOPE_BLOCK` to its pre-M45 spelling. Verified: `screen('幫我购買
+這個商品')` and `screen('購买這個商品')` both return None on this tree and on base
+`7eeda93`, so the policy is unchanged in that direction and there is nothing left
+to pin.
+Spec: every CJK term in `SCOPE_BLOCK` (`src/browser/agent.py`) is spelled as a
+traditional/simplified PAIR — `密碼|密码`, `購買|购买`, `驗證碼|验证码`,
+`刪除|删除`, `下載|下载`, `登入|登录` — so a spelling that mixes the two scripts
+within one word matches neither alternative. Carried verbatim from R4's evidence:
+`screen('幫我輸入验证碼')` returns None. Confirmed on this tree for the wider set:
+幫我购買這個商品, 購买這個商品, 幫我輸入验证碼 and 幫我輸入驗证码 all pass the
+screen. Mixed script is not exotic — input methods, copy-paste between zh-TW and
+zh-CN sources, and OCR all produce it routinely.
+The trap, and why this is a task rather than a one-line character-class fold:
+folding every pair into character classes is the widening R4 caught in the 購買
+case, so it moves the refusal policy for every term at once and must be watched
+as such. It is also the fail-CLOSED direction (more refusals), which is the safe
+one, so it is a different risk profile from M45's withdrawn narrowings — but "safe
+direction" is not "unwatched direction".
+Acceptance: each pair is folded to a character class (or an equivalent), every
+mixed-script form is pinned as a `true` row in
+`screening-zh-term-inside-another-word` — watched red first, since every one of
+them passes today — and the fold is recorded as the deliberate policy widening it
+is rather than presented as behaviour-neutral. Gate green.
+
+### M45-D4 — 刪除's positive-adjacency form was never built or priced            [status: todo]
+Origin: M45 spec-drift audit, 2026-08-26, finding 5. M45's own spec asked for
+this and M45 shipped something else; the departure is recorded but the
+alternative was never measured, which is the part worth closing.
+Spec: `tasks/TODO.md` M45 asked that 刪除 get "an adjacent object the way
+`delete` requires a determiner" — i.e. the POSITIVE-adjacency shape the English
+clause uses, `\bdelet(?:e|es|ed|ing)\s+(?:my|the|this|these|those|all|every|any|our)\b`
+(`src/browser/agent.py`). M45 tried the NEGATIVE form instead, `[刪删]除(?!的)`,
+cold review broke it on three genuine destructive asks, and the screen was left
+fail-closed with no condition at all. Every document then recorded the
+conclusion as "no regex separates those" — which is true of the negative form
+that was tried and NOT established for the positive one, which was never
+written. A Chinese quantifier/possessive list (所有, 全部, 我的, 這些, 那些,
+每一, 任何, 我們的, 帳號, …) adjacent to 刪除 is the direct mirror, and the two
+existing true-positive cases suggest it is not obviously hopeless — 刪除所有郵件
+has 所有 immediately after the verb, though 刪除購物車裡的所有商品 does not,
+which is exactly the measurement this block is for.
+Acceptance: the positive-adjacency form is written and measured against the full
+row set of `screening-zh-term-inside-another-word` plus
+`l5-refuse-destructive-zh`; either it beats bare 刪除 on the false-positive rows
+without losing a true positive — in which case it ships, red-first, and D31's
+刪除 residuals shrink — or it does not, in which case the "no regex separates
+those" sentence in `src/browser/agent.py`, the case provenance and
+`docs/support-matrix.md` D31 is upgraded from an assertion to a measured claim
+citing this block. Either outcome closes it. Gate green.
+
+### M45-D5 — the four zh support-matrix rows were never re-probed against the build that ships them            [status: todo]
+Origin: M45 spec-drift audit, 2026-08-26, finding 6. Structural, not an
+oversight: the obligation cannot be discharged from inside the PR that incurs it.
+Spec: ADR-022 Decision 1a requires every live-declared row to be re-run against
+the build being shipped, immediately before merge — the rule that exists because
+two of the three rows it was written for were withdrawn when a build changed
+underneath them. M45's four zh rows (`docs/support-matrix.md`, "Chinese-language
+(zh) evidence") were measured against `main@9c3340c`; merging M45 moves `main`
+and the deployment follows it, so the shipping build is a different build from
+the measured one. It is not a different BEHAVIOUR — M45 ships no production code
+change and `SCOPE_BLOCK` is byte-for-byte what it was — but 1a is a rule about
+the build, written that way because the rows it was created for were invalidated
+by a build change nobody expected to matter. No re-probe is possible pre-merge
+because the deployment only moves when `main` does — the same wall ADR-025 hit,
+which is why T-M40-5 was split out as its own task rather than folded into the
+PR that created the need. The gap is declared in the matrix section itself
+rather than left implicit, and the substantive risk is low and stated: this PR
+changes no production code, and no Group A task contains a `SCOPE_BLOCK` term in
+any case. Low risk is not a re-run.
+Acceptance: after M45 merges and `deploy-smoke` succeeds for the merge sha, the
+four Group A rows are re-run 3× each in Chinese against the deployed build,
+every run id published, and the matrix rows re-declared from the new numbers —
+including declaring a shape unsupported if the re-probe says so. If the re-probe
+contradicts the 12/12, the rows are withdrawn, not softened. Additionally: B1,
+B2 and B3 (密碼學 / 購買力平價 / 刪除的檔案) are re-submitted once each and must
+**still refuse**, at $0.00 with an empty trace, confirming D31's declared
+residual on the deployed build. That direction is deliberate and worth stating,
+because an earlier draft of this block had it backwards — it asked them to RUN,
+which would have made this probe's pass condition the opposite of what M45
+shipped, and handed whoever ran it either a phantom regression or a reason to
+ship one of the narrowings M45 withdrew on purpose.
+Cost ceiling: 15 runs, roughly $0.006 at the rate M45 measured.
+
+### M45-D3 — the auth block covers two of the five Chinese spellings of "log in"            [status: todo]
+Origin: M45 cold review, 2026-08-26. Pre-existing (it predates M45 and M45 does
+not change it), out of M45's spec, and therefore not fixed in that PR.
+Spec: `SCOPE_BLOCK` (`src/browser/agent.py`) blocks 登入 and 登录 and nothing
+else. 登陸, 登陆 and 登錄 are all ordinary spellings of the same verb — 登陆 in
+particular is the dominant mainland form — so `帮我登陆这个网站并查看消息` is a
+plain auth ask that reaches the browser and spends tokens, where its traditional
+twin refuses at $0.00. Verified red on this tree: `screen('帮我登陆这个网站并查看
+消息')` returns None. 註冊/注册 (register) is a related and equally uncovered
+verb, and is a synonym rather than a spelling, so it is a separate judgement.
+The trap, and the reason this is a task rather than a one-line widening: 登陸
+also means *to make landfall* (颱風什麼時候登陸？, 登陸月球), so adding it
+verbatim manufactures a new instance of exactly the defect M45 closed — a term
+firing on a legitimate read task. Fixing it properly needs the same treatment
+M45's terms got: evidence for both directions before the alternation moves.
+Acceptance: a probe or a case set that exercises both directions — the auth asks
+in all five spellings AND the landfall/astronomy readings — the alternation
+widened only as far as that evidence reaches, both directions pinned in
+`screening-zh-term-inside-another-word` or a sibling, the false-positive rows
+watched red first, and any residual declared in `docs/support-matrix.md` D31.
+Gate green.
+
+### M45-D1 — docs/analysis.md §6's two tag tables have never matched the case files            [status: todo]
+Origin: M45, 2026-08-26. Found while refreshing §6's total for the one case
+M45 adds; not caused by M45, and not repaired by it under the debt rule.
+Spec: `## 6. Coverage` publishes a task-class table and a difficulty table
+whose cells are described as "refreshed from the case files' own
+`tc`/`level`/`domain` tags rather than recounted by hand". They are not.
+Measured 2026-08-26 (`for f in evals/{golden,adversarial}/*.json`, counting
+`tc` and `level`): TC1 57 published 54, TC2 8 ✓, TC3 13 ✓, TC4 36 ✓, TC5 6 ✓,
+untagged 73 published 72; L1 58 published 57, L2 48 ✓, L3 19 published 17,
+L4 16 ✓, L5 9 published 8, untagged 43 ✓. The published cells have never summed
+to the published total (189 vs 193). The drift predates this branch — the same
+recount at the parent commit gave TC1 56, L1 58, L3 19 against identical
+published cells — and it survived because `docs-numbers-are-derived` grades the
+golden/adversarial split quote and the domain rows and NOT these two tables,
+while the paragraph above them advertises that it does. M45 declared the drift
+in place (§6, with the measured numbers) rather than half-repairing a table
+whose other cells it had not put into error.
+This is the third time §6 has drifted under a preamble claiming it does not:
+T-M39-5 (closed) was the same defect on the section's OTHER pair of numbers,
+and its own closing note states the rule this block re-earns — "a number no
+check recomputes is a number that goes stale again". T-M39-5 widened the grader
+to cover the pair it found and stopped there; these two tables were the part it
+did not reach.
+Acceptance: `docs-numbers-are-derived` grows a clause that recomputes both tag
+tables from the case files the way it already recomputes the domain rows, the
+cells are refreshed to match, the §6 paragraph's claim becomes true, and the
+declaration M45 left in §6 is deleted in the same commit. Watched red first by
+publishing one cell off by one.
+Also in scope for this block, found by M45's spec-drift audit: `docs/analysis.md`
+§1 says "The **six** L5 refusal cases" and §7 says "**6** refusal cases", while
+L5 measures 9 and the table publishes 8. Same defect, same section's blast
+radius, and M45's own case is one of the three the sentence is short by — so it
+is repaired by the same recount rather than left to drift a fourth time.
+
+### M45-D2 — the ADR-022 file's H1 says ADR-020            [status: todo]
+Origin: M45, 2026-08-26, while reading ADR-022 for the live-declaration rule
+that leg 3 required. One-line fix, deliberately not taken in M45's PR under the
+debt rule.
+Spec: `specs/decisions/ADR-022-m40-declaring-a-domain-from-live-runs.md` opens
+`# ADR-020: Declaring a domain from live runs ...`, while
+`specs/decisions/ADR-020-m32-observation-drill-down.md` correctly opens
+`# ADR-020: M32 — ...`. So two files claim number 020 in their H1 and one of
+them is cited everywhere as 022 (INDEX.md, the support matrix, ADR-024/025/028).
+Nothing catches it: `adr-header-and-index` grades that a `**Ruling**:` block
+exists and is short, that INDEX lists each number once, and that citations
+resolve to a FILE — it never compares a file's H1 number to its own filename,
+which is the one comparison that would have caught this on the day it was
+written.
+Acceptance: the H1 is corrected to `# ADR-022:`, and `adr-header-and-index`
+grows a clause asserting every `specs/decisions/ADR-0NN-*.md` file's H1 number
+equals the NN in its filename — watched red on the current tree first, since
+the tree is red for it today.
 ### T-M42-19 — the CI-ceiling site sweep still fails OPEN on a figure without an `s`            [status: todo]
 Origin: PR #57, orchestrator verification after round 7 (the round the human's
 stopping rule made the last one). Logged, not fixed, under that rule.
