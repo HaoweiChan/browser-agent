@@ -459,6 +459,34 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M42-19 — the CI-ceiling site sweep still fails OPEN on a figure without an `s`            [status: todo]
+Origin: PR #57, orchestrator verification after round 7 (the round the human's
+stopping rule made the last one). Logged, not fixed, under that rule.
+Spec: `ci-numbers-are-derived`'s site sweep was inverted in round 7 from
+shape-matching to an enumerated site allowlist (`README.md`,
+`specs/decisions/*.md`, `docs/**/*.md`), and that inversion earned its keep —
+it found two stale CI ceilings in `docs/analysis.md` and `docs/support-matrix.md`
+that six rounds of shape patterns never looked for. But the *detection* half is
+still shape-bound: the figure rule matches `<n>s` forms and misses a CI ceiling
+written without the unit or with the unit spelled out. Verified by injection on
+the merged tree, three realistic sentences, one file each:
+  - `README.md`  + "On CI the fast gate tolerates 90 seconds."      -> PASSES green
+  - `ADR-002...` + "The CI wall-clock ceiling for invariant is 20." -> PASSES green
+  - `docs/analysis.md` + "CI budget for fast: 90s."                 -> correctly RED
+So the allowlist logic is sound and the site coverage is real; a stale ceiling
+phrased without a bare `s` suffix is still invisible in two of the three scanned
+trees. This is the eighth crop of the class PR #57 spent six rounds on, and it is
+recorded rather than chased because the human set a stopping rule: no round 8.
+Acceptance: the figure rule matches a CI ceiling regardless of unit form
+(`90`, `90s`, `90 seconds`, `90 sec`), the three injections above are watched red
+first, and the two legitimate exemption labels (`[historical]`, `[local]`) still
+suppress what they suppress. Consider `T-M42-18`'s question in the same change:
+if the site sweep is sufficient, the two older shape anchors should be DELETED
+rather than repaired — that is a decision, not a patch.
+Out of scope: the line-scoped-label cost declared in the round-7 code comment
+(a line carrying both a labelled and a live figure is wholly exempt); that one is
+accepted and named, not a defect.
+
 ### T-M42-17 — a prose-guard assert that exercises a copy of the pattern, not the pattern            [status: todo]
 Origin: PR #57 R34 (LOW).
 Spec, the finding verbatim: "The third of the three new prose-guard asserts is
