@@ -141,9 +141,12 @@ four repaired, each watched red first:
     `index`, `near` and `extract_all` all select from the set BEFORE the
     uniqueness check — so `{name: 'Add to cart', index: 0}` moved off the row CTA
     onto an `ADD TO CART` banner above it, no ambiguity, nothing in the trace.
-    Fix: each name tier is now two passes, case-exact first, folded only if that
-    finds nothing — so nothing changes on a page that spells the name the plan's
-    way. A folded resolution says so: `narrowed: name-case-folded`. Cases
+    Fix: case-exact first, folded only if that finds nothing. **Round 2 (R10)
+    then falsified the "nothing changes" half of that sentence** — two passes is
+    two SETS, and `index` was applied to each in turn, so `index: 0` and
+    `index: 1` returned the same element. ADR-032 settles it: one set per tier,
+    chosen once, fallback and never union. A folded resolution says so:
+    `narrowed: name-case-folded`. Cases
     `resolver-case-twin-index-picks-the-exact-spelling`,
     `resolver-case-twin-near-picks-the-exact-spelling`,
     `resolver-case-fold-is-recorded-in-the-trace`, fixture `case-twins.html`.
@@ -169,6 +172,34 @@ R2, R7, R8, R9 were routed to debt and are logged below as T-M42-20-D5..D8;
 T-M42-20-D4 is the role-level engine disagreement R3's widening exposed.
 The suite grew by six and got FASTER — `LATE_OPTIONS_DELAY_S` 1.0s -> 0.5s and
 the 10s wait -> 2s more than paid for it.
+Update 2026-08-27 — PR #60 round 2: four findings, three repaired, two logged.
+The pattern the orchestrator named is the real finding — each round's fix was
+right about its own defect and wrong about the mechanism around it — so round 3
+closes the SEMANTICS in **ADR-032** rather than patching a third symptom.
+  - R10 (HIGH). Two passes is two SETS, and `index` was applied to each in turn,
+    so `index: 0` and `index: 1` returned the same element and a plan asking for
+    the second match answered `success` with the first. ADR-032: a tier is ONE
+    match set, chosen once — exact counted first, folded used only if that is
+    EMPTY. Fallback, not union; a union puts the twins back into the set `index`
+    indexes, which is R1 again. Case `resolver-index-selects-from-one-match-set`.
+    The four sentences claiming byte-for-byte behaviour while it was false are
+    corrected, and now TRUE for `index` as well as uniqueness.
+  - R11. Round 1's non-string guard covered one key of four: the role tier's
+    exact pass hands `name` to Playwright and `_nearest` calls `near.strip()`,
+    both before `_whole_string`. The guard moved to the top of `resolve()`, over
+    `name`/`text`/`near`/`anchor`. Three cases, all `invariant`.
+  - R12. The `/`-escape shipped with no case that could go red — the reviewer
+    deleted it and the whole gate stayed green — and the widened round-trip check
+    excludes the one role carrying the offending name. Case
+    `resolver-folded-name-with-a-slash-resolves` reaches it directly.
+  - R13, R14 → debt, T-M42-20-D9 and -D10.
+Wall clock is now the binding constraint and was met by REMOVING waste, which is
+ADR-021's own ruling: the select step got its own budget
+(`SELECT_OPTIONS_WAIT_MS`, 1s) instead of borrowing `SETTLE_BUDGET_MS`, and
+`LATE_OPTIONS_DELAY_S` went 0.5s -> 0.3s. `invariant` went 17.22s -> 16.04s
+(the cliff where the rule stops giving 20 is 17.39s) and `fast` sits at 90.99s
+against a 91.30s cliff — 0.26s from the ledger's slowest row. Stated against the
+LEDGER MAX, not the published band, which is R13's lesson.
 STILL OPEN, and the reason this block is not closed: the deployment tracks
 `main`, so a 3-rep smoke run before this branch merges would measure the
 pre-fix build. No run ids are published here because no run was made (rule 4).
@@ -530,6 +561,54 @@ Spec: a debt item that RESTATES a ledger will drift from it; make D3 cite the
 ledger (suite, env, count) instead of enumerating rows, or teach a check to read
 enumerated ledger rows out of TODO.md the way the band checks read the ADR.
 Acceptance: no debt block in this file restates ledger rows it does not derive.
+
+### T-M42-20-D9 — the round's wall-clock story is told against the published band, not the ledger max            [status: todo]
+Origin: PR #60 R13 (LOW, routed to debt). Two stale claims, one class.
+Evidence, verbatim. (1) `T-M42-20-D8`, added in the round-1 commit, says in the
+present tense that "`published-band-slack-is-declared` independently reports
+`headroom_s {fast: 1.05}`". Running that case on the round-2 tree gives
+`{'declared_slack_s': 4.35, 'headroom_s': {'fast': 1.86, 'invariant': 1.02}}` —
+the scalar is not one the grader produces any more. (2) Headroom there is
+measured against the PUBLISHED band, not the ledger's maximum. At 227 cases the
+committed ledger held four `fast` rows — 89.32, 89.44, 90.46, 90.66 — so the
+real margin to the next rounding step is `91.30 - 90.66 = 0.64s`, TIGHTER than
+the 0.81s `T-M42-20-D3` raised the debt for, while the round-1 entry summarises
+the round as "grew by six and got FASTER". Both statements were true of the
+numbers they cited and neither cited the number that binds. (3) It also inverts
+the stated reason for tagging the new 2s case `invariant`: the grader reports
+`invariant` headroom 1.02s against `fast`'s 1.86s after the move, so the suite
+the case was moved INTO now has less published headroom than the one it was
+moved out of — the ledger-max picture still favours the move, which is why this
+is LOW, and ADR-019 §3 discloses the 13.76 -> 16.37 jump.
+Spec: pick ONE number as the one the wall-clock story is told against — the
+ledger maximum, not the published band, since that is what item 3 (same-ceiling)
+actually grades — and state it wherever the story is told (D3, D8, ADR-019 §2).
+Then stop restating grader output in prose: cite the case and let a reader run
+it, the way the band bullets cite the ledger.
+Acceptance: no debt block quotes a headroom scalar, and the margin figure that
+appears in D3/D8/ADR-019 §2 is derived from the same maximum
+`published-band-matches-the-ledger` item 3 uses.
+
+### T-M42-20-D10 — a resolution that used TWO relaxations discloses only one            [status: todo]
+Origin: PR #60 R14 (LOW, routed to debt). Named as an open question in ADR-032's
+"What this does NOT settle".
+Evidence, verbatim: `resolver.py`'s `near` branch returns
+`loc.nth(i), 'structural', ((f'near-{how}' if how in ('normalised','prefix') else None) or fold)`
+— the `or` short-circuits, so a truthy `near-normalised` hides `name-case-folded`.
+On a page with two links both named `SAVE FOR LATER` beside anchors
+`Ada's row` / `Bob row`, target
+`{'role':'link','name':'Save for later','near':"Ada's row"}` resolves tier
+`structural` with note `near-normalised` — the case fold is not reported
+anywhere. `resolver-case-fold-is-recorded-in-the-trace` uses `index: 0`, which
+cannot reach this branch.
+Spec: join the non-None parts rather than picking one — the trace note is a list
+of what was relaxed, not a single label — and pin it with a case whose
+`trace_note_contains` requires `name-case-folded` on a `near-normalised`
+resolution. Cheap, but it changes the shape of a graded string, so every
+existing `trace_note_contains` expectation has to be re-read against it first;
+that is why it is not done in the round that found it.
+Acceptance: both labels appear when both relaxations were used, and no existing
+`trace_note_contains` case changes meaning.
 
 ### T-M39-14 — the front-page baseline cites a run that failed, and the rule set makes it unfixable in place            [status: todo]
 Origin: found on merged `main` (`7e0b662`) by the session that had driven PR #52,

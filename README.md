@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 227 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 229 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00
 ```
@@ -50,14 +50,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260826-180006-fast.json`, with
-`evals/report/20260826-175831-invariant.json` and
+Latest offline baseline — `evals/report/20260826-184406-fast.json`, with
+`evals/report/20260826-184230-invariant.json` and
 `evals/report/20260826-132658-live.json`:
 
 ```
-fast  226/227    invariant  76/77    live  11/11    $0.0000    90.5s
-recovery 9/9 verified (19 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 61/61 · 14 replans
+fast  228/229    invariant  79/80    live  11/11    $0.0000    91.0s
+recovery 9/9 verified (20 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
+diagnosis 62/62 · 14 replans
 ```
 
 `live` is not part of the gate, and it goes red when a site is having a bad
@@ -179,8 +179,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 227 | 89.44s | 102.86 | **105s** |
-| `invariant` | 77 | 16.37s | 18.83 | **20s** |
+| `fast` | 229 | 91.04s | 104.7 | **105s** |
+| `invariant` | 80 | 15.88s | 18.26 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of one run (`14a6a7b`, 213 `fast` / 74 `invariant` cases, the tree this
@@ -422,7 +422,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 241 cases (227 of them in the offline gate), it
+The eval set is not weak; it is 246 cases (229 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

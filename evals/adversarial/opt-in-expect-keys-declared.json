@@ -32,6 +32,7 @@
         "loop-refuses-a-document-root-extract",
         "probe3-quotes-most-quoted-author",
         "resolver-case-fold-is-recorded-in-the-trace",
+        "resolver-folded-name-with-a-slash-resolves",
         "resolver-narrows-by-anchor-proximity",
         "resolver-narrows-identical-matches",
         "resolver-narrows-singular-noun-ending-in-s",

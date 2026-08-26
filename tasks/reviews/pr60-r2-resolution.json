@@ -1,0 +1,88 @@
+{
+  "task": "T-M42-20",
+  "branch": "task/T-M42-20-fix",
+  "pr": 60,
+  "round": 2,
+  "reviewed_commit": "04cc136",
+  "counts": {
+    "findings": 4,
+    "repaired": 3,
+    "logged_as_debt": 2,
+    "rejected": 0,
+    "new_cases": 5,
+    "new_adr": "ADR-032",
+    "note": "R13 and R14 were both routed to debt; the counts add to 5 because R13's acceptance also touches prose this round had to rewrite anyway (the band bullets), which is stated under R13 rather than silently done."
+  },
+  "headline": "The orchestrator's framing was the actual finding: three rounds running, a fix was correct about its own defect and created a new one in the same mechanism. Round 3 does not patch a third symptom — it writes ADR-032, which settles what a match set IS when a tier has two matchers, and then makes the code obey it.",
+  "gate": {
+    "invariant": "80/80 = 1.000, wall 15.82s, ceiling 20",
+    "fast": "229/229 = 1.000, wall 90.38s, ceiling 105"
+  },
+  "wall_clock": {
+    "constraint": "Both suites reached their rounding step this round. `invariant` hit 17.22s against a 17.39s cliff (where the rule stops deriving 20) and `fast` recorded 91.04s against 91.30s.",
+    "answer": "Removed waste rather than asking for a ceiling, which is ADR-021's own ruling quoted in ADR-029: the select step got its OWN budget (`SELECT_OPTIONS_WAIT_MS`, 1s) instead of borrowing `SETTLE_BUDGET_MS` (2s), and `LATE_OPTIONS_DELAY_S` went 0.5s -> 0.3s. Result: invariant 17.22 -> 15.82s, fast 91.04 -> 90.38s, with five cases added.",
+    "stated_honestly": "The published band cites the ledger's slowest row at 229 (91.04s), and the margin quoted in ADR-019 section 2 is now 0.26s against that MAXIMUM rather than the larger number the published band implies — which is R13's lesson applied in the same commit that logs R13."
+  },
+  "findings": [
+    {
+      "id": "R10",
+      "severity": "HIGH",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "semantics_settled": "ADR-032 — a name tier resolves to exactly ONE match set per document. `scope_tiers` carries the exact locator and a folded alternative; `_resolve_in` counts the exact one ONCE and swaps in the folded one only if it is empty. Everything downstream (`near`, `index`, `many`, `n == 1`, M38's ambiguity bookkeeping) sees a single locator and cannot tell how it was chosen.",
+      "which_option_and_why": "Fallback, not union — the reviewer's first option, and the ADR says why the second is rejected: a union contains the case twins, so `index`, `near` and `many` read a set the plan was not written against, which is PR #60 R1 arriving by another route. Fallback also buys the stronger property the four falsified sentences were reaching for: if the page spells the name the plan's way, the fold is never consulted, at any tier, for any rule.",
+      "red_first": "resolver-index-selects-from-one-match-set (fast), `{'role':'link','name':'Add to cart','index':1}` on case-twins.html: on 04cc136 the run is `{'status':'success','answer':'Catalogue row CTA'}` — the SAME element `index: 0` returns. Expected `failure:locate`, which is what base 6b016b5 gave. Now `failure:locate`.",
+      "four_sentences_corrected": [
+        "src/browser/resolver.py — the scope_tiers comment now states one-set-per-tier and names ADR-032",
+        ".claude/skills/browser-domain/SKILL.md — the tier paragraph rewritten around the set, with both falsified attempts recorded",
+        "tasks/TODO.md — the round-1 entry now says R10 falsified the 'nothing changes' half of its own claim",
+        "evals/adversarial/resolver-case-twin-index-picks-the-exact-spelling.json — provenance rewritten"
+      ],
+      "cost": "One extra `count()` per name tier per document. Every path except `near` was already paying it; `near` now pays it too, which is the price of proximity and indexing agreeing about what they select from."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "The guard moved OUT of `_whole_string` and to the top of `resolve()`, before any locator is built, over `name`, `text`, `near` and `anchor`. `_whole_string` keeps a one-line check as a local invariant for a caller that does not route through `resolve`, and its docstring no longer claims to be the choke point — that claim is what R11 falsified.",
+      "why_locate_not_task": "`locate` is the class base 6b016b5 gave, and failure class is a graded output (INV-1). A `task`-class plan refusal is arguably more correct — it is a bad PLAN, not an absent element — but it means teaching `plan_gap` about value types, which was declined in round 1 for the same reason and is unchanged.",
+      "red_first": [
+        "resolver-non-string-name-is-a-locate-failure: `failure:act` — `AttributeError: 'float' object has no attribute 'replace'`",
+        "resolver-non-string-near-is-a-locate-failure: `failure:act` — `AttributeError: 'float' object has no attribute 'strip'`",
+        "resolver-non-string-name-is-a-list: `failure:act` — `AttributeError: 'list' object has no attribute 'replace'`"
+      ],
+      "suite_tags": "All three `invariant`, not `fast`: they are must-always-hold diagnosis properties and the `fast` band could not pay for them. `resolver-non-string-target-is-a-locate-failure` (the `text` key) stays in `fast` as the representative."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "New case `resolver-folded-name-with-a-slash-resolves` (fast) targeting a button on `case-twins.html` whose label is uppercased by stylesheet and contains `/` — so the exact pass finds nothing, the FOLDED pass runs, and it is the only pass that builds a regex. `button` stays in `resolve_advertised_except` on the inspector case (that exclusion is the ROLE disagreement T-M42-20-D4, a different thing), and this case reaches the crash directly instead.",
+      "red_first": "With `.replace(\"/\", r\"\\\\/\")` deleted from resolver.py, the case is `failure:act`: `Error: Locator.count: InvalidSelectorError: Error while parsing selector `button[name=/^\\\\s*EXPORT\\\\s+AS\\\\s+\\\\.HTM\\\\s+/\\\\s+\\\\.HTML\\\\s+/\\\\s+\\\\.TXT\\\\s*$/i]` - unexpected symbol \"\\\\\" at position 40 during parsing attribute value`. With the escape in place it is `success`. The reviewer's own check — delete the escape, run the gate — now fails at this case instead of staying green.",
+      "note": "`trace_note_contains: narrowed: name-case-folded` is asserted too, so a case that stopped reaching the folded pass cannot pass for the wrong reason."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D9",
+      "note": "Logged with the grader's current output verbatim (`{'declared_slack_s': 4.35, 'headroom_s': {'fast': 1.86, 'invariant': 1.02}}`), the four ledger rows at 227, and the 0.64s real margin. D8's stale scalar is NOT edited, per the routing. What this round DID do — because it had to rewrite the band prose anyway — is state the margin against the ledger MAXIMUM in ADR-019 section 2 and in this round's TODO entry, which is R13's acceptance for the prose it touched. The general fix (pick one number, stop restating grader output) stays open in D9."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D10",
+      "note": "Logged with the `or`-short-circuit line verbatim and the two-anchor repro. Not fixed: joining the labels changes the shape of a graded string (`trace_note_contains`), so every existing expectation using that key has to be re-read against it first. Also named in ADR-032's 'What this does NOT settle'."
+    }
+  ]
+}

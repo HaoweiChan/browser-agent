@@ -21,15 +21,26 @@ not. A `<label>` under `text-transform: uppercase` reaches the planner shouting
 and comes back unresolvable — that is how M42's live clause died 3/3 in both
 modes on a control the page rendered perfectly.
 
-**The ORDER is the whole of it, and getting it wrong shipped a silent
-wrong-success.** `index`, `near` and `extract_all` all select from a tier's match
-SET *before* the `n == 1` uniqueness check or any ambiguity bookkeeping runs, so
-a case-blind first pass silently widens what they select from: with the fold
-first, `{name: 'Add to cart', index: 0}` moved off the row CTA onto an
-`ADD TO CART` promo banner above it — no `ambiguous-match`, nothing in the
-trace. Exact-first means a page that spells the name the plan's way behaves
-exactly as it did before T-M42-20, and only a page that spells it no other way
-reaches the fold. Cases: `resolver-case-twin-index-picks-the-exact-spelling`,
+**ONE SET, chosen before anything selects from it — read ADR-032 before touching
+this.** `index`, `near`, `many` and the `n == 1` uniqueness check all select from
+a tier's match SET, and two review rounds found the same silent wrong-success by
+giving them different sets to read. Round 1 made the fold *the* matcher and the
+set grew: `{name: 'Add to cart', index: 0}` moved off the row CTA onto an
+`ADD TO CART` banner, no `ambiguous-match`, nothing in the trace. Round 2 made it
+two ordered passes and applied the rules to each in turn, so `index` was re-based
+per pass: `index: 0` and `index: 1` returned THE SAME element and a plan asking
+for the second match was answered `success` with the first.
+
+What ships is neither: `_resolve_in` counts the exact locator once and swaps in
+the folded one only if it is EMPTY, so everything downstream sees a single
+locator and cannot tell how it was chosen. **Fallback, not union** — a union puts
+the twins back into the set `index` indexes, which is round 1 again. The
+consequence, and this time it is true for every rule and not just uniqueness: a
+page carrying an exact-case match never consults the fold at all and resolves
+byte-for-byte as it did before T-M42-20; `index: k` past the exact matches is a
+loud `element-not-found`, as it always was. Cases:
+`resolver-index-selects-from-one-match-set`,
+`resolver-case-twin-index-picks-the-exact-spelling`,
 `resolver-case-twin-near-picks-the-exact-spelling`.
 
 So the collision claim is CONDITIONAL: two names differing only in case collide
@@ -41,10 +52,15 @@ so — trace note `narrowed: name-case-folded`, pinned by
 `resolver-case-fold-is-recorded-in-the-trace`. Whitespace is collapsed to `\s+`
 and `/` is escaped, because Playwright normalises whitespace for STRING matching
 but tests a regex against RAW text, and serialises the pattern into a `/…/flags`
-selector literal a bare slash would terminate. A non-string `name`/`text` is
-refused in `_whole_string` as a `locate` failure — `.split()` raising
-`AttributeError` got the step classified `act`
-(`resolver-non-string-target-is-a-locate-failure`).
+selector literal a bare slash would terminate
+(`resolver-folded-name-with-a-slash-resolves` — role tier only; `get_by_text`
+with the same pattern does not crash). A non-string `name`/`text`/`near`/`anchor`
+is refused at the TOP of `resolve()`, before any locator is built, as a `locate`
+failure. Refusing inside `_whole_string` was the first attempt and covered one
+key of four: the role tier's exact pass hands `name` straight to Playwright and
+`_nearest` calls `near.strip()`, both before `_whole_string` is reached, so the
+`AttributeError` still got the step classified `act`
+(`resolver-non-string-target-is-a-locate-failure` and its three siblings).
 
 **`near` anchors fold too, and only at the exact pass** (`_nearest`, PR #60 R5):
 an anchor is quoted off the same observation a name is, so `near: 'TOTAL'` on an

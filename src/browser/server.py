@@ -862,6 +862,7 @@ const ADRS = [
   ["029", "the offline time ceiling moves to what the grown suite actually measures on this machine — and says plainly that CI's is not yet measured"],
   ["030", "the sec-10k inspector probe's tasks and pass bar are frozen in a commit before it runs; that site's own API may supply ground truth to the eval side and to nothing else; the row it declares says it measures one execution mode"],
   ["031", "the Chinese-language probe's tasks, its paired English arm and its pass bar are frozen before it runs, so \u201c中文都會失敗” is graded against criteria fixed in advance"],
+  ["032", "a locator tier is ONE match set: the case-exact matcher is counted first and the case-folded one used only when it is empty, so index, near and enumeration never select from a set the plan was not written against"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;
@@ -1422,10 +1423,12 @@ async def fixture_hang():
 #
 # The measured first read of `el.options` is ~0.1s after `goto` (this case's own
 # red-first run finished navigate + observe + select + verification in 108ms).
-# 0.5s is 5x that, and ~3x even on a CI runner measured at ~1.6x this machine.
-# It was 1.0s until PR #60 added five cases to the same suite and the band's
-# headroom, not the margin, became the binding constraint.
-LATE_OPTIONS_DELAY_S = 0.5
+# 0.3s is 3x that, and it must also stay well under `agent.SELECT_OPTIONS_WAIT_MS`
+# (1s) or the case grades the timeout instead of the wait. It was 1.0s, then 0.5s:
+# each of PR #60's rounds added cases to a suite whose published band ships under
+# one rounding step of headroom, and this is the only knob in the case that costs
+# wall clock without measuring anything (T-M42-20-D3/D9).
+LATE_OPTIONS_DELAY_S = 0.3
 LATE_OPTIONS = ["aapl-2025", "msft-2013", "nvda-2024"]
 
 

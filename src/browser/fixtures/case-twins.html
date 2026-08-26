@@ -7,6 +7,7 @@
      is the shouted one. Chromium's accessibility snapshot applies this;
      Playwright's locator engine does not. */
   th { text-transform: uppercase; }
+  .shout { text-transform: uppercase; }
 </style>
 
 <h1>Case twins</h1>
@@ -44,3 +45,15 @@
   <tr><th>Total</th><td>10</td></tr>
   <tr><th>Subtotal of Total line</th><td>99</td></tr>
 </table>
+
+<h2>Export</h2>
+<!-- A name containing `/`, reachable ONLY through the folded role tier: the
+     label is uppercased by stylesheet, so the observation advertises
+     `EXPORT AS .HTM / .HTML / .TXT` and the exact pass finds nothing. Playwright
+     serialises a regex `name=` into its own `/…/flags` selector literal, so an
+     unescaped slash terminates it and `get_by_role` dies with
+     InvalidSelectorError — which `classify` calls `act`. PR #60 R12: the escape
+     shipped with no case that could go red, and this is that case's page.
+     `get_by_text` with the same pattern does NOT crash, so the shape is
+     role-tier-specific and the target below has to be a role+name. -->
+<p><button id="export" class="shout">export as .htm / .html / .txt</button></p>

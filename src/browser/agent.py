@@ -59,6 +59,22 @@ NEEDS_TARGET = {"click", "fill", "extract", "extract_all", "observe", "select_op
 # string literals that can drift apart.
 OPTIONS_JS = "el => el.options ? [...el.options].map(o => [o.value, o.label]) : null"
 
+# How long the select step waits for a fetch-painted `<select>` to fill.
+#
+# Deliberately its own knob, not SETTLE_BUDGET_MS, for the reason SETTLE_BUDGET_MS
+# already gives about the fix budget: they answer different questions. Settling is
+# "has the page finished loading"; this is "has one control's own network round
+# trip landed", asked on a page that already fired `load` and already resolved the
+# element. It is also the only budget in this file that is paid IN FULL on the
+# failure path — every control that never fills costs exactly this much — so it is
+# the one that shows up in the suite's wall clock, and `max_ms` on
+# `action-select-option-never-filled-fails-loud` is what keeps that visible.
+# 1s against a fixture whose options land at 0.3s and a first read measured at
+# ~0.1s. A slower page loses the wait and fails loudly, which the replan ladder
+# can act on; a longer budget buys that back at a price the published band cannot
+# currently pay (T-M42-20-D3/D9).
+SELECT_OPTIONS_WAIT_MS = 1_000
+
 # Actions that leave the page as they found it, so `attempt` does not pay for a
 # before/after comparison. `observe` reads, and `final_answer` is the loop's
 # terminal call — it acts on nothing at all.
@@ -1123,17 +1139,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # then reads a list that arrived seconds earlier
                             # (measured: 10.2s vs 1.6s on the case below).
                             #
-                            # SETTLE_BUDGET_MS, not the 10s the select call
-                            # below gets: this is the same "how long may a page
-                            # take to do something before we read it anyway"
-                            # question `navigate` and every postcondition
-                            # already answer, and it is paid IN FULL by every
-                            # control that never fills. At 10s that was 10.0s
-                            # per such step with no case measuring it, inside a
-                            # wall-clock-gated suite (PR #60 R4, case
+                            # SELECT_OPTIONS_WAIT_MS, not the 10s the select
+                            # call below gets: this budget is paid IN FULL by
+                            # every control that never fills, and at 10s that was
+                            # 10.0s per such step with no case measuring it,
+                            # inside a wall-clock-gated suite (PR #60 R4, case
                             # action-select-option-never-filled-fails-loud).
                             await loc.locator("option").first.wait_for(
-                                state="attached", timeout=SETTLE_BUDGET_MS)
+                                state="attached", timeout=SELECT_OPTIONS_WAIT_MS)
                         except Exception:
                             pass  # let the empty-offer message below say it
                         opts = await loc.evaluate(OPTIONS_JS)

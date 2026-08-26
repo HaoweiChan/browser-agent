@@ -1,0 +1,33 @@
+{
+  "id": "resolver-folded-name-with-a-slash-resolves",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What does the export button say?",
+    "fixture": "case-twins.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "button",
+          "name": "EXPORT AS .HTM / .HTML / .TXT"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "export as .htm / .html / .txt",
+    "trace_note_contains": "narrowed: name-case-folded"
+  },
+  "provenance": "PR #60 R12: the `/`-escape shipped in round 1 with NO case that could go red. The reviewer deleted the `.replace(\"/\", ...)` call and ran the whole gate — `invariant` 77/77 and `fast` 227/227, both green with the fix removed — and the widened round-trip check that had found the crash now lists `button` in `resolve_advertised_except`, which is the role carrying the offending name, so the suite could not reach it by construction. This case reaches it directly. Playwright serialises a regex `name=` into its own `/…/flags` selector literal, so an unescaped slash terminates the literal and `get_by_role` raises `InvalidSelectorError` — which `classify` reads as `act`, i.e. a page-content-dependent crash misdiagnosed as an action failure. The button's label is uppercased by stylesheet, so the exact pass finds nothing and the FOLDED pass — the only one that builds a regex — is what runs. A sweep of the other special characters through the role tier found no sibling, so one case covers it.",
+  "triage": {
+    "class": "coverage",
+    "red_first": "PENDING",
+    "note": "Role tier specifically: `get_by_text` with the same pattern returns count 1 and does not crash, so a text-tier case would grade nothing. `trace_note_contains` is asserted too, because a case that stopped reaching the folded pass would otherwise pass for the wrong reason."
+  }
+}

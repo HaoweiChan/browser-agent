@@ -1,0 +1,32 @@
+{
+  "id": "resolver-index-selects-from-one-match-set",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What does the SECOND 'Add to cart' link say?",
+    "fixture": "case-twins.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "Add to cart",
+          "index": 1
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "PR #60 R10, and the reason ADR-032 exists. The two-pass name tier introduced in round 1 was two SETS, and `index` was applied to each in turn — so when the exact pass held fewer than `index + 1` matches the loop fell through and indexed the FOLDED set instead. On `case-twins.html` that made `index: 0` and `index: 1` return the same element and answered \"what does the SECOND link say?\" with the first link, where base `6b016b5` raised a loud `element-not-found`. ADR-032 settles the semantics rather than patching the symptom: a tier is ONE match set, chosen once — the folded pass is a fallback for an EMPTY exact pass, never a supplement to a non-empty one — and every downstream rule (`near`, `index`, `many`, uniqueness, ambiguity) reads that one set. Union was the other candidate and is rejected in the ADR: unioning puts the case twins back into the set `index` indexes, which is exactly the round-1 defect (R1) returning by another route.",
+  "triage": {
+    "class": "regression",
+    "red_first": "PENDING",
+    "note": "This is the case that makes the byte-for-byte claim TRUE rather than nearly true: with one set per tier, a page carrying an exact-case match never consults the fold at all, so `index` counts what it counted before T-M42-20 — here, one match, and a second index is a loud failure. The four sentences that claimed this while it was false are corrected in the same commit (resolver.py, SKILL.md, tasks/TODO.md, and the index case's own provenance)."
+  }
+}
