@@ -33,20 +33,24 @@ again.
 
 The number is `_band_rule(max)` over the local rows at the current case count,
 which is the same function `published-band-matches-the-ledger` uses to grade it.
-Nothing here is hand-arithmetic; ADR-019 §2's republished band bullet carries
-the cited run and the arrow, and item 5 grades that the arrow is the rule's own
-answer. It comes out at **105s**: 88.42s measured, × 1.15 = 101.68, rounded up
-to a multiple of five.
+Nothing here is hand-arithmetic, and nothing here restates it. **ADR-019 §2's
+band bullet is the one place this repo publishes the band figure and the arrow
+it derives**, because it is the one place `published-band-matches-the-ledger`
+grades — its item 2 (cited-run) against the ledger row, its item 5 (derivation)
+against the rule. Read the number there. What this ADR commits is the ceiling
+that arrow lands on, **105s**, which `WALL_BUDGET_S` holds and
+`fast-wall-clock-budget` enforces.
 
 Two steps, not one, and the second step is machine variance rather than case
-count: the committed rows at this count are spread across most of a second,
-while the band this replaces was measured in a quieter session on the same
-laptop. Neither the spread's endpoints nor that earlier figure is written here.
-The endpoints move with every gate run, so a literal for them is a fact that
-falsifies itself on the next commit; the earlier figure belongs to a smaller
-tree, and a wall clock carried across case counts is exactly what PR #56 round 3
-found (see the struck note below). `adr029-variance-cites-the-ledger` reads what
-IS published here back against the rows at the shipped case count. That spread is the property ADR-013's rule is built around — SLOWEST observed,
+count: the rows at this count differ from one another, while the band this
+replaces was measured in a quieter session on the same laptop. No magnitude for
+that difference is given, no endpoint is named, and no wall clock is retyped.
+The ledger gains a row on every gate run — including the verification runs of
+the review loop that read this sentence — so any prose describing its maximum,
+its spread or its endpoints is falsified by the act of checking it. Five rounds
+of findings in this class (PR #56 R5, R14-R16, R19-R23) all reduce to that one
+sentence. `adr029-variance-cites-the-ledger` is what keeps this section from
+acquiring such a literal again. That difference is the property ADR-013's rule is built around — SLOWEST observed,
 not median — and exactly what T-M39-13 warns makes a band fragile. Publishing
 the median would be choosing rather than deriving, and would leave the next
 honest gate run red.
