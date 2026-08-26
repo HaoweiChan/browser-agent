@@ -1,0 +1,48 @@
+{
+  "pr": 58,
+  "task": "M41",
+  "round": 3,
+  "result": "REQUEST_CHANGES",
+  "reviewer": "pr-loop/pr-reviewer (fresh context, repair diff 48d02f7..d6e6cff + the three standing findings)",
+  "date": "2026-08-26",
+  "circuit_breaker": "FIRED — three review rounds without approval. The orchestrator stops here and escalates to the human rather than opening a fourth round on its own judgment. Routes below are PROPOSED, contingent on the human choosing option A; under option B every finding here becomes named debt instead.",
+  "standing_findings_verdict": {
+    "R6": "adequately repaired — the derived count was verified by construction: perturbing `_check_ground_truth_endpoint_eval_only` to return 3 and then 5 `wrong` keys reddens `docs-numbers-are-derived` both times with neither document touched. R9 and R10 are new defects in the repair's prose and comments, not a re-report of R6.",
+    "R7": "adequately deferred — T-M41-7 exists under `## Debt` with `Origin: PR #58 R7` and the evidence verbatim; nothing was quietly fixed in code instead, and the substring generalisation the implementer added is true of `readme_quotes`.",
+    "R8": "NOT adequately repaired — re-reported below under its original id. The original R1 note is genuinely intact and the correction is genuinely appended rather than a rewrite, so the orchestrator's constraint was honoured; but the corrected reason is itself false."
+  },
+  "convergence_note": "Severity has moved monotonically down and has never included a HIGH: round 1 = 3 MEDIUM / 2 LOW, round 2 = 1 MEDIUM / 2 LOW, round 3 = 0 MEDIUM / 3 LOW. The gate has been green at every round and no execution-policy module (`agent`/`planner`/`observe`/`resolver`/`verifier`/`judge`) was touched anywhere in the PR. Every finding for two consecutive rounds has been documentation-truth inside one paragraph — ADR-030 §The ground-truth-endpoint boundary and the derived-numbers machinery that grades it — because each repair rewrites that paragraph. That is the tail the circuit breaker exists for.",
+  "findings": [
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route_proposed": "repair",
+      "blocker": true,
+      "claim": "The R6 repair introduces a new false sentence into the exact ADR section it was filed against — the ADR says \"The first three all scanned MODULES\" one line after saying the missing conjunct IS the third — and the same commit's support-matrix calls that conjunct \"the fourth\", so the two documents disagree on which conjunct the R2 evidence describes.",
+      "evidence": "specs/decisions/ADR-030-m41-sec10k-inspector-probe.md:136-158 enumerates in this order: (1) endpoint path in no `src/browser/` module but `eval_adapter.py`; (2) host in none but `eval_adapter.py`/`server.py`; (3) no eval case feeds that endpoint through its `input` block; (4) every case with `expect.answer` names the endpoint. Line 151 then reads \"The third conjunct is the one that was missing… The first three all scanned MODULES; none looked at what a case FEEDS a run.\" Under the ADR's own ordering the third IS the new one, so \"the first three all scanned MODULES\" is false; under the chronological reading it is also false, because the pre-existing citation conjunct scans `evals/**/*.json`, not modules (src/browser/eval_adapter.py:5169-5193). docs/support-matrix.md:319, changed in the same commit d6e6cff, says \"4 conjuncts each watched red — the fourth added at PR #58 R2\", while src/browser/eval_adapter.py:5195-5199 emits the new key `ground_truth_endpoint_fed_to_the_executor` THIRD in `wrong` and `cases_not_citing_the_ground_truth_endpoint` fourth.",
+      "repro": "sed -n '136,158p' specs/decisions/ADR-030-m41-sec10k-inspector-probe.md; sed -n '319p' docs/support-matrix.md | grep -o 'the fourth added at PR #58 R2'; source .venv/bin/activate && python3 -c \"import src.browser.eval_adapter as ea; print(list(ea._check_ground_truth_endpoint_eval_only()['wrong']))\"",
+      "acceptance": "ADR-030 and support-matrix D30 agree on the ordinal of the input-scan conjunct (matching the `wrong` key order the derived count reads), and the sentence about what the pre-existing conjuncts scanned is true — two scanned `src/browser/` modules and one scanned eval case files, and none of them read a case's `input`. `--suite invariant` and `--suite fast` stay green."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route_proposed": "repair",
+      "blocker": false,
+      "claim": "The R8 correction replaces one false claim about the grader with another: it states that `analysis_section1` is gated on a non-red headline report, and the committed code refutes that — the hook grades normally when the cited report is red.",
+      "evidence": "tasks/reviews/pr58-r1-resolution.json, R1.correction.the_real_reason_doc_quotes_was_needed: \"`analysis_section1` is gated on a non-red headline report (`if s1 and (head := ...)`), so a suite count parked there would stop being graded whenever the cited report went red\" — repeated in tasks/reviews/pr58-r2-resolution.json R8.found_while_checking and in the d6e6cff commit message, where it is the stated reason R8's alternative acceptance (fold into the existing hook) is \"the worse of the two options\". src/browser/eval_adapter.py:4826 reads `if s1 and (head := reports.get(ws[\"headline\"]) if ws else None):` — the walrus re-reads the parsed report out of the `reports` dict, so the `head = None` set at :4788 when `headline_report_is_red` fires does not reach it. A red headline report yields a truthy `head` and `analysis_section1` still formats and still grades.",
+      "repro": "PYTHONPATH=. python3 tasks/reviews/pr58-r3-repro-R8.py  — prints headline_report_is_red: True AND analysis_section1_does_not_say: True, showing the hook graded under a red report.",
+      "acceptance": "The `correction` object (and the r2 resolution's `found_while_checking`) either drops the non-red-report claim or restates it as what the code does — `analysis_section1` is gated on the headline report EXISTING and parsing, not on it being green; `head = None` at :4788 only suppresses the README wall-clock/metric quotes below it. The remaining, verified reason (KeyError on `{live}`/`{live_sites}` against `vals`) stands unchanged, and the original R1 `note` stays verbatim as it now is.",
+      "orchestrator_verification": "Claim VERIFIED independently by the orchestrator, both by reading src/browser/eval_adapter.py:4826 (the walrus re-reads `reports.get(...)`, bypassing the `head = None` at :4786) and by running the repro. The reviewer's own repro snippet was WRONG in one detail — it read `out['got']['docs']`, but `got` exposes only {'counts','domains'} — so the committed script scans the serialised result instead. The defect reproduces exactly as claimed; only the reviewer's access path was off."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route_proposed": "debt",
+      "blocker": false,
+      "claim": "The declared ceiling that makes the new derivation fallible — a conjunct folded into an existing `wrong` key is invisible to `gt_conjuncts` — is documented only at the consumer site and in the commit/resolution artifacts, never at the function a maintainer edits when adding a conjunct.",
+      "evidence": "The ceiling comment is at src/browser/eval_adapter.py:4712-4719, inside `_run_doc_counts_case`. The function whose edit triggers it, `_check_ground_truth_endpoint_eval_only`, starts ~400 lines later at src/browser/eval_adapter.py:5115 and its docstring (:5116-5147) and its `wrong` literal (:5196-5199) contain no mention of `gt_conjuncts`, of the two documents that quote the count, or of the folding ceiling: `grep -n gt_conjuncts src/browser/eval_adapter.py` returns only line 4721. The counterpart ceiling (`bool(cases)` is not counted) IS surfaced to readers in ADR-030:153-158; this one is not surfaced anywhere a maintainer of the check will read.",
+      "repro": "source .venv/bin/activate && python3 -c \"import src.browser.eval_adapter as ea,inspect; s=inspect.getsource(ea._check_ground_truth_endpoint_eval_only); print('gt_conjuncts' in s, 'ADR-030' in s)\"  # False False",
+      "acceptance": "One line in `_check_ground_truth_endpoint_eval_only`'s docstring or beside its `wrong` dict stating that `len(wrong)` is published as `gt_conjuncts` and quoted back out of ADR-030 and support-matrix D30, so a new conjunct needs its own key; suites stay green."
+    }
+  ]
+}
