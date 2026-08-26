@@ -79,6 +79,19 @@ the red-baseline probe is still worth running under mode B (it pins the
 failure shapes as cases either way), but the DECLARED matrix row should wait
 for M42 and be probed under both modes — M44 owns folding the loop-mode
 results back into this row.
+Update 2026-08-26 (ADR-030, this branch): the cross-repo dependency deployed,
+so the probe ran against the page shape that stays. Landed: a committed
+snapshot fixture, six offline cases and two live ones (each watched red first),
+the ground-truth-endpoint boundary as an invariant, ADR-030 pre-registering the
+probe in its own commit BEFORE the runs, the probe itself (4/6 correct, 2 loud,
+**0 wrong-success**, 0 refusals) and the matrix row + D30 declared from it by
+ADR-030's frozen rule -> `unreliable`. Scope ruling recorded in ADR-030: the row
+is declared NOW and labelled a MODE-B row, since M44 cannot fold loop-mode
+results into a row that does not exist. Two things worth carrying forward: the
+inspector's own build sha moved once inside this milestone (re-verified
+byte-identical, T-M41-3 is the missing guard), and an aborted harness attempt
+lost ~3 run ids to in-memory `RUNS` (D19) — recorded in ADR-030 §Outcome rather
+than rounded away. Debt filed: T-M41-1, T-M41-2, T-M41-3.
 Acceptance: a `docs/support-matrix.md` row for whaleforce-sec10k.zeabur.app
 declared under the report-assisted rule, carrying run ids, repeat counts, and
 BOTH build shas — this deployment's and the inspector's (`/api/meta` serves
@@ -263,6 +276,136 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M41-1 — the coverage tables in `docs/analysis.md` §6 drift because nothing grades their cells            [status: todo]
+Origin: M41, 2026-08-26. Found while republishing §6 for M41's eight new
+inspector cases (seven of them domain-tagged, which is the count §6's domain
+row carries; the eighth is the untagged invariant): the published task-class and difficulty tables were stale by
+up to nine in a single cell — TC1 published at 54 against an actual 63, L3 at
+17 against 21, "mechanism/unit probes" at 72 against 74 — while the split
+quote and the domain rows two lines below them were current, because those
+two ARE graded and the tables are not. `docs-numbers-are-derived`'s
+`analysis_coverage` block recomputes `{total} distinct cases ({golden} golden
++ {adversarial} adversarial)` from the case files and requires a row per
+live domain, and stops there; the cells are hand-typed and were never read
+back. This is the same defect that check was built for, one table lower.
+Spec: recompute both count tables from the case files' own `tc`/`level` tags
+the way the split quote already is — a `class_counts` / `level_counts` list
+of `{"label": ..., "tag": ...}` rows the grader formats and requires
+verbatim, so a re-typed cell is red. The L3 cell is prose plus a count and
+only its count is mechanically checkable; grade the count and leave the
+enumeration to the human, stating that split rather than pretending the
+sentence is derived. Watched red by re-typing one cell.
+Out of scope: the L3 enumeration's completeness, and the `— 4 live (one of
+them unrun) + 17 fixture` breakdown, which no tag carries.
+
+### T-M41-2 — an extraction answers with the LINE the value sits on, not the value            [status: todo]
+Origin: M41, 2026-08-26, ADR-030's probe and its two offline twins. Both
+frozen probe tasks — `What is the doc_status of the aapl-2025 fixture?` and
+`How many items are extracted?` — are answered from one status line,
+`doc_status: success — 18 extracted · 5 incorporated_by_reference fixture:
+aapl-2025`. ADR-030 froze "an answer that carries the ground-truth value is
+correct" BEFORE the runs, so this is not a threshold moved after the fact and
+the probe's numbers stand; but a caller who asked how many items were
+extracted got a sentence containing 18, not 18. Every guard passes honestly:
+`not_a_dump` sees 79 characters against a page of thousands, `grounded` and
+`identity_anchors` hold, and the judge certifies. Pinned as published
+behaviour by `sec10k-item-count-is-in-the-named-status` and
+`live-sec10k-authored-wait-reaches-the-item-count`, both of which carry the
+whole line as `expect.answer`, and declared in `docs/support-matrix.md` D30.
+Spec: decide whether answer granularity is this repo's problem at all, and
+record the decision either way. Two routes exist and one is a trap. The
+page-side route (an element per number) is not available in general and is
+not a capability of this agent. The executor-side route — a step that reduces
+an extracted string to the part the task asked for — is where the trap is:
+any pattern taken from the page is site-specific knowledge in the execution
+policy (rule 6), and any pattern taken from the task text is the
+`_AGGREGATE`/`SCOPE_BLOCK` ceiling D21 already names. A third possibility is
+that this is correctly the judge's business and not the executor's. No code
+until that is decided, and whatever is decided lands with its own red-first
+case.
+Out of scope: widening `extract`'s target vocabulary, which is M42's.
+
+### T-M41-3 — nothing detects that the committed inspector snapshot has stopped matching the deployed page            [status: todo]
+Origin: M41, 2026-08-26. `src/browser/fixtures/sec10k-inspector.html` is a
+rendered capture of `whaleforce-sec10k.zeabur.app` at the build the page
+reported as `6b37ffa99d05`, and five `fast` cases grade the page shape against
+it. The sha is recorded in every one of those cases' `provenance` and in
+`docs/support-matrix.md` D30, and NOTHING reads it back — which this milestone
+demonstrated the hard way: `/api/meta` answered a DIFFERENT sha by `curl` at
+capture time than the page's own footer showed, and it took a cold review of the
+committed file to notice that every document had recorded the wrong one. When the inspector
+redeploys, the offline cases keep passing against a page that no longer
+exists and the two `live` cases start failing for a reason nobody will
+attribute correctly — which is D28's build-expiry finding arriving from the
+target's side, exactly as the demo postmortem §2 predicted it would.
+Spec: a `live`-tagged case that reads `/api/meta` and compares `git_sha` to
+the sha the snapshot was taken at, failing loudly with both values when they
+differ. It belongs in `live`, not `fast`: `fast` must stay offline and $0
+with no network call, and a stale snapshot is a declaration problem, not a
+gate regression. Cheap — one GET, no browser. Watched red by comparing
+against a wrong sha.
+Out of scope: re-capturing the snapshot automatically. A capture is evidence
+about a build and re-taking it is a decision, the same way declaring a live
+row is (ADR-022).
+
+### T-M41-4 — the observe harness compares NAMES as a set, so it cannot see the ambiguity S3 was            [status: todo]
+Origin: M41 cold review, 2026-08-26. `_run_observe_case`
+(`src/browser/eval_adapter.py`) builds `names` and `roles` as SETS of the
+observation's elements and grades `must_include_names` / `must_exclude_names` by
+membership. Two consequences, one in each direction, and both land on M41's own
+cases. (1) `sec10k-extract-buttons-are-distinguishable` claims the three Extract
+buttons are distinguishable, but the demo shape S3 was three ELEMENTS sharing one
+name — an ambiguity `resolve()` reports as "3 matches at tier role" — and set
+membership is blind to multiplicity: give a second element one of the three
+labels and the case stays green while a plan naming that button resolves to two
+matches. What the case actually supports is "all three labels are present and
+differ from each other", which is weaker than what its name suggests. (2)
+`must_exclude_names` is exact-string membership, so
+`sec10k-item-text-region-is-past-the-observation-cap` goes VACUOUSLY true the day
+the target site rewords that aria-label — it stops being a claim about the
+observation cap without going red.
+Spec: give the observe harness a `name_counts` expectation — `{"<name>": n}`
+graded against a Counter over the observation's elements, so a case can say
+"exactly one element carries this name" and a second one reddens it. For the
+exclusion direction, an `must_exclude_names_present_on_page` companion (the name
+must be absent from the observation AND resolvable on the page) turns a vacuous
+pass into a red. Both watched red first: add a duplicate-labelled button to the
+snapshot for the first, reword the region label for the second.
+Out of scope: changing what the M41 cases claim — their triage notes already
+state these two ceilings; this block is the harness change that would let them
+claim more.
+
+### T-M41-5 — ADR-022's file names one number and its title another            [status: todo]
+Origin: M41 spec-drift audit, 2026-08-26; pre-existing, found while auditing this
+milestone rather than caused by it. `specs/decisions/ADR-022-m40-declaring-a-
+domain-from-live-runs.md` opens `# ADR-020:`. `adr-header-and-index` reads the
+NUMBER off the filename and the header shape off the body, so a body that
+announces a different number is unguarded, and every reader who quotes the title
+propagates the wrong one — M41 nearly did, attributing a mode-labelling rule to
+ADR-022 that ADR-022 does not contain.
+Spec: fix the title, and add the one-line conjunct that would have caught it —
+the first heading's number must equal the filename's. Watched red by flipping a
+digit in any ADR's title.
+Out of scope: whether ADR-020 and ADR-022 should be merged or cross-referenced;
+they are different decisions and only the heading is wrong.
+
+### T-M41-6 — the reviewer UI's decision digest is hand-kept and nothing grades it            [status: todo]
+Origin: M41 spec-drift audit, 2026-08-26. `src/browser/server.py`'s `ADRS` array
+renders "N architecture decisions" to every visitor and had gone two decisions
+stale — no 023 (on `main` since M39), no 027 (merged) — while a comment beside it
+asserted the numbering had exactly one gap. M41 added the three missing lines and
+deleted the false claim, which fixes today and not tomorrow: the next ADR
+reddens nothing.
+Spec: grade the digest the way `ui-examples-cover-matrix` grades the demo cards —
+the set of numbers in `ADRS` must equal the set of `specs/decisions/ADR-*.md`
+files, in both directions. One `parse`-free check, no browser. Watched red by
+deleting a line from the array. Deliberately does NOT grade the one-liner's
+CONTENT: whether a plain-English teaser is an honest compression is the same
+human-judgment act as an INDEX.md ruling line, and `adr-header-and-index` already
+declines to grade that.
+Out of scope: whether the digest should be generated from INDEX.md instead of
+hand-written — that is a bigger change and the check above makes either choice safe.
 
 ### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: todo]
 Origin: the ADR-027 planning commit, 2026-08-25, on a worktree of this branch.

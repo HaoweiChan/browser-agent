@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260826-065025-fast.json`, with
-`evals/report/20260826-064912-invariant.json` and
-`evals/report/20260826-064432-live.json`:
+Latest offline baseline — `evals/report/20260826-073201-fast.json`, with
+`evals/report/20260826-073029-invariant.json` and
+`evals/report/20260826-073048-live.json`:
 
 ```
-fast  187/187    invariant  67/67    live  11/11    $0.0000    72.9s
+fast  187/187    invariant  67/67    live  11/11    $0.0000    73.6s
 recovery 8/8 verified (18 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 48/48 · 13 replans
 ```
@@ -338,7 +338,9 @@ Rationale lives in `specs/decisions/`; the short version:
 
 The unusual thing in this repo is that the limitation list is generated from
 cases, not from memory — every `unreliable`/`unsupported` row in
-[`docs/support-matrix.md`](docs/support-matrix.md) cites a case id, and an
+[`docs/support-matrix.md`](docs/support-matrix.md) cites a case id, or, where
+the failure is a deployment run that no case can hold, the run ids of the
+failures (that file states the rule and its M41 amendment), and an
 invariant-suite case fails if a citation stops resolving, or if the document
 ever parses to zero declared limitations. The pre-commit eval gate runs it.
 

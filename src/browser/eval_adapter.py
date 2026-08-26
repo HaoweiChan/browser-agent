@@ -2477,17 +2477,7 @@ def _run_adr_header_index_case(case: dict) -> dict:
                    if p.is_file()
                    and p.suffix in (".py", ".md", ".yml", ".yaml", ".json")
                    and "__pycache__" not in p.parts
-                   and not p.is_relative_to(root / "evals" / "report")
-                   # ...and `src/browser/fixtures/` for the same reason one step
-                   # further out: those files are PAGES, not prose this repo
-                   # wrote. `sec10k-inspector.html` (M41) is a captured snapshot
-                   # of another project's deployed UI, and that UI renders its
-                   # own repo's decision log and its own ADR numbers into
-                   # visible text — one of them, 032, exists there and not here.
-                   # Reading a third party's citations as this repo's is a false
-                   # positive by construction, and the alternative (editing the
-                   # capture so it passes) would make the fixture a fiction.
-                   and not p.is_relative_to(root / "src" / "browser" / "fixtures")]
+                   and not p.is_relative_to(root / "evals" / "report")]
     dangling, bad_section, resolved = [], [], 0
     for p in sorted(citing):
         text = p.read_text(encoding="utf-8", errors="ignore")
@@ -2833,6 +2823,19 @@ REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
 # here on purpose: writing the literal path in a comment near the regex would
 # make the comment itself a dangling citation.)
 REPORT_CITATION_SKIP = ("29991231-235959-fast.json",)
+# Directories inside the scope above that hold PAGES rather than prose. The M41
+# inspector snapshot is a capture of another project's deployed UI, and that UI
+# renders that project's own capability table — including the name of a
+# benchmark report in ITS `evals/report/`, which does not exist here. Quoting a
+# page is not this repo claiming evidence, and the alternative (editing the
+# capture until the regex is happy) would make the fixture a fiction.
+#
+# A directory prefix is exactly the shape R20 of PR #20 caught blinding this
+# guard, so it is pinned rather than trusted: the case carries
+# `expect.exclude_exactly` and a widened prefix is red before it is green. That
+# is the only defence available — widening a scan silently REMOVES findings, so
+# nothing else here can notice.
+REPORT_CITATION_EXCLUDE = ("src/browser/fixtures",)
 
 
 def _run_report_citations_case(case: dict) -> dict:
@@ -2858,12 +2861,8 @@ def _run_report_citations_case(case: dict) -> dict:
     for rel in REPORT_CITATION_SCOPE:
         p = root / rel
         for f in ([p] if p.is_file() else p.rglob("*") if p.is_dir() else []):
-            # Fixtures are pages, not citations — same exclusion and same reason
-            # as `adr-header-index`'s: the M41 inspector snapshot renders the
-            # OTHER repo's capability table, which names a benchmark report in
-            # that repo's `evals/report/`. It is a quotation of a page, not a
-            # claim by this repo about its own evidence.
-            if not f.is_file() or f.is_relative_to(root / "src" / "browser" / "fixtures"):
+            if not f.is_file() or any(f.is_relative_to(root / d)
+                                      for d in REPORT_CITATION_EXCLUDE):
                 continue
             cited |= set(REPORT_CITATION.findall(f.read_text(encoding="utf-8", errors="ignore")))
     cited -= set(REPORT_CITATION_SKIP)
@@ -2875,8 +2874,13 @@ def _run_report_citations_case(case: dict) -> dict:
     got_skip = sorted(REPORT_CITATION_SKIP)
     if want_skip and got_skip != want_skip:
         wrong["skip"] = {"want": want_skip, "got": got_skip}
+    want_excl = sorted(case.get("expect", {}).get("exclude_exactly", []))
+    got_excl = sorted(REPORT_CITATION_EXCLUDE)
+    if want_excl and got_excl != want_excl:
+        wrong["exclude"] = {"want": want_excl, "got": got_excl}
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"citations": len(cited), "skip": got_skip}}
+            "got": {"citations": len(cited), "skip": got_skip,
+                    "exclude": got_excl}}
 
 
 def _run_gateway_error_case(case: dict) -> dict:
@@ -5096,24 +5100,29 @@ def _check_ground_truth_endpoint_eval_only() -> dict:
     places. The ENDPOINT path may appear only in `eval_adapter.py` among the
     package's modules. The HOST may additionally appear in `server.py`, which
     carries a start URL per declared matrix row in `EXAMPLES` — a start URL is
-    the FIRST thing rule 6 allows, and `examples-cover-matrix` requires one for
-    every live row. What it may not do is reach the execution policy: the
-    planner, the executor, the observer, the resolver, the verifier or the
-    judge. Data, not code: the committed page snapshot under `fixtures/` is a
-    fixture like `shop.html` and is not scanned.
+    the FIRST thing rule 6 allows, and `ui-examples-cover-matrix` requires one
+    for every live row. Everywhere else under `src/browser/` it is a leak.
+
+    Both rules are ALLOWLISTS, not denylists, and that is the repair a cold
+    review earned: the host rule first named the six execution-policy modules
+    explicitly, which left `cli.py` and `mutate.py` free to carry per-site
+    knowledge with nothing red — and the host is the string a navigation recipe
+    would travel in. Naming what may is a rule a new module cannot walk around;
+    naming what may not is a list somebody forgets to extend.
+
+    Data, not code: the committed page snapshot under `fixtures/` is a fixture
+    like `shop.html`, and `glob("*.py")` never reaches it.
     """
     ENDPOINT, HOST = "/api/extract/", "whaleforce-sec10k.zeabur.app"
-    POLICY = {"agent.py", "planner.py", "observe.py", "resolver.py",
-              "verifier.py", "judge.py"}
+    ENDPOINT_OK = {"eval_adapter.py"}
+    HOST_OK = {"eval_adapter.py", "server.py"}
     pkg = Path(__file__).parent
     endpoint_leaks, host_leaks = [], []
     for f in sorted(pkg.glob("*.py")):
-        if f.name == "eval_adapter.py":
-            continue
         text = f.read_text(encoding="utf-8")
-        if ENDPOINT in text:
+        if ENDPOINT in text and f.name not in ENDPOINT_OK:
             endpoint_leaks.append(f.name)
-        if HOST in text and f.name in POLICY:
+        if HOST in text and f.name not in HOST_OK:
             host_leaks.append(f.name)
     # The other direction, and the reason this is not a one-sided ban: the
     # ground truth still has to come from somewhere a reader can retrace. Every
@@ -5121,17 +5130,25 @@ def _check_ground_truth_endpoint_eval_only() -> dict:
     # `sec10k-*` case whose ground truth is hand-waved is red here before it can
     # be green in a run. An assertion that never sees the string it governs is
     # decoration.
-    # Only the cases that CARRY a hand-labelled value: an observation-shape case
-    # asserts what the planner was shown and has no ground truth to source.
+    # Keyed on the case's own `domain` tag, not on its filename: a filename
+    # pattern is a naming convention, and renaming a case to `inspector-*.json`
+    # would have dropped it out of this scan in silence while `bool(cases)`
+    # still passed on the rest (cold review). And only the cases that CARRY a
+    # hand-labelled value — an observation-shape case asserts what the planner
+    # was shown and has no ground truth to source.
     cases = []
-    for c in sorted((Path(__file__).parents[2] / "evals").rglob("*sec10k*.json")):
+    for c in sorted((Path(__file__).parents[2] / "evals").rglob("*.json")):
         raw = c.read_text(encoding="utf-8")
-        if "answer" in json.loads(raw).get("expect", {}):
+        try:
+            case = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if case.get("domain") == HOST and "answer" in case.get("expect", {}):
             cases.append((c.name, raw))
     uncited = [n for n, raw in cases if "/api/extract/fixture" not in raw]
     return {"passed": not endpoint_leaks and not host_leaks and bool(cases) and not uncited,
             "wrong": {"endpoint_in_production_module": endpoint_leaks,
-                      "host_in_execution_policy": host_leaks,
+                      "host_outside_the_allowlist": host_leaks,
                       "cases_not_citing_the_ground_truth_endpoint": uncited},
             "got": {"cases_scanned": len(cases)}}
 

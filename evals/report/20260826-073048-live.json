@@ -6,13 +6,13 @@
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 17975,
+    "ms": 17996,
     "judge_calls": 9,
     "judge_tokens": 0,
     "judge_usd": 0.0,
-    "wall_seconds": 18.22,
-    "latency_p50": 1.27,
-    "latency_p95": 4.23,
+    "wall_seconds": 18.29,
+    "latency_p50": 1.45,
+    "latency_p95": 3.16,
     "cases_with_budgets": 11
   },
   "metrics": {
@@ -67,12 +67,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2134,
+        "ms": 2279,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.34,
+      "seconds": 2.55,
       "id": "live-books-detail-upc",
       "kind": "golden"
     },
@@ -119,12 +119,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1897,
+        "ms": 2139,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.9,
+      "seconds": 2.14,
       "id": "live-books-travel-price",
       "kind": "golden"
     },
@@ -170,12 +170,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 998,
+        "ms": 980,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.0,
+      "seconds": 0.98,
       "id": "live-hn-item1-submitter",
       "kind": "golden"
     },
@@ -221,12 +221,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 964,
+        "ms": 949,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.97,
+      "seconds": 0.95,
       "id": "live-hn-item1-title",
       "kind": "golden"
     },
@@ -272,12 +272,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4225,
+        "ms": 3156,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 4.23,
+      "seconds": 3.16,
       "id": "live-ol-edition-title",
       "kind": "golden"
     },
@@ -324,12 +324,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 846,
+        "ms": 1049,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.85,
+      "seconds": 1.05,
       "id": "live-sec10k-authored-wait-reaches-the-doc-status",
       "kind": "golden"
     },
@@ -376,12 +376,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1019,
+        "ms": 1178,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.02,
+      "seconds": 1.18,
       "id": "live-sec10k-authored-wait-reaches-the-item-count",
       "kind": "golden"
     },
@@ -426,12 +426,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2082,
+        "ms": 1923,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.09,
+      "seconds": 1.93,
       "id": "live-ol-search-a11y-invisible",
       "kind": "adversarial"
     },
@@ -473,12 +473,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1266,
+        "ms": 1445,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.27,
+      "seconds": 1.45,
       "id": "live-quotes-js-delayed-empty",
       "kind": "adversarial"
     },
@@ -524,13 +524,13 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1279,
+        "ms": 1448,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
       "known_wrong_ground_truth": "expect.answer pins the WRONG answer this build produces; a PASS here means 'the agent reproduced the known-wrong answer', never 'the answer is correct'",
-      "seconds": 1.28,
+      "seconds": 1.45,
       "id": "live-quotes-js-role-tier-blind",
       "kind": "adversarial"
     },
@@ -576,12 +576,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1265,
+        "ms": 1450,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.27,
+      "seconds": 1.45,
       "id": "live-quotes-js-text-tier-reaches",
       "kind": "adversarial"
     }

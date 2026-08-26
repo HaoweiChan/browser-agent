@@ -130,11 +130,21 @@ fraction, and why two of the three rows are `unreliable`.
 | companiesmarketcap.com (live) | supported | — | — | — | — |
 | bankofcanada.ca (live) | supported | — | — | — | — |
 | ecb.europa.eu (live) | unreliable | — | — | — | — |
+| whaleforce-sec10k.zeabur.app (live) | unreliable | — | — | — | — |
 
 Statuses: `supported` / `unreliable` / `unsupported` / `—` (not yet evaluated).
 Unsupported and unreliable rows must cite concrete failing evidence: a case id
 where one exists, and otherwise — for the M40 live-declared rows only — the run
-ids of the failures themselves, in D28. The distinction matters and is not a
+ids of the failures themselves, in D28. **Amended by M41 (2026-08-26), because
+the inspector row is a third shape the sentence did not cover and a cold audit
+caught it being used as if it did**: that row HAS cases, seven of them, and they
+all pass — what fails is the deployment, so its failing evidence is run ids
+(`e996cc7d`, `79c8dc32`) exactly like an M40 row, while its passing cases carry
+the page-shape claims underneath. The rule is therefore: failing evidence is a
+case id where a case can hold the failure, and run ids where the failure is a
+run and no case can be. Widened here rather than quietly stretched, and the
+weakness is the same one the next paragraph already names — a run id is a
+receipt for something that happened once and cannot be replayed. The distinction matters and is not a
 loosening dressed up as a rule: a case id is re-run by the gate on every commit,
 a run id is a receipt for something that happened once and cannot be replayed
 (`RUNS` is in-memory, D19). So `x-rates.com` and `multpl.com` carry the weaker
@@ -142,6 +152,37 @@ form of evidence, deliberately and visibly, until a case exists for either. No
 check enforces this sentence — `support-matrix-cites-real-cases` verifies that
 backticked case ids RESOLVE, and cannot tell which row a citation belongs to
 (its own provenance says so). It is a rule this file keeps by hand.
+
+**The inspector row is a MODE-B row, and the column it does not have is named.**
+`whaleforce-sec10k.zeabur.app` is Task 2's own deployed inspector — the one
+external site this project also controls — and it is here because the
+2026-08-24 demo failed against it in front of an audience
+(`docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md`). Its `unreliable`
+is decided by a rule frozen before the runs existed (ADR-030 §Thresholds: 6/6
+`supported`, 3-5 `unreliable`, 0-2 `unsupported`), and the probe returned 4/6.
+It measures **mode B** — plan once, then execute — because that is the only
+mode that exists on the deployed build. Loop mode (ADR-027, M42) is unprobed
+here, in either direction, and **M44 owns folding a loop-mode column into this
+row**; the mode label is ADR-030's own
+ruling, not an older one — ADR-022 gives the live-declaration rule this builds
+on and says nothing about execution modes, so nothing before this milestone
+required a row to name one. D30 below has every run id, both build
+shas, and what is not claimed.
+
+It is also the first row here declared BOTH ways at once, which is why it is
+stronger than the M40 rows above it and is worth saying rather than leaving to
+be inferred. It is **report-assisted** in this file's original sense — a
+committed `live` report, `evals/report/20260826-073048-live.json` (11/11,
+$0.0000), with hand-written plans behind
+`live-sec10k-authored-wait-reaches-the-doc-status` and its item-count twin, plus
+six offline cases in the `fast` gate — five that re-check the page shape on
+every commit and one, `sec10k-ground-truth-endpoint-eval-only`, that re-checks
+the ground-truth boundary in `invariant` too — AND it carries the M40-style end-to-end evidence that measures the
+planner, six runs against the deployment with the real planner. The M40 rows have
+only the second half and D28 says so; this row has both, and the two halves
+disagree in a useful way: the hand-written plan answers 2/2 because it authors
+the wait, and the real planner answers 4/6 because it does not always.
+
 
 ## Declared limitations (M40 investment-domain probe)
 
@@ -270,3 +311,9 @@ backticked case ids RESOLVE, and cannot tell which row a citation belongs to
 | The `fast` suite never runs observe → plan → resolve | all fixture cases inject a stub plan at the planner boundary | by design (cost-discipline), but it means the L4 self-maintenance passes are measured on plans hand-authored against the mutated DOM. Only the `full` suite closes this. |
 | A click whose effect cannot be asserted | `postcondition-unverified-click` | `unsupported` by choice: the run fails loudly rather than reporting an unverified state change as success |
 | ZH support is character-level, not planning-level | 6 ZH cases, all with stubbed plans | `unreliable` until a ZH case runs in the `full` suite |
+
+## Declared limitations (M41 sec-10k inspector)
+
+| Limitation | Evidence | Status |
+|---|---|---|
+| **D30** — the agent can answer from our own sec-10k inspector, and it is `unreliable` at it: 4 of 6 pre-registered probe runs correct, with the other two failing loudly in two different ways and neither of them the shape the demo was blamed on. Two tasks x 3 reps against `https://whaleforce-browser-agent.zeabur.app` on build `9c3340c` (deploy-smoke run `32926527916`), start URL the deep link `https://whaleforce-sec10k.zeabur.app/?fixture=aapl-2025&run=1`, no `model` override, $0.004742 of model spend across all six, 2026-08-26 — protocol, frozen task texts and thresholds all in ADR-030, written and committed before any run. **Both build shas, because a row here is a claim about two deployments** (postmortem §2): ours `9c3340c`, the inspector's `6b37ffa99d05` at probe time. The committed fixture snapshot is a capture of that same `6b37ffa99d05`, which took a cold review to establish and is worth the sentence: `/api/meta` was still answering `5a44758598f5` by `curl` at capture time while the page's own footer — filled from that same field — already read `build 6b37ffa99d05`, two reads of one field disagreeing inside one session, which is what a rolling deploy looks like (inferred, not measured). The capture was re-taken later and diffed against the committed one: byte-identical apart from one `total_ms` figure. So the fixture and the probe agree on one build instead of straddling two, and the page shape the offline cases grade is unchanged across the window. | **Every run id, correct and not.** Task `What is the doc_status of the aapl-2025 fixture?`: `a413fbf9` and `1e43220d` correct (`navigate` -> `extract`, under 4.5s of run time, $0.00015 each); `e996cc7d` `failure:semantic`. Task `How many items are extracted?`: `5da0441b` and `81172a2f` correct; `79c8dc32` `failure:env`. Metrics kept apart the way ADR-025 requires and never blended: **correct 4/6, loud failure 2/6, wrong success 0/6, refusal 0/6.** Ground truth from the inspector's own `/api/extract/fixture` — rule 6's per-site ground-truth endpoint, reachable from the eval side and nothing else, which is not a promise but a case (`sec10k-ground-truth-endpoint-eval-only`, three conjuncts each watched red). **The wrong success this probe predicted in advance happened, and the judge ate it.** ADR-030 §Frozen task table names `"Extracting…"` as the wrong-success shape to watch for; `e996cc7d` extracted exactly that string and the ADR-017 judge rejected it — "it appears to be a progress message" — turning it into a loud failure. First live evidence for the grading quality D25 declares unverified, on a shape that was written down before it occurred. `79c8dc32` is a different shape again: the plan clicked, asked to `observe {role: main}`, and ADR-020's no-progress guard ended the run. **What the offline cases pin.** S2 is fixed page-side and measured: `sec10k-doc-status-is-a-named-status` and `sec10k-item-text-region-resolves` each go red when the ARIA role and label are stripped from the snapshot (`failure:locate`, the relocation rung retargeting on a name that is not page text). S3 is fixed page-side too — `sec10k-extract-buttons-are-distinguishable`, red with the three ARIA labels removed. **What they pin that is NOT fixed.** `sec10k-item-text-region-is-past-the-observation-cap`: the fixture `<select>`'s 42 `option` elements spend the 60-element observation budget, so the named extracted-text region that `sec10k-item-text-region-resolves` proves is reachable is never SHOWN to a planner — the D27 cliff on a real deployed page. And S1: `live-sec10k-authored-wait-reaches-the-doc-status` grades that the planner's observation still lacks `18 extracted` on the deep link, because the observation is taken before the page's own extraction round-trip lands. | `unreliable`, and these things are NOT claimed. (a) That the domain is measured rather than these two tasks on this one page — one phrasing each, three reps each, one fixture. (b) That `unreliable` will survive either deployment moving: it is a claim about `9c3340c` against `6b37ffa99d05`, the inspector's sha ALREADY moved once inside this milestone, and nothing in this repo reads either sha back (`tasks/TODO.md` T-M41-3). (c) That zero wrong-success covers every run this protocol caused: an aborted harness attempt preceded the probe and its run ids are lost except `6045555d` (`failure:semantic`, published in ADR-030 §Outcome with the six), because `RUNS` is in-memory (D19) and there is no listing endpoint — so the HARD threshold is graded on seven runs, not on all of them, and ADR-030 says so rather than rounding it away. (d) That the ANSWER is the value: both tasks are answered with the whole status line, `doc_status: success — 18 extracted · 5 incorporated_by_reference fixture: aapl-2025`, which ADR-030 froze as correct before the runs and which is still a sentence where a caller asked for a number (T-M41-2). (e) That S3 or S4 are fixed as CAPABILITIES: S3 is fixed on this page's markup only and the resolver gap stays with M38/ADR-026; S4 is unfixed, pinned offline by `l4-shop-render-delayed`, and the default post-click settle is M42's under ADR-027. (f) Anything at all about loop mode — see the mode-B paragraph above; M44 owns that column. |
