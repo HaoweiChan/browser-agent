@@ -18,7 +18,10 @@ S3 three identical "Extract" buttons, S4 unauthored async settle), each
 individually sufficient to end a run, none of them replayed from a surviving
 trace because `RUNS` is in-memory (D19). `tasks/TODO.md` M41 is the remediation
 block. Its cross-repo dependency — sec-10k-extract's display-layer legibility
-row — **has since deployed**: `/api/meta` reports `git_sha` `5a44758598f5`, the
+row — **has since deployed**: `/api/meta` answered `git_sha` `5a44758598f5` when this
+section was written, at pre-registration — the sha moved before the probe ran
+and the page was already serving the newer build even then, which §Outcome
+records and which this line is deliberately NOT edited to hide; the
 deep link `?fixture=<id>&run=1` preloads and extracts on page load, `#banner`
 carries `role="status" aria-label="doc_status"`, the extracted-text panes carry
 `role="region" aria-label="Item <n> extracted text"`, and the three Extract
@@ -252,9 +255,13 @@ submission payload, which carried no `model` field, and `POST /tasks` defaults
 when the field is absent (`server.py`, pinned by `gateway-model-reaches-planner`).
 `specs/001-browser-contract.md` puts `model` in the run record precisely so
 attribution is not the driver's own assertion, and this harness did not read it
-back. (2) Every one of the six runs reports `judge_calls: 1` with
+back. (2) FIVE of the six runs report `judge_calls: 1` with
 `judge_tokens: 0` and `judge_usd: 0.0`, including `e996cc7d`, whose judge
-returned bespoke prose. Per the contract those are zero for a stub or a cache
+returned bespoke prose. The sixth, `79c8dc32`, reports `judge_calls: 0` and
+correctly so: it died on the drill-down's no-progress guard before an answer
+existed, and there is nothing for a judge to grade. This sentence said "every
+one of the six" until PR #58 R5 read the artifact back — a note whose whole
+subject is an accounting gap, wrong about the accounting. Per the contract those are zero for a stub or a cache
 hit, and the aborted attempt had already run the same two tasks against the same
 page, so a cache hit is the likely reading — likely, not established. Either way
 the published `$0.004742` is planner spend; judge spend on these runs is
@@ -292,8 +299,10 @@ verifier reason, is committed at
   The rule was written before the numbers existed and is applied as written.
 - **(c) Refusals: 0.**
 - **(d)** Both build shas recorded (ours `9c3340c`, the inspector's
-  `6b37ffa99d05`, with the capture sha `5a44758598f5` and the diff between
-  them stated above), all six run ids published, repeat count 3 per task.
+  `6b37ffa99d05`, which is ALSO the build the committed snapshot captures —
+  `5a44758598f5` was the reading `curl` got from `/api/meta` at capture time,
+  not the build captured, and calling it "the capture sha" survived the
+  nine-document correction in this one place until PR #58 R5), all six run ids published, repeat count 3 per task.
 
 Overall verdict: **PASS on (a), `unreliable` on (b).**
 

@@ -172,7 +172,7 @@ shas, and what is not claimed.
 It is also the first row here declared BOTH ways at once, which is why it is
 stronger than the M40 rows above it and is worth saying rather than leaving to
 be inferred. It is **report-assisted** in this file's original sense — a
-committed `live` report, `evals/report/20260826-073048-live.json` (11/11,
+committed `live` report, `evals/report/20260826-080559-live.json` (11/11,
 $0.0000), with hand-written plans behind
 `live-sec10k-authored-wait-reaches-the-doc-status` and its item-count twin, plus
 six offline cases in the `fast` gate — five that re-check the page shape on

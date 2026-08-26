@@ -4698,11 +4698,27 @@ def _run_doc_counts_case(case: dict) -> dict:
 
     inp, wrong = case["input"], []
     counts = {s: len(load_cases(s)) for s in ("fast", "invariant", "live", "full", "all")}
+    # How many distinct real sites the live suite touches. Published in prose in
+    # two documents and in neither of them derived, so both said "four real
+    # sites" for the whole of the PR that took it to five (PR #58 R1) — the same
+    # defect this check exists for, one sentence over from the counts it already
+    # reads back. A `domain` tag is what the coverage half of this case already
+    # trusts to mean "a real site", so it is what this counts.
+    counts["live_sites"] = len({c["domain"] for c in load_cases("live") if c.get("domain")})
     readme = (RUN_ROOT / "README.md").read_text(encoding="utf-8")
     for quote in inp.get("readme_quotes", []):
         want = quote.format(**counts)
         if want not in readme:
             wrong.append({"readme_does_not_say": want})
+    # The same, for any other document of record. README got its own key first
+    # and every later count landed there by default; the stale sentence R1 found
+    # was in docs/analysis.md, outside anything this case could reach.
+    for entry in inp.get("doc_quotes", []):
+        text = (RUN_ROOT / entry["doc"]).read_text(encoding="utf-8")
+        for quote in entry["quotes"]:
+            want = quote.format(**counts)
+            if want not in text:
+                wrong.append({"doc_does_not_say": want, "doc": entry["doc"]})
 
     ws = inp.get("where_it_stands")
     if ws:
@@ -5136,19 +5152,36 @@ def _check_ground_truth_endpoint_eval_only() -> dict:
     # still passed on the rest (cold review). And only the cases that CARRY a
     # hand-labelled value — an observation-shape case asserts what the planner
     # was shown and has no ground truth to source.
-    cases = []
+    cases, fed_to_the_executor = [], []
     for c in sorted((Path(__file__).parents[2] / "evals").rglob("*.json")):
         raw = c.read_text(encoding="utf-8")
         try:
             case = json.loads(raw)
         except json.JSONDecodeError:
             continue
+        # The direction the module scan cannot see, and the one the rule is
+        # actually about (PR #58 R2). A case's `input` is what the RUN is given:
+        # `url`, `stub_plan[].value`, `target`, the task text. Put the
+        # ground-truth endpoint there and the executor fetches the answer
+        # instead of reading the page — every verifier check passes, because the
+        # value really is on the "page" — while this check stayed green and the
+        # third conjunct below actively rewarded the string's presence. Scanning
+        # the whole `input` subtree rather than an allowlist of field names, for
+        # the same reason the two scans above became allowlists: a new field a
+        # future case shape adds is inside `input` and needs no maintenance
+        # here. Everything else in a case file — `provenance`, `triage`,
+        # `expect` — is a record for a reader and is untouched.
+        fed = json.dumps(case.get("input", {}))
+        if ENDPOINT in fed or f"{HOST}/api/" in fed:
+            fed_to_the_executor.append(c.name)
         if case.get("domain") == HOST and "answer" in case.get("expect", {}):
             cases.append((c.name, raw))
     uncited = [n for n, raw in cases if "/api/extract/fixture" not in raw]
-    return {"passed": not endpoint_leaks and not host_leaks and bool(cases) and not uncited,
+    return {"passed": not endpoint_leaks and not host_leaks and not fed_to_the_executor
+                      and bool(cases) and not uncited,
             "wrong": {"endpoint_in_production_module": endpoint_leaks,
                       "host_outside_the_allowlist": host_leaks,
+                      "ground_truth_endpoint_fed_to_the_executor": fed_to_the_executor,
                       "cases_not_citing_the_ground_truth_endpoint": uncited},
             "got": {"cases_scanned": len(cases)}}
 

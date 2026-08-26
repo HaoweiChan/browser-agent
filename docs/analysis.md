@@ -60,7 +60,7 @@ its own report beside it.
 200 distinct cases (22 golden + 178 adversarial).
 293 browser actions in a `fast` run; **112 of the 187** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260826-073201-fast.json` rather than tallied by hand (the
+`evals/report/20260826-080713-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
@@ -69,11 +69,13 @@ component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
 ablation driver's preflight and its `failure:env` classifier and the ablation
-table's honesty guard; and in M12, the wall-clock ruling). `live` is 9/9 across
-four real sites, the fourth added at M8 to be hostile rather than to be passed:
+table's honesty guard; and in M12, the wall-clock ruling). `live` is 11/11 across 5 real sites. The
+fourth was added at M8 to be hostile rather than to be passed:
 `quotes.toscrape.com/js` renders its content invisibly to the accessibility tree,
 and the run there answers confidently and wrongly (§ the M8 rows in
-`docs/support-matrix.md`, D5–D11). M40 note: that is the `/js` page and it is
+`docs/support-matrix.md`, D5–D11). The fifth was added at M41 and is this
+project's OTHER deployment, the sec-10k inspector the 2026-08-24 demo failed
+against (D30). M40 note: that is the `/js` page and it is
 unchanged; the domain's static author pages answer 3/3 with a real planner, which
 is why the matrix row is now `unreliable` rather than `unsupported`. The hostile
 case is still hostile and still red-by-design.

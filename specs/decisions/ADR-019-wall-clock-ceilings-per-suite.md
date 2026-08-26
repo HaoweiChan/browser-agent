@@ -221,8 +221,14 @@ does not move it: ADR-021 set 90 from a longer record at 146 cases (ledger
 slowest 74.8s), and §6's no-ratchet-down rule is that a freshly republished
 band is a short sample and therefore a lower bound on what the tree costs. The
 handful of runs at 187 cases is exactly that short sample. Item 5 (derivation) grades the
-arrow against the RULE, not against the committed ceiling, which is why 85 under a §2 heading
-that says 90 is green and declared rather than a contradiction. The band
+arrow against the RULE, not against the committed ceiling — which is what lets a
+derived number sit BELOW the heading's ceiling without being a contradiction,
+and §6 declares that residue. **It does not apply to the band above:** the rule's
+answer and the committed ceiling are the same number here. The band at 181
+cases did carry the residue, and when this section was republished the arrow
+moved while the sentence explaining it kept naming the old derived figure —
+leaving a paragraph that derived one number and then explained why a different
+one was acceptable, with nothing in the gate reading it back (PR #58 R3). The band
 published for the earlier
 114-, 116- and 122-case trees is superseded rather than corrected in place: it was
 derived by hand from a subset, and the point of the grader is that nobody has

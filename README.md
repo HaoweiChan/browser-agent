@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260826-073201-fast.json`, with
-`evals/report/20260826-073029-invariant.json` and
-`evals/report/20260826-073048-live.json`:
+Latest offline baseline — `evals/report/20260826-080713-fast.json`, with
+`evals/report/20260826-080534-invariant.json` and
+`evals/report/20260826-080559-live.json`:
 
 ```
-fast  187/187    invariant  67/67    live  11/11    $0.0000    73.6s
+fast  187/187    invariant  67/67    live  11/11    $0.0000    74.5s
 recovery 8/8 verified (18 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 48/48 · 13 replans
 ```
@@ -201,7 +201,7 @@ own measured ceiling alongside a local one
 by [ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) when M31
 grew the suite, and `invariant` given ceilings of its own).
 
-`live 9/9` covers four real sites. It was `4/6` at the M6 merge; two of those
+`live 11/11` covers 5 real sites. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one
 case went green immediately while the other kept failing, because the outage had
 been hiding a defect of ours: navigation waited for `load`, so one hanging
