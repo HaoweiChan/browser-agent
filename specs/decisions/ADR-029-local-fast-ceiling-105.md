@@ -67,38 +67,46 @@ back against the committed local `fast` rows, so this cannot recur silently.
 The rows were NOT committed after the fact to fit the sentence — that is the
 other way to close a finding like this, and it is the dishonest one.
 
-### 2. CI stays at 90, and that is a statement about evidence, not about speed
+### 2. CI has now measured this tree; the ceiling it derives is not published yet
 
-ADR-019 §5's four CI measurements are hand-read off the log of a named workflow
-run, because no CI run appends to this repo's ledger (§7, T-R51, T-R73). I have
-no CI measurement of this tree, so I have no number to derive one from, and
-`_check_ci_numbers_are_derived` exists precisely to stop the two documents that
-publish CI's ceiling from drifting apart on a number nobody measured.
+ADR-019 §5's CI numbers are hand-read off the log of a named workflow run,
+because no CI run appends to this repo's ledger (§7, T-R51, T-R73).
 
-**Stated rather than discovered later**: CI is likely to breach 90 on this
-branch. It measured 74.25s at 152 cases; this tree is larger, and main's last
-recorded CI `fast` run was already 89.62s under the same 90s ceiling
-(`fast-wall-clock-budget`'s own row). Extrapolating is not deriving, so no
-number is written on the strength of it — but a reader should expect the PR's
-own CI run to be the measurement that settles CI's ceiling, and should treat a
-red CI wall clock on this branch as the expected next step rather than as a
-surprise. That is the ADR-021 pattern exactly: its CI figures came from a run
-that had already happened, cited by id.
+**The measurement exists.** eval-gate run
+[32937020758](https://github.com/HaoweiChan/browser-agent/actions/runs/32937020758)
+on commit `14a6a7b`, branch `task/M42`, 2026-08-26 — the first CI run of this
+tree. It says two things that point opposite ways: **every case passed** (`fast`
+213/213, correctness green in the environment that guards `main`) and the wall
+clock exceeded the `EVAL_WALL_BUDGET_S_FAST` that workflow declares, so the job
+exited non-zero. The wall clock itself is not reprinted here — CI wall clocks
+are published in ADR-019 §5, which `ci-numbers-are-derived` grades, and nowhere
+else (the one-publisher rule PR #57 R20-R23 arrived at).
 
-**Therefore, and this scopes every green-gate claim this branch makes** (PR #57
-R7): **CI's `fast` ceiling for this tree is UNMEASURED.** `.github/workflows/
-eval.yml` still declares 90s, untouched by this branch, because raising it to a
-guessed number is the one thing ADR-013's rule forbids and
-`ci-numbers-are-derived` exists to refuse. The branch's gate evidence —
-`invariant` 74/74, `fast` 213/213 — is **local only**, and no document, PR body
-or report on this branch may say the gate is green without that scope. Those two
-figures are read back against the suites by `adr029-scope-matches-the-suites`,
-because this paragraph published a four-case-stale pair for one round (PR #57
-R14) and a disclosure that is wrong about its own evidence is not a disclosure. One of
-the two gated environments has not run this tree at all: at the time of writing
-the push to `origin` was denied by the harness permission classifier, so no PR
-and no CI run exist yet. When one does, its workflow-run id is cited in ADR-019
-§5 and CI's ceiling is derived from it there, before merge.
+**Why the ceiling has not moved on the strength of it.** §5's form is four
+attempts of one run, and the check enforces the form: the table is refused at any
+other length, and the ceiling the workflow declares is read back from that
+table's maximum. Run 32937020758 supplied one attempt. Publishing from it would
+mean either weakening the guard that requires four — it exists because two of
+§5's eight cells were once unread (PR #41 R14) — or deriving a ceiling from one
+draw of a runner whose spread across §5's own four attempts was 6.8%, which is
+the coin flip ADR-021 named. Neither is worth a round number, so
+`.github/workflows/eval.yml` is untouched, and this branch ships a **red CI wall
+clock deliberately**, with the reason written down rather than discovered.
+
+**Therefore, scoping every gate claim this branch makes** (PR #57 R7):
+**correctness is green in both environments** — locally `invariant` 74/74 and
+`fast` 213/213, and on CI `fast` 213/213 — while the **wall-clock gate is green
+locally and red on CI**. That is the whole and exact truth about this branch's
+evidence, and it supersedes the earlier scoping of it as local-only, which was
+accurate when written and is not now. The local pair is read back against the
+suites by `adr029-scope-matches-the-suites`, because this paragraph once
+published a four-case-stale pair (PR #57 R14) and a disclosure wrong about its
+own evidence is not a disclosure.
+
+What remains is arithmetic waiting on samples: three more attempts of run
+32937020758, recorded in §5's table by the same hand-read route as its existing
+four, with the ceiling derived there from their maximum and the workflow set to
+it — before merge.
 
 ### 3. What was NOT done, and why the offer was refused
 
