@@ -1,0 +1,68 @@
+{
+  "task": "T-M42-20",
+  "branch": "task/T-M42-20-fix",
+  "pr": 60,
+  "round": 3,
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "FIRED \u2014 three review rounds without approval. Escalated to the human; no round 4 without a human ruling.",
+  "scope": "repair diff fb84a88..4bda01f plus standing findings",
+  "gate": {
+    "invariant": "80/80 = 1.000, wall 15.88s",
+    "fast": "229/229 = 1.000, wall 89.45s",
+    "baseline_file": "unchanged from main",
+    "run_by": "orchestrator, independently, on committed 4bda01f"
+  },
+  "verified_clean": [
+    "R10 fixed: index:1 raises as base did, index:0 unchanged, uppercase spelling still resolves (orchestrator-verified)",
+    "no case was weakened to buy wall clock: the wait case goes red 3/3 when ablated, the never-filled case still emits the loud StepError",
+    "all five claimed reds reproduced verbatim by the reviewer",
+    "the 0.26s ledger margin claim is correct"
+  ],
+  "findings": [
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: ADR-032 Decision 3 ('A folded resolution ... carries a trace note \u2014 narrowed: name-case-folded \u2014 rather than being invisible') is false on M38's ambiguity path \u2014 a match set reached ONLY through the fold and then settled by rung 1 or rung 2 reports anchor-proximity / document-order and drops name-case-folded entirely, and the ADR's 'What this does NOT settle' names only the different near-branch or short-circuit (T-M42-20-D10).",
+      "evidence": "resolver.py:566 `return loc.nth(i), tier, 'anchor-proximity'` and the sibling `document-order` return \u2014 the narrowing block never reads `fold`, and `ambiguous = (tier, loc, n)` at :505 does not carry it. Ran on HEAD 4bda01f with two links whose labels are uppercased by stylesheet under headings 'Ada row'/'Bob row': resolve({'role':'link','name':'SAVE FOR LATER'}, action='extract') -> tier role note 'document-order'; with anchor='Bob row' -> tier structural note 'anchor-proximity'. Both resolutions exist only because the fold ran (base 6b016b5 raises no tier resolved for both), and neither note says so. Same on the text tier. T-M42-20-D10's evidence and Spec are scoped to the near branch, so fixing D10 as written leaves this path silent and D10's acceptance nominally met.",
+      "repro": "resolve({'role':'link','name':'SAVE FOR LATER'}, action='extract') on a page with two stylesheet-uppercased links under distinct headings \u2014 note is document-order, never name-case-folded.",
+      "acceptance": "Either an adversarial case asserting trace_note_contains: name-case-folded on a folded resolution settled by document-order and one settled by anchor-proximity (watched red first), or ADR-032's 'What this does NOT settle' widened to 'any resolution the M38 rungs settle discloses only the rung', with T-M42-20-D10 extended to cover the narrowing returns."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: R11's repair changes the failure class for a non-string `anchor` from act to locate \u2014 the fourth of the four keys the new guard covers \u2014 and it is the only one of the four with no eval case, so the key that motivated moving the guard out of _whole_string is exactly the key nothing could catch a regression on.",
+      "evidence": "resolver.py:357-360 iterates ('name','text','near','anchor'); `anchor` is a top-level PLAN key (agent.py:1059 `anchor=step.get('anchor')`), so a model can emit \"anchor\": 4.82. Measured on case-twins.html, action='extract': base 6b016b5 and round-2 fb84a88 -> AttributeError: 'float' object has no attribute 'strip' (classified act, raised at resolver.py:315 inside _nearest's loose passes); HEAD 4bda01f -> ResolveError: target anchor is not a string: 4.82 (locate). Three cases were added for name (scalar), name (list) and near; text is covered by the pre-existing case. browser-domain/SKILL.md:57-61 names all four keys but cites 'resolver-non-string-target-is-a-locate-failure and its three siblings' \u2014 four keys, four cases, none of them anchor.",
+      "repro": "resolve(pg, {'role':'link'}, action='extract', anchor=4.82) on case-twins.html at HEAD vs at 6b016b5 \u2014 ResolveError/locate vs AttributeError/act.",
+      "acceptance": "An adversarial case with a step carrying \"anchor\": <non-string> expecting failure:locate, watched red on fb84a88 with the recorded AttributeError, and SKILL.md's 'three siblings' updated to the real count."
+    },
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: the ADR-019 republish introduced three statements the repo's own committed ledger and reports contradict, none of which any grader reads \u2014 the section 3 band bullet cites a report file belonging to a different run, misstates that run's red set, and section 2 attributes a pre-band ledger row to the post-cut window.",
+      "evidence": "(1) ADR-019:275 declares the invariant band source as ts 20260826-184041, 80 cases, 15.88s, 77/80 \u2014 but line 284 in the same bullet still says it cites 'evals/report/20260826-175637-invariant.json', the round-2 run (77 cases / wall 16.37s). Pre-diff both agreed; the repair updated one and not the other. (2) The same bullet says 'The two red cases \u2014 docs-numbers-are-derived and published-band-matches-the-ledger', but the cited row 20260826-184041-invariant.json has THREE failures, adding adr029-scope-matches-the-suites (section 2's bullet was correctly updated to three; section 3's was not). (3) ADR-019:96-99 says 'the two rows recorded after it, once round 3 cut LATE_OPTIONS_DELAY_S to 0.3s ... are 90.02s and 90.76s' \u2014 the committed fast/229 rows are 183453=90.02, 183633=91.04 (the band row), 184010=90.76, 184406=90.99, 184632=90.38, so 90.02 predates the band row by ~3 minutes and three rows follow it, not two (90.99, the row README cites, is omitted). The 0.26s margin itself is correct \u2014 published-band-slack-is-declared reports headroom_s {'fast': 0.26, 'invariant': 1.51} and 91.04 is the true ledger maximum at 229 \u2014 only the supporting prose is wrong. published-band-matches-the-ledger PASSES because it reads the band ts, not the inline filename or the red list.",
+      "repro": "sed -n '273,290p;94,100p' ADR-019 ; load both invariant reports and print case counts and failing ids ; filter history.jsonl to fast/229 and print (ts, wall_s).",
+      "acceptance": "Section 3 cites 20260826-184041-invariant.json and names its three red cases; section 2's post-cut row list matches the committed ledger rows following the band ts; ideally published-band-matches-the-ledger is extended to read the inline report filename back against the band ts so this class cannot ship green again \u2014 the T-M39-14 class."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "CONFIRMED: LATE_OPTIONS_DELAY_S went 0.5s -> 0.3s but the two documents that own the constant's rationale still publish the old values \u2014 the case whose provenance derives the delay says 0.5s (and '~5x margin'), and SKILL.md's fixture catalogue still says 1.0s, two rounds stale.",
+      "evidence": "server.py:1431 LATE_OPTIONS_DELAY_S = 0.3; action-select-option-waits-for-fetch-painted-options.json:47 still says 0.5s and '~5x margin' (this file is not in git diff fb84a88..HEAD); browser-domain/SKILL.md:206 still says 1.0s. The margin is now 3x. The case itself is NOT weakened: ablating the wait (timeout -> 1ms at agent.py:1149) turns it red 3/3, unablated it runs 452/453/453ms; action-select-option-never-filled-fails-loud runs 1144-1161ms against max_ms 2500 and still emits the loud StepError. Prose drift only.",
+      "repro": "grep -rn 'LATE_OPTIONS_DELAY_S' src/browser/server.py evals/adversarial/action-select-option-waits-for-fetch-painted-options.json .claude/skills/browser-domain/SKILL.md",
+      "acceptance": "Both sites state 0.3s and the derived margin (~3x against the ~0.1s first read), or the scalar is removed from prose and both cite server.py the way the band bullets cite the ledger."
+    },
+    {
+      "id": "R19",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "CONFIRMED: all five new cases ship with \"red_first\": \"PENDING\" in their triage block while the actual red output lives only in tasks/reviews/pr60-r2-resolution.json \u2014 every other case in the repo carrying that key records the red run. The reds themselves are GENUINE (the reviewer reproduced all five verbatim), so this is a record-keeping gap, not a Rule 2 violation.",
+      "evidence": "grep -rl '\"red_first\": \"PENDING\"' evals/adversarial/ returns exactly the five new files; 16 cases carry red_first, the other 11 record real output. Reproduced on a detached worktree at fb84a88 with only the five case files + case-twins.html copied in: index case -> {'status':'success','answer':'Catalogue row CTA'}; non-string name -> failure:act AttributeError 'float' has no 'replace'; list -> 'list' object has no 'replace'; near -> 'float' object has no 'strip'. R12 reproduced at HEAD with only the /-escape deleted: failure:act InvalidSelectorError ... unexpected symbol at position 40 \u2014 matching the resolution JSON word for word.",
+      "repro": "grep -rn '\"red_first\": \"PENDING\"' evals/adversarial/",
+      "acceptance": "The five triage.red_first fields carry the verbatim red output already recorded in tasks/reviews/pr60-r2-resolution.json."
+    }
+  ]
+}
