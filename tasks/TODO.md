@@ -12,6 +12,93 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
+### T-M42-20 — M42's headline acceptance clause is unmet on the live deployment: both modes die resolving a fetch-painted `<select>`            [status: todo]
+Origin: post-merge live smoke of M42, run by the pr-loop orchestrator on
+2026-08-26 against the deployment at `0403b50` (the merge commit of PR #57),
+after Zeabur redeployed. M42 shipped with this clause declared UNMET because no
+`OPENROUTER_API_KEY` was reachable and the deployment served `main`; both
+blockers are now gone, the smoke ran, and the clause is still unmet — for a
+different and previously unknown reason. `tasks/DONE.md:44` records M42 as
+delivered and does not say this; that line needs the qualification either way.
+Spec: the smoke ran one S1-shaped task — "Select the nvda-2024 fixture, extract
+it, and report the period end date" — against `https://whaleforce-sec10k.zeabur.app`,
+3 reps per mode. Ground truth `period_end: 2024-01-28`, taken independently from
+the inspector's own `/api/extract/fixture` endpoint (allowed per-site data, rule 6)
+BEFORE any run, so correctness was never judged from the agent's own output.
+
+| mode | run id | status | cost | actions |
+|---|---|---|---|---|
+| plan | `6c37e768` | `failure:locate` | $0.0043 | 4 |
+| plan | `11f9a92d` | `failure:locate` | $0.0023 | 4 |
+| plan | `ffed8d46` | `failure:locate` | $0.0015 | 3 |
+| loop | `5a33aa80` | `failure:env` (no progress) | $0.4871 | 17 |
+| loop | `9ff2056e` | `failure:env` (no progress) | $0.4830 | 17 |
+| loop | `7abacb97` | `failure:env` (no progress) | $0.9166 | 31 |
+
+Mode B verifiably fails, 3/3 — that half of the clause IS met. Loop mode also
+fails, 3/3, so "answering correctly under loop mode" is NOT met and M42's
+central live demonstration does not reproduce. Both modes die at the same step:
+resolving the fixture `<select>`. Loop:
+`no tier resolved {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}`.
+Mode B: the same target through the text tier after a relocation.
+Update 2026-08-26 — ROOT CAUSE FOUND, and it is the hypothesis this block
+first dismissed. The dismissal was wrong and cited the wrong code: the
+`re.IGNORECASE` at `resolver.py:169,182` belongs to `_PLURAL_ASK` (a plural-
+phrasing detector) and `_loose()` (the `near` typography tolerance) — neither
+touches name matching. The role tier is `resolver.py:300`
+`get_by_role(role, name=name, exact=True)`, and Playwright's `exact=True` is
+CASE-SENSITIVE whole-string; the text tier (`:303`, `get_by_text(text, exact=True)`)
+fails identically, which is why the relocation rung retargeting `{text: <name>}`
+dies the same way. Found by the planning session and reproduced independently
+here against the live deployment with the repo's own primitives ($0, no LLM):
+  - `observe()` reports the control as role `combobox`, name
+    `'SELECT A COMMITTED FIXTURE'` — UPPERCASE, because Chromium's
+    `accessibility.snapshot()` applies the page's CSS `text-transform: uppercase`
+    to the accessible name.
+  - `resolve({role: combobox, name: 'SELECT A COMMITTED FIXTURE'})` -> ResolveError
+    "no tier resolved". `resolve({..., name: 'select a committed fixture'})` ->
+    RESOLVED, tier `role`.
+  - 43 `<option>`s were in the DOM at observation time, so this is NOT the
+    empty-at-load race this block guessed at second.
+So the defect is two different accessible-name computations disagreeing:
+Chromium's snapshot applies CSS `text-transform`, Playwright's locator engine
+does not. `resolver.py:294`'s own comment — "planner names come from the
+observation verbatim" — is exactly the assumption this breaks. In loop mode every
+re-observation reproduces the same uppercase name, nothing resolves, no page
+change is recorded, and the no-progress harness fires at the 4th revisit: the six
+run records above are fully consistent with this and need no other explanation.
+Proposed fix (site-agnostic, rule 6 clean, smallest diff): keep whole-string
+semantics and relax only case — the role tier passes an anchored case-insensitive
+regex when a name is present,
+`get_by_role(role, name=re.compile(rf"^{re.escape(name)}$", re.IGNORECASE))`,
+and the text tier gets the same treatment. `exact=True`'s reason to exist
+(refusing substring-ambiguity, case `resolver-substring-name`) survives because
+the regex is anchored. Two names differing only by case now collide into M38's
+existing ambiguity machinery, which is the honest outcome rather than a silent
+pick.
+Two things did work and must not be lost when this is fixed: the no-progress
+harness fired on all three loop runs — its first live firing — ending each at
+the 4th revisit of the same page state with the reason named, after a forced
+strategy change failed to move it, rather than grinding the budget in a circle;
+and per-run cost is visible in the trace, which is its own clause and IS met.
+Also recorded, not a defect: loop mode cost 100-300x mode B per run
+($0.4830-$0.9166 vs $0.0015-$0.0043). Total smoke spend ~$1.90.
+Acceptance: TWO red-first cases, both red today, both required (rule 2):
+(a) a fixture whose label carries `text-transform: uppercase`, where the case
+feeds the OBSERVED name back into `resolve` — this is the root cause above;
+(b) a `<select>` EMPTY at load whose options arrive by `fetch()` — the separate
+S1 half this block's "finding behind the finding" names, still uncovered.
+Then the fix above; the same live smoke
+re-run at 3 reps with loop mode answering `2024-01-28` and run ids published;
+`tasks/DONE.md:44` amended to say what M42 did and did not demonstrate live.
+Out of scope: mode B answering this task (D28's declared boundary — S1 is why
+loop mode exists); the cost ratio (ADR-027 rules cost is not a constraint);
+`T-M42-19`'s unit-less-figure gap in the CI-ceiling sweep.
+Note: the offline suite is 213 green cases and none of them caught this. That is
+the finding behind the finding — no fixture in the repo has a control that is
+absent at load and arrives by fetch, which is the exact S1 shape M42 was built
+for.
+
 ### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: todo]
 Origin: live demo, 2026-08-24 — asked to drive Task 2's deployed inspector
 (https://whaleforce-sec10k.zeabur.app) and answer from it, the agent failed.
@@ -230,6 +317,48 @@ role/name, unreachable by role tier by construction — answered under loop mode
 with vision in a live smoke (3 reps, run ids published), while mode B's
 documented failure on the same fixture is pinned as the contrast case; suites
 green at $0; implementation ADR; cold-reviewer + spec-drift before commit.
+
+### M46 — plan-then-loop escalation: mode B is the fast path, loop mode is the fallback, one RunResult carries both            [status: todo]
+Depends: T-M42-20
+Origin: owner, 2026-08-26 — after PR #59's smoke measured both modes dying on
+the same task, the owner asked whether plan mode and loop mode should be
+integrated, naming LangGraph as a candidate. Ruling: integrate as an escalation
+POLICY in this codebase, no orchestration framework — a framework adds no
+observation, no action and no verification, would re-wire the offline stub
+boundary the 220-case suite depends on, and the capability gaps the interviewers
+named (vision, frame reach, resolver fixes, model) are all things an
+orchestrator cannot provide. The implementation ADR comes with the milestone,
+per the per-feature loop.
+Spec: a third execution policy, `escalate` (its own `POST /tasks` flag; neither
+existing mode's behaviour changes): run mode B once; if it ends in ANY failure
+class, re-run the same task in loop mode, seeding the loop's opening note with
+mode B's terminal evidence — which step died, on which target, with which
+failure class. Trace facts only, never site knowledge (rule 6 untouched). One
+RunResult: both legs' traces concatenated under the existing supersede semantics
+(the B leg is superseded, never hidden — ADR-004/ADR-005), budgets and cost
+summed and reported per-leg plus total, verifier and judge run once on the final
+leg's answer, unchanged.
+The cost argument is PR #59's own six runs, quoted at the range they actually
+recorded: the B attempt cost **$0.0015-$0.0043** across 3-4 actions, against
+loop's **$0.4830-$0.9166** across 17-31. So B-first prices the fallback at well
+under 1% overhead on tasks the loop would have needed anyway, and saves two
+orders of magnitude on tasks B can already do. (Those figures are this task's
+justification, not a published ceiling — the run ids behind them are in
+T-M42-20, which is the one place they are recorded.)
+Acceptance: stub-driven cases watched red first — (a) B succeeds -> the loop
+never starts, one leg in the trace; (b) B fails -> escalation fires, the loop leg
+carries the seeded note, the RunResult totals both legs; (c) budget exhaustion
+mid-escalation stays INV-3 loud; (d) the seeded note cannot smuggle an
+instruction — the same injection-boundary shape the planner note path already
+has. M44 gains `escalate` as a third arm in its A-vs-B table, same probe set,
+same 3-rep protocol.
+Why the dependency is hard, not bookkeeping: on today's build BOTH legs die on
+the same resolver bug (T-M42-20's `text-transform` name mismatch), so escalation
+would only pay twice for one failure. Measuring the policy before that fix lands
+would measure the bug, not the policy.
+Out of scope: LangGraph or any orchestration dependency (the ruling above); mode
+auto-selection beyond "B first, loop on failure" — a task-difficulty classifier
+is speculative until M44's table shows which tasks actually need the loop.
 
 ### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
 Origin: ADR-027. Depends: M42 (M43 for the vision rows, marked as such).
