@@ -1,0 +1,65 @@
+{
+  "pr": 58,
+  "task": "M41",
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "reviewer": "pr-loop/pr-reviewer (fresh context, full-diff sweep)",
+  "date": "2026-08-26",
+  "orchestrator_note": "R4 and R5 were returned LOW. The orchestrator routes both to repair anyway under the third scope bullet — each is a statement in ADR-030, this PR's own decision record, that contradicts an artifact committed in the same PR, which is the 'committed artifact a reader would take as verified-correct' case. The severity disagreement is recorded rather than silently overridden; both fixes are one line in a file already open.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "This PR grew the live suite from 9 cases/4 sites to 11 cases/5 sites but left two published prose counts saying the old thing, so README and analysis.md now contradict their own updated blocks and the committed live report.",
+      "evidence": "README.md:204 — \"`live 9/9` covers four real sites.\" while README.md:41 and README.md:58 in the same diff now say `--suite live # 11 cases, 5 real sites` and `live 11/11`. Same defect at docs/analysis.md:72 — \"`live` is 9/9 across four real sites\" — inside the very paragraph the diff rewrote (200 cases / 293 actions / 112 of 187 / remaining 75). Measured: 11 live-tagged cases across 5 distinct domains (books, quotes, hn, openlibrary, whaleforce-sec10k), and evals/report/20260826-073048-live.json is 11/11. Both lines were TRUE on main, so this PR made them false. `docs-numbers-are-derived` does not read them back — the fast suite is 187/187 green with both stale lines in the tree, which is T-M41-1's class arriving inside the PR that filed T-M41-1.",
+      "repro": "source .venv/bin/activate && python3 -m evals.run --suite live   # 11/11, 5 sites; then `sed -n '204p' README.md` and `sed -n '72p' docs/analysis.md`",
+      "acceptance": "Both sentences state the current live count and site count (or are re-derived), and the gate is green; ideally the count in that sentence is added to whatever `docs-numbers-are-derived` already reads back so it cannot go stale silently again."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`sec10k-ground-truth-endpoint-eval-only` only guards the module direction of the rule-6 boundary; an eval case that feeds `/api/extract/fixture` straight to the executor as its start URL passes the invariant green, and the case's third conjunct actively rewards the endpoint string being present in the case file, so the leak is indistinguishable from compliance.",
+      "evidence": "src/browser/eval_adapter.py:5085-5150 — `_check_ground_truth_endpoint_eval_only` scans `pkg.glob(\"*.py\")` for the endpoint/host (verified red for planner.py, observe.py, resolver.py and a brand-new module) but the case-side conjunct is `\"/api/extract/fixture\" not in raw` over the whole file, so `input.url` and `stub_plan[].value` are never distinguished from `provenance`. Concrete state: a case `evals/adversarial/zz-tmp-leak-probe.json` with `domain: whaleforce-sec10k.zeabur.app`, `expect.answer: \"success\"`, and `input.url` / stub_plan navigate = `https://whaleforce-sec10k.zeabur.app/api/extract/fixture?fixture=aapl-2025` — the invariant returned `{'passed': True, ... 'cases_scanned': 6}` and the case ran PASSED. That is exactly the shape ADR-030 §The ground-truth-endpoint boundary says must be impossible (\"reached ... by nothing that decides what the agent does\") and CLAUDE.md rule 6's \"must never feed them to the executor\".",
+      "repro": "Write the case above into evals/adversarial/, then `source .venv/bin/activate && python3 -c \"import src.browser.eval_adapter as ea; print(ea._check_ground_truth_endpoint_eval_only())\"` -> passed: True.",
+      "acceptance": "The invariant also refuses the endpoint (and any `/api/` path on that host) appearing in a case's executor-facing fields — `input.url`, `input.start_url`, any `stub_plan[].value`/`target` — while still permitting it in `provenance`/`triage`/`expect`; watched red with the probe case above before it goes green."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §2's republication leaves a dangling `85` in the sentence that explains the arrow, so the paragraph now derives 90 and then explains why 85 is acceptable — a re-typed number nothing reads back, made false by this PR.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:219-224 — the diff changed \"73.06 x 1.15 = 84.02 -> **85**, which is BELOW the committed 90\" to \"74.05 x 1.15 = 85.16 -> **90**, which is exactly the committed 90\", and changed \"181 cases\" to \"187 cases\" two lines down, but left \"...which is why 85 under a §2 heading that says 90 is green and declared rather than a contradiction.\" There is no 85 anywhere in §2 any more. `_check_published_band` (src/browser/eval_adapter.py:680+) grades only the `(x, product, ceiling)` triple, so the sentence is invisible to the gate — the suite is 187/187 green with it. Arithmetic of the new triple itself checks out (74.05x1.15=85.1575->85.16->90; 13.47x1.15=15.4905->15.49->20) and no committed ceiling moved (WALL_BUDGET_S and .github/workflows/eval.yml are untouched by the diff).",
+      "repro": "sed -n '218,226p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "The explanatory sentence names the number §2 actually derives (or is written without a concrete figure), and the fast suite stays green."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "ADR-030's own honesty note about the artifact is contradicted by the artifact: it says every one of the six runs reports `judge_calls: 1`, but the committed probe JSON records `judge_calls: 0` for run 79c8dc32.",
+      "evidence": "specs/decisions/ADR-030-m41-sec10k-inspector-probe.md:255 — \"(2) Every one of the six runs reports `judge_calls: 1` with `judge_tokens: 0` and `judge_usd: 0.0`\" versus evals/report/20260826-065901-m41-inspector-probe.json `runs[3]` (`run_id: 79c8dc32`, `status: failure:env`) whose `budgets.judge_calls` is 0 — correctly so, since that run died on the drill-down no-progress guard before an answer existed. Five of six, not six of six.",
+      "repro": "python3 -c \"import json;d=json.load(open('evals/report/20260826-065901-m41-inspector-probe.json'));print([(r['run_id'],r['budgets']['judge_calls']) for r in d['runs']])\"",
+      "acceptance": "The sentence says five of the six (naming 79c8dc32 as the exception and why), matching the committed artifact."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "A stale `5a44758598f5` claim does survive the nine-document correction — inside ADR-030 itself, in two places, one of them still calling it 'the capture sha' after §Outcome established the capture is of 6b37ffa99d05.",
+      "evidence": "specs/decisions/ADR-030-m41-sec10k-inspector-probe.md:21 states in the present tense \"`/api/meta` reports `git_sha` `5a44758598f5`\", and line 295 (§Outcome verdict (d)) says \"the inspector's `6b37ffa99d05`, with the capture sha `5a44758598f5`\" — while lines 226-231 of the same file and docs/support-matrix.md D30 both say the committed snapshot is a capture of `6b37ffa99d05`. The seven case `provenance` blocks and the fixture footer (src/browser/fixtures/sec10k-inspector.html:765 `build 6b37ffa99d05`) all agree on 6b37ffa99d05; ADR-030 is the one document still carrying the corrected-away value as a live label. Independently confirmed the deployed inspector is `git_sha 6b37ffa99d05` and ground truth doc_status=success / extracted=18 / 23 items via `/api/meta` and `/api/extract/fixture`.",
+      "repro": "grep -n '5a44758598f5' specs/decisions/ADR-030-m41-sec10k-inspector-probe.md; curl -s https://whaleforce-sec10k.zeabur.app/api/meta | head -c 40",
+      "acceptance": "Line 295 stops calling 5a44758598f5 the capture sha (it was the `curl` reading at capture time, not the build captured), and line 21's present-tense claim is marked as the state at pre-registration; every other document keeps 6b37ffa99d05."
+    }
+  ],
+  "verified_not_findings": [
+    "Pre-registration ordering holds: 9568b4a (06:52:55Z) carries §Frozen task table, §Thresholds and the pre-registered \"Extracting…\" wrong-success prediction; the probe artifact stamps 06:59:01Z; `git diff 9568b4a 80b0071` touches nothing before line 97, so no threshold moved after results existed.",
+    "The four ADR-025 metrics are reported separately everywhere; 4/6 + 2/6 + 0/6 + 0/6 sums to 6 and per-run costs sum to exactly $0.004742.",
+    ".eval-baseline.json untouched; WALL_BUDGET_S and .github/workflows/eval.yml untouched.",
+    "The row is `unreliable` per the frozen 3-5/6 rule; it states mode B only and names M44 as owner of the loop-mode column.",
+    "Nothing in src/browser/ moved except eval_adapter.py and server.py — no execution-policy module.",
+    "The fixture has zero <script>, <iframe> and font links; fast stays 187/187 at $0.0000 / 73.5s.",
+    "Every red-first claim that could be ablated reproduced exactly as documented: MAX_ELEMS 60->200 gives inside_the_cap_after_all: [\"Item 4 extracted text\"], n_elements: 174; stripping the three aria-labels reddens the buttons case; stripping the banner/region ARIA reddens the three answering cases; all three conjuncts of the boundary invariant go red under ablation; deleting expected_state from the live case gives two `success` runs answering \"Extracting…\" plus one failure:semantic over 3 reps."
+  ]
+}
