@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-M42-20 — M42's headline acceptance clause is unmet on the live deployment: both modes die resolving a fetch-painted `<select>`            [status: todo]
+### T-M42-20 — M42's headline acceptance clause is unmet on the live deployment: both modes die resolving a fetch-painted `<select>`            [status: in-progress]
 Origin: post-merge live smoke of M42, run by the pr-loop orchestrator on
 2026-08-26 against the deployment at `0403b50` (the merge commit of PR #57),
 after Zeabur redeployed. M42 shipped with this clause declared UNMET because no
@@ -173,129 +173,6 @@ pins that matches differing in role are NOT auto-picked; `ui-no-url-guard`/
 after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
-
-### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: pr]
-Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
-two Try examples produce nothing, five cards should be eight, the running stage should
-show it is running, a right-hand panel should show what the browser saw so a reviewer can
-check the scraped content, and the covered domains should include the investment sites an
-investment firm actually uses.
-**Process note, recorded rather than tidied away:** this block was written AFTER the work
-started, at the owner's instruction mid-session ("make sure you update TODO before
-implementation"). CLAUDE.md's per-feature loop puts plan → ADR → cases first; on this task
-the probing came first and the block second. Written down because the ordering is exactly
-what this file exists to make visible, and because the probe results below are what a plan
-written first would have had to guess at.
-Spec: four frontend asks, one that is not. The four are `src/browser/server.py`'s inline
-PAGE — a CSS-only spinner on the current phase (the progress case forbids timers in the
-script, and a phase advancing on a clock is a progress bar that lies about the trace), a
-right-hand page view carrying the step screenshot the executor already takes plus, after
-the run, every extraction with the page text it was read from, and an EXAMPLES/matrix set
-that reaches eight real-site rows. The fifth — "support investment sites" — cannot be
-answered by writing code; it is answered by running the deployment and declaring what came
-back, under the same report-assisted/human-declared rule as every other row.
-Acceptance:
-- Every Try example and every live-declared row is re-run against the build being
-  shipped, immediately before merge (added mid-task — see ADR-022 Decision 1a; the
-  first three rows declared here expired when the deployment was replaced).
-- The page view shows the page ITSELF, scrollable, not only a screenshot (owner
-  amendment mid-task) — and the proxy that requires is graded as the SSRF surface
-  it is, watched red per property.
-- No Try example cites a run shape that no longer reproduces. Each card's example is
-  re-run against the deployment and its status matches what happened, including the one
-  card that is deliberately a failure demo.
-- Eight non-fixture rows in `docs/support-matrix.md`, each with an EXAMPLES entry
-  (`ui-examples-cover-matrix` already grades set equality in both directions).
-- The new live-declared rows carry their run ids, their repeat counts, and a declared
-  limitation naming the page shapes that failed — not a pass rate thresholded into a word.
-- Every new UI hook is pinned by the UI cases, watched red against the pre-M40 page.
-- Cold review and spec-drift both run before the commit; every finding either lands as a
-  fix with a case, or as a declared limitation. No finding is closed by rewording alone.
-Rebased onto main 2026-08-23 after PR #34/#39 merged: this block was written as M38 and
-renamed to M40 — main had already queued M38 (resolver disambiguation) and M39. The
-collision is worth noting rather than silently renumbering, because main's M38 is the fix
-for one of the two broken Try examples this task found by hand: `e985e048`/`e6768ee0` in
-its Origin are the same quotes.toscrape.com ambiguity this task hit as `eefae1b8`.
-Not in scope, and why: a plan-lint clause refusing container-role `extract` targets. It is
-the obvious fix for the dominant live failure shape and it would turn
-`extract-container-dump-is-not-the-answer` red by ending the run before anything is read —
-changing what that case can observe rather than fixing what it grades. Isolating the cell
-stays T-R66/M28.
-### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: pr]
-Origin: interviewer feedback, 2026-08-26 — "使用者輸入中文搜尋或問答時,部署版
-會直接回傳 refused,甚至還沒開啟瀏覽器就結束", under the headline "中文都會
-失敗". No run ids came with the report. Priority note: sequence this AHEAD of
-M43 — the likely root cause is a few lines of regex plus probe evidence, the
-highest leverage-per-cost item in this queue, and it answers the single most
-damaging sentence in the feedback.
-Spec: the only pre-browser refusal in the pipeline is `screen()`'s
-`SCOPE_BLOCK` (`src/browser/agent.py`), and its CJK alternation is bare
-substring matching — `登入|密碼|驗證碼|付款|購買|刪除|下載` with no boundary
-and no context — while the English side earned word boundaries and determiner
-adjacency through two probe-driven repairs, each pinned
-(`screening-word-boundary`, `l5-refuse-delete-determiners`). A legitimate zh
-READ task that merely mentions 下載/付款/刪除 as subject matter refuses at
-$0.00. Whether that asymmetry is the whole of "中文都會失敗" is unmeasured:
-every live probe ever run (M40's four rounds) was English; every zh case in
-the suites is an offline fixture. Three legs, evidence first:
-(1) REPRODUCE — a zh probe set against the deployment: the interviewer's
-shapes (plain search, plain QA) plus zh phrasings of the M40 card tasks,
-3 reps each, run ids published, every failure triaged per
-`docs/evals/failure-taxonomy.md` BEFORE any code moves.
-(2) SCREENING PARITY — the CJK terms get the same precision work the English
-side got: per-term context conditions (刪除 + adjacent object the way
-`delete` requires a determiner; 下載/付款/購買 refusing as the task's VERB,
-not as mentioned subject matter), watched red first with legitimate-zh-read
-cases, while the negative direction is pinned too — real destructive/auth zh
-asks still refuse, `l5-refuse-destructive-zh` stays green, and the refusal
-POLICY is unchanged: only its zh false-positive rate moves.
-(3) DECLARE — the matrix carries the zh evidence (zh rows or per-row zh
-annotation, under ADR-022's live-declaration rule): "中文都會失敗" ends this
-milestone either fixed with cases or declared with named shapes, never
-unaddressed.
-Acceptance: probe run ids committed; every screening change pinned in both
-directions (a false-positive case that was red, a true-positive case that
-stayed green); zh live evidence visible in `docs/support-matrix.md`; the
-interviewer's exact phrasings among the probe tasks; gate green;
-cold-reviewer + spec-drift before commit.
-Out of scope: planner/judge zh answer quality beyond what the probe surfaces —
-new shapes found there become their own blocks (rule 2). Independent of
-M42/M43: mode B's screening is the same code path, so this neither waits for
-nor blocks the loop work.
-RESULT (2026-08-26): **the headline did not reproduce; the third of it that did
-is declared, not fixed.**
-Leg 1 — 29 runs against `main@9c3340c`, pre-registered in ADR-031, $0.011195
-(planner $0.009783 + judge $0.001412), every run_id in `docs/analysis.md` §8a-5 and
-`evals/report/20260826-011010-m45-zh-probe.json`. Paired zh/en on the same
-URLs, same build, interleaved: **Chinese 12/12 correct, English 9/12,
-wrong-success 0/29.** Zero of the twelve Chinese runs was a refusal — the
-"還沒開啟瀏覽器就結束" symptom did NOT occur on plain search or plain QA. All
-three failures in the probe are English `failure:locate` (the D29 shape).
-Leg 2 — what DID reproduce: the mention shape, three live refusals at $0.00
-with an empty trace (`8304ee3b` 密碼學, `be20ba6a` 購買力平價, `038bc371`
-刪除的檔案). **It is declared, not fixed.** Three per-term negative lookaheads
-were written and all three were falsified by ordinary Chinese that they
-un-refused — `[刪删]除(?!的)` allowed 把購物車裡要刪除的商品都刪掉 (cold review);
-`[購购][買买](?!力平[價价])` allowed 我要購買力平價這本書 and
-请帮我购买力平价指数基金 (PR #56 R2); `密[碼码](?![學学])` allowed
-幫我重設密碼學生帳號 (PR #56 R2). To a regex the continuation that makes a term
-part of another word is indistinguishable from the first character of a real
-request's object, so the screen fails CLOSED and `SCOPE_BLOCK` ships
-byte-for-byte as it was. `screening-zh-term-inside-another-word` pins all three
-shapes and all six counterexamples, watched red three times through the harness
-(`evals/report/20260825-170430-invariant.json`,
-`evals/report/20260825-175345-invariant.json`,
-`evals/report/20260825-182616-invariant.json`).
-`l5-refuse-destructive-zh` and `screening-word-boundary` stayed green
-throughout, and the destructive/auth directions were re-confirmed LIVE
-(`ab08cbd5`, `cb689bff`).
-Leg 3 — `docs/support-matrix.md` gains a "Chinese-language (zh) evidence"
-section (four rows, run ids, repeat counts, paired English arm) plus D30/D31
-under ADR-022's live-declaration rule. D31 names all seven over-refusing shapes
-(密碼學, 購買力平價, 刪除的檔案, 美元的購買力, 密碼子, 購買量, 刪除按鈕) and
-separates out the two that are shared with English rather than Chinese defects:
-下載 and 付款 over-refuse in BOTH languages, and narrowing those would move the
-refusal policy rather than close an asymmetry.
 
 ### M43 — loop mode sees the page: screenshot observation for a vision model            [status: todo]
 Origin: ADR-027; postmortem S2 — the failure class "the answer is not the

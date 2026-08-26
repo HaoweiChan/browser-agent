@@ -52,3 +52,5 @@ ADR-007). Full criterion table with evidence: `tasks/TODO.md` at `98de1a6`
 and `docs/plans/completed/task1-b-level-plan.md`. Standing qualification:
 green live cases run hand-written plans, so live *planning* quality is
 unmeasured (ADR-007) — the M5/M10 held-out probes are the counterweight.
+- M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for (2026-08-24) — PR #43, trace in tasks/reviews/pr43-r*.json
+- M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence (2026-08-26) — PR #56; the headline did not reproduce, the word-boundary bug did — debt M45-D1..D9
