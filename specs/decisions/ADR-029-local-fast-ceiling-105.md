@@ -67,46 +67,48 @@ back against the committed local `fast` rows, so this cannot recur silently.
 The rows were NOT committed after the fact to fit the sentence — that is the
 other way to close a finding like this, and it is the dishonest one.
 
-### 2. CI has now measured this tree; the ceiling it derives is not published yet
+### 2. CI has measured this tree, and both its ceilings are derived from that
 
 ADR-019 §5's CI numbers are hand-read off the log of a named workflow run,
 because no CI run appends to this repo's ledger (§7, T-R51, T-R73).
 
-**The measurement exists.** eval-gate run
+**The measurement exists and it is four attempts, not one.** eval-gate run
 [32937020758](https://github.com/HaoweiChan/browser-agent/actions/runs/32937020758)
-on commit `14a6a7b`, branch `task/M42`, 2026-08-26 — the first CI run of this
-tree. It says two things that point opposite ways: **every case passed** (`fast`
-213/213, correctness green in the environment that guards `main`) and the wall
-clock exceeded the `EVAL_WALL_BUDGET_S_FAST` that workflow declares, so the job
-exited non-zero. The wall clock itself is not reprinted here — CI wall clocks
-are published in ADR-019 §5, which `ci-numbers-are-derived` grades, and nowhere
-else (the one-publisher rule PR #57 R20-R23 arrived at).
+on commit `14a6a7b` ran this tree on CI four times. Every attempt was
+correctness-green — `fast` 213/213, `invariant` 74/74, in the environment that
+guards `main` — and every attempt was over the 90s `fast` ceiling then declared.
+The wall clocks are not reprinted here: CI wall clocks are published in ADR-019
+§5, which `ci-numbers-are-derived` grades, and nowhere else (the one-publisher
+rule PR #57 R20-R23 arrived at). §5 carries the table, the arithmetic and the
+`gh run view` command that reprints it.
 
-**Why the ceiling has not moved on the strength of it.** §5's form is four
-attempts of one run, and the check enforces the form: the table is refused at any
-other length, and the ceiling the workflow declares is read back from that
-table's maximum. Run 32937020758 supplied one attempt. Publishing from it would
-mean either weakening the guard that requires four — it exists because two of
-§5's eight cells were once unread (PR #41 R14) — or deriving a ceiling from one
-draw of a runner whose spread across §5's own four attempts was 6.8%, which is
-the coin flip ADR-021 named. Neither is worth a round number, so
-`.github/workflows/eval.yml` is untouched, and this branch ships a **red CI wall
-clock deliberately**, with the reason written down rather than discovered.
+**Both CI ceilings now come from that table**, by ADR-013 Decision 3's rule
+applied to its maxima, and `.github/workflows/eval.yml` declares exactly what
+they derive. `invariant`'s moves too, although CI never breached it: its tree
+grew from 48 cases to 74, and deriving one suite from the new table while
+leaving the other on the old one would publish two trees inside one table —
+the class this PR spent five rounds closing.
 
-**Therefore, scoping every gate claim this branch makes** (PR #57 R7):
-**correctness is green in both environments** — locally `invariant` 74/74 and
-`fast` 213/213, and on CI `fast` 213/213 — while the **wall-clock gate is green
-locally and red on CI**. That is the whole and exact truth about this branch's
-evidence, and it supersedes the earlier scoping of it as local-only, which was
-accurate when written and is not now. The local pair is read back against the
-suites by `adr029-scope-matches-the-suites`, because this paragraph once
-published a four-case-stale pair (PR #57 R14) and a disclosure wrong about its
-own evidence is not a disclosure.
+**This supersedes the two positions this section held before it.** It first said
+CI's ceiling was UNMEASURED and scoped every gate claim as local-only; that was
+true when written and stopped being true the moment CI ran. It then said the
+branch shipped a **red CI wall clock deliberately**, which was the honest
+description of a tree whose ceiling was waiting on samples — and is now wrong in
+the other direction: the samples arrived, the ceiling is derived, and the breach
+is closed by a number the rule produced rather than tolerated by a note in an
+ADR. Neither earlier framing survives, and saying so is the point of the
+paragraph: a disclosure that quietly drops its own previous claim is not a
+disclosure.
 
-What remains is arithmetic waiting on samples: three more attempts of run
-32937020758, recorded in §5's table by the same hand-read route as its existing
-four, with the ceiling derived there from their maximum and the workflow set to
-it — before merge.
+**Where that leaves the evidence**: correctness is green in both environments —
+locally `invariant` 74/74 and `fast` 213/213, and on CI `fast` 213/213 across
+four attempts — and the wall-clock gate is now derived, not breached, in both.
+The local pair is read back against the suites by
+`adr029-scope-matches-the-suites`, because this paragraph once published a
+four-case-stale pair (PR #57 R14) and a disclosure wrong about its own evidence
+is not a disclosure. The confirmation this branch cannot give itself is the CI
+run of the commit that carries these ceilings; that run is the check on the
+number, and it is read after the push rather than asserted here.
 
 ### 3. What was NOT done, and why the offer was refused
 

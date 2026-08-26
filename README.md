@@ -81,11 +81,13 @@ first version of this paragraph published the first two of those runs as
 "59.56 / 59.60s" and was falsified inside the same review round by a run at
 60.64s; this is a sample, not a bound, and the honest statement is that this
 suite straddles its ceiling rather than clears it. The same suite on CI
-(ubuntu-latest) measured **69.37 / 69.54 / 74.04 / 74.06s** across four attempts
-of one commit — a 6.8% spread on byte-identical code, which is why the wall-clock
+(ubuntu-latest) measured **101.73 / 105.14 / 106.75 / 107.89s** across four
+attempts of one run — on byte-identical code, which is why the wall-clock
 ceiling is per-environment rather than one number pretending to be portable.
-Those four are eval-gate run 32561162459 attempts 1-4, hand-read off the log and
-recorded with that id in ADR-019 §5. They supersede an earlier CI band published
+Those four are eval-gate run 32937020758 attempts 1-4 on commit `14a6a7b`,
+hand-read off the log and recorded with that id in ADR-019 §5. All four were
+correctness-green and all four were over the 90s ceiling in force when they ran,
+which is what moved it: the breach was in the budget, not the results. They supersede an earlier CI band published
 here — 59.77 / 60.84 / 64.61 / 64.67s — which was measured on a 95-case tree and
 so cannot describe this one. That band is NOT unevidenced, and an earlier
 revision of this paragraph struck it on that ground: ADR-013 names its run
@@ -174,11 +176,12 @@ enumerating them here is the snapshot that drifted:
 | `invariant` | 74 | 14.18s | 16.31 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
-attempts of one commit (`d173340`, 116 `fast` / 48 `invariant` cases, a smaller
-tree than this one; eval-gate run 32561162459) gave `invariant` 14.80-16.47s and
-`fast` 69.37-74.06s, so **20s** and **90s** by the same rule. The old CI `fast` ceiling
-of 80 was the next coin flip: 74.06s against it is 8% of margin on a runner
-whose own spread is 6.8% (ADR-019 §5). One variable per suite
+attempts of one run (`14a6a7b`, 213 `fast` / 74 `invariant` cases, the tree this
+branch ships; eval-gate run 32937020758) gave `invariant` 18.59-18.88s and
+`fast` 101.73-107.89s, so **25s** and **125s** by the same rule. `invariant` moves
+although its CI runs were never over budget: its tree grew from 48 cases to 74,
+and deriving one suite from this table while leaving the other on the old one
+would publish two trees in one table (ADR-019 §5). One variable per suite
 (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`) carries them, so
 raising one environment's ceiling for one suite cannot silently raise another's.
 

@@ -384,30 +384,32 @@ its `invariant` ceiling — the relief-valve property §3 is about — and each 
 can be measured where it is enforced, which is what ADR-013 Decision 3 already
 ruled `fast` needed. `fast-wall-clock-budget` pins both directions.
 
-### 5. CI's two numbers, measured on CI: 90 and 20
+### 5. CI's two numbers, measured on CI: 125 and 25
 
 Not projected from local runs, which is the mistake §3 made. **Hand-read off the
 workflow log, not from the ledger** (§7): four attempts of eval-gate run
-[32561162459](https://github.com/HaoweiChan/browser-agent/actions/runs/32561162459)
-on commit `d173340` — 116 `fast`, 48 `invariant`; the tree at the time of
-measurement, smaller than the one this branch ships. `gh run view 32561162459
---attempt N --log` reprints each line below.
+[32937020758](https://github.com/HaoweiChan/browser-agent/actions/runs/32937020758)
+on commit `14a6a7b` — 213 `fast`, 74 `invariant`, the tree this branch ships.
+`gh run view 32937020758 --attempt N --log` reprints each line below.
 
 | attempt | `invariant` | `fast` |
 |---|---|---|
-| 1 | 16.47s | 69.54s |
-| 2 | 15.85s | 74.06s |
-| 3 | 14.80s | 69.37s |
-| 4 | 15.60s | 74.04s |
+| 1 | 18.59s | 105.14s |
+| 2 | 18.65s | 101.73s |
+| 3 | 18.88s | 106.75s |
+| 4 | 18.72s | 107.89s |
 
 Each cell is one `[eval] cost … wall Ns` line of that attempt's log, with
-`invariant` 48/48 and `fast` 116/116 in all four. **All eight cells of this table
-are graded**, by `ci-numbers-are-derived`, and each of the eight was watched red
-one at a time: they are compared cell-by-cell, in attempt order, against the copy
-in `.github/workflows/eval.yml`'s comment block, so editing either copy reddens
-the gate and deleting the workflow's block does too. Round 1 of that case did NOT
-do this: `invariant`'s column was only ever read through `min`/`max`, so attempts
-2 and 4 could be edited freely with everything green — two numbers in a spec that
+`invariant` 74/74 and `fast` 213/213 in all four — **every attempt
+correctness-green, every attempt over the 90s `fast` ceiling that was declared
+when they ran.** That is the whole reason this section moved: the breach was in
+the budget, never in the results. **All eight cells of this table are graded**,
+by `ci-numbers-are-derived`, and each of the eight was watched red one at a time:
+they are compared cell-by-cell, in attempt order, against the copy in
+`.github/workflows/eval.yml`'s comment block, so editing either copy reddens the
+gate and deleting the workflow's block does too. Round 1 of that case did NOT do
+this: `invariant`'s column was only ever read through `min`/`max`, so attempts 2
+and 4 could be edited freely with everything green — two numbers in a spec that
 nothing read, which is the exact residue this case exists to close (PR #41 R14).
 
 From this table the same case also reads back README's four `fast` values, both
@@ -417,25 +419,36 @@ the ones the workflow declares. `published-band-matches-the-ledger` still does
 not see any of these numbers — it reads the committed ledger and no CI row is in
 it — which is why a second case exists at all.
 
-Two things are NOT pinned, stated because the alternative is a sentence claiming
-more than it does. First: that anyone ever ran these four attempts. Both copies
-could be wrong together and the gate would stay green; the run id is what a
-reader checks (`gh run view … --log`), and T-R73 carries the ledger route that
-would make it a mechanism. Second: CI figures published anywhere other than this
-section, README and the workflow comment — ADR-013's copy of the superseded
-95-case band is not read here, and is owned by `task/T-M32-9`.
+Three things are NOT pinned, stated because the alternative is a sentence
+claiming more than it does. First: that anyone ever ran these four attempts.
+Both copies could be wrong together and the gate would stay green; the run id is
+what a reader checks (`gh run view … --log`), and T-R73 carries the ledger route
+that would make it a mechanism. Second: CI figures published anywhere other than
+this section, README and the workflow comment — ADR-013's copy of the superseded
+95-case band is not read here, and is owned by `task/T-M32-9`. Third, and it
+applies to the previous four-attempt table as much as to this one: **four
+attempts of one run sample the runner's variance, not variance across commits or
+runner allocations.** Re-running one workflow run holds the commit, the image and
+the allocation fixed by construction. That is a narrower sample than the number
+of attempts suggests, and §6's no-ratchet-down rule is what makes it safe to
+publish from — a short sample is a lower bound on what the tree costs, so the
+ceiling it derives can only be too tight, never too loose.
 
-Same rule: 16.47 × 1.15 = 18.9 → **20**; 74.06 × 1.15 = 85.2 → **90**.
+Same rule: 18.88 × 1.15 = 21.71 → **25**; 107.89 × 1.15 = 124.07 → **125**.
 
-**CI's `fast` ceiling of 80 was the next coin flip, and this is the measurement
-that says so** rather than the promise the first version of this ADR left in its
-place. 74.06s against 80 is 8% of margin on a runner whose own spread across
-these four attempts is 6.8% — the same ratio that produced the local 60.24s
-refusal. The reviewer projected ~72s and the measurement came in at 74.06s
-(PR #29 R19).
+Both ceilings move, and `invariant`'s moves for a reason worth stating plainly:
+its CI runs were never over budget and are not now. But a ceiling is a derived
+number, and the tree deriving it grew from 48 `invariant` cases to 74. Deriving
+`fast` from this table while leaving `invariant` derived from the old one would
+publish two numbers from two different trees inside one table — the class this
+PR spent five rounds closing. Both come from this table or neither does.
 
-The runner is ~1.15x slower than this laptop on `fast` (74.06 vs 64.71) and
-~1.27x on `invariant` (16.47 vs 12.96), which is why four numbers and not two.
+~~**CI's `fast` ceiling of 80 was the next coin flip, and this is the measurement
+that says so**~~ and ~~the runner is ~1.15x slower than this laptop~~ — struck
+2026-08-26. Both sentences argued from the 116-case table above them, and that
+table is gone; a ratio between two trees that no longer exist is exactly the
+restated-fact class PR #57 R20-R23 closed. What replaced them is the table
+itself, which a reader can re-read off the log.
 
 ### 6. (2026-08-23) The band's slack is a declared ceiling, not an oversight
 
