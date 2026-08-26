@@ -12,6 +12,64 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
+### T-M42-20 — M42's headline acceptance clause is unmet on the live deployment: both modes die resolving a fetch-painted `<select>`            [status: todo]
+Origin: post-merge live smoke of M42, run by the pr-loop orchestrator on
+2026-08-26 against the deployment at `0403b50` (the merge commit of PR #57),
+after Zeabur redeployed. M42 shipped with this clause declared UNMET because no
+`OPENROUTER_API_KEY` was reachable and the deployment served `main`; both
+blockers are now gone, the smoke ran, and the clause is still unmet — for a
+different and previously unknown reason. `tasks/DONE.md:44` records M42 as
+delivered and does not say this; that line needs the qualification either way.
+Spec: the smoke ran one S1-shaped task — "Select the nvda-2024 fixture, extract
+it, and report the period end date" — against `https://whaleforce-sec10k.zeabur.app`,
+3 reps per mode. Ground truth `period_end: 2024-01-28`, taken independently from
+the inspector's own `/api/extract/fixture` endpoint (allowed per-site data, rule 6)
+BEFORE any run, so correctness was never judged from the agent's own output.
+
+| mode | run id | status | cost | actions |
+|---|---|---|---|---|
+| plan | `6c37e768` | `failure:locate` | $0.0043 | 4 |
+| plan | `11f9a92d` | `failure:locate` | $0.0023 | 4 |
+| plan | `ffed8d46` | `failure:locate` | $0.0015 | 3 |
+| loop | `5a33aa80` | `failure:env` (no progress) | $0.4871 | 17 |
+| loop | `9ff2056e` | `failure:env` (no progress) | $0.4830 | 17 |
+| loop | `7abacb97` | `failure:env` (no progress) | $0.9166 | 31 |
+
+Mode B verifiably fails, 3/3 — that half of the clause IS met. Loop mode also
+fails, 3/3, so "answering correctly under loop mode" is NOT met and M42's
+central live demonstration does not reproduce. Both modes die at the same step:
+resolving the fixture `<select>`. Loop:
+`no tier resolved {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}`.
+Mode B: the same target through the text tier after a relocation.
+What is NOT yet established is WHY. The visible label is CSS-uppercased while
+the DOM carries `<label for="fx">select a committed fixture</label>`, but case
+alone should not defeat the resolver — `resolver.py:169,182` match with
+`re.IGNORECASE`. A likelier line of enquiry: the served markup is
+`<select id="fx"></select>`, EMPTY, its options painted by `fetch()`. The run
+evidence carries screenshots but no observation dump, so the tier-by-tier
+failure cannot be reconstructed from outside the run. Do not fix on the case
+hypothesis without reproducing first — it was asserted once already and does not
+survive reading the resolver.
+Two things did work and must not be lost when this is fixed: the no-progress
+harness fired on all three loop runs — its first live firing — ending each at
+the 4th revisit of the same page state with the reason named, after a forced
+strategy change failed to move it, rather than grinding the budget in a circle;
+and per-run cost is visible in the trace, which is its own clause and IS met.
+Also recorded, not a defect: loop mode cost 100-300x mode B per run
+($0.4830-$0.9166 vs $0.0015-$0.0043). Total smoke spend ~$1.90.
+Acceptance: a fixture reproducing the shape offline — a `<select>` that is
+EMPTY at load and whose options arrive by `fetch()`, with a CSS-uppercased
+label — watched red first; the root cause named and fixed; the same live smoke
+re-run at 3 reps with loop mode answering `2024-01-28` and run ids published;
+`tasks/DONE.md:44` amended to say what M42 did and did not demonstrate live.
+Out of scope: mode B answering this task (D28's declared boundary — S1 is why
+loop mode exists); the cost ratio (ADR-027 rules cost is not a constraint);
+`T-M42-19`'s unit-less-figure gap in the CI-ceiling sweep.
+Note: the offline suite is 213 green cases and none of them caught this. That is
+the finding behind the finding — no fixture in the repo has a control that is
+absent at load and arrives by fetch, which is the exact S1 shape M42 was built
+for.
+
 ### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: todo]
 Origin: live demo, 2026-08-24 — asked to drive Task 2's deployed inspector
 (https://whaleforce-sec10k.zeabur.app) and answer from it, the agent failed.
