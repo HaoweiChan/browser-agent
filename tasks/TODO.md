@@ -98,6 +98,47 @@ Note: the offline suite is 213 green cases and none of them caught this. That is
 the finding behind the finding — no fixture in the repo has a control that is
 absent at load and arrives by fetch, which is the exact S1 shape M42 was built
 for.
+Update 2026-08-26 — BOTH CASES WRITTEN, WATCHED RED, FIXED; the deployment
+smoke is the one clause still open. Red-first record, verbatim:
+  - (a) `observe-uppercase-label-name-resolves` (fast) — a new `observe`-case
+    key `resolve_advertised` feeds every advertised combobox name back into
+    `resolve` verbatim. Red: `advertised_name_did_not_resolve: [{'target':
+    {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}, 'error':
+    "ResolveError: no tier resolved ..."}]` against the committed
+    `sec10k-inspector.html` snapshot, whose `.mode label` carries
+    `text-transform: uppercase`. No new fixture was needed — the snapshot
+    already reproduced the live defect byte for byte.
+  - (b) `action-select-option-waits-for-fetch-painted-options` (fast) — new
+    fixture `late-options.html` plus a `/fixtures/late-options.json` endpoint
+    that sleeps 1.0s server-side. Red: `failure:act` — `step 2 (select_option):
+    no option matches 'nvda-2024'; this control offers []`.
+Fixes: `resolver._whole_string` replaces `exact=True` on the role AND text
+tiers with an anchored, whitespace-normalising, case-insensitive regex — the
+substring refusal (`resolver-substring-name`) survives because it is anchored,
+and two names differing only by case now collide into M38's ambiguity
+machinery; and the select step, on reading zero options, waits once for the
+first `option` to be ATTACHED (never `visible` — the options of a closed
+`<select>` never are, which costs the full timeout and then reads a list that
+arrived seconds earlier) before failing loudly as it always did.
+Gate: `invariant` 76/76, `fast` 222/222, wall 14.97s / 89.6s against ceilings
+20 / 105 (`evals/report/20260826-170109-invariant.json`,
+`20260826-170244-fast.json`); ADR-019 §2's band, ADR-029 §2, README and
+docs/analysis.md all republished at the new count.
+Live verification of the FIX, $0 and no LLM, against
+`https://whaleforce-sec10k.zeabur.app` (inspector build `e54573fef9aa`),
+with the repo's own `navigate` -> `observe` -> `resolve`: the observation still
+reports `{'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}` — the two
+engines still disagree, which is the point — and that name now resolves,
+`RESOLVED tier=role`, where before it raised `ResolveError: no tier resolved`.
+Two probes minutes apart read 0 and 43 `<option>`s at the same moment of the
+page's life, so the live picker is BOTH shapes: (b) is not a fixture-only
+concern. Ground truth re-confirmed from `/api/extract/fixture`:
+`period_end: 2024-01-28`.
+STILL OPEN, and the reason this block is not closed: the deployment tracks
+`main`, so a 3-rep smoke run before this branch merges would measure the
+pre-fix build. No run ids are published here because no run was made (rule 4).
+The clause needs merge -> redeploy -> 3 reps per mode with loop mode answering
+`2024-01-28`, and only then does M42's headline clause close.
 
 ### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: todo]
 Origin: live demo, 2026-08-24 — asked to drive Task 2's deployed inspector
@@ -294,6 +335,63 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]
+Origin: T-M42-20, while writing case (a). The defect it caught — two different
+accessible-name engines disagreeing — was invisible to 213 green cases for a
+whole milestone because every case grades ONE end: `observe` cases assert what
+the observation says, resolver cases resolve targets an author typed by hand,
+and nothing ever handed the observation's own output back to the resolver.
+`resolve_advertised` (new `observe`-case key) closes that loop, but it is
+declared on exactly one fixture (`sec10k-inspector.html`) for exactly one role
+(`combobox`), so the same class of disagreement on any other page or role is
+still uncovered. Two known widenings and one known hazard, none taken here:
+`text-transform: capitalize`/`lowercase` are the same defect with different
+casing; `::before`/`::after` content is also folded into Chromium's snapshot
+name and NOT into the locator engine's, which the case-fold fix does not touch
+at all; and turning the key on across every existing `observe` case would be a
+gate-wide claim ("no observation anywhere advertises an unusable name") that
+should be watched red before it is asserted, not switched on and assumed.
+Spec: widen deliberately, one page/role at a time, each with its own red-first
+run — or, if the sweep comes back clean, promote it to a property over the
+fixture set with the cost measured against the `fast` band first.
+Acceptance: at least the `::before` content case pinned red, and a stated
+ruling on whether the round trip is per-case or a suite-wide property.
+
+### T-M42-20-D2 — ADR-029 §2's CI figures are graded as if they measured this tree            [status: todo]
+Origin: T-M42-20, adding two cases. `adr029-scope-matches-the-suites` reads
+every `` `fast` N/N `` and `` `invariant` N/N `` in ADR-029 §2 back against the
+CURRENT suite sizes. Two of those figures belong to CI run
+`32937020758` on commit `14a6a7b`, which measured a 220-case tree and always
+will; the local pair legitimately moves with every case addition. Following the
+convention (git history: 213→219→220, all three restated together) would have
+had this branch publish "on CI `fast` 222/222", a number no run produced —
+CLAUDE.md rule 4. This branch instead spells the CI counts out in words so the
+grader does not read them as this tree's, and says so in the ADR.
+Spec: decide which of the two the repo wants — either §2 stops restating CI
+counts at all and defers to ADR-019 §5, the one publisher (`ci-numbers-are-derived`
+already grades that), or the guard learns to scope a figure to the commit it
+names. The current state is honest but relies on prose staying in a form the
+regex ignores, which is a guard by accident.
+Acceptance: the CI half of §2 either gone or graded against its own run id, and
+a case that reddens if a CI figure is restated in the local pair's form.
+
+### T-M42-20-D3 — the local `fast` band ships 0.8s under a rounding step            [status: todo]
+Origin: T-M42-20, republishing ADR-019 §2 at 222 cases. The three runs recorded
+at this count measured 89.60 / 90.08 / 90.49s. `_band_rule` gives 105 for
+anything up to 91.30s and 110 above it, so the ledger's maximum is 0.81s from
+the step that would make item 4 (committed-ceiling) demand a ceiling this repo
+has not committed — and moving `WALL_BUDGET_S["fast"]` is an ADR, not an edit,
+so the first ordinary run that lands at 91.4s blocks a commit until someone
+writes one. This is not a T-M42-20 defect; it is the state the band was already
+in (the 220-case band sat at 88.81s, 2.5s of room) and two cases used a third of
+what was left.
+Spec: decide before it bites — either take the ~2.3s of measured waste the next
+profile finds (ADR-021's own ruling that the answer to per-case growth is
+removing waste rather than another raise) or pre-commit a ceiling with an ADR
+that says which. `T-M42-19` (the CI half of the sweep) is adjacent and separate.
+Acceptance: either a `fast` band whose maximum sits at least one full step under
+its ceiling, or an ADR that rules the current margin acceptable and says why.
 
 ### T-M39-14 — the front-page baseline cites a run that failed, and the rule set makes it unfixable in place            [status: todo]
 Origin: found on merged `main` (`7e0b662`) by the session that had driven PR #52,

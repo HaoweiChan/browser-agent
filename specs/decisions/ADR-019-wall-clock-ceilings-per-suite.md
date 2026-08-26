@@ -80,14 +80,18 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 220 cases, ts `20260826-132151`, **88.81s**, 217/220
-  (`evals/report/20260826-132151-fast.json`; `dirty: true`, for the reason the
-  next paragraph gives, and red — the two failures are `docs-numbers-are-derived`
-  and `published-band-matches-the-ledger` themselves, mid-refresh at the moment
+- Band source — local `fast` at 222 cases, ts `20260826-165306`, **90.25s**, 219/222
+  (`evals/report/20260826-165306-fast.json`; `dirty: true`, for the reason the
+  next paragraph gives, and red — the three failures are `docs-numbers-are-derived`,
+  `published-band-matches-the-ledger` and `adr029-scope-matches-the-suites`
+  themselves, mid-refresh at the moment
   this row was recorded. That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
-  the addition forces. Here the addition is M45's zh cases arriving on top of M41's inspector cases and M42's loop-mode cases, in the merge of PR #56. The stamp is UTC, as
+  the addition forces. Here the addition is T-M42-20's two cases —
+  `observe-uppercase-label-name-resolves` and
+  `action-select-option-waits-for-fetch-painted-options` — the red-first pair for
+  the defect that left M42's headline live clause unmet. The stamp is UTC, as
   every row written since §7 is. How many rows the ledger holds at this count,
   and what its maximum is, are deliberately not written here — see §3. Each
   re-derivation of this section is exactly the cost `T-M39-11` names, and PR #57
@@ -115,7 +119,7 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 220 cases, 217/220) and
+The cited rows' own results — (restated — `fast`: 222 cases, 219/222) and
 (restated — `invariant`: 76 cases, 73/76) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
@@ -236,7 +240,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 88.81 × 1.15 = 102.13 → **105**, which is exactly the
+five — gives 90.25 × 1.15 = 103.79 → **105**, which is exactly the
 committed 105. The ceiling was moved 90 → 105 by ADR-029, derived
 from the band source cited above — a committed row at the shipped case count
 whose derived ceiling is the one the ledger's maximum derives, which is item 3

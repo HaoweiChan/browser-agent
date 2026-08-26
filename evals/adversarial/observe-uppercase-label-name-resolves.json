@@ -1,0 +1,31 @@
+{
+  "id": "observe-uppercase-label-name-resolves",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "kind": "observe",
+    "fixture": "sec10k-inspector.html"
+  },
+  "expect": {
+    "contains": [
+      {
+        "role": "combobox"
+      }
+    ],
+    "resolve_advertised": [
+      "combobox"
+    ],
+    "note": "every name this observation advertises for a combobox is a name resolve() accepts, fed back verbatim"
+  },
+  "provenance": "T-M42-20 case (a) — the root cause of M42's unmet headline clause, and the only case in the suite that closes the observe->resolve loop instead of grading each end separately. `observe()` and `resolve()` compute the accessible name with two different engines: Chromium's `accessibility.snapshot()` applies the page's CSS `text-transform`, Playwright's locator engine does not. The inspector's picker is labelled `<label for=\"fx\">select a committed fixture</label>` under a `.mode label{text-transform:uppercase}` rule, so the observation hands the planner `SELECT A COMMITTED FIXTURE` and `resolver.py`'s role tier — `get_by_role(role, name=name, exact=True)`, case-sensitive whole-string — cannot match it. `resolver.py`'s own comment, \"planner names come from the observation verbatim\", is exactly the assumption this breaks. Measured live at $0 on 2026-08-26 against https://whaleforce-sec10k.zeabur.app with 43 `<option>`s in the DOM, so it is not the empty-at-load race the block guessed at second (that half is case `action-select-option-waits-for-fetch-painted-options`); the committed snapshot `src/browser/fixtures/sec10k-inspector.html` reproduces it offline, byte for byte the same name. The case asserts the ROUND TRIP, not the uppercase string: pinning `SELECT A COMMITTED FIXTURE` in `contains` would have made the case red for the other legitimate fix (folding the case inside `observe`), and the invariant that matters is that the two ends agree, whichever end moves.",
+  "triage": {
+    "class": "invariant-gap",
+    "red_first": "observed as `{'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}`; fed back, `resolve` raised `ResolveError: no tier resolved {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}`. Case output: `advertised_name_did_not_resolve: [{'target': {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}, 'error': \"ResolveError: no tier resolved {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}\"}]`. The same target lowercased resolved at tier `role`.",
+    "note": "213 offline cases were green over this. The gap was structural: `observe` cases graded what the observation says and resolver cases graded targets an author typed, so no case ever handed one end's output to the other."
+  }
+}

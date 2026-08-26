@@ -100,7 +100,9 @@ AMBIGUOUS = -2
 # and each is the whole guard on one tier: a role-tier ambiguity has identical
 # roles by construction and is separated by TEXT ({role: link, name: "user
 # profile"} over two bylines — resolver-narrows-by-anchor-proximity), a
-# text-tier ambiguity has identical text by construction (exact=True) and is
+# text-tier ambiguity has near-identical text by construction (whole-string
+# matching; since T-M42-20 it is case-insensitive, so two matches CAN differ in
+# case, and this check then refuses to narrow them — the safe direction) and is
 # separated by ROLE (the same "4.7" as a thread score and a footer median —
 # resolver-refuses-mixed-roles).
 #
@@ -169,6 +171,35 @@ _PLURAL_ASK = re.compile(
     re.IGNORECASE)
 
 
+def _whole_string(s: str):
+    """Name/text -> an ANCHORED case-insensitive regex: whole-string, case-blind.
+
+    `exact=True` was the wrong half of Playwright's two knobs. It buys the
+    refusal `resolver-substring-name` exists for — an absent 'History' must not
+    resolve to 'Hello Fixture History' — and it also makes matching
+    CASE-SENSITIVE, which is a promise about the page's stylesheet that nothing
+    in this repo can keep. `observe()` reads the accessible name from Chromium's
+    `accessibility.snapshot()`, which APPLIES CSS `text-transform`; the locator
+    engine underneath `get_by_role` computes its own name and does not. A
+    `<label>` under `text-transform: uppercase` therefore reaches the planner
+    shouting and comes back unresolvable, which is how M42's live clause died
+    3/3 in both modes on a control the page was rendering perfectly
+    (T-M42-20; case observe-uppercase-label-name-resolves).
+
+    Anchoring is what keeps the substring refusal intact, so the fix relaxes
+    case and nothing else. Two names that differ only in case now collide as an
+    ambiguity and go to M38's narrowing rungs — the honest outcome, and the one
+    `exact=True` was silently deciding by stylesheet.
+
+    Whitespace is collapsed into `\\s+` rather than escaped literally because
+    Playwright normalises whitespace for STRING matching but tests a regex
+    against the element's raw text, so `^...$` over an escaped literal would
+    have been a stricter matcher than the one it replaced, not a looser one.
+    """
+    return re.compile(r"^\s*" + r"\s+".join(re.escape(w) for w in s.split()) + r"\s*$",
+                      re.IGNORECASE)
+
+
 def _loose(s: str):
     """`near` string -> a regex that tolerates typography and whitespace."""
     out = []
@@ -197,7 +228,7 @@ async def _nearest(page, loc, near: str, *, loose: bool) -> tuple[int | None, st
     page could not tell any reader.
 
     Four passes, strictest first, and the looser two are M38's rung 3. Exact
-    before substring, for the reason the role tier already uses exact=True
+    before substring, for the reason the role tier already matches whole-string
     (resolver-substring-name): a sloppy anchor lands on a superstring sibling
     and the run reports the neighbour of the wrong label as its answer. The
     substring fallback stays because a `near` anchor is usually a fragment of a
@@ -291,16 +322,19 @@ async def resolve(page, target: dict, many: bool = False,
     # were ungated for a round (PR #42 R7). The argument for each is at the
     # `if ambiguous:` block below.
     may_narrow = action in READS and not _PLURAL_ASK.search(task or "")
-    # exact=True: planner names come from the observation verbatim; substring
-    # matching resolved absent targets to superstring siblings and extracted
-    # the wrong element as a success (case resolver-substring-name).
+    # Whole-string, not substring: substring matching resolved absent targets to
+    # superstring siblings and extracted the wrong element as a success (case
+    # resolver-substring-name). `_whole_string` keeps that refusal — it is
+    # anchored — and relaxes only CASE, because the comment this replaced
+    # ("planner names come from the observation verbatim") was true of the
+    # planner and false of the two engines underneath it (T-M42-20).
     def scope_tiers(scope):
         out = []
         if role:
-            out.append(("role", (scope.get_by_role(role, name=name, exact=True) if name
+            out.append(("role", (scope.get_by_role(role, name=_whole_string(name)) if name
                                  else scope.get_by_role(role)), scope))
         if text:
-            out.append(("text", scope.get_by_text(text, exact=True), scope))
+            out.append(("text", scope.get_by_text(_whole_string(text)), scope))
         return out
 
     # One DOCUMENT at a time, finished before the next is opened. A flat tier

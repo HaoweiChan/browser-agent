@@ -197,7 +197,11 @@ act.
 **Rung 2 guarded only on role, as tasks/TODO.md M38 specified** — implemented
 with the text half added, not instead. The role conjunct is vacuous on the role
 tier (`get_by_role` returns one role by construction) and the text conjunct is
-vacuous on the text tier (`exact=True` returns one string by construction), so
+vacuous on the text tier (whole-string matching returns one string by
+construction — as of T-M42-20 that is an anchored case-insensitive regex rather
+than `exact=True`, so the text conjunct is now merely NEARLY vacuous there: two
+matches can differ in case, and the check refuses to narrow them, which is the
+conservative direction and not a change of rule), so
 either alone leaves the other tier unguarded: `{role: link, name: "user
 profile"}` over two bylines reading "arden" and "bellweather" is same-role,
 different-answer, and role alone would have picked one. Each half is the whole

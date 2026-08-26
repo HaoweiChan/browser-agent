@@ -172,8 +172,23 @@ async def _frame_elements(frame, budget: int) -> list[dict]:
 
     Playwright's own ARIA snapshot rather than a hand-rolled walker: the roles
     and names are computed by the same engine `get_by_role` matches with, so
-    what the observation advertises is what the resolver can reach. It is used
-    ONLY for child frames -- `page.accessibility.snapshot()` cannot reach them
+    what the observation advertises is what the resolver can reach.
+
+    **The MAIN frame does not get that guarantee, and T-M42-20 is what it cost.**
+    Its elements come from `page.accessibility.snapshot()` below, which is
+    Chromium's own tree and APPLIES CSS `text-transform` to an accessible name
+    where the locator engine does not — so a `<label>` under
+    `text-transform: uppercase` is advertised in a form `get_by_role(name=...)`
+    could not match at all, until the resolver's name tiers stopped being
+    case-sensitive (`resolver._whole_string`). Do not "fix" that by folding the
+    case HERE: the observation is what the planner reads and what the page
+    renders, and lowering it would hand the model a string the page does not
+    show. Two engines, one contract, enforced at the matcher — and pinned by
+    `observe-uppercase-label-name-resolves`, which feeds this function's own
+    output back into `resolve`.
+
+    This function is used ONLY for child frames -- `page.accessibility.snapshot()`
+    cannot reach them
     (it returns None for a cross-frame root, measured) while it remains the
     main frame's observation unchanged, so no case written before M42 sees a
     different element list.

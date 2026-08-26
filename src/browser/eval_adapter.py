@@ -2057,20 +2057,41 @@ def _run_observe_case(case: dict) -> dict:
             # contract. Same lesson as the screenshot bound one level up —
             # try/except bounds error propagation, never latency.
             await page.goto(url)
-            if drill := case["input"].get("drill"):
-                # The scoped observation, reached the way production reaches it:
-                # through the real resolver, from a target a plan could write.
-                # The eval harness does not get its own path to a subtree —
-                # that would grade something the executor never runs.
-                from .resolver import resolve
+            # The scoped observation, reached the way production reaches it:
+            # through the real resolver, from a target a plan could write.
+            # The eval harness does not get its own path to a subtree —
+            # that would grade something the executor never runs.
+            from .resolver import resolve
 
+            if drill := case["input"].get("drill"):
                 loc, _tier, _narrowed = await resolve(page, drill)
-                return await observe(page, root=loc, text_head=DRILL_TEXT_HEAD)
-            return await observe(page)
+                obs = await observe(page, root=loc, text_head=DRILL_TEXT_HEAD)
+            else:
+                obs = await observe(page)
+            # The observe -> resolve ROUND TRIP, for the roles a case names. Every
+            # other check here grades one end alone: `unnameable_roles` asserts
+            # from a hand-kept role list that a name is usable, and the resolver
+            # cases resolve targets an author typed. Neither ever handed the
+            # observation's own output back to the resolver, which is how two
+            # different accessible-name engines disagreed for a milestone
+            # (T-M42-20). The name goes back VERBATIM — anything else would
+            # grade a normalisation the planner does not perform.
+            unresolvable = []
+            for role in case["expect"].get("resolve_advertised", []):
+                for e in obs["elements"]:
+                    if e["role"] != role or not e["name"]:
+                        continue
+                    target = {"role": e["role"], "name": e["name"]}
+                    try:
+                        await resolve(page, target)
+                    except Exception as exc:
+                        unresolvable.append({"target": target,
+                                             "error": f"{type(exc).__name__}: {exc}"})
+            return obs, unresolvable
         finally:
             await ctx.close()
 
-    obs = _await(go())
+    obs, unresolvable = _await(go())
     exp = case["expect"]
     missing = [
         want for want in exp.get("contains", [])
@@ -2099,9 +2120,10 @@ def _run_observe_case(case: dict) -> dict:
     text_missing = [t for t in exp.get("text_head_contains", []) if t not in obs["text_head"]]
     return {
         "passed": not missing and not unnameable and not starved and not leaked
-                  and not text_missing,
+                  and not text_missing and not unresolvable,
         "missing": missing,
         "advertised_unresolvable": unnameable,
+        "advertised_name_did_not_resolve": unresolvable,
         "starved_by_chrome": starved,
         "inside_the_cap_after_all": leaked,
         "text_head_missing": text_missing,

@@ -9,6 +9,23 @@ description: Domain knowledge for the browser-agent task — Playwright pitfalls
 
 1. **role + accessible name** — survives cosmetic change; needs decent ARIA.
 2. **text/label** — robust; breaks on copy changes (`button-text-renamed`).
+
+**Both name tiers match WHOLE-STRING and CASE-INSENSITIVELY** (`_whole_string`,
+T-M42-20). Not `exact=True`, which buys the whole-string refusal
+(`resolver-substring-name`) and a case-sensitivity promise nothing can keep:
+`observe()` reads the accessible name from Chromium's `accessibility.snapshot()`,
+which APPLIES CSS `text-transform`, and Playwright's locator engine computes its
+own name and does not. A `<label>` under `text-transform: uppercase` therefore
+reaches the planner shouting and comes back unresolvable — that is how M42's
+live clause died 3/3 in both modes on a control the page rendered perfectly.
+The regex is anchored, so substring ambiguity is still refused; whitespace is
+collapsed to `\s+` because Playwright normalises whitespace for STRING matching
+but tests a regex against the element's RAW text. Two names differing only in
+case now collide as an ambiguity and go to M38's narrowing rungs, which is the
+honest outcome. Pinned by `observe-uppercase-label-name-resolves`, the only case
+that closes the `observe` -> `resolve` loop instead of grading each end alone —
+and the reason it existed to be broken for a milestone is that no other case
+does (debt: `T-M42-20-D1`).
 3. **stable attrs** (id, data-*, name) — precise; most brittle (`ids-renamed`).
 4. **structural relations** — last resort; killed by `wrapper-nesting`.
 
@@ -98,7 +115,8 @@ clean single match at the text tier outranks a narrowed one at the role tier.
   `index` (structural), the two shared refusals, and matches interchangeable in
   role AND rendered text. The two halves of "interchangeable" are not redundant
   — role is vacuous on the role tier and text is vacuous on the text tier
-  (`exact=True`), so each is the whole guard on the other's tier:
+  (whole-string; near-vacuous rather than vacuous since T-M42-20 made it
+  case-insensitive), so each is the whole guard on the other's tier:
   `resolver-refuses-mixed-roles` (role), `resolver-refuses-different-readings`
   (text). Interchangeability gates rung 2 ONLY — rung 1 is *for* candidates
   that differ.
@@ -133,6 +151,17 @@ path. `src/browser/mutate.py` is the transform layer.
   Ground truth: `GET /fixtures/forms/state` returns the last submission;
   `POST /fixtures/forms/reset` clears it before a case.
 - `/fixtures/hello.html` — M1 walking-skeleton page, still the cheapest case.
+- `/fixtures/late-options.html` (T-M42-20) — a `<select>` that is in the DOM at
+  `load` with ZERO `<option>`s, filled from `fetch('/fixtures/late-options.json')`,
+  an endpoint that sleeps `server.LATE_OPTIONS_DELAY_S` (1.0s) so the page waits
+  on the NETWORK rather than on a page-side timer. The only fixture of that
+  shape — `loop-lab.html` paints late but on a click, from a timer, and its
+  `<select>` is fully populated in the document — and its absence is why 213
+  green cases missed the S1 half M42 was built for. The delay is squeezed from
+  both sides: shorter and the options land before the select step's first read
+  (measured at ~0.1s after `goto`), so the case passes and grades nothing;
+  longer and it is pure wall clock inside a published band. Case:
+  `action-select-option-waits-for-fetch-painted-options`.
 - `/fixtures/slow-asset.html` — references `/fixtures/hang.png`, an endpoint
   that sleeps 120s, so the `load` event never fires while the document is
   complete in milliseconds. openlibrary.org's edition pages behaved exactly

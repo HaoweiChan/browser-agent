@@ -1412,6 +1412,28 @@ async def fixture_hang():
     raise HTTPException(504, "unreachable by design")
 
 
+# Two ceilings squeeze this number and it is worth naming both, because moving
+# it in either direction breaks something quietly. Too SHORT and the options
+# land before the select step's first read, so the case still passes and has
+# stopped grading the wait — the silent-disarm failure this repo keeps paying
+# for. Too LONG and it is pure wall clock inside a `fast` suite whose ceiling is
+# published, derived and gated (ADR-029). 1.0s against a first read measured at
+# ~0.1s after `goto` is ~10x margin for the first and ~1% of the suite for the
+# second.
+LATE_OPTIONS_DELAY_S = 1.0
+LATE_OPTIONS = ["aapl-2025", "msft-2013", "nvda-2024"]
+
+
+@app.get("/fixtures/late-options.json")
+async def fixture_late_options():
+    """The option list `late-options.html` paints its empty `<select>` from,
+    served late on purpose (T-M42-20 case (b)). The delay lives HERE rather
+    than in a page-side timer so the fixture is genuinely waiting on the
+    network, which is what a fetch-painted control does."""
+    await asyncio.sleep(LATE_OPTIONS_DELAY_S)
+    return LATE_OPTIONS
+
+
 @app.get("/fixtures/{name}", response_class=HTMLResponse)
 async def fixture(name: str, mut: str | None = None):
     path = (FIXTURE_DIR / name).resolve()
