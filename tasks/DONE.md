@@ -33,6 +33,12 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 
 - T-M40-1 — a browser check takes the run slot instead of reading it (2026-08-24) — PR #45, trace in tasks/reviews/pr45-r*.json; 3 rounds, 1 circuit breaker (human ruled option B: R8/R9 shipped as T-R89/T-R90). Nine debt items T-R82..T-R90, renumbered from T-R73..T-R79 after the final merge found seven ids defined differently on both sides with tasks/TODO.md auto-merging clean
 - T-M40-2 — the document root is not an answer: the plan lint refuses it at both adoption points (2026-08-24) — ADR-024, PR #46, trace in tasks/reviews/pr46-r*.json; 3 rounds, approved
+- T-M32-9 — three published wall-clock ceilings are not the enforced ones, CLAUDE.md included (2026-08-24) — PR #40, trace in tasks/reviews/pr40-r*.json; pinned by `ceiling_sweep_rows`
+- T-R44 — a published band is graded only against rows from its own environment (2026-08-24) — ADR-019 §7, PR #41, trace in tasks/reviews/pr41-r*.json; bundles T-R51, closes T-M32-13's second half
+- M39 — a malformed judge completion is retried once, then fails closed exactly as before (2026-08-24) — PR #44, trace in tasks/reviews/pr44-r*.json
+- M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer reaches for (2026-08-24) — PR #43, trace in tasks/reviews/pr43-r*.json; support-matrix D28; also closed T-R61
+- T-M40-4 — deploy-smoke treats "refused because a run is executing" as not-a-failure, and says UNCHECKED when it exhausts retries (2026-08-24) — PR #47
+- T-R61 — the task field's placeholder cites a verified run instead of the retired HN prompt (2026-08-24) — closed by M40, PR #43
 
 ## B-floor exit criteria — final status
 
