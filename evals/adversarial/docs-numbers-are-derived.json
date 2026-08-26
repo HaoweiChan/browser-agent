@@ -16,8 +16,8 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260826-080713-fast.json",
-        "invariant": "20260826-080534-invariant.json",
+        "fast": "20260826-083201-fast.json",
+        "invariant": "20260826-083047-invariant.json",
         "live": "20260826-080559-live.json"
       }
     },
@@ -112,6 +112,18 @@
         "doc": "docs/analysis.md",
         "quotes": [
           "`live` is {live}/{live} across {live_sites} real sites"
+        ]
+      },
+      {
+        "doc": "specs/decisions/ADR-030-m41-sec10k-inspector-probe.md",
+        "quotes": [
+          "enforces\n{gt_conjuncts} conjuncts, each watched red before it was green"
+        ]
+      },
+      {
+        "doc": "docs/support-matrix.md",
+        "quotes": [
+          "`sec10k-ground-truth-endpoint-eval-only`, {gt_conjuncts} conjuncts each watched red"
         ]
       }
     ]

@@ -60,7 +60,7 @@ its own report beside it.
 200 distinct cases (22 golden + 178 adversarial).
 293 browser actions in a `fast` run; **112 of the 187** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260826-080713-fast.json` rather than tallied by hand (the
+`evals/report/20260826-083201-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The

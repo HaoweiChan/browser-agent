@@ -134,13 +134,32 @@ and a ground-truth API endpoint. M41 uses the first and the third. The rule that
 keeps the third honest is direction: `/api/extract/fixture` may be reached by
 the probe script, by `evals/` and by an eval adapter, and by nothing that
 decides what the agent does. `sec10k-ground-truth-endpoint-eval-only` enforces
-three conjuncts, each watched red before it was green: the endpoint path appears
+4 conjuncts, each watched red before it was green: the endpoint path appears
 in no module of `src/browser/` except `eval_adapter.py`; the inspector host
 appears in none except `eval_adapter.py` and `server.py`, which carries a start
 URL per declared matrix row in `EXAMPLES` (rule 6's first allowance, and
-`ui-examples-cover-matrix` requires one for every live row); and every eval case
-tagged with that domain that carries an `expect.answer` names the endpoint its
-ground truth came from.
+`ui-examples-cover-matrix` requires one for every live row); **no eval case
+anywhere feeds that endpoint — or any `/api/` path on that host — to a run
+through its `input` block**; and every eval case tagged with that domain that
+carries an `expect.answer` names the endpoint its ground truth came from. A
+`bool(cases)` non-vacuity precondition sits beside them and is deliberately not
+counted as a fifth: it stops the last conjunct passing on an empty set, it is
+not a claim about the boundary, and the count above is derived from the check's
+own `wrong` keys rather than re-typed here.
+
+**The third conjunct is the one that was missing, and it is the one the rule is
+actually about (PR #58 R2).** The first three all scanned MODULES; none looked
+at what a case FEEDS a run. A case with `input.url` and a `navigate` step
+pointing at `.../api/extract/fixture?fixture=aapl-2025` made the executor fetch
+the answer instead of reading a page, and every downstream guard passed
+honestly — the value really is in that response's text — while this check
+returned `{'passed': True, ..., 'cases_scanned': 6}` and the case itself ran
+PASSED. Worse, the last conjunct REWARDS the endpoint string being present in
+the case file, so the leak was indistinguishable from compliance. Reproduced
+that way first, then watched red with the same probe file present
+(`{"ground_truth_endpoint_fed_to_the_executor": ["zz-tmp-leak-probe.json"]}`),
+then the probe removed — it is a rule-6 violation by construction and
+committing it would leave the invariant permanently red.
 
 Both halves of that are allowlists, and they became allowlists because a cold
 review found them narrower than the sentence above. The host rule first named

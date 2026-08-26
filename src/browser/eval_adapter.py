@@ -4705,6 +4705,20 @@ def _run_doc_counts_case(case: dict) -> dict:
     # reads back. A `domain` tag is what the coverage half of this case already
     # trusts to mean "a real site", so it is what this counts.
     counts["live_sites"] = len({c["domain"] for c in load_cases("live") if c.get("domain")})
+    # How many conjuncts the rule-6 boundary invariant actually enforces. Two
+    # documents describe that guard in prose and both said "three" for a whole
+    # round after a fourth shipped (PR #58 R6) — the third instance in this PR
+    # of a multi-artifact correction leaving a document behind, which is the
+    # argument for deriving it instead of re-typing it.
+    #
+    # ponytail: the count is `len(wrong)`, one key per conjunct, because that is
+    # the shape the check already returns and no second registry is worth
+    # keeping in sync with it. Two ceilings, both real: `bool(cases)` — the
+    # non-vacuity precondition that stops the scan passing on an empty set — is
+    # NOT a conjunct and carries no key, so it is deliberately not counted; and
+    # a future conjunct that folds into an existing key would be invisible here.
+    # Upgrade if either bites: name the conjuncts in a tuple the check returns.
+    counts["gt_conjuncts"] = len(_check_ground_truth_endpoint_eval_only()["wrong"])
     readme = (RUN_ROOT / "README.md").read_text(encoding="utf-8")
     for quote in inp.get("readme_quotes", []):
         want = quote.format(**counts)
