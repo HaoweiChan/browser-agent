@@ -1,0 +1,60 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "pr": "https://github.com/HaoweiChan/browser-agent/pull/57",
+  "round": 6,
+  "scope": "frozen to R24-R27; R28 was the orchestrator's own and is not redone",
+  "counts": {
+    "fixed": 4,
+    "rejected": 0,
+    "debt": 0
+  },
+  "context": "CI passed on e0ea784 (run 32939583133): invariant 74/74 in 17.40s under 25, fast 213/213 in 98.17s under 125, no OVER BUDGET line. 98.17s sits below all four attempts the ceiling was derived from, so the derivation was not fitted to a lucky run. R7 is closed and confirmed by the thing it was about.",
+  "findings": {
+    "R24": {
+      "state": "fixed",
+      "change": "Five ungraded publishers of the retired CI ceilings struck IN PLACE with dated pointers, never silently edited: ADR-029's Ruling, ADR-019's Ruling, ADR-019's smaller-tree paragraph, ADR-019's Amended-by, and INDEX.md's ADR-029 entry. The reversal is the substance, so it stays visible.",
+      "structural_half": "`ci-numbers-are-derived` now scans every specs/decisions/*.md: any document naming an EVAL_WALL_BUDGET_S_* variable beside a number on the same line must name the number the workflow declares. Anchored to the variable, with struck spans stripped first, for the same reason `_ceiling_drift` is anchored — prose narrating a past ceiling is indistinguishable from a live one by any cheap pattern (T-M32-9's ruling).",
+      "red_first": "Run against the pre-round documents (git stash of the four files), the extended check returned: [{\"doc\": \"ADR-021-local-fast-ceiling-90.md\", \"publishes_a_ci_ceiling_of\": 90, \"suite\": \"fast\", \"workflow_declares\": 125}, {\"doc\": \"ADR-029-local-fast-ceiling-105.md\", 90 vs 125}, {\"doc\": \"INDEX.md\", 90 vs 125}, {\"doc\": \"INDEX.md\", 90 vs 125}] — it finds ADR-021 as well, which is R25's document, so one guard now covers both crops."
+    },
+    "R25": {
+      "state": "fixed",
+      "change": "ADR-021 gains the `Amended by` line it never had, naming ADR-029 and stating its CI ruling is OVERTURNED; the section heading, its operative sentence and the bullet at :42 are struck in place. ADR-029 gains an `Amends` line (it had none) naming ADR-019 Decision 2, ADR-019 §5, and the overturn. INDEX's ADR-021 entry no longer presents 'CI's fast stays 90' as a live RULING.",
+      "note": "ADR-021's reasoning is deliberately left unstruck — a ceiling is derived from a measurement of the shipped tree, not from an absence of evidence. That reasoning is exactly what overturned its own conclusion, applied to a later tree."
+    },
+    "R26": {
+      "state": "fixed",
+      "change": "The retired run id is gone from both prose sites. README's upper paragraph and ADR-019's debt paragraph now refer to 'the run ADR-019 §5 names' instead of repeating an id, so §5 is the single publisher of the run id exactly as it is of the wall clocks. README still carries the current id once, in the paragraph that publishes the four values, which is what `ci-numbers-are-derived` requires.",
+      "note": "The `gh run view <id>` command a reader could copy out of README returned the retired cells. It now points at §5, which carries the command with the live id."
+    },
+    "R27": {
+      "state": "fixed",
+      "change": "The trailing lookahead `(?![\\d.])` became `(?!\\d)`. Rejecting a following DIGIT is what it was for; a period is punctuation, and sentence-final is the commonest position a number takes in prose — so the guard was blind exactly where it is most needed, and ADR-029 section 1 rests on it alone.",
+      "red_first": "Demonstrated both directions on the live document. Injected 'The band was 91.23s.' INSIDE section 1: pre-fix {\"passed\": true, \"quoted\": []} — green and wrong. Post-fix, same injection: {\"quoted_in_adr029_section_1_but_in_no_local_fast_row_at\": 213, \"unreadable\": [91.23]}. Injection removed, green again.",
+      "exemptions_kept": "Struck spans still stripped before matching; the integer form (`105s`, a ceiling rather than a measurement) is still unmatched by construction, since the pattern requires `\\d+\\.\\d+`.",
+      "self_exercise": "Three asserts now run inside the check on every invocation — mid-sentence, sentence-final, and the integer exemption — so the hole cannot reopen silently. That is the value-level exercise `_ceiling_drift`'s rows already carry one check over, and its absence is why this hole survived."
+    }
+  },
+  "gate": {
+    "invariant": "74/74 = 1.000, wall 13.95s, $0.0000",
+    "fast": "213/213 = 1.000, wall 87.03s, $0.0000",
+    "baseline_file": "unchanged from main",
+    "ci": "read on the commit this round pushes; the previous commit passed as run 32939583133"
+  },
+  "round_5_completion": {
+    "why": "Round 5 was not finished. Two of R24's five sentences were still live, and the guard built in that round to catch them reported green — because it carried the EXACT lookahead bug R27 fixed in its sibling, written in the same round.",
+    "the_bug": "`(?![\\d.])` rejects a match whose next character is a period, so a number ENDING A SENTENCE is invisible. ADR-021's Ruling ends \"...`EVAL_WALL_BUDGET_S_FAST` stays 90.\" and the scan could not see it. Second demonstration of one class in one round: a regex written to police prose gets tested against the shapes its author pictures, and sentence-final is the shape nobody pictures.",
+    "fixes": [
+      "`(?![\\d.])` -> `(?!\\d)` in the CI-ceiling scan.",
+      "A second anchor for the shape no variable-anchored pattern can reach: ADR-019's Amended-by ended 'CI's stays 90 because nothing in that change measured CI' with no EVAL_WALL_BUDGET_S token on the line at all. The new pattern cannot say which suite, so it is graded the only way it can be — the number must be one the workflow declares for some suite, and 90 is neither 125 nor 25. No false positives across 31 decision documents, so no debt was needed and the check was not weakened to make the tree green.",
+      "Four asserts inside the check, sentence-final first, because that is the case that was missed. Plus one in `adr029-scope-matches-the-suites`, applying the carried lesson to a sibling prose guard rather than only to the one a reviewer happened to test.",
+      "ADR-021's Ruling clause and ADR-019's Amended-by trailing clause struck in place with dated pointers, like the other three."
+    ],
+    "red_first": "[{\"doc\": \"ADR-019-wall-clock-ceilings-per-suite.md\", \"says_ci_stays\": 90, \"workflow_declares\": [25, 125]}, {\"doc\": \"ADR-021-local-fast-ceiling-90.md\", \"publishes_a_ci_ceiling_of\": 90, \"suite\": \"fast\", \"workflow_declares\": 125}, {\"doc\": \"ADR-021-local-fast-ceiling-90.md\", \"says_ci_stays\": 90, \"workflow_declares\": [25, 125]}] — ADR-021 named by BOTH patterns, ADR-019 by the new one, on the very tree where the previous version of this guard reported green.",
+    "gate": {
+      "invariant": "74/74 = 1.000, wall 14.10s, $0.0000",
+      "fast": "213/213 = 1.000, wall 87.32s, $0.0000"
+    },
+    "carried_forward": "The asserts-inside-the-check pattern is what catches a lookahead written against imagined shapes. It is now in three prose guards, and the rule is that it belongs in every one — not only in the one that was caught."
+  }
+}

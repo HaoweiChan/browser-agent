@@ -1,0 +1,45 @@
+{
+  "id": "loop-failed-enumeration-does-not-disarm-rank",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "shop.html",
+    "task": "Which product in the catalogue has the lowest price?",
+    "stub_calls": [
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "listitem"
+        }
+      },
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "listitem"
+        },
+        "rank": true
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Cobalt Floor Rug $18.00",
+    "trace_actions": [
+      "navigate",
+      "extract_all",
+      "extract_all",
+      "final_answer"
+    ]
+  },
+  "provenance": "Cold review of M42, finding 2 (HIGH). `finalize` reads the ranking declaration off the FIRST `extract_all` in the trace that is not superseded — and nothing in loop mode ever sets `superseded_by`, because that pointer is written only by mode B's family-2 replan. So a first attempt that omitted `rank` (which `execute` refuses, in a message that teaches the model the exact retry — the single likeliest loop trace there is) left `enumerated = None`, `verifier.rank` never ran, and the raw unranked candidate list was returned as the answer to a which-one question with verdict PASS. Every guard that should have caught it looks at a different set: the answer-assembly `plan_gap` filters failures out and sees one clean enumeration, and `aggregate_needs_comparison` uses `any(... rank is True ...)` which the SECOND step satisfies. This is verbatim the defect family ADR-018 and PR #29 R2/R9/R16 exist to close, reopened through a code path none of those guards cover.",
+  "triage": {
+    "class": "wrong-success",
+    "note": "the failed attempt is not a declaration; only executed steps declare"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "driver-tools-match-the-executor",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "invariant",
+    "check": "driver-tools-match-the-executor"
+  },
+  "expect": {
+    "note": "`planner.TOOL_TABLE` — the twelve functions the loop driver offers the model — and `agent.ACTIONS` — the vocabulary the executor implements — are the same set, and every tool's declared parameters are keys the executor actually reads."
+  },
+  "provenance": "Spec-drift audit finding 1B. `planner.py` carried a comment asserting that `driver-tools-match-the-executor` 'reads both and reddens if they disagree'. No such case existed anywhere in the tree: the invariant was fiction, and the two lists agreed only because one person wrote them in one sitting. Watched red as an `unknown invariant check driver-tools-match-the-executor` error before the check existed — the same way `inv3-budget-exhaustion-loud` and `plan-gap-truth-table` were — and again by ablation, removing `go_back` from TOOL_TABLE: `{only_the_executor_implements: ['go_back']}`. A tool the executor does not implement is a run that dies `failure:task` on a call the model was invited to make; an action the tools omit is a capability the model cannot reach and no offline case would notice, because every offline call is hand-scripted.",
+  "triage": {
+    "class": "decorative-invariant",
+    "note": "the comment promised a guard that did not exist — the exact shape ADR-027 Decision 4 uses the phrase 'and not a fiction' about"
+  }
+}

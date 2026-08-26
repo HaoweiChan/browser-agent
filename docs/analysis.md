@@ -57,14 +57,19 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-200 distinct cases (22 golden + 178 adversarial).
-293 browser actions in a `fast` run; **112 of the 187** `fast` cases drive a real Chromium end to end — counted here as
+232 distinct cases (23 golden + 209 adversarial).
+382 browser actions in a `fast` run; **138 of the 219** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260826-113937-fast.json` rather than tallied by hand (the
+`evals/report/20260826-130830-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
-and said so with the confidence of a derived number). The six L5 refusal cases
+and said so with the confidence of a derived number; PR #57 R4 caught the next
+variant of the same defect — the two figures WERE recomputed, from the headline
+report, while this sentence still credited a 181-case report holding 287 actions
+and 109 browser cases, so the paragraph was arithmetically true and evidentially
+false. `docs-numbers-are-derived` now checks the citation as well as the
+arithmetic). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 75 are those refusals plus pure-code probes of a single
+remaining 81 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
@@ -102,7 +107,7 @@ removed rather than absorbed into the ceiling. Then it fired again on the branch
 first CI run, which is the more useful of the two: `main`'s own CI does `fast` in
 **89.62s** (run `32385032004`), so CI had been ~50% over the ceiling for its entire
 existence and nothing had ever checked there. This branch cuts that to 59.8-64.7s
-across four runs. CI now carries its own measured ceiling (80s after re-measurement) while local stays
+across four runs. CI carries its own measured ceiling — ~~80s after re-measurement~~ [historical], re-derived 2026-08-26 and published in ADR-019 §5 — while local stays
 at 60s, both enforced. The local number was then re-measured, then that
 re-measurement was withdrawn: the M9-stage-2 merge added a readiness case
 that holds a run slot for 3.0s on purpose, the suite straddled 60s across

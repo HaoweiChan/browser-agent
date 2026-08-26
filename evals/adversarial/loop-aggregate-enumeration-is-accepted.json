@@ -1,0 +1,28 @@
+{
+  "id": "loop-aggregate-enumeration-is-accepted",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "shop.html",
+    "task": "Which product in the catalogue has the lowest price?",
+    "stub_calls": [
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "listitem"
+        },
+        "rank": true
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success"
+  },
+  "provenance": "The positive direction of loop-aggregate-single-read-at-answer-assembly: a guard that refuses every aggregate loop run would pass its own negative case and be worthless. One enumeration declaring `rank: true` is accepted, and the comparison is still done in code by `verifier.rank` \u2014 the loop does not get to pick the winner any more than a plan does."
+}

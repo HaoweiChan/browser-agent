@@ -1,0 +1,106 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "pr": 57,
+  "round": 5,
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "Breaker had already fired twice (rounds 3 and 4); the human authorised bounded rounds each time. Round 5 is the closing review and did not approve. Escalated to the human a third time; no round 6 without a human ruling.",
+  "scope": "repair diff 14a6a7b..e0ea784 (structural band-citation fix, PR-number rename sweep, R7 closure) plus a whole-PR honesty check",
+  "gate": {
+    "local_invariant": "74/74 = 1.000",
+    "local_fast": "213/213 = 1.000",
+    "ci": "run 32939583133 on e0ea784 \u2014 SUCCESS under the newly derived ceilings (fast 125, invariant 25)",
+    "ci_prior": "run 32937020758 on 14a6a7b \u2014 4 attempts, all 213/213 and 74/74 correctness-green, all over the old 90s fast ceiling",
+    "baseline_file": "unchanged from main",
+    "run_by": "orchestrator, independently"
+  },
+  "closed_this_round": [
+    "R20",
+    "R21",
+    "R22",
+    "R23",
+    "R7"
+  ],
+  "verified_clean": [
+    "all eight CI cells match the workflow log",
+    "_band_rule(107.89)==125 and _band_rule(18.88)==25 and the workflow declares those",
+    "ci-numbers-are-derived red-first reproduces",
+    "the rename lost or collided nothing",
+    "the live-smoke gap is stated plainly with no invented run ids"
+  ],
+  "root_cause_note": "R24, R25 and R26 are the ungraded-prose tail of the R7 ceiling move directed this round: the number reached every graded surface and none of the ungraded ones. R28 is the orchestrator's own incomplete rename sweep (commit 2487c47 covered tasks/, specs/, docs/ but not evals/ or src/), and it misdirects to a real live unrelated PR. R27 is a genuine regex hole in the guard this PR promotes.",
+  "findings": [
+    {
+      "id": "R24",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The R7 ceiling move (CI fast 90->125, invariant 20->25) reached the workflow, ADR-019 section 5, ADR-029 section 2 and README's table, but NOT the documents of record that publish the ruling \u2014 four surviving sentences state a CI ceiling of 90/20 or assert CI has never measured this tree, and one contradicts its own document two sections later.",
+      "evidence": "ADR-029:6 (**Ruling**) reads \"CI's `EVAL_WALL_BUDGET_S_FAST` **stays at 90** because nothing in this change measured CI\" while :70 of the same file is headed \"### 2. CI has measured this tree, and both its ceilings are derived from that\". ADR-019:6 (**Ruling**) reads \"CI `fast` 80 -> **90s**, CI `invariant` **20s**\" while :387 is headed \"### 5. CI's two numbers, measured on CI: 125 and 25\". ADR-019:63-66 is flatly false as written (\"measurements of a SMALLER tree than the one shipping ... CI's committed 90s ceiling is a number no run of this tree has tested\") \u2014 section 5 now records 14a6a7b at 213 fast / 74 invariant, this tree exactly. ADR-019:10 (**Amended by**) repeats \"CI's stays 90\". INDEX.md:38 \u2014 the file whose own header says it is read \"when you just need 'what is now true'\" \u2014 publishes \"stays 90 ... CI is expected to breach on this branch\". Ground truth: .github/workflows/eval.yml:39-40 declares 125 and 25. Nothing grades any of these five locations. Confirmed independently by the orchestrator, including that CI run 32939583133 on e0ea784 now passes under the derived ceilings.",
+      "repro": "sed -n '6p;10p;63,74p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md ; sed -n '6p' specs/decisions/ADR-029-local-fast-ceiling-105.md ; sed -n '38p' specs/decisions/INDEX.md ; grep -n 'EVAL_WALL_BUDGET_S_' .github/workflows/eval.yml",
+      "acceptance": "ADR-019:6, ADR-019:10, ADR-029:6 and INDEX.md:38 state CI's ceilings as 125s/25s derived from run 32937020758, and ADR-019:63-74's 'smaller tree / unmeasured / local-only' paragraph is struck in place with a dated pointer the way section 5's two retired paragraphs were. Ideally the CI ceilings in the Ruling headers and INDEX are read back from .github/workflows/eval.yml by `ci-numbers-are-derived` (it already parses that file), watched red first."
+    },
+    {
+      "id": "R25",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "This diff overturns ADR-021's explicit CI ruling without recording the supersession anywhere, and ADR-021 carries no `Amended by` line at all \u2014 so the ADR chain still presents 'EVAL_WALL_BUDGET_S_FAST stays 90 and _INVARIANT stays 20' as the ruled state.",
+      "evidence": "ADR-021:115 is headed \"### The ceiling stays at 90, and that is a ruling\"; :133 states \"`EVAL_WALL_BUDGET_S_FAST` stays 90 and `_INVARIANT` stays 20. That is now the ruled state rather than the untouched default\"; :42 repeats it. The header block (:6-11) has Ruling/Because/Enforced by/Amends and no **Amended by** \u2014 compare ADR-019:10, which carries one. ADR-029's Amends line names only 'ADR-019 Decision 2', so nothing records that ADR-021's CI ruling was superseded on 2026-08-26. INDEX.md:30 also still says \"CI's `EVAL_WALL_BUDGET_S_FAST` stays 90 and that is a RULING, not a deferral\".",
+      "repro": "sed -n '1,12p;42p;115,135p' specs/decisions/ADR-021-local-fast-ceiling-90.md ; sed -n '30p' specs/decisions/INDEX.md ; grep -n 'EVAL_WALL_BUDGET_S_' .github/workflows/eval.yml",
+      "acceptance": "ADR-021 gains an `**Amended by**` line naming the ADR that moved CI's two ceilings off 90/20, its :115/:133/:42 'stays 90' sentences are struck in place with a dated pointer, and INDEX.md:30 no longer presents 'CI's fast stays 90' as a live ruling."
+    },
+    {
+      "id": "R26",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Two documents still name the retired workflow run 32561162459 as the source of ADR-019 section 5's numbers, so README and ADR-019 section 7 point a reader at a log of the 116-case tree for ceilings derived from the 213-case one \u2014 and README cites two different run ids as the source of the same four numbers, 36 lines apart.",
+      "evidence": "README.md:142-145 says the CI numbers \"are measured by hand off the log of eval-gate run 32561162459 and recorded with that id in ADR-019 section 5, where `gh run view 32561162459 --attempt N --log` reprints them.\" README.md:178-181, same file same subject, says they come from run 32937020758 on `14a6a7b`. ADR-019:770-771 says \"section 5's four numbers are labelled for what they are and pinned to eval-gate run 32561162459, attempts 1-4\"; section 5 at :390-392 now cites 32937020758. `ci-numbers-are-derived` only asserts the ADR's CURRENT run id appears somewhere in README (eval_adapter.py:1222-1226); it never checks a superseded id is gone. Running the command README prints returns the retired 69.37/74.06s cells, which match nothing published.",
+      "repro": "grep -n '32561162459' README.md specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md ; gh run view 32561162459 --attempt 1 --log | grep 'wall '",
+      "acceptance": "README.md:142-145 and ADR-019:770-771 name 32937020758, or the run id is written once and the other sites cite section 5 rather than restating it \u2014 the one-publisher rule this round adopted for the band figure, applied to the run id too."
+    },
+    {
+      "id": "R27",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`adr029-variance-cites-the-ledger`, which this diff newly promotes to 'what keeps this section from acquiring such a literal again', does not redden on a wall-clock literal that ends a sentence \u2014 the exact shape of the original defect it was written for.",
+      "evidence": "src/browser/eval_adapter.py:5318 uses `(?<![\\d.])(\\d+\\.\\d+)s(?![\\d.])`; the trailing negative lookahead rejects a match whose next character is `.`, so a sentence-ending literal is invisible. ADR-029:44 now claims the check is what keeps section 1 from acquiring a literal again, while section 1 carries none (`got.quoted == []`), making the guard the only thing standing there. Demonstrated: injecting \"The band was 91.23s and that is the spread.\" -> passed False, quoted [91.23] (correctly red); \"The band was 91.23s.\" -> passed True, quoted [] (green, WRONG \u2014 91.23 is in no ledger row).",
+      "repro": "Inject a sentence-final seconds literal into ADR-029 section 1 and call `_check_adr029_variance_cites_the_ledger()` \u2014 returns passed True with quoted [].",
+      "acceptance": "The literal regex matches a seconds figure regardless of following punctuation (e.g. lookahead `(?!\\d)`), the sentence-final injection is watched red before the change, and the mid-sentence and struck-span behaviours are unchanged (`~~...~~` still exempt, `105s`-style integers still exempt)."
+    },
+    {
+      "id": "R28",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The PR-number sweep stopped at tasks/, specs/ and docs/, leaving 18 `PR #56` citations in evals/ case provenance and src/ comments \u2014 and PR #56 is a real, live, unrelated PR (M45), so those citations now misdirect rather than merely dangle, and they contradict docs/ which was rewritten to #57 for the same findings.",
+      "evidence": "`gh pr view 56` returns {\"number\":56,\"state\":\"OPEN\",\"title\":\"M45: Chinese reaches the browser \u2014 the headline did not reproduce, the word-boundary bug did\"}. Surviving citations include evals/adversarial/adr029-variance-cites-the-ledger.json:15 (\"PR #56 R3\"), replan-cannot-launder-noop-action-in-a-frame.json:45 (\"PR #56 R1\"), replan-after-an-iframe-only-change-is-not-laundering.json:47 (\"PR #56 R13\"), adr029-scope-matches-the-suites.json:15, ui-adrs-cover-every-decision.json:15, loop-abandoned-failure-is-not-a-success.json:41, docs-numbers-are-derived.json:107, src/browser/eval_adapter.py:4895/5239/5277/5304/5335, observe.py:136, verifier.py:475, agent.py:1257/1266/1447, fixtures/frames-swap.html:6. Contradiction introduced by the partial sweep: docs/evals/m42-red-first-ledger.md:255 credits the case under a \"## PR #57, review round 1\" heading while the case's own provenance says PR #56 R3. ORIGIN NOTE: this was the orchestrator's own sweep (commit 2487c47), which covered tasks/, specs/ and docs/ only \u2014 not the implementer's omission. Confirmed independently: 18 residual references.",
+      "repro": "gh pr view 56 --json number,title ; grep -rn 'PR #56' --exclude-dir=.git . | wc -l  -> 18",
+      "acceptance": "Every `PR #56 R<N>` that means this PR reads `PR #57 R<N>` in evals/ and src/ too; `grep -rn 'PR #56' --exclude-dir=.git .` returns only references that genuinely mean the M45 PR (currently none)."
+    },
+    {
+      "id": "R29",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The repair moved `ci_wall_seconds` to 125 in fast-wall-clock-budget.json but left the sibling row note asserting the opposite, so the case file explains its own pinned CI row with a ceiling the same file no longer pins.",
+      "evidence": "evals/adversarial/fast-wall-clock-budget.json, the {suite: fast, wall_seconds: 89.62} row's note: \"It is a CI number and CI's ceiling is still 90, which is the point of keeping it here: the two environments no longer publish the same figure.\" The file's `ci_wall_seconds` is now 125 and the workflow declares 125, so 89.62s is nowhere near the boundary and the row's stated rationale no longer holds. The note is ungraded prose.",
+      "repro": "Load evals/adversarial/fast-wall-clock-budget.json and print input.ci_wall_seconds alongside the 89.62 row's note.",
+      "acceptance": "The 89.62 row's note states the relation (a real recorded CI run, over the 60/80 ceilings of its day, inside 90, 105 and 125) rather than a ceiling value that moves."
+    },
+    {
+      "id": "R30",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "OUT OF SCOPE: two ceiling literals that pre-date this repair diff still publish superseded numbers inside the same files item (a) swept \u2014 ADR-019 section 2's own heading and fast-wall-clock-budget's `note` field.",
+      "evidence": "ADR-019:46 is headed \"### 2. The local `fast` ceiling is 90s, computed from the ledger\" while :235-237 of that same section says the ceiling moved 90 -> 105 and `WALL_BUDGET_S['fast']` is 105. fast-wall-clock-budget.json `input.note` says \"`over_budget` says 90.00s is inside the fast ceiling and 90.01s is not\" while `input.rows` holds 105.0/105.01. Both present at 14a6a7b, so they are debt rather than this round.",
+      "repro": "sed -n '46p;235,237p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md ; print input.note and the fast rows of fast-wall-clock-budget.json",
+      "acceptance": "Routed to a T-* debt row: section 2's heading names the committed local ceiling or no number, and the case note describes the boundary as the committed ceiling rather than a moving literal."
+    },
+    {
+      "id": "R31",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "OUT OF SCOPE: ADR-013's description of what ADR-019 section 5 measures is now stale in the same stroke as R26, though section 5 explicitly disclaims ownership of it.",
+      "evidence": "ADR-013:176-177: \"ADR-019 section 5 re-measured CI on `d173340` at 116 `fast` / 48 `invariant`.\" Section 5 now measures 14a6a7b at 213/74. ADR-019 section 5's own 'not pinned' list (:426-429) names exactly this case and assigns it to `task/T-M32-9`, so it is declared, owned debt rather than undisclosed drift.",
+      "repro": "sed -n '176,177p' specs/decisions/ADR-013-fast-suite-wall-clock.md ; grep -n 'T-M32-9' tasks/TODO.md",
+      "acceptance": "T-M32-9 (or its successor) records that ADR-013:176-177 now describes a superseded section 5."
+    }
+  ]
+}

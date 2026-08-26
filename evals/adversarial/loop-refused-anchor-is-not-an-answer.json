@@ -1,0 +1,40 @@
+{
+  "id": "loop-refused-anchor-is-not-an-answer",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "shop.html",
+    "task": "What is the price of the Aurora Desk Lamp?",
+    "stub_calls": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "Meridian Wall Clock"
+        },
+        "anchor": "Zenith Floor Lamp"
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:extract",
+    "answer_null": true,
+    "trace_actions": [
+      "navigate",
+      "extract",
+      "final_answer"
+    ]
+  },
+  "provenance": "Cold review of M42, finding 1 (HIGH), and the milestone's worst defect. `execute`'s extract branch appended to `extractions` and `answers` and THEN raised the identity-anchor check — harmless for five milestones because mode B ends the run at the first failed step, so nothing ever read what a failed step had already written. Loop mode makes a failed call routine, and the refused read stayed in `answers`: `status: success`, `answer: 'Nimbus Wall Clock'`, verdict PASS, with the trace carrying `failure_class: 'semantic'` on the very step the answer came from — a run reporting success alongside its own refutation. No verifier predicate could catch it: nothing in `verify` keys on `failure_class`, `no_failed_postcondition` reads `postcondition_ok is False` (a raise inside `execute` leaves it None) and `actions_verified` covers only state-changing verbs. The fix is a rollback in `attempt`, not a reordering of that one check: any step that fails after writing evidence has the same shape, and the URL guard that fires AFTER `execute` returns is the second instance. A model-authored `anchor` missing the page byte-for-byte is the ordinary case, not an exotic one — the tool schema asks for an anchor on every extract. First written against a link name shop.html does not carry, so it passed on a locate failure without ever reaching the ordering it exists to pin — recorded because a case that goes green for the wrong reason is the failure mode this repo watches reds to avoid.",
+  "triage": {
+    "class": "wrong-success",
+    "note": "INV-2's shape, reached through a path the verifier structurally cannot see"
+  }
+}

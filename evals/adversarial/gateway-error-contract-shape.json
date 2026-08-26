@@ -14,6 +14,7 @@
     "keys": {
       "result": [
         "status",
+        "mode",
         "model",
         "answer",
         "reason",
@@ -41,5 +42,6 @@
   "triage": {
     "class": "contract-drift",
     "note": "the frontend is the injured party — it renders evidence.trace and budgets_spent, so a null there is a blank trace viewer on the single most likely production failure (a deployment that lost its key). Forces the no-key path by blanking the env var for the duration, so the case costs $0.00 and behaves identically on a machine that has a key. Fail-fast is kept deliberately: a missing key is diagnosed before a browser is launched, so an empty trace here is correct and only the SHAPE was wrong."
-  }
+  },
+  "provenance_m42_2026_08_26": "`mode` joins the result contract (ADR-028 §7): a run record has to say which cadence produced it, and this case is the one that grades the shape of a run that never got off the ground — where the field matters most, because there is no trace to infer it from."
 }

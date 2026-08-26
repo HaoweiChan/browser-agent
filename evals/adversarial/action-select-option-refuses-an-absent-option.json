@@ -1,0 +1,36 @@
+{
+  "id": "action-select-option-refuses-an-absent-option",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "fixture": "loop-lab.html",
+    "task": "What does the appendix footnote in the Filing lab say?",
+    "stub_plan": [
+      {
+        "action": "select_option",
+        "target": {
+          "role": "combobox",
+          "name": "Filing"
+        },
+        "value": "Tesla FY2099"
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Appendix footnote"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "trace_actions": [
+      "navigate",
+      "select_option"
+    ]
+  },
+  "provenance": "The ablation for the readback above: a select that selected nothing must be an `act` failure, not a silent no-op that lets the next step read a page in a state nobody chose. Watched red before `select_option` existed at all (unknown action -> failure:task) and again with the readback removed, where the run reaches the extract and reports success on an unselected page. The step loop ends here because an act failure with no replan budget spent still stops the run once the ladder cannot help \u2014 mode B's replan returns the same plan."
+}

@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 187 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 219 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00
 ```
@@ -50,14 +50,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260826-113937-fast.json`, with
-`evals/report/20260826-113823-invariant.json` and
-`evals/report/20260826-080559-live.json`:
+Latest offline baseline — `evals/report/20260826-130830-fast.json`, with
+`evals/report/20260826-130701-invariant.json` and
+`evals/report/20260826-130853-live.json`:
 
 ```
-fast  187/187    invariant  67/67    live  11/11    $0.0000    73.8s
-recovery 8/8 verified (18 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 48/48 · 13 replans
+fast  219/219    invariant  75/75    live  11/11    $0.0000    88.8s
+recovery 9/9 verified (19 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
+diagnosis 60/60 · 14 replans
 ```
 
 `live` is not part of the gate, and it goes red when a site is having a bad
@@ -81,11 +81,13 @@ first version of this paragraph published the first two of those runs as
 "59.56 / 59.60s" and was falsified inside the same review round by a run at
 60.64s; this is a sample, not a bound, and the honest statement is that this
 suite straddles its ceiling rather than clears it. The same suite on CI
-(ubuntu-latest) measured **69.37 / 69.54 / 74.04 / 74.06s** across four attempts
-of one commit — a 6.8% spread on byte-identical code, which is why the wall-clock
+(ubuntu-latest) measured **101.73 / 105.14 / 106.75 / 107.89s** across four
+attempts of one run — on byte-identical code, which is why the wall-clock
 ceiling is per-environment rather than one number pretending to be portable.
-Those four are eval-gate run 32561162459 attempts 1-4, hand-read off the log and
-recorded with that id in ADR-019 §5. They supersede an earlier CI band published
+Those four are eval-gate run 32937020758 attempts 1-4 on commit `14a6a7b`,
+hand-read off the log and recorded with that id in ADR-019 §5. All four were
+correctness-green and all four were over the 90s ceiling in force when they ran,
+which is what moved it: the breach was in the budget, not the results. They supersede an earlier CI band published
 here — 59.77 / 60.84 / 64.61 / 64.67s — which was measured on a 95-case tree and
 so cannot describe this one. That band is NOT unevidenced, and an earlier
 revision of this paragraph struck it on that ground: ADR-013 names its run
@@ -94,8 +96,12 @@ reproduce verbatim from that run's attempts. It is superseded by a later
 measurement, which is a different thing from being unsupported, and this file no
 longer says otherwise (PR #41 R3; ADR-013's own copy of the band is scoped on
 `task/T-M32-9`, which owns that file).
-CI's ceiling is the slowest observed run plus 15% (90s since ADR-019 §5, measured
-on CI — at the case count of the commit named there, not this one); the local ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
+CI's ceiling is the slowest observed run plus 15%, measured on CI at the case
+count of the commit ADR-019 §5 names — which since 2026-08-26 is the commit this
+branch ships, so ~~90s ... at the case count of the commit named there, not this
+one~~ is struck [historical] (PR #57 R32: both halves were false, the number and
+the qualifier). §5 publishes the live figure; it is not repeated here. The local
+ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
 58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
@@ -138,9 +144,12 @@ one ceiling was derived from a maximum that was never measured (R18, R21) — th
 same selective presentation ADR-013 Decision 4 was withdrawn over.
 
 CI's two numbers below are NOT in this ledger and cannot be: no CI run commits
-its wall clock, so they are measured by hand off the log of eval-gate run
-32561162459 and recorded with that id in ADR-019 §5, where `gh run view
-32561162459 --attempt N --log` reprints them. §5's table is the one source and
+its wall clock, so they are measured by hand off the log of the eval-gate run
+ADR-019 §5 names, and recorded with that id there; §5 also carries the
+`gh run view … --attempt N --log` command that reprints them. The id is not
+repeated in this paragraph: for one round this file cited a retired run here and
+the current one thirty-six lines below, so the command a reader could copy
+returned cells that matched nothing published (PR #57 R26). §5's table is the one source and
 `ci-numbers-are-derived` grades it: the four values, both ranges and the ceilings
 below are read back from that table, the run id has to appear here as well as
 there, and the ceilings must be the ones the workflow declares — so these numbers
@@ -170,15 +179,16 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 187 | 74.05s | 85.16 | **90s** |
-| `invariant` | 67 | 13.47s | 15.49 | **20s** |
+| `fast` | 219 | 89.03s | 102.38 | **105s** |
+| `invariant` | 75 | 14.94s | 17.18 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
-attempts of one commit (`d173340`, 116 `fast` / 48 `invariant` cases, a smaller
-tree than this one; eval-gate run 32561162459) gave `invariant` 14.80-16.47s and
-`fast` 69.37-74.06s, so **20s** and **90s** by the same rule. The old CI `fast` ceiling
-of 80 was the next coin flip: 74.06s against it is 8% of margin on a runner
-whose own spread is 6.8% (ADR-019 §5). One variable per suite
+attempts of one run (`14a6a7b`, 213 `fast` / 74 `invariant` cases, the tree this
+branch ships; eval-gate run 32937020758) gave `invariant` 18.59-18.88s and
+`fast` 101.73-107.89s, so **25s** and **125s** by the same rule. `invariant` moves
+although its CI runs were never over budget: its tree grew from 48 cases to 74,
+and deriving one suite from this table while leaving the other on the old one
+would publish two trees in one table (ADR-019 §5). One variable per suite
 (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`) carries them, so
 raising one environment's ceiling for one suite cannot silently raise another's.
 
@@ -412,7 +422,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 200 cases (187 of them in the offline gate), it
+The eval set is not weak; it is 232 cases (219 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

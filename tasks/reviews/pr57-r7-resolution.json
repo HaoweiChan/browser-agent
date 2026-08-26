@@ -1,0 +1,55 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "pr": "https://github.com/HaoweiChan/browser-agent/pull/57",
+  "round": 7,
+  "authorised_by": "human ruling A (fourth), with the stopping rule: close the class or merge the remainder as named debt. No round 8.",
+  "counts": { "fixed": 2, "rejected": 0, "debt": 2 },
+  "the_change": "The guard is INVERTED. It no longer asks 'does this prose match a shape a stale ceiling takes?' — six rounds of that caught each previous crop and missed the next site. It asks 'is this figure allowed to be here at all?' over an enumerated site set (README.md, specs/decisions/*.md including INDEX.md, docs/**/*.md), and allows a hit only if it is the value the workflow declares, inside a ~~struck~~ span, inside ADR-019 section 5 or the workflow (the two allowlisted publishers), or explicitly labelled [historical] (true then) or [local] (not CI's figure). History is MARKED, not exempted.",
+  "why_it_fails_safe": "A new document, a new phrasing or a new file lands in the scanned set and must justify itself. The previous three patterns failed open: README was invisible for being in the wrong FILE, not the wrong shape.",
+  "findings": {
+    "R32": {
+      "state": "fixed",
+      "site": "README.md:99",
+      "was": "\"CI's ceiling is the slowest observed run plus 15% (90s since ADR-019 §5, measured on CI — at the case count of the commit named there, not this one)\" — present tense, both halves false: the number, and the qualifier, since run 32937020758 measured 14a6a7b at 213/74, this tree exactly.",
+      "now": "The false clause is struck in place and labelled [historical]; the live figure is not repeated — section 5 publishes it."
+    },
+    "R33": {
+      "state": "fixed",
+      "sites": [
+        "INDEX.md:28 — \"CI `fast` 80 -> 90, CI `invariant` 20\" struck [historical] with ADR-029 added to the amendment trail; the local pair on the same line labelled [local].",
+        "ADR-029:140-144 — the Consequences bullet argued that CI's ceiling was 'a reason to re-derive promptly rather than to leave it' while section 2 of the same document had already re-derived it. Struck [historical]; the bullet now states the per-environment rule and points at the two graded publishers."
+      ]
+    },
+    "found_by_the_inversion_and_named_by_nobody": [
+      "docs/analysis.md:108 — \"CI now carries its own measured ceiling (80s after re-measurement)\", present tense, false.",
+      "docs/support-matrix.md:211 — \"so CI carries its own measured 80s\", present tense, false."
+    ],
+    "R34": { "state": "debt", "t_id": "T-M42-17" },
+    "R35": { "state": "debt", "t_id": "T-M42-18" }
+  },
+  "red_first": {
+    "note": "Run on today's tree BEFORE any strike or label, the inverted sweep named 27 figures across 12 files — including all three sites the review named and two it did not.",
+    "named_targets": [
+      "README.md:99  90",
+      "INDEX.md:28  80 / 90",
+      "ADR-029-local-fast-ceiling-105.md:140  90"
+    ],
+    "additional_sites_no_previous_pattern_could_see": [
+      "analysis.md:108  80",
+      "support-matrix.md:211  80"
+    ],
+    "history_the_sweep_also_surfaced_and_which_is_now_labelled": [
+      "ADR-002-performance-thresholds.md:4,6", "ADR-013-fast-suite-wall-clock.md:10,14",
+      "ADR-021-local-fast-ceiling-90.md:76", "ADR-019:6,10 [local]", "ADR-029:10 [local]"
+    ]
+  },
+  "self_exercise": "The sweep's asserts call the SAME compiled objects the check runs (_CI_SECONDS, _CI_MOVE, _CI_TOKEN, _CI_LABELLED), which is R34's acceptance criterion applied to the new code as it was written. Five asserts: the three shapes six rounds each missed one of, plus the two the figure rule must NOT match (case counts, `M42`-style tokens).",
+  "declared_cost": "The [historical]/[local] label is line-scoped while the CI token is window-scoped. A line carrying both a labelled figure and a live one is wholly exempt. Acceptable and stated in the code, because the live values live in the two allowlisted publishers, which the check reads directly.",
+  "gate": {
+    "invariant": "74/74 = 1.000, wall 13.90s, $0.0000",
+    "fast": "213/213 = 1.000, wall 88.43s, $0.0000",
+    "baseline_file": "unchanged from main"
+  },
+  "nothing_half_closed": "No item was left for a later round. R34 and R35 are debt by routing, not by deferral, and both carry evidence and repro verbatim."
+}

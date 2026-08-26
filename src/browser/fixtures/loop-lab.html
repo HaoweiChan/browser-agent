@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Filing lab — Nimbus</title>
+<h1>Filing lab</h1>
+
+<p>Pick a filing, then extract it. Nothing below is painted until you do —
+the S1 shape of the 2026-08-24 postmortem, reproduced offline.</p>
+
+<label for="fx">Filing</label>
+<select id="fx" aria-label="Filing">
+  <option value="">Choose a filing</option>
+  <option value="aapl-2025">Apple FY2025</option>
+  <option value="msft-2025">Microsoft FY2025</option>
+</select>
+
+<button type="button" aria-label="Extract filing">Extract</button>
+
+<p><span role="status" aria-label="Extraction status">No filing extracted yet.</span></p>
+<p><span role="status" aria-label="Inventory turnover"></span></p>
+
+<h2>Filing code echo</h2>
+<label for="code">Filing code</label>
+<input id="code" aria-label="Filing code" type="text">
+<p><span role="status" aria-label="Code echo"></span></p>
+
+<h2>Appendix</h2>
+<div id="filler"></div>
+<p><span role="status" aria-label="Appendix footnote">Footnote 12: figures are unaudited.</span></p>
+<p><a href="/fixtures/hello.html">Leave the lab</a></p>
+
+<script>
+  // Fixture code may know its own DOM (CLAUDE.md rule 6); none of it reaches
+  // the executor. Elements are found by aria-label so `ids-renamed` cannot
+  // break the page instead of the agent.
+  var TURNOVER = {'aapl-2025': '4.82', 'msft-2025': '3.17'};
+  var byLabel = function (l) { return document.querySelector('[aria-label="' + l + '"]'); };
+
+  var filler = document.getElementById('filler');
+  for (var i = 0; i < 60; i++) {
+    var p = document.createElement('p');
+    p.textContent = 'Appendix line ' + (i + 1) + ' — immaterial disclosure.';
+    filler.appendChild(p);
+  }
+
+  byLabel('Extract filing').addEventListener('click', function () {
+    var sel = byLabel('Filing');
+    // Painted AFTER the click returns, and only after a delay: the un-awaited
+    // async result of postmortem S4. A plan authored from the pre-click
+    // observation cannot name what is not there yet.
+    setTimeout(function () {
+      if (!sel.value) {
+        byLabel('Extraction status').textContent = 'Choose a filing first.';
+        return;
+      }
+      byLabel('Extraction status').textContent = 'Extraction complete.';
+      byLabel('Inventory turnover').textContent = TURNOVER[sel.value];
+    }, 400);
+  });
+
+  byLabel('Filing code').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      byLabel('Code echo').textContent = 'Code accepted: ' + e.target.value;
+    }
+  });
+</script>

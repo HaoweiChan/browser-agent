@@ -1,0 +1,32 @@
+{
+  "id": "action-scroll-that-moves-nothing-is-loud",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "fixture": "hello.html",
+    "task": "What is the greeting?",
+    "stub_plan": [
+      {
+        "action": "scroll",
+        "value": "2000"
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello, browser agent"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "trace_actions": [
+      "navigate",
+      "scroll"
+    ]
+  },
+  "provenance": "The ablation for the scroll postcondition. hello.html is shorter than the viewport, so there is nothing to scroll: the position does not move and the step is an `act` failure rather than a no-op the next step reads through. Without this, `scroll` is the one action in the vocabulary that can never fail, which is another way of saying it is never verified \u2014 and a loop driver that scrolls a page that cannot scroll would grind the step budget in a circle rather than being told."
+}

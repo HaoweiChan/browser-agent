@@ -1,0 +1,76 @@
+{
+  "id": "loop-drives-a-fetch-then-render-page",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "loop-lab.html",
+    "task": "In the Filing lab, what inventory turnover does the Apple FY2025 filing report?",
+    "stub_calls": [
+      {
+        "action": "select_option",
+        "target": {
+          "role": "combobox",
+          "name": "Filing"
+        },
+        "value": "Apple FY2025"
+      },
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Extract filing"
+        },
+        "expected_state": {
+          "role_visible": {
+            "role": "status",
+            "name": "Extraction status"
+          }
+        }
+      },
+      {
+        "action": "wait_for",
+        "expected_state": {
+          "text_visible": "Extraction complete."
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Inventory turnover"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "4.82",
+    "trace_actions": [
+      "navigate",
+      "select_option",
+      "click",
+      "wait_for",
+      "extract",
+      "final_answer"
+    ],
+    "trace_postconditions": [
+      true,
+      true,
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "provenance": "M42/ADR-028. Hand-verified against src/browser/fixtures/loop-lab.html: the turnover element is EMPTY until the Extract click's timer fires, so 4.82 exists on the page only after the wait. The tool-call sequence is scripted through `stub_driver` (planner.py) at the same injection boundary `stub_planner` uses, so this run makes zero LLM calls and costs $0.00. It grades the DRIVER and the trace shape, never the live model's step choices (ADR-027 Invariants).",
+  "triage": {
+    "class": "capability",
+    "note": "postmortem S1/S4 reproduced offline: the answer is painted after an action, so no plan authored before it can name it."
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "id": "loop-observe-drills-into-a-container",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "deep-spec.html",
+    "task": "What is the serial number of the Nimbus Field Notebook?",
+    "stub_calls": [
+      {
+        "action": "observe",
+        "target": {
+          "role": "region",
+          "name": "Product Information"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "cell",
+          "name": "SN-88231"
+        },
+        "anchor": "Nimbus Field Notebook"
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "SN-88231",
+    "trace_actions": [
+      "navigate",
+      "observe",
+      "extract",
+      "final_answer"
+    ],
+    "planner_saw": [
+      {
+        "has": [
+          "region — 'Product Information'"
+        ],
+        "lacks": [
+          "SN-88231"
+        ]
+      },
+      {
+        "has": [
+          "SN-88231",
+          "cell — 'SN-88231'"
+        ]
+      },
+      {
+        "lacks": [
+          "SN-88231"
+        ],
+        "has": [
+          "region — 'Product Information'"
+        ]
+      }
+    ],
+    "budgets": {
+      "replans": 0
+    }
+  },
+  "provenance": "ADR-027 Decision 5's third clause, which is easy to miss because it is not a guard: loop-mode `observe` spends the STEP budget and no replan budget, and it must still DISCLOSE. Found by reading the loop against ADR-020's promise rather than by a failure — `execute` puts the scoped observation in `drilled` and only mode B's drill-down branch popped it, so in loop mode the next turn was handed a fresh PAGE observation and the drill-down did nothing at all, while the tool description given to the model said 'you are shown that subtree alone'. What this case grades is the DISCLOSURE, not the hand-written call that follows it — the same argument `observe-drilldown-past-max-elems` makes for mode B, and the reason `planner_saw`'s second entry is the load-bearing one: `SN-88231` is past the page-level observation's element budget, so a driver that was shown the page again could not have named it. `budgets.replans: 0` is the other half of Decision 5: mode B's twin spends a replan for the same disclosure, and loop mode must not. The THIRD entry is the scope discipline: a drill-down is consumed once, so the turn after the extract is back on the page-level observation — the same one-shot rule mode B's  list has, and the reason a loop cannot accumulate scoped views it never paid for.",
+  "triage": {
+    "class": "silent-no-op",
+    "note": "a tool that lies about what it does is worse than one that does not exist"
+  }
+}

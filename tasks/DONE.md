@@ -39,6 +39,7 @@ history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 - M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer reaches for (2026-08-24) — PR #43, trace in tasks/reviews/pr43-r*.json; support-matrix D28; also closed T-R61
 - T-M40-4 — deploy-smoke treats "refused because a run is executing" as not-a-failure, and says UNCHECKED when it exhausts retries (2026-08-24) — PR #47
 - T-R61 — the task field's placeholder cites a verified run instead of the retired HN prompt (2026-08-24) — closed by M40, PR #43
+- M41 — the agent answers from its own sec-10k inspector, and the matrix says exactly how far that goes (2026-08-26) — ADR-030, PR #58, trace in tasks/reviews/pr58-r*.json; 4 rounds, 1 circuit breaker (human ruled option A), support-matrix D30 declared `unreliable` at 4/6 with zero wrong-success; eight debt items T-M41-1..8
 
 ## B-floor exit criteria — final status
 

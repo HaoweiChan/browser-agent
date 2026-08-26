@@ -39,68 +39,7 @@ after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
 
-### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: pr]
-Origin: live demo, 2026-08-24 — asked to drive Task 2's deployed inspector
-(https://whaleforce-sec10k.zeabur.app) and answer from it, the agent failed.
-No run ids survive (`RUNS` is in-memory, D19), so the failure analysis is a
-static shape analysis, not a replayed trace. **Read
-`docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md` before taking
-this** — it holds the four predicted failure shapes (S1 fetch-then-render
-page, S2 answers-not-accessible-names, S3 three identical "Extract" buttons,
-S4 unauthored async settle), each mapped to the existing evidence (D7/D28,
-T-M40-2, M38's Origin, T-M40-5-3) with file:line receipts on both repos.
-The same demo's OTHER failure line (wrong extractions at conf 0.95) belongs
-to sec-10k-extract and is tracked there (its Demo-remediation track, D6–D9).
-Spec: treat the inspector as a new live domain under the M40 method. Probe
-the deployment with small-value tasks ("what is the doc_status of the
-aapl-2025 fixture?", "how many items are extracted?") at 3 reps per task
-(ADR-025's protocol — T-M40-5-3 is why one rep is not a read); every failure
-shape becomes an adversarial case watched red first (rule 2), with a
-committed fixture snapshot of the inspector page for the offline cases.
-Ground truth routes through the inspector's `/api/extract/fixture` — the
-per-site ground-truth endpoint rule 6 explicitly allows — for the verifier
-and eval adapter only, never the planner or executor. No site-specific
-selector, DOM path or navigation recipe enters `src/browser/` (rule 6; owning
-the target site is not an exemption). Capability gaps stay with their owners:
-S3 is M38's existing queue block; S4's default post-click settle and the
-select-option action both moved to M42 under ADR-027 (in mode B the authored
-`expected_state` path stands) — the postmortem's "deferred as YAGNI" line
-predates that ADR and is superseded by it.
-Cross-repo dependency, stated rather than hidden: sec-10k-extract's
-Demo-remediation track carries the page-side row (deep-link query params so a
-parameterised start URL lands on an already-rendered page — start URL is
-allowed per-site data — plus `role="status"` on the banner, a labelled region
-on the extracted-text pane, distinct Extract button names). Probing before
-that row deploys measures the old page: probe once for the red baseline, but
-declare the matrix row only against the page shape that will stay deployed.
-Update 2026-08-25 (ADR-027): loop mode (M42) is now queued and directly
-targets this block's S1/S4 shapes. Sequencing guidance, not a hard Depends:
-the red-baseline probe is still worth running under mode B (it pins the
-failure shapes as cases either way), but the DECLARED matrix row should wait
-for M42 and be probed under both modes — M44 owns folding the loop-mode
-results back into this row.
-Update 2026-08-26 (ADR-030, this branch): the cross-repo dependency deployed,
-so the probe ran against the page shape that stays. Landed: a committed
-snapshot fixture, six offline cases and two live ones (each watched red first),
-the ground-truth-endpoint boundary as an invariant, ADR-030 pre-registering the
-probe in its own commit BEFORE the runs, the probe itself (4/6 correct, 2 loud,
-**0 wrong-success**, 0 refusals) and the matrix row + D30 declared from it by
-ADR-030's frozen rule -> `unreliable`. Scope ruling recorded in ADR-030: the row
-is declared NOW and labelled a MODE-B row, since M44 cannot fold loop-mode
-results into a row that does not exist. Two things worth carrying forward: the
-inspector's own build sha moved once inside this milestone (re-verified
-byte-identical, T-M41-3 is the missing guard), and an aborted harness attempt
-lost ~3 run ids to in-memory `RUNS` (D19) — recorded in ADR-030 §Outcome rather
-than rounded away. Debt filed: T-M41-1, T-M41-2, T-M41-3.
-Acceptance: a `docs/support-matrix.md` row for whaleforce-sec10k.zeabur.app
-declared under the report-assisted rule, carrying run ids, repeat counts, and
-BOTH build shas — this deployment's and the inspector's (`/api/meta` serves
-`git_sha`; D28's expiry rule applies to the target site's build too). Every
-demo failure shape either fixed with its case green, or declared as a
-limitation citing its case. Gate green; cold-reviewer + spec-drift before the
-commit (repo memory: review subagents run even when the harness says no).
-
-### M42 — loop mode: the model chooses every step, and the machinery that grades it does not move            [status: todo]
+### M42 — loop mode: the model chooses every step, and the machinery that grades it does not move            [status: in-progress]
 Origin: owner, 2026-08-25 — interviewer mandate relayed verbatim in intent:
 "complete the task by any means necessary, cost is not a constraint." Decision
 recorded as ADR-027 (read it first — its Invariants section is the boundary of
@@ -156,7 +95,7 @@ new trace fields and caps; cold-reviewer + spec-drift before commit.
 Out of scope: vision (M43), matrix re-declaration (M44), making loop the live
 default (M44's evidence decides).
 
-### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: todo]
+### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: pr]
 Origin: interviewer feedback, 2026-08-26 — "使用者輸入中文搜尋或問答時,部署版
 會直接回傳 refused,甚至還沒開啟瀏覽器就結束", under the headline "中文都會
 失敗". No run ids came with the report. Priority note: sequence this AHEAD of
@@ -277,6 +216,469 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M42-19 — the CI-ceiling site sweep still fails OPEN on a figure without an `s`            [status: todo]
+Origin: PR #57, orchestrator verification after round 7 (the round the human's
+stopping rule made the last one). Logged, not fixed, under that rule.
+Spec: `ci-numbers-are-derived`'s site sweep was inverted in round 7 from
+shape-matching to an enumerated site allowlist (`README.md`,
+`specs/decisions/*.md`, `docs/**/*.md`), and that inversion earned its keep —
+it found two stale CI ceilings in `docs/analysis.md` and `docs/support-matrix.md`
+that six rounds of shape patterns never looked for. But the *detection* half is
+still shape-bound: the figure rule matches `<n>s` forms and misses a CI ceiling
+written without the unit or with the unit spelled out. Verified by injection on
+the merged tree, three realistic sentences, one file each:
+  - `README.md`  + "On CI the fast gate tolerates 90 seconds."      -> PASSES green
+  - `ADR-002...` + "The CI wall-clock ceiling for invariant is 20." -> PASSES green
+  - `docs/analysis.md` + "CI budget for fast: 90s."                 -> correctly RED
+So the allowlist logic is sound and the site coverage is real; a stale ceiling
+phrased without a bare `s` suffix is still invisible in two of the three scanned
+trees. This is the eighth crop of the class PR #57 spent six rounds on, and it is
+recorded rather than chased because the human set a stopping rule: no round 8.
+Acceptance: the figure rule matches a CI ceiling regardless of unit form
+(`90`, `90s`, `90 seconds`, `90 sec`), the three injections above are watched red
+first, and the two legitimate exemption labels (`[historical]`, `[local]`) still
+suppress what they suppress. Consider `T-M42-18`'s question in the same change:
+if the site sweep is sufficient, the two older shape anchors should be DELETED
+rather than repaired — that is a decision, not a patch.
+Out of scope: the line-scoped-label cost declared in the round-7 code comment
+(a line carrying both a labelled and a live figure is wholly exempt); that one is
+accepted and named, not a defect.
+
+### T-M42-17 — a prose-guard assert that exercises a copy of the pattern, not the pattern            [status: todo]
+Origin: PR #57 R34 (LOW).
+Spec, the finding verbatim: "The third of the three new prose-guard asserts is
+decorative: it re-types the pattern instead of exercising the one the guard
+uses, so a regression in the guard's own regex leaves it green."
+Evidence, verbatim: "src/browser/eval_adapter.py:5439 asserts against a fresh
+literal pattern, while the loop at :5442 builds its own equivalent. Nothing ties
+them. By contrast `live`/`stays` (:1300, :1308) and `_SECONDS` (:5383) are
+compiled once and shared with their asserts — the reviewer confirmed those three
+DO fire when the lookahead is regressed to `(?![\d.])`. The comment at
+:5434-5438 claims the assert 'records that as a checked fact rather than an
+assumption'; it records a fact about a copy."
+Repro, verbatim: "Compare the literal at eval_adapter.py:5439 with the pattern
+built at :5442 — editing the latter does not trip the former."
+Acceptance, verbatim: "Compile the pattern once per suite and have the assert
+call that object, as the two sibling guards already do."
+Status note: the CI-ceiling site sweep added in this round was written to the
+acceptance criterion — `_CI_SECONDS`, `_CI_MOVE`, `_CI_TOKEN`, `_CI_LABELLED`
+are module-level and its asserts call those objects. `adr029-scope-matches-the-
+suites` is the one still re-typing, and is what this row is about.
+
+### T-M42-18 — two declared holes in the CI-ceiling anchors            [status: todo]
+Origin: PR #57 R35 (LOW).
+Spec, the finding verbatim: "Named debt in the new anchors, confirmed rather
+than hypothetical: `stays` is suite-blind and accepts a wrong CI ceiling that
+equals the other suite's, and `live`'s 60-character window can grab an ADR
+number as if it were a ceiling."
+Evidence, verbatim: "eval_adapter.py:1308 — `stays.findall(\"CI's `invariant`
+ceiling stays 125.\")` grades 125 as green because 125 is declared for `fast`;
+only the variable-anchored shape is suite-aware. eval_adapter.py:1300 —
+`live.findall('`EVAL_WALL_BUDGET_S_FAST` — see ADR-019 section 5 — is 125')`
+returns ('FAST','19') and would redden the gate on the ADR number. Neither fires
+today (zero matches across all 31 decision docs after strike-stripping, so the
+'zero false positives' claim is true but vacuous), but
+ADR-002-performance-thresholds.md:4 already has both variables and digits on one
+line ~110 characters apart — one editing pass shorter and it reddens on '019'."
+Repro, verbatim: "Run the two compiled patterns against the two strings above."
+Acceptance, verbatim: "Either name the two holes in the guard's comment as
+declared ceilings (suite-blindness, and the window's ADR-number hazard) so the
+next reader is not surprised, or make `stays` read the suite word when the line
+carries one. No behaviour change required today."
+Note for whoever takes it: the site sweep added in PR #57's last round is the
+structural answer to the class these two anchors belong to, and it is
+suite-blind by design — it asks whether a figure is ALLOWED to be here, not
+which suite it claims. If that sweep proves sufficient in practice, the honest
+resolution may be deleting the two older anchors rather than repairing them;
+that is a decision, not a patch, and it wants one more milestone of evidence.
+
+### T-M42-14 — `page_changed` is frames-aware, and the false positive that buys is undemonstrated but real            [status: todo]
+Origin: PR #57 R13, 2026-08-26. The accepted cost of the chosen direction, logged
+because R13's own ruling is that a trade-off may not be declared in one direction
+and left silent in the other.
+Spec: `page_changed` compares `page_text(page)` before and after an acting step —
+every frame, both sides. That is the only setting under which both committed
+directions are correct: `replan-after-an-iframe-only-change-is-not-laundering`
+(a control whose only effect is inside an iframe really did something) and
+`replan-cannot-launder-noop-action-in-a-frame` (a no-op on a framed page really
+did not). The cost is a page carrying a frame that mutates on its OWN — a ticking
+clock, a rotating ad, a chat bubble — where `page_changed` reads true for a step
+that did nothing, unlatching the anti-laundering guard and letting a replan drop
+a failed action and read the page as though it had worked.
+Why it is not fixed: the hazard has never been reproduced in this repo, and the
+false negative it would trade back for was reproduced on a six-line fixture. This
+repo's rule is to widen on what a probe found rather than on what someone
+imagined (D21), and both halves are now declared — in `observe.page_text`'s
+docstring, in the `attempt` comment, and in ADR-028 item 5, which records the
+shipped ruling and withdraws the opposite one it argued for before the reversal
+(PR #57 R19: that pointer sent a reader at the rejected position for a round).
+Repro that would reopen it: a fixture whose iframe rewrites its own content on a
+timer, driven by the `replan-cannot-launder-noop-action` plan shape — a no-op
+click, a postcondition that does not hold, and a replan that reads without
+acting. Green today only because no such fixture exists.
+Acceptance: that fixture, watched red, and then a rule that distinguishes "a
+frame the step touched" from "a frame that moved on its own" — which needs the
+executor to record which document `resolve` returned from, the same trace field
+T-M42-4 needs and ADR-028 §7 currently forbids. The two debts close together or
+not at all.
+
+### T-M42-15 — ADR-028 still credits the mechanism R6 falsified, and no ADR records `no_abandoned_failure`            [status: todo]
+Origin: PR #57 R17 (LOW).
+Spec, the finding verbatim: "The R6 repair fixed the false causal claim in the
+code comment but left the identical claim standing in the ADR of record, and no
+ADR mentions `no_abandoned_failure` at all."
+Evidence, verbatim: "specs/decisions/ADR-028-loop-mode-implementation.md:294-297
+still reads '**(2) and (3) share one fix**: a failed loop call is superseded by
+whatever the model does next ... with `final_answer` excluded, so a model that
+gives up right after a failure is still graded on that failure' — the exact
+attribution R6 falsified (the exclusion alone graded nothing; `verifier.py:483`
+`no_abandoned_failure` is what provides the property). ADR-028:8's `Enforced by`
+list of 26 cases does not include `loop-abandoned-failure-is-not-a-success`, and
+`grep -rn no_abandoned_failure specs/` returns nothing, so the cross-mode grading
+rule added to `verify` has no record in specs/."
+Repro, verbatim: "grep -n \"gives up right after a failure is still graded\"
+specs/decisions/ADR-028-loop-mode-implementation.md ; grep -rn
+no_abandoned_failure specs/"
+Why it is debt and not a repair: the property itself holds and is pinned
+(`loop-abandoned-failure-is-not-a-success`, red-first); what is missing is the
+record. Routed by the orchestrator, and worth taking as one edit with the ADR-028
+rewrite T-M42-15's sibling findings imply rather than as a third patch to the
+same paragraph in three rounds.
+Acceptance, verbatim: "ADR-028 (or a new ADR line) records that a graded step
+carrying `failure_class` fails the run whatever it failed at, names
+`no_abandoned_failure` and `loop-abandoned-failure-is-not-a-success`, and the
+294-297 sentence credits the mechanism that actually holds the property."
+
+### T-M42-16 — the red-first ledger's iframe claim is contradicted by one of the two cases it describes            [status: todo]
+Origin: PR #57 R18 (LOW).
+Spec, the finding verbatim: "The new red-first ledger section makes a claim its
+own case file contradicts: it says neither of the two wrong-success reds is
+detectable without an iframe, but `loop-abandoned-failure-is-not-a-success` runs
+on `shop.html`, which has none."
+Evidence, verbatim: "docs/evals/m42-red-first-ledger.md:197 ('Neither is
+detectable on any fixture without an iframe') closes the paragraph about R1 and
+R6; evals/adversarial/loop-abandoned-failure-is-not-a-success.json:8 sets
+`\"fixture\": \"shop.html\"`, and reverting `verifier.py`'s
+`no_abandoned_failure` block reproduces that red on shop.html (status `success`,
+answer `Meridian Wall Clock`, verdict PASS). The same sentence is repeated in
+tasks/reviews/pr57-r1-resolution.json's closing note."
+Repro, verbatim: "grep -n '\"fixture\"'
+evals/adversarial/loop-abandoned-failure-is-not-a-success.json ; grep -n
+'Neither is detectable' docs/evals/m42-red-first-ledger.md"
+Why it is debt and not a repair: it is a sentence in a narrative section of the
+ledger, and the ledger's graded content — the case ids and the red lines — is
+correct. It is worth a row anyway because the ledger's whole value is being
+auditable against the case files, and this is the one sentence in it that fails
+that audit. Routed by the orchestrator.
+Acceptance, verbatim: "The sentence scopes the iframe claim to R1 (the only one
+of the two that needs a framed fixture), so a reader auditing the ledger against
+the case files finds no contradiction."
+
+### T-M42-9 — both loop-budget ceiling cases describe numbers they no longer script            [status: todo]
+Origin: PR #57 R8 (LOW).
+Spec, the finding verbatim: "Both loop-budget ceiling cases carry `provenance`
+prose describing numbers the case files no longer contain, so the recorded
+rationale cannot be re-derived from the case."
+Evidence, verbatim: "`evals/adversarial/loop-token-ceiling-stops-the-run-loudly.json`
+`provenance`: 'The stub driver reports 9 tokens on its first call against an
+injected 5-token cap' — the file scripts `_usage.llm_tokens: 2` against
+`loop_budgets.llm_tokens: 1`. `evals/adversarial/loop-usd-ceiling-stops-the-run-loudly.json`
+`provenance`: '3 tokens trip a $0.01 cap here' — the file scripts `llm_usd: 2e-06`
+against a `1e-06` cap and `llm_tokens: 0`."
+Repro, verbatim: "diff the `_usage`/`loop_budgets` blocks of both files against
+their own `provenance` strings."
+Why it is debt and not a repair: the cases grade the right thing and grade it
+correctly — the caps trip, the budgets are asserted through `expect.budgets`, and
+both were watched red. What rotted is the sentence beside them, which was written
+against the first (500,000-token / $99) version and then against the second
+(9/5) before the third (2/1, 2e-06/1e-06) landed. It is a documentation defect
+inside a case file, which is exactly the class this repo keeps finding and
+exactly the class that is cheapest to fix badly under time pressure.
+Acceptance, verbatim: "The provenance sentences quote the numbers the case
+actually scripts, so a reader can check the cap arithmetic from the file alone."
+Plus, because this is the third revision of the same two sentences: prefer
+wording that names the RELATION (usage exceeds the injected cap by one unit)
+over wording that re-types both scalars, so the next cap change cannot restage it.
+
+### T-M42-10 — `trace_note_contains` was broadened for loop mode and five older cases inherited the looser rule            [status: todo]
+Origin: PR #57 R9 (LOW).
+Spec, the finding verbatim: "`trace_note_contains` was broadened to search
+superseded steps for every case in the suite, which weakens five pre-existing
+resolver cases that were written against the narrower semantics, and no case
+pins that the note must be on a live step."
+Evidence, verbatim: "src/browser/eval_adapter.py, the `trace_note_contains`
+block: `for s in trace if not s.get('superseded_by')` became `for s in trace`.
+Affected pre-existing cases: evals/adversarial/resolver-narrows-singular-noun-ending-in-s.json,
+resolver-narrows-identical-matches.json, resolver-narrows-by-anchor-proximity.json,
+resolver-near-normalises-typography.json, probe3-quotes-most-quoted-author.json
+— each asserts a `narrowed: ...` note that, after this change, can now be
+satisfied by a superseded (i.e. discarded) attempt."
+Repro, verbatim: "grep -rln trace_note_contains evals/golden evals/adversarial ;
+then read the block in src/browser/eval_adapter.py — the loop-mode need is
+served by the same key that grades the five older cases."
+Why it is debt and not a repair: the broadening was itself forced by a real
+finding (`loop-refuses-a-document-root-extract` ends `success`, and the refusal
+it must show is on a step the recovery superseded), and no case regressed — but
+"no case regressed" is the argument this repo distrusts most, because the five
+affected cases would pass either way on their current fixtures. The reviewer is
+right that one key now serves two different questions.
+Acceptance, verbatim: "Either the loop-mode need gets its own key (e.g.
+`trace_note_contains_any` vs `trace_note_contains_live`), or a case demonstrates
+that a note appearing ONLY on a superseded step is still a red — watched red
+before the broadening."
+
+### T-M42-11 — T-M42-4's own limitation claim is falsified by a fixture already in the tree            [status: todo]
+Origin: PR #57 R10 (LOW). Compounds T-M42-4 rather than replacing it.
+Spec, the finding verbatim: "T-M42-4's declared HIGH (a postcondition earned by
+a document the action never touched) is demonstrable on a fixture that is
+already in the tree, not only in principle — so 'nothing offline can see it' is
+already false."
+Evidence, verbatim: "tasks/TODO.md T-M42-4 says 'Nothing offline can see it:
+every fixture with a frame in this repo has exactly one, and it is the frame the
+task is about.' src/browser/agent.py:478 `text_visible` -> `page_text(page)`
+(all frames). On src/browser/fixtures/frames-host.html a `press \"Shift\"` that
+touches only the main document, asserting `{\"text_visible\": \"Reported
+inventory turnover\"}` (a string that exists only inside the iframe), records
+`postcondition_ok=True`."
+Repro, verbatim: "Run `run_task` with `stub_planner([[{\"action\":\"press\",
+\"value\":\"Shift\",\"expected_state\":{\"text_visible\":\"Reported
+inventory turnover\"}}]])` against `/fixtures/frames-host.html`; trace.jsonl
+shows `step 2 press postcondition_ok=True`."
+Why it is debt and not a repair: the FIX is still the scoping decision T-M42-4
+describes and still needs a trace field ADR-028 §7 currently forbids — that has
+not changed. What this finding kills is the excuse attached to it. It is also
+the third time in this repo's history that a declared limitation was falsified
+by a fixture already committed, which is the pattern worth carrying forward more
+than the row itself.
+Acceptance, verbatim: "T-M42-4 carries this repro (it is the red-first case its
+own acceptance asks for), and the 'nothing offline can see it' sentence is
+corrected — the guard against declaring a limitation that a committed fixture
+already falsifies."
+
+### T-M42-12 — the offline suites now append a nonzero `cost_usd` that nothing asserts is stub-only            [status: todo]
+Origin: PR #57 R11 (LOW).
+Spec, the finding verbatim: "`fast` and `invariant` now append `cost_usd: 2e-06`
+to the committed ledger while the headline prints `$0.0000`, and nothing asserts
+that either suite's spend is zero — so a future real sub-$0.00005 call is no
+longer distinguishable from the stub baseline."
+Evidence, verbatim: "evals/report/history.jsonl:1883-1893 (`\"cost_usd\": 2e-06`
+on every new row, where every prior row is `0.0`), from
+evals/adversarial/loop-usd-ceiling-stops-the-run-loudly.json's scripted
+`_usage.llm_usd: 2e-06`; evals/run.py:275 prints `cost ${...:.4f}`, which renders
+2e-06 as `$0.0000`. No case in evals/ asserts a suite-level `llm_usd == 0`."
+Repro, verbatim: "tail -4 evals/report/history.jsonl ; grep -rn 'llm_usd'
+evals/adversarial/*.json | grep -v loop- (no suite-level zero-spend assertion)."
+Why it is debt and not a repair: this is the direct consequence of the choice
+that closed the last round's own finding — the ceiling cases stopped simulating
+$99 of spend and started declaring the smallest amount that can trip a cap. The
+cost-discipline claim ("`fast` makes zero paid calls") was never checked by
+anything even when every row read 0.0, so the finding is really about a gap this
+milestone made visible rather than one it opened. Fixing it properly means
+deciding what the claim IS — zero paid calls, or zero spend — and that is a
+cost-discipline ruling, not an edit.
+Acceptance, verbatim: "Either the USD ceiling case trips on a cap without
+declaring nonzero spend (e.g. a cap of 0.0 with `>=`), or an invariant case
+asserts that the `fast`/`invariant` totals' `llm_usd` equals exactly the sum of
+stub-declared usage — so the `$0` claim is checked rather than displayed."
+
+### T-M42-13 — the red-first ledger names a commit that does not exist            [status: todo]
+Origin: PR #57 R12 (LOW).
+Spec, the finding verbatim: "Six rows of the red-first ledger name a 'greened by'
+commit that does not exist in the branch history, so their red->green ordering is
+attested only by the ledger's prose (the reds themselves do reproduce — audited,
+see repro)."
+Evidence, verbatim: "docs/evals/m42-red-first-ledger.md:147-152 lists `M42:
+review-round repairs` as the greening commit for
+`loop-refused-anchor-is-not-an-answer`,
+`loop-failed-enumeration-does-not-disarm-rank`,
+`extract-all-refuses-matches-in-two-documents`,
+`loop-recovered-failure-still-verifies`, `driver-tools-match-the-executor`.
+`git log --oneline main..task/M42` has four commits and no such subject; those
+case files and their fixes both land in 1ac8a19."
+Repro, verbatim: "git log --oneline main..task/M42 (no `review-round` commit).
+Audit performed by the reviewer: the leg-4 reds reproduce verbatim against
+`main` + the two case files + the two fixtures, and
+`loop-refused-anchor-is-not-an-answer`'s claimed red reproduces exactly by
+ablating the rollback line at src/browser/agent.py:1260. So the ledger is honest;
+only the commit reference is unresolvable."
+Why it is debt and not a repair: the label was written before the commits were
+squashed under CLAUDE.md rule 7, and the reviewer independently reproduced every
+red it names, so nothing about the evidence is in doubt. It is a naming defect in
+a document whose whole value is checkability, which is why it is worth a row
+rather than a silent edit — and worth fixing in the same pass that decides how a
+ledger written before a commit exists should reference it at all.
+Acceptance, verbatim: "The 'greened by' column names a commit that exists (or
+says 'folded into 1ac8a19 under CLAUDE.md rule 7'), so every row is checkable
+from `git log` without trusting the prose."
+
+### T-M42-4 — a postcondition can be satisfied by a document the action never touched            [status: todo]
+Origin: M42 cold review, finding 4 (HIGH), 2026-08-26. Accepted deliberately as
+the cost of leg (a); logged rather than fixed because the fix is a scoping
+decision, not a repair.
+Spec: `check_state`'s `text_visible` now reads `observe.page_text`, and its
+`role_visible` iterates `[page, *frames[1:]]`. Both are what make an iframe'd
+page verifiable at all — and both mean a click's `expected_state` can be earned
+by an element in a completely unrelated document: a consent iframe, a chat
+widget, a `display:none` tracking iframe (still in `page.frames`, still
+evaluable). The step then records `postcondition_ok: true` for an action that
+did nothing, which is the one thing a postcondition exists to make impossible.
+Nothing offline can see it: every fixture with a frame in this repo has exactly
+one, and it is the frame the task is about.
+Why not fixed here: the honest fix is to scope a postcondition to the document
+its action touched, which needs the executor to record which scope `resolve`
+returned from — a trace field, and ADR-028 §7 rules that the trace gains no
+fields in this milestone. It is also not obviously right: `wait_for` on a page
+that paints into an iframe legitimately wants the frame, and a `url_contains`
+predicate is page-level by nature. That is a decision with two defensible
+answers, which makes it an ADR rather than a patch.
+Acceptance: a ruling on whether a postcondition is document-scoped, and if so
+a `resolved.scope` (or equivalent) on the trace step plus the ADR-028 §7
+amendment that allows it — with a fixture carrying a decoy iframe whose text
+satisfies a predicate the main document does not, watched red first.
+
+### T-M42-5 — `not_a_dump`'s denominator and `evidence_window`'s offset now disagree about what "the page" is            [status: todo]
+Origin: M42 cold review, finding 4 (same finding, different consequence),
+2026-08-26. Related to but distinct from T-M42-3, which is about the offset
+alone.
+Spec: `body_len` is `len(page_text(page))` — every frame concatenated — while
+ADR-008 calibrated `not_a_dump`'s 0.35 ratio on main-frame `innerText` over a
+25-record pinned confusion matrix. Any page with a substantial iframe now has an
+inflated denominator, so a value that IS a dump of its own document can pass. No
+committed case moves, because no fixture in the calibration set has a frame; the
+ratio was measured on pages that do not exist any more in the shape it was
+measured on.
+Why not fixed here: raising or re-deriving DUMP_RATIO is an ADR-008 amendment
+and needs the confusion matrix re-run on framed pages, which needs framed pages
+in the labelled set (`evals/labels/`). That is a measurement task, and guessing
+a new ratio is exactly what ADR-008 exists to prevent.
+Acceptance: either `body_len` becomes the length of the document the value was
+read FROM (the narrower, probably-correct answer, and it composes with T-M42-3's
+per-frame offsets — one change, two debts closed), or ADR-008 is amended with a
+re-derived ratio over a labelled set that includes framed pages. Red-first case:
+a framed fixture where a main-document dump passes today.
+
+### T-M42-6 — the no-progress harness cannot see a run that repeats one call on one page            [status: todo]
+Origin: M42 cold review, finding 7, 2026-08-26. The `ponytail:` comment in
+`agent.drive_loop` names this ceiling; this block is the tracked version of it.
+Spec: a visit is an ARRIVAL — `if state != last_state: st["visits"] += 1` — so
+a model that emits the same call on the same page forever never advances the
+counter and dies at the step cap with "budget exhausted": the symptom-not-cause
+failure the harness exists to replace. Arrival-counting is what stopped the
+harness killing legitimate multi-step work (select → click → wait is three turns
+on one page), so it is not simply wrong, but it covers one of the two shapes.
+The second, cheap-looking fix — count a repeated (state, call) pair — was left
+out on purpose rather than added speculatively: nothing has produced the shape,
+and this milestone already shipped one harness that misfired on its own golden
+case.
+Acceptance: a stub-driven case scripting the same call on an unchanged page
+until the run ends, watched red (it currently ends `budget exhausted: actions
+40/40`, naming a resource rather than a cause), then a (state, call-intent)
+repeat counter sharing `LOOP_REVISIT_CAP`'s threshold.
+
+### T-M42-7 — `ADR-022`'s file is titled `ADR-020`            [status: todo]
+Origin: M42 spec-drift audit, finding 13, 2026-08-26. Pre-existing, unrelated to
+M42; logged rather than fixed under the debt rule.
+Spec: `specs/decisions/ADR-022-m40-declaring-a-domain-from-live-runs.md` opens
+with `# ADR-020: Declaring a domain from live runs…`, so two ADRs claim number
+020 by title (`ADR-020-m32-observation-drill-down.md` is the real one).
+`adr-header-and-index` passes because it keys on filenames and INDEX entries and
+never on the H1, so this rots in silence in both directions — and ADR-027 and
+ADR-028 both lean on ADR-022 by number.
+Acceptance: the H1 corrected, and `adr-header-and-index` extended to require the
+H1's number to match the filename's — watched red against the current file,
+which is what makes the fix stick.
+
+### T-M42-8 — the reviewer UI cannot select loop mode and describes mode B's guards to every visitor            [status: todo]
+Origin: M42 spec-drift audit, finding 14, 2026-08-26.
+Spec: `POST /tasks` takes `mode` (ADR-028), but `submitTask` in the reviewer page
+never sends it, so loop mode is reachable only by raw HTTP or the
+`BROWSER_AGENT_MODE` env default. Separately, the `#guards` line reads "up to 30
+actions and 2 replans per run · a run costs about $0.001 in model tokens" — mode
+B's numbers, printed unconditionally, so under `BROWSER_AGENT_MODE=loop` every
+visitor is shown the wrong ceilings for the run they are watching (40 actions, 0
+replans, a $5.00 ceiling, a frontier model). ADR-028 names the USD ceiling as
+the only bound on a public unauthenticated endpoint, which makes the sentence a
+visitor reads the wrong one to have wrong.
+Why not fixed here: M42's acceptance is "per-run cost visible in the trace/UI",
+which the budgets line already satisfies (it renders `llm_usd` per run, and loop
+runs populate it). A mode SELECTOR is a product decision that belongs with M44's
+"does loop mode earn default-ness" evidence, not ahead of it.
+Acceptance: the guards line reads from the mode the run actually used (the
+result now carries `mode`), and either a mode control in the UI or an explicit
+note that mode is deployment-level — decided with M44's evidence.
+
+### T-M42-1 — mode B's planner prompt still advertises six actions while the executor implements eleven            [status: todo]
+Origin: M42 implementation, 2026-08-26. Found while widening the vocabulary;
+deliberately not fixed in that PR.
+Spec: ADR-027 Decision 2 widens the action vocabulary for BOTH modes, and
+`agent.ACTIONS` now implements `select_option`, `scroll`, `press`, `wait_for`
+and `go_back` for both. But `planner.SYSTEM` — the mode B prompt — still lists
+`navigate|click|fill|extract|extract_all|observe` and nothing else, so a live
+mode B planner will never emit any of the five. The capability is real and
+graded (five red-first cases, all mode B fixture runs with hand-written plans);
+what is missing is that the live planner is told about it.
+Why it was not done in M42: adding five verbs to `SYSTEM` changes what every
+live mode B run plans, and this repo's rule for that is a measurement, not an
+edit — the M9 ablation, the M40 probe set and D28's declared rows are all
+statements about the planner as it is prompted today. Doing it inside a
+milestone whose acceptance is a LOOP-mode smoke would move mode B's behaviour
+under cover of a change about the other mode, and no case in `fast` can see the
+difference because every offline plan is hand-written (`stub_planner`).
+Acceptance: `SYSTEM` gains the five verbs with their postcondition obligations
+stated (`press`/`go_back` must carry `expected_state`; `wait_for` needs a
+predicate; `extract_all` unchanged), `planner-prompt-carries-the-note`'s sibling
+check is extended to pin that the advertised vocabulary equals
+`agent.ACTIONS` minus `final_answer` — watched red first against today's
+`SYSTEM` — and the change lands with a live probe under the ADR-022/ADR-025
+protocol showing the regressed set did not move, because that is the only thing
+that can tell "the planner can now wait" from "the planner now waits instead of
+planning".
+
+### T-M42-2 — `live_driver` is unexercised: no case, offline or live, has ever called it            [status: todo]
+Origin: M42 implementation, 2026-08-26.
+Spec: `planner.live_driver` builds the OpenRouter tool-calling payload, sends
+it, and turns the response into a step through `parse_tool_call`. Its pure
+parts are reachable and partly graded — `build_driver_user`, `trace_digest`,
+`TOOLS`, `parse_tool_call` are all module-level and pure — but the function
+itself has been executed exactly zero times, offline or live, because
+`OPENROUTER_API_KEY` is not set in this environment and no `full`-tagged case
+asks for `driver: "live"`. The eval adapter accepts `input.driver == "live"`,
+so the hook exists; nothing pulls it. This is the same epistemic split ADR-027
+declares for the loop generally ("what the stub cannot grade is the live
+model's step choices"), but it is WIDER than that sentence admits: what is
+ungraded here is not only the model's choices, it is whether the request this
+code builds is one OpenRouter accepts at all — a wrong `tools` shape, a
+provider that ignores `tool_choice: "required"`, or a `tool_calls` envelope
+shaped differently from the assumption in `parse_tool_call` would each be
+invisible until the first live run.
+Acceptance: a `full`-tagged case with `driver: "live"` against a fixture, run
+manually with a key, its run id and cost published — plus, if the first attempt
+finds an envelope mismatch, an adversarial case pinning that shape through
+`parse_tool_call` at $0. Blocked on a key, not on design; M42's live smoke is
+the natural place it gets exercised for the first time.
+
+### T-M42-3 — `evidence_window`'s DOM offset hint is computed per frame but consumed against the concatenated page text            [status: todo]
+Origin: M42 implementation, 2026-08-26. A known, bounded imprecision introduced
+by `observe.page_text`, not a defect anything has produced.
+Spec: `agent.TEXT_OFFSET_JS` walks up from the extracted element to its own
+`<body>`, so the offset it returns is relative to THAT FRAME's text. Since M42,
+`page_text` concatenates the main frame's text with each child frame's, so for
+an element inside an iframe the hint is short by the length of everything
+before that frame. `_closest_occurrence` uses the hint only to choose among
+multiple occurrences of the same string, so the cost is bounded: on a page
+where a value occurs once (most extractions) nothing changes at all, and on one
+where it occurs twice the evidence window can centre on the wrong occurrence —
+which degrades evidence selection, never the verdict, since a value absent from
+the window fails the grounding check either way.
+Repro: an iframe'd page carrying the same value in the main document and in the
+frame, extracted from the frame; the window centres on the main document's copy.
+No fixture has this shape.
+Acceptance: either the hint is offset by the running length of the frames
+already concatenated (the fix is a few lines in `page_text` returning per-frame
+lengths, and `execute` adding the frame's base), or a declared support-matrix
+row saying evidence-window selection is main-frame-accurate only — whichever
+way, with a fixture carrying the duplicated value across a frame boundary and
+the case watched red first.
 ### T-M41-1 — the coverage tables in `docs/analysis.md` §6 drift because nothing grades their cells            [status: todo]
 Origin: M41, 2026-08-26. Found while republishing §6 for M41's eight new
 inspector cases (seven of them domain-tagged, which is the count §6's domain
