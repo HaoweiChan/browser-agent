@@ -39,7 +39,7 @@ after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
 
-### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: in-progress]
+### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: pr]
 Origin: live demo, 2026-08-24 — asked to drive Task 2's deployed inspector
 (https://whaleforce-sec10k.zeabur.app) and answer from it, the agent failed.
 No run ids survive (`RUNS` is in-memory, D19), so the failure analysis is a
@@ -432,6 +432,33 @@ tolerates whatever follows it is a general shape, not a one-line defect —
 at its last character. Whether that wants a general fix (anchor each quote to
 end-of-line) or three more characters in one string is the decision this block
 carries.
+
+### T-M41-8 — an ordinal in a code comment drifted the same way R9's ADR ordinals did            [status: todo]
+Origin: PR #58 R11
+Spec: `src/browser/eval_adapter.py:5181-5182` reads "while this check stayed
+green and the third conjunct below actively rewarded the string's presence".
+The conjunct that rewards the endpoint string is
+`cases_not_citing_the_ground_truth_endpoint`, key 4 of 4 in the `wrong` dict at
+:5201-5204 (order: `endpoint_in_production_module`,
+`host_outside_the_allowlist`, `ground_truth_endpoint_fed_to_the_executor`,
+`cases_not_citing_the_ground_truth_endpoint`). No counting basis makes it
+third: counting `wrong` keys it is fourth; counting only conjuncts textually
+below the comment it is second. ADR-030:160, rewritten in PR #58's round-3
+repair, now calls that same conjunct "the last". This is the third instance of
+the ordinal drift R9 was filed against — the count is derived and graded, the
+POSITION is derived by nothing — surviving in the one place R9's acceptance
+clause did not name, because that clause named only ADR-030 and D30.
+Introduced in `db54986` (PR #58 round-1 repair), so it predates the round-3
+diff; routed to debt rather than repaired because it is LOW, out of scope for
+the three clauses the human's bounded round authorised, and nothing grades it.
+Repro: `grep -n "third conjunct below" src/browser/eval_adapter.py`;
+`grep -n "last conjunct REWARDS" specs/decisions/ADR-030-m41-sec10k-inspector-probe.md`;
+`python3 -c "import src.browser.eval_adapter as ea; print(list(ea._check_ground_truth_endpoint_eval_only()['wrong']))"`
+Acceptance: the comment names the conjunct instead of numbering it (e.g. "the
+citation conjunct below"), matching what ADR-030 and support-matrix D30 now do;
+`invariant` and `fast` stay green. Worth deciding once for the repo rather than
+per site: an ordinal into a list nothing derives is a re-typed number, and this
+is the fourth one this PR found.
 
 ### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: todo]
 Origin: the ADR-027 planning commit, 2026-08-25, on a worktree of this branch.
