@@ -234,8 +234,8 @@ is published here is now exactly what is graded (§6).
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
 five — gives 88.42 × 1.15 = 101.68 → **105**, which is exactly the
 committed 105. The ceiling was moved 90 → 105 by ADR-029, derived
-from the slowest row this tree has recorded (87.96s at 207 cases, still in the
-ledger); M42's growth is in case COUNT and not in per-case cost — the condition ADR-021 named when it said the answer
+from the slowest row this tree has recorded (the band source §2 cites above,
+which is the ledger maximum at the shipped case count by construction); M42's growth is in case COUNT and not in per-case cost — the condition ADR-021 named when it said the answer
 to per-case growth is removing waste rather than another raise. Item 5
 (derivation) grades the arrow against the RULE and never against the committed
 ceiling, which is why an arrow one step under the heading's number is green and

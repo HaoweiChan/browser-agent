@@ -244,3 +244,41 @@ count of M42's growth is **deleted**, not corrected — the number is
 `git diff main --stat` away and is republished nowhere — and the one figure that
 had to stay, ADR-029 §2's gate result, is now graded against the suites the
 runner loads. A number a human retypes drifts; a number a case reads back cannot.
+
+## PR #56, review round 3 — the check is the deliverable
+
+Round 3 found the class's fourth crop and, more usefully, found why the guard
+built for it in round 1 did not catch it.
+
+| check | red observed (pre-fix) | finding | greened by |
+|---|---|---|---|
+| `adr029-variance-cites-the-ledger` (extended) | `{"quoted_in_adr029_section_1_but_in_no_local_fast_row_at": 213, "unreadable": [73.06, 82.18, 87.96], "rows_at_that_count": [87.95, 88.01, 88.27, 88.4, 88.42]}` | round 3, item 3 | `M42: PR #56 round-3 repairs` |
+
+The hole was one clause: the check asked whether a seconds literal matched
+*some* local `fast` row at *any* case count. 87.96s and 82.18s really were local
+`fast` rows — of the 207-case tree — so a band lifted wholesale from a smaller
+suite read back clean on a larger one. A wall clock is evidence for the tree it
+measured and no other, which is the rule `published-band-matches-the-ledger`
+item 1 (count) already applies to the band itself; the extension applies it to
+the prose that argues for the band.
+
+### The class, four rounds on
+
+R5, R14, R15, R16, R19 and R20 are one defect: a fact typed into a document of
+record that nothing grades. Round 2 deleted the case-count scalars, which killed
+that crop — and the band figures and ADR-028's ruling text drifted next, in
+exactly the same way. So the order that actually holds is: **delete the restated
+fact, or state the relation, and only grade a literal that genuinely must be
+published.** Round 3 applied all three: ADR-029 §1's span endpoints are gone (they
+falsify themselves on the next gate run), the earlier tree's figure is gone, and
+the one literal left is the cited band source — read back against rows at the
+shipped count by the extended check, and against the ledger by the band check.
+
+ADR-028 item 5 needed the same treatment for a non-numeric fact: it still ruled
+that `page_changed` stays main-frame-only, which is the opposite of what shipped
+after round 2 reversed it, and `tasks/TODO.md` pointed readers at it as the place
+the accepted cost was declared. The withdrawn ruling is now recorded as withdrawn
+rather than deleted, the shipped one is stated with the three settings tried and
+why only the third survives, and the two cases that specify the field are in the
+ADR's `Enforced by` list — which is where the pair belonged from the moment they
+were written, since neither alone constrains the line.

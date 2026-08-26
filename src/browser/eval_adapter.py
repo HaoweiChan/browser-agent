@@ -5292,15 +5292,24 @@ def _check_adr029_variance_cites_the_ledger() -> dict:
     import json as _json
     import re as _re
 
-    from evals.run import HISTORY
+    from evals.run import HISTORY, load_cases
 
     adr = next((Path(__file__).parents[2] / "specs" / "decisions").glob("ADR-029-*.md"))
     text = adr.read_text(encoding="utf-8")
     one = text[text.index("### 1."):]
     one = one[:one.index("\n### ")] if "\n### " in one else one
+    # ...at the case count this tree SHIPS. Matching any row at any count was the
+    # hole: a band lifted from the 207-case tree read back clean on the 213-case
+    # one, because 87.96s really was a local `fast` row — of a different suite
+    # (PR #56, round 3). A wall clock is only evidence for the tree it measured,
+    # which is the same rule `published-band-matches-the-ledger` item 1 (count)
+    # applies to the band itself; this is that rule applied to the prose that
+    # argues for it.
+    now = len(load_cases("fast"))
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
     measured = {r["wall_s"] for r in rows
-                if r["suite"] == "fast" and r.get("env", "local") == "local"}
+                if r["suite"] == "fast" and r.get("env", "local") == "local"
+                and r["total"] == now}
     # Struck spans come out first, the same convention  and the
     # criterion-5 sweep apply and for the same reason: this repo strikes a
     # falsified claim in place with a dated pointer rather than deleting it, and
@@ -5309,9 +5318,11 @@ def _check_adr029_variance_cites_the_ledger() -> dict:
     quoted = {float(m) for m in _re.findall(r"(?<![\d.])(\d+\.\d+)s(?![\d.])", one)}
     unreadable = sorted(q for q in quoted if q not in measured)
     return {"passed": not unreadable,
-            "wrong": [{"quoted_in_adr029_section_1_but_in_no_local_fast_row": unreadable}]
+            "wrong": [{"quoted_in_adr029_section_1_but_in_no_local_fast_row_at": now,
+                       "unreadable": unreadable, "rows_at_that_count": sorted(measured)}]
             if unreadable else [],
-            "got": {"quoted": sorted(quoted), "ledger_rows": len(measured)}}
+            "got": {"quoted": sorted(quoted), "cases": now,
+                    "rows_at_that_count": sorted(measured)}}
 
 
 def _check_adr029_scope_matches_the_suites() -> dict:

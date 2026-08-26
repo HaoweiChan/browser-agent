@@ -5,7 +5,7 @@ Status: accepted
 
 **Ruling**: `run_task` gains `mode="loop"`, selected per task (`POST /tasks`'s `mode` flag, defaulting to `BROWSER_AGENT_MODE` and to mode B when that is unset or unrecognised), in which a *driver* — `async (task, url, observation, trace, found, note) -> (call, usage)`, the same injection boundary `planner` and `judge` already have — is called after EVERY action with a fresh observation, the executed trace, what has been extracted so far, and any note, and returns exactly one OpenRouter tool call; twelve tools are declared, one per executor action plus `final_answer`; the action vocabulary widens for BOTH modes with `select_option`, `scroll`, `press`, `wait_for` and `go_back`, each with a postcondition and a red-first case; observation and evidence pierce iframes and open shadow roots; a no-progress harness forces a strategy change and then ends the run loudly when the loop revisits a state without learning anything; loop budgets are `{"actions": 40, "llm_tokens": 400_000, "llm_usd": 5.00}`, injectable so they can be graded; and `ALLOWED_MODELS` gains `anthropic/claude-opus-5` as a third list, `LOOP_MODELS`, deliberately outside `ABLATION_MODELS`.
 **Because**: ADR-027 ruled the loop is a deliverable and set the boundary of the "any means necessary" mandate — zero wrong-success, rule 6, eval-first and the single trace pipeline are not reachable by it — so the entire engineering question left was *how to add a second planning cadence without adding a second anything else*; every decision below is an answer to that, and the two guards that ADR-027 Decision 5 said would lose their anchor are the proof it was the right question.
-**Enforced by**: the cases named below, each watched red first with the observed output recorded in `docs/evals/m42-red-first-ledger.md` — `loop-drives-a-fetch-then-render-page`, `loop-mode-b-cannot-read-the-un-awaited-result`, `loop-token-ceiling-stops-the-run-loudly`, `loop-usd-ceiling-stops-the-run-loudly`, `contract-trace-schema-loop-mode`, `loop-refuses-a-document-root-extract`, `loop-aggregate-single-read-at-answer-assembly`, `loop-aggregate-enumeration-is-accepted`, `action-select-option-verifies-by-readback`, `action-select-option-refuses-an-absent-option`, `action-scroll-moves-the-viewport`, `action-scroll-that-moves-nothing-is-loud`, `action-press-carries-a-postcondition`, `action-wait-for-reaches-a-late-predicate`, `action-wait-for-that-never-holds-is-loud`, `action-go-back-returns-to-the-previous-page`, `observe-reaches-into-an-iframe`, `shadow-dom-value-is-reachable-and-grounded`, `loop-no-progress-revisit-ends-the-run-loudly`, `gateway-mode-selects-the-driver` — `loop-observe-drills-into-a-container`, `driver-tools-match-the-executor`, `loop-refused-anchor-is-not-an-answer`, `loop-failed-enumeration-does-not-disarm-rank`, `extract-all-refuses-matches-in-two-documents`, `loop-recovered-failure-still-verifies` — plus the extended `gateway-model-reaches-planner`, the moved row in `gateway-model-not-allowlisted`, and `mode` added to both `contract-trace-schema` cases.
+**Enforced by**: the cases named below, each watched red first with the observed output recorded in `docs/evals/m42-red-first-ledger.md` — `loop-drives-a-fetch-then-render-page`, `loop-mode-b-cannot-read-the-un-awaited-result`, `loop-token-ceiling-stops-the-run-loudly`, `loop-usd-ceiling-stops-the-run-loudly`, `contract-trace-schema-loop-mode`, `loop-refuses-a-document-root-extract`, `loop-aggregate-single-read-at-answer-assembly`, `loop-aggregate-enumeration-is-accepted`, `action-select-option-verifies-by-readback`, `action-select-option-refuses-an-absent-option`, `action-scroll-moves-the-viewport`, `action-scroll-that-moves-nothing-is-loud`, `action-press-carries-a-postcondition`, `action-wait-for-reaches-a-late-predicate`, `action-wait-for-that-never-holds-is-loud`, `action-go-back-returns-to-the-previous-page`, `observe-reaches-into-an-iframe`, `shadow-dom-value-is-reachable-and-grounded`, `loop-no-progress-revisit-ends-the-run-loudly`, `gateway-mode-selects-the-driver` — `loop-observe-drills-into-a-container`, `driver-tools-match-the-executor`, `loop-refused-anchor-is-not-an-answer`, `loop-failed-enumeration-does-not-disarm-rank`, `extract-all-refuses-matches-in-two-documents`, `loop-recovered-failure-still-verifies`, `replan-cannot-launder-noop-action-in-a-frame`, `replan-after-an-iframe-only-change-is-not-laundering` (the pair that specifies `page_changed`; see item 5) — plus the extended `gateway-model-reaches-planner`, the moved row in `gateway-model-not-allowlisted`, and `mode` added to both `contract-trace-schema` cases.
 
 ---
 
@@ -302,11 +302,41 @@ call is routine.**
    child frame. Now each document resolves to completion before the next opens,
    and an enumeration matching in two documents is refused loudly.
 5. `page_text`'s new reach moved calibrated inputs it had no business moving.
-   `page_changed` — the sole evidence behind the anti-laundering guard,
-   calibrated on main-frame text — would flip True from a ticking third-party
-   iframe; and the shadow walk checked visibility only on a root's direct
-   children, so the ordinary wrapper-`div` shape let hidden text ground answers.
-   Evidence is widened; a calibrated guard's input is not.
+   The shadow walk checked visibility only on a root's direct children, so the
+   ordinary wrapper-`div` shape let hidden text ground answers — fixed by
+   walking the subtree and skipping anything the page is not rendering.
+
+   `page_changed` — the sole evidence behind the anti-laundering guard — took
+   two more rounds and ends up at the OPPOSITE of what this item ruled when it
+   was first written. That ruling ("evidence is widened; a calibrated guard's
+   input is not", i.e. keep `page_changed` main-frame-only) is **withdrawn**;
+   it is recorded here rather than deleted because it was the position this ADR
+   argued for, and because reversing it is the substance of what follows.
+
+   **Shipped ruling: `page_changed` compares `page_text(page)` — every frame —
+   on both sides.** Three settings were tried and only the third survives:
+
+   | setting | no-op step on a framed page | step whose only effect is inside a frame |
+   |---|---|---|
+   | asymmetric (`before` main-only, `after` all frames) | **true** — guard disarmed | true |
+   | symmetric, main-frame-only | false | **false** — legitimate replan refused, run dies claiming the step "changed nothing" |
+   | symmetric, frames-aware (shipped) | false | true |
+
+   The two cases that pin it are the same page shape with and without a real
+   effect, and **the pair is the specification of the field** — neither alone
+   constrains this line, which is exactly how the first repair flipped the sign
+   while staying green: `replan-cannot-launder-noop-action-in-a-frame` and
+   `replan-after-an-iframe-only-change-is-not-laundering`.
+
+   The accepted cost is a page whose frame mutates on its own — a ticking
+   third-party iframe, a rotating ad, a chat bubble — reading as a change
+   nobody caused, which unlatches the guard in the other direction. That hazard
+   is real and has never been reproduced here, while the false negative was
+   reproduced on a six-line fixture; this repo widens on what a probe found,
+   not on what someone imagined (D21). **T-M42-14** carries the repro that
+   would reopen it. Both costs are now declared, which is the part that was
+   missing the first time: the false positive was documented and the false
+   negative was not.
 
 None of the five is exotic. Each is the ordinary case: a model-authored anchor
 that misses the page, a tool argument omitted once and corrected, a click with

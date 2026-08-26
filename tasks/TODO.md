@@ -476,7 +476,9 @@ Why it is not fixed: the hazard has never been reproduced in this repo, and the
 false negative it would trade back for was reproduced on a six-line fixture. This
 repo's rule is to widen on what a probe found rather than on what someone
 imagined (D21), and both halves are now declared — in `observe.page_text`'s
-docstring, in the `attempt` comment, and in ADR-028.
+docstring, in the `attempt` comment, and in ADR-028 item 5, which records the
+shipped ruling and withdraws the opposite one it argued for before the reversal
+(PR #56 R19: that pointer sent a reader at the rejected position for a round).
 Repro that would reopen it: a fixture whose iframe rewrites its own content on a
 timer, driven by the `replan-cannot-launder-noop-action` plan shape — a no-op
 click, a postcondition that does not hold, and a replan that reads without
