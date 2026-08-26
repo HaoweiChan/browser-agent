@@ -4877,7 +4877,7 @@ def _run_doc_counts_case(case: dict) -> dict:
     # rationale; the history of how they got there belongs in tasks/reviews/ or
     # the PR body, which is where a reader looks for it and where it does not
     # age into a claim about the shipped system. Scoped to the three documents
-    # named, and deliberately NOT to specs/decisions/ADR-028: a pre-registration
+    # named, and deliberately NOT to specs/decisions/ADR-031: a pre-registration
     # recording a correction to its own frozen figure is the entire point of
     # pre-registering, and stripping that would destroy the evidence rather than
     # tidy it. tasks/ is excluded for the reason criterion5 excludes it — a

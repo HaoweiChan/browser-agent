@@ -159,7 +159,7 @@ M42/M43: mode B's screening is the same code path, so this neither waits for
 nor blocks the loop work.
 RESULT (2026-08-26): **the headline did not reproduce; the third of it that did
 is declared, not fixed.**
-Leg 1 — 29 runs against `main@9c3340c`, pre-registered in ADR-028, $0.011195
+Leg 1 — 29 runs against `main@9c3340c`, pre-registered in ADR-031, $0.011195
 (planner $0.009783 + judge $0.001412), every run_id in `docs/analysis.md` §8a-5 and
 `evals/report/20260826-011010-m45-zh-probe.json`. Paired zh/en on the same
 URLs, same build, interleaved: **Chinese 12/12 correct, English 9/12,

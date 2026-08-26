@@ -1,5 +1,5 @@
 {
- "protocol_source": "ADR-028-m45-preregistered-zh-probe.md",
+ "protocol_source": "ADR-031-m45-preregistered-zh-probe.md",
  "runs": [
   {
    "group": "A",
@@ -3719,7 +3719,7 @@
   }
  ],
  "summary": {
-  "protocol_source": "ADR-028-m45-preregistered-zh-probe.md",
+  "protocol_source": "ADR-031-m45-preregistered-zh-probe.md",
   "provenance": {
    "expected_sha": "9c3340c57192e0ce40cddfcf3568e45c699b6d91",
    "actual_head_sha_before": "9c3340c57192e0ce40cddfcf3568e45c699b6d91",
@@ -3845,6 +3845,6 @@
    "note": "The first published figure was $0.009783 — the planner half only. The judge is a second billed call per run (ADR-017) and its spend belongs in the total. Corrected in-place after the M45 spec-drift audit caught it; the per-run fields now carry both halves separately."
   },
   "report_filename_timezone_note": "This file's name is stamped in LOCAL time (2026-08-26 01:10), while every timestamp inside it and every evals/run.py-written report name is UTC. The probe driver was ad-hoc, like T-M40-5's, and named its output by local clock. ts_utc below is authoritative.",
-  "group_b_label_note": "ADR-028 freezes these as B1-B5; an earlier version of this file wrote them BB1-BB5. Corrected to the frozen names."
+  "group_b_label_note": "ADR-031 freezes these as B1-B5; an earlier version of this file wrote them BB1-BB5. Corrected to the frozen names."
  }
 }

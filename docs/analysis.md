@@ -1179,14 +1179,14 @@ extraction from.
 
 ## 8a-5. Pre-registered Chinese-language probe (M45) — the headline did not reproduce, one third of it did
 
-**Pre-registration provenance.** `specs/decisions/ADR-028-m45-preregistered-zh-probe.md`
+**Pre-registration provenance.** `specs/decisions/ADR-031-m45-preregistered-zh-probe.md`
 freezes the task set, the exact task text and start URL for each, the protocol,
 the four metric classes, **and — new relative to ADR-025 — four written-down
 predictions**, committed to `task/M45` before any run below executed. That is
 weaker evidence than ADR-025's push timestamp (a branch commit, not a remote
-push), and ADR-028 says so in its own text rather than letting the reader
+push), and ADR-031 says so in its own text rather than letting the reader
 assume otherwise. Nothing below was adjusted after seeing results; the one
-change made to ADR-028 afterwards — its Commitment said the write-up would be
+change made to ADR-031 afterwards — its Commitment said the write-up would be
 "§8b", a number this file already uses — is recorded in that ADR's Outcome as
 a clerical correction rather than applied silently.
 
@@ -1257,7 +1257,7 @@ cells sum to the $0.011195 above, which `docs-numbers-are-derived` recomputes
 from the report rather than trusting the label. `A1`–`A4` are the frozen Group A rows (A1 plain zh search on the deployment's
 shop fixture, A2 plain zh QA on books.toscrape.com, A3 companiesmarketcap.com,
 A4 bankofcanada.ca); `B1`–`B5` are Group B's screening shapes. Full task text
-per row is in ADR-028's frozen table.
+per row is in ADR-031's frozen table.
 
 ### Metric classes, per row per language, never blended
 
@@ -1273,7 +1273,7 @@ Group B: 5 refusals, 5 × $0.00, 5 × empty trace (`trace_len: 0` on all five,
 which is what makes "no browser opened" a measurement rather than an inference). All 29 runs: correct 21 ·
 loud failure 3 · wrong success 0 · refusal 5.
 
-### Verdicts against ADR-028's frozen rules
+### Verdicts against ADR-031's frozen rules
 
 - **(a) HARD — zero wrong-success: PASS, 0/29.**
 - **(b) Reproduction — DID NOT REPRODUCE on the shapes the report named.** Zero

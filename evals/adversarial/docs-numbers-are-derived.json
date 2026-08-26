@@ -132,7 +132,7 @@
           "deliberately re-opened",
           "corrected after M45"
         ],
-        "why": "PR #56 R3. Each phrase is a literal that appeared in one of these three documents and narrated this PR's own repair rounds rather than the shipped system. specs/decisions/ADR-028 is deliberately out of scope — its Outcome corrections are what pre-registration is for. The phrase list is scoped to M45's own narrative: a bare \"spec-drift audit\" is ordinary provenance and appears legitimately in D12 and a resolver row, so the literal carries the milestone name."
+        "why": "PR #56 R3. Each phrase is a literal that appeared in one of these three documents and narrated this PR's own repair rounds rather than the shipped system. specs/decisions/ADR-031 is deliberately out of scope — its Outcome corrections are what pre-registration is for. The phrase list is scoped to M45's own narrative: a bare \"spec-drift audit\" is ordinary provenance and appears legitimately in D12 and a resolver row, so the literal carries the milestone name."
       },
       {
         "label": "asserts_this_pr_changes_scope_block",
@@ -140,7 +140,7 @@
           "docs/support-matrix.md",
           "docs/analysis.md",
           "tasks/TODO.md",
-          "specs/decisions/ADR-028-m45-preregistered-zh-probe.md"
+          "specs/decisions/ADR-031-m45-preregistered-zh-probe.md"
         ],
         "phrases": [
           "the branch that publishes them changes `SCOPE_BLOCK`",
@@ -153,14 +153,14 @@
       {
         "label": "claims_the_zh_screening_was_fixed",
         "docs": [
-          "specs/decisions/ADR-028-m45-preregistered-zh-probe.md"
+          "specs/decisions/ADR-031-m45-preregistered-zh-probe.md"
         ],
         "phrases": [
           "M45's leg 2 fixes",
           "leg 2 fixes",
           "and is what M45 fixes"
         ],
-        "why": "PR #56 R7. ADR-028 is the document of record for the probe, so it is where a reader looks for the verdict. Its Outcome corrections are legitimately exempt from the repair-history group — a pre-registration recording a correction to its own frozen figure is the point of pre-registering — but that exemption is not cover for a forward claim that a fix shipped."
+        "why": "PR #56 R7. ADR-031 is the document of record for the probe, so it is where a reader looks for the verdict. Its Outcome corrections are legitimately exempt from the repair-history group — a pre-registration recording a correction to its own frozen figure is the point of pre-registering — but that exemption is not cover for a forward claim that a fix shipped."
       }
     ],
     "block_must_contain": [

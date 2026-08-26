@@ -80,7 +80,7 @@ PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, 
 # inside a LONGER word that means something else.
 #
 # M45 measured that, tried to fix it three times, and shipped none of the three.
-# The measurement is real: the repo's first live probe in Chinese (ADR-028,
+# The measurement is real: the repo's first live probe in Chinese (ADR-031,
 # docs/analysis.md §8a-5) refused three legitimate READ tasks at $0.00 with an
 # empty trace — 密碼 inside 密碼學 (cryptography, run 8304ee3b), 購買 inside
 # 購買力平價 (purchasing power parity, run be20ba6a, a read task in this repo's

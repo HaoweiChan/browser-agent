@@ -1,4 +1,4 @@
-# ADR-028: The M45 Chinese-language probe is pre-registered before it runs
+# ADR-031: The M45 Chinese-language probe is pre-registered before it runs
 
 Date: 2026-08-26
 Status: accepted
@@ -34,6 +34,23 @@ measurement, and this ADR freezes how it is taken.
 chore/m39-done-and-id-uniqueness`, whose file list contains no
 `specs/decisions/` path. This ADR takes 028, the number after `main`'s current
 maximum.
+
+**That check was correct when it ran and wrong by the time this merged, and the
+number moved (2026-08-26).** The sweep read `--state open` at a moment when
+`#57` (M42) had not yet opened, and `#57` then allocated 028 independently for
+loop mode and merged first. Both PRs were green, both were `MERGEABLE`, and the
+two `ADR-028-*.md` files never touched each other — the collision surfaces only
+in `specs/decisions/INDEX.md`, where `adr-header-and-index` gates it at 100%
+("each ADR number exactly once"), which is what forced the rename rather than
+anyone noticing. **This ADR is 031**; every citation outside `tasks/reviews/`
+moved with it. The reviewer records under `tasks/reviews/pr56-*.json` still say
+028 and are deliberately left verbatim — the citation check scopes that
+directory out precisely so a record of what was claimed at the time survives
+being renumbered. The original paragraph is kept above rather than corrected in
+place, on the same precedent ADR-025 §Correction sets: a falsified check is
+evidence, and a check that was sound in method and beaten by timing is worth
+more as a record than as a tidy sentence. The durable fix is `T-M39-13`
+(nothing grades id uniqueness at allocation time, only at INDEX time).
 
 **Pre-registration evidence is weaker here than ADR-025's, and that is stated
 rather than hidden.** ADR-025's pre-registration was a *push* to `origin` before
