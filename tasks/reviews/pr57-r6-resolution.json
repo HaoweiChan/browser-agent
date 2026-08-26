@@ -3,49 +3,38 @@
   "branch": "task/M42",
   "pr": "https://github.com/HaoweiChan/browser-agent/pull/57",
   "round": 6,
-  "scope": "frozen to R7",
-  "counts": { "fixed": 1, "rejected": 0, "debt": 0 },
+  "scope": "frozen to R24-R27; R28 was the orchestrator's own and is not redone",
+  "counts": { "fixed": 4, "rejected": 0, "debt": 0 },
+  "context": "CI passed on e0ea784 (run 32939583133): invariant 74/74 in 17.40s under 25, fast 213/213 in 98.17s under 125, no OVER BUDGET line. 98.17s sits below all four attempts the ceiling was derived from, so the derivation was not fitted to a lucky run. R7 is closed and confirmed by the thing it was about.",
   "findings": {
-    "R7": {
+    "R24": {
       "state": "fixed",
-      "measurement": {
-        "run": "32937020758",
-        "commit": "14a6a7b",
-        "form": "four attempts of ONE run on ONE commit — ADR-019 §5's own form",
-        "tree": "213 fast / 74 invariant cases",
-        "results": "every attempt correctness-green: fast 213/213 = 1.000, invariant 74/74 = 1.000",
-        "table": {
-          "invariant": [18.59, 18.65, 18.88, 18.72],
-          "fast": [105.14, 101.73, 106.75, 107.89]
-        }
-      },
-      "derivation": {
-        "rule": "ADR-013 Decision 3 — slowest observed +15%, rounded up to a multiple of five — applied through `eval_adapter._band_rule`, the same function `ci-numbers-are-derived` uses",
-        "fast": "max 107.89s; 107.89 x 1.15 = 124.07 -> 125",
-        "invariant": "max 18.88s; 18.88 x 1.15 = 21.71 -> 25",
-        "note_on_the_earlier_figure": "The 125 reported last round came from attempt 1 alone (105.14). Re-derived from the table's maximum as instructed; it lands on 125 again, but from 107.89, not carried forward."
-      },
-      "invariant_ceiling_moved": "Yes — 20 -> 25, and the orchestrator was right that I had wrongly called this settled. CI's invariant run was never over budget and still is not; the ceiling moves because it is a DERIVED number and the tree deriving it grew from 48 cases to 74. Deriving fast from the new table while leaving invariant on the old one would publish two trees inside one table — the class this PR spent five rounds closing.",
-      "changed": [
-        "ADR-019 §5: table replaced with run 32937020758's four attempts, cited by run id and commit, hand-read per `gh run view ... --attempt N --log`; both derivations shown; the two paragraphs that argued from the retired 116-case table are struck in place with a dated pointer rather than deleted.",
-        "ADR-019 §5: the re-run caveat recorded ONCE, as instructed — four attempts of one run sample the runner's variance but hold commit, image and allocation fixed, so it is a narrower sample than the attempt count suggests; §6's no-ratchet-down rule is what makes publishing from it safe (a short sample is a lower bound).",
-        ".github/workflows/eval.yml: comment-block cells replaced (attempt order, both suites) and EVAL_WALL_BUDGET_S_FAST 90 -> 125, EVAL_WALL_BUDGET_S_INVARIANT 20 -> 25.",
-        "README.md: the bolded four-value fast list, the run id, both min-max ranges and both derived ceilings — all read back from §5's table by `ci-numbers-are-derived`.",
-        "evals/adversarial/fast-wall-clock-budget.json: `ci_wall_seconds` 90 -> 125 and `ci_invariant_wall_seconds` 20 -> 25; this case pins what the workflow DECLARES, while `ci-numbers-are-derived` ties those declarations back to §5's cells.",
-        "ADR-029 §2: CI is measured across four attempts, both ceilings are derived, and the section states that it supersedes BOTH of its earlier positions — the 'UNMEASURED / local-only' scoping and the 'deliberately red CI wall clock' framing."
-      ],
-      "red_first": {
-        "check": "ci-numbers-are-derived",
-        "observed_after_replacing_only_the_table": "[{\"suite\": \"fast\", \"adr_five_table\": [105.14, 101.73, 106.75, 107.89], \"workflow_comment\": [69.54, 74.06, 69.37, 74.04]}, {\"suite\": \"invariant\", \"adr_five_table\": [18.59, 18.65, 18.88, 18.72], \"workflow_comment\": [16.47, 15.85, 14.8, 15.6]}, {\"readme\": \"does_not_name_the_run_the_adr_cites\", \"adr_cites\": \"32937020758\"}, {\"readme\": \"fast_attempt_list_is_not_the_adr_table\", \"expected\": \"101.73 / 105.14 / 106.75 / 107.89s\"}, {\"readme\": \"ci_range_or_ceiling_is_not_the_adr_table\", \"suite\": \"fast\", \"readme_says\": [69.37, 74.06, 90], \"adr_table_gives\": [101.73, 107.89, 125]}, {\"readme\": \"ci_range_or_ceiling_is_not_the_adr_table\", \"suite\": \"invariant\", \"readme_says\": [14.8, 16.47, 20], \"adr_table_gives\": [18.59, 18.88, 25]}, {\"suite\": \"fast\", \"workflow_declares\": 90, \"adr_five_max\": 107.89, \"rule_gives\": 125}, {\"suite\": \"invariant\", \"workflow_declares\": 20, \"adr_five_max\": 18.88, \"rule_gives\": 25}]",
-        "note": "The red names every copy that had to move, which is the point of the check: one edit to the graded table reddened all eight surfaces at once.",
-        "second_red": "fast-wall-clock-budget, once the workflow moved and the case had not: {\"workflow\": \"EVAL_WALL_BUDGET_S_FAST\", \"declared\": \"125\", \"expected\": 90} and the same for INVARIANT at 25 against 20."
-      }
+      "change": "Five ungraded publishers of the retired CI ceilings struck IN PLACE with dated pointers, never silently edited: ADR-029's Ruling, ADR-019's Ruling, ADR-019's smaller-tree paragraph, ADR-019's Amended-by, and INDEX.md's ADR-029 entry. The reversal is the substance, so it stays visible.",
+      "structural_half": "`ci-numbers-are-derived` now scans every specs/decisions/*.md: any document naming an EVAL_WALL_BUDGET_S_* variable beside a number on the same line must name the number the workflow declares. Anchored to the variable, with struck spans stripped first, for the same reason `_ceiling_drift` is anchored — prose narrating a past ceiling is indistinguishable from a live one by any cheap pattern (T-M32-9's ruling).",
+      "red_first": "Run against the pre-round documents (git stash of the four files), the extended check returned: [{\"doc\": \"ADR-021-local-fast-ceiling-90.md\", \"publishes_a_ci_ceiling_of\": 90, \"suite\": \"fast\", \"workflow_declares\": 125}, {\"doc\": \"ADR-029-local-fast-ceiling-105.md\", 90 vs 125}, {\"doc\": \"INDEX.md\", 90 vs 125}, {\"doc\": \"INDEX.md\", 90 vs 125}] — it finds ADR-021 as well, which is R25's document, so one guard now covers both crops."
+    },
+    "R25": {
+      "state": "fixed",
+      "change": "ADR-021 gains the `Amended by` line it never had, naming ADR-029 and stating its CI ruling is OVERTURNED; the section heading, its operative sentence and the bullet at :42 are struck in place. ADR-029 gains an `Amends` line (it had none) naming ADR-019 Decision 2, ADR-019 §5, and the overturn. INDEX's ADR-021 entry no longer presents 'CI's fast stays 90' as a live RULING.",
+      "note": "ADR-021's reasoning is deliberately left unstruck — a ceiling is derived from a measurement of the shipped tree, not from an absence of evidence. That reasoning is exactly what overturned its own conclusion, applied to a later tree."
+    },
+    "R26": {
+      "state": "fixed",
+      "change": "The retired run id is gone from both prose sites. README's upper paragraph and ADR-019's debt paragraph now refer to 'the run ADR-019 §5 names' instead of repeating an id, so §5 is the single publisher of the run id exactly as it is of the wall clocks. README still carries the current id once, in the paragraph that publishes the four values, which is what `ci-numbers-are-derived` requires.",
+      "note": "The `gh run view <id>` command a reader could copy out of README returned the retired cells. It now points at §5, which carries the command with the live id."
+    },
+    "R27": {
+      "state": "fixed",
+      "change": "The trailing lookahead `(?![\\d.])` became `(?!\\d)`. Rejecting a following DIGIT is what it was for; a period is punctuation, and sentence-final is the commonest position a number takes in prose — so the guard was blind exactly where it is most needed, and ADR-029 section 1 rests on it alone.",
+      "red_first": "Demonstrated both directions on the live document. Injected 'The band was 91.23s.' INSIDE section 1: pre-fix {\"passed\": true, \"quoted\": []} — green and wrong. Post-fix, same injection: {\"quoted_in_adr029_section_1_but_in_no_local_fast_row_at\": 213, \"unreadable\": [91.23]}. Injection removed, green again.",
+      "exemptions_kept": "Struck spans still stripped before matching; the integer form (`105s`, a ceiling rather than a measurement) is still unmatched by construction, since the pattern requires `\\d+\\.\\d+`.",
+      "self_exercise": "Three asserts now run inside the check on every invocation — mid-sentence, sentence-final, and the integer exemption — so the hole cannot reopen silently. That is the value-level exercise `_ceiling_drift`'s rows already carry one check over, and its absence is why this hole survived."
     }
   },
   "gate": {
-    "invariant": "74/74 = 1.000, wall 14.31s, $0.0000",
-    "fast": "213/213 = 1.000, wall 87.31s, $0.0000",
+    "invariant": "74/74 = 1.000, wall 13.95s, $0.0000",
+    "fast": "213/213 = 1.000, wall 87.03s, $0.0000",
     "baseline_file": "unchanged from main",
-    "ci_confirmation": "The CI run of the commit carrying these ceilings is the check on the number and is read after the push, not asserted here."
+    "ci": "read on the commit this round pushes; the previous commit passed as run 32939583133"
   }
 }

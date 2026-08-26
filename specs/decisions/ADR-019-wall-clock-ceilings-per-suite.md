@@ -3,11 +3,11 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → **105s** (ADR-021, then ADR-029), local `invariant` **20s**, CI `fast` 80 → **90s**, CI `invariant` **20s** — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → **105s** (ADR-021, then ADR-029), local `invariant` **20s**, and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 from run `32937020758` and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `evals/run.py` `over_budget()`
 
-**Amended by**: ADR-029 (Decision 2's local `fast` ceiling 90 -> 105, on the number `published-band-matches-the-ledger` derived after M42 grew the suite (the count is `git diff main --stat` away and is published nowhere, because three documents published three different values for it — PR #57 R16); CI's stays 90 because nothing in that change measured CI) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
+**Amended by**: ADR-029 (Decision 2's local `fast` ceiling 90 -> 105, and §5's two CI ceilings re-derived from run `32937020758` — the values themselves live in §5 and in the workflow, graded against each other, on the number `published-band-matches-the-ledger` derived after M42 grew the suite (the count is `git diff main --stat` away and is published nowhere, because three documents published three different values for it — PR #57 R16); CI's stays 90 because nothing in that change measured CI) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 80) and ADR-002 Decision 4 (a second suite now has a ceiling)
 
@@ -61,13 +61,17 @@ decision that amends it.
 wall clock, and this ADR does not make one: §7 says why, and labels them for what
 they are, hand-read off the log of a named workflow run so a reader can re-read
 it. **They are also, as of 2026-08-26, measurements of a SMALLER tree than the
-one shipping**: §5's four attempts ran the case count §5's own table records,
+one shipping**: ~~§5's four attempts ran the case count §5's own table records,
 on the commit it names, and this tree is larger — so CI's committed 90s ceiling
 is a number no run of this tree has tested. The count is not repeated here: this
 sentence said 152 for one round, which is ADR-021's run `32639577041` on
-`07e3d34`, not §5's `32561162459` on `d173340`, and a document contradicting
-itself about which run it means is worse than one that makes the reader look
-(PR #57 R15).
+`07e3d34`, not §5's `32561162459` on `d173340`~~ — struck 2026-08-26 (PR #57
+R24). It was true until CI ran this tree: §5 now records the commit it shipped,
+at the case counts it ships, so the sentence's premise is gone. Both halves are
+kept struck rather than deleted because the reversal is the substance — a
+document contradicting itself about which run it means is worse than one that
+makes the reader look (PR #57 R15), and that lesson is why §5 is now the only
+place a CI run id or wall clock is published at all.
 ADR-029 §2 carries the ruling — the ceiling is not raised on an extrapolation,
 and until a CI run of this tree exists and is cited here by workflow-run id,
 every gate-green claim on that branch is scoped to the local environment
@@ -767,8 +771,10 @@ artifact the check reads. It is not taken here: a step that commits from a
 pull-request job is a permissions-and-push-loop problem to solve for one number
 per run, and it cannot be verified from a laptop, which is the exact shape that
 produced this debt (numbers published that no committed artifact reproduces). So
-§5's four numbers are labelled for what they are and pinned to eval-gate run
-32561162459, attempts 1-4, where `gh run view … --log` reprints them.
+§5's four numbers are labelled for what they are and pinned to the eval-gate run
+§5 itself cites, attempts 1-4, where `gh run view … --log` reprints them. The id
+is written once, in §5, for the reason PR #57 R26 gives: this document pinned a
+retired run here while §5 had moved on.
 
 **What is graded grew, and this paragraph is the third place that said otherwise**
 (PR #41 R15; it was written when the labelling route shipped with nothing behind

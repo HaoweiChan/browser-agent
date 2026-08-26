@@ -9,6 +9,8 @@ Status: accepted
 
 **Amends**: ADR-019 Decision 2 (local `fast` 80 -> 90; the other three ceilings are unchanged)
 
+**Amended by**: ADR-029 (2026-08-26) — this ADR's CI ruling below is OVERTURNED. Both CI ceilings were re-derived from a measurement of the tree that ships and the workflow declares what they derive; the values live in ADR-019 §5 and are graded against the workflow by `ci-numbers-are-derived`. The local half of this ADR (`fast` 80 -> 90) stands as the step ADR-029 raises from. This header had no `Amended by` line at all for one round, so a reader following the chain reached a ruling the workflow no longer obeyed (PR #57 R25).
+
 ---
 
 ## Context
@@ -39,7 +41,7 @@ themselves, so ordinary run-to-run variance does not redden a doc.
 - **`invariant` stays 20.** It grew 51 → 54 cases and still derives 20 from the
   same rule (slowest 13.43s → 15.4 → 20). CI's `invariant` step ran 16.79s
   against it.
-- **CI's `EVAL_WALL_BUDGET_S_FAST` stays 90.** When this was written CI had
+- **~~CI's `EVAL_WALL_BUDGET_S_FAST` stays 90.~~** (Overturned by ADR-029.) When this was written CI had
   produced no `fast` measurement at all on this branch — its run died at the
   `invariant` step, on the two cases this ADR closes — so this bullet originally
   left 90 in place for want of evidence. It no longer rests on that: CI has
@@ -112,7 +114,16 @@ LOCAL ceiling moved. Run **32627229208** measured **`920218e`**, the parent of
 the R16 repair, at 146 `fast` / 54 `invariant`: `fast` **88.39s** against 90 —
 **1.8%** — and `invariant` 16.79s against 20.
 
-### The ceiling stays at 90, and that is a ruling
+### ~~The ceiling stays at 90, and that is a ruling~~ — OVERTURNED 2026-08-26
+
+**Struck by ADR-029 (PR #57 R25).** Everything below was true of the tree it
+measured and is kept for that reason: the reasoning — a ceiling is derived from a
+measurement of the shipped tree, not from an absence of evidence — is exactly
+what overturned it, applied to a later tree. What is no longer true is the
+conclusion. CI has since measured the tree M42 ships, both CI ceilings were
+re-derived from it, and the workflow declares those. ADR-019 §5 publishes them
+and `ci-numbers-are-derived` grades them against the workflow; no number from
+this section is live.
 
 Three things, in order, because the ADR previously left 90 standing on an
 absence of evidence and R28 deletes that reasoning:
@@ -130,8 +141,9 @@ asked for 105. **The shipped tree's own measurement removed the premise.** CI
 came in FASTER on a LARGER suite — 88.39s at 146 cases, 74.25s at 152 — so the
 gap the raise was meant to close is not there on the tree that ships.
 
-`EVAL_WALL_BUDGET_S_FAST` stays 90 and `_INVARIANT` stays 20. That is now the
-ruled state rather than the untouched default. Both values in
+~~`EVAL_WALL_BUDGET_S_FAST` stays 90 and `_INVARIANT` stays 20. That is now the
+ruled state rather than the untouched default.~~ (Overturned by ADR-029; see the
+heading above.) Both values in
 `.github/workflows/eval.yml` are unchanged from `origin/main`; the file itself is
 not byte-identical any more, because T-R44 added `EVAL_ENV: ci` beside them
 (2026-08-23 amendment below) — no ceiling moved.

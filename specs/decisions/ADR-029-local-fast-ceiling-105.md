@@ -3,9 +3,11 @@
 Date: 2026-08-26
 Status: accepted
 
-**Ruling**: `WALL_BUDGET_S["fast"]` moves from 90s to **105s** for the LOCAL environment only, taken from ADR-013 Decision 3's rule applied to this tree's own committed ledger rather than chosen; CI's `EVAL_WALL_BUDGET_S_FAST` **stays at 90** because nothing in this change measured CI, and ADR-019 §5's four CI numbers are hand-read off a named workflow run — a number I cannot take from here is a number I may not write; `invariant` is untouched at 20s, which its own ledger rows still derive.
+**Ruling**: `WALL_BUDGET_S["fast"]` moves from 90s to **105s** for the LOCAL environment only, taken from ADR-013 Decision 3's rule applied to this tree's own committed ledger rather than chosen; ~~CI's `EVAL_WALL_BUDGET_S_FAST` **stays at 90** because nothing in this change measured CI~~ — struck 2026-08-26 (PR #57 R24): CI has since measured this tree and §2 records both ceilings it derives, which the workflow declares. ADR-019 §5 is where CI's numbers are published and `ci-numbers-are-derived` grades them against the workflow, so no ceiling is repeated in this line; `invariant` is untouched at 20s, which its own ledger rows still derive.
 **Because**: M42's additions grew `fast`, which is growth in CASE COUNT and not in per-case cost — the exact condition ADR-021 named when it said "if a future gap comes from per-case cost the answer is removing waste (T-M32-3), not another raise"; the tree measured 73.06s at 181 cases and the new cases cost ~7s of real browser work between them, so the band crosses a ceiling step and ADR-013's rule derives 105 from it.
 **Enforced by**: `published-band-matches-the-ledger` (items 3, 4 and 5 are what force this file to exist rather than letting the band be re-typed), `fast-wall-clock-budget` (whose boundary rows move to 105.00/105.01 in the same change, watched red first), `evals/run.py`'s `over_budget()`.
+
+**Amends**: ADR-019 Decision 2 (local `fast` 90 -> 105) and ADR-019 §5 (both CI ceilings re-derived from a measurement of the tree that ships) · **overturns ADR-021's CI ruling** ("the ceiling stays at 90, and that is a ruling"), which is struck in place there — for one round that ADR carried no `Amended by` line and a reader following the chain reached a ruling the workflow no longer obeyed (PR #57 R25)
 
 ---
 

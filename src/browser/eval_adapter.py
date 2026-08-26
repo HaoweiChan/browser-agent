@@ -1269,8 +1269,38 @@ def _check_ci_numbers_are_derived() -> dict:
             wrong.append({"suite": suite, "workflow_declares": got,
                           "adr_five_max": max(by[suite]),
                           "rule_gives": _band_rule(max(by[suite]))})
+    # PR #57 R24: the ceiling move reached every GRADED surface and no ungraded
+    # one. Five places went on publishing CI at 90/20, including two ADR Ruling
+    # headers and INDEX.md — the file whose own header says it is what you read
+    # when you just need what is now true. Nothing saw them, because everything
+    # above reads §5, README and the workflow and stops.
+    #
+    # So: any tracked decision document that names an `EVAL_WALL_BUDGET_S_*`
+    # variable beside a number must name the number the workflow declares.
+    # Anchored to the variable, and to the same line, because that is the one
+    # form that can only mean a live ceiling — prose narrating a past one is
+    # indistinguishable by any cheap pattern, which is the ruling T-M32-9
+    # already made for the local ceilings and the reason `_ceiling_drift` is
+    # anchored the way it is.
+    #
+    # Struck spans come out first, the convention every document sweep here
+    # uses: this repo strikes a reversed ruling in place with a dated pointer,
+    # and a guard that reddens on preserved history is one someone turns off.
+    docs = sorted((Path(__file__).parents[2] / "specs" / "decisions").glob("*.md"))
+    declared = {s: _re.search(rf'EVAL_WALL_BUDGET_S_{s.upper()}: "(\d+)"', wf) for s in by}
+    declared = {s: int(m.group(1)) for s, m in declared.items() if m}
+    live = _re.compile(r"EVAL_WALL_BUDGET_S_(FAST|INVARIANT)`?[^\n]{0,60}?"
+                       r"(?<![\d.])(\d+)(?![\d.])")
+    for doc in docs:
+        text = _re.sub(r"~~.*?~~", "", doc.read_text(encoding="utf-8"), flags=_re.DOTALL)
+        for suite, said in live.findall(text):
+            want = declared.get(suite.lower())
+            if want is not None and int(said) != want:
+                wrong.append({"doc": doc.name, "publishes_a_ci_ceiling_of": int(said),
+                              "suite": suite.lower(), "workflow_declares": want})
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"adr_five": by, "run": run_id.group(1) if run_id else None}}
+            "got": {"adr_five": by, "run": run_id.group(1) if run_id else None,
+                    "workflow_declares": declared, "decision_docs_scanned": len(docs)}}
 
 
 def _check_history_dirty_before_report() -> dict:
@@ -5315,7 +5345,24 @@ def _check_adr029_variance_cites_the_ledger() -> dict:
     # falsified claim in place with a dated pointer rather than deleting it, and
     # a guard that reddens on preserved history is a guard someone turns off.
     one = _re.sub(r"~~.*?~~", "", one, flags=_re.DOTALL)
-    quoted = {float(m) for m in _re.findall(r"(?<![\d.])(\d+\.\d+)s(?![\d.])", one)}
+    # `(?!\d)` and NOT `(?![\d.])`: the old lookahead rejected a match whose next
+    # character is a period, so a seconds literal ENDING A SENTENCE was invisible
+    # — "the band was 91.23s and that is the spread" reddened correctly while
+    # "the band was 91.23s." sailed through (PR #57 R27). Sentence-final is the
+    # commonest position a number takes in prose, so the guard was blind exactly
+    # where it is most needed, and ADR-029 §1 now rests on it alone. Rejecting a
+    # following DIGIT is what the lookahead was for; a period is punctuation.
+    # The integer form (`105s`, a ceiling rather than a measurement) is still
+    # unmatched by construction — the pattern requires `\d+\.\d+`.
+    _SECONDS = _re.compile(r"(?<![\d.])(\d+\.\d+)s(?!\d)")
+    # ponytail: the self-exercise this guard needed. Both positions, one
+    # runnable line — an exercise set that only tries what the code was written
+    # for proves nothing, which is the lesson `_ceiling_drift`'s value-level
+    # rows already carry one check over.
+    assert _SECONDS.findall("was 91.23s and more") == ["91.23"], "mid-sentence"
+    assert _SECONDS.findall("was 91.23s.") == ["91.23"], "sentence-final (R27)"
+    assert _SECONDS.findall("ceiling 105s.") == [], "integer ceilings stay exempt"
+    quoted = {float(m) for m in _SECONDS.findall(one)}
     unreadable = sorted(q for q in quoted if q not in measured)
     return {"passed": not unreadable,
             "wrong": [{"quoted_in_adr029_section_1_but_in_no_local_fast_row_at": now,

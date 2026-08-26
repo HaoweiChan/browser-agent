@@ -140,9 +140,12 @@ one ceiling was derived from a maximum that was never measured (R18, R21) — th
 same selective presentation ADR-013 Decision 4 was withdrawn over.
 
 CI's two numbers below are NOT in this ledger and cannot be: no CI run commits
-its wall clock, so they are measured by hand off the log of eval-gate run
-32561162459 and recorded with that id in ADR-019 §5, where `gh run view
-32561162459 --attempt N --log` reprints them. §5's table is the one source and
+its wall clock, so they are measured by hand off the log of the eval-gate run
+ADR-019 §5 names, and recorded with that id there; §5 also carries the
+`gh run view … --attempt N --log` command that reprints them. The id is not
+repeated in this paragraph: for one round this file cited a retired run here and
+the current one thirty-six lines below, so the command a reader could copy
+returned cells that matched nothing published (PR #57 R26). §5's table is the one source and
 `ci-numbers-are-derived` grades it: the four values, both ranges and the ceilings
 below are read back from that table, the run id has to appear here as well as
 there, and the ceilings must be the ones the workflow declares — so these numbers
