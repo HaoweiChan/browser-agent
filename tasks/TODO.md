@@ -338,7 +338,7 @@ new trace fields and caps; cold-reviewer + spec-drift before commit.
 Out of scope: vision (M43), matrix re-declaration (M44), making loop the live
 default (M44's evidence decides).
 
-### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: todo]
+### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: pr]
 Origin: interviewer feedback, 2026-08-26 — "使用者輸入中文搜尋或問答時,部署版
 會直接回傳 refused,甚至還沒開啟瀏覽器就結束", under the headline "中文都會
 失敗". No run ids came with the report. Priority note: sequence this AHEAD of
