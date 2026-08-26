@@ -133,7 +133,7 @@ async def page_text(page, frames: bool = True) -> str:
     this is evidence capture and the postcondition is the gate.
 
     `frames=False` reads the main document (and its shadow roots) only. It exists
-    for the before/after comparison behind `page_changed` and, as of PR #56 R13,
+    for the before/after comparison behind `page_changed` and, as of PR #57 R13,
     **no caller uses it** — the argument is kept because the trade-off it names
     is real and the next reader will re-derive it otherwise:
 

@@ -1254,7 +1254,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         #     disarming `changed_nothing` — the whole evidence
                         #     behind the anti-laundering guard, in BOTH modes —
                         #     and telling the loop driver a no-op did something
-                        #     (PR #56 R1,
+                        #     (PR #57 R1,
                         #     `replan-cannot-launder-noop-action-in-a-frame`);
                         #   * symmetric-but-frames-BLIND flipped the sign instead
                         #     of removing the defect: a control whose only effect
@@ -1263,7 +1263,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         #     `false`, so the guard refused a legitimate replan
                         #     and the run died stating as fact that a step which
                         #     had just loaded a document ID "changed nothing on
-                        #     the page" (PR #56 R13,
+                        #     the page" (PR #57 R13,
                         #     `replan-after-an-iframe-only-change-is-not-laundering`).
                         #
                         # Symmetric and frames-aware is the only setting under
@@ -1444,7 +1444,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         # for a round while the verifier could not see a
                         # `locate` or `extract` failure at all, so the run
                         # reported success with the failure in its own trace
-                        # (PR #56 R6).
+                        # (PR #57 R6).
                         pending_supersede.append(rec)
                         # `page_changed` is THREE-valued and null means "never
                         # compared", not "nothing moved" — every failure raised

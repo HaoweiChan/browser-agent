@@ -4892,7 +4892,7 @@ def _run_doc_counts_case(case: dict) -> dict:
         # beside them credited a different file — "read out of the committed
         # report X rather than tallied by hand", where X held 181 results, 287
         # actions and 109 browser cases against the 207/367/132 printed next to
-        # it (PR #56 R4). Deriving a number and citing a source are two claims,
+        # it (PR #57 R4). Deriving a number and citing a source are two claims,
         # and only the first was graded, so the sentence that makes the whole
         # paragraph checkable was the one nothing checked.
         if s1.get("cites_report") and (rid := ws["reports"][ws["headline"]]) not in text:
@@ -5236,7 +5236,7 @@ def _check_ui_adrs_cover_every_decision() -> dict:
     "028",` substitution and produced a FOUR-element row against a
     `([n, line])` destructure, so the page rendered "ADR-026 — 027", ADR-026's
     real one-liner vanished, ADR-027/028/029 never reached a visitor, and
-    `${ADRS.length}` undercounted (PR #56 R2). The shape defect is the visible
+    `${ADRS.length}` undercounted (PR #57 R2). The shape defect is the visible
     half; the coverage defect is the one that had been there since M39, with
     ADR-023 simply absent.
 
@@ -5274,7 +5274,7 @@ def _check_adr029_variance_cites_the_ledger() -> dict:
 
     §1 justified a second ceiling step with "the same tree measured 84.83s and
     88.87s within the hour" — two numbers in no committed report and no ledger
-    row (PR #56 R3). They were real measurements, discarded with the probe rows
+    row (PR #57 R3). They were real measurements, discarded with the probe rows
     they belonged to under the T-M38-5 practice, which is exactly how a document
     ends up arguing from evidence nothing can check: the honest handling is to
     argue from the rows that survived, not to commit rows after the fact to fit
@@ -5301,7 +5301,7 @@ def _check_adr029_variance_cites_the_ledger() -> dict:
     # ...at the case count this tree SHIPS. Matching any row at any count was the
     # hole: a band lifted from the 207-case tree read back clean on the 213-case
     # one, because 87.96s really was a local `fast` row — of a different suite
-    # (PR #56, round 3). A wall clock is only evidence for the tree it measured,
+    # (PR #57, round 3). A wall clock is only evidence for the tree it measured,
     # which is the same rule `published-band-matches-the-ledger` item 1 (count)
     # applies to the band itself; this is that rule applied to the prose that
     # argues for it.
@@ -5332,7 +5332,7 @@ def _check_adr029_scope_matches_the_suites() -> dict:
     gate is green LOCALLY and that CI has not run this tree, which is the whole
     of R7's disclosure. It published `invariant 71/71, fast 207/207` against a
     tree of 73 and 211: stale by four cases and two commits, in the one place
-    where stale and wrong are the same thing (PR #56 R14).
+    where stale and wrong are the same thing (PR #57 R14).
 
     This is the third instance of one class in one milestone — a scalar in prose
     that nothing reads back — and the second produced by repairing the first.

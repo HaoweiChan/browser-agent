@@ -472,7 +472,7 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     # was invisible to both. That was harmless while mode B ended the run at the
     # first failed step; loop mode made a failed call routine, and a run whose
     # last real call failed unsuperseded reported `success` with verdict PASS
-    # and the failure sitting in its own trace (PR #56 R6,
+    # and the failure sitting in its own trace (PR #57 R6,
     # `loop-abandoned-failure-is-not-a-success`).
     #
     # The line is the one `superseded_by` has always drawn, now applied to every
