@@ -87,6 +87,53 @@ after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
 
+### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: pr]
+Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
+two Try examples produce nothing, five cards should be eight, the running stage should
+show it is running, a right-hand panel should show what the browser saw so a reviewer can
+check the scraped content, and the covered domains should include the investment sites an
+investment firm actually uses.
+**Process note, recorded rather than tidied away:** this block was written AFTER the work
+started, at the owner's instruction mid-session ("make sure you update TODO before
+implementation"). CLAUDE.md's per-feature loop puts plan → ADR → cases first; on this task
+the probing came first and the block second. Written down because the ordering is exactly
+what this file exists to make visible, and because the probe results below are what a plan
+written first would have had to guess at.
+Spec: four frontend asks, one that is not. The four are `src/browser/server.py`'s inline
+PAGE — a CSS-only spinner on the current phase (the progress case forbids timers in the
+script, and a phase advancing on a clock is a progress bar that lies about the trace), a
+right-hand page view carrying the step screenshot the executor already takes plus, after
+the run, every extraction with the page text it was read from, and an EXAMPLES/matrix set
+that reaches eight real-site rows. The fifth — "support investment sites" — cannot be
+answered by writing code; it is answered by running the deployment and declaring what came
+back, under the same report-assisted/human-declared rule as every other row.
+Acceptance:
+- Every Try example and every live-declared row is re-run against the build being
+  shipped, immediately before merge (added mid-task — see ADR-022 Decision 1a; the
+  first three rows declared here expired when the deployment was replaced).
+- The page view shows the page ITSELF, scrollable, not only a screenshot (owner
+  amendment mid-task) — and the proxy that requires is graded as the SSRF surface
+  it is, watched red per property.
+- No Try example cites a run shape that no longer reproduces. Each card's example is
+  re-run against the deployment and its status matches what happened, including the one
+  card that is deliberately a failure demo.
+- Eight non-fixture rows in `docs/support-matrix.md`, each with an EXAMPLES entry
+  (`ui-examples-cover-matrix` already grades set equality in both directions).
+- The new live-declared rows carry their run ids, their repeat counts, and a declared
+  limitation naming the page shapes that failed — not a pass rate thresholded into a word.
+- Every new UI hook is pinned by the UI cases, watched red against the pre-M40 page.
+- Cold review and spec-drift both run before the commit; every finding either lands as a
+  fix with a case, or as a declared limitation. No finding is closed by rewording alone.
+Rebased onto main 2026-08-23 after PR #34/#39 merged: this block was written as M38 and
+renamed to M40 — main had already queued M38 (resolver disambiguation) and M39. The
+collision is worth noting rather than silently renumbering, because main's M38 is the fix
+for one of the two broken Try examples this task found by hand: `e985e048`/`e6768ee0` in
+its Origin are the same quotes.toscrape.com ambiguity this task hit as `eefae1b8`.
+Not in scope, and why: a plan-lint clause refusing container-role `extract` targets. It is
+the obvious fix for the dominant live failure shape and it would turn
+`extract-container-dump-is-not-the-answer` red by ending the run before anything is read —
+changing what that case can observe rather than fixing what it grades. Isolating the cell
+stays T-R66/M28.
 ### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: pr]
 Origin: interviewer feedback, 2026-08-26 — "使用者輸入中文搜尋或問答時,部署版
 會直接回傳 refused,甚至還沒開啟瀏覽器就結束", under the headline "中文都會
@@ -241,6 +288,122 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M39-14 — the front-page baseline cites a run that failed, and the rule set makes it unfixable in place            [status: todo]
+Origin: found on merged `main` (`7e0b662`) by the session that had driven PR #52,
+immediately after M39 merged. Reproduced and diagnosed here; NOT fixed, because
+fixing it needs a decision, not an edit.
+Spec: README's "Where it stands" block publishes
+`fast  180/181    invariant  65/66` as the latest offline baseline, citing
+`evals/report/20260824-052304-fast.json` (score 0.994) and
+`20260824-052134-invariant.json` (score 0.985). Both are RED runs — the failing
+case in each is `docs-numbers-are-derived` itself. ADR-019's band bullets have
+the same shape: the `fast` band cites ts `20260824-051337` at `179/181` and the
+`invariant` band cites `20260824-051159` at `64/66`. So the repo's front page
+and its ceiling ADR both advertise numbers taken from failing runs, while the
+tree itself passes 181/181 and 66/66.
+Why the gate does not catch it: `headline_report_is_red` exists and is correct,
+but it deliberately excludes the running case's own id, with a documented
+deadlock argument (`eval_adapter.py`, ~line 4712) — once this case goes red,
+every later report contains it failing, so without the exclusion no green report
+could ever be produced to cite. The exclusion is right. The consequence is that
+a block stale in exactly this way is invisible to the gate.
+Why it is not a one-line repoint (attempted, reverted): three rules bind at once
+and are currently unsatisfiable together.
+  1. the band may not cite a `dirty` run when a clean one was available
+     (`cited_a_dirty_run`);
+  2. the published number must derive the SAME ceiling as the ledger maximum at
+     that count (`item 3`, same-ceiling);
+  3. producing a green report at the current count requires `--report`, and
+     running it on a tree carrying the very fix under review makes that row
+     `dirty`.
+Measured here: a `--report` pair gives green 181/181 and 66/66, but the gate run
+that follows lands a dirty 75.32s row, which becomes the ledger maximum and
+derives 90, while every CLEAN row is ~73s and derives 85. Republishing to the
+dirty row trips rule 1; republishing to the clean row trips rule 2. The only
+exits are to drop the dirty row from the ledger — a second discretionary
+deletion of measurements, which should not be routine — or to change a rule,
+which is an ADR.
+Repro: on `main`, read README lines 53-58 beside
+`python3 -c "import json; d=json.load(open('evals/report/20260824-052304-fast.json')); print(d['score'])"` -> 0.994.
+Acceptance: the front-page block and both ADR-019 band bullets cite runs that
+PASSED, with the sequencing that makes that reachable written down (commit
+first so the tree is clean, then `--report`, then cite) — or an ADR amending
+whichever of the three rules deadlocks, saying which and why. Plus a case that
+reddens when a cited baseline report has any failure other than the excluded
+self-reference, so this class stops being invisible.
+Out of scope: the self-exclusion in `headline_report_is_red`; it is load-bearing
+and its deadlock argument holds.
+
+Update (2026-08-26, after PR #58/#57/#56 merged): **the README half is closed;
+the ADR-019 half was never a defect.** Verified on `main` at `7038169`:
+README's "Where it stands" block and `where_it_stands.reports` now cite
+`20260826-132636-fast.json` (220/220), `20260826-132508-invariant.json` (76/76)
+and `20260826-132658-live.json` (11/11) — three GREEN runs. What closed it was
+not a rule change but running the republish twice: the first run at a new case
+count is necessarily red on `docs-numbers-are-derived` itself, so cite that
+run, re-run, and cite the now-green report. That is the "two commits instead of
+one" cost T-R44 named, paid deliberately rather than worked around.
+The other half stands and should be RETIRED rather than fixed: ADR-019 §2/§3's
+band bullets still cite red runs (`20260826-132151-fast.json` 217/220,
+`20260826-132022-invariant.json` 73/76) and §6 item 2 (cited-run) says in so
+many words that this is correct — "a band source is taken as it is found ...
+green is required nowhere in §6". A band source is evidence that a tree cost
+what it cost; whether the suite agreed with its own prose at that instant is a
+different claim. So the deadlock this block describes is real only for the
+README block, and only until someone runs the republish a second time.
+Acceptance (narrowed): either this block closes as fixed-and-declared, or the
+two-run republish becomes written procedure somewhere a person will read before
+paying for the discovery again — `.claude/skills/eval-protocol/` is the place.
+The rule-set change the original spec contemplated is NOT wanted: §6 item 2 is
+right and the block was reading it as a bug.
+
+### T-M39-15 — nothing grades task-id or ADR-number uniqueness, so both collide silently            [status: todo]
+Origin: PR #44 pass-5 merge, found by the pr-loop verification agent while
+computing over the merged trees (credited at the request of the session that
+hit the second instance).
+Spec: two id collisions happened in this repo on 2026-08-24, both merging
+clean and green because nothing in the eval set reads the id space.
+(1) `T-M39-1` was defined differently on `task/M39` (`stub_judge` certifies on
+any unrecognised verdict token) and on `main` (arrived via PR #51: the judge's
+unreadable-completion retry may not reach a MISSING body); `tasks/TODO.md`
+auto-merged and carried both under one id until a human-directed renumber to
+`T-M39-12`. (2) `ADR-023` was allocated independently by PR #42 and PR #44
+before #42 vacated it to `ADR-026`; the collision was caught by hand, and only
+because one orchestrator happened to grep for it before pushing.
+This is the same class as T-M40-1's nine renumbered debt ids: the failure mode
+is not a merge conflict but the absence of one.
+Repro: define `### T-X-1` on two branches with different bodies, or add
+`specs/decisions/ADR-0NN-*.md` on two branches with the same NN; merge. Git
+reports nothing and both suites stay green.
+Acceptance: an `invariant`-tagged case that reddens on a duplicate task id in
+`tasks/TODO.md` + `tasks/DONE.md`, and on a duplicate ADR number across
+`specs/decisions/` filenames and `INDEX.md` rows. Watched red first by
+introducing one of each. Pure-code probe, no browser, no LLM — it belongs in
+`invariant` because it is a property of the tree, not of a run.
+Out of scope: renaming any existing id; deciding an allocation protocol.
+Update (2026-08-26, the merge of PR #54 into `main` after PR #58/#57/#56):
+**this block collided with another `T-M39-13` while being merged, and was
+renumbered to T-M39-15 to land.** `main` had acquired a different T-M39-13 — "a
+slower dirty re-run at an unchanged count can make the published band
+unrepublishable", filed 2026-08-25 from an ADR-027 planning worktree — so the
+id named two unrelated findings at once. That is instance three of this block's
+own defect, produced by the act of filing it.
+Three more instances arrived in the same backlog, and they are the evidence the
+acceptance below should be graded against: (a) `ADR-028` was allocated
+independently by PR #57 (loop mode) and PR #56 (the zh probe); both PRs were
+green and `MERGEABLE`, the two ADR files never touched, and the collision
+surfaced only in `INDEX.md`, where `adr-header-and-index` gates it — PR #56's
+own in-ADR collision check had run `gh pr list --state open` at a moment before
+#57 existed, so the method was sound and the timing beat it. (b) `tasks/DONE.md`
+acquired SIX duplicate ids (M39, M40, T-M32-9, T-M40-4, T-R44, T-R61) because
+three branches did the same housekeeping; git auto-merged every one of them
+without a conflict. (c) `tasks/TODO.md` produced a duplicated `### M42` header.
+The asymmetry that makes this worth fixing: the ADR half IS gated (INDEX.md,
+at 100%), and the TASK-ID half is gated by nothing — `tasks/DONE.md` and
+`tasks/TODO.md` are read by the citation check only for ADR references, never
+for id uniqueness. Verified on the merged tree: appending a duplicate
+`- M39 — ...` line to DONE.md leaves `invariant` and `fast` fully green.
 
 ### M45-D9 — M45 ran four narrowings and published three            [status: todo]
 Origin: PR #56 R9, 2026-08-26. Routed to debt as LOW because the undercount
