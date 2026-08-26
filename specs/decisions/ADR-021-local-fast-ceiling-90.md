@@ -73,7 +73,7 @@ trusted to do the multiplication.
 
 ## The second ceiling decision in this PR, and why the first was withdrawn
 
-PR #34 already tried this once. **ADR-020 raised CI's ceiling 80 → 92 and was
+PR #34 already tried this once. **ADR-020 raised CI's ceiling 80 → 92 [historical] and was
 reverted** (`744b7a6`), and a reader should be able to see why that one was
 withdrawn and this one was not:
 

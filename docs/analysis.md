@@ -105,7 +105,7 @@ removed rather than absorbed into the ceiling. Then it fired again on the branch
 first CI run, which is the more useful of the two: `main`'s own CI does `fast` in
 **89.62s** (run `32385032004`), so CI had been ~50% over the ceiling for its entire
 existence and nothing had ever checked there. This branch cuts that to 59.8-64.7s
-across four runs. CI now carries its own measured ceiling (80s after re-measurement) while local stays
+across four runs. CI carries its own measured ceiling — ~~80s after re-measurement~~ [historical], re-derived 2026-08-26 and published in ADR-019 §5 — while local stays
 at 60s, both enforced. The local number was then re-measured, then that
 re-measurement was withdrawn: the M9-stage-2 merge added a readiness case
 that holds a run slot for 3.0s on purpose, the suite straddled 60s across

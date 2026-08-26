@@ -1149,6 +1149,38 @@ def _check_published_band_ts_orders_real_time() -> dict:
 
 
 
+# --- the CI-ceiling site sweep (PR #57 R32/R33) ------------------------------
+# Module-level so `ci-ceiling-sites-are-labelled`'s asserts exercise the SAME
+# compiled objects the check runs (PR #57 R34: an assert that re-types the
+# pattern records a fact about a copy, and a regression in the real one leaves
+# it green).
+_CI_WINDOW = 70
+_CI_TOKEN = re.compile(r"\bCI\b|EVAL_WALL_BUDGET")
+_CI_CEILING_LINE = re.compile(r"ceiling|budget|wall[- ]clock|\bstays\b", re.I)
+# What a ceiling looks like as a NUMBER: seconds-suffixed, or an operand of a
+# move. Never preceded by a word character — that is what keeps `M42`, `M31`,
+# `R16` and `ADR-019` out, and case counts and run ids are neither shape.
+_CI_SECONDS = re.compile(r"(?<![\w.\-§#])(\d{2,4})s\b")
+_CI_MOVE = re.compile(r"(?<![\w.\-§#])(\d{2,4})\s*(?:->|→|vs)\s*(\d{2,4})\b")
+# The two explicit labels a figure may carry instead of being the live value:
+# `[historical]` (true then, kept as the record) and `[local]` (not CI's number
+# at all, caught only by sitting near the word CI).
+_CI_LABELLED = re.compile(r"\[(?:historical|local)\]")
+
+
+def _in_section_five(text: str, line: str) -> bool:
+    """Is `line` inside ADR-019 §5 — one of the two allowlisted publishers?
+
+    The other is `.github/workflows/eval.yml`, which this check already reads
+    cell-by-cell. Everything else must be labelled or equal to what is declared.
+    """
+    five = text.find("### 5.")
+    if five < 0:
+        return False
+    end = text.find("\n### ", five + 1)
+    return line in text[five:end if end > 0 else len(text)]
+
+
 def _check_ci_numbers_are_derived() -> dict:
     """ADR-019 §5's four CI measurements are one source, and README derives from it.
 
@@ -1286,7 +1318,28 @@ def _check_ci_numbers_are_derived() -> dict:
     # Struck spans come out first, the convention every document sweep here
     # uses: this repo strikes a reversed ruling in place with a dated pointer,
     # and a guard that reddens on preserved history is one someone turns off.
-    docs = sorted((Path(__file__).parents[2] / "specs" / "decisions").glob("*.md"))
+    # PR #57 R32/R33, and the seventh crop of one class. Six rounds widened this
+    # guard one prose SHAPE at a time and each widening caught the previous crop
+    # and missed the next SITE: the scan read `specs/decisions/*.md`, so
+    # README's "CI's ceiling is ... 90s" was invisible for being in the wrong
+    # FILE, not the wrong shape. A pattern zoo fails open. So the question is
+    # inverted — not "does this prose match a shape a stale ceiling takes?" but
+    # "is this figure allowed to be here at all?" — and the answer is an
+    # allowlist over sites, which fails safe: a new document or a new phrasing
+    # lands in the scanned set and has to justify itself.
+    #
+    # A figure is a CI-ceiling claim when it is seconds-suffixed or an operand
+    # of a `->`/`vs` move (that is what a ceiling looks like as a NUMBER, and it
+    # is what keeps case counts, run ids and `M42` out), it sits within
+    # `_CI_WINDOW` characters of a CI token, and its line is about ceilings.
+    # It is allowed only if it is: the value the workflow declares, inside a
+    # `~~struck~~` span, or explicitly labelled `[historical]` (a figure that
+    # was true then) or `[local]` (a figure that is not CI's). Everything else
+    # is red and names its file and line. History is marked, not exempted —
+    # which is the whole difference between this and the six patterns before it.
+    docs = ([Path(__file__).parents[2] / "README.md"]
+            + sorted((Path(__file__).parents[2] / "specs" / "decisions").glob("*.md"))
+            + sorted((Path(__file__).parents[2] / "docs").rglob("*.md")))
     declared = {s: _re.search(rf'EVAL_WALL_BUDGET_S_{s.upper()}: "(\d+)"', wf) for s in by}
     declared = {s: int(m.group(1)) for s, m in declared.items() if m}
     # `(?!\d)`, and this guard was written with `(?![\d.])` — the identical
@@ -1313,6 +1366,15 @@ def _check_ci_numbers_are_derived() -> dict:
         ("FAST", "90")]
     assert stays.findall("CI's stays 90 because nothing measured CI") == ["90"]
     assert stays.findall("CI's stays 90.") == ["90"]
+    # The site sweep's own exercise, on the SAME compiled objects it runs — the
+    # three shapes six rounds of patterns each missed one of, plus the two the
+    # figure rule must NOT match (PR #57 R34).
+    assert _CI_SECONDS.findall("CI's ceiling is ... (90s since ADR-019 §5)") == ["90"]
+    assert _CI_MOVE.findall("CI `fast` 80 -> 90, CI `invariant` 20") == [("80", "90")]
+    assert _CI_MOVE.findall("different `fast` ceilings (105 vs 90)") == [("105", "90")]
+    assert _CI_SECONDS.findall("its tree grew from 48 cases to 74") == []
+    assert _CI_SECONDS.findall("M42 ships and R16 found it") == []
+    assert _CI_LABELLED.search("CI's ceiling was 90s [historical]")
     for doc in docs:
         text = _re.sub(r"~~.*?~~", "", doc.read_text(encoding="utf-8"), flags=_re.DOTALL)
         for suite, said in live.findall(text):
@@ -1324,6 +1386,35 @@ def _check_ci_numbers_are_derived() -> dict:
             if declared and int(said) not in declared.values():
                 wrong.append({"doc": doc.name, "says_ci_stays": int(said),
                               "workflow_declares": sorted(declared.values())})
+        # --- the site sweep (see the comment above `docs`) --------------------
+        ok = set(declared.values())
+        for i, line in enumerate(text.splitlines(), 1):
+            if not _CI_CEILING_LINE.search(line):
+                continue
+            figures = [(m.start(), m.end(), m.group(1)) for m in _CI_SECONDS.finditer(line)]
+            for m in _CI_MOVE.finditer(line):
+                figures += [(m.start(), m.end(), g) for g in (m.group(1), m.group(2))]
+            for s, e, num in figures:
+                if int(num) in ok:
+                    continue
+                near = line[max(0, s - _CI_WINDOW):e + _CI_WINDOW]
+                # The LABEL is line-scoped while the CI token is window-scoped,
+                # and the asymmetry is deliberate. Adjacency is what makes a
+                # figure a CI-ceiling claim, so it is measured tightly; the
+                # label is an author's statement ABOUT this line's figures, and
+                # requiring one per figure on a 400-character INDEX entry would
+                # buy nothing but noise. The declared cost: a line carrying both
+                # a labelled figure and a live one is wholly exempt — acceptable
+                # because the live values live in the two allowlisted publishers
+                # (ADR-019 §5, the workflow), which this check reads directly.
+                if not _CI_TOKEN.search(near) or _CI_LABELLED.search(line):
+                    continue
+                if doc.name.startswith("ADR-019") and _in_section_five(text, line):
+                    continue  # the allowlisted publisher
+                wrong.append({"doc": doc.name, "line": i,
+                              "publishes_an_unlabelled_ci_ceiling": int(num),
+                              "workflow_declares": sorted(ok),
+                              "context": line.strip()[:110]})
     return {"passed": not wrong, "wrong": wrong,
             "got": {"adr_five": by, "run": run_id.group(1) if run_id else None,
                     "workflow_declares": declared, "decision_docs_scanned": len(docs)}}

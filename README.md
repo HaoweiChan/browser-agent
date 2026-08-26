@@ -96,8 +96,12 @@ reproduce verbatim from that run's attempts. It is superseded by a later
 measurement, which is a different thing from being unsupported, and this file no
 longer says otherwise (PR #41 R3; ADR-013's own copy of the band is scoped on
 `task/T-M32-9`, which owns that file).
-CI's ceiling is the slowest observed run plus 15% (90s since ADR-019 §5, measured
-on CI — at the case count of the commit named there, not this one); the local ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
+CI's ceiling is the slowest observed run plus 15%, measured on CI at the case
+count of the commit ADR-019 §5 names — which since 2026-08-26 is the commit this
+branch ships, so ~~90s ... at the case count of the commit named there, not this
+one~~ is struck [historical] (PR #57 R32: both halves were false, the number and
+the qualifier). §5 publishes the live figure; it is not repeated here. The local
+ceiling was the original **60s** through M30 — a straddling band briefly pushed it to 70, but round-5 review could not
 reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
 58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21

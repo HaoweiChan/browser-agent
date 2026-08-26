@@ -459,6 +459,54 @@ with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
 
+### T-M42-17 — a prose-guard assert that exercises a copy of the pattern, not the pattern            [status: todo]
+Origin: PR #57 R34 (LOW).
+Spec, the finding verbatim: "The third of the three new prose-guard asserts is
+decorative: it re-types the pattern instead of exercising the one the guard
+uses, so a regression in the guard's own regex leaves it green."
+Evidence, verbatim: "src/browser/eval_adapter.py:5439 asserts against a fresh
+literal pattern, while the loop at :5442 builds its own equivalent. Nothing ties
+them. By contrast `live`/`stays` (:1300, :1308) and `_SECONDS` (:5383) are
+compiled once and shared with their asserts — the reviewer confirmed those three
+DO fire when the lookahead is regressed to `(?![\d.])`. The comment at
+:5434-5438 claims the assert 'records that as a checked fact rather than an
+assumption'; it records a fact about a copy."
+Repro, verbatim: "Compare the literal at eval_adapter.py:5439 with the pattern
+built at :5442 — editing the latter does not trip the former."
+Acceptance, verbatim: "Compile the pattern once per suite and have the assert
+call that object, as the two sibling guards already do."
+Status note: the CI-ceiling site sweep added in this round was written to the
+acceptance criterion — `_CI_SECONDS`, `_CI_MOVE`, `_CI_TOKEN`, `_CI_LABELLED`
+are module-level and its asserts call those objects. `adr029-scope-matches-the-
+suites` is the one still re-typing, and is what this row is about.
+
+### T-M42-18 — two declared holes in the CI-ceiling anchors            [status: todo]
+Origin: PR #57 R35 (LOW).
+Spec, the finding verbatim: "Named debt in the new anchors, confirmed rather
+than hypothetical: `stays` is suite-blind and accepts a wrong CI ceiling that
+equals the other suite's, and `live`'s 60-character window can grab an ADR
+number as if it were a ceiling."
+Evidence, verbatim: "eval_adapter.py:1308 — `stays.findall(\"CI's `invariant`
+ceiling stays 125.\")` grades 125 as green because 125 is declared for `fast`;
+only the variable-anchored shape is suite-aware. eval_adapter.py:1300 —
+`live.findall('`EVAL_WALL_BUDGET_S_FAST` — see ADR-019 section 5 — is 125')`
+returns ('FAST','19') and would redden the gate on the ADR number. Neither fires
+today (zero matches across all 31 decision docs after strike-stripping, so the
+'zero false positives' claim is true but vacuous), but
+ADR-002-performance-thresholds.md:4 already has both variables and digits on one
+line ~110 characters apart — one editing pass shorter and it reddens on '019'."
+Repro, verbatim: "Run the two compiled patterns against the two strings above."
+Acceptance, verbatim: "Either name the two holes in the guard's comment as
+declared ceilings (suite-blindness, and the window's ADR-number hazard) so the
+next reader is not surprised, or make `stays` read the suite word when the line
+carries one. No behaviour change required today."
+Note for whoever takes it: the site sweep added in PR #57's last round is the
+structural answer to the class these two anchors belong to, and it is
+suite-blind by design — it asks whether a figure is ALLOWED to be here, not
+which suite it claims. If that sweep proves sufficient in practice, the honest
+resolution may be deleting the two older anchors rather than repairing them;
+that is a decision, not a patch, and it wants one more milestone of evidence.
+
 ### T-M42-14 — `page_changed` is frames-aware, and the false positive that buys is undemonstrated but real            [status: todo]
 Origin: PR #57 R13, 2026-08-26. The accepted cost of the chosen direction, logged
 because R13's own ruling is that a trade-off may not be declared in one direction

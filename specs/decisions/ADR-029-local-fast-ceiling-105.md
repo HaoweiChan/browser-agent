@@ -7,7 +7,7 @@ Status: accepted
 **Because**: M42's additions grew `fast`, which is growth in CASE COUNT and not in per-case cost — the exact condition ADR-021 named when it said "if a future gap comes from per-case cost the answer is removing waste (T-M32-3), not another raise"; the tree measured 73.06s at 181 cases and the new cases cost ~7s of real browser work between them, so the band crosses a ceiling step and ADR-013's rule derives 105 from it.
 **Enforced by**: `published-band-matches-the-ledger` (items 3, 4 and 5 are what force this file to exist rather than letting the band be re-typed), `fast-wall-clock-budget` (whose boundary rows move to 105.00/105.01 in the same change, watched red first), `evals/run.py`'s `over_budget()`.
 
-**Amends**: ADR-019 Decision 2 (local `fast` 90 -> 105) and ADR-019 §5 (both CI ceilings re-derived from a measurement of the tree that ships) · **overturns ADR-021's CI ruling** ("the ceiling stays at 90, and that is a ruling"), which is struck in place there — for one round that ADR carried no `Amended by` line and a reader following the chain reached a ruling the workflow no longer obeyed (PR #57 R25)
+**Amends**: ADR-019 Decision 2 (local `fast` 90 -> 105 [local]) and ADR-019 §5 (both CI ceilings re-derived from a measurement of the tree that ships) · **overturns ADR-021's CI ruling** ("the ceiling stays at 90, and that is a ruling"), which is struck in place there — for one round that ADR carried no `Amended by` line and a reader following the chain reached a ruling the workflow no longer obeyed (PR #57 R25)
 
 ---
 
@@ -137,8 +137,11 @@ ADR pays the cost openly instead.
   have to prove the same thing.
 - `fast-wall-clock-budget`'s boundary rows move with the number, so the case
   keeps testing the boundary rather than a number it used to be.
-- Local and CI now publish different `fast` ceilings (105 vs 90). ADR-019 §4
-  already rules that per-environment numbers are independent and read through
-  one override variable per suite, so this is the design working; it is
-  nonetheless the first time local has been the LOOSER of the two, which is a
-  reason to re-derive CI's promptly rather than to leave it.
+- Local and CI publish per-environment `fast` ceilings, independent by ADR-019
+  §4's rule and read through one override variable per suite. ~~(105 vs 90) ...
+  the first time local has been the LOOSER of the two, which is a reason to
+  re-derive CI's promptly rather than to leave it~~ — struck [historical]
+  (PR #57 R33): §2 of this same document re-derived CI's from a measurement of
+  the tree that ships, so the sentence argued for something the document beside
+  it had already done. Both live figures are published where they are graded —
+  local in ADR-019 §2, CI in §5 — and neither is repeated here.
