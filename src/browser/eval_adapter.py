@@ -1289,8 +1289,30 @@ def _check_ci_numbers_are_derived() -> dict:
     docs = sorted((Path(__file__).parents[2] / "specs" / "decisions").glob("*.md"))
     declared = {s: _re.search(rf'EVAL_WALL_BUDGET_S_{s.upper()}: "(\d+)"', wf) for s in by}
     declared = {s: int(m.group(1)) for s, m in declared.items() if m}
+    # `(?!\d)`, and this guard was written with `(?![\d.])` — the identical
+    # sentence-final blindness R27 had just fixed in `adr029-variance-cites-the-
+    # ledger`, reproduced in its sibling in the same round. `ADR-021`'s Ruling
+    # ends "...`EVAL_WALL_BUDGET_S_FAST` stays 90." and the guard could not see
+    # it, purely because the number ends the sentence. Twice-demonstrated now:
+    # a regex written to police prose gets tested against the shapes its author
+    # pictures, and sentence-final is the shape nobody pictures. The asserts
+    # below are the answer, and they belong in every prose guard here.
     live = _re.compile(r"EVAL_WALL_BUDGET_S_(FAST|INVARIANT)`?[^\n]{0,60}?"
-                       r"(?<![\d.])(\d+)(?![\d.])")
+                       r"(?<![\d.])(\d+)(?!\d)")
+    # The second shape, which no variable-anchored pattern can reach: a CI
+    # ceiling asserted with the variable named earlier in the line or not at
+    # all — `ADR-019`'s Amended-by ended "CI's stays 90 because nothing in that
+    # change measured CI", contradicting the same sentence's own opening. It
+    # cannot say WHICH suite, so it is graded the only way it can be: the number
+    # must be one this workflow declares for some suite. 90 is neither.
+    stays = _re.compile(r"\bCI(?:'s)?\b[^\n]{0,60}?\bstays\s+(?<![\d.])(\d+)(?!\d)")
+    # ponytail: the self-exercise, the thing whose absence let the lookahead sit
+    # blind. Sentence-final first, because that is the case that was missed.
+    assert live.findall("CI's `EVAL_WALL_BUDGET_S_FAST` stays 90.") == [("FAST", "90")]
+    assert live.findall("`EVAL_WALL_BUDGET_S_FAST` stays 90 and that is a ruling") == [
+        ("FAST", "90")]
+    assert stays.findall("CI's stays 90 because nothing measured CI") == ["90"]
+    assert stays.findall("CI's stays 90.") == ["90"]
     for doc in docs:
         text = _re.sub(r"~~.*?~~", "", doc.read_text(encoding="utf-8"), flags=_re.DOTALL)
         for suite, said in live.findall(text):
@@ -1298,6 +1320,10 @@ def _check_ci_numbers_are_derived() -> dict:
             if want is not None and int(said) != want:
                 wrong.append({"doc": doc.name, "publishes_a_ci_ceiling_of": int(said),
                               "suite": suite.lower(), "workflow_declares": want})
+        for said in stays.findall(text):
+            if declared and int(said) not in declared.values():
+                wrong.append({"doc": doc.name, "says_ci_stays": int(said),
+                              "workflow_declares": sorted(declared.values())})
     return {"passed": not wrong, "wrong": wrong,
             "got": {"adr_five": by, "run": run_id.group(1) if run_id else None,
                     "workflow_declares": declared, "decision_docs_scanned": len(docs)}}
@@ -5405,6 +5431,12 @@ def _check_adr029_scope_matches_the_suites() -> dict:
     two = two[:two.index("\n### ")] if "\n### " in two else two
     two = _re.sub(r"~~.*?~~", "", two, flags=_re.DOTALL)  # struck history, as everywhere here
     wrong = []
+    # The self-exercise the sibling guards now carry, on the shape this one is
+    # about: a gate figure that ends a sentence. This pattern has no trailing
+    # lookahead so it was never blind there — the assert records that as a
+    # checked fact rather than an assumption, which is the whole lesson of
+    # PR #57 R27 and its repeat in `ci-numbers-are-derived`.
+    assert _re.findall(r"`fast`\s+(\d+)/(\d+)", "`fast` 213/213.") == [("213", "213")]
     for suite in ("fast", "invariant"):
         want = len(load_cases(suite))
         for passed, total in _re.findall(rf"`{suite}`\s+(\d+)/(\d+)", two):

@@ -3,7 +3,7 @@
 Date: 2026-08-23
 Status: accepted
 
-**Ruling**: `WALL_BUDGET_S["fast"]` becomes 90. The value is not chosen — it is what `published-band-matches-the-ledger` reports as `required_by_adr013_rule` from the committed ledger at 146 cases (slowest 74.8s, ADR-013's +15%-round-to-five rule). `invariant` stays 20 and CI's `EVAL_WALL_BUDGET_S_FAST` stays 90.
+**Ruling**: `WALL_BUDGET_S["fast"]` becomes 90. The value is not chosen — it is what `published-band-matches-the-ledger` reports as `required_by_adr013_rule` from the committed ledger at 146 cases (slowest 74.8s, ADR-013's +15%-round-to-five rule). `invariant` stays 20 and ~~CI's `EVAL_WALL_BUDGET_S_FAST` stays 90~~ — struck 2026-08-26, OVERTURNED by ADR-029 (see the Amended-by line above and the struck section below). Both CI ceilings were re-derived from a measurement of the tree M42 ships; the live values are in ADR-019 §5 and in the workflow, graded against each other. This line survived the first sweep of PR #57 R24 for a reason worth recording: the number ends the sentence, and the guard's lookahead was blind to that position.
 **Because**: the suite grew 131 -> 146 cases absorbing M31's, M36's and M32's coverage, and the ledger's slowest run moved with it; every non-ceiling case passes, so the gap is a ceiling derived against a smaller suite, not a threshold moved to hide a failure.
 **Enforced by**: `published-band-matches-the-ledger` (derives the number), `fast-wall-clock-budget` (pins the committed ruling), `evals/run.py` `over_budget()`
 

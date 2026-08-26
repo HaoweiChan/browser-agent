@@ -4,7 +4,11 @@
   "pr": "https://github.com/HaoweiChan/browser-agent/pull/57",
   "round": 6,
   "scope": "frozen to R24-R27; R28 was the orchestrator's own and is not redone",
-  "counts": { "fixed": 4, "rejected": 0, "debt": 0 },
+  "counts": {
+    "fixed": 4,
+    "rejected": 0,
+    "debt": 0
+  },
   "context": "CI passed on e0ea784 (run 32939583133): invariant 74/74 in 17.40s under 25, fast 213/213 in 98.17s under 125, no OVER BUDGET line. 98.17s sits below all four attempts the ceiling was derived from, so the derivation was not fitted to a lucky run. R7 is closed and confirmed by the thing it was about.",
   "findings": {
     "R24": {
@@ -36,5 +40,21 @@
     "fast": "213/213 = 1.000, wall 87.03s, $0.0000",
     "baseline_file": "unchanged from main",
     "ci": "read on the commit this round pushes; the previous commit passed as run 32939583133"
+  },
+  "round_5_completion": {
+    "why": "Round 5 was not finished. Two of R24's five sentences were still live, and the guard built in that round to catch them reported green — because it carried the EXACT lookahead bug R27 fixed in its sibling, written in the same round.",
+    "the_bug": "`(?![\\d.])` rejects a match whose next character is a period, so a number ENDING A SENTENCE is invisible. ADR-021's Ruling ends \"...`EVAL_WALL_BUDGET_S_FAST` stays 90.\" and the scan could not see it. Second demonstration of one class in one round: a regex written to police prose gets tested against the shapes its author pictures, and sentence-final is the shape nobody pictures.",
+    "fixes": [
+      "`(?![\\d.])` -> `(?!\\d)` in the CI-ceiling scan.",
+      "A second anchor for the shape no variable-anchored pattern can reach: ADR-019's Amended-by ended 'CI's stays 90 because nothing in that change measured CI' with no EVAL_WALL_BUDGET_S token on the line at all. The new pattern cannot say which suite, so it is graded the only way it can be — the number must be one the workflow declares for some suite, and 90 is neither 125 nor 25. No false positives across 31 decision documents, so no debt was needed and the check was not weakened to make the tree green.",
+      "Four asserts inside the check, sentence-final first, because that is the case that was missed. Plus one in `adr029-scope-matches-the-suites`, applying the carried lesson to a sibling prose guard rather than only to the one a reviewer happened to test.",
+      "ADR-021's Ruling clause and ADR-019's Amended-by trailing clause struck in place with dated pointers, like the other three."
+    ],
+    "red_first": "[{\"doc\": \"ADR-019-wall-clock-ceilings-per-suite.md\", \"says_ci_stays\": 90, \"workflow_declares\": [25, 125]}, {\"doc\": \"ADR-021-local-fast-ceiling-90.md\", \"publishes_a_ci_ceiling_of\": 90, \"suite\": \"fast\", \"workflow_declares\": 125}, {\"doc\": \"ADR-021-local-fast-ceiling-90.md\", \"says_ci_stays\": 90, \"workflow_declares\": [25, 125]}] — ADR-021 named by BOTH patterns, ADR-019 by the new one, on the very tree where the previous version of this guard reported green.",
+    "gate": {
+      "invariant": "74/74 = 1.000, wall 14.10s, $0.0000",
+      "fast": "213/213 = 1.000, wall 87.32s, $0.0000"
+    },
+    "carried_forward": "The asserts-inside-the-check pattern is what catches a lookahead written against imagined shapes. It is now in three prose guards, and the rule is that it belongs in every one — not only in the one that was caught."
   }
 }
