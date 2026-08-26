@@ -1,0 +1,46 @@
+{
+  "pr": 58,
+  "task": "M41",
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "reviewer": "pr-loop/pr-reviewer (fresh context, repair diff d82a7be..db54986 + the five standing findings)",
+  "date": "2026-08-26",
+  "standing_findings_verdict": {
+    "R1": "adequately repaired — not re-reported",
+    "R2": "adequately repaired — not re-reported; the reviewer verified the fourth conjunct by construction, writing its own leak cases (endpoint in input.url, in a stub_plan step value, in a target, nested deeper than anticipated, and the host with a different /api/ path) and confirming the permitted placements (provenance, triage, expect) still pass",
+    "R3": "adequately repaired — not re-reported",
+    "R4": "adequately repaired — not re-reported",
+    "R5": "adequately repaired — not re-reported"
+  },
+  "orchestrator_note": "R7 is routed to debt: README.md:41's site count is TRUE today, merely ungraded, so it fails no honesty test — and round 1's own R1 acceptance made the extra grading hook explicitly optional (\"ideally\"). R8 is routed to repair on the same third-bullet reasoning that carried R4/R5 in round 1: a committed artifact stating something the committed code refutes. The correction must be visible AS a correction in tasks/reviews/pr58-r1-resolution.json, not a silent rewrite — the round-1 trace is a record of what was claimed, and erasing the claim would destroy the evidence that it was wrong.",
+  "findings": [
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The repair that added a fourth conjunct to `sec10k-ground-truth-endpoint-eval-only` updated the case JSON and the code but left both prose descriptions of that invariant saying it enforces THREE conjuncts, and both enumerate only the three the repair proved insufficient — so this PR's own decision record now understates the guard it ships and omits the direction round 1 said the rule is actually about.",
+      "evidence": "specs/decisions/ADR-030-m41-sec10k-inspector-probe.md:137 — \"`sec10k-ground-truth-endpoint-eval-only` enforces three conjuncts, each watched red before it was green: the endpoint path appears in no module of `src/browser/` except `eval_adapter.py`; the inspector host appears in none except ...; and every eval case tagged with that domain that carries an `expect.answer` names the endpoint its ground truth came from\" — under the heading §The ground-truth-endpoint boundary, the exact section round 1 quoted. Same claim at docs/support-matrix.md:319, D30 evidence cell: \"(`sec10k-ground-truth-endpoint-eval-only`, three conjuncts each watched red)\". Since db54986, src/browser/eval_adapter.py:5152-5187 conjoins four: `not endpoint_leaks and not host_leaks and not fed_to_the_executor and bool(cases) and not uncited`, and the case's own `expect.note` was rewritten in the same commit to list four. Nothing in the gate reads either sentence back: invariant is 67/67 and fast is 187/187 with both stale. This is the third instance of the pattern the implementer flagged in its own R5 note — a multi-artifact correction leaving the originating document behind — and this time the document left behind is ADR-030, the record this PR exists to publish.",
+      "repro": "grep -n 'three conjuncts' specs/decisions/ADR-030-m41-sec10k-inspector-probe.md docs/support-matrix.md; then source .venv/bin/activate && python3 -c \"import src.browser.eval_adapter as ea; r=ea._check_ground_truth_endpoint_eval_only(); print(list(r['wrong']))\"  # four wrong-keys, three named in the prose",
+      "acceptance": "ADR-030 §The ground-truth-endpoint boundary and support-matrix D30 both state four conjuncts and name the fourth (no eval case feeds the endpoint, or any `/api/` path on that host, to a run through its `input` block), with the PR #58 R2 red-first evidence cited the way the other three are; `--suite invariant` and `--suite fast` stay green."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "debt_id": "T-M41-7",
+      "claim": "The live SITE count is published three times but derived twice: README.md:41 carries a third copy that the extended `docs-numbers-are-derived` quote does not cover, so the recurrence-stopper R1 installed still leaves one publication of the same number free to go stale.",
+      "evidence": "README.md:41 reads `python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00`, but the graded quote in evals/adversarial/docs-numbers-are-derived.json is only `\"--suite live        # {live} cases\"` — a prefix that matches whatever follows the comma. Verified: with `counts['live_sites']` forced to 6, README.md:204 and docs/analysis.md:72 go red (`readme_does_not_say` / `doc_does_not_say`) while line 41's `5 real sites` is never inspected. That is precisely the shape R1 was filed over — a site count published in prose that nothing recomputes — surviving in the same file the repair now grades twice.",
+      "repro": "source .venv/bin/activate && python3 -c \"import json,src.browser.eval_adapter as ea; c=json.load(open('evals/adversarial/docs-numbers-are-derived.json')); print(ea.run_case(c)['got']['counts'])\"; sed -n 41p README.md   # 5 real sites, ungraded",
+      "acceptance": "The README:41 quote in `readme_quotes` becomes `--suite live        # {live} cases, {live_sites} real sites` (or line 41 drops the site count), watched red against the current text with `live_sites` perturbed, and the fast suite stays green."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The R1 resolution's justification for the new `doc_quotes` block is factually wrong about the code it is committed beside: docs/analysis.md was already reachable by two existing hooks in the same grader.",
+      "evidence": "tasks/reviews/pr58-r1-resolution.json, R1 `note`: \"`docs/analysis.md` was also outside anything this case could reach at all — `readme_quotes` was the only text hook\". src/browser/eval_adapter.py:4811-4820 (`analysis_section1`) reads `(RUN_ROOT / s1[\"doc\"])` with a `{doc, quotes}` shape over docs/analysis.md and has since PR #44 R4, and :4822-4836 (`analysis_coverage`) reads the same file for the split quote and the §6 domain sweep — both configured in the same case file (`input.analysis_section1`, `input.analysis_coverage`, docs/analysis.md in each). The reason `doc_quotes` was needed is narrower and different: `analysis_section1`'s format namespace has no `live`/`live_sites` key, so the new quote could not be added there without KeyError. Committed review record contradicting committed code, the same class R4 and R5 were routed to repair for.",
+      "repro": "grep -n 'analysis_section1\\|analysis_coverage\\|doc_quotes' src/browser/eval_adapter.py; python3 -c \"import json; d=json.load(open('evals/adversarial/docs-numbers-are-derived.json'))['input']; print(d['analysis_section1']['doc'], d['analysis_coverage']['doc'])\"",
+      "acceptance": "The R1 note states the real reason (`analysis_section1`'s value namespace does not carry the suite counts) instead of claiming docs/analysis.md was unreachable, or `doc_quotes` is folded into the existing hook."
+    }
+  ]
+}

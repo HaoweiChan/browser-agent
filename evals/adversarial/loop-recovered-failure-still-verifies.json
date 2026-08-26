@@ -1,0 +1,49 @@
+{
+  "id": "loop-recovered-failure-still-verifies",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "shop.html",
+    "task": "Open the Aurora Desk Lamp page and read its SKU.",
+    "stub_calls": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "url_contains": "this-fragment-is-not-in-any-url"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Aurora Desk Lamp"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Aurora Desk Lamp",
+    "trace_actions": [
+      "navigate",
+      "click",
+      "extract",
+      "final_answer"
+    ]
+  },
+  "provenance": "Cold review of M42, finding 6. The mirror image of finding 1: the verifier's unverified-state-change guard counts every `click`/`press`/`go_back` whose `postcondition_ok` is null, and a step that FAILED leaves it null. In mode B that set was always empty at grading time because a failed state-changing step ended the run; in loop mode the failure is recorded, the model is told, and it carries on — so a run that clicked with a wrong expectation, was told, and then read the right answer was demoted to `failure:semantic` for 'state-changing step(s) [2] carried no checkable postcondition'. A false failure on a correct run, which is the other way to lose the honesty property. A step that failed is a FAILED step, not an unverified one, and it is already in the trace saying so.",
+  "triage": {
+    "class": "false-failure",
+    "note": "the guard has to distinguish 'nothing was checked' from 'the check failed'"
+  }
+}

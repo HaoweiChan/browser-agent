@@ -29,14 +29,17 @@
         "plan-lint-refuses-a-document-root-extract"
       ],
       "trace_note_contains": [
+        "loop-refuses-a-document-root-extract",
         "probe3-quotes-most-quoted-author",
         "resolver-narrows-by-anchor-proximity",
         "resolver-narrows-identical-matches",
-        "resolver-near-normalises-typography",
-        "resolver-narrows-singular-noun-ending-in-s"
+        "resolver-narrows-singular-noun-ending-in-s",
+        "resolver-near-normalises-typography"
       ],
       "answer_null": [
         "extract-container-dump-is-not-the-answer",
+        "loop-abandoned-failure-is-not-a-success",
+        "loop-refused-anchor-is-not-an-answer",
         "plan-lint-refuses-a-document-root-extract",
         "plan-lint-refuses-a-document-root-extract-midrun"
       ],
@@ -55,5 +58,6 @@
   "triage": {
     "class": "eval-integrity",
     "note": "guards a documentation claim, not the product — the same shape as support-matrix-cites-real-cases and the MUTATIONS coverage check in mutation-catalog-integrity. Also refuses `answer_is_known_wrong` on a case with no `expect.answer`, where the marker would label nothing."
-  }
+  },
+  "provenance_m42_2026_08_26": "M42 adds `loop-refuses-a-document-root-extract` to the `trace_note_contains` list. The key carries the same weight there it carries everywhere else — it is the only thing that can see a refusal the run then RECOVERED from, which is the whole shape of the re-homed ADR-024 guard in loop mode: the run ends `success`, so the status says nothing about whether the root read was refused or quietly allowed."
 }

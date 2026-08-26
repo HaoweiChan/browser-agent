@@ -1,0 +1,39 @@
+{
+  "id": "action-scroll-moves-the-viewport",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "fixture": "loop-lab.html",
+    "task": "What does the appendix footnote in the Filing lab say?",
+    "stub_plan": [
+      {
+        "action": "scroll",
+        "value": "2000"
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Appendix footnote"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Footnote 12: figures are unaudited.",
+    "trace_actions": [
+      "navigate",
+      "scroll",
+      "extract"
+    ],
+    "trace_postconditions": [
+      true,
+      true,
+      null
+    ]
+  },
+  "provenance": "ADR-028: `scroll` with a pixel delta in `value`. Its postcondition is that the scroll position actually MOVED, read back off the page \u2014 the only checkable consequence a scroll has."
+}

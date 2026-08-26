@@ -413,6 +413,12 @@ def answers_match(got, want) -> bool:
     return normalize(got) == normalize(want)
 
 
+# Verbs that change the page and cannot verify themselves. The comment at the
+# `unverified` check inside `verify` carries the argument for every inclusion
+# and every omission.
+STATE_CHANGING = {"click", "press", "go_back"}
+
+
 def verify(*, trace, extractions, answer, expect=None, state=None, task=None) -> dict:
     """Return {"verdict": PASS|FAIL|INCONCLUSIVE, "layer", "checks", "reason"}.
 
@@ -458,11 +464,39 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     )
     check("answer_nonempty", bool(answer), "answer is empty")
 
+    # A step that FAILED and was never replaced is graded, whatever it failed
+    # at. `no_failed_postcondition` below reaches a step only through
+    # `postcondition_ok is False`, and `actions_verified` only through a
+    # state-changing verb with a null postcondition — so a `locate` or `extract`
+    # failure, which carries `failure_class` and leaves `postcondition_ok` None,
+    # was invisible to both. That was harmless while mode B ended the run at the
+    # first failed step; loop mode made a failed call routine, and a run whose
+    # last real call failed unsuperseded reported `success` with verdict PASS
+    # and the failure sitting in its own trace (PR #57 R6,
+    # `loop-abandoned-failure-is-not-a-success`).
+    #
+    # The line is the one `superseded_by` has always drawn, now applied to every
+    # class rather than to postconditions alone: a failure the run RECOVERED
+    # from is not graded (`verifier-superseded-not-a-loophole`,
+    # `loop-recovered-failure-still-verifies`), a failure it ABANDONED is.
+    abandoned = [s.get("i") for s in graded if s.get("failure_class")]
+    check("no_abandoned_failure", not abandoned,
+          f"step(s) {abandoned} failed and nothing replaced them")
+
     # A click changes state; an unverified state change is not a verified one.
     # `postcondition_ok is None` means "nothing was checked" — distinct from
     # False, and it must not read as success (case postcondition-unverified-click).
+    #
+    # M42 widens this from `click` alone to every verb that changes state
+    # without verifying itself. `fill`, `select_option` and `scroll` each read
+    # back what the browser holds and set their own `postcondition_ok`, so they
+    # need no authored assertion; `press` and `go_back` change state exactly the
+    # way a click does and would otherwise have had exactly a click's hole.
+    # `navigate` is deliberately out: its consequence is the URL it was handed,
+    # and requiring an assertion for it would fail every plan in this repo that
+    # begins by going somewhere.
     unverified = [s["i"] for s in graded
-                  if s.get("action") == "click" and s.get("postcondition_ok") is None]
+                  if s.get("action") in STATE_CHANGING and s.get("postcondition_ok") is None]
     check(
         "actions_verified",
         not unverified,

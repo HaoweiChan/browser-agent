@@ -1,0 +1,47 @@
+{
+  "id": "loop-token-ceiling-stops-the-run-loudly",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "hello.html",
+    "task": "What does the greeting page say?",
+    "stub_calls": [
+      {
+        "action": "observe",
+        "target": {
+          "role": "heading",
+          "name": "Hello Fixture"
+        },
+        "_usage": {
+          "llm_tokens": 2,
+          "llm_usd": 0.0
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ],
+    "loop_budgets": {
+      "actions": 40,
+      "llm_tokens": 1,
+      "llm_usd": 5.0
+    }
+  },
+  "expect": {
+    "status": "failure:env",
+    "reason_contains": "budget exhausted",
+    "trace_actions": [
+      "navigate",
+      "observe"
+    ],
+    "budgets": {
+      "llm_tokens": 2,
+      "llm_usd": 0.0
+    }
+  },
+  "provenance": "ADR-027 Decision 4 makes loop budgets runaway protection rather than a cost gate \u2014 but they must still STOP the run. The stub driver reports 9 tokens on its first call against an injected 5-token cap; the second turn hits `budget_stop` before the driver is called again, so the scripted `final_answer` never runs and the trace ends at the observe. INV-3's shape (budget exhaustion is loud) for the new mode, tagged invariant for that reason. The cap is injected rather than the spend simulated: the first version of this case scripted 500,000 tokens to trip the shipped 400,000 cap and put `cost $99.0000 \u00b7 500010 tok` on the headline of a suite whose whole claim is $0.00 (cost-discipline rule 4). `expect.budgets` pins that the run really did account for what the stub reported \u2014 a ceiling case that stopped without recording the spend would be ADR-027's other half ('not a constraint is a budget statement, not permission to stop measuring') quietly broken."
+}

@@ -109,7 +109,7 @@ appears, in order — no post-hoc reconstruction).
 ```json
 {
   "i": 1,
-  "action": "navigate | click | fill | extract | extract_all | observe",
+  "action": "navigate | click | fill | extract | extract_all | observe | select_option | scroll | press | wait_for | go_back | final_answer",
   "target": {"role": "...", "name": "...", "text": "...", "near": "...", "index": 0} ,
   "value": "string | null",
   "anchor": "string | null",
@@ -127,11 +127,40 @@ appears, in order — no post-hoc reconstruction).
 }
 ```
 
+- **The action vocabulary is the same in both execution modes** (see *Modes*
+  below), because they share one executor. `navigate`, `click`, `fill`,
+  `extract`, `extract_all` and `observe` are M1-M32's; ADR-028 adds five verbs
+  and one terminal call:
+  - `select_option` — choose an option of a `<select>` by its visible label or
+    its value. Self-verifying: the options are read, one is chosen by value, and
+    the selection is read back. A `value` no option matches is `failure:act`
+    naming the options that exist; an element with no options at all is
+    `failure:locate`, the same ruling `fill` gets for an element that cannot
+    hold a value.
+  - `scroll` — `value` pixels (negative scrolls up), or with a `target`, bring
+    that element into view. Self-verifying: the scroll position must have moved,
+    or the target must be visible after it. A scroll that moved nothing is
+    `failure:act`, never a silent no-op the next step reads through.
+  - `press` — one key to the target, or to the page when no target is given.
+    Changes state like a click and carries a click's obligation.
+  - `wait_for` — wait until an `expected_state` holds, within the same settle
+    budget a postcondition gets. It performs nothing: the postcondition IS the
+    wait. A `wait_for` with no `expected_state` is `failure:task` — a wait with
+    no predicate is a sleep.
+  - `go_back` — one entry back in the tab's history. No history to return to is
+    `failure:act`.
+  - `final_answer` — loop mode's terminal call. It carries **no answer text**:
+    the answer is assembled in code from what was `extract`ed, exactly as in
+    mode B, so a model can never assert a value the verifier did not grade.
+    A `final_answer` with nothing extracted is INV-0's empty answer.
 - `postcondition_ok` is **true / false / null**, and null is not true: it means
   nothing was asserted about this step. Every key in `expected_state` must
-  hold. A `click` with a null postcondition is unverifiable and the run is
-  `failure:semantic`; a `fill` verifies itself by field readback and needs no
-  authored postcondition.
+  hold. A **state-changing** step with a null postcondition is unverifiable and
+  the run is `failure:semantic`; the set is `{click, press, go_back}`
+  (`verifier.STATE_CHANGING`). `fill`, `select_option` and `scroll` verify
+  themselves by reading back what the browser holds and need no authored
+  postcondition; `navigate` is excluded because its consequence is the URL it
+  was handed.
 - `resolved.tier` is the tier the winning locator is *attributed* to, which is
   the tier that found it in every case but two: a target carrying `near` is
   recorded as `structural` however its candidates were gathered, because
@@ -146,6 +175,34 @@ appears, in order — no post-hoc reconstruction).
   only. That is *not* why two of the three mutations pass without recovering
   anything — the reason for that is that no plan was standing on the tiers they
   break (ADR-003).
+- **Modes** (ADR-027, ADR-028). `run_task` takes `mode`, selected per task by
+  `POST /tasks`'s `mode` field and defaulting to `BROWSER_AGENT_MODE`, itself
+  defaulting to `plan`.
+  - `plan` (mode B, the default and the only mode any offline suite exercises
+    end to end for planning quality) — one planning call over a condensed
+    observation, then deterministic execution, with observe/replan as the
+    recovery path. Everything else in this document describes it.
+  - `loop` — a driver is called after EVERY action with a fresh observation, the
+    trace so far and what has been extracted, and returns exactly one tool call.
+    It replaces the planning **cadence** and nothing else: the same executor
+    actions, the same resolver, **the same TraceStep with no additional fields**,
+    the same answer assembly, the same verifier and the same judge
+    (`contract-trace-schema-loop-mode` is what keeps that true). Its budgets are
+    its own (`agent.LOOP_BUDGETS`: actions, tokens AND USD) and exhausting any
+    of them is INV-3's loud stop.
+  - Two rules that mode B enforces at plan adoption have no adoption point in a
+    loop and are re-homed rather than lost (ADR-027 Decision 5): an
+    extraction targeting the accessibility document root is refused **as the
+    call is emitted** — recorded as a refused step, never executed, the reason
+    returned to the model — and the aggregate single-read rule is applied at
+    **answer assembly** over the executed trace. Both are the same functions
+    mode B uses (`agent.root_target_gap`, `agent.plan_gap`), asked at a second
+    anchor.
+  - A failed call does not end a loop run: the model is told what happened and
+    chooses again. What bounds that is the budgets and the no-progress harness —
+    arriving at the same `(URL, page signature)` state `LOOP_REVISIT_CAP` times
+    with nothing new extracted forces a strategy change, and the arrival after
+    that ends the run `failure:env` naming no-progress as the reason.
 - The five keys above are the **whole** target schema. A key outside it is a
   plan the executor cannot honour and stops the run as `failure:task`. It used
   to be dropped, and the step ran against whatever was left of the target —
@@ -169,9 +226,13 @@ appears, in order — no post-hoc reconstruction).
   postcondition` is the shape where it is the ONLY step the new plan has
   (`recovery-label-lands-on-the-extract` pins where the label lands). An
   `expected_state` on an `observe` step is refused as `failure:task`: there is
-  nothing for it to assert (`observe-step-cannot-carry-expected-state`). It
+  nothing for it to assert (`observe-step-cannot-carry-expected-state`). In **mode B** it
   spends one call from the existing `MAX_REPLANS` budget and adds no budget of
-  its own, so the per-run call ceiling is unchanged. A refused drill-down —
+  its own, so the per-run call ceiling is unchanged; in **loop mode** there is no
+  replan to spend, so the drill-down is a tool call like any other and spends the
+  STEP budget — ADR-027 Decision 5's amendment to ADR-020, confined to that mode
+  and graded by `loop-observe-drills-into-a-container`, which also pins that the
+  subtree is actually disclosed and said to be a subtree. A refused drill-down —
   budget exhausted, or a replan that returned nothing usable — ends the run as
   `failure:env` naming the target that was asked for; it never falls through to
   the steps the plan put after the `observe`, because those were written

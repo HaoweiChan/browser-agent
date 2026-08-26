@@ -1,0 +1,48 @@
+{
+  "id": "loop-refuses-a-document-root-extract",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "hello.html",
+    "task": "What is the greeting on this page?",
+    "stub_calls": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "WebArea",
+          "name": "Hello Fixture"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello Fixture"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Hello Fixture",
+    "trace_actions": [
+      "navigate",
+      "extract",
+      "extract",
+      "final_answer"
+    ],
+    "trace_note_contains": "accessibility root of the document",
+    "driver_note_contains": "accessibility root of the document"
+  },
+  "provenance": "ADR-027 Decision 5, first re-homed guard. ADR-024's refusal is anchored at plan adoption, and loop mode has no adoption point \u2014 without this a loop-mode `WebArea` extract is exactly the T-M40-2 shape with no guard at all. Re-homed as a TOOL-CALL-TIME refusal: the call is refused as it is emitted, never executed, recorded in the trace as a refused step, and the refusal text goes back to the model, which then names the element that holds the value. The run succeeds because the loop can recover from a refusal; what is graded is that the root read never happened.",
+  "triage": {
+    "class": "guard-rehome",
+    "note": "the refusal is the point; the recovery only shows a refusal is not a dead end."
+  }
+}

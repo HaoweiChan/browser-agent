@@ -1,0 +1,67 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "pr": 57,
+  "round": 6,
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "Breaker has fired three times (rounds 3, 4, 5); the human authorised a bounded round each time. Round 6 is the closing review and did not approve. Escalated to the human a fourth time.",
+  "scope": "repair diff e0ea784..30fff8e (R24 completion, R25, R26, R27) plus a whole-PR honesty check",
+  "gate": {
+    "local_invariant": "74/74 = 1.000",
+    "local_fast": "213/213 = 1.000",
+    "ci": "run 32939583133 on e0ea784 \u2014 SUCCESS: invariant 17.40s under 25, fast 98.17s under 125, no OVER BUDGET",
+    "baseline_file": "unchanged from main",
+    "run_by": "orchestrator, independently"
+  },
+  "closed_this_round": [
+    "R24 (specs/ half)",
+    "R25",
+    "R26",
+    "R27",
+    "R28"
+  ],
+  "verified_by_orchestrator": [
+    "all five R24 sentences and ADR-021's Ruling struck in place with dated pointers",
+    "the ci-numbers-are-derived scan reddens on all three shapes (sentence-final, mid-sentence, variable-less) by injection, and returns green when removed",
+    "PR #56 -> #57 sweep complete tree-wide"
+  ],
+  "root_cause_note": "Seventh crop of one class. The guard is being widened reactively, one prose SHAPE at a time; each widening catches the previous crop and misses the next publication SITE. R32 and R33 are outside the scanned set entirely (README) or outside the matched shapes (INDEX's ADR-019 entry, ADR-029's Consequences bullet). The untried structural move is to enumerate publication SITES rather than shapes: any CI-ceiling-like number in README, INDEX or specs/ must be struck, or must live in ADR-019 section 5 or the workflow.",
+  "findings": [
+    {
+      "id": "R32",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "R24 is not closed: README.md still publishes the retired CI `fast` ceiling (90s) as the live one, and repeats the 'measured at a different case count than this tree' disclaimer that ADR-019 struck in this very diff \u2014 so the top-level artifact contradicts its own table 85 lines below, and the workflow.",
+      "evidence": "README.md:99-100 \u2014 \"CI's ceiling is the slowest observed run plus 15% (90s since ADR-019 section 5, measured on CI \u2014 at the case count of the commit named there, not this one)\". Present tense, unstruck. README.md:184 in the same file publishes \"so **25s** and **125s**\", and .github/workflows/eval.yml:39 declares 125. Both halves of README:99 are false: the number, and the 'not this one' qualifier \u2014 run 32937020758 measured 14a6a7b at 213 fast / 74 invariant, this tree exactly. ADR-019's own 'smaller tree' paragraph asserting the same thing was struck 2026-08-26 as no longer true (ADR-019:63-70). The new scan cannot see it: it reads only specs/decisions/*.md, and only lines naming an EVAL_WALL_BUDGET_S_* variable or the literal 'CI ... stays N'. README:99's shape matches neither. Confirmed independently by the orchestrator.",
+      "repro": "grep -n \"CI's ceiling is the slowest\" README.md ; sed -n '184p' README.md ; grep -n 'EVAL_WALL_BUDGET_S_FAST' .github/workflows/eval.yml",
+      "acceptance": "README:99 struck in place with a dated pointer, or rewritten to defer to ADR-019 section 5 as README:87 and ADR-019 section 7 now do; plus one case that could have gone red on it, watched red against the current README:99 before the sentence is edited."
+    },
+    {
+      "id": "R33",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Two more ungraded publishers of the retired CI ceilings survive unstruck inside the two documents R24 named \u2014 INDEX.md's ADR-019 entry and ADR-029's own Consequences bullet \u2014 so the digest whose header says 'what is now true' still says CI is 90/20, and ADR-029 contradicts its own section 2.",
+      "evidence": "INDEX.md:28 \u2014 the ADR-019 entry still reads \"CI `fast` 80 -> 90, CI `invariant` 20\", unchanged from `main`, unstruck, with an amendment trail naming only ADR-021 and not ADR-029 \u2014 while INDEX.md:30's ADR-021 entry WAS struck for the identical claim. ADR-029:140-144 \u2014 \"Local and CI now publish different `fast` ceilings (105 vs 90) ... it is nonetheless the first time local has been the LOOSER of the two, which is a reason to re-derive CI's promptly rather than to leave it\" \u2014 CI is now 125, local 105 is the TIGHTER of the two, and section 2 of that same file re-derived it. tasks/reviews/pr57-r6-resolution.json lists five struck sites and neither of these. Both are invisible to the new scan (no EVAL_WALL_BUDGET_S_* token, no 'CI ... stays N'). ADR-029:140-144 confirmed independently by the orchestrator.",
+      "repro": "sed -n '28p' specs/decisions/INDEX.md ; sed -n '140,144p' specs/decisions/ADR-029-local-fast-ceiling-105.md",
+      "acceptance": "Both struck in place with dated pointers (INDEX.md:28's entry also gaining ADR-029 in its amendment trail), and the scan widened to the shape that hid them \u2014 a CI ceiling asserted with the suite named in prose rather than by variable \u2014 demonstrated red on today's INDEX.md:28 before the strike lands."
+    },
+    {
+      "id": "R34",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The third of the three new prose-guard asserts is decorative: it re-types the pattern instead of exercising the one the guard uses, so a regression in the guard's own regex leaves it green.",
+      "evidence": "src/browser/eval_adapter.py:5439 asserts against a fresh literal pattern, while the loop at :5442 builds its own equivalent. Nothing ties them. By contrast `live`/`stays` (:1300, :1308) and `_SECONDS` (:5383) are compiled once and shared with their asserts \u2014 the reviewer confirmed those three DO fire when the lookahead is regressed to `(?![\\d.])`. The comment at :5434-5438 claims the assert 'records that as a checked fact rather than an assumption'; it records a fact about a copy.",
+      "repro": "Compare the literal at eval_adapter.py:5439 with the pattern built at :5442 \u2014 editing the latter does not trip the former.",
+      "acceptance": "Compile the pattern once per suite and have the assert call that object, as the two sibling guards already do."
+    },
+    {
+      "id": "R35",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Named debt in the new anchors, confirmed rather than hypothetical: `stays` is suite-blind and accepts a wrong CI ceiling that equals the other suite's, and `live`'s 60-character window can grab an ADR number as if it were a ceiling.",
+      "evidence": "eval_adapter.py:1308 \u2014 `stays.findall(\"CI's `invariant` ceiling stays 125.\")` grades 125 as green because 125 is declared for `fast`; only the variable-anchored shape is suite-aware. eval_adapter.py:1300 \u2014 `live.findall('`EVAL_WALL_BUDGET_S_FAST` \u2014 see ADR-019 section 5 \u2014 is 125')` returns ('FAST','19') and would redden the gate on the ADR number. Neither fires today (zero matches across all 31 decision docs after strike-stripping, so the 'zero false positives' claim is true but vacuous), but ADR-002-performance-thresholds.md:4 already has both variables and digits on one line ~110 characters apart \u2014 one editing pass shorter and it reddens on '019'.",
+      "repro": "Run the two compiled patterns against the two strings above.",
+      "acceptance": "Either name the two holes in the guard's comment as declared ceilings (suite-blindness, and the window's ADR-number hazard) so the next reader is not surprised, or make `stays` read the suite word when the line carries one. No behaviour change required today."
+    }
+  ]
+}

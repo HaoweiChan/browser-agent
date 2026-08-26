@@ -1,0 +1,28 @@
+{
+  "id": "sec10k-extract-buttons-are-distinguishable",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L3",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "kind": "observe",
+    "fixture": "sec10k-inspector.html"
+  },
+  "expect": {
+    "must_include_names": [
+      "Extract the selected committed fixture",
+      "Extract the uploaded filing",
+      "Extract from the EDGAR document URL"
+    ],
+    "note": "the three input modes' Extract buttons carry three different accessible names"
+  },
+  "provenance": "M41, postmortem shape S3: at demo time the inspector's three input modes each rendered a button whose role and accessible name were exactly `button` / \"Extract\", so any plan targeting it resolved to 3 matches — the ambiguity shape M38 owns. sec-10k-extract's legibility row gave the three buttons distinct `aria-label`s, and this case measures that on the snapshot of the build that is deployed (`git_sha` `6b37ffa99d05`): three names, three elements, nothing to narrow. Watched RED first by stripping the three `aria-label` attributes out of the fixture, which is the demo page shape: `{\"starved_by_chrome\": [\"Extract the selected committed fixture\", \"Extract the uploaded filing\", \"Extract from the EDGAR document URL\"]}` — see `triage.red_first`. **Build provenance, corrected after cold review — three shas are involved and only two of them are the same thing.** `/api/meta` answered `5a44758598f5` when this milestone started and `6b37ffa99d05` at probe time. But the captured page's own footer — which the page fills from that same `/api/meta` field, one line of its own script — already read `build 6b37ffa99d05` in the FIRST capture, taken while `curl` to the same endpoint was still answering `5a44758598f5`. The two reads disagreed inside one session, which is what a rolling deploy across containers looks like; that explanation is INFERRED, not measured, and is written as an inference on purpose. What is measured: the committed snapshot is a capture of the build that reported itself as `6b37ffa99d05`, which is the same build ADR-030's probe ran against, so the fixture and the probe agree on one build rather than straddling two. The capture was re-taken later, after `/api/meta` had caught up, and diffed against the committed one — identical apart from a single `total_ms` figure inside the extraction evidence (227.6 -> 221.1), which is what that agreement looks like from the other side. The first version of this note claimed the capture was taken at `5a44758598f5`; the page says otherwise and the page is the artifact. Nothing in this repo reads either sha back — `tasks/TODO.md` T-M41-3 is the debt block for that, and D28's build-expiry rule is why it matters.",
+  "triage": {
+    "class": "coverage",
+    "red_first": "with the three `aria-label` attributes removed from the fixture — the demo page shape, three buttons all named \"Extract\" — the case reports {\"starved_by_chrome\": [\"Extract the selected committed fixture\", \"Extract the uploaded filing\", \"Extract from the EDGAR document URL\"], \"n_elements\": 60} and fails.",
+    "note": "S3 is fixed PAGE-SIDE on this one page, and this case pins only that. The capability gap behind it — what the resolver does when a real page offers three identical accessible names — is unchanged and stays with M38/ADR-026, whose own cases (`resolver-refuses-narrowing-a-click` and the D29 set) grade it. Nothing in `src/browser/` moved for this case, and nothing should have (CLAUDE.md rule 6: owning the target site is not an exemption). And what this case does NOT grade, named after cold review: the observe harness compares `must_include_names` against a SET of the observation's names, so it sees presence, not multiplicity. S3 was three elements sharing one name — an ambiguity `resolve()` reports as '3 matches at tier role' — and a second element acquiring one of these three labels would leave this case green while a plan naming that button resolved to two matches. The claim this case actually supports is 'all three labels are present and distinct from each other', which is weaker than 'nothing on this page is ambiguous'. `tasks/TODO.md` T-M41-4."
+  }
+}

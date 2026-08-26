@@ -10,14 +10,15 @@
     "readme_quotes": [
       "offline gate: {fast} cases, zero paid calls",
       "--suite live        # {live} cases",
-      "it is {all} cases ({fast} of them in the offline gate)"
+      "it is {all} cases ({fast} of them in the offline gate)",
+      "`live {live}/{live}` covers {live_sites} real sites."
     ],
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260825-172218-fast.json",
-        "invariant": "20260825-172106-invariant.json",
-        "live": "20260823-164737-live.json"
+        "fast": "20260826-132636-fast.json",
+        "invariant": "20260826-132508-invariant.json",
+        "live": "20260826-132658-live.json"
       }
     },
     "d8_retired_2026_08_21": "The d8 half graded support-matrix D8 while D8 was an OPEN wall-clock breach: it recomputed the published range from the reports the row cited and required the row to cite them. M12 (PR #20, ADR-013) then CLOSED D8 — the row no longer publishes a breach range, so there is nothing left for this half to recompute, and it was failing on a row that had legitimately changed rather than on a defect. Retired rather than re-pointed because the number it protected is now gated directly and better: `fast-wall-clock-budget` asserts the suite's own wall clock against the ceiling (60s local, 80s CI) and `wall-clock-probe-history-isolated` covers the history side, so a regression reddens the gate itself instead of a prose range. The reports it cited (20260821-215759/215923-fast.json) were measured pre-M12 and are now uncited; they are prune candidates under ADR-012. The README-counts half stays — nothing else derives those, and it reddens the moment a case is added.",
@@ -63,12 +64,12 @@
         "note": "'ceiling' anchors it as surely as '<='"
       },
       {
-        "line": "python3 -m evals.run --suite fast   # wall clock <= 90s",
+        "line": "python3 -m evals.run --suite fast   # wall clock <= 105s",
         "flags": false,
         "note": "the committed ceiling, stated"
       },
       {
-        "line": "python3 -m evals.run --suite fast   # wall clock <= 90 seconds",
+        "line": "python3 -m evals.run --suite fast   # wall clock <= 105 seconds",
         "flags": false,
         "note": "spelled out; the unit alternation is not decoration"
       },
@@ -104,17 +105,41 @@
         "{actions} browser actions in a `fast` run; **{with_browser} of the {total}** `fast` cases drive a real Chromium end to end",
         "The\nremaining {remaining} are those refusals plus pure-code probes of a single"
       ],
-      "why": "T-M39-5 / PR #44 R4: this pair sat three lines under a preamble saying every count in the section is current, read out of a report two trees old, while the split quote beside it was being kept honest. Recomputed from the headline report the same way, so it cannot drift again without going red."
+      "why": "T-M39-5 / PR #44 R4: this pair sat three lines under a preamble saying every count in the section is current, read out of a report two trees old, while the split quote beside it was being kept honest. Recomputed from the headline report the same way, so it cannot drift again without going red. PR #57 R4 added the citation half: the two figures were recomputed correctly from the headline report while the sentence carrying them credited `20260824-052304-fast.json`, a 181-case report holding 287 actions and 109 browser cases. Deriving a number and naming its source are two claims; grading only the first is how a paragraph stays arithmetically true and evidentially false.",
+      "cites_report": true
     },
-    "probe_cost_column": {
-      "doc": "docs/analysis.md",
-      "report": "20260826-011010-m45-zh-probe.json",
-      "section_start": "### Every run, published regardless of outcome",
-      "section_end": "### Metric classes, per row per language",
-      "row_re": "\\| (?:A\\d|B\\d) \\| (?:zh|en) \\| \\d \\| `([0-9a-f]{8})` \\|[^|]*\\|[^|]*\\|[^|]*\\| \\$([0-9.]+) \\|",
-      "rows": 29,
-      "why": "PR #56 R1: the column header said planner+judge, the cells carried planner-only, and the 29 cells summed to the superseded $0.009783. Nothing read either, so the label drifted from its own data inside one table."
-    },
+    "doc_quotes": [
+      {
+        "doc": "docs/analysis.md",
+        "quotes": [
+          "`live` is {live}/{live} across {live_sites} real sites"
+        ]
+      },
+      {
+        "doc": "specs/decisions/ADR-030-m41-sec10k-inspector-probe.md",
+        "quotes": [
+          "enforces\n{gt_conjuncts} conjuncts, each watched red before it was green"
+        ]
+      },
+      {
+        "doc": "docs/support-matrix.md",
+        "quotes": [
+          "`sec10k-ground-truth-endpoint-eval-only`, {gt_conjuncts} conjuncts each watched red"
+        ]
+      }
+    ],
+    "block_must_contain": [
+      {
+        "doc": "tasks/TODO.md",
+        "heading": "### M45-D8",
+        "phrases": [
+          "request frame",
+          "imperative",
+          "Acceptance:"
+        ],
+        "why": "PR #56 R8. agent.py, docs/analysis.md, docs/support-matrix.md D31 and this case's own provenance all concede that the request-frame rule is the untried path forward and file it at a debt id. The pointer is only worth what its target says, so the target is read."
+      }
+    ],
     "forbidden_claims": [
       {
         "label": "carries_repair_history",
@@ -163,18 +188,15 @@
         "why": "PR #56 R7. ADR-031 is the document of record for the probe, so it is where a reader looks for the verdict. Its Outcome corrections are legitimately exempt from the repair-history group — a pre-registration recording a correction to its own frozen figure is the point of pre-registering — but that exemption is not cover for a forward claim that a fix shipped."
       }
     ],
-    "block_must_contain": [
-      {
-        "doc": "tasks/TODO.md",
-        "heading": "### M45-D8",
-        "phrases": [
-          "request frame",
-          "imperative",
-          "Acceptance:"
-        ],
-        "why": "PR #56 R8. agent.py, docs/analysis.md, docs/support-matrix.md D31 and this case's own provenance all concede that the request-frame rule is the untried path forward and file it at a debt id. The pointer is only worth what its target says, so the target is read."
-      }
-    ]
+    "probe_cost_column": {
+      "doc": "docs/analysis.md",
+      "report": "20260826-011010-m45-zh-probe.json",
+      "section_start": "### Every run, published regardless of outcome",
+      "section_end": "### Metric classes, per row per language",
+      "row_re": "\\| (?:A\\d|B\\d) \\| (?:zh|en) \\| \\d \\| `([0-9a-f]{8})` \\|[^|]*\\|[^|]*\\|[^|]*\\| \\$([0-9.]+) \\|",
+      "rows": 29,
+      "why": "PR #56 R1: the column header said planner+judge, the cells carried planner-only, and the 29 cells summed to the superseded $0.009783. Nothing read either, so the label drifted from its own data inside one table."
+    }
   },
   "expect": {
     "note": "every count in README equals what the runner loads, README's \"Where it stands\" block equals the reports it cites, and no tracked markdown file (prompts/ included, tasks/ excluded and why is in provenance) asserts criterion 5 green — outside a struck-through span or across bold/italic/link markdown, whitespace-normalized — while docs/analysis.md §8a-3's post-merge evidence says red, and no `--suite` gate command in ANY markdown file in the tree — `tasks/` and dot-directories included, `.git`/`.venv` excluded as machinery, a wider set than the criterion-5 scan in this same sentence — publishes a wall-clock ceiling, anchored to `<=`/`ceiling`/`budget`/`wall clock`, that is not the one `evals/run.py` commits for that suite, with `ceiling_sweep_rows` pinning both directions including the true timing notes that must stay green"
@@ -185,5 +207,6 @@
     "class": "doc-drift",
     "note": "tagged invariant — a hand-maintained count is wrong again by the next milestone, and this repo has already burned a review round on three documents carrying three different totals for the same thing (PR #15, R19). The failure mode this closes is not the wrong number, it is the number that nothing recomputes. Adding a case to the suite now turns this red until README is updated, which is the intended cost. D8's cited reports are immutable artifacts, so its assertion is stable; moving the range means citing the runs it was measured from. The block cites report files rather than recomputing 'the latest run' on purpose: a report is immutable, so the assertion is stable, and moving the block means citing the runs it was measured from — the same contract D8's retired half had. The M29 half is the same shape one level up: a milestone's own ADR asserted its gate criterion was green-pending, and the milestone after it is the one that knows whether pending resolved true or false — nothing forced that resolution back into the ADR until this case checked for it. PR #28 R3 (LOW, routed to debt, tasks/TODO.md T-R33): prompts/ is append-only — a curated file records what was known and decided on its date and is never rewritten to look right in hindsight (the same principle ADR-015's own struck-not-deleted amendments follow, stated explicitly for prompts/ in prompts/README.md). prompts/014-a-freeze.md keeping its original 'green offline, pending' wording is correct by that convention, not a defect — a live reader who wants the current status reads specs/decisions/ADR-015-a-freeze.md, which this M29/M28 work keeps current, not a dated prompt record. PR #28 R4/R5: the markdown-strip ceiling is now literal and stated precisely (bold/italic/link unwrapped, underscore emphasis deliberately not — a real gap, named rather than implied), and the `prompts/` carve-out from R3 turned out to be the same mistake as the original 5-file allowlist one level down — excluding a directory is just a coarser allowlist. The general lesson, stated once rather than per-finding: for a guard whose job is 'does prose currently assert X', the safe move is to strike/fix the false claim, not to stop looking at the file that contains it. The T-M32-9 half grades a form, not a number and not a file: prose narrating a past ceiling is indistinguishable from prose publishing a live one by any pattern cheap enough to keep, so this reaches only the gate-command form and says so. Residual, named rather than implied: a live ceiling published in any other shape — an ADR Ruling, an INDEX one-liner, a support-matrix row — is invisible here. ADR-019's Ruling is covered separately by `published-band-matches-the-ledger` item 6 (ruling); ADR-002's is now covered by having no literal left to drift.",
     "watched_red": "PR #35 R6, red against the tree as this PR shipped it, no mutation needed: {cites_a_report_of_a_different_tree: 20260823-000232-fast.json, report_cases: 132, suite_now: 133} and {cites_a_report_of_a_different_tree: 20260823-000031-invariant.json, report_cases: 51, suite_now: 52}. Growing a suite without touching the docs is now exactly this red. R14 watched red against the pre-fix scoping, with `live` grown by one case: {cites_a_report_of_a_different_tree: 20260823-000337-live.json, report_cases: 9, suite_now: 10} -- unreachable offline. With the scoping in place the same mutation leaves only {readme_does_not_say: \"--suite live        # 10 cases\"}, a text edit. R15/R16 watched red against the tree as round 3 shipped it, no mutation needed: {describes_a_deleted_rule: \"the ceiling that maximum derives in the ADR's prose must be the ceiling\", doc: README.md}, {describes_a_deleted_rule: \"nothing uncommitted in the tree\", doc: specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md} and {describes_a_deleted_rule: \"must multiply the published maximum and land on the ceiling\", doc: same}. The README one was not in the review's evidence -- it came out of the class sweep."
-  }
+  },
+  "provenance_m42_2026_08_26": "M42 re-points the block at this milestone's own runs: the suite grew by 26 cases, the local  ceiling moved 90 -> 105 (ADR-029), and the diagnosis count moved with the new failure-class cases. The fixed point this case documents applied again — the first run of the resized suite cannot cite a green report of that suite, because none exists until a run of the resized tree is taken, and that run is red on this very check; it went through that state and out of it once the band was republished and the counts agreed."
 }

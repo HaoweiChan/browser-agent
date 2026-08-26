@@ -1,0 +1,124 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "note": "PR number 56 is the expected number; the push to origin was blocked by the harness permission classifier at the time this round ran, so the PR did not yet exist. Rename this file if the assigned number differs.",
+  "gate": {
+    "invariant": "71/71 = 1.000, wall 14.35s, $0.0000",
+    "fast": "207/207 = 1.000, wall 82.91s, $0.0000",
+    "sha": "a305a33",
+    "run_by": "orchestrator, independently, on a clean tree",
+    "baseline_file": "unchanged from main"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "`page_changed` is computed from an asymmetric pair of reads — `before` is main-frame-only, `after` includes every child frame — so on any page carrying a text-bearing iframe every step records `page_changed: true`, which disarms the anti-laundering guard in BOTH modes and feeds the loop driver a false \"The page changed.\"",
+      "evidence": "src/browser/agent.py:1222 `before = (await page_text(page, frames=False) ...)` vs src/browser/agent.py:1248 `after = await page_text(page)` (frames defaults to True). src/browser/observe.py:136-147 states the exact reason the `frames=False` variant exists (\"a third-party iframe with a ticking clock ... would flip it to True on every step and unlatch the guard\") — and the other half of the comparison was not given it. Consumers: src/browser/agent.py:201 `changed_nothing()` (-> `replan-cannot-launder-noop-action`, `reads_without_acting`) and src/browser/agent.py:1423 the loop's failure note. Trigger: the repo's own `src/browser/fixtures/frames-host.html` (declared \"the same shape our own sec-10k inspector renders its source pane with\"). A `press \"Shift\"` that changes nothing records `page_changed=True` on frames-host.html and `False` on shop.html.",
+      "repro": "From the worktree root: compare `page_text(p)` against `page_text(p, frames=False)` on /fixtures/frames-host.html — they differ, so a no-op step records page_changed=True. Full end-to-end: a stub_planner plan of one `press` with `expected_state {url_contains}` on frames-host.html writes `page_changed=True` in trace.jsonl; the identical plan on shop.html writes `False`.",
+      "acceptance": "`before` and `after` read the same scope (both `frames=False`, or both `frames=True` with the calibration argument re-made), plus an adversarial case on a framed fixture where a genuinely no-op action is followed by a replan that tries to drop it — watched red against the current line before the fix."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The reviewer UI's ADR digest is broken by this diff: the M42 entry is a 4-element array destructured as `[n, line]`, so the page renders \"ADR-026 — 027\", the real description is dropped, and ADR-027/028/029 are never listed at all.",
+      "evidence": "src/browser/server.py:842 `[\"026\", \"027\", \"028\", \"when a target matches more than one element, ...\"]` against the consumer at src/browser/server.py:844 `ADRS.map(([n, line]) => ...)` and the count at :845 `${ADRS.length} architecture decisions`. Every other row in the list is a 2-tuple. ADR-028 is the milestone's own implementation ADR and ADR-029 moves the published ceiling; neither reaches a visitor.",
+      "repro": "sed -n '838,846p' src/browser/server.py — the row is 4 elements against a 2-element destructure. No eval case reads `ADRS`: `grep -n \"ADRS\" src/browser/eval_adapter.py` returns nothing. Confirmed independently by the orchestrator.",
+      "acceptance": "Three separate `[\"027\", \"...\"]`/`[\"028\", \"...\"]`/`[\"029\", \"...\"]` rows with their own one-liners (and `ADRS.length` moving with them), plus a check that every `specs/decisions/ADR-*.md` id appears exactly once in `ADRS` — watched red against the current 4-element row."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-029 section 1 justifies the second ceiling step with two measurements — 84.83s and 88.87s — that exist in no committed report and no ledger row anywhere in the repo, i.e. the document of record cites numbers nothing can read back.",
+      "evidence": "specs/decisions/ADR-029-local-fast-ceiling-105.md:40 \"The same tree measured 84.83s and 88.87s within the hour\". The committed local `fast` rows for that hour are only 87.96 / 87.05 / 82.18 / 83.4 / 83.1 (evals/report/history.jsonl:1883-1890). This is the class ADR-019 section 6 exists to close (\"values in no recorded run\", PR #29 R21) and the same class as the `cited_a_dirty_run` / T-M39-14 findings.",
+      "repro": "grep -rn '84\\.83\\|88\\.87' evals specs docs -> only the ADR-029 prose line; no report, no history row. Confirmed independently by the orchestrator.",
+      "acceptance": "Either the two runs are committed to `evals/report/history.jsonl` (with their `ts`, so a reader can re-derive the variance argument), or the sentence is struck and the variance claim is made from rows that exist."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "docs/analysis.md's recomputed coverage numbers come from a different report than the one it names as their source — the cited file yields 287 actions / 109 cases, not the 367 / 132 now printed beside it.",
+      "evidence": "docs/analysis.md:60-63: \"**367** browser actions in a `fast` run; **132 of the 207** `fast` cases drive a real Chromium end to end ... read out of the committed report `evals/report/20260824-052304-fast.json` rather than tallied by hand\". That report holds 181 results, 287 actions and 109 cases with a `budgets` block; 367/132 are the values of `evals/report/20260825-183605-fast.json`, the report this PR re-points README and `docs-numbers-are-derived` at.",
+      "repro": "Load both reports and tally `results`, the sum of `budgets.actions`, and the count of results carrying a `budgets` block -> `181 287 109` and `207 367 132`.",
+      "acceptance": "The citation names `20260825-183605-fast.json` (the report the numbers were actually read from), and the `analysis_coverage` half of `docs-numbers-are-derived` is extended to check the cited report reproduces the two figures — watched red against today's line."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 section 2's republished band bullet keeps the previous milestone's explanation verbatim under the new numbers, so the same bullet says the tree is at 207 cases and, three lines later, that \"the tree only reaches 181 cases while PR #44's merge of `origin/main` (178 cases) into `task/M39` (164 cases) is uncommitted\".",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:68-79. Line 68 was updated to `207 cases, ts 20260825-183300, 87.96s, 205/207`; lines 72-79 still narrate the M39/PR-#44 tree as the reason the cited row is dirty and red. The actual reason for THIS row (M42's 26 uncommitted cases) is nowhere in the bullet. Section 3's `invariant` bullet (lines 241-249) has the same residue (\"PR #44's merge of `origin/main` (65 cases) into `task/M39`\") under a 71-case row.",
+      "repro": "sed -n '66,80p;238,250p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md — the case-count contradiction is inside a single bullet; `published-band-matches-the-ledger` grades the scalars and never the prose, so nothing reddens.",
+      "acceptance": "The dirty/red explanation in both bullets names this tree's reason (M42's uncommitted cases), or is replaced by the one sentence that is true for every band republish; either way no bullet contains two different case counts for the same run."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The diff's own claim that \"a model that gives up right after a failure is still graded on that failure\" is false for every non-state-changing verb: a loop run whose last real call FAILED and was never superseded reports `status: success`, verdict `PASS`, and no case covers the shape.",
+      "evidence": "src/browser/agent.py:1394-1398 makes the claim; the mechanism it rests on (leaving `superseded_by` null) does nothing, because src/browser/verifier.py:458-485 only grades a step through `no_failed_postcondition` (`postcondition_ok is False`) and `actions_verified` (`STATE_CHANGING` with a null postcondition). A `locate`/`extract` failure carries `failure_class` and `postcondition_ok: None`, so it is invisible. `loop-recovered-failure-still-verifies` covers the recovered direction only; nothing covers the abandoned one.",
+      "repro": "Drive `run_task(..., mode='loop', driver=stub_driver([...]))` on `shop.html` with calls `[extract {role:link,name:'Meridian Wall Clock'}, extract {role:status,name:'No Such Thing'}, final_answer]` -> trace shows `step 3 extract failure_class=locate superseded_by=None` and the run returns `STATUS: success ANSWER: Meridian Wall Clock VERDICT: PASS`.",
+      "acceptance": "Either `verify` grades an unsuperseded step carrying a `failure_class` (which makes the comment true), or the comment and specs/001's Modes bullet say plainly that an abandoned failed call does not affect the verdict — with an adversarial case pinning whichever ruling is taken, watched red first."
+    },
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The acceptance clause \"`fast`/`invariant` green\" is met only in the local environment: CI's `fast` ceiling is left at 90s with no measurement, on a suite that grew from 181 to 207 cases and whose last recorded CI `fast` run was 89.62s — the branch ships a gate that is expected to go red in the environment that guards `main`.",
+      "evidence": ".github/workflows/eval.yml:31 `EVAL_WALL_BUDGET_S_FAST: \"90\"` (untouched by this diff — `git diff main..task/M42 -- .github/` is empty), against evals/adversarial/fast-wall-clock-budget.json:31-34, whose row records main's CI `fast` run at 89.62s under the same 90s ceiling. specs/decisions/ADR-029-local-fast-ceiling-105.md:47-61 states the expectation outright (\"CI is likely to breach 90 on this branch\") and defers the measurement to the PR's own CI run.",
+      "repro": "git diff main..task/M42 -- .github/ (empty) ; grep -n 'EVAL_WALL_BUDGET_S_FAST' .github/workflows/eval.yml -> \"90\". Confirmed independently by the orchestrator. The PR's own CI run is the demonstration, and is currently blocked: the push to origin was denied by the harness permission classifier.",
+      "acceptance": "The PR's own CI run is cited by workflow-run id in ADR-019 section 5 and ADR-029 section 2 and CI's ceiling is derived from it before merge — or the branch does not claim the gate is green, since one of the two gated environments has no measured ceiling for the tree being shipped."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Both loop-budget ceiling cases carry `provenance` prose describing numbers the case files no longer contain, so the recorded rationale cannot be re-derived from the case.",
+      "evidence": "evals/adversarial/loop-token-ceiling-stops-the-run-loudly.json `provenance`: \"The stub driver reports 9 tokens on its first call against an injected 5-token cap\" — the file scripts `_usage.llm_tokens: 2` against `loop_budgets.llm_tokens: 1`. evals/adversarial/loop-usd-ceiling-stops-the-run-loudly.json `provenance`: \"3 tokens trip a $0.01 cap here\" — the file scripts `llm_usd: 2e-06` against a `1e-06` cap and `llm_tokens: 0`.",
+      "repro": "diff the `_usage`/`loop_budgets` blocks of both files against their own `provenance` strings.",
+      "acceptance": "The provenance sentences quote the numbers the case actually scripts, so a reader can check the cap arithmetic from the file alone."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`trace_note_contains` was broadened to search superseded steps for every case in the suite, which weakens five pre-existing resolver cases that were written against the narrower semantics, and no case pins that the note must be on a live step.",
+      "evidence": "src/browser/eval_adapter.py, the `trace_note_contains` block: `for s in trace if not s.get(\"superseded_by\")` became `for s in trace`. Affected pre-existing cases: evals/adversarial/resolver-narrows-singular-noun-ending-in-s.json, resolver-narrows-identical-matches.json, resolver-narrows-by-anchor-proximity.json, resolver-near-normalises-typography.json, probe3-quotes-most-quoted-author.json — each asserts a `narrowed: ...` note that, after this change, can now be satisfied by a superseded (i.e. discarded) attempt.",
+      "repro": "grep -rln trace_note_contains evals/golden evals/adversarial ; then read the block in src/browser/eval_adapter.py — the loop-mode need is served by the same key that grades the five older cases.",
+      "acceptance": "Either the loop-mode need gets its own key (e.g. `trace_note_contains_any` vs `trace_note_contains_live`), or a case demonstrates that a note appearing ONLY on a superseded step is still a red — watched red before the broadening."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "T-M42-4's declared HIGH (a postcondition earned by a document the action never touched) is demonstrable on a fixture that is already in the tree, not only in principle — so \"nothing offline can see it\" is already false.",
+      "evidence": "tasks/TODO.md T-M42-4 says \"Nothing offline can see it: every fixture with a frame in this repo has exactly one, and it is the frame the task is about.\" src/browser/agent.py:478 `text_visible` -> `page_text(page)` (all frames). On src/browser/fixtures/frames-host.html a `press \"Shift\"` that touches only the main document, asserting `{\"text_visible\": \"Reported inventory turnover\"}` (a string that exists only inside the iframe), records `postcondition_ok=True`.",
+      "repro": "Run `run_task` with `stub_planner([[{\"action\":\"press\",\"value\":\"Shift\",\"expected_state\":{\"text_visible\":\"Reported inventory turnover\"}}]])` against `/fixtures/frames-host.html`; trace.jsonl shows `step 2 press postcondition_ok=True`.",
+      "acceptance": "T-M42-4 carries this repro (it is the red-first case its own acceptance asks for), and the \"nothing offline can see it\" sentence is corrected — the guard against declaring a limitation that a committed fixture already falsifies."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`fast` and `invariant` now append `cost_usd: 2e-06` to the committed ledger while the headline prints `$0.0000`, and nothing asserts that either suite's spend is zero — so a future real sub-$0.00005 call is no longer distinguishable from the stub baseline.",
+      "evidence": "evals/report/history.jsonl:1883-1893 (`\"cost_usd\": 2e-06` on every new row, where every prior row is `0.0`), from evals/adversarial/loop-usd-ceiling-stops-the-run-loudly.json's scripted `_usage.llm_usd: 2e-06`; evals/run.py:275 prints `cost ${...:.4f}`, which renders 2e-06 as `$0.0000`. No case in evals/ asserts a suite-level `llm_usd == 0`.",
+      "repro": "tail -4 evals/report/history.jsonl ; grep -rn 'llm_usd' evals/adversarial/*.json | grep -v loop- (no suite-level zero-spend assertion).",
+      "acceptance": "Either the USD ceiling case trips on a cap without declaring nonzero spend (e.g. a cap of 0.0 with `>=`), or an invariant case asserts that the `fast`/`invariant` totals' `llm_usd` equals exactly the sum of stub-declared usage — so the `$0` claim is checked rather than displayed."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Six rows of the red-first ledger name a 'greened by' commit that does not exist in the branch history, so their red->green ordering is attested only by the ledger's prose (the reds themselves do reproduce — audited, see repro).",
+      "evidence": "docs/evals/m42-red-first-ledger.md:147-152 lists `M42: review-round repairs` as the greening commit for `loop-refused-anchor-is-not-an-answer`, `loop-failed-enumeration-does-not-disarm-rank`, `extract-all-refuses-matches-in-two-documents`, `loop-recovered-failure-still-verifies`, `driver-tools-match-the-executor`. `git log --oneline main..task/M42` has four commits and no such subject; those case files and their fixes both land in 1ac8a19.",
+      "repro": "git log --oneline main..task/M42 (no `review-round` commit). Audit performed by the reviewer: the leg-4 reds reproduce verbatim against `main` + the two case files + the two fixtures, and `loop-refused-anchor-is-not-an-answer`'s claimed red reproduces exactly by ablating the rollback line at src/browser/agent.py:1260. So the ledger is honest; only the commit reference is unresolvable.",
+      "acceptance": "The 'greened by' column names a commit that exists (or says 'folded into 1ac8a19 under CLAUDE.md rule 7'), so every row is checkable from `git log` without trusting the prose."
+    }
+  ]
+}

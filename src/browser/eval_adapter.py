@@ -44,7 +44,7 @@ from pathlib import Path
 
 from .agent import assemble_result, run_task
 from .judge import live_judge, stub_judge
-from .planner import live_planner, stub_planner
+from .planner import live_driver, live_planner, stub_driver, stub_planner
 from .verifier import verify
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -1149,6 +1149,38 @@ def _check_published_band_ts_orders_real_time() -> dict:
 
 
 
+# --- the CI-ceiling site sweep (PR #57 R32/R33) ------------------------------
+# Module-level so `ci-ceiling-sites-are-labelled`'s asserts exercise the SAME
+# compiled objects the check runs (PR #57 R34: an assert that re-types the
+# pattern records a fact about a copy, and a regression in the real one leaves
+# it green).
+_CI_WINDOW = 70
+_CI_TOKEN = re.compile(r"\bCI\b|EVAL_WALL_BUDGET")
+_CI_CEILING_LINE = re.compile(r"ceiling|budget|wall[- ]clock|\bstays\b", re.I)
+# What a ceiling looks like as a NUMBER: seconds-suffixed, or an operand of a
+# move. Never preceded by a word character — that is what keeps `M42`, `M31`,
+# `R16` and `ADR-019` out, and case counts and run ids are neither shape.
+_CI_SECONDS = re.compile(r"(?<![\w.\-§#])(\d{2,4})s\b")
+_CI_MOVE = re.compile(r"(?<![\w.\-§#])(\d{2,4})\s*(?:->|→|vs)\s*(\d{2,4})\b")
+# The two explicit labels a figure may carry instead of being the live value:
+# `[historical]` (true then, kept as the record) and `[local]` (not CI's number
+# at all, caught only by sitting near the word CI).
+_CI_LABELLED = re.compile(r"\[(?:historical|local)\]")
+
+
+def _in_section_five(text: str, line: str) -> bool:
+    """Is `line` inside ADR-019 §5 — one of the two allowlisted publishers?
+
+    The other is `.github/workflows/eval.yml`, which this check already reads
+    cell-by-cell. Everything else must be labelled or equal to what is declared.
+    """
+    five = text.find("### 5.")
+    if five < 0:
+        return False
+    end = text.find("\n### ", five + 1)
+    return line in text[five:end if end > 0 else len(text)]
+
+
 def _check_ci_numbers_are_derived() -> dict:
     """ADR-019 §5's four CI measurements are one source, and README derives from it.
 
@@ -1269,8 +1301,123 @@ def _check_ci_numbers_are_derived() -> dict:
             wrong.append({"suite": suite, "workflow_declares": got,
                           "adr_five_max": max(by[suite]),
                           "rule_gives": _band_rule(max(by[suite]))})
+    # PR #57 R24: the ceiling move reached every GRADED surface and no ungraded
+    # one. Five places went on publishing CI at 90/20, including two ADR Ruling
+    # headers and INDEX.md — the file whose own header says it is what you read
+    # when you just need what is now true. Nothing saw them, because everything
+    # above reads §5, README and the workflow and stops.
+    #
+    # So: any tracked decision document that names an `EVAL_WALL_BUDGET_S_*`
+    # variable beside a number must name the number the workflow declares.
+    # Anchored to the variable, and to the same line, because that is the one
+    # form that can only mean a live ceiling — prose narrating a past one is
+    # indistinguishable by any cheap pattern, which is the ruling T-M32-9
+    # already made for the local ceilings and the reason `_ceiling_drift` is
+    # anchored the way it is.
+    #
+    # Struck spans come out first, the convention every document sweep here
+    # uses: this repo strikes a reversed ruling in place with a dated pointer,
+    # and a guard that reddens on preserved history is one someone turns off.
+    # PR #57 R32/R33, and the seventh crop of one class. Six rounds widened this
+    # guard one prose SHAPE at a time and each widening caught the previous crop
+    # and missed the next SITE: the scan read `specs/decisions/*.md`, so
+    # README's "CI's ceiling is ... 90s" was invisible for being in the wrong
+    # FILE, not the wrong shape. A pattern zoo fails open. So the question is
+    # inverted — not "does this prose match a shape a stale ceiling takes?" but
+    # "is this figure allowed to be here at all?" — and the answer is an
+    # allowlist over sites, which fails safe: a new document or a new phrasing
+    # lands in the scanned set and has to justify itself.
+    #
+    # A figure is a CI-ceiling claim when it is seconds-suffixed or an operand
+    # of a `->`/`vs` move (that is what a ceiling looks like as a NUMBER, and it
+    # is what keeps case counts, run ids and `M42` out), it sits within
+    # `_CI_WINDOW` characters of a CI token, and its line is about ceilings.
+    # It is allowed only if it is: the value the workflow declares, inside a
+    # `~~struck~~` span, or explicitly labelled `[historical]` (a figure that
+    # was true then) or `[local]` (a figure that is not CI's). Everything else
+    # is red and names its file and line. History is marked, not exempted —
+    # which is the whole difference between this and the six patterns before it.
+    docs = ([Path(__file__).parents[2] / "README.md"]
+            + sorted((Path(__file__).parents[2] / "specs" / "decisions").glob("*.md"))
+            + sorted((Path(__file__).parents[2] / "docs").rglob("*.md")))
+    declared = {s: _re.search(rf'EVAL_WALL_BUDGET_S_{s.upper()}: "(\d+)"', wf) for s in by}
+    declared = {s: int(m.group(1)) for s, m in declared.items() if m}
+    # `(?!\d)`, and this guard was written with `(?![\d.])` — the identical
+    # sentence-final blindness R27 had just fixed in `adr029-variance-cites-the-
+    # ledger`, reproduced in its sibling in the same round. `ADR-021`'s Ruling
+    # ends "...`EVAL_WALL_BUDGET_S_FAST` stays 90." and the guard could not see
+    # it, purely because the number ends the sentence. Twice-demonstrated now:
+    # a regex written to police prose gets tested against the shapes its author
+    # pictures, and sentence-final is the shape nobody pictures. The asserts
+    # below are the answer, and they belong in every prose guard here.
+    live = _re.compile(r"EVAL_WALL_BUDGET_S_(FAST|INVARIANT)`?[^\n]{0,60}?"
+                       r"(?<![\d.])(\d+)(?!\d)")
+    # The second shape, which no variable-anchored pattern can reach: a CI
+    # ceiling asserted with the variable named earlier in the line or not at
+    # all — `ADR-019`'s Amended-by ended "CI's stays 90 because nothing in that
+    # change measured CI", contradicting the same sentence's own opening. It
+    # cannot say WHICH suite, so it is graded the only way it can be: the number
+    # must be one this workflow declares for some suite. 90 is neither.
+    stays = _re.compile(r"\bCI(?:'s)?\b[^\n]{0,60}?\bstays\s+(?<![\d.])(\d+)(?!\d)")
+    # ponytail: the self-exercise, the thing whose absence let the lookahead sit
+    # blind. Sentence-final first, because that is the case that was missed.
+    assert live.findall("CI's `EVAL_WALL_BUDGET_S_FAST` stays 90.") == [("FAST", "90")]
+    assert live.findall("`EVAL_WALL_BUDGET_S_FAST` stays 90 and that is a ruling") == [
+        ("FAST", "90")]
+    assert stays.findall("CI's stays 90 because nothing measured CI") == ["90"]
+    assert stays.findall("CI's stays 90.") == ["90"]
+    # The site sweep's own exercise, on the SAME compiled objects it runs — the
+    # three shapes six rounds of patterns each missed one of, plus the two the
+    # figure rule must NOT match (PR #57 R34).
+    assert _CI_SECONDS.findall("CI's ceiling is ... (90s since ADR-019 §5)") == ["90"]
+    assert _CI_MOVE.findall("CI `fast` 80 -> 90, CI `invariant` 20") == [("80", "90")]
+    assert _CI_MOVE.findall("different `fast` ceilings (105 vs 90)") == [("105", "90")]
+    assert _CI_SECONDS.findall("its tree grew from 48 cases to 74") == []
+    assert _CI_SECONDS.findall("M42 ships and R16 found it") == []
+    assert _CI_LABELLED.search("CI's ceiling was 90s [historical]")
+    for doc in docs:
+        text = _re.sub(r"~~.*?~~", "", doc.read_text(encoding="utf-8"), flags=_re.DOTALL)
+        for suite, said in live.findall(text):
+            want = declared.get(suite.lower())
+            if want is not None and int(said) != want:
+                wrong.append({"doc": doc.name, "publishes_a_ci_ceiling_of": int(said),
+                              "suite": suite.lower(), "workflow_declares": want})
+        for said in stays.findall(text):
+            if declared and int(said) not in declared.values():
+                wrong.append({"doc": doc.name, "says_ci_stays": int(said),
+                              "workflow_declares": sorted(declared.values())})
+        # --- the site sweep (see the comment above `docs`) --------------------
+        ok = set(declared.values())
+        for i, line in enumerate(text.splitlines(), 1):
+            if not _CI_CEILING_LINE.search(line):
+                continue
+            figures = [(m.start(), m.end(), m.group(1)) for m in _CI_SECONDS.finditer(line)]
+            for m in _CI_MOVE.finditer(line):
+                figures += [(m.start(), m.end(), g) for g in (m.group(1), m.group(2))]
+            for s, e, num in figures:
+                if int(num) in ok:
+                    continue
+                near = line[max(0, s - _CI_WINDOW):e + _CI_WINDOW]
+                # The LABEL is line-scoped while the CI token is window-scoped,
+                # and the asymmetry is deliberate. Adjacency is what makes a
+                # figure a CI-ceiling claim, so it is measured tightly; the
+                # label is an author's statement ABOUT this line's figures, and
+                # requiring one per figure on a 400-character INDEX entry would
+                # buy nothing but noise. The declared cost: a line carrying both
+                # a labelled figure and a live one is wholly exempt — acceptable
+                # because the live values live in the two allowlisted publishers
+                # (ADR-019 §5, the workflow), which this check reads directly.
+                if not _CI_TOKEN.search(near) or _CI_LABELLED.search(line):
+                    continue
+                if doc.name.startswith("ADR-019") and _in_section_five(text, line):
+                    continue  # the allowlisted publisher
+                wrong.append({"doc": doc.name, "line": i,
+                              "publishes_an_unlabelled_ci_ceiling": int(num),
+                              "workflow_declares": sorted(ok),
+                              "context": line.strip()[:110]})
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"adr_five": by, "run": run_id.group(1) if run_id else None}}
+            "got": {"adr_five": by, "run": run_id.group(1) if run_id else None,
+                    "workflow_declares": declared, "decision_docs_scanned": len(docs)}}
 
 
 def _check_history_dirty_before_report() -> dict:
@@ -1441,8 +1588,16 @@ def _run_schema_case(case: dict) -> dict:
     emitted (M2 close-out)."""
     inp = case["input"]
     fixture_url = f"{_base_url()}/fixtures/{inp['fixture']}"
-    steps = _subst(inp["stub_plan"], fixture_url)
-    result = _run_agent(inp["task"], fixture_url, stub_planner([steps]))
+    # M42: the same conformance check for a LOOP run. ADR-027's "the trace stays
+    # the evidence" is a claim that loop mode emits the SAME TraceStep with no
+    # loop-only fields and no second evidence pipeline, and a claim about a
+    # schema is worth exactly what checks it.
+    if inp.get("mode") == "loop":
+        result = _run_agent(inp["task"], fixture_url, None, mode="loop",
+                            driver=stub_driver(_subst(inp["stub_calls"], fixture_url)))
+    else:
+        steps = _subst(inp["stub_plan"], fixture_url)
+        result = _run_agent(inp["task"], fixture_url, stub_planner([steps]))
 
     got = {
         "result": list(result),
@@ -2008,6 +2163,17 @@ def _run_fixture_case(case: dict) -> dict:
     # the case fails loudly; stubbing it would grade a capability nobody ran
     # (CLAUDE.md rule 4).
     planner = live_planner() if inp.get("planner") == "live" else stub_planner(plans)
+    # M42 loop mode (ADR-027/ADR-028). `stub_calls` scripts one tool call per
+    # model turn at the SAME injection boundary `stub_plans` uses, so the loop
+    # driver, every new action, budget exhaustion and the trace shape are all
+    # graded at $0.00 offline — the eval-first cost ADR-027 names as the real
+    # engineering price of loop mode. `driver: "live"` is the same opt-in shape
+    # `planner: "live"` is, and only a `full`-tagged case may ask for it.
+    mode = inp.get("mode", "plan")
+    driver = None
+    if mode == "loop":
+        driver = (live_driver() if inp.get("driver") == "live"
+                  else stub_driver(_subst(inp["stub_calls"], fixture_url or "")))
     # What the planner was actually SHOWN, per call. A stub plan is hand-written
     # (every plan in this repo is), so a case whose point is "the planner could
     # not have known this string" proves nothing from the plan alone — the M32
@@ -2020,6 +2186,10 @@ def _run_fixture_case(case: dict) -> dict:
         shown.append(observation)
         return await planner(task, url, observation, note)
 
+    async def recording_driver(task, url, observation=None, trace=None, found=None, note=None):
+        shown.append(observation)
+        return await driver(task, url, observation, trace, found, note)
+
     # M36: `judge: "live"` is the same opt-in shape as `planner: "live"` --
     # only a `full`-tagged case may spend real tokens on it. `judge_verdicts`
     # (mirrors `stub_plans`) lets a case script certify/reject/"error" per
@@ -2027,9 +2197,12 @@ def _run_fixture_case(case: dict) -> dict:
     # is what every case written before M36 needs to keep meaning what it did.
     judge = (live_judge() if inp.get("judge") == "live"
              else stub_judge(inp["judge_verdicts"]) if "judge_verdicts" in inp else None)
-    result = _run_agent(inp["task"], inp.get("url", fixture_url), recording_planner,
+    result = _run_agent(inp["task"], inp.get("url", fixture_url),
+                        None if mode == "loop" else recording_planner,
                         url_guard=guard, own_browser=inp.get("own_browser", False),
-                        judge=judge)
+                        judge=judge, mode=mode,
+                        driver=recording_driver if mode == "loop" else None,
+                        loop_budgets=inp.get("loop_budgets"))
 
     # Re-verify with ground truth the runtime cannot have: hand labels, identity
     # anchors, and the fixture's own record of what it received.
@@ -2122,10 +2295,46 @@ def _run_fixture_case(case: dict) -> dict:
     if "planner_note_contains" in exp:
         checks["planner_note_contains"] = any(
             exp["planner_note_contains"] in (n or "") for n in getattr(planner, "notes", []))
+    # The loop's half of the same claim: what the DRIVER was told between turns.
+    # Two of M42's mechanisms exist only in that message — the re-homed refusal
+    # the model is expected to recover from, and the forced strategy change the
+    # no-progress harness sends before it gives up — and neither is visible in
+    # the trace or the status. Without this key a harness that silently gave up
+    # without ever telling the model would pass
+    # (`loop-no-progress-revisit-ends-the-run-loudly`).
+    if "driver_note_contains" in exp:
+        checks["driver_note_contains"] = any(
+            exp["driver_note_contains"] in (n or "") for n in getattr(driver, "notes", []))
+    # `postcondition_ok` per step, in trace order, as a list — true / false /
+    # null, where null means nothing was asserted and is NOT true. M42 adds five
+    # verbs and the whole of what distinguishes them from a no-op is what they
+    # verify, so the postcondition column is asserted rather than described:
+    # `select_option` reads back what is selected, `scroll` reads back the
+    # position, `wait_for` IS its predicate, and `press`/`go_back` carry an
+    # authored one. Deleting any of those readbacks turns a case here red
+    # instead of leaving a green run that checked nothing.
+    if "trace_postconditions" in exp:
+        checks["trace_postconditions"] = [
+            s.get("postcondition_ok") for s in trace] == exp["trace_postconditions"]
+    # A substring of the terminal `reason`. Used where the STATUS is not the
+    # claim: three different guards can end a run `failure:env`, and a
+    # no-progress stop that reported a step cap would be exactly the symptom-
+    # not-cause failure the harness exists to replace.
+    if "reason_contains" in exp:
+        checks["reason_contains"] = exp["reason_contains"] in (result["reason"] or "")
+    # Every step, superseded ones included. It skipped superseded steps until
+    # M42, which was invisible while the only writers of `superseded_by` were
+    # mode B's ladders — there, a superseded note IS stale, replaced by the
+    # attempt that followed. Loop mode supersedes a REFUSED call with the
+    # recovery the model chose, and the refusal is exactly the thing the trace
+    # has to be able to show: `loop-refuses-a-document-root-extract` ends
+    # `success`, so nothing but this record distinguishes "the root read was
+    # refused and the model recovered" from "the root read was quietly allowed".
+    # Broadening only ever finds more, so every case written against the old
+    # semantics means what it always did.
     if "trace_note_contains" in exp:
         checks["trace_note_contains"] = any(
-            exp["trace_note_contains"] in (s.get("note") or "")
-            for s in trace if not s.get("superseded_by"))
+            exp["trace_note_contains"] in (s.get("note") or "") for s in trace)
     # Generic budgets_spent probe (M36): a case names the fields it cares
     # about and their exact expected values, e.g. `{"judge_calls": 1,
     # "judge_usd": 0.0}` to prove the judge ran exactly once and the fast
@@ -2823,6 +3032,19 @@ REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
 # here on purpose: writing the literal path in a comment near the regex would
 # make the comment itself a dangling citation.)
 REPORT_CITATION_SKIP = ("29991231-235959-fast.json",)
+# Directories inside the scope above that hold PAGES rather than prose. The M41
+# inspector snapshot is a capture of another project's deployed UI, and that UI
+# renders that project's own capability table — including the name of a
+# benchmark report in ITS `evals/report/`, which does not exist here. Quoting a
+# page is not this repo claiming evidence, and the alternative (editing the
+# capture until the regex is happy) would make the fixture a fiction.
+#
+# A directory prefix is exactly the shape R20 of PR #20 caught blinding this
+# guard, so it is pinned rather than trusted: the case carries
+# `expect.exclude_exactly` and a widened prefix is red before it is green. That
+# is the only defence available — widening a scan silently REMOVES findings, so
+# nothing else here can notice.
+REPORT_CITATION_EXCLUDE = ("src/browser/fixtures",)
 
 
 def _run_report_citations_case(case: dict) -> dict:
@@ -2848,7 +3070,8 @@ def _run_report_citations_case(case: dict) -> dict:
     for rel in REPORT_CITATION_SCOPE:
         p = root / rel
         for f in ([p] if p.is_file() else p.rglob("*") if p.is_dir() else []):
-            if not f.is_file():
+            if not f.is_file() or any(f.is_relative_to(root / d)
+                                      for d in REPORT_CITATION_EXCLUDE):
                 continue
             cited |= set(REPORT_CITATION.findall(f.read_text(encoding="utf-8", errors="ignore")))
     cited -= set(REPORT_CITATION_SKIP)
@@ -2860,8 +3083,13 @@ def _run_report_citations_case(case: dict) -> dict:
     got_skip = sorted(REPORT_CITATION_SKIP)
     if want_skip and got_skip != want_skip:
         wrong["skip"] = {"want": want_skip, "got": got_skip}
+    want_excl = sorted(case.get("expect", {}).get("exclude_exactly", []))
+    got_excl = sorted(REPORT_CITATION_EXCLUDE)
+    if want_excl and got_excl != want_excl:
+        wrong["exclude"] = {"want": want_excl, "got": got_excl}
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"citations": len(cited), "skip": got_skip}}
+            "got": {"citations": len(cited), "skip": got_skip,
+                    "exclude": got_excl}}
 
 
 def _run_gateway_error_case(case: dict) -> dict:
@@ -2930,12 +3158,25 @@ def _run_gateway_model_case(case: dict) -> dict:
     from . import server as S
 
     seen: list = []
+    factories: list = []
 
     def recorder(model=None):
         seen.append(model)
+        factories.append("planner")
         raise RuntimeError("eval recorder: planner never constructed")
 
+    def driver_recorder(model=None):
+        # M42: the loop mode's factory gets the same treatment, and for the same
+        # reason — a `mode` field that is accepted, validated and then dropped
+        # looks identical over HTTP to one that selects the driver. It must also
+        # be swapped for the $0 property to hold: without it a `mode: "loop"`
+        # row would construct a real driver and open a real browser.
+        seen.append(model)
+        factories.append("driver")
+        raise RuntimeError("eval recorder: driver never constructed")
+
     base, prev = _base_url(), S.live_planner
+    prev_driver = S.live_driver
     wrong = []
     # The allowlist and the frozen verification evidence must name the same four
     # models. Without this the ADR's "every id verified against OpenRouter on
@@ -2956,6 +3197,27 @@ def _run_gateway_model_case(case: dict) -> dict:
         if unfrozen := [m for m in ALLOWED_MODELS if m not in snap_ids]:
             wrong.append({"allowlisted_but_not_in_the_verified_snapshot": unfrozen,
                           "verified_snapshot": snap_ids, "read_on": snap.get("_read_on")})
+        # M42/ADR-028: the loop-mode additions are ADR-027's declared amendment
+        # to ADR-010's price ceiling, and an amendment is only as narrow as
+        # something checks. ADR-027 scopes it: the ceiling STAYS for the
+        # ablation arms and for mode B's default, and is lifted ONLY for
+        # loop-mode ids, each allowlisted explicitly with its price recorded.
+        # Three properties, because dropping any one of them turns "a declared
+        # amendment" back into "the ceiling drifted": a loop model must be
+        # accepted by the endpoint, must be frozen evidence like every other
+        # accepted id (the containment check above already sees it), and must
+        # NOT be in the ablation set — where the ceiling sweep below runs, and
+        # where its presence would either break the sweep or quietly raise the
+        # bar for every ablated model.
+        from .planner import LOOP_MODELS
+
+        for mid in LOOP_MODELS:
+            if mid not in ALLOWED_MODELS:
+                wrong.append({"loop_model_not_accepted_by_the_endpoint": mid})
+            if mid in ABLATION_MODELS:
+                wrong.append({"loop_model_leaked_into_the_ablation_set": mid,
+                              "note": "ADR-027 lifts ADR-010's ceiling for loop mode ONLY; an "
+                                      "id in the ablation set is measured under that ceiling"})
         if SUPERSEDED_INCUMBENT in ALLOWED_MODELS:
             wrong.append({"superseded_incumbent_still_accepted": SUPERSEDED_INCUMBENT})
         if SUPERSEDED_INCUMBENT not in snap_ids:
@@ -3021,9 +3283,12 @@ def _run_gateway_model_case(case: dict) -> dict:
     # recorder still installed, breaking every later case in the same process and
     # attributing the damage to unrelated cases (PR #15, R6).
     S.live_planner = recorder
+    S.live_driver = driver_recorder
     try:
         for chk in case["input"]["checks"]:
             payload = {"task": case["input"]["task"]}
+            if chk.get("mode") is not None:
+                payload["mode"] = chk["mode"]
             # `model: null` in a case file means "omit the field"; the sentinel is
             # how a case says "send an explicit JSON null", which is a different
             # request and, since PR #15 R8, a pinned one.
@@ -3052,6 +3317,9 @@ def _run_gateway_model_case(case: dict) -> dict:
                 got["detail"] = body.get("detail")
             got["planner_model"] = seen[before] if len(seen) > before else None
             want = {"http": chk["http"], "planner_model": chk["planner_model"]}
+            if "factory" in chk:
+                got["factory"] = factories[before] if len(factories) > before else None
+                want["factory"] = chk["factory"]
             if chk.get("detail_contains"):
                 want["detail"] = chk["detail_contains"]
                 got["detail"] = chk["detail_contains"] if chk["detail_contains"] in str(
@@ -3061,7 +3329,9 @@ def _run_gateway_model_case(case: dict) -> dict:
                               "got": {k: got.get(k) for k in want}})
     finally:
         S.live_planner = prev
-    return {"passed": not wrong, "wrong": wrong, "recorded_models": seen}
+        S.live_driver = prev_driver
+    return {"passed": not wrong, "wrong": wrong, "recorded_models": seen,
+            "recorded_factories": factories}
 
 
 def _run_ablation_run_one_case(case: dict) -> dict:
@@ -4679,11 +4949,41 @@ def _run_doc_counts_case(case: dict) -> dict:
 
     inp, wrong = case["input"], []
     counts = {s: len(load_cases(s)) for s in ("fast", "invariant", "live", "full", "all")}
+    # How many distinct real sites the live suite touches. Published in prose in
+    # two documents and in neither of them derived, so both said "four real
+    # sites" for the whole of the PR that took it to five (PR #58 R1) — the same
+    # defect this check exists for, one sentence over from the counts it already
+    # reads back. A `domain` tag is what the coverage half of this case already
+    # trusts to mean "a real site", so it is what this counts.
+    counts["live_sites"] = len({c["domain"] for c in load_cases("live") if c.get("domain")})
+    # How many conjuncts the rule-6 boundary invariant actually enforces. Two
+    # documents describe that guard in prose and both said "three" for a whole
+    # round after a fourth shipped (PR #58 R6) — the third instance in this PR
+    # of a multi-artifact correction leaving a document behind, which is the
+    # argument for deriving it instead of re-typing it.
+    #
+    # ponytail: the count is `len(wrong)`, one key per conjunct, because that is
+    # the shape the check already returns and no second registry is worth
+    # keeping in sync with it. Two ceilings, both real: `bool(cases)` — the
+    # non-vacuity precondition that stops the scan passing on an empty set — is
+    # NOT a conjunct and carries no key, so it is deliberately not counted; and
+    # a future conjunct that folds into an existing key would be invisible here.
+    # Upgrade if either bites: name the conjuncts in a tuple the check returns.
+    counts["gt_conjuncts"] = len(_check_ground_truth_endpoint_eval_only()["wrong"])
     readme = (RUN_ROOT / "README.md").read_text(encoding="utf-8")
     for quote in inp.get("readme_quotes", []):
         want = quote.format(**counts)
         if want not in readme:
             wrong.append({"readme_does_not_say": want})
+    # The same, for any other document of record. README got its own key first
+    # and every later count landed there by default; the stale sentence R1 found
+    # was in docs/analysis.md, outside anything this case could reach.
+    for entry in inp.get("doc_quotes", []):
+        text = (RUN_ROOT / entry["doc"]).read_text(encoding="utf-8")
+        for quote in entry["quotes"]:
+            want = quote.format(**counts)
+            if want not in text:
+                wrong.append({"doc_does_not_say": want, "doc": entry["doc"]})
 
     ws = inp.get("where_it_stands")
     if ws:
@@ -4783,6 +5083,18 @@ def _run_doc_counts_case(case: dict) -> dict:
         for q in s1["quotes"]:
             if (want := q.format(**vals)) not in text:
                 wrong.append({"analysis_section1_does_not_say": want})
+        # ...and the prose has to NAME the report those values came from. The
+        # numbers were derived here from the headline report while the sentence
+        # beside them credited a different file — "read out of the committed
+        # report X rather than tallied by hand", where X held 181 results, 287
+        # actions and 109 browser cases against the 207/367/132 printed next to
+        # it (PR #57 R4). Deriving a number and citing a source are two claims,
+        # and only the first was graded, so the sentence that makes the whole
+        # paragraph checkable was the one nothing checked.
+        if s1.get("cites_report") and (rid := ws["reports"][ws["headline"]]) not in text:
+            wrong.append({"analysis_section1_does_not_cite": rid,
+                          "note": "§1's figures are derived from this report; the prose credits "
+                                  "another"})
 
     cov = inp.get("analysis_coverage")
     domains: dict[str, int] = {}
@@ -5139,7 +5451,316 @@ def _check_narrowing_fails_closed() -> dict:
             "got": {"signature": str(inspect.signature(_nearest))}}
 
 
+def _check_driver_tools_match_the_executor() -> dict:
+    """The tools the loop driver OFFERS and the actions the executor IMPLEMENTS
+    are the same set, and every declared parameter is a key the executor reads.
+
+    `planner.py` asserted this in a comment naming a case id that existed
+    nowhere in the tree (spec-drift audit, finding 1B). The two lists agreed
+    only because one person wrote them in one sitting, which is the weakest
+    guarantee this repo accepts for anything.
+
+    Both directions fail, and they fail differently. A tool the executor does
+    not implement is a run that dies `failure:task` on a call the model was
+    invited to make. An action the tools omit is a capability the model cannot
+    reach at all — and no offline case would ever notice, because every offline
+    call is hand-scripted, so the stub can call an action the real driver was
+    never told about.
+
+    `navigate` is in both. `final_answer` is a tool AND an executor action
+    (it takes a trace record like every other call), so no carve-out is needed
+    in either direction.
+    """
+    from .agent import ACTIONS, NEEDS_TARGET
+    from .planner import STEP_KEYS, TOOL_TABLE, TOOLS
+
+    wrong = []
+    tools, actions = set(TOOL_TABLE), set(ACTIONS)
+    if extra := sorted(tools - actions):
+        wrong.append({"offered_to_the_model_but_not_implemented": extra})
+    if missing := sorted(actions - tools):
+        wrong.append({"only_the_executor_implements": missing})
+    # A declared parameter the executor never reads is a plan the model is
+    # invited to write and the executor silently reinterprets — the shape
+    # `resolver-unknown-target-key` rules on one level down.
+    for action, (_desc, params, required) in TOOL_TABLE.items():
+        if unknown := sorted(set(params) - STEP_KEYS):
+            wrong.append({"tool": action, "declares_a_parameter_no_step_carries": unknown})
+        if missing_req := sorted(set(required) - set(params)):
+            wrong.append({"tool": action, "requires_a_parameter_it_does_not_declare": missing_req})
+        # An action that cannot run without a resolved element must ask for one.
+        if action in NEEDS_TARGET and "target" not in required:
+            wrong.append({"tool": action, "needs_a_target_but_does_not_require_one": True})
+    # The JSON schema list is generated from the table, so it must not drift
+    # from it either — a hand-edited TOOLS entry is the third way to disagree.
+    if [t["function"]["name"] for t in TOOLS] != list(TOOL_TABLE):
+        wrong.append({"tools_schema_names": [t["function"]["name"] for t in TOOLS],
+                      "table": list(TOOL_TABLE)})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"tools": sorted(tools), "actions": sorted(actions)}}
+
+
+def _check_ui_adrs_cover_every_decision() -> dict:
+    """The reviewer page's ADR digest lists every decision, once, as a 2-tuple.
+
+    `ADRS` is how a reader without the repo sees what this project decided, and
+    nothing read it: M42 widened it with a blind `"026",` -> `"026", "027",
+    "028",` substitution and produced a FOUR-element row against a
+    `([n, line])` destructure, so the page rendered "ADR-026 — 027", ADR-026's
+    real one-liner vanished, ADR-027/028/029 never reached a visitor, and
+    `${ADRS.length}` undercounted (PR #57 R2). The shape defect is the visible
+    half; the coverage defect is the one that had been there since M39, with
+    ADR-023 simply absent.
+
+    Read out of the page source rather than from a second list, for the reason
+    `_check_examples_cover_matrix` reads the EXAMPLES keys out of the page: a
+    copy maintained beside the thing it describes is the copy that drifts.
+    """
+    import re as _re
+
+    src = (Path(__file__).with_name("server.py")).read_text(encoding="utf-8")
+    block = src[src.index("const ADRS = ["):]
+    block = block[:block.index("\n];")]
+    rows = [_re.findall(r'"((?:[^"\\]|\\.)*)"', line)
+            for line in block.splitlines() if line.strip().startswith('["')]
+    wrong = []
+    # Shape first: a row that is not (id, one-liner) makes every id claim below
+    # unreadable, and it is what a destructure silently swallows.
+    if malformed := [r for r in rows if len(r) != 2]:
+        wrong.append({"rows_that_are_not_id_plus_one_liner": malformed})
+    listed = [r[0] for r in rows if r]
+    if dupes := sorted({n for n in listed if listed.count(n) > 1}):
+        wrong.append({"listed_more_than_once": dupes})
+    have = sorted(p.name[4:7] for p in
+                  (Path(__file__).parents[2] / "specs" / "decisions").glob("ADR-*.md"))
+    if missing := [n for n in have if n not in listed]:
+        wrong.append({"decisions_the_page_never_mentions": missing})
+    if extra := [n for n in listed if n not in have]:
+        wrong.append({"listed_but_no_such_adr": extra})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"listed": len(listed), "adr_files": len(have)}}
+
+
+def _check_adr029_variance_cites_the_ledger() -> dict:
+    """Every wall clock ADR-029 §1 argues from is a row a reader can read back.
+
+    §1 justified a second ceiling step with "the same tree measured 84.83s and
+    88.87s within the hour" — two numbers in no committed report and no ledger
+    row (PR #57 R3). They were real measurements, discarded with the probe rows
+    they belonged to under the T-M38-5 practice, which is exactly how a document
+    ends up arguing from evidence nothing can check: the honest handling is to
+    argue from the rows that survived, not to commit rows after the fact to fit
+    a sentence.
+
+    Scoped to §1, and that scope is the ruling rather than a convenience: §1
+    argues about the LOCAL band, which this ledger holds, while §2's CI figures
+    are hand-read off a named workflow run by ADR-019 §5 and are deliberately
+    not here (§7, T-R51). A check that demanded ledger backing for those would
+    be demanding the impossible and would be switched off within a week.
+
+    A `seconds` literal only — `101.15` in "x 1.15 = 101.15" carries no unit and
+    is arithmetic over a cited number, not a measurement of its own.
+    """
+    import json as _json
+    import re as _re
+
+    from evals.run import HISTORY, load_cases
+
+    adr = next((Path(__file__).parents[2] / "specs" / "decisions").glob("ADR-029-*.md"))
+    text = adr.read_text(encoding="utf-8")
+    one = text[text.index("### 1."):]
+    one = one[:one.index("\n### ")] if "\n### " in one else one
+    # ...at the case count this tree SHIPS. Matching any row at any count was the
+    # hole: a band lifted from the 207-case tree read back clean on the 213-case
+    # one, because 87.96s really was a local `fast` row — of a different suite
+    # (PR #57, round 3). A wall clock is only evidence for the tree it measured,
+    # which is the same rule `published-band-matches-the-ledger` item 1 (count)
+    # applies to the band itself; this is that rule applied to the prose that
+    # argues for it.
+    now = len(load_cases("fast"))
+    rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
+    measured = {r["wall_s"] for r in rows
+                if r["suite"] == "fast" and r.get("env", "local") == "local"
+                and r["total"] == now}
+    # Struck spans come out first, the same convention  and the
+    # criterion-5 sweep apply and for the same reason: this repo strikes a
+    # falsified claim in place with a dated pointer rather than deleting it, and
+    # a guard that reddens on preserved history is a guard someone turns off.
+    one = _re.sub(r"~~.*?~~", "", one, flags=_re.DOTALL)
+    # `(?!\d)` and NOT `(?![\d.])`: the old lookahead rejected a match whose next
+    # character is a period, so a seconds literal ENDING A SENTENCE was invisible
+    # — "the band was 91.23s and that is the spread" reddened correctly while
+    # "the band was 91.23s." sailed through (PR #57 R27). Sentence-final is the
+    # commonest position a number takes in prose, so the guard was blind exactly
+    # where it is most needed, and ADR-029 §1 now rests on it alone. Rejecting a
+    # following DIGIT is what the lookahead was for; a period is punctuation.
+    # The integer form (`105s`, a ceiling rather than a measurement) is still
+    # unmatched by construction — the pattern requires `\d+\.\d+`.
+    _SECONDS = _re.compile(r"(?<![\d.])(\d+\.\d+)s(?!\d)")
+    # ponytail: the self-exercise this guard needed. Both positions, one
+    # runnable line — an exercise set that only tries what the code was written
+    # for proves nothing, which is the lesson `_ceiling_drift`'s value-level
+    # rows already carry one check over.
+    assert _SECONDS.findall("was 91.23s and more") == ["91.23"], "mid-sentence"
+    assert _SECONDS.findall("was 91.23s.") == ["91.23"], "sentence-final (R27)"
+    assert _SECONDS.findall("ceiling 105s.") == [], "integer ceilings stay exempt"
+    quoted = {float(m) for m in _SECONDS.findall(one)}
+    unreadable = sorted(q for q in quoted if q not in measured)
+    return {"passed": not unreadable,
+            "wrong": [{"quoted_in_adr029_section_1_but_in_no_local_fast_row_at": now,
+                       "unreadable": unreadable, "rows_at_that_count": sorted(measured)}]
+            if unreadable else [],
+            "got": {"quoted": sorted(quoted), "cases": now,
+                    "rows_at_that_count": sorted(measured)}}
+
+
+def _check_adr029_scope_matches_the_suites() -> dict:
+    """ADR-029 §2's gate figures equal the suites the runner actually loads.
+
+    §2 is the paragraph that scopes this branch's evidence — it is what says the
+    gate is green LOCALLY and that CI has not run this tree, which is the whole
+    of R7's disclosure. It published `invariant 71/71, fast 207/207` against a
+    tree of 73 and 211: stale by four cases and two commits, in the one place
+    where stale and wrong are the same thing (PR #57 R14).
+
+    This is the third instance of one class in one milestone — a scalar in prose
+    that nothing reads back — and the second produced by repairing the first.
+    Everywhere else the answer was to state the relation instead of the number;
+    here the number has to stay, because "the gate was green on THIS tree" is a
+    claim about a specific pair of totals. So it is graded instead: every `N/M`
+    a suite name introduces in §2 must be that suite's size, twice over (a gate
+    result is all-pass by definition of being cited here).
+
+    Deliberately narrow, for the reason `adr029-variance-cites-the-ledger` is
+    narrow: §2 also carries CI's figures, which are hand-read off a named
+    workflow run and measure a different tree on purpose (ADR-019 §5, §7). Only
+    a figure attached to `fast` or `invariant` by name is claimed to be this
+    tree's, and only those are read back.
+    """
+    import re as _re
+
+    from evals.run import load_cases
+
+    adr = next((Path(__file__).parents[2] / "specs" / "decisions").glob("ADR-029-*.md"))
+    text = adr.read_text(encoding="utf-8")
+    two = text[text.index("### 2."):]
+    two = two[:two.index("\n### ")] if "\n### " in two else two
+    two = _re.sub(r"~~.*?~~", "", two, flags=_re.DOTALL)  # struck history, as everywhere here
+    wrong = []
+    # The self-exercise the sibling guards now carry, on the shape this one is
+    # about: a gate figure that ends a sentence. This pattern has no trailing
+    # lookahead so it was never blind there — the assert records that as a
+    # checked fact rather than an assumption, which is the whole lesson of
+    # PR #57 R27 and its repeat in `ci-numbers-are-derived`.
+    assert _re.findall(r"`fast`\s+(\d+)/(\d+)", "`fast` 213/213.") == [("213", "213")]
+    for suite in ("fast", "invariant"):
+        want = len(load_cases(suite))
+        for passed, total in _re.findall(rf"`{suite}`\s+(\d+)/(\d+)", two):
+            if (int(passed), int(total)) != (want, want):
+                wrong.append({"suite": suite, "adr029_section_2_says": f"{passed}/{total}",
+                              "suite_is": f"{want}/{want}"})
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {s: len(load_cases(s)) for s in ("fast", "invariant")}}
+def _check_ground_truth_endpoint_eval_only() -> dict:
+    """The inspector's ground-truth endpoint is reachable from the eval side and
+    from nowhere else (M41, CLAUDE.md rule 6).
+
+    Rule 6 allows exactly three pieces of per-site data anywhere: a start URL, a
+    rate limit, and a ground-truth API endpoint. M41 uses the third — the
+    sec-10k inspector's `/api/extract/fixture` supplies the hand-labelled values
+    behind the `sec10k-*` and `live-sec10k-*` cases. The rule that makes that
+    legitimate rather than a hole is WHERE it may be reached from: the eval
+    adapter and the case files, never the code that decides what the agent
+    does. An executor that could ask a site's API what the answer is would
+    "pass" every case on that domain without reading the page, and no other
+    check here would notice.
+
+    Two different claims, because the two strings are allowed in different
+    places. The ENDPOINT path may appear only in `eval_adapter.py` among the
+    package's modules. The HOST may additionally appear in `server.py`, which
+    carries a start URL per declared matrix row in `EXAMPLES` — a start URL is
+    the FIRST thing rule 6 allows, and `ui-examples-cover-matrix` requires one
+    for every live row. Everywhere else under `src/browser/` it is a leak.
+
+    Both rules are ALLOWLISTS, not denylists, and that is the repair a cold
+    review earned: the host rule first named the six execution-policy modules
+    explicitly, which left `cli.py` and `mutate.py` free to carry per-site
+    knowledge with nothing red — and the host is the string a navigation recipe
+    would travel in. Naming what may is a rule a new module cannot walk around;
+    naming what may not is a list somebody forgets to extend.
+
+    Data, not code: the committed page snapshot under `fixtures/` is a fixture
+    like `shop.html`, and `glob("*.py")` never reaches it.
+    """
+    ENDPOINT, HOST = "/api/extract/", "whaleforce-sec10k.zeabur.app"
+    ENDPOINT_OK = {"eval_adapter.py"}
+    HOST_OK = {"eval_adapter.py", "server.py"}
+    pkg = Path(__file__).parent
+    endpoint_leaks, host_leaks = [], []
+    for f in sorted(pkg.glob("*.py")):
+        text = f.read_text(encoding="utf-8")
+        if ENDPOINT in text and f.name not in ENDPOINT_OK:
+            endpoint_leaks.append(f.name)
+        if HOST in text and f.name not in HOST_OK:
+            host_leaks.append(f.name)
+    # The other direction, and the reason this is not a one-sided ban: the
+    # ground truth still has to come from somewhere a reader can retrace. Every
+    # inspector case has to name the endpoint its expected value came from, so a
+    # `sec10k-*` case whose ground truth is hand-waved is red here before it can
+    # be green in a run. An assertion that never sees the string it governs is
+    # decoration.
+    # Keyed on the case's own `domain` tag, not on its filename: a filename
+    # pattern is a naming convention, and renaming a case to `inspector-*.json`
+    # would have dropped it out of this scan in silence while `bool(cases)`
+    # still passed on the rest (cold review). And only the cases that CARRY a
+    # hand-labelled value — an observation-shape case asserts what the planner
+    # was shown and has no ground truth to source.
+    cases, fed_to_the_executor = [], []
+    for c in sorted((Path(__file__).parents[2] / "evals").rglob("*.json")):
+        raw = c.read_text(encoding="utf-8")
+        try:
+            case = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        # The direction the module scan cannot see, and the one the rule is
+        # actually about (PR #58 R2). A case's `input` is what the RUN is given:
+        # `url`, `stub_plan[].value`, `target`, the task text. Put the
+        # ground-truth endpoint there and the executor fetches the answer
+        # instead of reading the page — every verifier check passes, because the
+        # value really is on the "page" — while this check stayed green and the
+        # third conjunct below actively rewarded the string's presence. Scanning
+        # the whole `input` subtree rather than an allowlist of field names, for
+        # the same reason the two scans above became allowlists: a new field a
+        # future case shape adds is inside `input` and needs no maintenance
+        # here. Everything else in a case file — `provenance`, `triage`,
+        # `expect` — is a record for a reader and is untouched.
+        fed = json.dumps(case.get("input", {}))
+        if ENDPOINT in fed or f"{HOST}/api/" in fed:
+            fed_to_the_executor.append(c.name)
+        if case.get("domain") == HOST and "answer" in case.get("expect", {}):
+            cases.append((c.name, raw))
+    uncited = [n for n, raw in cases if "/api/extract/fixture" not in raw]
+    # One key per conjunct, and that is load-bearing outside this function:
+    # `len(wrong)` is published as `gt_conjuncts` by `_run_doc_counts_case` and
+    # quoted back out of ADR-030 §The ground-truth-endpoint boundary and
+    # support-matrix D30, so a NEW conjunct needs its own key or the count those
+    # two documents are graded against silently stays put (PR #58 R10).
+    # `bool(cases)` below is the non-vacuity precondition, not a conjunct: it
+    # carries no key and is deliberately not counted.
+    return {"passed": not endpoint_leaks and not host_leaks and not fed_to_the_executor
+                      and bool(cases) and not uncited,
+            "wrong": {"endpoint_in_production_module": endpoint_leaks,
+                      "host_outside_the_allowlist": host_leaks,
+                      "ground_truth_endpoint_fed_to_the_executor": fed_to_the_executor,
+                      "cases_not_citing_the_ground_truth_endpoint": uncited},
+            "got": {"cases_scanned": len(cases)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
+              "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
+              "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
+              "adr029-variance-cites-the-ledger": _check_adr029_variance_cites_the_ledger,
+              "driver-tools-match-the-executor": _check_driver_tools_match_the_executor,
               "examples-cover-matrix": _check_examples_cover_matrix,
               "inv3": _check_inv3, "supersede-dangling": _check_supersede_dangling,
               "evidence-window-miss-bounded": _check_evidence_window_miss_bounded,
@@ -5154,7 +5775,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
-              "narrowing-fails-closed": _check_narrowing_fails_closed}
+              "narrowing-fails-closed": _check_narrowing_fails_closed,
+              "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

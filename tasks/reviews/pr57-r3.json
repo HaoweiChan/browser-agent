@@ -1,0 +1,38 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "round": 3,
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "FIRED — three review rounds without approval. Escalated to the human; no round 4 without a human ruling.",
+  "scope": "repair diff efa607c..HEAD plus standing findings; not a fresh full-diff sweep",
+  "note": "PR number 56 is the expected number; the push to origin remains denied by the harness permission classifier, so the PR still does not exist and CI has never run this tree.",
+  "gate": {
+    "invariant": "74/74 = 1.000, wall 14.16s, $0.0000",
+    "fast": "213/213 = 1.000, wall 88.4s, $0.0000",
+    "run_by": "orchestrator, independently, on a clean tree",
+    "baseline_file": "unchanged from main",
+    "scope": "local environment only; CI unmeasured (R7)"
+  },
+  "round_2_outcome": "4 repaired, 0 rejected, 2 routed to debt (T-M42-15, T-M42-16), plus T-M42-14 carrying R13's accepted cost. R13, R14, R15, R16 verified fixed this round.",
+  "open_standing": ["R7"],
+  "findings": [
+    {
+      "id": "R19",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-028, the ADR of record for M42, still rules that `page_changed`'s input is NOT frames-widened — the exact opposite of what this repair shipped — and the new debt row T-M42-14 asserts that ADR-028 declares the accepted cost, which it does not.",
+      "evidence": "specs/decisions/ADR-028-m42-loop-mode.md:304-309 reads \"`page_changed` — the sole evidence behind the anti-laundering guard, calibrated on main-frame text — would flip True from a ticking third-party iframe ... Evidence is widened; a calibrated guard's input is not.\" At HEAD both sides of that comparison are frames-aware: src/browser/agent.py:1222 `before = (await page_text(page)` and src/browser/agent.py:1279 `after = await page_text(page)`, with `page_text(page, frames: bool = True)` at src/browser/observe.py:119. The repair diff touched ADR-028 only at lines 8 and 255 (case-count scalars for R16); item 5 was not updated. tasks/TODO.md:477-479 nevertheless states \"both halves are now declared — in `observe.page_text`'s docstring, in the `attempt` comment, and in ADR-028\", so the debt row that is supposed to carry R13's accepted cost points a reader at a document that states the rejected position. ADR-028's `Enforced by` list (:8) also names neither `replan-cannot-launder-noop-action-in-a-frame` nor `replan-after-an-iframe-only-change-is-not-laundering`, the pair the author argues IS the specification of the field. Confirmed independently by the orchestrator: ADR-028:309 reads \"Evidence is widened; a calibrated guard's input is not\" while agent.py:1222 calls `page_text(page)` with frames defaulting True.",
+      "repro": "sed -n '304,309p' specs/decisions/ADR-028-m42-loop-mode.md ; grep -n 'page_text(page)' src/browser/agent.py ; grep -n 'and in ADR-028' tasks/TODO.md",
+      "acceptance": "ADR-028 item 5 records the shipped ruling — `page_changed` compares every frame on both sides, pinned by the pair `replan-cannot-launder-noop-action-in-a-frame` / `replan-after-an-iframe-only-change-is-not-laundering`, with the accepted false positive (a self-mutating frame) named and pointed at T-M42-14 — and the two cases appear in its `Enforced by` list; or T-M42-14:479 drops the ADR-028 claim and names only the two places that actually declare it. Ideally an invariant reads the ADR sentence back against `agent.py`'s call so this cannot drift a fourth time."
+    },
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The band was republished to the 213-case ledger rows in ADR-019 section 2 but ADR-029 — the ADR that owns the 105s ruling — still derives 105 from the 207-case band, so the two documents of record now publish different values for the same graded quantity, and ADR-019:237 asserts as fact something the committed ledger falsifies.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:79 and :235 (republished by this diff) carry `local fast at 213 cases, ts 20260825-195505, 88.42s` and `88.42 x 1.15 = 101.68 -> 105`. Two lines later, unchanged, :237 says the ceiling was \"derived from the slowest row this tree has recorded (87.96s at 207 cases, still in the ledger)\" — 87.96s is a 207-case row; the slowest row this tree has recorded is 88.42s. specs/decisions/ADR-029-local-fast-ceiling-105.md:38 claims \"87.96s measured, x 1.15 = 101.15\" and :42 claims \"the committed rows at this count span **82.18s to 87.96s**\". Confirmed independently by the orchestrator: the committed local `fast` rows at 213 cases are [87.95, 88.01, 88.27, 88.4, 88.42]; 82.18 and 87.96 are 207-case rows and neither exists at the shipped count. Nothing reddens: `published-band-matches-the-ledger` reads only ADR-019 (src/browser/eval_adapter.py:475), and `adr029-variance-cites-the-ledger` (src/browser/eval_adapter.py:5288-5296) only asks whether a seconds literal equals SOME local `fast` row's `wall_s` at ANY case count — so a band lifted from a smaller tree passes it. The committed ceiling is unaffected (both derivations round to 105); the published evidence for it is not.",
+      "repro": "Filter evals/report/history.jsonl to suite=fast, env=local, total=213 and print wall_s -> [87.95, 88.01, 88.27, 88.4, 88.42]. Then grep -n '87.96\\|82.18' specs/decisions/ADR-029-local-fast-ceiling-105.md specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md -> ADR-029:38, ADR-029:42, ADR-019:237.",
+      "acceptance": "ADR-029 section 1's band figures and its \"rows at this count\" span are the rows at the shipped case count (max 88.42s, spanning 87.95s-88.42s) or are explicitly labelled as the derivation taken at the 207-case count, and ADR-019:237 stops calling 87.96s \"the slowest row this tree has recorded\"; and `adr029-variance-cites-the-ledger` (or a sibling item of `published-band-matches-the-ledger`) reads section 1's literals back against rows AT THE SHIPPED CASE COUNT, watched red on today's text first, so a smaller tree's band cannot satisfy it again."
+    }
+  ]
+}

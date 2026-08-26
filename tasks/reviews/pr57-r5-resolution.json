@@ -1,0 +1,37 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "pr": "https://github.com/HaoweiChan/browser-agent/pull/57",
+  "round": 5,
+  "scope": "frozen to R7",
+  "counts": { "fixed": 0, "partial": 1, "rejected": 0, "debt": 0 },
+  "findings": {
+    "R7": {
+      "state": "partially closed — disclosure corrected, ceiling derivation blocked on samples",
+      "closed_now": "ADR-029 §2 no longer says CI is unmeasured, because it is not. It cites eval-gate run 32937020758 (commit 14a6a7b, branch task/M42, 2026-08-26), records that every case passed on CI and that the wall clock exceeded the declared ceiling, and scopes the branch's evidence as what it actually is: correctness green in BOTH environments, wall-clock gate green locally and red on CI. The old local-only scoping is superseded and said to be superseded.",
+      "not_closed": "EVAL_WALL_BUDGET_S_FAST is untouched at 90 and ADR-019 §5's table is untouched.",
+      "why_not": "The workflow number and §5's table are chained by `ci-numbers-are-derived`: it refuses §5's table at any length other than four rows (`len(rows) != 4` -> failed), and it requires the workflow's declared ceiling to equal `_band_rule(max(table))`. Setting the workflow to a value §5's table does not derive turns that check red, so the ceiling cannot move until this tree's measurement is IN that table — and the table's form is four attempts of one run. Run 32937020758 supplied one attempt.",
+      "derived_value_from_the_single_sample": {
+        "measurement": "105.14s, run 32937020758, fast 213/213",
+        "arithmetic": "105.14 x 1.15 = 120.91, rounded up to a multiple of five -> 125",
+        "rule": "ADR-013 Decision 3, applied through `eval_adapter._band_rule`, the same function `ci-numbers-are-derived` uses",
+        "cross_check": "The same function reproduces §5's existing published derivations from its own maxima: 74.06 -> 90 and 16.47 -> 20. So the rule is being applied identically, not reinterpreted.",
+        "status": "NOT published anywhere. Reported here for the orchestrator only; it is one draw and §5's form wants four."
+      },
+      "what_unblocks_it": "Three more attempts of eval-gate run 32937020758 on commit 14a6a7b — i.e. re-runs of that same workflow run, not new runs on later commits, because §5's form is four attempts of ONE run on ONE commit and its margin argument is the spread across them. With those four `[eval] cost ... wall Ns` lines I can fill §5's table, derive from its maximum, set the workflow, and close R7 in one commit.",
+      "invariant_ceiling": "Left at 20, as instructed. CI's invariant run is not reported as over budget in the log supplied, and 20 is what §5's table already derives (16.47 x 1.15 = 18.94 -> 20).",
+      "considered_and_refused": [
+        "Weakening `ci-numbers-are-derived` to accept a 1-row table. That guard's four cells exist because two of §5's eight were once unread (PR #41 R14); loosening a check in order to ship a weaker sample is the half-fix this loop has been punishing for five rounds.",
+        "Publishing 125 from one draw. §5's own margin argument rests on the runner's 6.8% spread across four attempts, and ADR-021 called a single CI sample on this tree the next coin flip.",
+        "Copying the local 105. The orchestrator named this and is right: the collision would be a coincidence and a reader could not tell which number was derived and which was borrowed.",
+        "Restating 105.14s in ADR-029 §2 prose. CI wall clocks have one publication point, ADR-019 §5, which `ci-numbers-are-derived` reads — the rule R20-R23 arrived at."
+      ]
+    }
+  },
+  "gate": {
+    "invariant": "74/74 = 1.000, wall 14.21s, $0.0000",
+    "fast": "213/213 = 1.000, wall 87.92s, $0.0000",
+    "ci": "fast 213/213 = 1.000 on run 32937020758 — correctness green; wall clock over the declared 90s, which is the open item",
+    "baseline_file": "unchanged from main"
+  }
+}

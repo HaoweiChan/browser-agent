@@ -20,16 +20,24 @@ jobs:
       # at 15.06s and 15.22s with 46/46 passing (PR #29 R15).
       #
       # Measured here, on this runner, not projected from local numbers: four
-      # attempts of one commit (d173340, 116 fast / 48 invariant cases) gave
-      #   invariant  16.47 / 15.85 / 14.80 / 15.60s
-      #   fast       69.54 / 74.06 / 69.37 / 74.04s
+      # attempts of one run (32937020758 on 14a6a7b, 213 fast / 74 invariant
+      # cases) gave
+      #   invariant  18.59 / 18.65 / 18.88 / 18.72s
+      #   fast       105.14 / 101.73 / 106.75 / 107.89s
       # ADR-013 Decision 3's rule is the slowest observed run +15%, rounded up
-      # to a multiple of five: 16.47 x 1.15 = 18.9 -> 20, and
-      # 74.06 x 1.15 = 85.2 -> 90. `fast`'s old 80 was the next coin flip —
-      # 74.06s against it is 8% of margin on a runner whose own spread is 6.8%
-      # (PR #29 R19). `fast-wall-clock-budget` grades both values declared here.
-      EVAL_WALL_BUDGET_S_FAST: "90"
-      EVAL_WALL_BUDGET_S_INVARIANT: "20"
+      # to a multiple of five: 18.88 x 1.15 = 21.71 -> 25, and
+      # 107.89 x 1.15 = 124.07 -> 125. Every one of those attempts was
+      # correctness-green (213/213, 74/74) and every one was over the 90s this
+      # file used to declare, which is what moved these numbers: the breach was
+      # in the budget, never in the results. `invariant` moves with it although
+      # it was never over budget — its tree grew 48 -> 74 cases, and deriving
+      # one suite from this table while leaving the other on the old one would
+      # publish two trees in one table (PR #57 R7). ADR-019 §5 is the graded
+      # source for all eight cells above; `ci-numbers-are-derived` compares them
+      # cell-by-cell against it, and `fast-wall-clock-budget` grades both values
+      # declared below.
+      EVAL_WALL_BUDGET_S_FAST: "125"
+      EVAL_WALL_BUDGET_S_INVARIANT: "25"
       # Which environment measured a history row (ADR-019 §7). The `invariant`
       # step below appends its row to this job's copy of the ledger before the
       # `fast` step grades ADR-019 §3's band against it. Untagged, that row is

@@ -136,3 +136,12 @@ The loop driver's exact prompt/tool schemas, the new trace fields, the step
 cap's number, which frontier model joins the allowlist, and whether loop mode
 becomes the live default — each belongs to M42/M43/M44's own ADRs, decided
 with implementation evidence in hand.
+
+*Answered 2026-08-26 by ADR-028 (M42), except the live default, which is still
+M44's:* the schemas and the driver prompt are in ADR-028 §1/§7, the trace gains
+NO fields (§7), the caps are `{actions 40, llm_tokens 400k, llm_usd $5}` and are
+injectable so they can be graded (§6), and the model is `anthropic/claude-opus-5`
+at 3.1x/7.8x this ceiling, frozen with its price (§8). Decision 5's re-homing is
+§2, and it came out narrower than this ADR anticipated in one respect worth
+recording: both guards are the SAME functions asked at a second anchor, not
+loop-mode reimplementations of them.

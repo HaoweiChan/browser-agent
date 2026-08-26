@@ -1,0 +1,42 @@
+{
+  "task": "M42",
+  "branch": "task/M42",
+  "pr": "https://github.com/HaoweiChan/browser-agent/pull/57",
+  "round": 4,
+  "authorised_by": "human ruling: option A a second time — one more bounded round, one structural fix",
+  "scope": "frozen — one structural change and its four consequences; nothing else touched",
+  "structural_change": "ADR-019 §2's band bullet is the ONE place this repo publishes the band figure and the arrow it derives, because it is the one place `published-band-matches-the-ledger` grades (item 2 cited-run, item 5 derivation, item 7 readme-row for README's table). Every other mention now cites it and states no derived fact of its own. After the change, a sweep for band literals across specs/, README.md and docs/analysis.md returns exactly three hits and all three are inside that graded set.",
+  "gate": {
+    "invariant": "74/74 = 1.000, wall 14.28s, $0.0000",
+    "fast": "213/213 = 1.000, wall 87.61s, $0.0000",
+    "environment": "LOCAL. CI is now running this tree for the first time; that measurement is the orchestrator's to hand over and R7 closes as its own step.",
+    "baseline_file": "unchanged from main"
+  },
+  "counts": { "fixed": 4, "rejected": 0, "debt": 0 },
+  "findings": {
+    "R20": {
+      "state": "fixed",
+      "change": "specs/decisions/INDEX.md:38 stops retyping a wall clock. It no longer carries `87.96s x 1.15 = 101.15` (a 207-case derivation on a 213-case tree) or any other figure; it says the number is derived from the committed ledger and published once, in ADR-019 §2's band bullet, which grades it.",
+      "note": "The round-3 sweep never touched this file — `git diff 5ffe36f..HEAD -- specs/decisions/INDEX.md` was empty, as the reviewer verified. Under the structural rule it is not a scalar to correct but a restatement to remove."
+    },
+    "R21": {
+      "state": "fixed",
+      "change": "ADR-019:237-238 now reads: derived from the band source cited above — a committed row at the shipped case count whose derived ceiling is the one the ledger's maximum derives, which is item 3 (same-ceiling) and NOT an identity, since publishing below the maximum is green and declared (§6) and §3 says the maximum itself is deliberately not written here. It claims nothing about which row is largest.",
+      "note": "The old clause made three false or contradicted claims at once: slowest row, ledger maximum, and 'by construction'. The 105 ruling is untouched — 88.42 and 89.54 both derive it, which is exactly why the sentence had to stop asserting which of them it was."
+    },
+    "R22": {
+      "state": "fixed — closed for free by the structural change",
+      "change": "ADR-029:42's 'spread across most of a second' is gone. No magnitude, no endpoint, no wall clock: the paragraph says the rows differ and says why no number for that difference belongs in prose — the ledger gains a row on every gate run, the review loop's own verification runs included, so any sentence describing its maximum, spread or endpoints is falsified by the act of checking it.",
+      "routed_as": "debt in the round-4 artifact; closed instead, as the brief allowed"
+    },
+    "R23": {
+      "state": "fixed — closed by construction, no new check written",
+      "change": "ADR-029 §1 no longer publishes the band source, so there is no literal for the 88.01 substitution to land on. `adr029-variance-cites-the-ledger` now reports `quoted: []` and remains as the guard that reddens the moment §1 acquires a wall clock that is not a row at the shipped case count.",
+      "routed_as": "debt in the round-4 artifact; the brief said close it if the structural fix does so for free, and it does"
+    }
+  },
+  "open_not_mine": {
+    "R7": "CI is running this tree for the first time now that the push is unblocked. Not acted on, not guessed; .github/workflows/eval.yml untouched and CI's ceiling still 90."
+  },
+  "note_for_the_orchestrator_sweep": "New prose in ADR-029 §1 cites this class as 'PR #57 R5, R14-R16, R19-R23', matching every existing artifact and the `Origin: PR #57` lines in tasks/TODO.md. Left consistent with the tree rather than half-renamed, for the #56 -> #57 sweep you said you would run yourself."
+}
