@@ -1,0 +1,36 @@
+{
+  "id": "resolver-near-anchor-is-case-insensitive",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the total on the case-twins order summary?",
+    "fixture": "case-twins.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "cell",
+          "near": "TOTAL"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "10",
+    "trace_actions": [
+      "navigate",
+      "extract"
+    ]
+  },
+  "provenance": "PR #60 R5: T-M42-20 fixed half the round trip. A `near` anchor is quoted off the SAME observation a name is, so on a `text-transform: uppercase` table the only spelling a planner can write is the shouted one — and `_nearest`'s exact pass was still `get_by_text(near, exact=True)`, case-sensitive. `case-twins.html`'s summary table is uppercased by stylesheet only (`<th>Total</th>` renders as `TOTAL`), with `Subtotal of Total line` beside it as the substring trap that keeps the exact pass load-bearing. The fix reuses `_whole_string` for that pass, so it stays whole-string — the substring pass is still a separate, later rung and `near-anchor-substring` still grades what it always did.",
+  "triage": {
+    "class": "invariant-gap",
+    "red_first": "on `fbe304b`: `ResolveError: proximity to 'TOTAL' does not identify one element for {'role': 'cell', 'near': 'TOTAL'}` — the exact pass found 0 and the substring pass found 2 (`Total` and `Subtotal of Total line`). The spelling that DID resolve, `near: 'Total'`, is a string the observation never contains.",
+    "note": "This closes the anchor's exact pass only; `resolve_advertised` still feeds names, not anchors, so nothing grades the anchor half of the round trip generically. Declared in docs/support-matrix.md rather than left implicit."
+  }
+}

@@ -32,6 +32,7 @@ per process) so eval and production exercise the same serving path.
 
 import asyncio
 import atexit
+import collections
 import json
 import re
 import socket
@@ -2076,17 +2077,48 @@ def _run_observe_case(case: dict) -> dict:
             # different accessible-name engines disagreed for a milestone
             # (T-M42-20). The name goes back VERBATIM — anything else would
             # grade a normalisation the planner does not perform.
+            #
+            # "Did not raise" is NOT the property. A name advertised for element
+            # A that resolves onto element B round-trips green while grading the
+            # opposite of what it claims: a host page and an iframe both
+            # carrying `button "Continue"` are advertised as TWO elements, and
+            # `resolve` hands back the main frame's for both, because tiers are
+            # built main-frame-first (PR #60 R3). So the check is a COUNT
+            # identity: however many elements the observation advertises under
+            # one (role, name), that many must be reachable under it. Counting
+            # rather than comparing element handles because `observe` returns
+            # {role, name} dicts and has no handle to compare against — the
+            # ceiling is that k elements could still be the wrong k, which no
+            # observation this module produces can currently distinguish.
+            advertised = collections.Counter(
+                (e["role"], e["name"]) for e in obs["elements"] if e["name"])
+            # `"*"` means every role the observation carries, so the check keeps
+            # covering roles nobody has thought of yet; `resolve_advertised_except`
+            # is where a KNOWN disagreement is named out loud instead of being
+            # quietly left off a hand-kept list.
+            want_roles = case["expect"].get("resolve_advertised", [])
+            skip_roles = case["expect"].get("resolve_advertised_except", [])
             unresolvable = []
-            for role in case["expect"].get("resolve_advertised", []):
-                for e in obs["elements"]:
-                    if e["role"] != role or not e["name"]:
-                        continue
-                    target = {"role": e["role"], "name": e["name"]}
-                    try:
-                        await resolve(page, target)
-                    except Exception as exc:
-                        unresolvable.append({"target": target,
-                                             "error": f"{type(exc).__name__}: {exc}"})
+            for (role, nm), want_n in sorted(advertised.items()):
+                if role in skip_roles or not ("*" in want_roles or role in want_roles):
+                    continue
+                target = {"role": role, "name": nm}
+                try:
+                    # `many=True`: the count is the question. No `task`/`action`
+                    # either, so `may_narrow` is False — a narrowing is a
+                    # RECOVERY, and an invariant that only holds after one is
+                    # not the invariant this case claims.
+                    loc, _tier, _fold = await resolve(page, target, many=True)
+                    got_n = await loc.count()
+                except Exception as exc:
+                    unresolvable.append({"target": target,
+                                         "error": f"{type(exc).__name__}: {exc}"})
+                    continue
+                if got_n != want_n:
+                    unresolvable.append({"target": target, "advertised": want_n,
+                                         "resolved": got_n,
+                                         "error": "the observation advertises this name for "
+                                                  f"{want_n} element(s); resolve reaches {got_n}"})
             return obs, unresolvable
         finally:
             await ctx.close()
@@ -2366,6 +2398,15 @@ def _run_fixture_case(case: dict) -> dict:
     if "budgets" in exp:
         got_budgets = {k: result["budgets_spent"].get(k) for k in exp["budgets"]}
         checks["budgets"] = got_budgets == exp["budgets"]
+    # An UPPER BOUND on the run's own wall clock, where `budgets` is an equality
+    # and a duration is never equal twice. It exists for one shape: a step whose
+    # correctness and whose COST are separate claims, so a fix that keeps the
+    # right failure class while paying 10s for it is still red (PR #60 R4 —
+    # `select_option`'s wait was 10.0s per never-filling control, correct and
+    # ungraded, inside a wall-clock-gated suite). Deliberately loose: it catches
+    # an order-of-magnitude regression, not jitter.
+    if "max_ms" in exp:
+        checks["max_ms"] = result["budgets_spent"].get("ms", 0) <= exp["max_ms"]
     # Generic verdict-checks probe (M39/ADR-023), same shape as `budgets`
     # above: a case names the `verdict.checks` fields it cares about and their
     # exact values. `judge_attempts` lives here and nowhere else — a status

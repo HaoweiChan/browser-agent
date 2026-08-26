@@ -1,0 +1,37 @@
+{
+  "id": "resolver-case-twin-index-picks-the-exact-spelling",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What does the first 'Add to cart' link on the case-twins page say?",
+    "fixture": "case-twins.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "Add to cart",
+          "index": 0
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Catalogue row CTA",
+    "trace_actions": [
+      "navigate",
+      "extract"
+    ]
+  },
+  "provenance": "PR #60 R1, the HIGH finding: T-M42-20 widened both name tiers to case-insensitive, and `_resolve_in`'s `index` branch selects from the match SET before the `n == 1` uniqueness check or any ambiguity bookkeeping runs — so widening the matcher silently moved which element `index` indexes. `case-twins.html` puts `<a id=promo>ADD TO CART</a>` (literally uppercase in the MARKUP, which is what makes it a different string to the locator engine) in document order before `<a id=rowcta>Add to cart</a>`. The fix is ordering, not a new guard: each name tier is now two passes, case-exact first and case-folded only if that finds nothing, so a page that spells the name the plan's way resolves byte-for-byte as it did before T-M42-20 and only a page that spells it no other way reaches the fold.",
+  "triage": {
+    "class": "regression",
+    "red_first": "on `fbe304b` the run succeeds and answers `Promo banner offer` — the promo banner, whose accessible name is `ADD TO CART`. Base `6b016b5` answers `Catalogue row CTA`. As a case: `answer 'Promo banner offer' != expected 'Catalogue row CTA'`. At the resolver: `resolve({'role':'link','name':'Add to cart','index':0})` returned `['promo']` on fbe304b and `['rowcta']` on base and after the fix.",
+    "note": "Each twin is named by `aria-label` and READS something else, so the two answers differ by more than case — `verifier.normalize` folds case, so a fixture whose twins were named by their own text would pass on the wrong element and grade nothing (found while writing this case). `extract_all` grew the same way and is covered by the same ordering fix rather than by a third case; the before/after measurement is in tasks/reviews/pr60-r1-resolution.json."
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "id": "action-select-option-never-filled-fails-loud",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "Select the 2019 archive in the picker and report what is selected.",
+    "fixture": "late-options.html",
+    "stub_plan": [
+      {
+        "action": "select_option",
+        "target": {
+          "role": "combobox",
+          "name": "Archive"
+        },
+        "value": "2019"
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Selection"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "trace_actions": [
+      "navigate",
+      "select_option"
+    ],
+    "max_ms": 4000
+  },
+  "provenance": "PR #60 R4: the wait T-M42-20 added to `select_option` had no case on its failure side, and the two cases the original case's `note` named as its ablations both run against `loop-lab.html`, whose `<select>` carries three in-document `<option>`s — so `opts` is never empty there and the branch is dead in both. Measured on a control that never fills: 10.0s per step with the `TimeoutError` swallowed, inside a wall-clock-gated suite and graded by nothing. `late-options.html` now carries a second `<select aria-label=\"Archive\">` that is empty at load with no script behind it at all, so the wait is paid in full and this case is what bounds it. The wait is now `agent.SETTLE_BUDGET_MS` (2s) — the same budget `navigate` and every postcondition already get — rather than the 10s the select call below it uses.",
+  "triage": {
+    "class": "coverage",
+    "red_first": "on `fbe304b` the status is already right and the COST is not: the run is `failure:act` after 10.11s (`budgets.ms` 10105), because the wait was `timeout=10_000` and the `TimeoutError` was swallowed. As a case: `max_ms` False (10105 > 4000). That is the whole finding — a correct failure class nobody was paying attention to the price of — so the case pins the price as well as the class, and `max_ms` exists for exactly that shape.",
+    "note": "`invariant` and not `fast` on purpose: it costs a full 2s and the `fast` band ships under one rounding step of headroom (T-M42-20-D3). It is still gated — the gate runs both suites — and `invariant`'s band has room. It is the second invariant-only case in the repo."
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "resolver-case-twin-near-picks-the-exact-spelling",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What does the 'Save for later' link say?",
+    "fixture": "case-twins.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "Save for later",
+          "near": "Widget A"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "The real save link",
+    "trace_actions": [
+      "navigate",
+      "extract"
+    ]
+  },
+  "provenance": "PR #60 R1, second half. `near` returns from `_resolve_in` at the same point `index` does — before uniqueness and before the ambiguity bookkeeping — so a case-twin planted INSIDE the anchor's own row steals a proximity query from the element the plan meant. `case-twins.html` puts `<a id=twin>SAVE FOR LATER</a>` in Widget A's paragraph and `<a id=real>Save for later</a>` further down; on `fbe304b` proximity picked the twin because the folded tier had gathered it as a candidate. Exact-first means the twin is not a candidate at all while an exact-case match exists, so proximity chooses among the elements the plan actually named.",
+  "triage": {
+    "class": "regression",
+    "red_first": "on `fbe304b` the run succeeds and answers `Twin inside Widget A` — the twin whose accessible name is `SAVE FOR LATER`, sitting inside the anchor's own paragraph. Base `6b016b5` answers `The real save link`. As a case: `answer 'Twin inside Widget A' != expected 'The real save link'`. At the resolver: `['twin']` on fbe304b, `['real']` on base and after the fix.",
+    "note": "The document-order layout is load-bearing exactly as `forum-thread.html`'s is: moving the twin out of Widget A's paragraph disarms this case silently, because then the real link is nearest either way."
+  }
+}

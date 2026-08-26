@@ -80,18 +80,23 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 222 cases, ts `20260826-165306`, **90.25s**, 219/222
-  (`evals/report/20260826-165306-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 227 cases, ts `20260826-175616`, **89.44s**, 225/227
+  (`evals/report/20260826-175616-fast.json`; `dirty: true`, for the reason the
   next paragraph gives, and red — the three failures are `docs-numbers-are-derived`,
   `published-band-matches-the-ledger` and `adr029-scope-matches-the-suites`
   themselves, mid-refresh at the moment
   this row was recorded. That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
-  the addition forces. Here the addition is T-M42-20's two cases —
-  `observe-uppercase-label-name-resolves` and
-  `action-select-option-waits-for-fetch-painted-options` — the red-first pair for
-  the defect that left M42's headline live clause unmet. The stamp is UTC, as
+  the addition forces. Here the addition is T-M42-20's cases: two in the first
+  commit — `observe-uppercase-label-name-resolves` and
+  `action-select-option-waits-for-fetch-painted-options`, the red-first pair for the
+  defect that left M42's headline live clause unmet — and five more in PR #60's
+  round-1 repair, four of them red-first cases for regressions the FIRST fix
+  introduced. The suite grew by five and got FASTER (90.27s -> 89.44s), because the
+  same round cut `LATE_OPTIONS_DELAY_S` 1.0s -> 0.5s and moved the select step's wait
+  from 10s to `SETTLE_BUDGET_MS`; the sixth new case is `invariant`-only for that
+  reason (T-M42-20-D3). The stamp is UTC, as
   every row written since §7 is. How many rows the ledger holds at this count,
   and what its maximum is, are deliberately not written here — see §3. Each
   re-derivation of this section is exactly the cost `T-M39-11` names, and PR #57
@@ -119,8 +124,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 222 cases, 219/222) and
-(restated — `invariant`: 76 cases, 73/76) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 227 cases, 225/227) and
+(restated — `invariant`: 77 cases, 75/77) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -240,7 +245,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 90.25 × 1.15 = 103.79 → **105**, which is exactly the
+five — gives 89.44 × 1.15 = 102.86 → **105**, which is exactly the
 committed 105. The ceiling was moved 90 → 105 by ADR-029, derived
 from the band source cited above — a committed row at the shipped case count
 whose derived ceiling is the one the ledger's maximum derives, which is item 3
@@ -265,14 +270,20 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 76 cases, ts `20260826-132022`, **13.76s**, 73/76
+- Band source — local `invariant` at 77 cases, ts `20260826-175637`, **16.37s**, 75/77
   (`dirty: true`, and red, for the same structural reason §2's is and stated the
   same general way: a tree reaches its new case count only while the cases are
-  uncommitted, so 76 exists only while M45's invariant-tagged addition is, and
-  the two red cases — `docs-numbers-are-derived` and
+  uncommitted, so 77 exists only while PR #60's invariant-tagged addition is —
+  `action-select-option-never-filled-fails-loud`, which is `invariant`-only
+  because it costs a full 2s waiting out a `<select>` that never fills and the
+  `fast` band has no room for that (T-M42-20-D3). It is the second invariant-only
+  case in the repo. The two red cases — `docs-numbers-are-derived` and
   `published-band-matches-the-ledger` — are the two this republish clears; the
   run is red, so ADR-012 wrote a per-case report for it and this bullet cites
-  the file the way §2's does — `evals/report/20260826-132022-invariant.json`.
+  the file the way §2's does — `evals/report/20260826-175637-invariant.json`.
+  **This band moved 13.76s -> 16.37s for one case**, which is what a 2s case
+  costs in a 14s suite and is stated rather than smoothed: the rule still gives
+  20, but the headroom it leaves is now the thing to watch, not the ceiling.
   As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
@@ -331,7 +342,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 13.76 × 1.15 = 15.82 → **20**, which is the committed
+The same rule gives 16.37 × 1.15 = 18.83 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

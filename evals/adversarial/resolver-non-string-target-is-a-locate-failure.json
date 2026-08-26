@@ -1,0 +1,30 @@
+{
+  "id": "resolver-non-string-target-is-a-locate-failure",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the inventory turnover?",
+    "fixture": "hello.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "text": 4.82
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "PR #60 R6, a regression T-M42-20 introduced. `_whole_string` called `.split()` unguarded, so a JSON number in `name`/`text` — which `agent.py`'s plan lint does not catch, because it validates target KEYS and not their values — raised `AttributeError` before any Playwright call. `agent.classify` has no branch for it and labelled the step `act`, sending a bad plan down the action ladder; base `6b016b5` raised `ResolveError` and classified it `locate`. Failure class is a graded output (INV-1, diagnosis accuracy), so this is a wrong answer to a question the harness scores. Refused in `_whole_string` rather than at each tier because both tiers route through it.",
+  "triage": {
+    "class": "regression",
+    "red_first": "on `fbe304b`: `AttributeError: 'float' object has no attribute 'split'`, classified `act`. As a case: `status 'failure:act' != expected 'failure:locate'`.",
+    "note": "A `task`-class plan refusal in the shape `unsupported target key(s)` uses would be the stronger fix — it is a bad PLAN, not an absent element — but that means teaching the lint about value types, which is a wider change than this repair. Recorded as the alternative in tasks/reviews/pr60-r1-resolution.json."
+  }
+}

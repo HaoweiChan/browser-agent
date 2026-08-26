@@ -1,0 +1,34 @@
+{
+  "id": "resolver-case-fold-is-recorded-in-the-trace",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What does the first 'add TO cart' link say?",
+    "fixture": "case-twins.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "add TO cart",
+          "index": 0
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Promo banner offer",
+    "trace_note_contains": "narrowed: name-case-folded"
+  },
+  "provenance": "PR #60 R1's other half: the review's complaint was not only that the wrong element was picked but that NOTHING in the trace said a looser reading had been used. A name matched case-insensitively is a softening of what the plan asked for, in the same sense M38's rungs are, so it wears a label the same way. This case pins that label on the one shape that must reach the folded pass — a spelling (`add TO cart`) that matches NEITHER twin exactly, so the exact pass finds nothing and the fold gathers both. It also documents where the collision promise in `_whole_string`'s docstring, ADR-026 and browser-domain/SKILL.md actually holds: the two twins collide only here, when no exact-case match exists.",
+  "triage": {
+    "class": "invariant-gap",
+    "red_first": "on `fbe304b` the run succeeds with the same answer and the `trace_note_contains` check is False against note `None` — there is no fold label at all, the third element of `_resolve_in`'s return is `None` on every non-narrowing path.",
+    "note": "`index: 0` and not narrowing: an `index` returns before the narrowing rungs by construction, so this grades the FOLD label specifically and not an M38 rung. The answer is the SHOUTING twin on purpose — with no exact-case match the fold gathers both and document order decides, which is exactly the behaviour the label exists to disclose."
+  }
+}

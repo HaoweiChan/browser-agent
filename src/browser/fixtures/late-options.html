@@ -12,6 +12,12 @@ had (T-M42-20). The control is present at load; its contents are not.</p>
 <select id="pick" aria-label="Filing"></select>
 
 <p><span role="status" aria-label="Selection">No filing selected.</span></p>
+
+<!-- The other side of the same branch: a control that is empty at load and
+     STAYS empty, with no script behind it at all. The wait is paid in full
+     here, so this is what bounds it (PR #60 R4). -->
+<label for="arch">Archive</label>
+<select id="arch" aria-label="Archive"></select>
 <p><a href="/fixtures/hello.html">Leave the picker</a></p>
 
 <script>

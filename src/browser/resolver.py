@@ -187,17 +187,46 @@ def _whole_string(s: str):
     (T-M42-20; case observe-uppercase-label-name-resolves).
 
     Anchoring is what keeps the substring refusal intact, so the fix relaxes
-    case and nothing else. Two names that differ only in case now collide as an
-    ambiguity and go to M38's narrowing rungs — the honest outcome, and the one
-    `exact=True` was silently deciding by stylesheet.
+    case and nothing else. **It is a FALLBACK, never the first thing tried** —
+    `scope_tiers` runs the case-exact matcher first and only reaches this one
+    when the page carries no exact-case match. That ordering is the whole of
+    PR #60 R1: widening a tier widens the SET, and `index`/`near`/`extract_all`
+    all select from the set before any uniqueness check runs, so a case-blind
+    first pass silently moved `{name: 'Add to cart', index: 0}` from the row CTA
+    onto a `text-transform: uppercase` promo banner above it, with no
+    `ambiguous-match` and nothing in the trace. Exact-first means nothing on a
+    page that spells the name the plan's way changes at all; only a page that
+    spells it no other way reaches the fold, and when it does the step's trace
+    note says `narrowed: name-case-folded` rather than saying nothing.
+
+    So the collision promise is conditional and this is where it is written
+    down: two names differing only in case collide as an ambiguity — and go to
+    M38's narrowing rungs — only when NEITHER matches the plan's spelling
+    exactly. When one does, it wins outright, which is the behaviour every case
+    written before T-M42-20 was measured against.
+
+    A non-string `name`/`text` is refused HERE rather than at the tier, because
+    this is the one place both tiers route through. It raises `ResolveError`,
+    which `agent.classify` reads as `locate`; letting `.split()` raise
+    `AttributeError` re-labelled the same bad plan `act` and sent it down the
+    wrong ladder (PR #60 R6, case resolver-non-string-target-is-a-locate-failure).
 
     Whitespace is collapsed into `\\s+` rather than escaped literally because
     Playwright normalises whitespace for STRING matching but tests a regex
     against the element's raw text, so `^...$` over an escaped literal would
     have been a stricter matcher than the one it replaced, not a looser one.
     """
-    return re.compile(r"^\s*" + r"\s+".join(re.escape(w) for w in s.split()) + r"\s*$",
-                      re.IGNORECASE)
+    if not isinstance(s, str):
+        raise ResolveError("element-not-found", f"target value is not a string: {s!r}")
+    # `/` is escaped on top of `re.escape`, which leaves it alone: Playwright
+    # serialises this pattern into its own selector string as a `/…/flags`
+    # literal, so a bare slash TERMINATES the regex there and the whole locator
+    # dies with `InvalidSelectorError` — a page-content-dependent crash that
+    # `classify` reads as `act`, not `locate`. Found by widening
+    # `resolve_advertised` past `combobox` (PR #60 R3): the inspector's own
+    # `UPLOAD A FILING (.HTM / .HTML / .TXT)` button is the shape.
+    body = r"\s+".join(re.escape(w) for w in s.split()).replace("/", r"\/")
+    return re.compile(r"^\s*" + body + r"\s*$", re.IGNORECASE)
 
 
 def _loose(s: str):
@@ -262,7 +291,15 @@ async def _nearest(page, loc, near: str, *, loose: bool) -> tuple[int | None, st
     itself, which is why an anchor that differs only in spacing is M6 behaviour
     and not this milestone's to gate.
     """
-    passes = [("exact", lambda: page.get_by_text(near, exact=True)),
+    # `_whole_string`, not `exact=True`: an anchor is quoted off the SAME
+    # observation a name is, so the spelling a planner can write for a
+    # `text-transform: uppercase` label is the shouted one — and the exact pass
+    # used to refuse exactly that, leaving the anchor to the substring pass this
+    # docstring calls risky, or to nothing (PR #60 R5, case
+    # resolver-near-anchor-is-case-insensitive). Whole-string is preserved, so
+    # the substring pass is still a separate, later rung and
+    # `near-anchor-substring` still grades what it always did.
+    passes = [("exact", lambda: page.get_by_text(_whole_string(near))),
               ("substring", lambda: page.get_by_text(near))]
     if loose:
         passes.append(("normalised", lambda: page.get_by_text(_loose(near))))
@@ -328,13 +365,26 @@ async def resolve(page, target: dict, many: bool = False,
     # anchored — and relaxes only CASE, because the comment this replaced
     # ("planner names come from the observation verbatim") was true of the
     # planner and false of the two engines underneath it (T-M42-20).
+    # Each name tier is TWO passes, strictest first — the same idiom `_nearest`
+    # has used since M6. The exact-case pass is byte-for-byte the pre-T-M42-20
+    # matcher, so a page that spells the name the way the plan does resolves
+    # exactly as it always did; the case-folded pass is reached only when that
+    # finds nothing, and says so in the trace (`narrowed: name-case-folded`).
+    # Both passes carry the same tier LABEL, because the tier is which evidence
+    # was used and the fold is how loosely it was read — the same separation
+    # M38's rungs make.
+    FOLD = "name-case-folded"
+
     def scope_tiers(scope):
         out = []
-        if role:
-            out.append(("role", (scope.get_by_role(role, name=_whole_string(name)) if name
-                                 else scope.get_by_role(role)), scope))
+        if role and name:
+            out.append(("role", scope.get_by_role(role, name=name, exact=True), scope, None))
+            out.append(("role", scope.get_by_role(role, name=_whole_string(name)), scope, FOLD))
+        elif role:
+            out.append(("role", scope.get_by_role(role), scope, None))
         if text:
-            out.append(("text", scope.get_by_text(_whole_string(text)), scope))
+            out.append(("text", scope.get_by_text(text, exact=True), scope, None))
+            out.append(("text", scope.get_by_text(_whole_string(text)), scope, FOLD))
         return out
 
     # One DOCUMENT at a time, finished before the next is opened. A flat tier
@@ -384,7 +434,7 @@ async def _resolve_in(page, tiers, target, *, many, index, near, anchor, may_nar
     API, and every call in this function is one of the two.
     """
     ambiguous = None
-    for tier, loc, scope in tiers:
+    for tier, loc, scope, fold in tiers:
         if near is not None:
             # Proximity is a relation between elements, not a property of one,
             # so the winning tier is `structural` however the candidates were
@@ -401,20 +451,20 @@ async def _resolve_in(page, tiers, target, *, many, index, near, anchor, may_nar
             if i is not None and i >= 0:
                 # A `near` that matched literally is the plan working as
                 # written; one that needed loosening is a narrowing and says so.
-                return loc.nth(i), "structural", (f"near-{how}" if how in
-                                                  ("normalised", "prefix") else None)
+                return loc.nth(i), "structural", ((f"near-{how}" if how in
+                                                   ("normalised", "prefix") else None) or fold)
             continue
         n = await loc.count()
         if many:
             if n:
-                return loc, tier, None
+                return loc, tier, fold
             continue  # nothing here; the caller tries the next document
         if index is not None:
             if n > index:
-                return loc.nth(index), tier, None
+                return loc.nth(index), tier, fold
             continue
         if n == 1:
-            return loc, tier, None
+            return loc, tier, fold
         if n > 1 and ambiguous is None:
             ambiguous = (tier, loc, n)
 

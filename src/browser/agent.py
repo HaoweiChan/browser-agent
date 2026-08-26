@@ -1122,8 +1122,18 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # default state waits out the whole timeout and only
                             # then reads a list that arrived seconds earlier
                             # (measured: 10.2s vs 1.6s on the case below).
+                            #
+                            # SETTLE_BUDGET_MS, not the 10s the select call
+                            # below gets: this is the same "how long may a page
+                            # take to do something before we read it anyway"
+                            # question `navigate` and every postcondition
+                            # already answer, and it is paid IN FULL by every
+                            # control that never fills. At 10s that was 10.0s
+                            # per such step with no case measuring it, inside a
+                            # wall-clock-gated suite (PR #60 R4, case
+                            # action-select-option-never-filled-fails-loud).
                             await loc.locator("option").first.wait_for(
-                                state="attached", timeout=10_000)
+                                state="attached", timeout=SETTLE_BUDGET_MS)
                         except Exception:
                             pass  # let the empty-offer message below say it
                         opts = await loc.evaluate(OPTIONS_JS)

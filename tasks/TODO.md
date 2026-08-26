@@ -134,6 +134,41 @@ Two probes minutes apart read 0 and 43 `<option>`s at the same moment of the
 page's life, so the live picker is BOTH shapes: (b) is not a fixture-only
 concern. Ground truth re-confirmed from `/api/extract/fixture`:
 `period_end: 2024-01-28`.
+Update 2026-08-27 — PR #60 round 1: the reviewer executed every claim and the
+first fix was WRONG in four ways, three of them regressions it introduced. All
+four repaired, each watched red first:
+  - R1 (HIGH, silent wrong-success). Widening a tier widens the SET, and
+    `index`, `near` and `extract_all` all select from the set BEFORE the
+    uniqueness check — so `{name: 'Add to cart', index: 0}` moved off the row CTA
+    onto an `ADD TO CART` banner above it, no ambiguity, nothing in the trace.
+    Fix: each name tier is now two passes, case-exact first, folded only if that
+    finds nothing — so nothing changes on a page that spells the name the plan's
+    way. A folded resolution says so: `narrowed: name-case-folded`. Cases
+    `resolver-case-twin-index-picks-the-exact-spelling`,
+    `resolver-case-twin-near-picks-the-exact-spelling`,
+    `resolver-case-fold-is-recorded-in-the-trace`, fixture `case-twins.html`.
+  - R3. `resolve_advertised` only recorded whether `resolve` RAISED, so a name
+    advertised for element A that resolved onto element B graded green. It is
+    now a count identity, and it runs over EVERY role (`"*"`) rather than one.
+    Widening it immediately found a second defect in the first fix: `/` inside a
+    name terminated the regex literal Playwright serialises the pattern into
+    (`InvalidSelectorError`, classified `act`), on our own inspector's
+    `UPLOAD A FILING (.HTM / .HTML / .TXT)` button.
+  - R5. `_nearest`'s exact pass was still case-sensitive, so an anchor quoted off
+    the observation (`near: 'TOTAL'`) raised while a spelling the observation
+    never contains resolved. Case `resolver-near-anchor-is-case-insensitive`.
+  - R6. `_whole_string` called `.split()` unguarded, so `{'text': 4.82}` raised
+    `AttributeError` and the step's class regressed `locate` -> `act`. Case
+    `resolver-non-string-target-is-a-locate-failure`.
+  - R4 (the wait's own gap). Its named ablations ablated nothing — both run on a
+    fixture whose `<select>` is never empty — and the never-fills path cost 10.0s
+    with the `TimeoutError` swallowed and no case. The wait is now
+    `SETTLE_BUDGET_MS`; `action-select-option-never-filled-fails-loud` pins the
+    loud failure AND its price through a new `max_ms` expect key.
+R2, R7, R8, R9 were routed to debt and are logged below as T-M42-20-D5..D8;
+T-M42-20-D4 is the role-level engine disagreement R3's widening exposed.
+The suite grew by six and got FASTER — `LATE_OPTIONS_DELAY_S` 1.0s -> 0.5s and
+the 10s wait -> 2s more than paid for it.
 STILL OPEN, and the reason this block is not closed: the deployment tracks
 `main`, so a 3-rep smoke run before this branch merges would measure the
 pre-fix build. No run ids are published here because no run was made (rule 4).
@@ -392,6 +427,109 @@ removing waste rather than another raise) or pre-commit a ceiling with an ADR
 that says which. `T-M42-19` (the CI half of the sweep) is adjacent and separate.
 Acceptance: either a `fast` band whose maximum sits at least one full step under
 its ceiling, or an ADR that rules the current margin acceptable and says why.
+
+### T-M42-20-D4 — `observe` and `resolve` disagree about a control's ROLE, and nothing grades that            [status: todo]
+Origin: PR #60 R3, found while widening `resolve_advertised` past `combobox`.
+T-M42-20 closed the NAME half of the observe->resolve round trip. The role half
+is open and our own inspector carries an instance: `<input type="file" id="up">`
+is role `button` to Chromium's `accessibility.snapshot()` and role `textbox` to
+Playwright's locator engine, so the observation advertises
+`{'role': 'button', 'name': 'UPLOAD A FILING (.HTM / .HTML / .TXT)'}` and
+`resolve` answers `ResolveError: no tier resolved` — at any casing. The name-fold
+fix cannot touch it, because the disagreement is not about the name.
+Evidence, verbatim from the widened check:
+  `{'target': {'role': 'button', 'name': 'UPLOAD A FILING (.HTM / .HTML / .TXT)'},`
+  ` 'error': "ResolveError: no tier resolved {'role': 'button', 'name': 'UPLOAD A FILING (.HTM / .HTML / .TXT)'}"}`
+Every other role on that page round-trips clean (22 probed, one at a time), so
+this is one element and one shape, not a general rot — but it is exactly the
+shape that stays invisible until a planner writes the target.
+`observe-uppercase-label-name-resolves` therefore excludes `button` BY NAME, and
+that exclusion is the debt: a real disagreement parked behind a list entry.
+(`WebArea` is excluded too and is NOT this: it is the document root, which this
+repo already refuses as a target.)
+Spec: decide where the mapping belongs. Either `observe` maps the snapshot's
+role to the one the locator engine computes (a table, and a wrong entry is a
+silent mis-advertisement — needs a case per row), or `resolve` tries a small set
+of equivalent roles when a target resolves nowhere (a widening, with the usual
+wrong-element risk), or the observation drops names for roles it cannot
+guarantee, the way `NAME_PROHIBITED` already does. `<input type="file">` is one
+data point; find the others before choosing.
+Acceptance: the `button` exclusion gone from that case with a red-first case for
+whichever rule is chosen, or a `docs/support-matrix.md` limitation naming the
+shape — D32 declares it as of PR #60, so the minimum here is the case.
+
+### T-M42-20-D5 — `select_option` matches the wanted string against value OR label            [status: todo]
+Origin: PR #60 R2 (MEDIUM, routed to debt). PRE-EXISTING — shipped with M42's
+`select_option`, not introduced by T-M42-20.
+Evidence, verbatim: `agent.py` `match = next((o for o in opts if want in o), None)`
+with the readback comparing to `match[0]`, which is self-consistent by
+construction. Executed: on
+`<option value=''>Choose a filing…</option><option value='2024'>FY 2023</option><option value='2025'>FY 2024</option>`,
+`want='2024'` -> matched `['2024','FY 2023']`, selected value `'2024'`,
+`postcondition_ok=True`, and the page fires `change` for the FY 2023 filing.
+`want=''` (a step that omits `value`, which `step.get("value") or ""` turns into
+the empty string) -> matched `['','Choose a filing…']`, `postcondition_ok=True` —
+a filter never applied, recorded as applied. `press` refuses the missing-value
+shape and `select_option` does not; nothing in `plan_gap` type-checks or requires
+the value. `loop-lab.html` ships exactly the `<option value=''>` placeholder.
+Spec: two adversarial cases, both red first — (i) a `<select>` whose option
+VALUES collide with another option's LABEL, asserting the step selects the
+intended option or fails loudly rather than reporting success; (ii) a
+`select_option` step with no `value`, asserting a `task`-class refusal in the
+shape `press` already uses. Or a declared limitation naming both shapes.
+Acceptance: a run can no longer report `success` with `postcondition_ok: True`
+for a selection nobody asked for.
+
+### T-M42-20-D6 — `role_visible` postconditions still match on a SUBSTRING            [status: todo]
+Origin: PR #60 R7 (LOW, routed to debt). Pre-existing and untouched, but now
+inconsistent with the invariant T-M42-20 establishes one file over.
+Evidence, verbatim: `agent.py` builds `get_by_role(role, name=<str>)` with
+neither `exact` nor `_whole_string`, i.e. case-insensitive SUBSTRING. Executed:
+on `<h1>Shopping Cart is empty</h1>`,
+`check_state(page, {'role_visible': {'role':'heading','name':'Cart'}})` returns
+True. The whole argument the resolver's whole-string matching rests on —
+"substring matching resolved absent targets to superstring siblings and
+extracted the wrong element as a success" — applies verbatim to a postcondition,
+which is what `verify` treats as proof the action landed.
+Spec: either `role_visible` uses `_whole_string` too, pinned by a case red on the
+'Cart' vs 'Shopping Cart is empty' input, or the asymmetry is written down so the
+next reader does not assume the matcher is shared. Not fixed here because
+tightening a postcondition changes which authored `expected_state` values hold
+across the existing suite, which is a change with its own blast radius and
+belongs in its own commit.
+Acceptance: the matcher is shared, or the difference is documented at both ends.
+
+### T-M42-20-D7 — a custom ARIA combobox is a `locate` failure it did not earn            [status: todo]
+Origin: PR #60 R8 (LOW, routed to debt). Pre-existing and untouched.
+Evidence, verbatim: `<div role=combobox aria-label='Filing' tabindex=0>Choose</div>`
+resolves at tier `role`, `loc.evaluate(OPTIONS_JS)` returns None because a `<div>`
+has no `el.options`, and the step raises
+`StepError('locate', 'resolved element has no options to select: ...')` — a
+LOCATE class for an element the resolver located correctly. No case covers the
+shape, and the misdiagnosis sends the run down the relocation ladder, which
+re-resolves the element it already had.
+Spec: the class becomes `act` (the control cannot do what was asked) or `task`
+(the plan asked a `<div>` to behave like a `<select>`), with a case pinning it;
+or the shape is declared in `docs/support-matrix.md` as a known misdiagnosis.
+Acceptance: a resolved-but-unsupported control is not reported as a location
+failure, or the matrix says it is and why.
+
+### T-M42-20-D8 — T-M42-20-D3 understates the ledger it derives from            [status: todo]
+Origin: PR #60 R9 (LOW, routed to debt — logged, deliberately not fixed in place).
+`T-M42-20-D3` says "The three runs recorded at this count measured
+89.60 / 90.08 / 90.49s". At the commit the review read, the committed
+`history.jsonl` held FIVE rows at 222 cases, not three: `20260826-165306` 90.25,
+`20260826-165845` 90.08, `20260826-170244` 89.6, `20260826-170822` 90.49,
+`20260826-171550` 90.27. The two omitted rows include the band source itself.
+The arithmetic conclusion is unaffected and was correct: `_band_rule` gives 105
+for x <= 91.30 (105/1.15 = 91.304), so a maximum of 90.49 left 0.81s, and
+`published-band-slack-is-declared` independently reports `headroom_s {fast: 1.05}`
+and is green. Nothing graded reads TODO.md prose, which is why it drifted.
+Recorded here rather than corrected in D3 because the review routed it to debt.
+Spec: a debt item that RESTATES a ledger will drift from it; make D3 cite the
+ledger (suite, env, count) instead of enumerating rows, or teach a check to read
+enumerated ledger rows out of TODO.md the way the band checks read the ADR.
+Acceptance: no debt block in this file restates ledger rows it does not derive.
 
 ### T-M39-14 — the front-page baseline cites a run that failed, and the rule set makes it unfixable in place            [status: todo]
 Origin: found on merged `main` (`7e0b662`) by the session that had driven PR #52,

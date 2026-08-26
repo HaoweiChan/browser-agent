@@ -10,22 +10,56 @@ description: Domain knowledge for the browser-agent task — Playwright pitfalls
 1. **role + accessible name** — survives cosmetic change; needs decent ARIA.
 2. **text/label** — robust; breaks on copy changes (`button-text-renamed`).
 
-**Both name tiers match WHOLE-STRING and CASE-INSENSITIVELY** (`_whole_string`,
-T-M42-20). Not `exact=True`, which buys the whole-string refusal
-(`resolver-substring-name`) and a case-sensitivity promise nothing can keep:
-`observe()` reads the accessible name from Chromium's `accessibility.snapshot()`,
-which APPLIES CSS `text-transform`, and Playwright's locator engine computes its
-own name and does not. A `<label>` under `text-transform: uppercase` therefore
-reaches the planner shouting and comes back unresolvable — that is how M42's
-live clause died 3/3 in both modes on a control the page rendered perfectly.
-The regex is anchored, so substring ambiguity is still refused; whitespace is
-collapsed to `\s+` because Playwright normalises whitespace for STRING matching
-but tests a regex against the element's RAW text. Two names differing only in
-case now collide as an ambiguity and go to M38's narrowing rungs, which is the
-honest outcome. Pinned by `observe-uppercase-label-name-resolves`, the only case
-that closes the `observe` -> `resolve` loop instead of grading each end alone —
-and the reason it existed to be broken for a milestone is that no other case
-does (debt: `T-M42-20-D1`).
+**Each name tier is TWO passes: case-exact first, case-folded only if that finds
+nothing** (`_whole_string`, T-M42-20 as repaired by PR #60 R1). Both are
+whole-string, so the substring refusal `resolver-substring-name` exists for is
+untouched either way. The fold exists because `exact=True` also promises
+CASE-sensitivity, which nothing here can keep: `observe()` reads the accessible
+name from Chromium's `accessibility.snapshot()`, which APPLIES CSS
+`text-transform`, and Playwright's locator engine computes its own name and does
+not. A `<label>` under `text-transform: uppercase` reaches the planner shouting
+and comes back unresolvable — that is how M42's live clause died 3/3 in both
+modes on a control the page rendered perfectly.
+
+**The ORDER is the whole of it, and getting it wrong shipped a silent
+wrong-success.** `index`, `near` and `extract_all` all select from a tier's match
+SET *before* the `n == 1` uniqueness check or any ambiguity bookkeeping runs, so
+a case-blind first pass silently widens what they select from: with the fold
+first, `{name: 'Add to cart', index: 0}` moved off the row CTA onto an
+`ADD TO CART` promo banner above it — no `ambiguous-match`, nothing in the
+trace. Exact-first means a page that spells the name the plan's way behaves
+exactly as it did before T-M42-20, and only a page that spells it no other way
+reaches the fold. Cases: `resolver-case-twin-index-picks-the-exact-spelling`,
+`resolver-case-twin-near-picks-the-exact-spelling`.
+
+So the collision claim is CONDITIONAL: two names differing only in case collide
+as an ambiguity, and go to M38's narrowing rungs, **only when neither matches
+the plan's spelling exactly**. When one does, it wins outright.
+
+A folded resolution is a looser reading of what the plan asked for, so it says
+so — trace note `narrowed: name-case-folded`, pinned by
+`resolver-case-fold-is-recorded-in-the-trace`. Whitespace is collapsed to `\s+`
+and `/` is escaped, because Playwright normalises whitespace for STRING matching
+but tests a regex against RAW text, and serialises the pattern into a `/…/flags`
+selector literal a bare slash would terminate. A non-string `name`/`text` is
+refused in `_whole_string` as a `locate` failure — `.split()` raising
+`AttributeError` got the step classified `act`
+(`resolver-non-string-target-is-a-locate-failure`).
+
+**`near` anchors fold too, and only at the exact pass** (`_nearest`, PR #60 R5):
+an anchor is quoted off the same observation a name is, so `near: 'TOTAL'` on an
+uppercased `th` must work (`resolver-near-anchor-is-case-insensitive`). The
+substring pass after it is unchanged.
+
+The round trip itself — every name the observation advertises resolves, and
+reaches as many elements as the observation claims — is
+`observe-uppercase-label-name-resolves`, the only case that closes
+`observe` -> `resolve` instead of grading each end alone; that gap is why this
+was broken for a milestone (debt: `T-M42-20-D1`). It runs over every role on its
+fixture except two, both named in the case: `WebArea` (Chromium's document root,
+not an addressable ARIA role) and `button` (the two engines disagree about
+`<input type="file">` — role `button` to the snapshot, `textbox` to the locator
+engine; debt `T-M42-20-D4`).
 3. **stable attrs** (id, data-*, name) — precise; most brittle (`ids-renamed`).
 4. **structural relations** — last resort; killed by `wrapper-nesting`.
 
@@ -160,8 +194,26 @@ path. `src/browser/mutate.py` is the transform layer.
   green cases missed the S1 half M42 was built for. The delay is squeezed from
   both sides: shorter and the options land before the select step's first read
   (measured at ~0.1s after `goto`), so the case passes and grades nothing;
-  longer and it is pure wall clock inside a published band. Case:
-  `action-select-option-waits-for-fetch-painted-options`.
+  longer and it is pure wall clock inside a published band (0.5s since PR #60
+  put five more cases in the same suite). It also carries a SECOND
+  `<select aria-label="Archive">` that is empty at load with no script behind it
+  at all — that one never fills, so it is what bounds the wait, and its case is
+  `invariant`-only because it costs the full 2s. Cases:
+  `action-select-option-waits-for-fetch-painted-options`,
+  `action-select-option-never-filled-fails-loud`.
+- `/fixtures/case-twins.html` (PR #60) — two pairs of links whose ACCESSIBLE
+  NAMES differ only in case (`ADD TO CART` / `Add to cart`,
+  `SAVE FOR LATER` / `Save for later`), plus a summary table whose `<th>` is
+  uppercased by stylesheet. Three things are load-bearing and all three were
+  learned by getting them wrong: the twins are named by `aria-label` and READ
+  something else, because `verifier.normalize` folds case and a fixture whose
+  twins were named by their own text would pass on the wrong element and grade
+  nothing; the shouting twin comes FIRST in document order, or `index: 0` cannot
+  tell the two orderings apart; and the twin sits INSIDE Widget A's paragraph, or
+  the `near` case is nearest the right answer either way. Uppercase in the
+  MARKUP for the links (two different strings to the locator engine) and by
+  STYLESHEET for the `th` (one string, two readings) — the page needs both,
+  because they are different defects.
 - `/fixtures/slow-asset.html` — references `/fixtures/hang.png`, an endpoint
   that sleeps 120s, so the `load` event never fires while the document is
   complete in milliseconds. openlibrary.org's edition pages behaved exactly

@@ -1417,10 +1417,15 @@ async def fixture_hang():
 # land before the select step's first read, so the case still passes and has
 # stopped grading the wait — the silent-disarm failure this repo keeps paying
 # for. Too LONG and it is pure wall clock inside a `fast` suite whose ceiling is
-# published, derived and gated (ADR-029). 1.0s against a first read measured at
-# ~0.1s after `goto` is ~10x margin for the first and ~1% of the suite for the
-# second.
-LATE_OPTIONS_DELAY_S = 1.0
+# published, derived and gated (ADR-029), and whose band ships under one
+# rounding step of headroom (T-M42-20-D3).
+#
+# The measured first read of `el.options` is ~0.1s after `goto` (this case's own
+# red-first run finished navigate + observe + select + verification in 108ms).
+# 0.5s is 5x that, and ~3x even on a CI runner measured at ~1.6x this machine.
+# It was 1.0s until PR #60 added five cases to the same suite and the band's
+# headroom, not the margin, became the binding constraint.
+LATE_OPTIONS_DELAY_S = 0.5
 LATE_OPTIONS = ["aapl-2025", "msft-2013", "nvda-2024"]
 
 
