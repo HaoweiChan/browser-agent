@@ -1,0 +1,41 @@
+{
+  "pr": 67,
+  "round": 3,
+  "task": "M44-P1",
+  "scope": "repair diff c32a55d..6373427 plus standing round-2 findings",
+  "head": "6373427",
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "TRIPPED — three review rounds without approval; escalated to the human rather than opening a round 4",
+  "standing_round_2": {
+    "R6": "fixed — verified: COPY --from=build-identity /ctx/.git /app/.git now RED on final_stage_source_not_on_the_allowlist",
+    "R7": "fixed for every spelling named in R7 — verified: COPY ./ /app/, ADD . /app/, COPY --chown=… . /app/, COPY --link . /app/ all RED",
+    "R8": "fixed (not debt) — verified: COPY ./ /ctx and COPY --link . /ctx are GREEN; the shared normaliser closed it",
+    "R9": "fixed — quote boundary corrected"
+  },
+  "gate": {
+    "invariant": "84/84 = 1.000, 16.2s, ceiling 20",
+    "fast": "229/229 = 1.000, 90.11s, ceiling 105",
+    "cost": "$0.0000",
+    "verified_by": "orchestrator, on 6373427"
+  },
+  "findings": [
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The allowlist parser only sees instructions spelled in uppercase at column 0, so the exact hazard the repair exists to catch — the whole context, `.git` included, copied into the published image — is GREEN when written `copy . /app/`, `Copy . /app/`, `add . /app/`, or with leading whitespace; and the same spellings in the derive stage falsely REDDEN a correct Dockerfile.",
+      "evidence": "src/browser/eval_adapter.py:6059 `re.finditer(r\"(?m)^(?:COPY|ADD)\\s+([^\\n]*)$\", text)` — case-sensitive literals anchored to column 0. Docker instruction keywords are case-insensitive and leading whitespace before an instruction is legal, so a line the parser does not match contributes no source and cannot be unlisted: the allowlist is default-red only for lines it parses, and default-GREEN for lines it does not. This is the fail-open-and-fail-closed-at-once signature the resolution artifact itself cites as the reason the denylist was retired. The diff also ships absolute prose that this falsifies: \"survives Docker syntax nobody here has seen\" and \"no escape hatch\" (case JSON ceiling (6), source comment, resolution artifact).",
+      "repro": "Orchestrator-verified on 6373427. Final stage, each replacing `COPY src/ /app/src/`: `copy . /app/`, `Copy . /app/`, `add . /app/`, ` COPY . /app/`, `\\tCOPY . /app/` -> all passed=True. Derive stage, replacing `COPY . /ctx`: `copy . /ctx` and ` COPY . /ctx` -> both RED on derive_stage_never_copies_the_context.",
+      "acceptance": "The shared instruction parser matches case-insensitively and tolerates leading whitespace (e.g. `(?mi)^[ \\t]*(?:COPY|ADD)\\s+`), watched red first with `copy . /app/` and an indented `COPY . /app/` added as self-test rows; or ceiling (4) is widened to name case and leading whitespace verbatim AND the absolute wording in ceiling (6), the source comment and the resolution artifact is struck. One regex fixes both directions, because both conjuncts read the same parser."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The resolution artifact and the shipped case triage both state the check runs ELEVEN self-test rows, \"four that must stay CLEAN\"; the tree has TEN rows and three clean — and the missing fourth is the spelling that would guard the half of R8 the repair claims fixed (\"reads EVERY COPY into the context rather than the first\"), so a revert to a first-COPY-only read is caught by nothing.",
+      "evidence": "src/browser/eval_adapter.py self-test tuple list: 10 tuples, 3 with conjunct `None`. tasks/reviews/pr67-r2-resolution.json says \"Eleven ... seven that must be RED ... four that must stay CLEAN\" and \"the eleven extra invocations\"; evals/adversarial/build-sha-is-derived-not-supplied.json ceiling (8) says \"none of the eleven rows\". The two-COPY-into-the-context case listed in the provenance's verification list exists only as an ad-hoc run, not as a row: no row has more than one COPY into `/ctx`.",
+      "repro": "Orchestrator-verified: counting the tuple list yields 10 named rows and 3 `, None)` entries, against the artifact's 11 / 4. `COPY . /ctx` -> `COPY src /ctx\\nCOPY . /ctx` passes today with no row asserting it.",
+      "acceptance": "The two-COPY-into-the-context mutation is added as an eleventh row with `conjunct=None`, watched red first against a first-match-only derive read; and the counts in the resolution artifact and ceiling (8) match the number of tuples actually in the loop."
+    }
+  ]
+}
