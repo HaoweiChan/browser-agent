@@ -227,6 +227,24 @@ its five siblings and `fast` is byte-for-byte the 229-case tree that measured
 rounds running the band has decided a suite tag rather than a reviewer doing it**;
 `T-M42-20-D3`/`-D9` are that debt and the honest fix is a ceiling decision, not
 more routing.
+Update 2026-08-27 — PR #60 round 4, bounded, human-ruled after the breaker fired
+a second time, under a stopping rule: nothing carries to a round 6. Two items,
+both closed; three logged.
+  - R20. `resolver-non-string-anchor-is-a-locate-failure` was GREEN on the
+    pre-guard tree — it graded nothing. `anchor` is read at exactly one place,
+    M38's narrowing rung 1, reached only when a tier is AMBIGUOUS, and the case
+    was pointed at a target that matches nothing. Repointed at
+    `forum-thread.html`'s two same-named links; watched red with the guard
+    ablated: `failure:act`, `AttributeError: 'float' object has no attribute
+    'strip'`. Green: `failure:locate`, `ResolveError: target anchor is not a
+    string: 4.82`. The `red_first` field now carries that measured output instead
+    of text that did not reproduce.
+  - R21. The invariant bullet's bold trajectory ended in a restated scalar that
+    had already aged into a superseded case count. It now ends at the number the
+    bullet publishes, because nothing grades a free-form trajectory and updating
+    the figure would have rebuilt the same trap.
+  - R22, R23, R24 -> debt, T-M42-20-D13/D14/D15.
+Nothing was left half-done and nothing carries forward from this round.
 STILL OPEN, and the reason this block is not closed: the deployment tracks
 `main`, so a 3-rep smoke run before this branch merges would measure the
 pre-fix build. No run ids are published here because no run was made (rule 4).
@@ -682,6 +700,67 @@ that artifact's), and — the part that stops it recurring — refuse `"PENDING"
 as a `red_first` value in `opt-in-expect-keys-declared` or a sibling check, so a
 placeholder cannot be committed.
 Acceptance: no case file carries a placeholder `red_first`, and a check says so.
+
+### T-M42-20-D13 — the suite-move justification carries two false clauses            [status: todo]
+Origin: PR #60 R22 (LOW, routed to debt — logged, deliberately not edited).
+The load-bearing half of that disclosure was judged honest: the three 230-case
+rows (90.65, 91.06, 91.76) ARE in the committed ledger and ADR-019 §2 names them
+accurately. The justifying sentence is where it goes wrong.
+Evidence, verbatim: `ADR-019:102` says `fast` "is byte-for-byte the 229-case tree
+those five rows measured". HEAD's `history.jsonl` holds EIGHT local `fast` rows
+at `total=229` — 90.02, 91.04, 90.76, 90.99, 90.38, 90.73, 91.03, 90.72 — five
+from 0826 and three recorded after round 3. And the tree is not byte-for-byte:
+`resolver.py`, `server.py` and `eval_adapter.py` all changed since those rows,
+which §2 itself says ten lines earlier when it records round 3 changing
+`LATE_OPTIONS_DELAY_S` and the select budget. §2 also says, fourteen lines later,
+that how many rows sit at a count "are deliberately not written here" — so the
+sentence breaks that rule in the act of breaking two others.
+`tasks/TODO.md` carries the same pair, and this file already records a PRIOR
+finding about four sentences claiming byte-for-byte behaviour while it was false.
+No gate impact: the three post-round-3 rows are all under the published 91.04s
+maximum, so the band and the 0.26s margin stand.
+**That phrase has been wrong three times in one PR.** The correction is not a
+better adjective: the CASE SET is the same 229 ids, the product tree is not, and
+the ledger's maximum at 229 is 91.04s across all rows — none of which needs a row
+count. Written here because the routing said log, not fix.
+Spec: rewrite `ADR-019:102` and its TODO twin to that form, and retire
+"byte-for-byte" from this repo's vocabulary for anything but a literal file
+comparison.
+Acceptance: no document claims a tree is unchanged when `git diff` says
+otherwise, and no band prose states a row count §2 says it does not state.
+
+### T-M42-20-D14 — SKILL.md's non-string-target sentence miscounts its own cases            [status: todo]
+Origin: PR #60 R23 (LOW, routed to debt).
+Evidence, verbatim: `browser-domain/SKILL.md` says
+"`resolver-non-string-target-is-a-locate-failure` for `text`, in `fast`, and its
+three `invariant` siblings for `name`, a list-valued `name`, `near` and `anchor`
+— four keys, four cases". Measured: five files match
+`evals/adversarial/resolver-non-string-*.json`, four tagged `invariant` (`name`,
+`name-is-a-list`, `near`, `anchor`) and one `fast` (`text`). So "three siblings"
+is stale — it was written while three existed and the fourth landed in the same
+commit — and "four cases" counts keys, not files.
+Spec: say four `invariant` siblings and five cases across four keys, or — better,
+and the standing rule — name the keys and cite the case ids without a count at
+all. A count in prose is a scalar nothing derives.
+Acceptance: SKILL.md carries no case count that a `glob` can falsify.
+
+### T-M42-20-D15 — SKILL.md contradicts itself about the fetch delay            [status: todo]
+Origin: PR #60 R24 (LOW, routed to debt).
+Evidence, verbatim: `browser-domain/SKILL.md` says "an endpoint that sleeps
+`server.LATE_OPTIONS_DELAY_S` (1.0s)" seven lines above the clause round 3
+corrected to "(0.3s since PR #60's rounds put twelve more cases in the same
+suite...)", while `server.py` has `LATE_OPTIONS_DELAY_S = 0.3`. The file
+contradicts itself and the constant.
+It also falsifies `T-M42-20-D11`'s own status line, which asserts "Round 3
+repaired the SKILL.md half in passing ... so the drift is halved and not closed":
+the SKILL.md half is NOT repaired, only one of its two mentions is, so D11
+understates the drift the next round inherits. Recorded here rather than edited
+into D11 because the routing said log.
+Spec: D11's fix closes this one too — the scalar has ONE home (`server.py`) and
+every other mention cites it rather than restating it. Doing it by hand a third
+time is how there came to be two mentions in one file disagreeing.
+Acceptance: `grep -rn LATE_OPTIONS_DELAY_S` shows exactly one number, in
+`server.py`.
 
 ### T-M39-14 — the front-page baseline cites a run that failed, and the rule set makes it unfixable in place            [status: todo]
 Origin: found on merged `main` (`7e0b662`) by the session that had driven PR #52,

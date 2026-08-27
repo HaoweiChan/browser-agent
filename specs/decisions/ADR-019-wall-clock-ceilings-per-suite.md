@@ -304,12 +304,15 @@ commit that changed nothing but JSON.
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
   while the ts beside it was current, and nothing was red (PR #60 R17).
-  **This band moved 13.76s -> 17.22s and back to 15.88s**, and both halves are
-  stated rather than smoothed. The 2s never-fills case plus three more took a 14s
-  suite to 17.22s — within 0.17s of the 17.39s where the rule stops giving 20 — and
-  round 3 bought it back by giving the select step its own 1s budget instead of
-  borrowing `SETTLE_BUDGET_MS`. What is worth watching here is headroom, not the
-  ceiling.
+  **This band rose to 17.22s and came back down**, and both halves are stated
+  rather than smoothed — the endpoint is the number this bullet publishes above,
+  not a third figure restated here, because a trajectory written out is a copy of
+  a scalar that moves every republish and the last one aged into a superseded case
+  count within a round (PR #60 R21). The 2s never-fills case plus three more took
+  a 14s suite to 17.22s — within 0.17s of the 17.39s where the rule stops giving
+  20 — and round 3 bought it back by giving the select step its own 1s budget
+  instead of borrowing `SETTLE_BUDGET_MS`. What is worth watching here is
+  headroom, not the ceiling.
   As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
