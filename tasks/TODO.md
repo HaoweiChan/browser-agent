@@ -75,7 +75,7 @@ Out of scope: LangGraph or any orchestration dependency (the ruling above); mode
 auto-selection beyond "B first, loop on failure" — a task-difficulty classifier
 is speculative until M44's table shows which tasks actually need the loop.
 
-### M44-P1 — the deployment can report the build it is running            [status: in-progress]
+### M44-P1 — the deployment can report the build it is running            [status: pr]
 Origin: M44's acceptance clause, which is not deliverable without this. M44 must
 publish "matrix rows updated with run ids, repeat counts, both build shas where
 the target is our own deploy (postmortem §2)" — and our own deploy could not
@@ -174,6 +174,50 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### M44-P1-D4 — item 12's rule is still not true of the file it governs            [status: todo]
+Origin: PR #65 R9 (LOW, routed debt).
+Spec: item 12's opening states a rule about its own file — a ledger MAXIMUM stated
+here carries the marker — and §2's ablation paragraph states two without one:
+"one of them (74.29s, 162/165) its maximum at this case count" and "one of them
+again the maximum (75.02s, 162/168)". `_BAND_LEDGER_MAX.finditer(adr)` returns
+exactly one match, the 230-case one. Unlike R5 there is no staleness exposure —
+both rows were deleted by `820d807`, `fast` is 229 and counts grow monotonically,
+and item 12 declares an unmarked maximum invisible. The committed ledger's
+fast@165 max is 73.36, not 74.29, reconcilable only via the deletion table the
+same paragraph provides.
+Repro: `python3 -c "from src.browser.eval_adapter import _BAND_LEDGER_MAX as R, _ADR019; print(len(R.findall(_ADR019.read_text())))"` -> 1, against two sentences naming "its maximum at this case count".
+Acceptance: M44-P1-D3's Spec names these two as the concrete surviving instances
+(they are the only ones), or item 12's opening is phrased as the rule for a LIVE
+maximum rather than for every maximum the file narrates.
+
+### M44-P1-D5 — the ceiling a marked maximum derives is not itself graded            [status: todo]
+Origin: PR #65 R10 (LOW, routed debt).
+Spec: §2 writes "(ledger max — `fast` at 230 cases: **91.76s**) — derives **110**"
+and "while the marked maximum above still derives 110". `_BAND_DERIVATION` only
+matches the `x × 1.15 = y → **N**` form and only for published bands, so neither
+110 is read back. If `fast` returns to 230 and a 95.7s row lands, the marker goes
+red and is repaired to 95.70 — whose rule value is 115 — and both "110" sentences
+stay green. Repairing the graded scalar leaves the ungraded one beside it wrong,
+which is the shape M44-P1 spent three rounds on.
+Repro: in a scratch copy set the marker to **95.70s** and inject a fast@230 row at
+95.7 — `published-band-matches-the-ledger` is GREEN with "derives **110**" present.
+Acceptance: the derived ceiling either travels inside the marker (one edit moves
+both scalars) or is dropped from the prose, matching item 5's rule for band
+derivations.
+
+### M44-P1-D6 — the new pointer group scans one document and does not say so            [status: todo]
+Origin: PR #65 R11 (LOW, routed debt).
+Spec: `points_at_a_check_that_does_not_read_the_ledger` lists a single doc,
+ADR-019, so the same mis-pointing written into README.md or specs/decisions/INDEX.md
+would be invisible. Both already name `published-band-slack-is-declared`, so both
+are surfaces where the claim can be written. The sibling group's `why` records that
+a scan is only as wide as its document list ("the list is now every surface that
+states the ruling"); this group's does not.
+Repro: insert "`published-band-slack-is-declared` prints the ledger's own arithmetic"
+into README.md:168 -> `docs-numbers-are-derived` stays GREEN.
+Acceptance: README.md and specs/decisions/INDEX.md added to the group's docs, or the
+one-document scope stated in the group's `why`.
 
 ### M44-P1-D3 — a ledger maximum written without its marker is still invisible            [status: todo]
 Origin: PR #65 R8
