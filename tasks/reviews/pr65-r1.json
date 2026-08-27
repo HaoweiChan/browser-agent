@@ -1,0 +1,40 @@
+{
+  "pr": 65, "round": 1, "task": "M44-P1", "result": "REQUEST_CHANGES",
+  "gate_at_review": {"invariant": "83/83 = 1.000, 15.82s / 20", "fast": "229/229 = 1.000, 89.42s / 105", "cost_usd": 0.0},
+  "reviewer_note": "No HIGH. The reviewer could not make /version publish a sha it should not. The matcher survived every ablation the ADR claims it survives (re.match, re.search, re.IGNORECASE, {7,}, {1,40}, dropped .strip(), git fallback — all red, verified). The file is root-owned in the image while the process runs as pwuser, .dockerignore really excludes .git, and the ARG default genuinely fails to unavailable. All findings are about claims the code does not back, plus one published number this PR made stale.",
+  "findings": [
+    {
+      "id": "R1", "severity": "MEDIUM", "route": "repair",
+      "blocks_under": "makes a published number dishonest",
+      "claim": "This PR commits a 91.30s / 229-case local fast row and leaves the ADR-019 §2 sentence it edited around still claiming the maximum at that count is 91.04s and 'the real margin is 0.26s' — the published margin is now 0.0043s, ~60x wrong, in the same bullet the diff touches.",
+      "evidence": "evals/report/history.jsonl (added by this PR): ts 20260827-160112, fast, local, total 229, wall_s 91.3. On origin/main the max at (fast, 229, local) was 91.04. ADR-019:94-97 still reads 'the rule gives 105 for anything up to 91.30s and the slowest row at this count is the 91.04s cited above, so the real margin is 0.26s' — while line 97, the very next sentence, IS edited by this diff (three 230-case rows -> four). _band_rule(91.3)=105, _band_rule(91.31)=110, so the ceiling holds but the next 229-case run above 91.3043s turns published-band-matches-the-ledger red. The asymmetry is self-inflicted: §3's invariant bullet was rewritten in this same diff to disclose 'NOT necessarily the maximum at this count'; §2's was not. Nothing grades that prose.",
+      "orchestrator_confirmation": "Verified independently: the diff adds five 229-case rows including 91.3s; max at 229 goes 91.04 (origin/main) -> 91.30 (HEAD); the 'real margin is 0.26s' sentence is present at ADR-019:97.",
+      "repro": "python3 -c \"from src.browser.eval_adapter import _band_rule; print(_band_rule(91.04), _band_rule(91.3))\" -> 105 105",
+      "acceptance": "ADR-019 §2's margin sentence states the ledger's actual maximum at 229 local cases (91.30s, ts 20260827-160112) and the margin it implies (0.0043s), or the row is not committed. Bonus: the margin carries a graded marker so the next republication cannot leave it stale silently."
+    },
+    {
+      "id": "R2", "severity": "MEDIUM", "route": "repair",
+      "blocks_under": "makes a published claim dishonest",
+      "claim": "'It never reads an environment variable' — the load-bearing half of ADR-033 Decision 2, the reason the whole design was moved off ENV — is asserted in three places and graded by nothing: an implementation with an env fallback passes the 13-probe case green.",
+      "evidence": "src/browser/server.py:1375-1385 ('there is no knob', 'it never reads an environment variable'), ADR-033 Decision 2 ('there is no other way in') and Consequences:198 ('it reads no environment variable at all'). The case never sets an environment variable during the run, so the absent/empty/whitespace probes cannot distinguish a file-only route from a file-plus-env route. Demonstrated by the reviewer: replacing server.build_identity with a version falling back to os.environ['BUILD_SHA'] when the file is blank returns {'passed': True, 'wrong': {}} with the env unset — the state any eval run is in. The same mutation with BUILD_SHA set goes red on 3 probes, which is the one-line fix. The git fallback, by contrast, IS graded, because the eval supplies the thing the fallback would read.",
+      "orchestrator_confirmation": "Confirmed the three claim sites exist at the cited lines.",
+      "repro": "Monkeypatch build_identity with an os.environ fallback, leave BUILD_SHA unset, run_case -> passed: True.",
+      "acceptance": "The absent/empty probes run with plausible env names set (BUILD_SHA, ZEABUR_GIT_COMMIT_SHA, VERSION) to a valid-shaped sha and still assert {sha: null, source: unavailable}, watched red against an env-reading route the way the git fallback was — or the three prose claims are downgraded to 'no env read today, ungraded' and the ceiling is declared in the case triage."
+    },
+    {
+      "id": "R3", "severity": "MEDIUM", "route": "repair",
+      "blocks_under": "makes a published claim dishonest",
+      "claim": "The claim that the file mechanism removes the hand-set knob is contradicted inside this same diff: the ADR's own recommended remedy — a Zeabur service variable consumed by the declared ARG — is a dashboard field a human types a sha into that gets baked with source 'image' and goes stale on every subsequent deploy, i.e. the exact failure the ENV design was rejected for, moved from runtime to build time rather than eliminated.",
+      "evidence": "Dockerfile:20-21 asserts 'A file in the image cannot be shadowed, so there is no hand-set path to go stale'; ADR-033 Decision 2 heads 'there is no other way in'. ADR-033 Consequences then names the remedy for the unavailable case: 'a Zeabur service variable consumed by the declared ARG'. Walk it: operator sets ZEABUR_GIT_COMMIT_SHA=<today's sha> in the dashboard -> every subsequent build bakes that same value -> /version reports a sha of a commit that is not the running build, with source 'image', indistinguishable from a platform-supplied one. Immunity to runtime shadowing is real; immunity to a hand-set stale sha is not.",
+      "repro": "Read side by side: Dockerfile:14-27 and ADR-033 Decision 2 vs its Consequences bullet. No code repro — the class is unfalsifiable offline, which is itself the point.",
+      "acceptance": "Either the absolute claims are narrowed to what the mechanism buys ('cannot be shadowed at RUNTIME; a build-time variable of the same name is still an operator-settable path, and the file cannot tell it from the platform's'), or the remedy bullet is struck and replaced with the only knob-free option (compute the sha in the build), so the change does not forbid and recommend the same operational path in two files."
+    },
+    {
+      "id": "R4", "severity": "LOW", "route": "debt",
+      "claim": "The new case makes a 100%-gated suite depend on `git rev-parse HEAD` resolving in the process's environment: a correct route reddens invariant wherever HEAD does not resolve.",
+      "evidence": "src/browser/eval_adapter.py _check_version_never_guesses: on head_sha is None it appends wrong['head-does-not-resolve'], so passed is False even when all 13 probes matched. A container: CI job, a git archive tarball, or a git-less image fails a suite CLAUDE.md gates at 100%. Declared as ceiling (3) in the case triage, so this is disclosure-complete, not hidden.",
+      "repro": "Run the case with git removed from PATH, or from an export of the tree -> passed False with wrong['head-does-not-resolve'] while the route is correct.",
+      "acceptance": "If it ever bites, the non-vacuity signal belongs in `got` (got['head_resolves'] already exists) with a separate case asserting it, so an unresolvable HEAD reports 'this probe was vacuous here' rather than 'the route is broken'."
+    }
+  ]
+}
