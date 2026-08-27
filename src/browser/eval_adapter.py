@@ -542,6 +542,27 @@ _BAND_RESTATE = re.compile(
 # back — and the same fix: read it back.
 _BAND_REPORT = re.compile(r"evals/report/(\d{8}-\d{6})-(fast|invariant)\.json")
 
+# A ledger MAXIMUM or a margin, retyped into prose. Item 12 (no-stale-max).
+# Distinct from every marker above: those grade a copy against its source, and
+# that works because a band bullet's own scalars only move when the band is
+# republished. A maximum does not — any gate run can move it, so a copy of one
+# is stale the moment someone runs the suite, and there is no republication step
+# to catch it. §2 published "the slowest row at this count is the 91.04s ... so
+# the real margin is 0.26s" while the very PR editing the next sentence pushed
+# the maximum to 91.30s and the margin to 0.0043s, sixty times smaller
+# (PR #65 R1). So the rule is not "grade the copy" but "do not keep one":
+# `published-band-slack-is-declared` prints the ledger's arithmetic on demand,
+# and the BOUNDARY (`the rule gives 105 for anything up to 91.30s`) is a
+# function of the ceiling, moves only when the ceiling does, and is deliberately
+# not matched here.
+# ponytail: a phrasing denylist, with the ceiling every grep-shaped check in this
+# repo has — a maximum spelled some third way is invisible. Upgrade path if that
+# ever happens: a positive rule that no `NN.NNs` token may appear in §2/§3
+# outside the graded markers, which today would flag a dozen legitimate ones.
+_BAND_MAX_PROSE = re.compile(
+    r"(?:slowest|largest|maximum|highest)[^.\n]{0,60}?is (?:the )?\*{0,2}\d+\.\d+s"
+    r"|(?:real |actual )?margin is \*{0,2}\d+\.\d+s")
+
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
     rf"([\d.]+) × {re.escape(f'{_BAND_RATE:g}')} = ([\d.]+) → \*\*(\d+)\*\*")
@@ -763,6 +784,13 @@ def _check_published_band() -> dict:
         seen = [s for s, _ in pairs]
         for suite in sorted({s for s in seen if seen.count(s) > 1}):
             wrong.append({"suite": suite, f"{where}_publishes_two_bands": True})
+    # Item 12 (no-stale-max). A maximum or a margin retyped into prose is a copy
+    # of a scalar every gate run can move, with no republication step to catch
+    # it — so it is refused outright rather than graded against the ledger. The
+    # boundary a ceiling implies is not this: it moves only when the ceiling
+    # does, and the regex leaves it alone.
+    if retyped := [m.group(0).strip() for m in _BAND_MAX_PROSE.finditer(adr)]:
+        wrong.append({"adr_retypes_a_ledger_maximum_or_margin": retyped})
     # The ceiling the ADR DERIVES from that maximum, in prose, must be the one
     # the RULE gives — not the one `evals/run.py` commits (ADR-019 §6 item 5
     # (derivation)).
@@ -5854,6 +5882,16 @@ def _check_version_never_guesses() -> dict:
     guards is a confident wrong answer and not a missing one. Four groups:
 
     - **absent/blank** — the file the image bakes is missing or says nothing.
+      Every probe runs with `BUILD_SHA`, `ZEABUR_GIT_COMMIT_SHA` and `VERSION`
+      set to a well-formed sha that is not the file's, because ADR-033's
+      load-bearing claim — "it never reads an environment variable", the whole
+      reason the design moved off `ENV` — was asserted in three documents and
+      graded by nothing: an implementation falling back to `os.environ` when the
+      file is blank passed all thirteen probes green, since no probe ever set an
+      environment variable and the fallback therefore never fired (PR #65 R2).
+      This is the same lesson as the git fallback one line down, arrived at
+      from the other end: a negative claim is graded only where the eval
+      SUPPLIES the thing the forbidden path would read.
       The `absent` probe is also the git-fallback guard, and it is only that
       because of where it runs: `git rev-parse HEAD` resolves here, so a route
       that shelled out to git when it had no build identity would answer a real
@@ -5886,6 +5924,7 @@ def _check_version_never_guesses() -> dict:
     and restores it. That attribute has exactly one reader, which matters
     because `server` also runs background gateway tasks in this process.
     """
+    import os
     import subprocess
     import tempfile
     import urllib.error
@@ -5927,9 +5966,17 @@ def _check_version_never_guesses() -> dict:
     if head_sha and not re.fullmatch(r"[0-9a-f]{40}", head_sha):
         head_sha = None
 
+    # A sha no probe writes to the file, so a route that reads any of these
+    # answers a value this check can name. `VERSION` is in the list because it is
+    # what someone reaching for a conventional name would pick.
+    ENV_SHA = "beef1234beef1234beef1234beef1234beef1234"
+    ENV_NAMES = ("BUILD_SHA", "ZEABUR_GIT_COMMIT_SHA", "VERSION")
     prev = server.BUILD_SHA_FILE
+    prev_env = {k: os.environ.get(k) for k in ENV_NAMES}
     wrong = {}
     try:
+        for k in ENV_NAMES:
+            os.environ[k] = ENV_SHA
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "BUILD_SHA"
             server.BUILD_SHA_FILE = path
@@ -5950,14 +5997,24 @@ def _check_version_never_guesses() -> dict:
                     wrong["git-fallback"] = {
                         "got": got, "want": NULL_UNAVAILABLE,
                         "note": "answered this checkout's HEAD, which is not the build"}
+                if got.get("sha") == ENV_SHA:
+                    wrong["env-fallback"] = {
+                        "got": got, "want": want, "probe": name,
+                        "note": f"answered one of {ENV_NAMES}, which the build did not write"}
     finally:
         server.BUILD_SHA_FILE = prev
+        for k, v in prev_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
     if head_sha is None:
         wrong["head-does-not-resolve"] = (
             "`absent` is the git-fallback guard only where a fallback would have "
             "a sha to answer with; run this suite from a git checkout")
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"probes": len(probes), "head_resolves": head_sha is not None}}
+            "got": {"probes": len(probes), "head_resolves": head_sha is not None,
+                    "env_names_set": list(ENV_NAMES)}}
 
 
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,

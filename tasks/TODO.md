@@ -105,12 +105,15 @@ this block stays open until then**: read `/version` on the deployed URL and
 compare it to the merge commit. A sha equal to the merge commit closes this and
 unblocks M44's clause. `{"sha": null, "source": "unavailable"}` means Zeabur
 does not pass the build argument to a Dockerfile build — documented neither way,
-which is why the design fails to the null. **There is deliberately no hand-set
-remedy**: the fix is build-time (a service variable consumed by the declared
-`ARG`, or computing the sha in the build, which needs `.git` in a context
-`.dockerignore` currently excludes) or the deployment publishes `unavailable`
-and any matrix row says it cannot name our build. Setting the sha by hand is
-ADR-033 Decision 2's rejected alternative, not a shortcut.
+which is why the design fails to the null. **The remedy is a sha the build
+DERIVES** — computing it during the build, which needs `.git` in a context
+`.dockerignore` currently excludes — or the deployment publishes `unavailable`
+and any matrix row says it cannot name our build. Filling the declared `ARG`
+from a dashboard field is NOT the remedy even though it would work: a human
+typing a sha into a form freezes that value into every later build, which is
+ADR-033 Decision 2's rejected path arriving at build time instead of runtime
+(PR #65 R3). What the file buys is immunity to RUNTIME shadowing, and the
+acceptance clause says only that.
 
 ### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
 Depends: M42
@@ -171,6 +174,29 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### M44-P1-D2 — the build-sha case makes a 100%-gated suite need a resolvable HEAD            [status: todo]
+Origin: PR #65 R4
+Priority: P2
+Spec: verbatim from the finding. "The new case makes a 100%-gated suite depend
+on `git rev-parse HEAD` resolving in the process's environment: a correct route
+reddens invariant wherever HEAD does not resolve." Evidence: "`src/browser/
+eval_adapter.py` `_check_version_never_guesses`: on `head_sha is None` it appends
+`wrong['head-does-not-resolve']`, so `passed` is False even when all 13 probes
+matched. A `container:` CI job, a `git archive` tarball, or a git-less image
+fails a suite CLAUDE.md gates at 100%. Declared as ceiling (3) in the case
+triage, so this is disclosure-complete, not hidden." Repro: "Run the case with
+git removed from PATH, or from an export of the tree -> passed False with
+`wrong['head-does-not-resolve']` while the route is correct."
+Not fixed in M44-P1 on the reviewer's own routing: the precondition is what makes
+the `absent` probe a git-fallback guard rather than a tautology, and today it
+holds everywhere the suite runs (`actions/checkout` gives CI a real checkout).
+Acceptance, carrying the reviewer's note: if it ever bites, the non-vacuity
+signal moves to `got` — where `got['head_resolves']` already is — with a separate
+case asserting it, so an unresolvable HEAD reports "this probe was vacuous here"
+rather than "the route is broken". The move is only correct WITH that second
+case: dropping the key from `wrong` and adding nothing makes a vacuous probe
+silently green, which is worse than a loud false red.
 
 ### M44-P1-D1 — deploy-smoke still cannot prove it tested the new build            [status: todo]
 Origin: M44-P1

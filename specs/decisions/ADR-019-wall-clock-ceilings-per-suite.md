@@ -91,10 +91,18 @@ repo's ledger and nothing else.
   the addition forces. Here the addition is T-M42-20's cases across three commits:
   two red-first cases for the defect that left M42's headline live clause unmet, five
   more in PR #60's round-1 repair and five in round 2's, most of them red-first cases
-  for regressions an earlier fix introduced. **State the margin against the ledger's
+  for regressions an earlier fix introduced. **Read the margin against the ledger's
   MAXIMUM, not against this published number** (PR #60 R13): the rule gives 105 for
-  anything up to 91.30s and the slowest row at this count is the 91.04s cited above,
-  so the real margin is 0.26s. **The committed ledger also holds four rows at 230
+  anything up to 91.30s, and that boundary — not any figure retyped here — is what to
+  measure against. The maximum itself is deliberately not written down, the same rule
+  §3's bullet states and for a harder reason than symmetry: this bullet DID carry one,
+  with the margin it implied, and M44-P1's own gate runs moved the maximum and shrank
+  that margin sixty-fold while the same diff edited the next sentence and left this one
+  alone (PR #65 R1) — then reported it as a hazard the PR had found rather than one it
+  had caused. A maximum has no republication step to catch a stale copy, because any
+  run moves it, so item 12 (no-stale-max) refuses the copy outright rather than grading
+  it, and `published-band-slack-is-declared` prints the ledger's own arithmetic on
+  demand. **The committed ledger also holds four rows at 230
   cases — 90.65, 91.06, 91.76 and 90.41s — and they are the reason this suite is 229 and not
   230.** PR #60's round-3 repair briefly put one more case in `fast`, the tree measured
   91.76s, and the rule derives **110** from that: a ceiling nobody has committed, which
@@ -614,6 +622,22 @@ is about this section itself:
    (PR #60 R17). The bullet is the region from the band line to the next blank
    line, and EVERY report file named inside it must match; a bullet naming none is
    not an error, because the ledger row is the claim and the file is a convenience.
+12. (no-stale-max) this file names no ledger MAXIMUM and no margin as a number.
+   Every other item grades a copy against its source, which works because a
+   band bullet's scalars move only when the band is republished. A maximum has
+   no such step: any gate run can move it, so a copy is stale the moment
+   somebody runs the suite and nothing is looking. §2 carried both — a `fast`
+   maximum and the margin it implied — and the PR editing the next sentence
+   moved the maximum and shrank the margin sixty-fold without touching either
+   figure, then reported the result as a hazard it had found rather than one it
+   had caused (PR #65 R1). So the rule is refusal, not grading:
+   `published-band-slack-is-declared` prints the ledger's arithmetic for anyone
+   who wants it. The BOUNDARY a ceiling implies — the value up to which the rule
+   still gives that ceiling — is not a maximum, moves only when the ceiling
+   does, and is deliberately outside this. Neither the retired sentences nor the
+   shape they wore is quoted anywhere in this file, for the reason
+   `REPORT_CITATION_SKIP` spells its own exception out in prose: this sweep
+   reads this file too.
 
 Green is required nowhere in that list and cannot be (T-R53); item 2 (cited-run) requires
 the result to be *stated*, not to be a pass. Item 5 (derivation) states the rule's value and

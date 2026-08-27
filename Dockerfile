@@ -14,11 +14,16 @@ COPY docs/support-matrix.md /app/docs/support-matrix.md
 
 # Build identity (ADR-033). Zeabur's docs say ZEABUR_GIT_COMMIT_SHA exists during
 # the BUILD phase only, so the sha has to be frozen into the image here — at
-# runtime the variable is gone. A FILE and not an `ENV`: a service-level
-# environment variable set in the Zeabur dashboard shadows an image `ENV` at
-# runtime, and a sha set by hand that way is correct until the next deploy and a
-# confident lie afterwards, indistinguishable from a baked one. A file in the
-# image cannot be shadowed, so there is no hand-set path to go stale.
+# runtime the variable is gone. A FILE and not an `ENV`, and the claim is exactly
+# this and no wider: a service-level environment variable set in the Zeabur
+# dashboard SHADOWS an image `ENV` at runtime, so a sha set that way is correct
+# until the next deploy and a confident lie afterwards; a file written here is
+# immune to that, because nothing at runtime can shadow it.
+# What it is NOT immune to: an operator who sets ZEABUR_GIT_COMMIT_SHA in the
+# dashboard, if that reaches this ARG, freezes that value into every later build,
+# and /version cannot tell it from a platform-supplied one. Do not do that — the
+# only knob-free source is a sha the build derives for itself (ADR-033
+# Consequences).
 # Placed after the COPYs so it never busts the pip layer, and before USER so the
 # write succeeds. If Zeabur does not pass the build argument, the ARG default
 # leaves this file empty and /version answers `unavailable`: it fails to the

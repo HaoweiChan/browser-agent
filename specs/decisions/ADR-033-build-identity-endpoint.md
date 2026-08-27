@@ -62,7 +62,7 @@ a cold review pointed out that it separated *set* from *unset* and never
 *baked* from *hand-set*, which is the distinction the whole ADR is about. The
 repair was to delete the second case, not to name it.
 
-### 2. The value is a file the build writes, and there is no other way in
+### 2. The value is a file the build writes, and no runtime setting can shadow it
 
 Zeabur's documentation lists `ZEABUR_GIT_COMMIT_SHA` — "the Git commit SHA
 value that the current deployment belongs to" — among its built-in variables,
@@ -96,8 +96,8 @@ Three alternatives were considered and rejected:
   natural quick fix if a build does not supply the sha — the route serves it
   forever, indistinguishable from a baked value, correct until the next deploy
   and a confident lie after it. That is not a hazard to document; it is the
-  failure this endpoint exists to prevent, with a knob attached. A file in the
-  image has no such knob.
+  failure this endpoint exists to prevent, with a knob attached. A file written
+  during the build is immune to that, because nothing at runtime can shadow it.
 - **A hand-set value as a declared fallback.** Rejected on the same ground, and
   named separately because the first draft of this ADR *did* prescribe it while
   the `Dockerfile` comment two files away forbade it. One change giving
@@ -108,8 +108,20 @@ Three alternatives were considered and rejected:
 
 So the trade the task set — environment variable or baked file — is decided by
 shadowing and by nothing else. What a file costs is four lines (a path, an
-encoding, an `OSError` branch); what it buys is that there is exactly one way
-for a sha to reach this route, and it runs at build time.
+encoding, an `OSError` branch); what it buys is that a sha reaching this route
+at RUNTIME is impossible.
+
+**And that is the whole of what it buys — the first version of this section
+claimed more.** A review walked the remaining path (PR #65 R3): an operator
+types a sha into the dashboard, it reaches the declared `ARG`, every subsequent
+build freezes that same value, and `/version` publishes a commit that is not
+the running build with `source: "image"`, indistinguishable from a
+platform-supplied one. That is the `ENV` failure moved from runtime to build
+time, not removed. Two things follow, and both are the reason the earlier
+absolute phrasing is now forbidden by
+`claims_the_build_sha_has_no_operator_settable_path`: the claim here is
+**runtime** immunity and nothing broader, and the remedy in Consequences is a
+sha the build DERIVES, never one a human supplies to it.
 
 ### 3. A value that is not a sha is refused, not echoed
 
@@ -170,15 +182,17 @@ to the merge commit.
 
 - If it answers a sha equal to the merge commit: done, and M44 may cite it.
 - If it answers `{"sha": null, "source": "unavailable"}`: the build argument is
-  not passed. **The remedy is a build-time one or none at all** — Decision 2's
-  ruling is that there is no hand-set fallback, because a hand-set sha is the
-  confident lie this endpoint exists to prevent. The candidates are a Zeabur
-  service variable consumed by the declared `ARG` (its Dockerfile docs say a
-  declared `ARG` is set before the build), or computing the sha in the build,
-  which today would also mean letting `.git` into the build context that
-  `.dockerignore` excludes. Until one of them works the honest published state
-  is `unavailable`, and a matrix row that cannot name our build says so instead
-  of naming one.
+  not passed. **The remedy is a sha the build DERIVES, and there is exactly one
+  candidate** — compute it during the build, which today also means letting
+  `.git` into the build context `.dockerignore` excludes, and which nobody can
+  set to a wrong value by hand. Filling the declared `ARG` from a dashboard
+  field is deliberately NOT offered, though it would work and the first draft of
+  this section did offer it: a human typing a sha into a form is the stale-value
+  path Decision 2 rejects, and recommending it here while the `Dockerfile`
+  forbade it made one change give opposite instructions in two files (PR #65
+  R3). Until the build can derive the sha, the honest published state is
+  `unavailable`, and a matrix row that cannot name our build says so instead of
+  naming one.
 
 **One thing `unavailable` deliberately does not distinguish**: a build that
 passed nothing, a build that wrote an empty file, and a process launched

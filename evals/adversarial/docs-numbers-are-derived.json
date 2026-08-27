@@ -186,6 +186,24 @@
           "and is what M45 fixes"
         ],
         "why": "PR #56 R7. ADR-031 is the document of record for the probe, so it is where a reader looks for the verdict. Its Outcome corrections are legitimately exempt from the repair-history group — a pre-registration recording a correction to its own frozen figure is the point of pre-registering — but that exemption is not cover for a forward claim that a fix shipped."
+      },
+      {
+        "label": "claims_the_build_sha_has_no_operator_settable_path",
+        "docs": [
+          "Dockerfile",
+          "specs/decisions/ADR-033-build-identity-endpoint.md",
+          "src/browser/server.py",
+          "tasks/TODO.md"
+        ],
+        "phrases": [
+          "A file in the image has no such knob.",
+          "and there is no other way in",
+          "cannot be shadowed, so there",
+          "is no knob",
+          "service variable consumed by the declared `ARG`",
+          "so there is no hand-set path to go stale"
+        ],
+        "why": "PR #65 R3. ADR-033 rejected an image `ENV` because a platform service variable shadows it at runtime and a hand-set sha then goes stale with `source: \"image\"` and nothing to notice. What the file buys is immunity to RUNTIME shadowing, and the first draft claimed more than that in three documents at once -- while its own Consequences named, as the remedy for `unavailable`, a dashboard field an operator types a sha into that every later build then bakes. Same failure, moved from runtime to build time rather than removed. The absolute phrasings are forbidden here and the remedy bullet with them, so the change cannot forbid and recommend one operational path in two files. Watched red with all six present. The ceiling is the usual one for a phrase scan: a new way of spelling the same absolute is invisible, which is why the ADR now states the narrow claim positively rather than relying on this to stop the broad one. `src/browser/server.py` is scanned as a document like the rest, and its phrase is spelled without the leading words because the whitespace collapse leaves a comment `#` inside the sentence -- the same hard-wrap problem the collapse exists for, one layer down. `tasks/TODO.md` is in scope because M44-P1's own acceptance clause repeated the struck remedy verbatim, which is where whoever picks this up post-merge would read it; that was the fourth document carrying it and it was watched red too."
       }
     ],
     "probe_cost_column": {
