@@ -263,6 +263,24 @@ figures, the boundaries, the derivation products) and would mean restructuring
 prose this task is a guest in. Take it when §2/§3 are being rewritten for another
 reason, not on its own.
 
+### M44-P1-D3 — the derive-command probes build a shell string by raw replace            [status: todo]
+Origin: PR #67 R4
+Priority: P3
+Spec: verbatim from the finding. The executed probes in
+`_check_build_sha_is_derived` substitute paths into the extracted command with
+raw `str.replace` and hand the result to `sh -c` unquoted, so a checkout path
+containing a space (or any shell metacharacter) is re-parsed as two arguments:
+`git -C /Users/me/my repo rev-parse HEAD` fails, the `|| :` branch fires, the
+file is empty, and `derives-this-checkouts-head` reddens against a Dockerfile
+that is correct. It cannot produce a false GREEN — the failure direction is a
+red on a correct tree — which is why it is P3 and not a repair.
+Not fixed in M44-P1: no path in this repo's checkouts contains a space, and the
+fix touches the one place the reviewer would rather see settled with the rest of
+the probe machinery than in a repair round scoped to two other findings.
+Acceptance: the substitution quotes with `shlex.quote`, or is done on tokens
+rather than on the command string, and a probe run from a directory whose name
+contains a space is green on the shipped Dockerfile.
+
 ### M44-P1-D2 — the build-sha case makes a 100%-gated suite need a resolvable HEAD            [status: todo]
 Origin: PR #65 R4
 Priority: P2
@@ -271,7 +289,12 @@ on `git rev-parse HEAD` resolving in the process's environment: a correct route
 reddens invariant wherever HEAD does not resolve." Evidence: "`src/browser/
 eval_adapter.py` `_check_version_never_guesses`: on `head_sha is None` it appends
 `wrong['head-does-not-resolve']`, so `passed` is False even when all 13 probes
-matched. A `container:` CI job, a `git archive` tarball, or a git-less image
+matched." **Second instance, PR #67 R5**: `_check_build_sha_is_derived` does the
+same thing for the same reason — its executed probes compare against
+`git rev-parse HEAD`, so an unresolvable HEAD reddens a correct Dockerfile. Both
+functions are in scope for the fix below, and the ceiling is now listed in that
+case's triage (it was not when the case was written, which is what made this a
+finding rather than a duplicate). A `container:` CI job, a `git archive` tarball, or a git-less image
 fails a suite CLAUDE.md gates at 100%. Declared as ceiling (3) in the case
 triage, so this is disclosure-complete, not hidden." Repro: "Run the case with
 git removed from PATH, or from an export of the tree -> passed False with

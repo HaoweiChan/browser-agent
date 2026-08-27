@@ -6112,8 +6112,18 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None) -> dict:
             stage_end = stages[stage_i + 1].start()
             stage_text = text[stages[stage_i].start():stage_end]
             ctx = derive.group(2)
-            if not re.search(rf"(?m)^COPY\s+\S+\s+{re.escape(ctx)}\S*\s*$", stage_text):
-                wrong["derive_stage_never_copies_the_context"] = ctx
+            # The SOURCE, not just the destination. Matching the destination
+            # alone passed a stage copying a subtree that cannot contain `.git`
+            # — the build then derives nothing and `/version` is `unavailable`
+            # forever, with this conjunct, named for that property, green
+            # (PR #67 R1). The executed probes cannot see it: they substitute
+            # the live checkout for `ctx` and never read what the stage copies.
+            into_ctx = re.search(rf"(?m)^COPY\s+(\S+)\s+{re.escape(ctx)}\S*\s*$", stage_text)
+            src = into_ctx.group(1) if into_ctx else None
+            if src is None or (src != "." and ".git" not in src):
+                wrong["derive_stage_never_copies_the_context"] = {
+                    "context": ctx, "copies": src,
+                    "want": "the whole context (`.`) or `.git` itself"}
             stage_name = stages[stage_i].group(1)
             copy_from = re.search(r"(?m)^COPY\s+--from=(\S+)\s+\S+\s+/app/BUILD_SHA\s*$",
                                   final_text)
@@ -6121,8 +6131,17 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None) -> dict:
                 wrong["final_stage_missing_copy_from"] = "/app/BUILD_SHA"
             elif stage_name is not None and copy_from.group(1) != stage_name:
                 wrong["copy_from_names_a_different_stage"] = copy_from.group(1)
-    if re.search(r"(?m)^COPY\s+[^\n]*\.git", final_text):
-        wrong["final_stage_copies_git"] = "the image must carry the one file, not the tree"
+    # The image carries the one file, not the tree — and the whole-context COPY
+    # is the way that breaks now. `.dockerignore` used to filter `.git` out of
+    # every stage, so `COPY . /app/` was harmless; this change is what makes it
+    # ship a public image with the git history in it, past a substring scan for
+    # `.git` that such a line never contains (PR #67 R2). `--from=` sources copy
+    # from a stage, not from the context, so they are not this.
+    ships_the_context = [m.group(0) for m in
+                         re.finditer(r"(?m)^COPY\s+(?!--from=)([^\n]*)$", final_text)
+                         if (m.group(1).split() or [""])[0] == "." or ".git" in m.group(1)]
+    if ships_the_context:
+        wrong["final_stage_copies_git"] = ships_the_context
 
     # (4) the command itself, executed. Non-vacuity first: a derivation can only
     # be shown to produce HEAD where HEAD resolves (same rule as
@@ -6163,6 +6182,32 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None) -> dict:
                 if rc != 0 or got != want:
                     wrong[probe] = {"exit": rc, "file": got, "want": want,
                                     "cmd": cmd}
+    # (5) the two COPY conjuncts, graded against Dockerfiles that break them.
+    # `ceiling_sweep_rows`' lesson one layer down (PR #40 R1): an exercise set
+    # that only tries what the code was written for proves nothing, and both of
+    # these were GREEN on the round-1 check — a derive stage copying a subtree
+    # with no `.git` in it (`/version` then `unavailable` forever), and a final
+    # stage copying the whole context (the git history shipped in a public
+    # image, reachable only because this change stopped `.dockerignore` from
+    # filtering it). PR #67 R1/R2. The mutations run only for the real file, so
+    # the recursion is one level deep, and each asserts its own substitution
+    # happened: a rename that makes `old` absent would otherwise leave the row
+    # passing on an unmutated copy.
+    if dockerfile is None:
+        for name, old, new, conjunct in (
+                ("derive-stage-copies-a-subtree", "COPY . /ctx", "COPY src /ctx",
+                 "derive_stage_never_copies_the_context"),
+                ("final-stage-copies-the-context", "COPY src/ /app/src/", "COPY . /app/",
+                 "final_stage_copies_git")):
+            if old not in text:
+                wrong[f"mutation_{name}_is_vacuous"] = f"{old!r} is not in the Dockerfile"
+                continue
+            with tempfile.TemporaryDirectory() as tmp:
+                p = Path(tmp) / "Dockerfile"
+                p.write_text(text.replace(old, new, 1), encoding="utf-8")
+                if conjunct not in _check_build_sha_is_derived(dockerfile=p)["wrong"]:
+                    wrong[f"mutation_{name}_not_caught"] = {
+                        "mutation": f"{old} -> {new}", "expected_conjunct": conjunct}
     return {"passed": not wrong, "wrong": wrong,
             "got": {"stages": len(stages), "head_resolves": head_sha is not None}}
 

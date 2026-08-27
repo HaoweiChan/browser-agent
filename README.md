@@ -51,7 +51,7 @@ python3 -m uvicorn src.browser.server:app --port 8099
 ## Where it stands
 
 Latest offline baseline — `evals/report/20260827-023505-fast.json`, with
-`evals/report/20260827-195401-invariant.json` and
+`evals/report/20260827-202417-invariant.json` and
 `evals/report/20260826-132658-live.json`:
 
 ```
@@ -180,7 +180,7 @@ enumerating them here is the snapshot that drifted:
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
 | `fast` | 229 | 91.04s | 104.7 | **105s** |
-| `invariant` | 84 | 15.95s | 18.34 | **20s** |
+| `invariant` | 84 | 16.18s | 18.61 | **20s** |
 
 **CI has its own two, measured on CI** rather than projected from these — four
 attempts of one run (`14a6a7b`, 213 `fast` / 74 `invariant` cases, the tree this

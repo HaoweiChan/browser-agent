@@ -1,0 +1,61 @@
+{
+  "pr": 67,
+  "round": 1,
+  "task": "M44-P1",
+  "base": "6089850",
+  "head": "857a22f",
+  "result": "REQUEST_CHANGES",
+  "gate": {
+    "invariant": "84/84 = 1.000, 16.24s, ceiling 20",
+    "fast": "229/229 = 1.000, 89.68s, ceiling 105",
+    "cost": "$0.0000",
+    "verified_by": "orchestrator, independently of the implementer's run"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The `derive_stage_never_copies_the_context` conjunct accepts any COPY *source*, so narrowing stage 1's `COPY . /ctx` to a subtree that has no `.git` leaves all four conjuncts green while the real build derives nothing and `/version` is permanently `unavailable` — the exact symptom this PR exists to remove.",
+      "evidence": "src/browser/eval_adapter.py:6113 — `re.search(rf\"(?m)^COPY\\s+\\S+\\s+{re.escape(ctx)}\\S*\\s*$\", stage_text)` matches on the *destination* only. Input: Dockerfile:25 changed from `COPY . /ctx` to `COPY src /ctx` (or `COPY docs /ctx`). The executed probes cannot see it because they substitute the LIVE checkout root for `ctx` and never read what the stage copies. The case's triage ceilings (1)-(4) declare the `.git`/ARG spelling hole, the no-Docker hole, the one-command-shape hole and the line-continuation hole — not this one, so it is an undeclared blind spot in the conjunct that names itself after this exact property.",
+      "repro": ".venv/bin/python -c 'import sys,tempfile,pathlib;sys.path.insert(0,\".\");from src.browser.eval_adapter import _check_build_sha_is_derived as f;o=pathlib.Path(\"Dockerfile\").read_text();t=tempfile.mkdtemp();p=pathlib.Path(t)/\"Dockerfile\";p.write_text(o.replace(\"COPY . /ctx\",\"COPY src /ctx\"));print(f(dockerfile=p))'  -> {'passed': True, 'wrong': {}}",
+      "acceptance": "`build-sha-is-derived-not-supplied` goes RED for a derive stage whose COPY source cannot contain the context's `.git` (e.g. require the source token to be `.` or to name `.git`), demonstrated red-first with the `COPY src /ctx` mutation; or the hole is added verbatim to the triage note's declared ceilings alongside (1)-(4)."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Dropping `.git` from `.dockerignore` removes the only mechanical guarantee that `.git` cannot reach the published image, and the conjunct that claims to replace it (`final_stage_copies_git`) is a literal-string regex that a final-stage `COPY . /app/` walks straight past.",
+      "evidence": ".dockerignore:1-4 (the `.git` line is gone) plus src/browser/eval_adapter.py:6124 `re.search(r\"(?m)^COPY\\s+[^\\n]*\\.git\", final_text)`. Input: Dockerfile:36 changed from `COPY src/ /app/src/` to `COPY . /app/` — the final image then ships the entire `.git` (git history, all branches) into a publicly deployed container, and the check stays green. The case's expect.note asserts the conjunct as \"`.git` never reaches the final image\"; what is graded is only \"no final-stage COPY line contains the substring `.git`\". Before this commit `.dockerignore` made that mutation harmless.",
+      "repro": ".venv/bin/python -c 'import sys,tempfile,pathlib;sys.path.insert(0,\".\");from src.browser.eval_adapter import _check_build_sha_is_derived as f;o=pathlib.Path(\"Dockerfile\").read_text();t=tempfile.mkdtemp();p=pathlib.Path(t)/\"Dockerfile\";p.write_text(o.replace(\"COPY src/ /app/src/\",\"COPY . /app/\"));print(f(dockerfile=p))'  -> {'passed': True, 'wrong': {}}",
+      "acceptance": "Either the final-stage COPY sources are enumerated/allowlisted so a whole-context COPY into the final stage is RED (watched red with the `COPY . /app/` mutation), or `.dockerignore` keeps an exclusion that stage 1 re-admits explicitly, or the hole is stated in the triage note's declared ceilings as a knowingly accepted one."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §3's stated reason for citing a RED ledger row as the `invariant` band source is contradicted by the committed ledger: a fully green 84/84 row at the same case count exists, its report is committed, and README cites it — the band silently uses the fastest of the eight rows at that count instead.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:306-315 says \"...so the only run that could carry this bullet's own numbers is one taken before the bullet was written.\" evals/report/history.jsonl now contains {\"ts\": \"20260827-195401\", \"suite\": \"invariant\", \"passed\": 84, \"total\": 84, \"wall_s\": 16.16, \"report\": \"20260827-195401-invariant.json\"} — green, at 84 cases, report committed, `_band_rule(16.16) == 20 == _band_rule(16.27)`, so it satisfies every item of `_band_wrong` (eval_adapter.py:683-709), and README.md:54 cites that very file for the 84/84 headline. Three more green rows at 84 follow it (195423, 195629, 195713). The published 15.95s is the MINIMUM of the eight rows at count 84 (ledger max 16.27s), in the section whose own text says it \"exists to refuse\" publishing below a maximum the author had already seen.",
+      "repro": ".venv/bin/python -c 'import json;rows=[json.loads(l) for l in open(\"evals/report/history.jsonl\")];print([(r[\"ts\"],r[\"passed\"],r[\"total\"],r[\"wall_s\"]) for r in rows if r[\"suite\"]==\"invariant\" and r.get(\"total\")==84])'",
+      "acceptance": "Either §3 cites the green row (ts 20260827-195401, 16.16s, 84/84 — `published-band` stays green, README and the ADR then cite the same run), or the bullet's justification is rewritten to the true one (a green run at this count exists and was not used; the red row was kept because it is the faster measurement) so no reader is told a green citation was unavailable."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The executed probes build a shell string by raw substring substitution and interpolate the checkout root unquoted into `sh -c`, so a repo path containing a space silently takes the `|| :` branch (exit 0, empty file) and reddens `derives-this-checkouts-head` on a byte-identical, correct Dockerfile.",
+      "evidence": "src/browser/eval_adapter.py:6155-6157 — `cmd = (template.replace(out, str(outfile)).replace(ctx, src if src is not None else tmp))` then `subprocess.run([\"sh\", \"-c\", cmd])`. With `root = /Users/willy/Documents/browser agent`, the command becomes `git -C /Users/willy/Documents/browser agent rev-parse HEAD > ... || : > ...`, which exits 0 with an empty file — indistinguishable from a genuine derivation failure. The same substitution also corrupts the output path whenever the extracted `ctx` token occurs as a substring of the substituted out path (the code comment at 6153-6154 asserts the reverse ordering is the only collision).",
+      "repro": ".venv/bin/python -c 'import subprocess,tempfile,pathlib;t=tempfile.mkdtemp();o=pathlib.Path(t)/\"BUILD_SHA\";c=\"git -C /ctx rev-parse HEAD > /BUILD_SHA 2>/dev/null || : > /BUILD_SHA\".replace(\"/BUILD_SHA\",str(o)).replace(\"/ctx\",\"/Users/willy/Documents/browser agent\");r=subprocess.run([\"sh\",\"-c\",c],capture_output=True);print(r.returncode, repr(o.read_text()))'  -> 0 ''",
+      "acceptance": "The extracted command is run with the paths quoted (`shlex.quote`) or the substitution is done on tokens rather than substrings, and the invariant suite stays 84/84 when the repo is checked out under a path containing a space."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new check adds a second instance of the already-tracked debt M44-P1-D2 (a 100%-gated suite that reddens where `git rev-parse HEAD` does not resolve), but D2's Spec and Acceptance still name only `_check_version_never_guesses`, and the new case's four declared triage ceilings do not list the precondition at all.",
+      "evidence": "src/browser/eval_adapter.py:6141-6143 appends `wrong[\"head-does-not-resolve\"]`, making `passed` False; tasks/TODO.md M44-P1-D2 scopes the debt to `_check_version_never_guesses` and its acceptance (\"the non-vacuity signal moves to `got` ... with a separate case asserting it\") would therefore fix half the instances. evals/adversarial/build-sha-is-derived-not-supplied.json `triage.note` lists ceilings (1)-(4) and none is the HEAD precondition (only the function docstring mentions it).",
+      "repro": "Run the invariant suite from a `git archive` export of this tree -> two cases red, both `head-does-not-resolve`.",
+      "acceptance": "M44-P1-D2's Spec names both `_check_version_never_guesses` and `_check_build_sha_is_derived`, and the new case's triage ceilings list the resolvable-HEAD precondition explicitly."
+    }
+  ]
+}
