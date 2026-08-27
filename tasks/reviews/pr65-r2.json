@@ -1,0 +1,46 @@
+{
+  "pr": 65, "round": 2, "task": "M44-P1", "result": "REQUEST_CHANGES",
+  "scope": "Repair diff (4b4175e) plus standing findings R1/R2/R3 only. No fresh full-diff sweep.",
+  "gate_at_review": {"invariant": "83/83 = 1.000, 16.46s / 20", "fast": "229/229 = 1.000, 89.89s / 105", "cost_usd": 0.0},
+  "standing_findings": {
+    "R1": "PARTIALLY FIXED. The stale sentence is gone and the guard fires end-to-end on the retired shapes. The ban-instead-of-correct deviation is sound in principle. But the ban is under-broad against a maximum already in the same file (R5) and over-broad against its own declared exemption (R8), and the substitute it points readers at is the wrong check and prints the stale number (R6). The §6 rationale does NOT reintroduce the banned phrasings — _BAND_MAX_PROSE.finditer(adr) returns [] on the real file while controls fire, so the guard reads the file rather than skipping it.",
+    "R2": "CONFIRMED FIXED. Mutation-verified: build_identity falling back to os.environ['BUILD_SHA'] returns passed False with absent/empty/whitespace and the named env-fallback conjunct; env-preferred-over-file reddens 8 probes. The declared fourth-name ceiling is real and honestly stated.",
+    "R3": "PARTIALLY FIXED. The four scanned documents are clean and the struck remedy is gone from tasks/TODO.md and the reviewer-page ADR digest. Two documents outside the group still carry the absolute — R7.",
+    "R4": "Debt as M44-P1-D2. Not re-litigated."
+  },
+  "findings": [
+    {
+      "id": "R5", "severity": "MEDIUM", "route": "repair",
+      "blocks_under": "makes a published claim dishonest",
+      "claim": "ADR-019 §6 item 12 declares 'this file names no ledger MAXIMUM and no margin as a number', but §2 of the same file names one — 'the maximum at that count is still 91.76s' — and the new guard is silent on it, so the ban is asserted rather than graded on the counter-example it already contains.",
+      "evidence": "ADR-019:113-114 says 'the maximum at that count is still 91.76s and still derives 110'; line 625 says the file names none. history.jsonl confirms 91.76 IS the current live maximum at 230 fast cases. _BAND_MAX_PROSE (src/browser/eval_adapter.py:223-225) requires `is (?:the )?\\d+\\.\\d+s`, so 'is still 91.76s' evades. Not hypothetical: M44-P1 itself wrote a new 230-case row (90.41s, ts 20260827-152555) — a run above 91.76s would have falsified line 114 silently, which is R1 verbatim.",
+      "orchestrator_confirmation": "Confirmed. The sentence wraps across a line break, which is why a single-line grep misses it — the orchestrator's first check was the flawed instrument, not the finding. Guard evasion reproduced: 'the maximum at that count is still 91.76s', 'the longest row at this count is 91.30s', 'maximum: 91.30s' and 'stands at 91.30s' all EVADE; only 'the real margin is 0.26s' is CAUGHT.",
+      "repro": "python3 -c \"from src.browser.eval_adapter import _BAND_MAX_PROSE as R; print(R.search('the maximum at that count is still 91.76s'))\" -> None. Injecting 'the longest row at this count is 95.00s' into ADR-019 leaves published-band-matches-the-ledger GREEN.",
+      "acceptance": "Either item 12's declaration is true of the file (113-114's maximum removed or re-expressed as the boundary), or item 12 states the phrase-scan ceiling honestly and names the surviving maximum as a declared exception. A case that goes red on the file's own 91.76s sentence, or on one of the evading spellings, is what would have caught this."
+    },
+    {
+      "id": "R6", "severity": "MEDIUM", "route": "repair",
+      "blocks_under": "makes a published claim dishonest",
+      "claim": "The repair makes published-band-slack-is-declared the load-bearing substitute for the deleted maximum, saying twice that it 'prints the ledger's own arithmetic' — it never reads the ledger, and the fast number it does print is 0.26, the exact stale margin R1 flagged.",
+      "evidence": "ADR-019:103-104 and :632-633 (both new in this diff) claim it prints the ledger's own arithmetic. _check_published_band_slack (src/browser/eval_adapter.py:955-1047) reads only _ADR019, _README, _INDEX and the published band line; it never opens history.jsonl. Its got is {'declared_slack_s': 4.35, 'headroom_s': {'fast': 0.26, 'invariant': 1.19}} — 91.30 minus the published 91.04, i.e. the retired sentence's number. True margin against the ledger maximum is 0.0043s. The check that DOES print the ledger maximum is published-band-matches-the-ledger via ledger_slowest, which ADR-019:382-383 and :748-749 already name correctly — the repair points the reader at the other one.",
+      "orchestrator_confirmation": "Confirmed both halves: got prints headroom_s fast 0.26, and a grep for 'history' over lines 955-1047 returns 0.",
+      "repro": "run_case(published-band-slack-is-declared)['got'] -> headroom_s fast 0.26",
+      "acceptance": "§2 and item 12 point at published-band-matches-the-ledger/ledger_slowest (the artefact ADR-019 elsewhere already names), or published-band-slack-is-declared actually computes headroom against the ledger maximum. One instance of this mis-pointing pre-dates the diff; the diff added two more and made them the substitute for a deleted claim."
+    },
+    {
+      "id": "R7", "severity": "MEDIUM", "route": "repair",
+      "blocks_under": "makes a published claim dishonest",
+      "claim": "R3 is repaired in the four graded documents but not in two ungraded ones, and ADR-033 now contradicts itself: Decision 1 still says a human cannot set the value at all, which Decision 2's new paragraph explicitly refutes.",
+      "evidence": "ADR-033:57-58 — 'there is no mechanism by which a human can set this value, so `image` has one meaning' — versus the paragraph this diff added at :113-118 describing an operator typing a sha into the dashboard and /version publishing a commit that is not the running build with source 'image'. Both sentences are about whether `image` has one meaning; they disagree. specs/decisions/INDEX.md:42 carries the same absolute: 'there is deliberately no hand-set fallback ... that is a finding, not a knob.' Neither is caught: forbidden_claims is a case-sensitive substring scan over grp['docs'] only, and the group's docs list is Dockerfile / ADR-033 / server.py / TODO.md with six literal phrases, none of which is 'no mechanism by which a human' or 'not a knob'.",
+      "repro": "grep -n 'no mechanism by which a human' specs/decisions/ADR-033-build-identity-endpoint.md; grep -n 'not a knob' specs/decisions/INDEX.md; run_case(docs-numbers-are-derived) is GREEN with both present.",
+      "acceptance": "ADR-033:57-58 restated to the narrow runtime claim (as Decision 2's heading now is), INDEX.md:42's digest matched to it, and the surviving spellings added to claims_the_build_sha_has_no_operator_settable_path — watched red first, as the group's own `why` field records for the other four."
+    },
+    {
+      "id": "R8", "severity": "LOW", "route": "debt",
+      "claim": "The ban is over-broad against the exemption item 12 itself declares: the BOUNDARY, which item 12 says is 'deliberately outside this', fires whenever it is spelled with 'maximum' or 'highest'.",
+      "evidence": "ADR-019:634-637 declares the boundary out of scope. src/browser/eval_adapter.py:223-225 matches on the keyword alone: 'the maximum wall clock the rule still admits at this ceiling is 91.30s' and 'the highest value the 105 ceiling admits is 91.30s' both match, as does unrelated prose like 'the largest per-case p95 we tolerate is 2.50s'. §2's current spelling evades only by accident of wording, so the gate is green today and the next author restating the boundary hits a rule the spec says does not apply to them.",
+      "repro": "R.search('the maximum wall clock the rule still admits at this ceiling is 91.30s') matches.",
+      "acceptance": "Either the regex excludes boundary phrasings, or item 12 drops the claim that the boundary is outside the rule. Not red today."
+    }
+  ]
+}
