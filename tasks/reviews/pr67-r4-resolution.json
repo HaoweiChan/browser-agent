@@ -1,0 +1,47 @@
+{
+  "pr": 67,
+  "round": 4,
+  "task": "M44-P1",
+  "resolved_at_head": "02d396b",
+  "disposition": "Option B — accept and declare the ceiling. No parser work this round: every finding below is text, and the one code-level gap (R12) is declared rather than patched on the reviewer's ruling.",
+  "resolutions": [
+    {
+      "id": "R12",
+      "status": "declared",
+      "reproduced_here": "`# x \\` + newline + `COPY . /app/` in the final stage -> `_dockerfile_copies` returns `[]` and the check returns `{'passed': True, 'wrong': {}}`, shipping the whole context. The retired substring regex caught that line.",
+      "declared_in": [
+        "specs/decisions/ADR-034-derived-build-sha.md — the ceiling section now names three evasion classes in order: SPELLING (round 3, pinned red), CLASS (`RUN --mount=type=bind,source=.git`), PARSER (this one)",
+        "evals/adversarial/build-sha-is-derived-not-supplied.json — ceiling (9)",
+        "tasks/TODO.md — M44-P1-D8, all three classes so the next session has the case made"
+      ],
+      "why_not_fixed": "The third class was introduced by round 3's own repair — joining continuations is what closed the spelling hole, and Docker strips comments before joining, which this parser does not. Three rounds, three classes, each deeper than the last and the newest manufactured by the previous fix: the surface grows as fast as it is covered. That is stated as the evidence for stopping, not softened. The guarantee sentence is unchanged and explicit: an accidental context copy is caught; NOT that `.git` cannot reach the image."
+    },
+    {
+      "id": "R14",
+      "status": "fixed",
+      "what_was_wrong": "Four documents recorded a verification that did not happen. They said a lowercase `FROM` 'fails closed, loudly' / 'reports `single_stage`' / 'all three are red'. The probe that actually ran lowercased BOTH `FROM` lines — which does report `single_stage`. Lowercasing only the DERIVE stage's `FROM` raises an uncaught `ValueError: max() iterable argument is empty` from the stage-index lookup, which the runner turns into a case ERROR: the named conjunct never reports.",
+      "reproduced_here": "derive-stage-only -> `ValueError: max() iterable argument is empty`; final-stage-only -> `['single_stage', 'derived_in_the_final_stage', 'final_stage_source_not_on_the_allowlist']`; both -> `['single_stage', 'final_stage_source_not_on_the_allowlist']`.",
+      "corrected_documents": [
+        "evals/adversarial/build-sha-is-derived-not-supplied.json — ceilings (4) and (9)",
+        "specs/decisions/ADR-034-derived-build-sha.md",
+        "tasks/TODO.md — M44-P1-D8",
+        "tasks/reviews/pr67-r3-resolution.json — corrected in place, marked as a round-4 correction"
+      ],
+      "code_changed": "none, deliberately. The ValueError is a loud case error and acceptable behaviour; only the description was false.",
+      "note": "This is the finding that mattered most this round, and it is the failure mode the PR spent three rounds establishing: a believed guard is worse than a known gap, and a believed VERIFICATION is the same defect one level up. The probe was run once, generalised in prose, and repeated into four documents."
+    },
+    {
+      "id": "R13",
+      "status": "fixed",
+      "what_was_wrong": "Ceiling (4) claimed the remaining case-sensitive regexes fail CLOSED — 'loud and wrong, never quiet and wrong'. The `ARG ZEABUR_GIT_COMMIT_SHA` regex fails OPEN.",
+      "reproduced_here": "`arg ZEABUR_GIT_COMMIT_SHA=\"\"` in the final stage -> `{'passed': True, 'wrong': {}}`.",
+      "what_changed": "Ceiling (4) now states what was observed for each spelling and retracts 'never quiet and wrong' explicitly, naming the ARG case as the quiet-and-wrong one. The regex is left alone: fixing it is more parser-chasing, and the ceiling covers it."
+    },
+    {
+      "id": "R15",
+      "status": "fixed",
+      "what_changed": "The borrowed CI number is DELETED, not attributed: '(86 `invariant` cases at 26.97s against a 25s budget)' is gone from M44-P1-D8 and the equivalent clause is gone from ADR-034. Neither document cites #66 or any other branch. The deferral rationale is now one that stands on its own and needs no citation: the check puts a Docker build of the Playwright base image (`mcr.microsoft.com/playwright/python:v1.49.0-noble`) into every CI run it is attached to, which is readable off this Dockerfile and independent of anything else in flight."
+    }
+  ],
+  "not_touched": "R3's cited band row (ts 20260827-202417) and its report, the history.jsonl rows, ADR-034's honesty paragraphs about the deployment being unknown, and the 13 probes of version-never-guesses. No published number moved: case counts are still 84 and 229."
+}

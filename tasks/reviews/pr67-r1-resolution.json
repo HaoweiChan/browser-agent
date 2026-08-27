@@ -1,0 +1,40 @@
+{
+  "pr": 67,
+  "round": 1,
+  "task": "M44-P1",
+  "resolved_at_head": "857a22f",
+  "resolutions": [
+    {
+      "id": "R1",
+      "status": "fixed",
+      "covered_by": "build-sha-is-derived-not-supplied / derive_stage_never_copies_the_context",
+      "what_changed": "The conjunct now reads the COPY SOURCE, not only the destination: the derive stage must copy the whole context (`.`) or `.git` itself. The hole is graded, not declared — the check runs the reviewer's own mutation (`COPY . /ctx` -> `COPY src /ctx`) against a scratch Dockerfile on every invocation and reddens if that conjunct does not fire.",
+      "watched_red": "Reproduced the reviewer's green first ({'passed': True, 'wrong': {}}), then added the mutation row and watched THAT red against the round-1 guard ({'mutation_derive-stage-copies-a-subtree_not_caught': {'mutation': 'COPY . /ctx -> COPY src /ctx', 'expected_conjunct': 'derive_stage_never_copies_the_context'}}) before touching the guard. Post-fix the mutation yields {'derive_stage_never_copies_the_context': {'context': '/ctx', 'copies': 'src', 'want': 'the whole context (`.`) or `.git` itself'}}."
+    },
+    {
+      "id": "R2",
+      "status": "fixed",
+      "covered_by": "build-sha-is-derived-not-supplied / final_stage_copies_git",
+      "what_changed": "A final-stage COPY whose source is `.` or names `.git` is now red; `--from=` sources are excluded because they copy from a stage, not from the context. Kept a shape check — no Docker build, no new dependency. Same mutation-row treatment as R1.",
+      "watched_red": "Reproduced green ({'passed': True, 'wrong': {}} on `COPY src/ /app/src/` -> `COPY . /app/`), then the mutation row red against the round-1 guard ({'mutation_final-stage-copies-the-context_not_caught': ...}), then the fix. Post-fix: {'final_stage_copies_git': ['COPY . /app/']}."
+    },
+    {
+      "id": "R3",
+      "status": "fixed",
+      "covered_by": "published-band-matches-the-ledger (ADR-019 §3, README band row)",
+      "what_changed": "The band now cites a GREEN 84/84 row, and the justification paragraph is rewritten to what is true. The false claim — that only a run taken before the bullet was written could carry its numbers — is gone: a green row taken after an earlier version of the bullet is exactly as citable, which is what this repair does. The row published is a fresh `--report` run of the REPAIRED tree, because R1/R2 changed what the check does and the band is a claim about the tree that ships; the eight pre-repair rows at 84 cases are a different tree's cost. Whether the published number is the ledger maximum at this count is stated in the bullet rather than left for a reader to compute, and README's block and the band cite the same run."
+    },
+    {
+      "id": "R4",
+      "status": "debt",
+      "became": "M44-P1-D7 (logged as D3; renumbered in round 3 when the rebase onto da6d05b brought main's own M44-P1-D3)",
+      "note": "Logged verbatim under `## Debt` with Origin: PR #67 R4. Not fixed here on the reviewer's routing; the failure direction is a red on a correct tree, never a false green."
+    },
+    {
+      "id": "R5",
+      "status": "debt",
+      "became": "M44-P1-D2 (widened)",
+      "note": "D2's Spec now names `_check_build_sha_is_derived` alongside `_check_version_never_guesses` as the second instance, and the resolvable-HEAD precondition is listed as ceiling (5) in the new case's triage — the two things the finding asked for."
+    }
+  ]
+}

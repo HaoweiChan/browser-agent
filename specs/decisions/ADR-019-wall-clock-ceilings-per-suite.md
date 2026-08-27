@@ -158,7 +158,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 229 cases, 226/229) and
-(restated — `invariant`: 83 cases, 83/83) — are graded against the bullets they
+(restated — `invariant`: 84 cases, 84/84) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -303,25 +303,32 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 83 cases, ts `20260827-153345`, **16.2s**, 83/83
+- Band source — local `invariant` at 84 cases, ts `20260827-202417`, **16.18s**, 84/84
   (`dirty: true`, for the same structural reason §2's is and stated the same
   general way: a tree reaches its new case count only while the cases are
-  uncommitted, so 83 exists only while M44-P1's
-  `version-never-guesses-a-build-sha` is — `invariant`-only for the same reason
+  uncommitted, so 84 exists only while M44-P1's
+  `build-sha-is-derived-not-supplied` is — `invariant`-only for the same reason
   PR #60's five additions were, which is that the `fast` band cannot pay for
   another case (ADR-033 Decision 4, T-M42-20-D3/D9). This suite is where the `fast`
-  band's overflow has landed four rounds running, which is a fact about the ceiling and not
-  about these cases. GREEN, unlike every band this section has published since
-  M31, and that is a difference in the refresh rather than in the rule: the
-  republish was split in two, so the cases and the counts landed first and this
-  row was measured afterwards on the tree that ships (`--report` forces the file
-  for a green run, since ADR-012 writes one only on red). It is therefore NOT
-  necessarily the maximum at this count, and that is said here rather than left
-  for a reader to find, because a band published below a maximum the author had
-  already seen is the selective presentation this whole section exists to
-  refuse: the mid-refresh runs that were still red on `docs-numbers-are-derived`
-  and `published-band-matches-the-ledger` — the two this republish clears — sit
-  beside it, and one of them is slower. What item 3 (same-ceiling) requires, and
+  band's overflow has landed five rounds running, which is a fact about the ceiling and not
+  about these cases. GREEN, 84/84, and the first version of this bullet was not:
+  it published the 82/84 row `20260827-195119` and justified it with the claim
+  that only a run taken before the bullet was written could carry the bullet's
+  own numbers. That is false, and PR #67 R3 falsified it against this file's own
+  ledger — a green row taken AFTER an earlier version of a bullet is exactly as
+  citable as a red one taken before it, which is what this row is. §6 does
+  require a run that HAPPENED and require green nowhere; that is a permission,
+  and the first draft read it as a reason. Worse, the number it published was
+  the SMALLEST of the rows at this count while larger ones were already on
+  record, in the section whose own rule refuses exactly that. It is NOT
+  necessarily the maximum at this count either, and that is said here rather
+  than left for a reader to find: the eight rows this republish walked through
+  sit beside it in the ledger, and the largest of them measured the tree as it
+  stood BEFORE PR #67's repairs — which is why this row was re-measured rather
+  than picked from that set, the repairs having changed what the case does. A
+  re-measurement to describe a changed tree is not the same act as a
+  re-measurement to find a prettier number, and the distinction is the whole
+  reason this sentence exists. What item 3 (same-ceiling) requires, and
   all it requires, is that both derive the same **20**. Which rows sit at this
   count and which is slowest is deliberately not retyped here, the same rule §2
   states, because it is a scalar every gate run can move and an ungraded copy of
@@ -332,7 +339,7 @@ commit that changed nothing but JSON.
   very margin PR #65 R1 retired (R6). **Margin against the
   MAXIMUM, not against the published number**: the rule gives 20 for anything up
   to 17.39s, and that is the number to watch. This bullet cites the file the way
-  §2's does — `evals/report/20260827-153345-invariant.json`.
+  §2's does — `evals/report/20260827-202417-invariant.json`.
   That pair — the ts this bullet declares and the file it names — is read back
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
@@ -404,7 +411,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 16.2 × 1.15 = 18.63 → **20**, which is the committed
+The same rule gives 16.18 × 1.15 = 18.61 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

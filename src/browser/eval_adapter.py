@@ -6034,6 +6034,354 @@ def _check_version_never_guesses() -> dict:
                     "env_names_set": list(ENV_NAMES)}}
 
 
+# Self-test rows in `_check_build_sha_is_derived`, counted in one place because
+# two documents stated ELEVEN while the loop held TEN, and the missing row was
+# the one guarding a property the resolution artifact claimed was fixed
+# (PR #67 R11). The check reads this back against the loop, so the number cannot
+# drift from the list again.
+_BUILD_SHA_SELF_TEST_ROWS = 20
+
+
+def _build_sha_mutation_row(text: str, name: str, old: str, new: str,
+                            conjunct: str | None) -> dict:
+    """One self-test row: mutate the real Dockerfile, assert what the check says.
+
+    `conjunct` names the key that must appear in `wrong`; `None` means the
+    mutation is a CORRECT Dockerfile and nothing may fire. The substitution is
+    asserted rather than assumed — a row whose `old` has been renamed out of the
+    file silently exercises an unmutated copy, which is the one failure an
+    exercise set cannot report about itself.
+    """
+    if old not in text:
+        return {f"mutation_{name}_is_vacuous": f"{old!r} is not in the Dockerfile"}
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "Dockerfile"
+        p.write_text(text.replace(old, new, 1), encoding="utf-8")
+        got = _check_build_sha_is_derived(dockerfile=p, shape_only=True)["wrong"]
+    if conjunct is None and got:
+        return {f"mutation_{name}_falsely_red": {"mutation": f"{old} -> {new}",
+                                                 "wrong": got}}
+    if conjunct is not None and conjunct not in got:
+        return {f"mutation_{name}_not_caught": {"mutation": f"{old} -> {new}",
+                                                "expected_conjunct": conjunct}}
+    return {}
+
+
+def _dockerfile_copies(text: str) -> list[dict]:
+    """Every `COPY`/`ADD` line as `{sources, dest, flags, line}`, normalised.
+
+    ONE normaliser for both COPY conjuncts, because they disagreed about what
+    "the whole context" is and the disagreement went both ways at once
+    (PR #67 R7/R8): the final-stage guard compared the raw first token to `.`,
+    so `COPY ./ /app/`, `ADD . /app/`, `COPY --chown=pwuser . /app/` and
+    `COPY --link . /app/` all shipped the context — `.git` now in it — into the
+    published image and stayed green, while the derive-stage guard reddened a
+    correct Dockerfile for the same two spellings. `ADD` is here because it
+    copies the context exactly as `COPY` does; a guard that names one
+    instruction is a guard against a spelling.
+
+    Flags are separated rather than dropped so a caller can see them, but no
+    rule above exempts a line for carrying one — including `--from=`. That
+    exemption was the round-1 repair's coverage regression: `build-identity`
+    holds the whole context at `/ctx`, so `COPY --from=build-identity /ctx/.git
+    /app/.git` ships the history out of a STAGE, and a comment claiming
+    `--from=` sources cannot be the context was simply false for this file
+    (PR #67 R6).
+    """
+    out = []
+    # Docker keywords are case-insensitive and may be indented, and a line
+    # continued with `\` is one instruction. A line this misses contributes no
+    # source, so the allowlist below cannot refuse it: the rule was default-red
+    # for lines the parser matched and default-GREEN for every line it did not
+    # (PR #67 R10). Continuations are joined first, for the same reason.
+    text = re.sub(r"\\\n[ \t]*", " ", text)
+    for m in re.finditer(r"(?mi)^[ \t]*(?:COPY|ADD)\s+([^\n]*)$", text):
+        toks = m.group(1).split()
+        flags = [t for t in toks if t.startswith("--")]
+        paths = [t for t in toks if not t.startswith("--")]
+        if len(paths) < 2:
+            continue
+        out.append({"sources": [p.rstrip("/") or "/" for p in paths[:-1]],
+                    "dest": paths[-1], "flags": flags, "line": m.group(0)})
+    return out
+
+
+def _check_build_sha_is_derived(dockerfile: Path | None = None,
+                                shape_only: bool = False) -> dict:
+    """The build derives its own sha from the context's HEAD; nobody hands it one.
+
+    ADR-034. The post-merge live read of ADR-033's design answered
+    `{"sha": null, "source": "unavailable"}` on 2026-08-28: Zeabur does not pass
+    its Git-group variables to a Dockerfile build, so the `ARG` fill mechanism
+    never fired, and the remedy ADR-033's Consequences pre-recorded is the one
+    graded here — a sha the build computes for itself. Four conjuncts, two
+    textual and two EXECUTED, because the fail-to-null half is a behaviour and a
+    behaviour asserted in prose is the thing PR #65 R2 was about:
+
+    - `.dockerignore` admits `.git` into the build context. Textual, with a
+      scan's usual ceiling: a new spelling of the same exclusion (`.git*`, a
+      re-included parent) is invisible here and caught only by the next live
+      read answering `unavailable`.
+    - The Dockerfile no longer declares `ARG ZEABUR_GIT_COMMIT_SHA`. The live
+      check proved the platform does not fill it, so the only feeder left was a
+      value typed into a dashboard build-arg field, which every later build
+      would re-bake — ADR-033 Decision 2's rejected path arriving at build time
+      (PR #65 R3).
+    - The derivation command is EXTRACTED from the Dockerfile's own RUN line and
+      run with substituted paths, not re-implemented here: pointed at this
+      repo's root it must exit 0 and write the checkout's HEAD (compared to
+      `git rev-parse HEAD`, 40 lowercase hex); pointed at a git-less temp dir it
+      must exit 0 and leave the file EMPTY — the fail-to-null property, since an
+      empty `/app/BUILD_SHA` is exactly what `/version` answers `unavailable`
+      for (`version-never-guesses` grades that half). Same non-vacuity
+      precondition as that check: HEAD must RESOLVE where this runs.
+    - `.git` never reaches the final image: the derivation lives in a separate,
+      earlier stage on the same base tag, that stage COPYs the context in, and
+      the final stage COPYs exactly one file back out
+      (`COPY --from=<that stage> ... /app/BUILD_SHA`) and no `.git` anything.
+    """
+    import subprocess
+    import tempfile
+
+    root = Path(__file__).parents[2]
+    df = dockerfile if dockerfile is not None else root / "Dockerfile"
+    wrong = {}
+
+    # (1) `.git` reaches the build context. Comment lines and negations don't
+    # count as exclusions; a bare `.git`, `/.git` or `.git/` does.
+    ignore_lines = (root / ".dockerignore").read_text(encoding="utf-8").splitlines()
+    excludes_git = [ln for ln in (l.strip() for l in ignore_lines)
+                    if not ln.startswith(("#", "!"))
+                    and ln.lstrip("/").rstrip("/") == ".git"]
+    if excludes_git:
+        wrong["dockerignore_excludes_git"] = excludes_git
+
+    text = df.read_text(encoding="utf-8")
+
+    # (2) the supplied-sha channel is gone.
+    args = re.findall(r"(?m)^\s*ARG\s+ZEABUR_GIT_COMMIT_SHA.*$", text)
+    if args:
+        wrong["build_arg_still_declared"] = args
+
+    # (3) shape: a separate derive stage, one file copied into the final stage.
+    stages = list(re.finditer(r"(?m)^FROM\s+\S+(?:\s+[Aa][Ss]\s+(\S+))?\s*$", text))
+    derive = re.search(
+        r"(?m)^RUN\s+(git\s+-C\s+(\S+)\s+rev-parse\s+HEAD\s*>\s*(\S+)"
+        r"(?:\s+2>/dev/null)?(?:\s*\|\|\s*:\s*>\s*(\S+))?)\s*$", text)
+    if len(stages) < 2:
+        wrong["single_stage"] = f"{len(stages)} FROM line(s); the derive stage must not be the image"
+    if derive is None:
+        wrong["derive_command_missing"] = (
+            "no RUN line matches `git -C <ctx> rev-parse HEAD > <file> "
+            "[2>/dev/null] [|| : > <file>]`")
+    final_start = stages[-1].start() if stages else 0
+    final_text = text[final_start:]
+    if derive is not None and stages:
+        if derive.start() >= final_start:
+            wrong["derived_in_the_final_stage"] = derive.group(1)
+        else:
+            # which stage holds it, and does that stage get the context?
+            stage_i = max(i for i, s in enumerate(stages) if s.start() <= derive.start())
+            stage_end = stages[stage_i + 1].start()
+            stage_text = text[stages[stage_i].start():stage_end]
+            ctx = derive.group(2)
+            # The SOURCE, not just the destination. Matching the destination
+            # alone passed a stage copying a subtree that cannot contain `.git`
+            # — the build then derives nothing and `/version` is `unavailable`
+            # forever, with this conjunct, named for that property, green
+            # (PR #67 R1). The executed probes cannot see it: they substitute
+            # the live checkout for `ctx` and never read what the stage copies.
+            # EVERY line into the context, not the first one found: a stage with
+            # two COPYs was read as if it had one (PR #67 R8).
+            into_ctx = [c for c in _dockerfile_copies(stage_text)
+                        if c["dest"].rstrip("/").startswith(ctx.rstrip("/"))]
+            if not any(s == "." or ".git" in s
+                       for c in into_ctx for s in c["sources"]):
+                wrong["derive_stage_never_copies_the_context"] = {
+                    "context": ctx,
+                    "copies": [s for c in into_ctx for s in c["sources"]] or None,
+                    "want": "the whole context (`.`) or `.git` itself"}
+            stage_name = stages[stage_i].group(1)
+            copy_from = re.search(r"(?m)^COPY\s+--from=(\S+)\s+\S+\s+/app/BUILD_SHA\s*$",
+                                  final_text)
+            if copy_from is None:
+                wrong["final_stage_missing_copy_from"] = "/app/BUILD_SHA"
+            elif stage_name is not None and copy_from.group(1) != stage_name:
+                wrong["copy_from_names_a_different_stage"] = copy_from.group(1)
+    # The image carries what it is supposed to carry, and the rule is set
+    # MEMBERSHIP rather than a hunt for sources that look dangerous.
+    #
+    # Two rounds of denylist failed in both directions at once, which is what
+    # says the mechanism was wrong and not the wording — the same conclusion
+    # PR #65 R5/R8 reached one file over when it retired a phrase denylist. It
+    # failed OPEN on `COPY ./ /app/`, `ADD . /app/`, `--chown=`, `--link` and on
+    # `COPY --from=build-identity /ctx/.git /app/.git` (PR #67 R6/R7 — and that
+    # last one the round-1 substring scan HAD caught, so the repair lost
+    # coverage), and CLOSED on `COPY ./ /ctx`, reddening a correct Dockerfile
+    # (R8). Docker's grammar has more spellings than anyone will enumerate and
+    # the next one is green by default.
+    #
+    # `--from=` is NOT a blanket pass: `build-identity` holds the whole context
+    # at `/ctx`, so a stage source is not inherently safe. The membership test
+    # applies to it like any other — `/BUILD_SHA` is on the list, `/ctx/.git`
+    # is not.
+    #
+    # ponytail: an allowlist means a legitimate new final-stage COPY is red
+    # until someone adds it here. That is a false red in the SAFE direction —
+    # it fails closed and costs one deliberate edit. What it buys is bounded and
+    # worth stating that way: every source the PARSER hands it must be listed,
+    # so a COPY/ADD spelling nobody here has written is refused rather than
+    # admitted. It buys nothing against an instruction the parser does not read
+    # — a `RUN --mount=type=bind,source=.git` puts the tree in the image with no
+    # COPY line at all, verified green here and declared in ADR-034 rather than
+    # chased, because that is a different instruction class and not one more
+    # spelling.
+    SHIPPED = {"src/browser/requirements.txt", "src", "docs/support-matrix.md",
+               "/BUILD_SHA"}
+    unlisted = [{"line": c["line"], "sources": [s for s in c["sources"] if s not in SHIPPED]}
+                for c in _dockerfile_copies(final_text)
+                if any(s not in SHIPPED for s in c["sources"])]
+    if unlisted:
+        wrong["final_stage_source_not_on_the_allowlist"] = {"unlisted_sources": unlisted,
+                                                        "allowed": sorted(SHIPPED)}
+
+    # (4) the command itself, executed. Non-vacuity first: a derivation can only
+    # be shown to produce HEAD where HEAD resolves (same rule as
+    # `version-never-guesses`' git-fallback probe).
+    try:
+        head = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
+                              capture_output=True, text=True, timeout=10)
+        head_sha = head.stdout.strip() if head.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        head_sha = None
+    if head_sha and not re.fullmatch(r"[0-9a-f]{40}", head_sha):
+        head_sha = None
+    if shape_only:
+        head_sha = None  # the self-test rows below grade text, not behaviour
+    elif head_sha is None:
+        wrong["head-does-not-resolve"] = (
+            "the derives-this-checkouts-head probe needs a resolvable HEAD; "
+            "run this suite from a git checkout")
+    elif derive is not None:
+        template, ctx, out, fallback_out = (derive.group(1), derive.group(2),
+                                            derive.group(3), derive.group(4))
+        if fallback_out is not None and fallback_out != out:
+            wrong["fallback_writes_a_different_file"] = fallback_out
+        for probe, src, want in (("derives-this-checkouts-head", str(root), head_sha),
+                                 ("gitless-context-empty-file", None, "")):
+            with tempfile.TemporaryDirectory() as tmp:
+                outfile = Path(tmp) / "BUILD_SHA"
+                # out first, then ctx: the out path may start with the ctx path,
+                # never the reverse in the shape the regex admits.
+                cmd = (template.replace(out, str(outfile))
+                       .replace(ctx, src if src is not None else tmp))
+                try:
+                    r = subprocess.run(["sh", "-c", cmd], capture_output=True,
+                                       text=True, timeout=30)
+                    rc = r.returncode
+                except (OSError, subprocess.SubprocessError) as e:
+                    rc = repr(e)
+                got = (outfile.read_text(encoding="utf-8").strip()
+                       if outfile.exists() else None)
+                if rc != 0 or got != want:
+                    wrong[probe] = {"exit": rc, "file": got, "want": want,
+                                    "cmd": cmd}
+    # (5) the two COPY conjuncts, graded against Dockerfiles that break them.
+    # `ceiling_sweep_rows`' lesson one layer down (PR #40 R1): an exercise set
+    # that only tries what the code was written for proves nothing, and both of
+    # these were GREEN on the round-1 check — a derive stage copying a subtree
+    # with no `.git` in it (`/version` then `unavailable` forever), and a final
+    # stage copying the whole context (the git history shipped in a public
+    # image, reachable only because this change stopped `.dockerignore` from
+    # filtering it). PR #67 R1/R2. The mutations run only for the real file, so
+    # the recursion is one level deep, and each asserts its own substitution
+    # happened: a rename that makes `old` absent would otherwise leave the row
+    # passing on an unmutated copy.
+    if dockerfile is None:
+        SRC, FINAL = "COPY . /ctx", "COPY src/ /app/src/"
+        rows = (
+                # Round 1: the two shapes that were green on the first guards.
+                ("derive-stage-copies-a-subtree", SRC, "COPY src /ctx",
+                 "derive_stage_never_copies_the_context"),
+                ("final-stage-copies-the-context", FINAL, "COPY . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                # Round 2, PR #67 R7: the same property spelled four other ways,
+                # each of which shipped the context past the round-1 repair. A
+                # guard proved on one spelling is proved on a spelling.
+                ("final-stage-copies-the-context-trailing-slash", FINAL, "COPY ./ /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-adds-the-context", FINAL, "ADD . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-with-chown", FINAL,
+                 "COPY --chown=pwuser . /app/", "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-with-link", FINAL, "COPY --link . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                # PR #67 R6: `--from=` is not a pass for a `.git` source. The
+                # derive stage HAS the context's git directory, so this ships the
+                # whole history — and the round-1 repair exempted it.
+                ("final-stage-copies-git-out-of-the-derive-stage",
+                 "COPY --from=build-identity /BUILD_SHA /app/BUILD_SHA",
+                 "COPY --from=build-identity /BUILD_SHA /app/BUILD_SHA\n"
+                 "COPY --from=build-identity /ctx/.git /app/.git",
+                 "final_stage_source_not_on_the_allowlist"),
+                # The over-fire direction, PR #67 R8: the two conjuncts disagreed
+                # about what the whole context is, so these correct spellings
+                # REDDENED a correct Dockerfile. `None` means "must stay clean" —
+                # a guard is only proved by the direction it must not fire in
+                # (PR #40 R1's lesson, which is why this list has both).
+                ("derive-stage-copies-the-context-trailing-slash", SRC, "COPY ./ /ctx", None),
+                ("derive-stage-copies-the-context-with-link", SRC, "COPY --link . /ctx", None),
+                ("derive-stage-copies-git-explicitly", SRC, "COPY .git /ctx/.git", None),
+                # Round 3, PR #67 R11: the row this list CLAIMED to have and did
+                # not. It guards the half of R8 the round-2 resolution said was
+                # fixed — that the derive conjunct reads every COPY into the
+                # context and not the first one it finds.
+                ("derive-stage-copies-the-context-second", SRC,
+                 "COPY src /ctx\nCOPY . /ctx", None),
+                # Round 3, PR #67 R10: the PARSER's own surface. Docker keywords
+                # are case-insensitive and may be indented, so a line the parser
+                # fails to match contributes no source and therefore cannot be
+                # unlisted — the allowlist was default-red only for lines it
+                # parsed and default-GREEN for every line it did not. Both
+                # directions again: five spellings that must be caught in the
+                # final stage, two that must not redden the derive stage.
+                ("final-stage-copies-the-context-lowercase", FINAL, "copy . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-mixed-case", FINAL, "Copy . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-adds-the-context-lowercase", FINAL, "add . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-indented-space", FINAL, " COPY . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-indented-tab", FINAL, "\tCOPY . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                # A COPY continued across a line break is one instruction; the
+                # parser reads lines, so this is the same hole spelled with a
+                # backslash. Found while fixing R10 rather than reported.
+                ("final-stage-copies-the-context-continued", FINAL, "COPY \\\n  . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("derive-stage-copies-the-context-lowercase", SRC, "copy . /ctx", None),
+                ("derive-stage-copies-the-context-indented", SRC, " COPY . /ctx", None))
+        for name, old, new, conjunct in rows:
+            wrong.update(_build_sha_mutation_row(text, name, old, new, conjunct))
+        # The vacuity guard, exercised rather than trusted. Every row above is
+        # only worth the substitution actually happening, so the guard that says
+        # so is itself a row: a mutation whose `old` is absent must report
+        # `_is_vacuous`. Without this the guard is the one piece of the exercise
+        # set nothing exercises — which is how the parser got here (PR #67 R10).
+        absent = _build_sha_mutation_row(text, "vacuity-guard",
+                                         "COPY __no_such_line__ /nowhere", "x", None)
+        if list(absent) != ["mutation_vacuity-guard_is_vacuous"]:
+            wrong["vacuity_guard_does_not_fire"] = absent or "an absent mutation reported nothing"
+        n_rows = len(rows) + 1
+        if n_rows != _BUILD_SHA_SELF_TEST_ROWS:
+            wrong["self_test_row_count_drifted"] = {
+                "rows": n_rows, "documented": _BUILD_SHA_SELF_TEST_ROWS}
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"stages": len(stages), "head_resolves": head_sha is not None,
+                    "self_test_rows": _BUILD_SHA_SELF_TEST_ROWS if dockerfile is None else 0}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
               "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
@@ -6055,7 +6403,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
               "narrowing-fails-closed": _check_narrowing_fails_closed,
               "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only,
-              "version-never-guesses": _check_version_never_guesses}
+              "version-never-guesses": _check_version_never_guesses,
+              "build-sha-derived": _check_build_sha_is_derived}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

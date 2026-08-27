@@ -88,8 +88,9 @@ cannot prove it tested the new build.
 Priority: P1
 Spec: ADR-033. One route on the gateway, `GET /version` ->
 `{"sha": <7-40 lowercase hex> | null, "source": "image"|"unavailable"|"malformed"}`,
-read from `/app/BUILD_SHA`, a file the Dockerfile writes at build time from
-Zeabur's `ZEABUR_GIT_COMMIT_SHA` build argument. The property that matters is
+read from `/app/BUILD_SHA`, a file the Dockerfile writes at build time — from
+Zeabur's `ZEABUR_GIT_COMMIT_SHA` build argument as first specced, from the
+context's own HEAD since ADR-034. The property that matters is
 the negative one: it never reports a sha it is not sure of. No request-time read
 of the local git checkout (in a container that tree is absent, and anywhere else
 it is a DIFFERENT tree from the one that was built); a value that is not a
@@ -100,20 +101,36 @@ it. A confidently wrong sha is worse than an honest null, because it is citable.
 Acceptance: `version-never-guesses-a-build-sha` green (13 probes, 8 of them
 asserting a null; watched red twice — as a 404 before any route existed, then
 10-of-13 red against the first, env-reading implementation a cold review
-killed); suites green at $0; ADR-033 committed. **Post-merge, and the reason
-this block stays open until then**: read `/version` on the deployed URL and
-compare it to the merge commit. A sha equal to the merge commit closes this and
-unblocks M44's clause. `{"sha": null, "source": "unavailable"}` means Zeabur
-does not pass the build argument to a Dockerfile build — documented neither way,
-which is why the design fails to the null. **The remedy is a sha the build
-DERIVES** — computing it during the build, which needs `.git` in a context
-`.dockerignore` currently excludes — or the deployment publishes `unavailable`
-and any matrix row says it cannot name our build. Filling the declared `ARG`
-from a dashboard field is NOT the remedy even though it would work: a human
-typing a sha into a form freezes that value into every later build, which is
-ADR-033 Decision 2's rejected path arriving at build time instead of runtime
-(PR #65 R3). What the file buys is immunity to RUNTIME shadowing, and the
-acceptance clause says only that.
+killed); suites green at $0; ADR-033 committed.
+**Post-merge read, done — and it came back `unavailable`.** On 2026-08-28,
+against the deployment running PR #65's merge (`6089850`):
+`curl https://whaleforce-browser-agent.zeabur.app/version` ->
+`{"sha":null,"source":"unavailable"}`, with `/healthz` ok, so the new build was
+serving and the build argument was simply never filled. That settles the one
+fact ADR-033 left open in both directions at once: Zeabur does not pass its
+Git-group variables to a Dockerfile build, and the design failed to the honest
+null exactly as designed rather than guessing.
+**The remedy is implemented in this change (ADR-034).** The build now derives
+its own sha: a build-identity stage on the same base tag runs
+`git rev-parse HEAD` against the context, whose `.git` `.dockerignore` now
+admits, and the final image COPYs the one resulting file — never the tree. A
+derivation that fails for any reason exits 0 and leaves the file empty, which
+`/version` publishes as `unavailable`. The never-filled
+`ARG ZEABUR_GIT_COMMIT_SHA` is dropped: with the platform verifiably not
+supplying it, the only value still able to arrive through it would be one an
+operator types into a dashboard build-arg field, and every later build re-bakes
+a typed value — ADR-033 Decision 2's rejected path arriving at build time
+instead of runtime (PR #65 R3). Graded by
+`build-sha-is-derived-not-supplied`, which extracts the derivation command from
+the Dockerfile and runs it: this checkout's HEAD from the repo root, exit 0 and
+an empty file from a git-less directory.
+**Why this block still stays open**: the same read, once more, against the NEW
+merge commit — `curl https://whaleforce-browser-agent.zeabur.app/version`. A
+sha equal to that commit closes this and unblocks M44's clause. `unavailable`
+again means the builder strips `.git` from the context, which is documented
+neither way and is the second thing this design fails to the null on; the
+honest published state then stands, and any matrix row says it cannot name our
+build rather than naming one.
 
 ### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
 Depends: M42
@@ -246,6 +263,70 @@ figures, the boundaries, the derivation products) and would mean restructuring
 prose this task is a guest in. Take it when §2/§3 are being rewritten for another
 reason, not on its own.
 
+### M44-P1-D8 — nothing reads the built image, only the recipe            [status: todo]
+Origin: PR #67 R12 (first filed from R10 in round 3; re-filed here as the
+Option A decision, with the third evasion class that settled it)
+Priority: P2
+Spec: `build-sha-is-derived-not-supplied` is a text scan of the Dockerfile's
+`COPY`/`ADD` instructions. It catches an accidental context copy across every
+spelling its parser reads, and it does NOT establish that `.git` cannot reach
+the image — which is a property of admitting `.git` to the build context at all
+(ADR-034, "What the `.git`-in-the-context tradeoff costs"), not a defect in the
+check. Three evasion classes are demonstrated, each deeper than the last, and
+whoever picks this up has the case already made:
+1. Instruction SPELLING — `copy`, indented, `ADD`, flagged, continued. Closed in
+   PR #67 round 3 and pinned by thirteen self-test rows.
+2. Instruction CLASS — verbatim, run against the shipped Dockerfile with the
+   final stage's `COPY src/ /app/src/` replaced by
+   `RUN --mount=type=bind,source=.git,target=/tmp/g cp -r /tmp/g /app/.git` ->
+   `{'passed': True, 'wrong': {}}`, with the whole history in the image.
+3. PARSER level — `# x \` + newline + `COPY . /app/` parses to no instructions
+   at all and ships the whole context, green, where the retired substring regex
+   caught it. Introduced by round 3's own repair: joining continuations closed
+   class 1, and Docker strips comments before joining, which this parser does
+   not.
+Probed in the same pass and failing CLOSED: an `ARG`-substituted source
+(`COPY ${SRC} /app/`) and a heredoc `COPY`. Probed and NOT fail-closed, recorded
+because an earlier version of this block said otherwise: lowercasing only the
+derive stage's `FROM` raises an uncaught `ValueError: max() iterable argument is
+empty` (a case ERROR — loud, but the named conjunct never reports), and
+`arg ZEABUR_GIT_COMMIT_SHA=""` in lowercase passes green, so that regex fails
+open. See the case's ceiling (4).
+Not fixed here, and the reason is cost rather than doubt: the only check that
+settles it reads the ARTIFACT instead of the recipe — a CI job that builds the
+image and asserts `/app/.git` does not exist — which puts a Docker build of the
+Playwright base (`mcr.microsoft.com/playwright/python:v1.49.0-noble`) into every
+CI run it is attached to. That cost is readable off this Dockerfile and does not
+depend on anything else in flight. Chasing `RUN` bodies in text instead was
+rejected: `cp` from a mount, a clone and a fetch are an unbounded surface, and a
+guard that cannot enumerate its own surface is the denylist this PR spent two
+rounds removing.
+Acceptance: a CI step builds the image and fails if `/app/.git` exists (`test !
+-e`), run on the same trigger as the eval gate or on a schedule if the build
+cost cannot ride there; ADR-034's two-sentence framing then moves from "an
+accidental context copy is caught" to the stronger one, and this block says which
+run demonstrated it.
+
+### M44-P1-D7 — the derive-command probes build a shell string by raw replace            [status: todo]
+Origin: PR #67 R4 (renumbered D3 -> D7 in PR #67 round 3: the rebase onto
+`da6d05b` brought main's own `M44-P1-D3`, which another block's Acceptance
+already cites, so the incoming id keeps the number)
+Priority: P3
+Spec: verbatim from the finding. The executed probes in
+`_check_build_sha_is_derived` substitute paths into the extracted command with
+raw `str.replace` and hand the result to `sh -c` unquoted, so a checkout path
+containing a space (or any shell metacharacter) is re-parsed as two arguments:
+`git -C /Users/me/my repo rev-parse HEAD` fails, the `|| :` branch fires, the
+file is empty, and `derives-this-checkouts-head` reddens against a Dockerfile
+that is correct. It cannot produce a false GREEN — the failure direction is a
+red on a correct tree — which is why it is P3 and not a repair.
+Not fixed in M44-P1: no path in this repo's checkouts contains a space, and the
+fix touches the one place the reviewer would rather see settled with the rest of
+the probe machinery than in a repair round scoped to two other findings.
+Acceptance: the substitution quotes with `shlex.quote`, or is done on tokens
+rather than on the command string, and a probe run from a directory whose name
+contains a space is green on the shipped Dockerfile.
+
 ### M44-P1-D2 — the build-sha case makes a 100%-gated suite need a resolvable HEAD            [status: todo]
 Origin: PR #65 R4
 Priority: P2
@@ -259,6 +340,12 @@ fails a suite CLAUDE.md gates at 100%. Declared as ceiling (3) in the case
 triage, so this is disclosure-complete, not hidden." Repro: "Run the case with
 git removed from PATH, or from an export of the tree -> passed False with
 `wrong['head-does-not-resolve']` while the route is correct."
+Second instance (PR #67 R5, outside the quoted finding above, which predates it):
+`_check_build_sha_is_derived` does the same thing for the same reason — its
+executed probes compare against `git rev-parse HEAD`, so an unresolvable HEAD
+reddens a correct Dockerfile. Both functions are in scope for the fix below, and
+the ceiling is now listed in that case's triage; it was not when the case was
+written, which is what made this a finding rather than a duplicate.
 Not fixed in M44-P1 on the reviewer's own routing: the precondition is what makes
 the `absent` probe a git-fallback guard rather than a tautology, and today it
 holds everywhere the suite runs (`actions/checkout` gives CI a real checkout).

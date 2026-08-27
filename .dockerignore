@@ -1,4 +1,6 @@
-.git
+# `.git` is deliberately IN the context (ADR-034): the Dockerfile's
+# build-identity stage derives /app/BUILD_SHA from the context's HEAD. It never
+# reaches the final image — that stage COPYs out exactly one file.
 .venv
 __pycache__
 *.pyc
