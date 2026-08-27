@@ -253,6 +253,33 @@ Acceptance: an adversarial case sending `click_at` with an unparseable `value`
 from a properly armed observation, expecting `failure:task` and the refusal
 note, watched red with the parse guard removed.
 
+### M43-D4 — pr-loop review artifacts may be reconstructions wearing a verbatim label            [status: todo]
+Origin: PR #70, found while committing `tasks/reviews/pr70-r1.json`.
+Spec: the `groundwork:pr-reviewer` subagent type has tools Read/Grep/Glob/Bash
+and NO message tool, so it cannot return its findings array to the orchestrator
+that spawned it — its output reaches the parent only as its terminal message,
+which in PR #70's case surfaced to the coordinating session rather than to the
+orchestrator. The orchestrator requested the raw array twice and never received
+it in-context, so `tasks/reviews/pr70-r1.json` carries a `text_provenance` field
+declaring its finding text as a RELAY rather than the reviewer's own bytes.
+This matters beyond one PR: the pr-loop protocol makes the artifact the
+reproducible trace that every line of the bounded PR comment must trace back
+to, and a trace whose provenance is "someone retyped it" cannot serve that
+purpose. PRs #66–#69 each committed `prNN-rN.json` files on the same night;
+whether any of them are verbatim depends on a mechanism nobody has checked.
+This is the THIRD pr-loop-layer gap found in one night, alongside T-M39-15's D2
+(no SPEC-phase check for cross-branch id / derived-number collisions) and D3 (an
+orchestrator may report a PR mergeable while it is CONFLICTING and has run no
+CI at all). Three gaps at the same layer is the argument for fixing the layer.
+Repro: read `.claude/agents/` (or the groundwork plugin's agent definition) for
+`pr-reviewer`'s tool list; note the absence of any message/send tool, then read
+`tasks/reviews/pr70-r1.json`'s `text_provenance` field.
+Acceptance: NOT fixable in this repo — the fix belongs in the groundwork
+plugin (give the reviewer agent a message tool, or have the orchestrator write
+the artifact from a file the reviewer produces). Same cross-repo constraint
+T-M39-15 recorded for its own two pr-loop-layer blocks. Closing this block means
+either the plugin change landing upstream, or a recorded decision that review
+artifacts declare their provenance permanently.
 ### M43-D5 — a partially visible drill target is cropped to the visible sliver            [status: todo]
 Origin: PR #70 R11 (LOW, routed debt).
 Spec: the drill crop is `page.screenshot(clip=<box ∩ viewport>)`, so an element

@@ -1,0 +1,64 @@
+{
+  "pr": 70,
+  "round": 1,
+  "task": "M43",
+  "date": "2026-08-28",
+  "head": "665369e",
+  "base": "da6d05b",
+  "note": "Rebased from 6089850 onto da6d05b mid-round (PR #71 merged from outside the queue and left #70 CONFLICTING, therefore running no CI silently). Every published number was re-derived at the new base rather than carried over. Kept as ONE consolidated commit.",
+  "resolutions": [
+    {
+      "id": "R1",
+      "disposition": "fixed",
+      "covered_by": "loop-drill-capture-does-not-scroll-the-page (evals/adversarial/)",
+      "detail": "Mechanism changed rather than declared: locator.screenshot() (which scrolls the element into view) replaced with page.screenshot(clip = element box intersect viewport), which cannot scroll by construction and degrades to no crop when the element lies wholly outside the viewport — matching what Decision 1 already does, so no new behaviour class. New fixture src/browser/fixtures/lazy-ledger.html makes the reviewer's 'sharpest realistic case' reproducible. The red-first run of the case on the pre-fix mechanism produced a genuine WRONG-SUCCESS: status success, every verifier check green, answer '9 entries loaded' against ground truth '3 entries loaded'. The declare-it-in-the-ADR path would have shipped that."
+    },
+    {
+      "id": "R2",
+      "disposition": "fixed",
+      "covered_by": "ADR-035 Decision 1 text + see() docstring",
+      "detail": "Text corrected to describe the code: on the look()-failure reuse path the model gets a FRESH image beside a STALE element list; a stale image occurs only when BOTH captures fail. The previously declared hazard was not reachable."
+    },
+    {
+      "id": "R3",
+      "disposition": "fixed",
+      "covered_by": "postcondition-unverified-click-at (evals/adversarial/)",
+      "detail": "Behavioural case added and watched red with \"click_at\" deleted from verifier.STATE_CHANGING, then green with it restored — so the property is now pinned rather than asserted."
+    },
+    {
+      "id": "R4",
+      "disposition": "debt",
+      "became": "M43-D2 — the vision REQUEST is built by code no case executes",
+      "detail": "Logged in tasks/TODO.md under ## Debt with Origin: PR #70 R4 (LOW, routed debt), evidence carried."
+    },
+    {
+      "id": "R5",
+      "disposition": "debt",
+      "became": "M43-D3 — the malformed-coordinate ruling is pinned by no case",
+      "detail": "Logged in tasks/TODO.md under ## Debt with Origin: PR #70 R5 (LOW, routed debt). The real refusal string was quoted rather than a paraphrase."
+    },
+    {
+      "id": "R6",
+      "disposition": "fixed",
+      "covered_by": "ADR-035 Decision 7 paragraph",
+      "detail": "Recorded that two cases share byte-identical input, so 'the seven cases ARE the milestone' holds for the assertions and not for the runs the band counts. The pair was deliberately NOT merged: two expect blocks in one case cannot be watched red independently, which is a property of this repo's grading rather than a preference."
+    }
+  ],
+  "deviations_from_brief": [
+    {
+      "what": "evals/report/history.jsonl rows were COMMITTED rather than restored.",
+      "why": "The repair moved the case count to 238, and published-band-matches-the-ledger requires the cited row to be committed AT that count — discarding the measured rows would have reddened the gate the pre-commit hook runs. Six measured rows committed, the hook's own post-commit row restored, and every red-first probe kept out of the ledger by running through run_case directly. Ratified by the orchestrator, who overruled the original 'always restore history.jsonl' instruction. Third independent line to resolve this same tension the same way."
+    },
+    {
+      "what": "The fast ceiling was re-derived, not re-checked.",
+      "why": "At the new base the count is 238 and the slowest committed row is 93.44s (superseding 93.26s at 236). ADR-013's rule (slowest +15%, round up to a multiple of five) gives 110 again — the same answer from a different row, by an honest path rather than a carry-over."
+    }
+  ],
+  "gate": {
+    "invariant": "83/83",
+    "fast": "238/238",
+    "cost_usd": 0.0,
+    "note": "orchestrator re-measures independently before the round is closed"
+  },
+  "pattern_note_added_in_round_2": "Round 2 falsified this round's own repair: the R1 fix swapped a capture with a side effect (loc.screenshot() scrolls) for one with an unbounded 30s wait (loc.bounding_box()) inside a block that swallows every exception — introducing the defect class R1 existed to fix. That is the THIRD time in one night a repair round opened the class it was closing (PR #67 round 1 lost coverage its predecessor had; PR #67 round 3's continuation join opened a comment-continuation bypass; PR #70 round 1 here). A repair diff is not safer for being small, and this is the loop's strongest argument that a repair round needs its own falsification pass rather than trust proportional to diff size."
+}
