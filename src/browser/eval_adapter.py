@@ -542,6 +542,35 @@ _BAND_RESTATE = re.compile(
 # back — and the same fix: read it back.
 _BAND_REPORT = re.compile(r"evals/report/(\d{8}-\d{6})-(fast|invariant)\.json")
 
+# A ledger MAXIMUM, written where it has to be written. Item 12 (ledger-max).
+#
+# The first attempt at this was a phrase DENYLIST — ban the shapes a maximum is
+# usually written in — and it failed in both directions inside one round, which
+# is what says the mechanism was wrong rather than the wording. It under-covered:
+# `is still 91.76s`, `stands at 91.30s` and `maximum: 91.30s` all walked past a
+# pattern that required `is <number>s`, and §2 was carrying one of those three at
+# the time this item declared the file carried none (PR #65 R5). It over-covered at
+# the same time: the BOUNDARY the same item declares exempt was caught the moment
+# anyone spelled it with "highest", as was `the largest per-case p95 we tolerate
+# is 2.50s`, which is not a ledger scalar at all (PR #65 R8). No third regex
+# fixes that, because the question a denylist is being asked — "is this number a
+# claim about the ledger?" — is semantic, and the two failure directions are the
+# same regex being asked to guess.
+#
+# So: the same answer item 10 (restatement) already gives one level down. A
+# maximum may be stated, and where it is stated it wears a marker this reads back
+# against `history.jsonl` on every run. A stale one is red on the next gate run
+# rather than at the next review. What the marker cannot do is notice a maximum
+# written WITHOUT one — declared rather than papered over, in ADR-019 §6 and in
+# the same words item 10 (restatement) uses for its own blind spot (T-R62).
+# `\s+` at every gap, not a literal space: these are hard-wrapped documents and
+# the marker's first use in §2 straddles a line break. Written with single spaces
+# it matched nothing, and a marker that matches nothing is green — the same
+# silence `forbidden_claims` collapses whitespace to avoid, found here by the
+# falsification run rather than by reading.
+_BAND_LEDGER_MAX = re.compile(
+    r"\(ledger max\s+—\s+`(fast|invariant)`\s+at\s+(\d+)\s+cases:\s+\*\*([\d.]+)s\*\*\)")
+
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
     rf"([\d.]+) × {re.escape(f'{_BAND_RATE:g}')} = ([\d.]+) → \*\*(\d+)\*\*")
@@ -736,6 +765,22 @@ def _check_published_band() -> dict:
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
     counts = {s: len(load_cases(s)) for s in WALL_BUDGET_S}
     wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows) + cited
+    # Item 12 (ledger-max). A maximum is a scalar every gate run can move, with no
+    # republication step to catch a stale copy — so where one is stated it carries
+    # this marker and is read back against the ledger, per environment and per case
+    # count, exactly like the band line it sits beside.
+    # Placed HERE, above README's parse, because `rows` is rebound to that table
+    # forty lines down: read after the rebind this indexes 4-tuples by string and
+    # raises, which it did until the falsification run in PR #65 R5 reached it.
+    for m in _BAND_LEDGER_MAX.finditer(adr):
+        suite, cases, said = m.group(1), int(m.group(2)), float(m.group(3))
+        at = [r["wall_s"] for r in rows if r["suite"] == suite and r["total"] == cases
+              and r.get("env", _LEGACY_ENV) == _LEGACY_ENV]
+        if not at:
+            wrong.append({"ledger_max_marker_names_a_count_with_no_rows": m.group(0)})
+        elif max(at) != said:
+            wrong.append({"ledger_max_marker_is_stale": " ".join(m.group(0).split()),
+                          "ledger_max_at_that_count": max(at), "rows_at_that_count": len(at)})
     # README's table is the other half of the same claim and drifted from this
     # file once already (PR #29 R24, the origin of T-R34). The whole row or red:
     # one set of numbers, two documents, no hand-kept copy — ADR-019 §6
@@ -5841,6 +5886,154 @@ def _check_ground_truth_endpoint_eval_only() -> dict:
             "got": {"cases_scanned": len(cases)}}
 
 
+def _check_version_never_guesses() -> dict:
+    """`GET /version` reports the sha this build was made from, or admits it has none.
+
+    ADR-033. The property is not "the route exists" — it is that the route never
+    reports a sha it is not sure of. A deployment that guesses is worse than one
+    that says nothing: the postmortem's §2 rule is that a live-declared matrix
+    row is a claim about ONE deployed build, so a row carrying the wrong sha
+    expires silently instead of loudly, which is the M29/D23 shape.
+
+    Thirteen probes, eight of which assert a NULL, because the failure mode this
+    guards is a confident wrong answer and not a missing one. Four groups:
+
+    - **absent/blank** — the file the image bakes is missing or says nothing.
+      Every probe runs with `BUILD_SHA`, `ZEABUR_GIT_COMMIT_SHA` and `VERSION`
+      set to a well-formed sha that is not the file's, because ADR-033's
+      load-bearing claim — "it never reads an environment variable", the whole
+      reason the design moved off `ENV` — was asserted in three documents and
+      graded by nothing: an implementation falling back to `os.environ` when the
+      file is blank passed all thirteen probes green, since no probe ever set an
+      environment variable and the fallback therefore never fired (PR #65 R2).
+      This is the same lesson as the git fallback one line down, arrived at
+      from the other end: a negative claim is graded only where the eval
+      SUPPLIES the thing the forbidden path would read.
+      The `absent` probe is also the git-fallback guard, and it is only that
+      because of where it runs: `git rev-parse HEAD` resolves here, so a route
+      that shelled out to git when it had no build identity would answer a real
+      sha of a tree that has nothing to do with any image, where the contract
+      says `null`. The precondition is that HEAD RESOLVES, not that a `.git`
+      path exists — a dangling worktree pointer satisfies `.exists()` and would
+      have made the strongest probe in this set vacuous while it reported
+      itself satisfied (cold review of M44-P1). The answer is compared against
+      that HEAD directly rather than only against `None`, so the probe states
+      what it is about.
+    - **not a sha at all** — a branch name, and the literal
+      `$ZEABUR_GIT_COMMIT_SHA`, which the Dockerfile's `RUN` reaches from one
+      quoting mistake (single quotes round the expansion write it verbatim).
+    - **boundaries** — 6, 7, 40 and 41 hex characters. The two accepted
+      boundaries are what stop the bound being decoration; the two refused ones
+      are what stop it being a suggestion.
+    - **shaped like a sha but not one** — uppercase, a valid sha with a suffix,
+      a valid sha with a prefix. These exist because a matcher that satisfies
+      every other probe here can still be wrong in three ways that a later edit
+      reaches by accident: `re.match` (prefix, publishes `<sha>-dirty` whole),
+      `re.search` (publishes `release-<sha>` whole) and `re.IGNORECASE`. Each of
+      the three was watched red against a deliberately weakened matcher, which
+      is the only way a boundary probe proves anything.
+
+    Graded over HTTP against the running app, not by calling the helper: a
+    ruling nothing consults is a comment (`fast-wall-clock-budget`'s reason for
+    driving `evals.run.main()` rather than `over_budget()` alone). The eval
+    swaps `server.BUILD_SHA_FILE` for a temp path, the same
+    module-attribute-from-the-eval-side move `_run_gateway_model_case` makes,
+    and restores it. That attribute has exactly one reader, which matters
+    because `server` also runs background gateway tasks in this process.
+    """
+    import os
+    import subprocess
+    import tempfile
+    import urllib.error
+
+    from . import server
+
+    SHA7 = "9c3340c"
+    SHA40 = "9c3340cfd3aa71b40e5c8d29f6a1b3c7d0e2f4a6"
+    NULL_UNAVAILABLE = {"sha": None, "source": "unavailable"}
+    NULL_MALFORMED = {"sha": None, "source": "malformed"}
+    def echoed(sha):
+        return {"sha": sha, "source": "image"}
+
+    probes = [
+        ("absent", None, NULL_UNAVAILABLE),
+        ("empty", "", NULL_UNAVAILABLE),
+        ("whitespace", "   \n", NULL_UNAVAILABLE),
+        ("unexpanded", "$ZEABUR_GIT_COMMIT_SHA", NULL_MALFORMED),
+        ("branch-name", "task/M44-P1", NULL_MALFORMED),
+        ("six-hex", "9c3340", NULL_MALFORMED),
+        ("forty-one-hex", SHA40 + "a", NULL_MALFORMED),
+        ("uppercase", SHA40.upper(), NULL_MALFORMED),
+        ("sha-with-suffix", SHA40 + "-dirty", NULL_MALFORMED),
+        ("sha-with-prefix", "release-" + SHA40, NULL_MALFORMED),
+        ("seven-hex", SHA7, echoed(SHA7)),
+        ("forty-hex", SHA40, echoed(SHA40)),
+        ("padded", f"  {SHA40}\n", echoed(SHA40)),
+    ]
+
+    # Non-vacuity for `absent`: a git fallback needs a resolvable HEAD to answer
+    # WITH. `.exists()` on a `.git` path is not that.
+    root = Path(__file__).parents[2]
+    try:
+        head = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
+                              capture_output=True, text=True, timeout=10)
+        head_sha = head.stdout.strip() if head.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        head_sha = None
+    if head_sha and not re.fullmatch(r"[0-9a-f]{40}", head_sha):
+        head_sha = None
+
+    # A sha no probe writes to the file, so a route that reads any of these
+    # answers a value this check can name. `VERSION` is in the list because it is
+    # what someone reaching for a conventional name would pick.
+    ENV_SHA = "beef1234beef1234beef1234beef1234beef1234"
+    ENV_NAMES = ("BUILD_SHA", "ZEABUR_GIT_COMMIT_SHA", "VERSION")
+    prev = server.BUILD_SHA_FILE
+    prev_env = {k: os.environ.get(k) for k in ENV_NAMES}
+    wrong = {}
+    try:
+        for k in ENV_NAMES:
+            os.environ[k] = ENV_SHA
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "BUILD_SHA"
+            server.BUILD_SHA_FILE = path
+            for name, content, want in probes:
+                if content is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    path.write_text(content, encoding="utf-8")
+                try:
+                    got = _get_json("/version")
+                except urllib.error.HTTPError as e:
+                    got = {"http_status": e.code}
+                except Exception as e:  # loud, never smoothed over
+                    got = {"error": repr(e)}
+                if got != want:
+                    wrong[name] = {"got": got, "want": want}
+                if name == "absent" and head_sha and got.get("sha") == head_sha:
+                    wrong["git-fallback"] = {
+                        "got": got, "want": NULL_UNAVAILABLE,
+                        "note": "answered this checkout's HEAD, which is not the build"}
+                if got.get("sha") == ENV_SHA:
+                    wrong["env-fallback"] = {
+                        "got": got, "want": want, "probe": name,
+                        "note": f"answered one of {ENV_NAMES}, which the build did not write"}
+    finally:
+        server.BUILD_SHA_FILE = prev
+        for k, v in prev_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    if head_sha is None:
+        wrong["head-does-not-resolve"] = (
+            "`absent` is the git-fallback guard only where a fallback would have "
+            "a sha to answer with; run this suite from a git checkout")
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"probes": len(probes), "head_resolves": head_sha is not None,
+                    "env_names_set": list(ENV_NAMES)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
               "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
@@ -5861,7 +6054,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
               "narrowing-fails-closed": _check_narrowing_fails_closed,
-              "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only}
+              "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only,
+              "version-never-guesses": _check_version_never_guesses}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

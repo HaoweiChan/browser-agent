@@ -1,0 +1,32 @@
+{
+  "pr": 65, "round": 1, "task": "M44-P1", "commit": "4b4175e",
+  "gate_after_repair": {"invariant": "83/83 = 1.000, 16.46s / 20", "fast": "229/229 = 1.000, 89.89s / 105", "cost_usd": 0.0},
+  "orchestrator_verification": "Both new guards ablated by the orchestrator rather than accepted on report. no-stale-max: injecting 'the slowest row at this count is the 91.30s', 'so the real margin is 0.0043s', and 'the maximum at this count is 91.30s' each reddens published-band-matches-the-ledger with adr_retypes_a_ledger_maximum_or_margin naming the injected phrase. env-fallback: a build_identity that falls back to os.environ['BUILD_SHA'] now fails version-never-guesses-a-build-sha with wrong keys ['absent','env-fallback','empty','whitespace'], where before the repair it passed green.",
+  "resolutions": [
+    {
+      "id": "R1", "severity": "MEDIUM", "outcome": "fixed",
+      "covered_by": "published-band-matches-the-ledger — new conjunct for ADR-019 §6 item 12 (no-stale-max)",
+      "deviation_from_instruction": "The orchestrator asked for the corrected maximum and margin, or for the row not to be committed. The implementer took a third option and argued it: a band bullet's scalars move only when the band is republished, but a MAXIMUM has no republication step — any gate run moves it, so a corrected 91.30/0.0043 would be stale again on the next run with nothing watching. That is the same defect one round later. So ADR-019 §6 gained item 12: this file names no ledger maximum and no margin as a number, enforced by a new conjunct. §2 now publishes only the BOUNDARY ('the rule gives 105 for anything up to 91.30s'), which is a function of the ceiling and moves only when the ceiling does, and points at published-band-slack-is-declared for the arithmetic. ACCEPTED by the orchestrator: refusal is the correct reading of §6's own residue rule, and it makes §2 and §3 symmetric, which was the finding.",
+      "attribution_corrected": "The implementer's round-0 report had flagged the 91.30s margin as a pre-existing hazard it had not caused. R1 established the row is in its own diff. Corrected in ADR-019 §2 and §6 item 12, which now say the PR 'reported the result as a hazard it had found rather than one it had caused.'",
+      "watched_red": "{'adr_retypes_a_ledger_maximum_or_margin': ['slowest row at this count is the 91.04s', 'real margin is 0.26s']} plus a second failure: the §6 rationale quoted the banned phrases verbatim and the sweep reads that file too. Both passages now describe the shape without spelling it, the way REPORT_CITATION_SKIP does.",
+      "non_vacuity": "Guard demonstrated to fire on four phrasings and to stay silent on three safe ones ('the rule gives 105 for anything up to 91.30s', 'the rule gives 20 for anything up to 17.39s', 'Publishing the slowest run on record is the least-')."
+    },
+    {
+      "id": "R2", "severity": "MEDIUM", "outcome": "fixed",
+      "covered_by": "version-never-guesses-a-build-sha — all 13 probes now run with BUILD_SHA, ZEABUR_GIT_COMMIT_SHA and VERSION set to a sha no probe writes to the file",
+      "watched_red": "Reproduced the orchestrator's repro first: env-reading route with BUILD_SHA unset (the state every eval run is in) returned {'passed': true, 'wrong': {}}. After the fix the same mutation returns absent/empty/whitespace all {'got': {'sha': 'beef1234…', 'source': 'image'}, 'want': {'sha': null, 'source': 'unavailable'}} plus an explicit 'env-fallback' key naming which variable answered.",
+      "generalisation_recorded": "The docstring now carries the rule the finding taught: a negative claim is graded only where the eval SUPPLIES what the forbidden path would read. That is why the git fallback was graded and the env claim was not.",
+      "new_declared_ceiling": "A route reading some fourth name (GIT_COMMIT, SOURCE_VERSION) is still invisible."
+    },
+    {
+      "id": "R3", "severity": "MEDIUM", "outcome": "fixed",
+      "covered_by": "docs-numbers-are-derived — new forbidden_claims group claims_the_build_sha_has_no_operator_settable_path, over four documents",
+      "note": "Both halves of the acceptance taken, not one. Claims narrowed to runtime shadowing AND the service-variable remedy struck for the knob-free one (a sha the build derives). Dockerfile now names what it is NOT immune to; ADR-033 Decision 2's heading goes from 'there is no other way in' to 'no runtime setting can shadow it', with a paragraph conceding the earlier version claimed more.",
+      "watched_red": "Four documents red at once: Dockerfile ('cannot be shadowed, so there', 'so there is no hand-set path to go stale'), ADR-033 ('A file in the image has no such knob.', 'a Zeabur service variable consumed by the declared `ARG`', 'and there is no other way in'), server.py ('is no knob'). Then tasks/TODO.md was added to the group and watched red separately, because M44-P1's own acceptance clause repeated the struck remedy — exactly where whoever picks this up post-merge would read it."
+    },
+    {
+      "id": "R4", "severity": "LOW", "outcome": "debt", "became": "M44-P1-D2",
+      "note": "Evidence and repro carried verbatim, with the orchestrator's ruling that the non-vacuity signal belongs in `got` beside head_resolves. The implementer added one line: the move is only correct WITH a second case asserting it — dropping the key from `wrong` and adding nothing makes a vacuous probe silently green, which is worse than a loud false red."
+    }
+  ]
+}
