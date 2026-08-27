@@ -5841,6 +5841,125 @@ def _check_ground_truth_endpoint_eval_only() -> dict:
             "got": {"cases_scanned": len(cases)}}
 
 
+def _check_version_never_guesses() -> dict:
+    """`GET /version` reports the sha this build was made from, or admits it has none.
+
+    ADR-033. The property is not "the route exists" — it is that the route never
+    reports a sha it is not sure of. A deployment that guesses is worse than one
+    that says nothing: the postmortem's §2 rule is that a live-declared matrix
+    row is a claim about ONE deployed build, so a row carrying the wrong sha
+    expires silently instead of loudly, which is the M29/D23 shape.
+
+    Thirteen probes, eight of which assert a NULL, because the failure mode this
+    guards is a confident wrong answer and not a missing one. Four groups:
+
+    - **absent/blank** — the file the image bakes is missing or says nothing.
+      The `absent` probe is also the git-fallback guard, and it is only that
+      because of where it runs: `git rev-parse HEAD` resolves here, so a route
+      that shelled out to git when it had no build identity would answer a real
+      sha of a tree that has nothing to do with any image, where the contract
+      says `null`. The precondition is that HEAD RESOLVES, not that a `.git`
+      path exists — a dangling worktree pointer satisfies `.exists()` and would
+      have made the strongest probe in this set vacuous while it reported
+      itself satisfied (cold review of M44-P1). The answer is compared against
+      that HEAD directly rather than only against `None`, so the probe states
+      what it is about.
+    - **not a sha at all** — a branch name, and the literal
+      `$ZEABUR_GIT_COMMIT_SHA`, which the Dockerfile's `RUN` reaches from one
+      quoting mistake (single quotes round the expansion write it verbatim).
+    - **boundaries** — 6, 7, 40 and 41 hex characters. The two accepted
+      boundaries are what stop the bound being decoration; the two refused ones
+      are what stop it being a suggestion.
+    - **shaped like a sha but not one** — uppercase, a valid sha with a suffix,
+      a valid sha with a prefix. These exist because a matcher that satisfies
+      every other probe here can still be wrong in three ways that a later edit
+      reaches by accident: `re.match` (prefix, publishes `<sha>-dirty` whole),
+      `re.search` (publishes `release-<sha>` whole) and `re.IGNORECASE`. Each of
+      the three was watched red against a deliberately weakened matcher, which
+      is the only way a boundary probe proves anything.
+
+    Graded over HTTP against the running app, not by calling the helper: a
+    ruling nothing consults is a comment (`fast-wall-clock-budget`'s reason for
+    driving `evals.run.main()` rather than `over_budget()` alone). The eval
+    swaps `server.BUILD_SHA_FILE` for a temp path, the same
+    module-attribute-from-the-eval-side move `_run_gateway_model_case` makes,
+    and restores it. That attribute has exactly one reader, which matters
+    because `server` also runs background gateway tasks in this process.
+    """
+    import subprocess
+    import tempfile
+    import urllib.error
+
+    from . import server
+
+    SHA7 = "9c3340c"
+    SHA40 = "9c3340cfd3aa71b40e5c8d29f6a1b3c7d0e2f4a6"
+    NULL_UNAVAILABLE = {"sha": None, "source": "unavailable"}
+    NULL_MALFORMED = {"sha": None, "source": "malformed"}
+    def echoed(sha):
+        return {"sha": sha, "source": "image"}
+
+    probes = [
+        ("absent", None, NULL_UNAVAILABLE),
+        ("empty", "", NULL_UNAVAILABLE),
+        ("whitespace", "   \n", NULL_UNAVAILABLE),
+        ("unexpanded", "$ZEABUR_GIT_COMMIT_SHA", NULL_MALFORMED),
+        ("branch-name", "task/M44-P1", NULL_MALFORMED),
+        ("six-hex", "9c3340", NULL_MALFORMED),
+        ("forty-one-hex", SHA40 + "a", NULL_MALFORMED),
+        ("uppercase", SHA40.upper(), NULL_MALFORMED),
+        ("sha-with-suffix", SHA40 + "-dirty", NULL_MALFORMED),
+        ("sha-with-prefix", "release-" + SHA40, NULL_MALFORMED),
+        ("seven-hex", SHA7, echoed(SHA7)),
+        ("forty-hex", SHA40, echoed(SHA40)),
+        ("padded", f"  {SHA40}\n", echoed(SHA40)),
+    ]
+
+    # Non-vacuity for `absent`: a git fallback needs a resolvable HEAD to answer
+    # WITH. `.exists()` on a `.git` path is not that.
+    root = Path(__file__).parents[2]
+    try:
+        head = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
+                              capture_output=True, text=True, timeout=10)
+        head_sha = head.stdout.strip() if head.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        head_sha = None
+    if head_sha and not re.fullmatch(r"[0-9a-f]{40}", head_sha):
+        head_sha = None
+
+    prev = server.BUILD_SHA_FILE
+    wrong = {}
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "BUILD_SHA"
+            server.BUILD_SHA_FILE = path
+            for name, content, want in probes:
+                if content is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    path.write_text(content, encoding="utf-8")
+                try:
+                    got = _get_json("/version")
+                except urllib.error.HTTPError as e:
+                    got = {"http_status": e.code}
+                except Exception as e:  # loud, never smoothed over
+                    got = {"error": repr(e)}
+                if got != want:
+                    wrong[name] = {"got": got, "want": want}
+                if name == "absent" and head_sha and got.get("sha") == head_sha:
+                    wrong["git-fallback"] = {
+                        "got": got, "want": NULL_UNAVAILABLE,
+                        "note": "answered this checkout's HEAD, which is not the build"}
+    finally:
+        server.BUILD_SHA_FILE = prev
+    if head_sha is None:
+        wrong["head-does-not-resolve"] = (
+            "`absent` is the git-fallback guard only where a fallback would have "
+            "a sha to answer with; run this suite from a git checkout")
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"probes": len(probes), "head_resolves": head_sha is not None}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
               "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
@@ -5861,7 +5980,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
               "narrowing-fails-closed": _check_narrowing_fails_closed,
-              "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only}
+              "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only,
+              "version-never-guesses": _check_version_never_guesses}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

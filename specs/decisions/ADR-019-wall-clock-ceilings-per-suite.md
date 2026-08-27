@@ -94,14 +94,18 @@ repo's ledger and nothing else.
   for regressions an earlier fix introduced. **State the margin against the ledger's
   MAXIMUM, not against this published number** (PR #60 R13): the rule gives 105 for
   anything up to 91.30s and the slowest row at this count is the 91.04s cited above,
-  so the real margin is 0.26s. **The committed ledger also holds three rows at 230
-  cases — 90.65, 91.06 and 91.76s — and they are the reason this suite is 229 and not
+  so the real margin is 0.26s. **The committed ledger also holds four rows at 230
+  cases — 90.65, 91.06, 91.76 and 90.41s — and they are the reason this suite is 229 and not
   230.** PR #60's round-3 repair briefly put one more case in `fast`, the tree measured
   91.76s, and the rule derives **110** from that: a ceiling nobody has committed, which
   is an ADR and not an edit. The case moved to `invariant`, where its four siblings
   already are, and `fast` is byte-for-byte the 229-case tree those five rows measured.
-  Three rounds running the band has decided a suite tag rather than a reviewer doing it,
-  and those 230-case rows stay in the ledger because they are the evidence for the
+  Four rounds running the band has decided a suite tag rather than a reviewer doing it:
+  the 90.41s row is M44-P1 asking the same question from the other side — with its case
+  in `fast` the tree ran 230 cases INSIDE the band, and the maximum at that count is
+  still 91.76s and still derives 110, so ADR-033 Decision 4 followed this ruling rather
+  than re-opening it on a faster sample.
+  Those 230-case rows stay in the ledger because they are the evidence for the
   ceiling decision `T-M42-20-D3`/`-D9` ask for. Which OTHER rows sit at this count, and in what order,
   is deliberately not written here — the same rule §3 states, and the sentence that
   used to enumerate them named a row measured three minutes BEFORE the band row as
@@ -141,7 +145,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 229 cases, 226/229) and
-(restated — `invariant`: 82 cases, 80/82) — are graded against the bullets they
+(restated — `invariant`: 83 cases, 83/83) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -286,20 +290,33 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 82 cases, ts `20260827-023305`, **16.19s**, 80/82
-  (`dirty: true`, and red, for the same structural reason §2's is and stated the
-  same general way: a tree reaches its new case count only while the cases are
-  uncommitted, so 82 exists only while PR #60's invariant-tagged additions are —
-  `action-select-option-never-filled-fails-loud`, the four non-string-target cases (one
-  per string-valued input the resolver takes) and
-  `resolver-narrowing-discloses-the-case-fold`, all `invariant`-only because the `fast`
-  band cannot pay for them (T-M42-20-D3/D9). This suite is where the `fast` band's
-  overflow has landed three rounds running, which is a fact about the ceiling and not
-  about these cases. The two red cases — `docs-numbers-are-derived` and
-  `published-band-matches-the-ledger` — are the two this republish clears; §2's bullet was corrected to three in the same
-  round this one was not (PR #60 R17), which is what an ungraded count does; the
-  run is red, so ADR-012 wrote a per-case report for it and this bullet cites
-  the file the way §2's does — `evals/report/20260827-023305-invariant.json`.
+- Band source — local `invariant` at 83 cases, ts `20260827-153345`, **16.2s**, 83/83
+  (`dirty: true`, for the same structural reason §2's is and stated the same
+  general way: a tree reaches its new case count only while the cases are
+  uncommitted, so 83 exists only while M44-P1's
+  `version-never-guesses-a-build-sha` is — `invariant`-only for the same reason
+  PR #60's five additions were, which is that the `fast` band cannot pay for
+  another case (ADR-033 Decision 4, T-M42-20-D3/D9). This suite is where the `fast`
+  band's overflow has landed four rounds running, which is a fact about the ceiling and not
+  about these cases. GREEN, unlike every band this section has published since
+  M31, and that is a difference in the refresh rather than in the rule: the
+  republish was split in two, so the cases and the counts landed first and this
+  row was measured afterwards on the tree that ships (`--report` forces the file
+  for a green run, since ADR-012 writes one only on red). It is therefore NOT
+  necessarily the maximum at this count, and that is said here rather than left
+  for a reader to find, because a band published below a maximum the author had
+  already seen is the selective presentation this whole section exists to
+  refuse: the mid-refresh runs that were still red on `docs-numbers-are-derived`
+  and `published-band-matches-the-ledger` — the two this republish clears — sit
+  beside it, and one of them is slower. What item 3 (same-ceiling) requires, and
+  all it requires, is that both derive the same **20**. Which rows sit at this
+  count and which is slowest is deliberately not retyped here, the same rule §2
+  states, because it is a scalar every gate run can move and an ungraded copy of
+  it would be stale within the hour; `published-band-slack-is-declared` prints
+  the ledger's own arithmetic for anyone who wants it. **Margin against the
+  MAXIMUM, not against the published number**: the rule gives 20 for anything up
+  to 17.39s, and that is the number to watch. This bullet cites the file the way
+  §2's does — `evals/report/20260827-153345-invariant.json`.
   That pair — the ts this bullet declares and the file it names — is read back
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
@@ -371,7 +388,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 16.19 × 1.15 = 18.62 → **20**, which is the committed
+The same rule gives 16.2 × 1.15 = 18.63 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

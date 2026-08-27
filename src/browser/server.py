@@ -863,6 +863,7 @@ const ADRS = [
   ["030", "the sec-10k inspector probe's tasks and pass bar are frozen in a commit before it runs; that site's own API may supply ground truth to the eval side and to nothing else; the row it declares says it measures one execution mode"],
   ["031", "the Chinese-language probe's tasks, its paired English arm and its pass bar are frozen before it runs, so \u201c中文都會失敗” is graded against criteria fixed in advance"],
   ["032", "a locator tier is ONE match set: the case-exact matcher is counted first and the case-folded one used only when it is empty, so index, near and enumeration never select from a set the plan was not written against"],
+  ["033", "the deployment says which commit it is running, or says plainly that it does not know \u2014 the build sha is written into the image at build time and read from there, never guessed from a local checkout and never settable by hand, because a confidently wrong build id is worse than none"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;
@@ -1358,6 +1359,62 @@ async def readyz():
 @app.get("/healthz")
 async def healthz():
     return {"ok": True}
+
+
+# --- Build identity --------------------------------------------------------
+# ADR-033. `/version` says which commit produced the running build, or admits it
+# does not know.
+#
+# TWO things it never does, and they are the whole decision.
+#
+# It never reads the local git checkout at request time. Inside the image that
+# tree is absent — `.dockerignore` excludes `.git` from the build context
+# entirely — and anywhere else it is a *different* tree from the one that was built, so a
+# git fallback answers a real sha of the wrong thing. That is strictly worse than
+# silence: postmortem §2's rule is that a live-declared row is a claim about ONE
+# deployed build, and a row carrying a confidently wrong sha expires quietly
+# instead of loudly.
+#
+# And it never reads an environment variable. A file baked into the image is the
+# same build-time freeze an image `ENV` is, minus the one property that decides
+# it: a platform's service-level variable SHADOWS image `ENV` at runtime, so a
+# `BUILD_SHA` set by hand once — the natural "quick fix" when a build does not
+# supply the sha — silently outlives the deploy it was true for, and the route
+# cannot tell it from a baked one. A hand-set knob that produces a
+# confident lie is the exact failure this endpoint exists to prevent, so there
+# is no knob (cold review of M44-P1; ADR-033 Decision 2).
+BUILD_SHA_FILE = Path("/app/BUILD_SHA")  # written by the Dockerfile, under its WORKDIR
+# git's own spelling: lowercase hex, abbreviated (>=7) through full (40),
+# whole-string. Uppercase is refused — git does not emit it, and refusing errs
+# toward the null. What this CANNOT catch is declared in ADR-033 Decision 3: a
+# value that is genuinely 7-40 lowercase hex but is not a commit (a deployment
+# id, a date like `20260827`) is indistinguishable from an abbreviated sha
+# without asking git, and asking git is the thing above.
+BUILD_SHA_RE = re.compile(r"[0-9a-f]{7,40}")
+
+
+def build_identity() -> dict:
+    """`{"sha": <hex> | None, "source": "image" | "unavailable" | "malformed"}`.
+
+    `source` is the point: it separates a sha that came from the build from an
+    absent one and from one that was present and refused — three different
+    operational states, two of which are misconfigurations that would otherwise
+    be a silent `null`.
+    """
+    try:
+        raw = BUILD_SHA_FILE.read_text(encoding="utf-8").strip()
+    except (OSError, ValueError):  # absent, unreadable, not UTF-8 — all mean "did not say"
+        raw = ""
+    if not raw:
+        return {"sha": None, "source": "unavailable"}
+    if not BUILD_SHA_RE.fullmatch(raw):
+        return {"sha": None, "source": "malformed"}
+    return {"sha": raw, "source": "image"}
+
+
+@app.get("/version")
+async def version():
+    return build_identity()
 
 
 # --- Fixture sites ---------------------------------------------------------

@@ -75,6 +75,43 @@ Out of scope: LangGraph or any orchestration dependency (the ruling above); mode
 auto-selection beyond "B first, loop on failure" — a task-difficulty classifier
 is speculative until M44's table shows which tasks actually need the loop.
 
+### M44-P1 — the deployment can report the build it is running            [status: in-progress]
+Origin: M44's acceptance clause, which is not deliverable without this. M44 must
+publish "matrix rows updated with run ids, repeat counts, both build shas where
+the target is our own deploy (postmortem §2)" — and our own deploy could not
+report a build: `/version` was 404, `/healthz` answers only `{"ok": true}`, and
+nothing in the repo set a build variable, so ADR-030's probe recorded ours by
+hand and T-M41-3 says out loud that nothing here reads either sha back. Same
+ceiling `.github/workflows/deploy-smoke.yml` has carried in a comment since M5
+("the app exposes no /version"), where it is the reason a push-triggered smoke
+cannot prove it tested the new build.
+Priority: P1
+Spec: ADR-033. One route on the gateway, `GET /version` ->
+`{"sha": <7-40 lowercase hex> | null, "source": "image"|"unavailable"|"malformed"}`,
+read from `/app/BUILD_SHA`, a file the Dockerfile writes at build time from
+Zeabur's `ZEABUR_GIT_COMMIT_SHA` build argument. The property that matters is
+the negative one: it never reports a sha it is not sure of. No request-time read
+of the local git checkout (in a container that tree is absent, and anywhere else
+it is a DIFFERENT tree from the one that was built); a value that is not a
+whole-string git sha refused rather than echoed; and no environment variable,
+because a Zeabur service variable shadows an image `ENV` at runtime, so a
+hand-set sha would be correct until the next deploy and a confident lie after
+it. A confidently wrong sha is worse than an honest null, because it is citable.
+Acceptance: `version-never-guesses-a-build-sha` green (13 probes, 8 of them
+asserting a null; watched red twice — as a 404 before any route existed, then
+10-of-13 red against the first, env-reading implementation a cold review
+killed); suites green at $0; ADR-033 committed. **Post-merge, and the reason
+this block stays open until then**: read `/version` on the deployed URL and
+compare it to the merge commit. A sha equal to the merge commit closes this and
+unblocks M44's clause. `{"sha": null, "source": "unavailable"}` means Zeabur
+does not pass the build argument to a Dockerfile build — documented neither way,
+which is why the design fails to the null. **There is deliberately no hand-set
+remedy**: the fix is build-time (a service variable consumed by the declared
+`ARG`, or computing the sha in the build, which needs `.git` in a context
+`.dockerignore` currently excludes) or the deployment publishes `unavailable`
+and any matrix row says it cannot name our build. Setting the sha by hand is
+ADR-033 Decision 2's rejected alternative, not a shortcut.
+
 ### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
 Depends: M42
 Origin: ADR-027. Depends: M42 (M43 for the vision rows, marked as such).
@@ -134,6 +171,32 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### M44-P1-D1 — deploy-smoke still cannot prove it tested the new build            [status: todo]
+Origin: M44-P1
+Priority: P2
+Spec: `.github/workflows/deploy-smoke.yml` names its own fix in a comment — "a
+/version endpoint compared against GITHUB_SHA is the honest fix" — and the
+endpoint now exists (ADR-033), but the workflow is unchanged: it still sleeps a
+fixed 240s on `push` and then tests whatever build answers. Out of M44-P1's
+scope on purpose (one route plus its case), and it belongs with the milestone
+that consumes the sha rather than the one that produces it. The change is a step
+that polls `$BASE/version` until `.sha` equals `$GITHUB_SHA` — or fails loudly
+saying which build it got — replacing the sleep. Two things it must NOT do:
+treat `{"sha": null, "source": "unavailable"}` as a pass (that is the deploy
+misconfiguration ADR-033's Consequences names, and passing on it would restore
+exactly the blindness this removes), and keep the sleep as a fallback beside a
+real check. Two questions it has to settle rather than assume, both raised by
+M44-P1's cold review: the deployed sha may be ABBREVIATED, so equality has to be
+a prefix comparison in the right direction, not `==`; and Zeabur documents
+`ZEABUR_GIT_COMMIT_SHA` as "the commit the deployment belongs to", which for a
+merge or a rollback is not necessarily `GITHUB_SHA` — if they turn out to differ
+systematically, the workflow compares what it can and says which, instead of
+failing honest deploys.
+Acceptance: the sleep is gone, a build mismatch fails the job with both shas in
+the log, and `unavailable` fails it separately with a message naming the Zeabur
+build-argument question — watched red by pointing the check at a sha that is not
+deployed.
 
 ### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]
 Origin: T-M42-20, while writing case (a). The defect it caught — two different
