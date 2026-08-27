@@ -1,0 +1,126 @@
+{
+  "task": "T-M42-20",
+  "branch": "task/T-M42-20-fix",
+  "pr": 60,
+  "round": 1,
+  "reviewed_commit": "fbe304b",
+  "resolution_commit": "see git log for the commit carrying this file",
+  "counts": {
+    "findings": 9,
+    "repaired": 5,
+    "logged_as_debt": 4,
+    "rejected": 0,
+    "new_cases": 6,
+    "new_fixtures": 1,
+    "defects_found_while_repairing": 2
+  },
+  "note": "Every repair was watched red first, as a CASE and not only at the call site. Two further defects in the T-M42-20 fix were found during the repair itself and are recorded under R3 and R1 — the regex-slash crash and the verifier's case folding — because neither is in the review and both would otherwise be invisible.",
+  "gate": {
+    "invariant": "77/77 = 1.000, wall 16.87s, ceiling 20",
+    "fast": "227/227 = 1.000, wall 90.46s, ceiling 105",
+    "note": "counts moved 222 -> 227 (fast) and 76 -> 77 (invariant); both bands, ADR-029 section 2, README and docs/analysis.md republished. The fast suite grew by five cases and got FASTER than the 90.27s it measured at 222, because the same round cut LATE_OPTIONS_DELAY_S 1.0s -> 0.5s and the select wait 10s -> 2s."
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "Each name tier is now TWO passes in `scope_tiers`: `exact=True` first, `_whole_string` (anchored, case-insensitive) only if the exact pass finds nothing. `_resolve_in` threads a per-pass `fold` label through every return, so a folded resolution records `narrowed: name-case-folded` in the step's trace note.",
+      "why_this_fix": "The reviewer offered a code guard OR a documentation correction. A guard that raises on ambiguity before `index`/`near` is wrong — those two keys exist precisely to select among N matches, so gating them on uniqueness would break M6 and M38 outright. A documentation-only fix would have shipped a case pinning the wrong-element pick as correct. Ordering is the third option and the smallest: it restores base behaviour exactly wherever an exact-case match exists (which is every page in the suite), reaches the fold only where nothing else matches, and makes the fold visible. It also fixes the `extract_all` growth the review measured, at the same line.",
+      "red_first": [
+        "resolver-case-twin-index-picks-the-exact-spelling: on fbe304b answers `Promo banner offer` (the ADD TO CART banner); expected `Catalogue row CTA`. At the resolver: resolve({'role':'link','name':'Add to cart','index':0}) -> ['promo'] on fbe304b, ['rowcta'] on base 6b016b5 and after the fix.",
+        "resolver-case-twin-near-picks-the-exact-spelling: on fbe304b answers `Twin inside Widget A`; expected `The real save link`. At the resolver: ['twin'] vs ['real'].",
+        "resolver-case-fold-is-recorded-in-the-trace: on fbe304b `trace_note_contains` is False against note None — no fold label existed at all."
+      ],
+      "extract_all_measured_not_cased": "{'text': 'Add to cart'} with many=True, on the plain-text version of the twin fixture: base ['p1'-equivalent single match], fbe304b both matches, after the fix the single exact match. Not shipped as a third case; the same ordering line covers it and a third fixture shape would have cost wall clock the band has no room for.",
+      "docs_corrected": [
+        "resolver._whole_string docstring — the collision promise is now stated as conditional (twins collide only when NEITHER matches the plan's spelling exactly) and the exact-first ordering is the reason.",
+        "ADR-026 — the text conjunct is vacuous on the exact pass and near-vacuous on the folded one.",
+        ".claude/skills/browser-domain/SKILL.md — rewritten: the ordering, the conditional collision claim, the fold label, the `near` half, and the non-string refusal."
+      ]
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D5",
+      "note": "Logged with the review's evidence verbatim, including the `want=''` shape and the `loop-lab.html` placeholder that ships it. Not fixed, per routing."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "`resolve_advertised` is now a COUNT identity: for each (role, name) the observation advertises k times, `resolve(..., many=True)` must reach k elements. It also takes `\"*\"` (every role in the observation) plus an explicit `resolve_advertised_except` list, and the case now uses `[\"*\"]` with two named exceptions instead of grading one role.",
+      "why_not_handle_identity": "`observe()` returns {role, name} dicts and holds no element handle to compare against, so handle identity is not available without changing what `observe` returns — a change to the planner's input, for an eval-side check. The count is a proxy and its ceiling is stated in the code and in the case: k elements could still be the wrong k.",
+      "may_narrow_kept_false": "Rejected the acceptance's third clause deliberately. The reviewer asked that `task`/`action` match what the executor would pass, which would set `may_narrow=True` for `extract`. A narrowing is a RECOVERY; an invariant that only holds after one is not the invariant this case claims. Stated in the code comment.",
+      "red_first": "Demonstration, not a shipped case: a host page with `<button id=HOST-BTN>Continue</button>` and an iframe holding `<button id=INNER-BTN>Continue</button>`. observe() advertises {('button','Continue'): 2}. OLD check: `no raise -> passed`. NEW check: `ResolveError: {'role': 'button', 'name': 'Continue'} matches in 2 separate documents (the page and 1 frame(s))` -> RED. Not committed as a case because main-frame-first tier construction is ADR-028's deliberate design, so such a case could never go green.",
+      "second_defect_found_here": "Widening to every role immediately reddened on our own inspector: `Locator.count: InvalidSelectorError: Error while parsing selector `button[name=/^\\s*UPLOAD\\s+A\\s+FILING\\s+\\(\\.HTM\\s+/\\s+\\.HTML\\s+/\\s+\\.TXT\\)\\s*$/i]` - unexpected symbol \"\\\" at position 50`. Playwright serialises the pattern into a `/…/flags` selector literal and a bare `/` in the name terminates it — a page-content-dependent crash that `classify` reads as `act`, i.e. R6's failure mode reached by a different route. `_whole_string` now escapes `/`. This was a live defect in the T-M42-20 fix that the review did not find and the widened check did.",
+      "exclusions": "`button` and `WebArea`, both named in the case with reasons. `WebArea` is Chromium's document root, not an addressable ARIA role. `button` is a genuine role-level engine disagreement (see T-M42-20-D4) and is declared in docs/support-matrix.md D32."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "The wait bound moved from 10s to `agent.SETTLE_BUDGET_MS` (2s) — the same budget `navigate` and every postcondition already get. `late-options.html` gained a second `<select aria-label=\"Archive\">` that is empty at load with no script behind it, so the never-fills path is a real fixture shape. New case `action-select-option-never-filled-fails-loud` pins the loud `act` failure and, through a new `max_ms` expect key, its price.",
+      "new_expect_key": "`max_ms` — an upper BOUND, where `budgets` is an equality and a duration is never equal twice. Declared in `opt-in-expect-keys-declared`.",
+      "red_first": "The status half was already green on fbe304b and the COST half was not: `failure:act` after 10.11s, `budgets.ms` 10105, `max_ms` False (10105 > 4000). After the fix: 2.11s, `budgets.ms` 2109, passed.",
+      "note_corrected": "`action-select-option-waits-for-fetch-painted-options`'s `note` no longer claims the two `loop-lab.html` cases are this branch's ablations — they are not, for the reason the review gives, and the note now says so and points at the real one.",
+      "suite_tag": "`invariant`-only, because it costs a full 2s and the `fast` band ships under one rounding step of headroom (T-M42-20-D3). Still gated: the gate runs both suites. Second invariant-only case in the repo."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "`_nearest`'s exact pass uses `_whole_string(near)` instead of `get_by_text(near, exact=True)`. Whole-string is preserved, so the substring pass after it is still a separate, later rung and `near-anchor-substring` grades what it always did.",
+      "red_first": "resolver-near-anchor-is-case-insensitive: on fbe304b `failure:locate` — `step 2 (extract): ResolveError: proximity to 'TOTAL' does not identify one element for {'role': 'cell', 'near': 'TOTAL'}`. The spelling that DID resolve, `near: 'Total'`, is a string the observation never contains.",
+      "residual_declared": "The reviewer's second option — feeding advertised names back as `near` anchors — is NOT done, and the residual asymmetry is declared in docs/support-matrix.md D32 rather than left implicit, as the acceptance allows."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "`_whole_string` raises `ResolveError(\"element-not-found\", ...)` on a non-string, which `agent.classify` reads as `locate`. Refused there because both tiers route through it.",
+      "red_first": "resolver-non-string-target-is-a-locate-failure: on fbe304b `failure:act` — `step 2 (extract): AttributeError: 'float' object has no attribute 'split'`. Expected `failure:locate`.",
+      "alternative_not_taken": "A `task`-class plan refusal in the shape `unsupported target key(s)` uses is the stronger fix — a non-string name is a bad PLAN, not an absent element — but it means teaching `plan_gap` about value types, a wider change than this repair. The acceptance allows either; `locate` restores base behaviour exactly."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D6",
+      "note": "Logged with the 'Cart' vs 'Shopping Cart is empty' evidence verbatim. Not fixed: tightening a postcondition changes which authored `expected_state` values hold across the whole suite, which is its own blast radius and its own commit."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D7",
+      "note": "Logged with the custom-ARIA-combobox evidence verbatim. Not fixed, per routing."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D8",
+      "note": "Logged, and NOT corrected in place, per the explicit routing. T-M42-20-D3's sentence still says 'three runs'; T-M42-20-D8 carries the five rows the committed ledger actually held and names the class — a debt block that restates a ledger will drift from it. The one-line correction to D3 is available on request."
+    }
+  ]
+}

@@ -31,6 +31,9 @@
       "trace_note_contains": [
         "loop-refuses-a-document-root-extract",
         "probe3-quotes-most-quoted-author",
+        "resolver-case-fold-is-recorded-in-the-trace",
+        "resolver-folded-name-with-a-slash-resolves",
+        "resolver-narrowing-discloses-the-case-fold",
         "resolver-narrows-by-anchor-proximity",
         "resolver-narrows-identical-matches",
         "resolver-narrows-singular-noun-ending-in-s",
@@ -48,6 +51,9 @@
       ],
       "evidence_contains": [
         "extract-container-dump-is-not-the-answer"
+      ],
+      "max_ms": [
+        "action-select-option-never-filled-fails-loud"
       ]
     }
   },
@@ -59,5 +65,7 @@
     "class": "eval-integrity",
     "note": "guards a documentation claim, not the product — the same shape as support-matrix-cites-real-cases and the MUTATIONS coverage check in mutation-catalog-integrity. Also refuses `answer_is_known_wrong` on a case with no `expect.answer`, where the marker would label nothing."
   },
-  "provenance_m42_2026_08_26": "M42 adds `loop-refuses-a-document-root-extract` to the `trace_note_contains` list. The key carries the same weight there it carries everywhere else — it is the only thing that can see a refusal the run then RECOVERED from, which is the whole shape of the re-homed ADR-024 guard in loop mode: the run ends `success`, so the status says nothing about whether the root read was refused or quietly allowed."
+  "provenance_m42_2026_08_26": "M42 adds `loop-refuses-a-document-root-extract` to the `trace_note_contains` list. The key carries the same weight there it carries everywhere else — it is the only thing that can see a refusal the run then RECOVERED from, which is the whole shape of the re-homed ADR-024 guard in loop mode: the run ends `success`, so the status says nothing about whether the root read was refused or quietly allowed.",
+  "provenance_pr60_2026_08_27": "PR #60 R4 adds `max_ms`, the first expect key that is an upper BOUND rather than an equality: `budgets` compares exactly and a duration is never equal twice, so the cost half of a finding whose correctness half was already green had nothing to be written in. R1 adds `resolver-case-fold-is-recorded-in-the-trace` to `trace_note_contains` — a name matched case-insensitively is a looser reading of what the plan asked for, and which reading was used is the same 'why did this step do that' the note already carries for M38's rungs.",
+  "provenance_pr60_r3_2026_08_27": "PR #60 R15 adds `resolver-narrowing-discloses-the-case-fold`: a resolution that used BOTH an M38 rung and the T-M42-20 case-fold reported only the rung, so the note is now every relaxation joined and this case is what pins the composed form. `trace_note_contains` is a substring test, so the four rung cases already carrying it are byte-identical."
 }

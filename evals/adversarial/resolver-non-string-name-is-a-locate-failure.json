@@ -1,0 +1,31 @@
+{
+  "id": "resolver-non-string-name-is-a-locate-failure",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the inventory turnover?",
+    "fixture": "hello.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": 4.82
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "PR #60 R11: round 1's non-string guard lived inside `_whole_string`, and its comment claimed that was \"the one place both tiers route through\". It is not — the role tier's EXACT pass builds `get_by_role(role, name=name, exact=True)` before the folded pass is ever constructed, so Playwright's own escaping raised `AttributeError: 'float' object has no attribute 'replace'` first and `classify` labelled the step `act`. `name` is the most-used target key in the repo and the one the shipped case did not cover. The guard now runs at the top of `resolve()`, before ANY locator is built, over every string-valued key.",
+  "triage": {
+    "class": "regression",
+    "red_first": "PENDING",
+    "note": "`invariant` rather than `fast` because it is a must-always-hold property of diagnosis (INV-1) and because the `fast` band's real margin at this case count is 0.64s (PR #60 R13) — the family of three costs ~0.3s and `invariant` has the room. `resolver-non-string-target-is-a-locate-failure` stays in `fast` as the representative."
+  }
+}

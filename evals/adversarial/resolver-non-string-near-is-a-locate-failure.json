@@ -1,0 +1,31 @@
+{
+  "id": "resolver-non-string-near-is-a-locate-failure",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the inventory turnover?",
+    "fixture": "hello.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "cell",
+          "near": 4.82
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "PR #60 R11, second shape and a second code path: `_nearest` reaches `near.strip()` before any `_whole_string(near)` lambda is called, so a non-string `near` raised `AttributeError: 'float' object has no attribute 'strip'` and classified `act`. Guarding inside `_whole_string` could never have covered this one; guarding at the top of `resolve()` does.",
+  "triage": {
+    "class": "regression",
+    "red_first": "PENDING",
+    "note": "Two shapes, two mechanisms — locator construction before the guard (`name`) and string manipulation before the guard (`near`). The third measured shape, a LIST-valued `name`, is the same mechanism as the first and is covered by `resolver-non-string-name-is-a-list`."
+  }
+}

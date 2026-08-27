@@ -862,6 +862,7 @@ const ADRS = [
   ["029", "the offline time ceiling moves to what the grown suite actually measures on this machine — and says plainly that CI's is not yet measured"],
   ["030", "the sec-10k inspector probe's tasks and pass bar are frozen in a commit before it runs; that site's own API may supply ground truth to the eval side and to nothing else; the row it declares says it measures one execution mode"],
   ["031", "the Chinese-language probe's tasks, its paired English arm and its pass bar are frozen before it runs, so \u201c中文都會失敗” is graded against criteria fixed in advance"],
+  ["032", "a locator tier is ONE match set: the case-exact matcher is counted first and the case-folded one used only when it is empty, so index, near and enumeration never select from a set the plan was not written against"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;
@@ -1410,6 +1411,35 @@ async def fixture_hang():
     before this returns."""
     await asyncio.sleep(120)
     raise HTTPException(504, "unreachable by design")
+
+
+# Two ceilings squeeze this number and it is worth naming both, because moving
+# it in either direction breaks something quietly. Too SHORT and the options
+# land before the select step's first read, so the case still passes and has
+# stopped grading the wait — the silent-disarm failure this repo keeps paying
+# for. Too LONG and it is pure wall clock inside a `fast` suite whose ceiling is
+# published, derived and gated (ADR-029), and whose band ships under one
+# rounding step of headroom (T-M42-20-D3).
+#
+# The measured first read of `el.options` is ~0.1s after `goto` (this case's own
+# red-first run finished navigate + observe + select + verification in 108ms).
+# 0.3s is 3x that, and it must also stay well under `agent.SELECT_OPTIONS_WAIT_MS`
+# (1s) or the case grades the timeout instead of the wait. It was 1.0s, then 0.5s:
+# each of PR #60's rounds added cases to a suite whose published band ships under
+# one rounding step of headroom, and this is the only knob in the case that costs
+# wall clock without measuring anything (T-M42-20-D3/D9).
+LATE_OPTIONS_DELAY_S = 0.3
+LATE_OPTIONS = ["aapl-2025", "msft-2013", "nvda-2024"]
+
+
+@app.get("/fixtures/late-options.json")
+async def fixture_late_options():
+    """The option list `late-options.html` paints its empty `<select>` from,
+    served late on purpose (T-M42-20 case (b)). The delay lives HERE rather
+    than in a page-side timer so the fixture is genuinely waiting on the
+    network, which is what a fetch-painted control does."""
+    await asyncio.sleep(LATE_OPTIONS_DELAY_S)
+    return LATE_OPTIONS
 
 
 @app.get("/fixtures/{name}", response_class=HTMLResponse)

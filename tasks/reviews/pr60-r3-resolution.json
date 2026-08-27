@@ -1,0 +1,86 @@
+{
+  "task": "T-M42-20",
+  "branch": "task/T-M42-20-fix",
+  "pr": 60,
+  "round": 3,
+  "reviewed_commit": "4bda01f",
+  "scope": "Bounded round, human-ruled option A. Four items: R17, R15, R16, and R18/R19 to debt. Nothing outside them was fixed.",
+  "counts": {
+    "findings": 5,
+    "repaired": 3,
+    "logged_as_debt": 2,
+    "rejected": 0,
+    "new_cases": 2,
+    "new_graded_check": "published-band-matches-the-ledger item 11 (cited-file)"
+  },
+  "gate": {
+    "invariant": "82/82 = 1.000, wall 16.17s, ceiling 20",
+    "fast": "229/229 = 1.000, wall 91.03s, ceiling 105"
+  },
+  "the_one_thing_to_read_first": {
+    "what": "The `fast` band crossed its rounding step DURING this round and the fix was a suite retag, disclosed rather than quiet.",
+    "measured": "With `resolver-narrowing-discloses-the-case-fold` in `fast`, the suite recorded 90.65 / 91.06 / 91.76s at 230 cases. `_band_rule(91.76)` = 110, above the committed 105, which makes item 3 (same-ceiling) and item 4 (committed-ceiling) red and demands a ceiling move — an ADR, and out of this round's scope.",
+    "done": "The case moved to `invariant`, where its five siblings already sit for the same reason, and `fast` is byte-for-byte the 229-case tree that measured 90.02-91.04s. The 230-case rows stay in the committed ledger; ADR-019 section 2 now names them and says why the suite is 229.",
+    "said_plainly": "This is the THIRD consecutive round in which the `fast` band, not a reviewer, decided a case's suite tag. That is the substance of T-M42-20-D3/D9 and the honest fix is a ceiling decision by the human, not more routing. Flagging it rather than absorbing it again."
+  },
+  "findings": [
+    {
+      "id": "R17",
+      "severity": "blocker",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "structural_half": {
+        "what": "`published-band-matches-the-ledger` gains item 11 (cited-file): the report filename a band bullet names in its prose must be the file that band's ts produced — same stamp, same suite. The bullet is the region from the band line to the next blank line, and every report file named inside it is checked.",
+        "red_first": "Wired in against the ADR-019 text as it stood on 4bda01f, the check reported: `{'suite': 'invariant', 'band_ts': '20260826-184041', 'bullet_cites_report': '20260826-175637-invariant.json'}` — exactly R17's item 1, now graded. It went green only after the prose was corrected. It also demanded section 6 carry an item 11 with the slug `cited-file` before the reference in the code was legal, which is item 8 (references) doing its job on a new block.",
+        "why_this_shape": "The ts and the filename are one claim written twice and only one was read back — the T-M39-14 class. Grading the pair is the fix; a bullet naming no file is not an error, because the ledger row is the claim and the file is a convenience."
+      },
+      "prose_half": [
+        "1. section 3's bullet now cites `evals/report/20260827-023305-invariant.json`, matching the ts it declares — and the sentence says why the check exists.",
+        "2. section 3's red-case count was two and the row had three; both bullets now state the count of the row they cite (this round's invariant row has two, and it says two).",
+        "3. section 2's enumeration of 'the two rows recorded after it ... 90.02s and 90.76s' is DELETED rather than corrected. It named a row measured three minutes before the band row as though it followed it, missed a third row and omitted the one README cites. Section 3 already says which rows sit at a count is deliberately not written; section 2 now says the same and points at `published-band-slack-is-declared` for anyone who wants the arithmetic. That is the standing rule applied: cite the graded location, do not restate."
+      ],
+      "margin_untouched": "0.26s at 229 cases, against ledger max 91.04 — the reviewer confirmed the number was right and only the prose was wrong."
+    },
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "chose": "Disclose, not widen. ADR-032 Decision 3 said the fold is disclosed; making that true is better than editing the ADR to promise less.",
+      "fix": "`ambiguous` now carries `fold`, and both narrowing returns go through a new `resolver._note(*parts)` that joins every relaxation that was used — `anchor-proximity + name-case-folded`. Where `fold` is None the note is byte-identical to what it always was, which is why no existing `trace_note_contains` case moves (all four re-run green).",
+      "red_first": "New case `resolver-narrowing-discloses-the-case-fold` on two stylesheet-uppercased links under distinct headings. On 4bda01f the run succeeds and the note reads `narrowed: anchor-proximity` — the fold that made the resolution possible at all is absent. Re-confirmed by ablation on the fixed tree: reverting `_note(\"anchor-proximity\", fold)` to the bare label turns it red (`trace_note_contains: false`). Base 6b016b5 raises `no tier resolved` for this target, so the fold is load-bearing rather than incidental.",
+      "adr_corrected": "ADR-032 Decision 3 now says relaxations COMPOSE and records that the sentence was false when first written. Its 'What this does NOT settle' entry is narrowed to the `near` branch only, which is where T-M42-20-D10 actually lives.",
+      "d10_left_alone": "Deliberate. `_note` exists and the `near` branch's `or` is a one-line adoption, but it changes the shape of a graded string and every `trace_note_contains` expectation has to be re-read against it first. D10 was routed to debt in round 2 and stays there; the ponytail comment on `_note` names the upgrade."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "New case `resolver-non-string-anchor-is-a-locate-failure` (invariant). `anchor` is not a target key — it is a top-level plan key the executor passes to `resolve` separately, so the plan lint never sees it and a model can emit `\"anchor\": 4.82`.",
+      "red_first": "The case did not exist. On fb84a88 (before the guard) the same plan is `failure:act` — `AttributeError: 'float' object has no attribute 'strip'` inside `_loose`; on 4bda01f it is `failure:locate` and nothing asserted either side. The guard was right and the class moved silently, which is the finding.",
+      "doc_half": "SKILL.md no longer says 'its three siblings' — it names four keys and four cases, and says which is in `fast` and which are in `invariant`."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D11",
+      "note": "Logged with the evidence verbatim, including the reassuring half: ablating the wait turns the case red 3/3, unablated it runs 452/453/453ms, and the never-filled case runs 1144-1161ms against max_ms 2500 while still emitting the loud StepError. The SKILL.md half was repaired in passing because it was one clause inside a sentence this round had to rewrite anyway; the case-provenance half is left, and D11 carries the real fix — the scalar has one home and everything else cites it."
+    },
+    {
+      "id": "R19",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D12",
+      "note": "Logged, not fixed, per the routing — and the debt block carries the reviewer's verbatim reproductions, so the record exists even while the five fields still say PENDING. The cause is written down so it does not recur: the five files came from one generator that wrote a placeholder, and the runs that filled it went into the resolution artifact instead of back into the case files. D12's spec includes refusing `\"PENDING\"` as a `red_first` value, which is the part that stops it happening again. Noting for the record that the backfill is one edit and the text is already in tasks/reviews/pr60-r2-resolution.json."
+    }
+  ]
+}

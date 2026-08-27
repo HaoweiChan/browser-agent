@@ -32,6 +32,7 @@ per process) so eval and production exercise the same serving path.
 
 import asyncio
 import atexit
+import collections
 import json
 import re
 import socket
@@ -532,6 +533,15 @@ _BAND_DEF = re.compile(
 _BAND_RESTATE = re.compile(
     r"\(restated — `(fast|invariant)`: (\d+) cases, (\d+)/(\d+)\)")
 
+# The report file a band bullet cites, beside the ts it cites. Item 11
+# (cited-file). Nothing read this pair, and a republish updated one half of it
+# and not the other: §3 declared ts `20260826-184041` while still naming
+# `evals/report/20260826-175637-invariant.json`, the PREVIOUS round's run at a
+# different case count and a different wall clock, and the whole gate stayed
+# green (PR #60 R17). Same class as T-M39-14 — a prose citation nothing reads
+# back — and the same fix: read it back.
+_BAND_REPORT = re.compile(r"evals/report/(\d{8}-\d{6})-(fast|invariant)\.json")
+
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
     rf"([\d.]+) × {re.escape(f'{_BAND_RATE:g}')} = ([\d.]+) → \*\*(\d+)\*\*")
@@ -709,10 +719,23 @@ def _check_published_band() -> dict:
     lines = [(m["suite"], (m["env"], int(m["cases"]), m["ts"], float(m["wall"]),
                            int(m["passed"]), int(m["total"])))
              for m in _BAND_LINE.finditer(adr)]
+    # Item 11 (cited-file). A bullet names a ts AND, in the prose beside it, the
+    # report file that ts produced. The two are one claim and were graded as
+    # half of one: PR #60 R17 found §3 declaring one run and citing another
+    # round's file, green. The bullet is the region between this band line and
+    # the next blank line, which is what a bullet is in this document.
+    cited = []
+    for m in _BAND_LINE.finditer(adr):
+        bullet = adr[m.start():]
+        bullet = bullet[:bullet.index("\n\n")] if "\n\n" in bullet else bullet
+        for ts, suite in _BAND_REPORT.findall(bullet):
+            if (ts, suite) != (m["ts"], m["suite"]):
+                cited.append({"suite": m["suite"], "band_ts": m["ts"],
+                              "bullet_cites_report": f"{ts}-{suite}.json"})
     published = dict(lines)
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
     counts = {s: len(load_cases(s)) for s in WALL_BUDGET_S}
-    wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows)
+    wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows) + cited
     # README's table is the other half of the same claim and drifted from this
     # file once already (PR #29 R24, the origin of T-R34). The whole row or red:
     # one set of numbers, two documents, no hand-kept copy — ADR-019 §6
@@ -2057,20 +2080,72 @@ def _run_observe_case(case: dict) -> dict:
             # contract. Same lesson as the screenshot bound one level up —
             # try/except bounds error propagation, never latency.
             await page.goto(url)
-            if drill := case["input"].get("drill"):
-                # The scoped observation, reached the way production reaches it:
-                # through the real resolver, from a target a plan could write.
-                # The eval harness does not get its own path to a subtree —
-                # that would grade something the executor never runs.
-                from .resolver import resolve
+            # The scoped observation, reached the way production reaches it:
+            # through the real resolver, from a target a plan could write.
+            # The eval harness does not get its own path to a subtree —
+            # that would grade something the executor never runs.
+            from .resolver import resolve
 
+            if drill := case["input"].get("drill"):
                 loc, _tier, _narrowed = await resolve(page, drill)
-                return await observe(page, root=loc, text_head=DRILL_TEXT_HEAD)
-            return await observe(page)
+                obs = await observe(page, root=loc, text_head=DRILL_TEXT_HEAD)
+            else:
+                obs = await observe(page)
+            # The observe -> resolve ROUND TRIP, for the roles a case names. Every
+            # other check here grades one end alone: `unnameable_roles` asserts
+            # from a hand-kept role list that a name is usable, and the resolver
+            # cases resolve targets an author typed. Neither ever handed the
+            # observation's own output back to the resolver, which is how two
+            # different accessible-name engines disagreed for a milestone
+            # (T-M42-20). The name goes back VERBATIM — anything else would
+            # grade a normalisation the planner does not perform.
+            #
+            # "Did not raise" is NOT the property. A name advertised for element
+            # A that resolves onto element B round-trips green while grading the
+            # opposite of what it claims: a host page and an iframe both
+            # carrying `button "Continue"` are advertised as TWO elements, and
+            # `resolve` hands back the main frame's for both, because tiers are
+            # built main-frame-first (PR #60 R3). So the check is a COUNT
+            # identity: however many elements the observation advertises under
+            # one (role, name), that many must be reachable under it. Counting
+            # rather than comparing element handles because `observe` returns
+            # {role, name} dicts and has no handle to compare against — the
+            # ceiling is that k elements could still be the wrong k, which no
+            # observation this module produces can currently distinguish.
+            advertised = collections.Counter(
+                (e["role"], e["name"]) for e in obs["elements"] if e["name"])
+            # `"*"` means every role the observation carries, so the check keeps
+            # covering roles nobody has thought of yet; `resolve_advertised_except`
+            # is where a KNOWN disagreement is named out loud instead of being
+            # quietly left off a hand-kept list.
+            want_roles = case["expect"].get("resolve_advertised", [])
+            skip_roles = case["expect"].get("resolve_advertised_except", [])
+            unresolvable = []
+            for (role, nm), want_n in sorted(advertised.items()):
+                if role in skip_roles or not ("*" in want_roles or role in want_roles):
+                    continue
+                target = {"role": role, "name": nm}
+                try:
+                    # `many=True`: the count is the question. No `task`/`action`
+                    # either, so `may_narrow` is False — a narrowing is a
+                    # RECOVERY, and an invariant that only holds after one is
+                    # not the invariant this case claims.
+                    loc, _tier, _fold = await resolve(page, target, many=True)
+                    got_n = await loc.count()
+                except Exception as exc:
+                    unresolvable.append({"target": target,
+                                         "error": f"{type(exc).__name__}: {exc}"})
+                    continue
+                if got_n != want_n:
+                    unresolvable.append({"target": target, "advertised": want_n,
+                                         "resolved": got_n,
+                                         "error": "the observation advertises this name for "
+                                                  f"{want_n} element(s); resolve reaches {got_n}"})
+            return obs, unresolvable
         finally:
             await ctx.close()
 
-    obs = _await(go())
+    obs, unresolvable = _await(go())
     exp = case["expect"]
     missing = [
         want for want in exp.get("contains", [])
@@ -2099,9 +2174,10 @@ def _run_observe_case(case: dict) -> dict:
     text_missing = [t for t in exp.get("text_head_contains", []) if t not in obs["text_head"]]
     return {
         "passed": not missing and not unnameable and not starved and not leaked
-                  and not text_missing,
+                  and not text_missing and not unresolvable,
         "missing": missing,
         "advertised_unresolvable": unnameable,
+        "advertised_name_did_not_resolve": unresolvable,
         "starved_by_chrome": starved,
         "inside_the_cap_after_all": leaked,
         "text_head_missing": text_missing,
@@ -2344,6 +2420,15 @@ def _run_fixture_case(case: dict) -> dict:
     if "budgets" in exp:
         got_budgets = {k: result["budgets_spent"].get(k) for k in exp["budgets"]}
         checks["budgets"] = got_budgets == exp["budgets"]
+    # An UPPER BOUND on the run's own wall clock, where `budgets` is an equality
+    # and a duration is never equal twice. It exists for one shape: a step whose
+    # correctness and whose COST are separate claims, so a fix that keeps the
+    # right failure class while paying 10s for it is still red (PR #60 R4 —
+    # `select_option`'s wait was 10.0s per never-filling control, correct and
+    # ungraded, inside a wall-clock-gated suite). Deliberately loose: it catches
+    # an order-of-magnitude regression, not jitter.
+    if "max_ms" in exp:
+        checks["max_ms"] = result["budgets_spent"].get("ms", 0) <= exp["max_ms"]
     # Generic verdict-checks probe (M39/ADR-023), same shape as `budgets`
     # above: a case names the `verdict.checks` fields it cares about and their
     # exact values. `judge_attempts` lives here and nowhere else — a status

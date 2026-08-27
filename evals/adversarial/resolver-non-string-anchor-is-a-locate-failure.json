@@ -1,0 +1,32 @@
+{
+  "id": "resolver-non-string-anchor-is-a-locate-failure",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "Who submitted the Aurora Desk Lamp teardown?",
+    "fixture": "forum-thread.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "user profile"
+        },
+        "anchor": 4.82
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "PR #60 R16. Round 3's guard covers four string-valued inputs — `name`, `text`, `near` and `anchor` — and shipped cases for three of them. `anchor` is not a target key at all: it is a top-level plan key the executor passes to `resolve` separately, so a model can emit `\"anchor\": 4.82` and the plan lint, which validates target KEYS, never sees it. Failure class is a graded output (INV-1), so a class that moves silently is exactly what this repo grades. **The page and the target are load-bearing, and the first version of this case got them wrong (PR #60 R20).** `anchor` is read at ONE place — M38's narrowing rung 1 — which is reached only when a tier resolves AMBIGUOUSLY, so a target that matches nothing never lets the anchor near `_loose()`. Pointed at `hello.html` with `{role: link, name: 'History'}`, which matches nothing, the case passed on the pre-guard tree and graded the guard not at all. It now borrows `resolver-narrows-by-anchor-proximity`'s page and target: `forum-thread.html`'s two links share the accessible name `user profile`, the role tier is ambiguous, `may_narrow` holds (an `extract` with a singular ask), and rung 1 reaches for the anchor.",
+  "triage": {
+    "class": "coverage",
+    "red_first": "Measured with the four-key guard in `resolve()` ablated and nothing else changed — the one line under test — which reproduces what the reviewer measured for this input on `fb84a88`: `failure:act`, `step 2 (extract): AttributeError: 'float' object has no attribute 'strip'; replan made no progress (identical or empty plan)`, `passed: false`. The `AttributeError` comes out of `_loose(anchor)` inside narrowing rung 1, which is why the target has to be ambiguous for the case to grade anything. Unablated: `failure:locate`, `step 3 (extract): relocation after locate failure: retargeting as {'text': 'user profile'}; ResolveError: target anchor is not a string: 4.82`, `passed: true`. The step number differs between the two because the guard fires before the tier loop, so the relocation rung runs and the trace is one step longer; the class and the exception are the finding.",
+    "note": "`invariant` with its siblings — `resolver-non-string-name-is-a-locate-failure`, `resolver-non-string-name-is-a-list`, `resolver-non-string-near-is-a-locate-failure` — because they are must-always-hold diagnosis properties and the `fast` band cannot pay for them. `resolver-non-string-target-is-a-locate-failure` (the `text` key) is the one in `fast`. The lesson worth keeping is not about `anchor`: a case for a guard on input X grades nothing unless the fixture and target let X REACH the guarded line, and that has to be checked per case rather than assumed from the guard's position."
+  }
+}

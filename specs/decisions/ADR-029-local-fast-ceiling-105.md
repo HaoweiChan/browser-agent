@@ -76,9 +76,19 @@ because no CI run appends to this repo's ledger (§7, T-R51, T-R73).
 
 **The measurement exists and it is four attempts, not one.** eval-gate run
 [32937020758](https://github.com/HaoweiChan/browser-agent/actions/runs/32937020758)
-on commit `14a6a7b` ran this tree on CI four times. Every attempt was
-correctness-green — `fast` 220/220, `invariant` 76/76, in the environment that
-guards `main` — and every attempt was over the 90s `fast` ceiling then declared.
+on commit `14a6a7b` ran that tree on CI four times. Every attempt was
+correctness-green — ~~`fast` 220/220, `invariant` 76/76~~ — in the environment
+that guards `main`, and every attempt was over the 90s `fast` ceiling then
+declared. **Those two figures are struck, and struck is not deleted**: they are
+the record of what that run measured, on the 220-case tree commit `14a6a7b`
+carried, and they are true of it forever. They are struck because
+`adr029-scope-matches-the-suites` reads every `` `suite` N/M `` in this section
+back against THIS tree's suites, which is right for the local pair below and
+wrong for a CI figure hand-read off a named workflow run of a different commit
+(ADR-019 §5, §7) — restated live, a true measurement of a 220-case tree becomes
+a fabricated claim about a 227-case one, one case addition at a time. The live
+claim is the sentence after this one; the digits stay readable above it. The one
+publisher for CI figures is ADR-019 §5 (T-M42-20-D2).
 The wall clocks are not reprinted here: CI wall clocks are published in ADR-019
 §5, which `ci-numbers-are-derived` grades, and nowhere else (the one-publisher
 rule PR #57 R20-R23 arrived at). §5 carries the table, the arithmetic and the
@@ -103,8 +113,10 @@ paragraph: a disclosure that quietly drops its own previous claim is not a
 disclosure.
 
 **Where that leaves the evidence**: correctness is green in both environments —
-locally `invariant` 76/76 and `fast` 220/220, and on CI `fast` 220/220 across
-four attempts — and the wall-clock gate is now derived, not breached, in both.
+locally `invariant` 82/82 and `fast` 229/229, and on CI green across four
+attempts of the tree that run measured, whose own totals are struck above and
+published live only in ADR-019 §5 — and the wall-clock gate is now derived, not
+breached, in both.
 The local pair is read back against the suites by
 `adr029-scope-matches-the-suites`, because this paragraph once published a
 four-case-stale pair (PR #57 R14) and a disclosure wrong about its own evidence

@@ -9,6 +9,73 @@ description: Domain knowledge for the browser-agent task — Playwright pitfalls
 
 1. **role + accessible name** — survives cosmetic change; needs decent ARIA.
 2. **text/label** — robust; breaks on copy changes (`button-text-renamed`).
+
+**Each name tier is TWO passes: case-exact first, case-folded only if that finds
+nothing** (`_whole_string`, T-M42-20 as repaired by PR #60 R1). Both are
+whole-string, so the substring refusal `resolver-substring-name` exists for is
+untouched either way. The fold exists because `exact=True` also promises
+CASE-sensitivity, which nothing here can keep: `observe()` reads the accessible
+name from Chromium's `accessibility.snapshot()`, which APPLIES CSS
+`text-transform`, and Playwright's locator engine computes its own name and does
+not. A `<label>` under `text-transform: uppercase` reaches the planner shouting
+and comes back unresolvable — that is how M42's live clause died 3/3 in both
+modes on a control the page rendered perfectly.
+
+**ONE SET, chosen before anything selects from it — read ADR-032 before touching
+this.** `index`, `near`, `many` and the `n == 1` uniqueness check all select from
+a tier's match SET, and two review rounds found the same silent wrong-success by
+giving them different sets to read. Round 1 made the fold *the* matcher and the
+set grew: `{name: 'Add to cart', index: 0}` moved off the row CTA onto an
+`ADD TO CART` banner, no `ambiguous-match`, nothing in the trace. Round 2 made it
+two ordered passes and applied the rules to each in turn, so `index` was re-based
+per pass: `index: 0` and `index: 1` returned THE SAME element and a plan asking
+for the second match was answered `success` with the first.
+
+What ships is neither: `_resolve_in` counts the exact locator once and swaps in
+the folded one only if it is EMPTY, so everything downstream sees a single
+locator and cannot tell how it was chosen. **Fallback, not union** — a union puts
+the twins back into the set `index` indexes, which is round 1 again. The
+consequence, and this time it is true for every rule and not just uniqueness: a
+page carrying an exact-case match never consults the fold at all and resolves
+byte-for-byte as it did before T-M42-20; `index: k` past the exact matches is a
+loud `element-not-found`, as it always was. Cases:
+`resolver-index-selects-from-one-match-set`,
+`resolver-case-twin-index-picks-the-exact-spelling`,
+`resolver-case-twin-near-picks-the-exact-spelling`.
+
+So the collision claim is CONDITIONAL: two names differing only in case collide
+as an ambiguity, and go to M38's narrowing rungs, **only when neither matches
+the plan's spelling exactly**. When one does, it wins outright.
+
+A folded resolution is a looser reading of what the plan asked for, so it says
+so — trace note `narrowed: name-case-folded`, pinned by
+`resolver-case-fold-is-recorded-in-the-trace`. Whitespace is collapsed to `\s+`
+and `/` is escaped, because Playwright normalises whitespace for STRING matching
+but tests a regex against RAW text, and serialises the pattern into a `/…/flags`
+selector literal a bare slash would terminate
+(`resolver-folded-name-with-a-slash-resolves` — role tier only; `get_by_text`
+with the same pattern does not crash). A non-string `name`/`text`/`near`/`anchor`
+is refused at the TOP of `resolve()`, before any locator is built, as a `locate`
+failure. Refusing inside `_whole_string` was the first attempt and covered one
+key of four: the role tier's exact pass hands `name` straight to Playwright and
+`_nearest` calls `near.strip()`, both before `_whole_string` is reached, so the
+`AttributeError` still got the step classified `act`
+(`resolver-non-string-target-is-a-locate-failure` for `text`, in `fast`, and its three `invariant` siblings for `name`, a list-valued `name`, `near` and `anchor` — four keys, four cases; `anchor` was the one the guard changed and nothing covered, PR #60 R16).
+
+**`near` anchors fold too, and only at the exact pass** (`_nearest`, PR #60 R5):
+an anchor is quoted off the same observation a name is, so `near: 'TOTAL'` on an
+uppercased `th` must work (`resolver-near-anchor-is-case-insensitive`). The
+substring pass after it is unchanged.
+
+The round trip itself — every name the observation advertises resolves, and
+reaches as many elements as the observation claims — is
+`observe-uppercase-label-name-resolves`, the only case that closes
+`observe` -> `resolve` instead of grading each end alone; that gap is why this
+was broken for a milestone (debt: `T-M42-20-D1`). It runs over every role on its
+fixture except two, both named in the case: `WebArea` (Chromium's document root,
+not an addressable ARIA role) and `button` (the two engines disagree about
+`<input type="file">` — role `button` to the snapshot, `textbox` to the locator
+engine; debt `T-M42-20-D4`).
 3. **stable attrs** (id, data-*, name) — precise; most brittle (`ids-renamed`).
 4. **structural relations** — last resort; killed by `wrapper-nesting`.
 
@@ -98,7 +165,8 @@ clean single match at the text tier outranks a narrowed one at the role tier.
   `index` (structural), the two shared refusals, and matches interchangeable in
   role AND rendered text. The two halves of "interchangeable" are not redundant
   — role is vacuous on the role tier and text is vacuous on the text tier
-  (`exact=True`), so each is the whole guard on the other's tier:
+  (whole-string; near-vacuous rather than vacuous since T-M42-20 made it
+  case-insensitive), so each is the whole guard on the other's tier:
   `resolver-refuses-mixed-roles` (role), `resolver-refuses-different-readings`
   (text). Interchangeability gates rung 2 ONLY — rung 1 is *for* candidates
   that differ.
@@ -133,6 +201,34 @@ path. `src/browser/mutate.py` is the transform layer.
   Ground truth: `GET /fixtures/forms/state` returns the last submission;
   `POST /fixtures/forms/reset` clears it before a case.
 - `/fixtures/hello.html` — M1 walking-skeleton page, still the cheapest case.
+- `/fixtures/late-options.html` (T-M42-20) — a `<select>` that is in the DOM at
+  `load` with ZERO `<option>`s, filled from `fetch('/fixtures/late-options.json')`,
+  an endpoint that sleeps `server.LATE_OPTIONS_DELAY_S` (1.0s) so the page waits
+  on the NETWORK rather than on a page-side timer. The only fixture of that
+  shape — `loop-lab.html` paints late but on a click, from a timer, and its
+  `<select>` is fully populated in the document — and its absence is why 213
+  green cases missed the S1 half M42 was built for. The delay is squeezed from
+  both sides: shorter and the options land before the select step's first read
+  (measured at ~0.1s after `goto`), so the case passes and grades nothing;
+  longer and it is pure wall clock inside a published band (0.3s since PR #60's rounds put twelve more cases in the same suite, ~3x the ~0.1s first read). It also carries a SECOND
+  `<select aria-label="Archive">` that is empty at load with no script behind it
+  at all — that one never fills, so it is what bounds the wait, and its case is
+  `invariant`-only because it costs the full 2s. Cases:
+  `action-select-option-waits-for-fetch-painted-options`,
+  `action-select-option-never-filled-fails-loud`.
+- `/fixtures/case-twins.html` (PR #60) — two pairs of links whose ACCESSIBLE
+  NAMES differ only in case (`ADD TO CART` / `Add to cart`,
+  `SAVE FOR LATER` / `Save for later`), plus a summary table whose `<th>` is
+  uppercased by stylesheet. Three things are load-bearing and all three were
+  learned by getting them wrong: the twins are named by `aria-label` and READ
+  something else, because `verifier.normalize` folds case and a fixture whose
+  twins were named by their own text would pass on the wrong element and grade
+  nothing; the shouting twin comes FIRST in document order, or `index: 0` cannot
+  tell the two orderings apart; and the twin sits INSIDE Widget A's paragraph, or
+  the `near` case is nearest the right answer either way. Uppercase in the
+  MARKUP for the links (two different strings to the locator engine) and by
+  STYLESHEET for the `th` (one string, two readings) — the page needs both,
+  because they are different defects.
 - `/fixtures/slow-asset.html` — references `/fixtures/hang.png`, an endpoint
   that sleeps 120s, so the `load` event never fires while the document is
   complete in milliseconds. openlibrary.org's edition pages behaved exactly

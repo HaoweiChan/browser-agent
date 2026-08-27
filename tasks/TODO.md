@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### T-M42-20 — M42's headline acceptance clause is unmet on the live deployment: both modes die resolving a fetch-painted `<select>`            [status: todo]
+### T-M42-20 — M42's headline acceptance clause is unmet on the live deployment: both modes die resolving a fetch-painted `<select>`            [status: in-progress]
 Origin: post-merge live smoke of M42, run by the pr-loop orchestrator on
 2026-08-26 against the deployment at `0403b50` (the merge commit of PR #57),
 after Zeabur redeployed. M42 shipped with this clause declared UNMET because no
@@ -83,6 +83,37 @@ strategy change failed to move it, rather than grinding the budget in a circle;
 and per-run cost is visible in the trace, which is its own clause and IS met.
 Also recorded, not a defect: loop mode cost 100-300x mode B per run
 ($0.4830-$0.9166 vs $0.0015-$0.0043). Total smoke spend ~$1.90.
+Update 2026-08-27 — LOCAL LIVE DEMONSTRATION, and a correction to this block's
+own smoke. Run on the fixed branch tree against the real inspector, 3 reps per
+mode, real LLM (`anthropic/claude-opus-5` for loop), `OPENROUTER_API_KEY` from
+the interactive shell:
+
+| mode | correct | cost | actions |
+|---|---|---|---|
+| plan | **0/3** | $0.0101 | 5 / 5 / 1 |
+| loop | **3/3** | $0.4652 | 6 / 6 / 8 |
+
+Loop mode answered `doc_status: success_with_warning — 19 extracted · 4
+incorporated_by_reference` on every rep; ground truth `counts.extracted = 19`
+from the inspector's own API. Mode B failed 3/3 — D28's declared boundary, met.
+**This is M42's headline capability demonstrated for the first time**: the S1
+shape mode B cannot plan, answered under loop mode. It is a LOCAL run of the
+branch, not the deployment (which still serves pre-fix `main`), so the
+acceptance clause's "against the deployment, run ids published" half remains
+open until this merges and Zeabur redeploys.
+
+CORRECTION to the smoke recorded above: the original task — "report the period
+end date" — was UNANSWERABLE. `period_end` appears only in the JSON of
+`/api/extract/fixture`; the rendered page never contains it or the string
+`2024-01-28`. Ground truth was taken from the API without checking the UI
+displays it, so the six deployment runs and the first six local runs were all
+graded against something no agent could read off the page. What that does NOT
+invalidate: the root cause, which was reproduced directly at the `resolve()`
+level independent of any task, and the finding that both modes died AT
+resolution before reaching an answer. What it does invalidate: any conclusion
+that loop mode could not answer an S1 task — that was never tested until now,
+and the answer is that it can.
+
 Acceptance: TWO red-first cases, both red today, both required (rule 2):
 (a) a fixture whose label carries `text-transform: uppercase`, where the case
 feeds the OBSERVED name back into `resolve` — this is the root cause above;
@@ -98,6 +129,158 @@ Note: the offline suite is 213 green cases and none of them caught this. That is
 the finding behind the finding — no fixture in the repo has a control that is
 absent at load and arrives by fetch, which is the exact S1 shape M42 was built
 for.
+Update 2026-08-26 — BOTH CASES WRITTEN, WATCHED RED, FIXED; the deployment
+smoke is the one clause still open. Red-first record, verbatim:
+  - (a) `observe-uppercase-label-name-resolves` (fast) — a new `observe`-case
+    key `resolve_advertised` feeds every advertised combobox name back into
+    `resolve` verbatim. Red: `advertised_name_did_not_resolve: [{'target':
+    {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}, 'error':
+    "ResolveError: no tier resolved ..."}]` against the committed
+    `sec10k-inspector.html` snapshot, whose `.mode label` carries
+    `text-transform: uppercase`. No new fixture was needed — the snapshot
+    already reproduced the live defect byte for byte.
+  - (b) `action-select-option-waits-for-fetch-painted-options` (fast) — new
+    fixture `late-options.html` plus a `/fixtures/late-options.json` endpoint
+    that sleeps 1.0s server-side. Red: `failure:act` — `step 2 (select_option):
+    no option matches 'nvda-2024'; this control offers []`.
+Fixes: `resolver._whole_string` replaces `exact=True` on the role AND text
+tiers with an anchored, whitespace-normalising, case-insensitive regex — the
+substring refusal (`resolver-substring-name`) survives because it is anchored,
+and two names differing only by case now collide into M38's ambiguity
+machinery; and the select step, on reading zero options, waits once for the
+first `option` to be ATTACHED (never `visible` — the options of a closed
+`<select>` never are, which costs the full timeout and then reads a list that
+arrived seconds earlier) before failing loudly as it always did.
+Gate: `invariant` 76/76, `fast` 222/222, wall 14.97s / 89.6s against ceilings
+20 / 105 (`evals/report/20260826-170109-invariant.json`,
+`20260826-170244-fast.json`); ADR-019 §2's band, ADR-029 §2, README and
+docs/analysis.md all republished at the new count.
+Live verification of the FIX, $0 and no LLM, against
+`https://whaleforce-sec10k.zeabur.app` (inspector build `e54573fef9aa`),
+with the repo's own `navigate` -> `observe` -> `resolve`: the observation still
+reports `{'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}` — the two
+engines still disagree, which is the point — and that name now resolves,
+`RESOLVED tier=role`, where before it raised `ResolveError: no tier resolved`.
+Two probes minutes apart read 0 and 43 `<option>`s at the same moment of the
+page's life, so the live picker is BOTH shapes: (b) is not a fixture-only
+concern. Ground truth re-confirmed from `/api/extract/fixture`:
+`period_end: 2024-01-28`.
+Update 2026-08-27 — PR #60 round 1: the reviewer executed every claim and the
+first fix was WRONG in four ways, three of them regressions it introduced. All
+four repaired, each watched red first:
+  - R1 (HIGH, silent wrong-success). Widening a tier widens the SET, and
+    `index`, `near` and `extract_all` all select from the set BEFORE the
+    uniqueness check — so `{name: 'Add to cart', index: 0}` moved off the row CTA
+    onto an `ADD TO CART` banner above it, no ambiguity, nothing in the trace.
+    Fix: case-exact first, folded only if that finds nothing. **Round 2 (R10)
+    then falsified the "nothing changes" half of that sentence** — two passes is
+    two SETS, and `index` was applied to each in turn, so `index: 0` and
+    `index: 1` returned the same element. ADR-032 settles it: one set per tier,
+    chosen once, fallback and never union. A folded resolution says so:
+    `narrowed: name-case-folded`. Cases
+    `resolver-case-twin-index-picks-the-exact-spelling`,
+    `resolver-case-twin-near-picks-the-exact-spelling`,
+    `resolver-case-fold-is-recorded-in-the-trace`, fixture `case-twins.html`.
+  - R3. `resolve_advertised` only recorded whether `resolve` RAISED, so a name
+    advertised for element A that resolved onto element B graded green. It is
+    now a count identity, and it runs over EVERY role (`"*"`) rather than one.
+    Widening it immediately found a second defect in the first fix: `/` inside a
+    name terminated the regex literal Playwright serialises the pattern into
+    (`InvalidSelectorError`, classified `act`), on our own inspector's
+    `UPLOAD A FILING (.HTM / .HTML / .TXT)` button.
+  - R5. `_nearest`'s exact pass was still case-sensitive, so an anchor quoted off
+    the observation (`near: 'TOTAL'`) raised while a spelling the observation
+    never contains resolved. Case `resolver-near-anchor-is-case-insensitive`.
+  - R6. `_whole_string` called `.split()` unguarded, so `{'text': 4.82}` raised
+    `AttributeError` and the step's class regressed `locate` -> `act`. Case
+    `resolver-non-string-target-is-a-locate-failure`.
+  - R4 (the wait's own gap). Its named ablations ablated nothing — both run on a
+    fixture whose `<select>` is never empty — and the never-fills path cost 10.0s
+    with the `TimeoutError` swallowed and no case. The wait is now
+    `SETTLE_BUDGET_MS`; `action-select-option-never-filled-fails-loud` pins the
+    loud failure AND its price through a new `max_ms` expect key.
+R2, R7, R8, R9 were routed to debt and are logged below as T-M42-20-D5..D8;
+T-M42-20-D4 is the role-level engine disagreement R3's widening exposed.
+The suite grew by six and got FASTER — `LATE_OPTIONS_DELAY_S` 1.0s -> 0.5s and
+the 10s wait -> 2s more than paid for it.
+Update 2026-08-27 — PR #60 round 2: four findings, three repaired, two logged.
+The pattern the orchestrator named is the real finding — each round's fix was
+right about its own defect and wrong about the mechanism around it — so round 3
+closes the SEMANTICS in **ADR-032** rather than patching a third symptom.
+  - R10 (HIGH). Two passes is two SETS, and `index` was applied to each in turn,
+    so `index: 0` and `index: 1` returned the same element and a plan asking for
+    the second match answered `success` with the first. ADR-032: a tier is ONE
+    match set, chosen once — exact counted first, folded used only if that is
+    EMPTY. Fallback, not union; a union puts the twins back into the set `index`
+    indexes, which is R1 again. Case `resolver-index-selects-from-one-match-set`.
+    The four sentences claiming byte-for-byte behaviour while it was false are
+    corrected, and now TRUE for `index` as well as uniqueness.
+  - R11. Round 1's non-string guard covered one key of four: the role tier's
+    exact pass hands `name` to Playwright and `_nearest` calls `near.strip()`,
+    both before `_whole_string`. The guard moved to the top of `resolve()`, over
+    `name`/`text`/`near`/`anchor`. Three cases, all `invariant`.
+  - R12. The `/`-escape shipped with no case that could go red — the reviewer
+    deleted it and the whole gate stayed green — and the widened round-trip check
+    excludes the one role carrying the offending name. Case
+    `resolver-folded-name-with-a-slash-resolves` reaches it directly.
+  - R13, R14 → debt, T-M42-20-D9 and -D10.
+Wall clock is now the binding constraint and was met by REMOVING waste, which is
+ADR-021's own ruling: the select step got its own budget
+(`SELECT_OPTIONS_WAIT_MS`, 1s) instead of borrowing `SETTLE_BUDGET_MS`, and
+`LATE_OPTIONS_DELAY_S` went 0.5s -> 0.3s. `invariant` went 17.22s -> 16.04s
+(the cliff where the rule stops giving 20 is 17.39s) and `fast` sits at 90.99s
+against a 91.30s cliff — 0.26s from the ledger's slowest row. Stated against the
+LEDGER MAX, not the published band, which is R13's lesson.
+Update 2026-08-27 — PR #60 round 3, bounded, human-ruled after the circuit
+breaker fired. Five findings, three repaired, two logged.
+  - R17 (blocker). The ADR-019 republish contradicted the ledger in three places,
+    none of them read by a grader: a bullet declaring one ts while citing another
+    round's report FILE, a red-case count of two against a row with three, and an
+    enumeration of rows that named one measured BEFORE the band row as though it
+    followed it. The structural half is the point: `published-band-matches-the-ledger`
+    now has **item 11 (cited-file)** and reads the filename back against the ts.
+    Watched red on the shipped text — `band_ts 20260826-184041` vs
+    `bullet_cites_report 20260826-175637-invariant.json`. The enumeration is
+    deleted rather than corrected: §3 already says which rows sit at a count is
+    not written here, and the standing rule is to cite the graded location.
+  - R15. ADR-032's own Decision 3 was false on M38's rungs — a resolution that
+    existed ONLY because the fold ran reported the rung alone. `_note()` now joins
+    every relaxation (`anchor-proximity + name-case-folded`); byte-identical
+    wherever `fold` is None, so no existing case moves. ADR-032 corrected.
+  - R16. The `anchor` key's failure class moved `act` -> `locate` with nothing
+    covering it. Four string-valued inputs, four cases now.
+  - R18, R19 -> debt, T-M42-20-D11 and -D12.
+**The `fast` band crossed its step during this round, and that is the headline.**
+With R15's case in `fast` the suite measured 91.76s at 230 cases and the rule
+derives 110 — a ceiling nobody has committed. The case moved to `invariant` with
+its five siblings and `fast` is byte-for-byte the 229-case tree that measured
+90.02-91.04s. The 230-case rows stay in the ledger as the evidence. **Three
+rounds running the band has decided a suite tag rather than a reviewer doing it**;
+`T-M42-20-D3`/`-D9` are that debt and the honest fix is a ceiling decision, not
+more routing.
+Update 2026-08-27 — PR #60 round 4, bounded, human-ruled after the breaker fired
+a second time, under a stopping rule: nothing carries to a round 6. Two items,
+both closed; three logged.
+  - R20. `resolver-non-string-anchor-is-a-locate-failure` was GREEN on the
+    pre-guard tree — it graded nothing. `anchor` is read at exactly one place,
+    M38's narrowing rung 1, reached only when a tier is AMBIGUOUS, and the case
+    was pointed at a target that matches nothing. Repointed at
+    `forum-thread.html`'s two same-named links; watched red with the guard
+    ablated: `failure:act`, `AttributeError: 'float' object has no attribute
+    'strip'`. Green: `failure:locate`, `ResolveError: target anchor is not a
+    string: 4.82`. The `red_first` field now carries that measured output instead
+    of text that did not reproduce.
+  - R21. The invariant bullet's bold trajectory ended in a restated scalar that
+    had already aged into a superseded case count. It now ends at the number the
+    bullet publishes, because nothing grades a free-form trajectory and updating
+    the figure would have rebuilt the same trap.
+  - R22, R23, R24 -> debt, T-M42-20-D13/D14/D15.
+Nothing was left half-done and nothing carries forward from this round.
+STILL OPEN, and the reason this block is not closed: the deployment tracks
+`main`, so a 3-rep smoke run before this branch merges would measure the
+pre-fix build. No run ids are published here because no run was made (rule 4).
+The clause needs merge -> redeploy -> 3 reps per mode with loop mode answering
+`2024-01-28`, and only then does M42's headline clause close.
 
 ### M41 — the agent can answer from its own sec-10k inspector, or the matrix says exactly why not            [status: todo]
 Origin: live demo, 2026-08-24 — asked to drive Task 2's deployed inspector
@@ -173,129 +356,6 @@ pins that matches differing in role are NOT auto-picked; `ui-no-url-guard`/
 after merge the HN/quotes examples are re-run 3× each on the deployment and
 the receipts go in the PR evidence pack.
 Out of scope: planner quality (M32), judge availability (M39).
-
-### M40 — the demo surface tells the truth about itself, and the matrix covers the domains a reviewer will actually reach for            [status: pr]
-Origin: owner, 2026-08-23, five asks in one message after looking at the deployed page —
-two Try examples produce nothing, five cards should be eight, the running stage should
-show it is running, a right-hand panel should show what the browser saw so a reviewer can
-check the scraped content, and the covered domains should include the investment sites an
-investment firm actually uses.
-**Process note, recorded rather than tidied away:** this block was written AFTER the work
-started, at the owner's instruction mid-session ("make sure you update TODO before
-implementation"). CLAUDE.md's per-feature loop puts plan → ADR → cases first; on this task
-the probing came first and the block second. Written down because the ordering is exactly
-what this file exists to make visible, and because the probe results below are what a plan
-written first would have had to guess at.
-Spec: four frontend asks, one that is not. The four are `src/browser/server.py`'s inline
-PAGE — a CSS-only spinner on the current phase (the progress case forbids timers in the
-script, and a phase advancing on a clock is a progress bar that lies about the trace), a
-right-hand page view carrying the step screenshot the executor already takes plus, after
-the run, every extraction with the page text it was read from, and an EXAMPLES/matrix set
-that reaches eight real-site rows. The fifth — "support investment sites" — cannot be
-answered by writing code; it is answered by running the deployment and declaring what came
-back, under the same report-assisted/human-declared rule as every other row.
-Acceptance:
-- Every Try example and every live-declared row is re-run against the build being
-  shipped, immediately before merge (added mid-task — see ADR-022 Decision 1a; the
-  first three rows declared here expired when the deployment was replaced).
-- The page view shows the page ITSELF, scrollable, not only a screenshot (owner
-  amendment mid-task) — and the proxy that requires is graded as the SSRF surface
-  it is, watched red per property.
-- No Try example cites a run shape that no longer reproduces. Each card's example is
-  re-run against the deployment and its status matches what happened, including the one
-  card that is deliberately a failure demo.
-- Eight non-fixture rows in `docs/support-matrix.md`, each with an EXAMPLES entry
-  (`ui-examples-cover-matrix` already grades set equality in both directions).
-- The new live-declared rows carry their run ids, their repeat counts, and a declared
-  limitation naming the page shapes that failed — not a pass rate thresholded into a word.
-- Every new UI hook is pinned by the UI cases, watched red against the pre-M40 page.
-- Cold review and spec-drift both run before the commit; every finding either lands as a
-  fix with a case, or as a declared limitation. No finding is closed by rewording alone.
-Rebased onto main 2026-08-23 after PR #34/#39 merged: this block was written as M38 and
-renamed to M40 — main had already queued M38 (resolver disambiguation) and M39. The
-collision is worth noting rather than silently renumbering, because main's M38 is the fix
-for one of the two broken Try examples this task found by hand: `e985e048`/`e6768ee0` in
-its Origin are the same quotes.toscrape.com ambiguity this task hit as `eefae1b8`.
-Not in scope, and why: a plan-lint clause refusing container-role `extract` targets. It is
-the obvious fix for the dominant live failure shape and it would turn
-`extract-container-dump-is-not-the-answer` red by ending the run before anything is read —
-changing what that case can observe rather than fixing what it grades. Isolating the cell
-stays T-R66/M28.
-### M45 — Chinese tasks reach the browser, and the matrix carries zh live evidence            [status: pr]
-Origin: interviewer feedback, 2026-08-26 — "使用者輸入中文搜尋或問答時,部署版
-會直接回傳 refused,甚至還沒開啟瀏覽器就結束", under the headline "中文都會
-失敗". No run ids came with the report. Priority note: sequence this AHEAD of
-M43 — the likely root cause is a few lines of regex plus probe evidence, the
-highest leverage-per-cost item in this queue, and it answers the single most
-damaging sentence in the feedback.
-Spec: the only pre-browser refusal in the pipeline is `screen()`'s
-`SCOPE_BLOCK` (`src/browser/agent.py`), and its CJK alternation is bare
-substring matching — `登入|密碼|驗證碼|付款|購買|刪除|下載` with no boundary
-and no context — while the English side earned word boundaries and determiner
-adjacency through two probe-driven repairs, each pinned
-(`screening-word-boundary`, `l5-refuse-delete-determiners`). A legitimate zh
-READ task that merely mentions 下載/付款/刪除 as subject matter refuses at
-$0.00. Whether that asymmetry is the whole of "中文都會失敗" is unmeasured:
-every live probe ever run (M40's four rounds) was English; every zh case in
-the suites is an offline fixture. Three legs, evidence first:
-(1) REPRODUCE — a zh probe set against the deployment: the interviewer's
-shapes (plain search, plain QA) plus zh phrasings of the M40 card tasks,
-3 reps each, run ids published, every failure triaged per
-`docs/evals/failure-taxonomy.md` BEFORE any code moves.
-(2) SCREENING PARITY — the CJK terms get the same precision work the English
-side got: per-term context conditions (刪除 + adjacent object the way
-`delete` requires a determiner; 下載/付款/購買 refusing as the task's VERB,
-not as mentioned subject matter), watched red first with legitimate-zh-read
-cases, while the negative direction is pinned too — real destructive/auth zh
-asks still refuse, `l5-refuse-destructive-zh` stays green, and the refusal
-POLICY is unchanged: only its zh false-positive rate moves.
-(3) DECLARE — the matrix carries the zh evidence (zh rows or per-row zh
-annotation, under ADR-022's live-declaration rule): "中文都會失敗" ends this
-milestone either fixed with cases or declared with named shapes, never
-unaddressed.
-Acceptance: probe run ids committed; every screening change pinned in both
-directions (a false-positive case that was red, a true-positive case that
-stayed green); zh live evidence visible in `docs/support-matrix.md`; the
-interviewer's exact phrasings among the probe tasks; gate green;
-cold-reviewer + spec-drift before commit.
-Out of scope: planner/judge zh answer quality beyond what the probe surfaces —
-new shapes found there become their own blocks (rule 2). Independent of
-M42/M43: mode B's screening is the same code path, so this neither waits for
-nor blocks the loop work.
-RESULT (2026-08-26): **the headline did not reproduce; the third of it that did
-is declared, not fixed.**
-Leg 1 — 29 runs against `main@9c3340c`, pre-registered in ADR-031, $0.011195
-(planner $0.009783 + judge $0.001412), every run_id in `docs/analysis.md` §8a-5 and
-`evals/report/20260826-011010-m45-zh-probe.json`. Paired zh/en on the same
-URLs, same build, interleaved: **Chinese 12/12 correct, English 9/12,
-wrong-success 0/29.** Zero of the twelve Chinese runs was a refusal — the
-"還沒開啟瀏覽器就結束" symptom did NOT occur on plain search or plain QA. All
-three failures in the probe are English `failure:locate` (the D29 shape).
-Leg 2 — what DID reproduce: the mention shape, three live refusals at $0.00
-with an empty trace (`8304ee3b` 密碼學, `be20ba6a` 購買力平價, `038bc371`
-刪除的檔案). **It is declared, not fixed.** Three per-term negative lookaheads
-were written and all three were falsified by ordinary Chinese that they
-un-refused — `[刪删]除(?!的)` allowed 把購物車裡要刪除的商品都刪掉 (cold review);
-`[購购][買买](?!力平[價价])` allowed 我要購買力平價這本書 and
-请帮我购买力平价指数基金 (PR #56 R2); `密[碼码](?![學学])` allowed
-幫我重設密碼學生帳號 (PR #56 R2). To a regex the continuation that makes a term
-part of another word is indistinguishable from the first character of a real
-request's object, so the screen fails CLOSED and `SCOPE_BLOCK` ships
-byte-for-byte as it was. `screening-zh-term-inside-another-word` pins all three
-shapes and all six counterexamples, watched red three times through the harness
-(`evals/report/20260825-170430-invariant.json`,
-`evals/report/20260825-175345-invariant.json`,
-`evals/report/20260825-182616-invariant.json`).
-`l5-refuse-destructive-zh` and `screening-word-boundary` stayed green
-throughout, and the destructive/auth directions were re-confirmed LIVE
-(`ab08cbd5`, `cb689bff`).
-Leg 3 — `docs/support-matrix.md` gains a "Chinese-language (zh) evidence"
-section (four rows, run ids, repeat counts, paired English arm) plus D30/D31
-under ADR-022's live-declaration rule. D31 names all seven over-refusing shapes
-(密碼學, 購買力平價, 刪除的檔案, 美元的購買力, 密碼子, 購買量, 刪除按鈕) and
-separates out the two that are shared with English rather than Chinese defects:
-下載 and 付款 over-refuse in BOTH languages, and narrowing those would move the
-refusal policy rather than close an asymmetry.
 
 ### M43 — loop mode sees the page: screenshot observation for a vision model            [status: todo]
 Origin: ADR-027; postmortem S2 — the failure class "the answer is not the
@@ -417,6 +477,321 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]
+Origin: T-M42-20, while writing case (a). The defect it caught — two different
+accessible-name engines disagreeing — was invisible to 213 green cases for a
+whole milestone because every case grades ONE end: `observe` cases assert what
+the observation says, resolver cases resolve targets an author typed by hand,
+and nothing ever handed the observation's own output back to the resolver.
+`resolve_advertised` (new `observe`-case key) closes that loop, but it is
+declared on exactly one fixture (`sec10k-inspector.html`) for exactly one role
+(`combobox`), so the same class of disagreement on any other page or role is
+still uncovered. Two known widenings and one known hazard, none taken here:
+`text-transform: capitalize`/`lowercase` are the same defect with different
+casing; `::before`/`::after` content is also folded into Chromium's snapshot
+name and NOT into the locator engine's, which the case-fold fix does not touch
+at all; and turning the key on across every existing `observe` case would be a
+gate-wide claim ("no observation anywhere advertises an unusable name") that
+should be watched red before it is asserted, not switched on and assumed.
+Spec: widen deliberately, one page/role at a time, each with its own red-first
+run — or, if the sweep comes back clean, promote it to a property over the
+fixture set with the cost measured against the `fast` band first.
+Acceptance: at least the `::before` content case pinned red, and a stated
+ruling on whether the round trip is per-case or a suite-wide property.
+
+### T-M42-20-D2 — ADR-029 §2's CI figures are graded as if they measured this tree            [status: todo]
+Origin: T-M42-20, adding two cases. `adr029-scope-matches-the-suites` reads
+every `` `fast` N/N `` and `` `invariant` N/N `` in ADR-029 §2 back against the
+CURRENT suite sizes. Two of those figures belong to CI run
+`32937020758` on commit `14a6a7b`, which measured a 220-case tree and always
+will; the local pair legitimately moves with every case addition. Following the
+convention (git history: 213→219→220, all three restated together) would have
+had this branch publish "on CI `fast` 222/222", a number no run produced —
+CLAUDE.md rule 4. This branch instead spells the CI counts out in words so the
+grader does not read them as this tree's, and says so in the ADR.
+Spec: decide which of the two the repo wants — either §2 stops restating CI
+counts at all and defers to ADR-019 §5, the one publisher (`ci-numbers-are-derived`
+already grades that), or the guard learns to scope a figure to the commit it
+names. The current state is honest but relies on prose staying in a form the
+regex ignores, which is a guard by accident.
+Acceptance: the CI half of §2 either gone or graded against its own run id, and
+a case that reddens if a CI figure is restated in the local pair's form.
+
+### T-M42-20-D3 — the local `fast` band ships 0.8s under a rounding step            [status: todo]
+Origin: T-M42-20, republishing ADR-019 §2 at 222 cases. The three runs recorded
+at this count measured 89.60 / 90.08 / 90.49s. `_band_rule` gives 105 for
+anything up to 91.30s and 110 above it, so the ledger's maximum is 0.81s from
+the step that would make item 4 (committed-ceiling) demand a ceiling this repo
+has not committed — and moving `WALL_BUDGET_S["fast"]` is an ADR, not an edit,
+so the first ordinary run that lands at 91.4s blocks a commit until someone
+writes one. This is not a T-M42-20 defect; it is the state the band was already
+in (the 220-case band sat at 88.81s, 2.5s of room) and two cases used a third of
+what was left.
+Spec: decide before it bites — either take the ~2.3s of measured waste the next
+profile finds (ADR-021's own ruling that the answer to per-case growth is
+removing waste rather than another raise) or pre-commit a ceiling with an ADR
+that says which. `T-M42-19` (the CI half of the sweep) is adjacent and separate.
+Acceptance: either a `fast` band whose maximum sits at least one full step under
+its ceiling, or an ADR that rules the current margin acceptable and says why.
+
+### T-M42-20-D4 — `observe` and `resolve` disagree about a control's ROLE, and nothing grades that            [status: todo]
+Origin: PR #60 R3, found while widening `resolve_advertised` past `combobox`.
+T-M42-20 closed the NAME half of the observe->resolve round trip. The role half
+is open and our own inspector carries an instance: `<input type="file" id="up">`
+is role `button` to Chromium's `accessibility.snapshot()` and role `textbox` to
+Playwright's locator engine, so the observation advertises
+`{'role': 'button', 'name': 'UPLOAD A FILING (.HTM / .HTML / .TXT)'}` and
+`resolve` answers `ResolveError: no tier resolved` — at any casing. The name-fold
+fix cannot touch it, because the disagreement is not about the name.
+Evidence, verbatim from the widened check:
+  `{'target': {'role': 'button', 'name': 'UPLOAD A FILING (.HTM / .HTML / .TXT)'},`
+  ` 'error': "ResolveError: no tier resolved {'role': 'button', 'name': 'UPLOAD A FILING (.HTM / .HTML / .TXT)'}"}`
+Every other role on that page round-trips clean (22 probed, one at a time), so
+this is one element and one shape, not a general rot — but it is exactly the
+shape that stays invisible until a planner writes the target.
+`observe-uppercase-label-name-resolves` therefore excludes `button` BY NAME, and
+that exclusion is the debt: a real disagreement parked behind a list entry.
+(`WebArea` is excluded too and is NOT this: it is the document root, which this
+repo already refuses as a target.)
+Spec: decide where the mapping belongs. Either `observe` maps the snapshot's
+role to the one the locator engine computes (a table, and a wrong entry is a
+silent mis-advertisement — needs a case per row), or `resolve` tries a small set
+of equivalent roles when a target resolves nowhere (a widening, with the usual
+wrong-element risk), or the observation drops names for roles it cannot
+guarantee, the way `NAME_PROHIBITED` already does. `<input type="file">` is one
+data point; find the others before choosing.
+Acceptance: the `button` exclusion gone from that case with a red-first case for
+whichever rule is chosen, or a `docs/support-matrix.md` limitation naming the
+shape — D32 declares it as of PR #60, so the minimum here is the case.
+
+### T-M42-20-D5 — `select_option` matches the wanted string against value OR label            [status: todo]
+Origin: PR #60 R2 (MEDIUM, routed to debt). PRE-EXISTING — shipped with M42's
+`select_option`, not introduced by T-M42-20.
+Evidence, verbatim: `agent.py` `match = next((o for o in opts if want in o), None)`
+with the readback comparing to `match[0]`, which is self-consistent by
+construction. Executed: on
+`<option value=''>Choose a filing…</option><option value='2024'>FY 2023</option><option value='2025'>FY 2024</option>`,
+`want='2024'` -> matched `['2024','FY 2023']`, selected value `'2024'`,
+`postcondition_ok=True`, and the page fires `change` for the FY 2023 filing.
+`want=''` (a step that omits `value`, which `step.get("value") or ""` turns into
+the empty string) -> matched `['','Choose a filing…']`, `postcondition_ok=True` —
+a filter never applied, recorded as applied. `press` refuses the missing-value
+shape and `select_option` does not; nothing in `plan_gap` type-checks or requires
+the value. `loop-lab.html` ships exactly the `<option value=''>` placeholder.
+Spec: two adversarial cases, both red first — (i) a `<select>` whose option
+VALUES collide with another option's LABEL, asserting the step selects the
+intended option or fails loudly rather than reporting success; (ii) a
+`select_option` step with no `value`, asserting a `task`-class refusal in the
+shape `press` already uses. Or a declared limitation naming both shapes.
+Acceptance: a run can no longer report `success` with `postcondition_ok: True`
+for a selection nobody asked for.
+
+### T-M42-20-D6 — `role_visible` postconditions still match on a SUBSTRING            [status: todo]
+Origin: PR #60 R7 (LOW, routed to debt). Pre-existing and untouched, but now
+inconsistent with the invariant T-M42-20 establishes one file over.
+Evidence, verbatim: `agent.py` builds `get_by_role(role, name=<str>)` with
+neither `exact` nor `_whole_string`, i.e. case-insensitive SUBSTRING. Executed:
+on `<h1>Shopping Cart is empty</h1>`,
+`check_state(page, {'role_visible': {'role':'heading','name':'Cart'}})` returns
+True. The whole argument the resolver's whole-string matching rests on —
+"substring matching resolved absent targets to superstring siblings and
+extracted the wrong element as a success" — applies verbatim to a postcondition,
+which is what `verify` treats as proof the action landed.
+Spec: either `role_visible` uses `_whole_string` too, pinned by a case red on the
+'Cart' vs 'Shopping Cart is empty' input, or the asymmetry is written down so the
+next reader does not assume the matcher is shared. Not fixed here because
+tightening a postcondition changes which authored `expected_state` values hold
+across the existing suite, which is a change with its own blast radius and
+belongs in its own commit.
+Acceptance: the matcher is shared, or the difference is documented at both ends.
+
+### T-M42-20-D7 — a custom ARIA combobox is a `locate` failure it did not earn            [status: todo]
+Origin: PR #60 R8 (LOW, routed to debt). Pre-existing and untouched.
+Evidence, verbatim: `<div role=combobox aria-label='Filing' tabindex=0>Choose</div>`
+resolves at tier `role`, `loc.evaluate(OPTIONS_JS)` returns None because a `<div>`
+has no `el.options`, and the step raises
+`StepError('locate', 'resolved element has no options to select: ...')` — a
+LOCATE class for an element the resolver located correctly. No case covers the
+shape, and the misdiagnosis sends the run down the relocation ladder, which
+re-resolves the element it already had.
+Spec: the class becomes `act` (the control cannot do what was asked) or `task`
+(the plan asked a `<div>` to behave like a `<select>`), with a case pinning it;
+or the shape is declared in `docs/support-matrix.md` as a known misdiagnosis.
+Acceptance: a resolved-but-unsupported control is not reported as a location
+failure, or the matrix says it is and why.
+
+### T-M42-20-D8 — T-M42-20-D3 understates the ledger it derives from            [status: todo]
+Origin: PR #60 R9 (LOW, routed to debt — logged, deliberately not fixed in place).
+`T-M42-20-D3` says "The three runs recorded at this count measured
+89.60 / 90.08 / 90.49s". At the commit the review read, the committed
+`history.jsonl` held FIVE rows at 222 cases, not three: `20260826-165306` 90.25,
+`20260826-165845` 90.08, `20260826-170244` 89.6, `20260826-170822` 90.49,
+`20260826-171550` 90.27. The two omitted rows include the band source itself.
+The arithmetic conclusion is unaffected and was correct: `_band_rule` gives 105
+for x <= 91.30 (105/1.15 = 91.304), so a maximum of 90.49 left 0.81s, and
+`published-band-slack-is-declared` independently reports `headroom_s {fast: 1.05}`
+and is green. Nothing graded reads TODO.md prose, which is why it drifted.
+Recorded here rather than corrected in D3 because the review routed it to debt.
+Spec: a debt item that RESTATES a ledger will drift from it; make D3 cite the
+ledger (suite, env, count) instead of enumerating rows, or teach a check to read
+enumerated ledger rows out of TODO.md the way the band checks read the ADR.
+Acceptance: no debt block in this file restates ledger rows it does not derive.
+
+### T-M42-20-D9 — the round's wall-clock story is told against the published band, not the ledger max            [status: todo]
+Origin: PR #60 R13 (LOW, routed to debt). Two stale claims, one class.
+Evidence, verbatim. (1) `T-M42-20-D8`, added in the round-1 commit, says in the
+present tense that "`published-band-slack-is-declared` independently reports
+`headroom_s {fast: 1.05}`". Running that case on the round-2 tree gives
+`{'declared_slack_s': 4.35, 'headroom_s': {'fast': 1.86, 'invariant': 1.02}}` —
+the scalar is not one the grader produces any more. (2) Headroom there is
+measured against the PUBLISHED band, not the ledger's maximum. At 227 cases the
+committed ledger held four `fast` rows — 89.32, 89.44, 90.46, 90.66 — so the
+real margin to the next rounding step is `91.30 - 90.66 = 0.64s`, TIGHTER than
+the 0.81s `T-M42-20-D3` raised the debt for, while the round-1 entry summarises
+the round as "grew by six and got FASTER". Both statements were true of the
+numbers they cited and neither cited the number that binds. (3) It also inverts
+the stated reason for tagging the new 2s case `invariant`: the grader reports
+`invariant` headroom 1.02s against `fast`'s 1.86s after the move, so the suite
+the case was moved INTO now has less published headroom than the one it was
+moved out of — the ledger-max picture still favours the move, which is why this
+is LOW, and ADR-019 §3 discloses the 13.76 -> 16.37 jump.
+Spec: pick ONE number as the one the wall-clock story is told against — the
+ledger maximum, not the published band, since that is what item 3 (same-ceiling)
+actually grades — and state it wherever the story is told (D3, D8, ADR-019 §2).
+Then stop restating grader output in prose: cite the case and let a reader run
+it, the way the band bullets cite the ledger.
+Acceptance: no debt block quotes a headroom scalar, and the margin figure that
+appears in D3/D8/ADR-019 §2 is derived from the same maximum
+`published-band-matches-the-ledger` item 3 uses.
+
+### T-M42-20-D10 — a resolution that used TWO relaxations discloses only one            [status: todo]
+Origin: PR #60 R14 (LOW, routed to debt). Named as an open question in ADR-032's
+"What this does NOT settle".
+Evidence, verbatim: `resolver.py`'s `near` branch returns
+`loc.nth(i), 'structural', ((f'near-{how}' if how in ('normalised','prefix') else None) or fold)`
+— the `or` short-circuits, so a truthy `near-normalised` hides `name-case-folded`.
+On a page with two links both named `SAVE FOR LATER` beside anchors
+`Ada's row` / `Bob row`, target
+`{'role':'link','name':'Save for later','near':"Ada's row"}` resolves tier
+`structural` with note `near-normalised` — the case fold is not reported
+anywhere. `resolver-case-fold-is-recorded-in-the-trace` uses `index: 0`, which
+cannot reach this branch.
+Spec: join the non-None parts rather than picking one — the trace note is a list
+of what was relaxed, not a single label — and pin it with a case whose
+`trace_note_contains` requires `name-case-folded` on a `near-normalised`
+resolution. Cheap, but it changes the shape of a graded string, so every
+existing `trace_note_contains` expectation has to be re-read against it first;
+that is why it is not done in the round that found it.
+Acceptance: both labels appear when both relaxations were used, and no existing
+`trace_note_contains` case changes meaning.
+
+### T-M42-20-D11 — a tuned constant's rationale lives in three places and only one of them moves            [status: todo]
+Origin: PR #60 R18 (LOW, routed to debt).
+Evidence, verbatim: `server.py` `LATE_OPTIONS_DELAY_S = 0.3`;
+`action-select-option-waits-for-fetch-painted-options.json` "still says 0.5s and
+'~5x margin' (this file is not in `git diff fb84a88..HEAD`)";
+`browser-domain/SKILL.md` "still says 1.0s, two rounds stale". The margin is now
+3x, not 5x and not 10x. Round 3 repaired the SKILL.md half in passing (it was one
+clause in a sentence that had to move anyway) and left the case provenance, so
+the drift is halved and not closed.
+Also from the same finding, and worth keeping because it is the reassuring half:
+the case is NOT weakened by the tuning. Ablating the wait (timeout -> 1ms) turns
+it red 3/3; unablated it runs 452/453/453ms; and
+`action-select-option-never-filled-fails-loud` runs 1144-1161ms against
+`max_ms` 2500 while still emitting the loud `StepError`.
+Spec: the scalar has one home (`server.py`) and every other mention should cite
+it rather than restate it, the way the band bullets cite the ledger. That is the
+standing rule this repo keeps re-learning; a derived margin ("~3x the measured
+first read") is a second scalar with the same problem and should be a relation,
+not a number.
+Acceptance: no document outside `server.py` states the delay as a number, or a
+check reads the restatements back against the constant.
+
+### T-M42-20-D12 — five cases ship `red_first: "PENDING"`            [status: todo]
+Origin: PR #60 R19 (LOW, routed to debt). **Not a rule-2 violation** — the
+reviewer independently reproduced all five reds verbatim on a detached worktree;
+this is a record-keeping gap, and it is logged rather than fixed because the
+review routed it that way.
+Evidence, verbatim: `grep -rl '"red_first": "PENDING"' evals/adversarial/`
+returns exactly the five files added in PR #60 round 2; 16 cases carry
+`red_first` and the other 11 record real output. The reds, reproduced by the
+reviewer at `fb84a88` with only the five case files and `case-twins.html` copied
+in: index case -> `{'status':'success','answer':'Catalogue row CTA'}`;
+non-string name -> `failure:act AttributeError 'float' has no 'replace'`;
+list -> `'list' object has no 'replace'`; near -> `'float' object has no 'strip'`.
+R12 reproduced at HEAD with only the `/`-escape deleted: `failure:act
+InvalidSelectorError ... unexpected symbol at position 40` — "matching the
+resolution JSON word for word".
+Cause, so it is not repeated: the five files were generated by one script that
+wrote a `red_first` placeholder and the runs that filled it went into
+`tasks/reviews/pr60-r2-resolution.json` instead of back into the case files.
+Spec: backfill the five fields from the resolution artifact (the text above is
+that artifact's), and — the part that stops it recurring — refuse `"PENDING"`
+as a `red_first` value in `opt-in-expect-keys-declared` or a sibling check, so a
+placeholder cannot be committed.
+Acceptance: no case file carries a placeholder `red_first`, and a check says so.
+
+### T-M42-20-D13 — the suite-move justification carries two false clauses            [status: todo]
+Origin: PR #60 R22 (LOW, routed to debt — logged, deliberately not edited).
+The load-bearing half of that disclosure was judged honest: the three 230-case
+rows (90.65, 91.06, 91.76) ARE in the committed ledger and ADR-019 §2 names them
+accurately. The justifying sentence is where it goes wrong.
+Evidence, verbatim: `ADR-019:102` says `fast` "is byte-for-byte the 229-case tree
+those five rows measured". HEAD's `history.jsonl` holds EIGHT local `fast` rows
+at `total=229` — 90.02, 91.04, 90.76, 90.99, 90.38, 90.73, 91.03, 90.72 — five
+from 0826 and three recorded after round 3. And the tree is not byte-for-byte:
+`resolver.py`, `server.py` and `eval_adapter.py` all changed since those rows,
+which §2 itself says ten lines earlier when it records round 3 changing
+`LATE_OPTIONS_DELAY_S` and the select budget. §2 also says, fourteen lines later,
+that how many rows sit at a count "are deliberately not written here" — so the
+sentence breaks that rule in the act of breaking two others.
+`tasks/TODO.md` carries the same pair, and this file already records a PRIOR
+finding about four sentences claiming byte-for-byte behaviour while it was false.
+No gate impact: the three post-round-3 rows are all under the published 91.04s
+maximum, so the band and the 0.26s margin stand.
+**That phrase has been wrong three times in one PR.** The correction is not a
+better adjective: the CASE SET is the same 229 ids, the product tree is not, and
+the ledger's maximum at 229 is 91.04s across all rows — none of which needs a row
+count. Written here because the routing said log, not fix.
+Spec: rewrite `ADR-019:102` and its TODO twin to that form, and retire
+"byte-for-byte" from this repo's vocabulary for anything but a literal file
+comparison.
+Acceptance: no document claims a tree is unchanged when `git diff` says
+otherwise, and no band prose states a row count §2 says it does not state.
+
+### T-M42-20-D14 — SKILL.md's non-string-target sentence miscounts its own cases            [status: todo]
+Origin: PR #60 R23 (LOW, routed to debt).
+Evidence, verbatim: `browser-domain/SKILL.md` says
+"`resolver-non-string-target-is-a-locate-failure` for `text`, in `fast`, and its
+three `invariant` siblings for `name`, a list-valued `name`, `near` and `anchor`
+— four keys, four cases". Measured: five files match
+`evals/adversarial/resolver-non-string-*.json`, four tagged `invariant` (`name`,
+`name-is-a-list`, `near`, `anchor`) and one `fast` (`text`). So "three siblings"
+is stale — it was written while three existed and the fourth landed in the same
+commit — and "four cases" counts keys, not files.
+Spec: say four `invariant` siblings and five cases across four keys, or — better,
+and the standing rule — name the keys and cite the case ids without a count at
+all. A count in prose is a scalar nothing derives.
+Acceptance: SKILL.md carries no case count that a `glob` can falsify.
+
+### T-M42-20-D15 — SKILL.md contradicts itself about the fetch delay            [status: todo]
+Origin: PR #60 R24 (LOW, routed to debt).
+Evidence, verbatim: `browser-domain/SKILL.md` says "an endpoint that sleeps
+`server.LATE_OPTIONS_DELAY_S` (1.0s)" seven lines above the clause round 3
+corrected to "(0.3s since PR #60's rounds put twelve more cases in the same
+suite...)", while `server.py` has `LATE_OPTIONS_DELAY_S = 0.3`. The file
+contradicts itself and the constant.
+It also falsifies `T-M42-20-D11`'s own status line, which asserts "Round 3
+repaired the SKILL.md half in passing ... so the drift is halved and not closed":
+the SKILL.md half is NOT repaired, only one of its two mentions is, so D11
+understates the drift the next round inherits. Recorded here rather than edited
+into D11 because the routing said log.
+Spec: D11's fix closes this one too — the scalar has ONE home (`server.py`) and
+every other mention cites it rather than restating it. Doing it by hand a third
+time is how there came to be two mentions in one file disagreeing.
+Acceptance: `grep -rn LATE_OPTIONS_DELAY_S` shows exactly one number, in
+`server.py`.
 
 ### T-M39-14 — the front-page baseline cites a run that failed, and the rule set makes it unfixable in place            [status: todo]
 Origin: found on merged `main` (`7e0b662`) by the session that had driven PR #52,

@@ -1,0 +1,78 @@
+{
+  "task": "T-M42-20",
+  "branch": "task/T-M42-20-fix",
+  "pr": 60,
+  "round": 4,
+  "reviewed_commit": "2757a81",
+  "scope": "Bounded round under the accepted stopping rule: two items, R20 and R21. R22-R24 logged as debt. Nothing else touched.",
+  "counts": {
+    "findings": 5,
+    "repaired": 2,
+    "logged_as_debt": 3,
+    "rejected": 0,
+    "new_cases": 0,
+    "cases_repointed": 1,
+    "left_open": 0
+  },
+  "gate": {
+    "invariant": "82/82 = 1.000, wall 16.53s, ceiling 20",
+    "fast": "229/229 = 1.000, wall 90.53s, ceiling 105",
+    "counts_unchanged": "229 / 82 — the anchor case was already `invariant` and was repointed, not added, so no band, ADR-029 section 2, README or docs/analysis.md figure moved this round."
+  },
+  "ceiling_not_touched": "As instructed. Nine rows at 229 span 90.02-91.04s against the 91.304s boundary; that is the human's decision and T-M42-20-D3/D9 carry it.",
+  "findings": [
+    {
+      "id": "R20",
+      "severity": "the one that matters",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "what_was_wrong": "The case was pointed at `hello.html` with `{role: link, name: 'History'}`, which matches nothing. `anchor` is read at exactly one place — M38's narrowing rung 1 — and rung 1 is reached only when a tier resolves AMBIGUOUSLY, so the float anchor never reached `_loose()` and the case graded the guard not at all. It was green on the pre-guard tree and its committed `red_first` recorded output that does not reproduce.",
+      "fix": "Repointed at `resolver-narrows-by-anchor-proximity`'s page and target: `forum-thread.html`, `{role: link, name: 'user profile'}` (two links share that accessible name, so the role tier is ambiguous), `anchor: 4.82`, an `extract` with a singular ask so `may_narrow` holds and rung 1 runs.",
+      "red_first_measured": {
+        "method": "The four-key guard in `resolve()` ablated and nothing else changed — the one line under test. Reproduces what the reviewer measured for this input on `fb84a88`.",
+        "pre_guard": "passed: false — status `failure:act`, reason `step 2 (extract): AttributeError: 'float' object has no attribute 'strip'; replan made no progress (identical or empty plan)`",
+        "post_guard": "passed: true — status `failure:locate`, reason `step 3 (extract): relocation after locate failure: retargeting as {'text': 'user profile'}; ResolveError: target anchor is not a string: 4.82`",
+        "why_the_step_number_differs": "The guard fires before the tier loop, so the relocation rung runs and the trace is one step longer. The class and the exception are the finding."
+      },
+      "red_first_field": "Rewritten with that measured output verbatim, replacing the text that did not reproduce.",
+      "lesson_recorded_in_the_case": "A case for a guard on input X grades nothing unless the fixture and target let X REACH the guarded line. That has to be checked per case rather than assumed from where the guard sits — all five non-string cases were re-read against it, and only this one was wrong."
+    },
+    {
+      "id": "R21",
+      "severity": "LOW",
+      "route": "repair",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "The bold trajectory no longer ends in a restated scalar. It reads 'This band rose to 17.22s and came back down' and points at the number the bullet publishes above it, with one clause saying why: a trajectory written out is a copy of a figure that moves every republish, and the last copy aged into a superseded case count (15.88s was a row at 80) within a single round.",
+      "why_not_just_update_the_number": "Updating it would have restored the same trap for the next republish. Item 10 matches only the `(restated — ...)` form and item 11 reads only report filenames, so nothing grades a free-form trajectory — which makes 'stop restating' the only durable answer, and it is this repo's standing rule."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D13",
+      "note": "Logged with the eight-row list and both false clauses verbatim, and with the correction spelled out so applying it is mechanical: the case SET is the same 229 ids, the product tree is not, and the ledger's maximum at 229 is 91.04s across all rows — none of which needs a row count section 2 says it does not write. 'byte-for-byte' has now been wrong three times in this PR; the debt block says to retire the phrase for anything but a literal file comparison, and no new prose this round uses it."
+    },
+    {
+      "id": "R23",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D14",
+      "note": "Logged verbatim: 'three invariant siblings' while enumerating four, and 'four cases' where five files exist across four keys. The stale count is my own from round 3 — written when three existed, with the fourth landing in the same commit."
+    },
+    {
+      "id": "R24",
+      "severity": "LOW",
+      "route": "debt",
+      "disposition": "logged",
+      "accepted": true,
+      "debt_id": "T-M42-20-D15",
+      "note": "Logged verbatim, including the part that corrects the record: T-M42-20-D11's status line claims round 3 repaired the SKILL.md half, and it did not — only one of that file's two mentions moved, so the file contradicts itself and `server.py`. D15 says so rather than editing D11, per the routing, and points at D11's own fix (one home for the scalar) as the thing that closes both."
+    }
+  ]
+}

@@ -53,6 +53,28 @@ ACTIONS = ("navigate", "click", "fill", "extract", "extract_all", "observe",
 # about.
 NEEDS_TARGET = {"click", "fill", "extract", "extract_all", "observe", "select_option"}
 
+# What a `<select>` currently offers, as (value, label) pairs — `null` for an
+# element that is not one. Read twice by the select step (before and after
+# waiting out a fetch-painted control), hence a constant rather than two
+# string literals that can drift apart.
+OPTIONS_JS = "el => el.options ? [...el.options].map(o => [o.value, o.label]) : null"
+
+# How long the select step waits for a fetch-painted `<select>` to fill.
+#
+# Deliberately its own knob, not SETTLE_BUDGET_MS, for the reason SETTLE_BUDGET_MS
+# already gives about the fix budget: they answer different questions. Settling is
+# "has the page finished loading"; this is "has one control's own network round
+# trip landed", asked on a page that already fired `load` and already resolved the
+# element. It is also the only budget in this file that is paid IN FULL on the
+# failure path — every control that never fills costs exactly this much — so it is
+# the one that shows up in the suite's wall clock, and `max_ms` on
+# `action-select-option-never-filled-fails-loud` is what keeps that visible.
+# 1s against a fixture whose options land at 0.3s and a first read measured at
+# ~0.1s. A slower page loses the wait and fails loudly, which the replan ladder
+# can act on; a longer budget buys that back at a price the published band cannot
+# currently pay (T-M42-20-D3/D9).
+SELECT_OPTIONS_WAIT_MS = 1_000
+
 # Actions that leave the page as they found it, so `attempt` does not pay for a
 # before/after comparison. `observe` reads, and `final_answer` is the loop's
 # terminal call — it acts on nothing at all.
@@ -1092,14 +1114,42 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # budgeted at 90s — and would tell the model nothing about
                     # what it could have picked instead.
                     want = step.get("value") or ""
-                    opts = await loc.evaluate(
-                        "el => el.options ? [...el.options].map(o => [o.value, o.label]) : null")
+                    opts = await loc.evaluate(OPTIONS_JS)
                     if opts is None:
                         # The wrong element, not a broken action — the same
                         # ruling `fill` gets when it lands on something that
                         # cannot hold a value (`relocate-fill-non-editable`).
                         raise StepError("locate", "resolved element has no options to select: "
                                                   f"{step.get('target')}")
+                    if not opts:
+                        # NO options is not the same as no MATCHING option. A
+                        # `<select>` painted from a `fetch()` is in the DOM,
+                        # resolvable and empty until the response lands, and the
+                        # eager read above is taken the instant the element
+                        # resolved — which is precisely the auto-wait that
+                        # reading the options ourselves gives up. So wait for the
+                        # first option to exist, once, and read again. A control
+                        # that never fills still fails loudly below, having paid
+                        # the wait; nothing else on the page is waited on
+                        # (`action-select-option-waits-for-fetch-painted-options`).
+                        try:
+                            # `attached`, not the default `visible`: the options
+                            # of a closed `<select>` are never visible, so the
+                            # default state waits out the whole timeout and only
+                            # then reads a list that arrived seconds earlier
+                            # (measured: 10.2s vs 1.6s on the case below).
+                            #
+                            # SELECT_OPTIONS_WAIT_MS, not the 10s the select
+                            # call below gets: this budget is paid IN FULL by
+                            # every control that never fills, and at 10s that was
+                            # 10.0s per such step with no case measuring it,
+                            # inside a wall-clock-gated suite (PR #60 R4, case
+                            # action-select-option-never-filled-fails-loud).
+                            await loc.locator("option").first.wait_for(
+                                state="attached", timeout=SELECT_OPTIONS_WAIT_MS)
+                        except Exception:
+                            pass  # let the empty-offer message below say it
+                        opts = await loc.evaluate(OPTIONS_JS)
                     match = next((o for o in opts if want in o), None)
                     if match is None:
                         raise StepError("act", f"no option matches {want!r}; this control offers "

@@ -1,0 +1,62 @@
+{
+  "task": "T-M42-20",
+  "branch": "task/T-M42-20-fix",
+  "pr": 60,
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff 84df1e8..04cc136 plus standing findings; not a full-diff sweep",
+  "gate": {
+    "invariant": "77/77 = 1.000, wall 16.52s",
+    "fast": "227/227 = 1.000, wall 89.52s",
+    "baseline_file": "unchanged from main",
+    "run_by": "orchestrator, independently, on committed 04cc136"
+  },
+  "round_1_outcome": "5 repaired, 4 to debt, one clause of R3 rejected with reason. R1's repair introduced R10; R6's repair covers one of three keys (R11); the /-escape shipped ungraded (R12).",
+  "findings": [
+    {
+      "id": "R10",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "CONFIRMED: the two-pass fix re-bases `index` per pass, so on a case-twin page `index: 0` and `index: 1` return the SAME element and a plan asking for the second match silently answers with the first \u2014 where base 6b016b5 raised a loud locate failure; this also falsifies the claim, repeated in four places, that exact-first leaves a page that spells the name the plan's way byte-identical to base.",
+      "evidence": "resolver.py:378-388 builds two tiers per name and :462-465 `if n > index: return loc.nth(index)` / `continue` \u2014 so when the exact pass has n <= index it falls through to the FOLDED pass and indexes a different, larger set. On the branch's own `src/browser/fixtures/case-twins.html`: HEAD index:0 -> ['rowcta'], index:1 -> ['rowcta'] (note name-case-folded); base 6b016b5 -> ['rowcta'] then ResolveError element-not-found; fbe304b -> ['promo'] then ['rowcta']. End-to-end via the adapter with index:1 and task \"What does the SECOND 'Add to cart' link say?\": {'status':'success','answer':'Catalogue row CTA'} \u2014 identical to the index:0 expected answer. Falsified claim at resolver.py:198, browser-domain/SKILL.md:30, tasks/TODO.md:145, and resolver-case-twin-index-picks-the-exact-spelling.json:31 (\"resolves byte-for-byte as it did before T-M42-20\"). VERIFIED INDEPENDENTLY BY THE ORCHESTRATOR: index:0 -> rowcta narrowed=None; index:1 -> rowcta narrowed=name-case-folded.",
+      "repro": "resolve({'role':'link','name':'Add to cart','index':i}, action='extract') on src/browser/fixtures/case-twins.html for i in (0,1) \u2014 both return id=rowcta.",
+      "acceptance": "`index` selects from one match set, not two \u2014 e.g. the folded pass is skipped whenever `index` is present and the exact pass matched at all, or the two passes are unioned before indexing \u2014 so two distinct indices never resolve to the same element; plus an adversarial case using `index: 1` on `case-twins.html` that is RED on 04cc136. If the behaviour is instead ruled acceptable, the four 'byte-for-byte as before T-M42-20' sentences must be corrected to name the `index` exception."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: R6 is fixed for exactly one of the three string-valued target keys \u2014 a non-string `name` or `near` still raises `AttributeError` and is classified `failure:act`, the very misclassification the finding named, and the shipped case exercises only `text`, the key that works.",
+      "evidence": "resolver.py:381 builds `scope.get_by_role(role, name=name, exact=True)` BEFORE the `_whole_string(name)` guard on :382, so Playwright's own escaping raises first; `_nearest` reaches `near.strip()` (resolver.py:307) before its `_whole_string(near)` lambda is called. The guard's comment says it is refused there \"because this is the one place both tiers route through\" \u2014 the exact pass does not route through it. Through the eval adapter on hello.html: {'role':'link','name':4.82} -> failure:act AttributeError 'float' has no 'replace'; {'role':'cell','near':4.82} -> failure:act AttributeError 'float' has no 'strip'; {'role':'link','name':['a']} -> failure:act; only {'text':4.82} -> failure:locate, which is the single shape resolver-non-string-target-is-a-locate-failure.json ships. Failure class is graded (INV-1 diagnosis accuracy) and `name` is the most-used target key in the repo.",
+      "repro": "Run resolver-non-string-target-is-a-locate-failure.json with its stub_plan target replaced by {'role':'link','name':4.82} \u2014 failure:act, not locate.",
+      "acceptance": "A non-string `name` and a non-string `near` classify `locate` (or `task`) exactly as a non-string `text` does, each pinned by an adversarial case red on 04cc136 \u2014 or the guard's comment and the case provenance stop claiming both tiers route through `_whole_string`."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: the `/`-escape \u2014 one of the two defects the author says the repair found \u2014 ships with no eval case that can go red, and the widened check that discovered it explicitly excludes the one role carrying the offending name, so the crash is now unreachable from the suite.",
+      "evidence": "resolver.py:228 `.replace('/', r'\\/')`. Built a worktree at 04cc136, deleted only that `.replace(...)` call, ran the full gate: invariant 77/77 = 1.000 and fast 227/227 = 1.000 \u2014 both green with the fix removed. The triggering name `UPLOAD A FILING (.HTM / .HTML / .TXT)` belongs to role `button`, which observe-uppercase-label-name-resolves.json now lists in `resolve_advertised_except` (eval_adapter.py:2100-2103 skips it), so the round-trip check can never reach it again. The crash is real and role-tier-specific: unescaped, get_by_role('button', name=<pattern>) raises InvalidSelectorError while get_by_text(<same pattern>) returns count 1. A sweep of / \\ \" ] ' % = : , [ ] ( ) $ ^ | * ? { } + # ~ & @ ! < > through the role tier found no sibling character \u2014 but the one that exists is ungraded. Repo rule 2: every new failure becomes a case before it is fixed.",
+      "repro": "git worktree add /tmp/mut 04cc136; delete the .replace('/', ...) call in resolver.py; run the fast suite \u2014 227/227 green with the fix deleted.",
+      "acceptance": "An adversarial case (a fixture element whose accessible name contains `/`, resolved through the folded role tier) that is RED on the escape-deleted tree and green on 04cc136 \u2014 or `button` removed from `resolve_advertised_except` so the inspector fixture reaches it again."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "CONFIRMED: the band bookkeeping added in this diff is stale in two places \u2014 the new T-M42-20-D8 states a headroom scalar the grader no longer produces, and the ledger's slowest row at 227 leaves LESS margin than the 0.81s D3 flagged at 222, which also inverts the stated reason for putting the new 2s case in `invariant` rather than `fast`.",
+      "evidence": "tasks/TODO.md:526 (added in this diff) says, present tense, \"`published-band-slack-is-declared` independently reports headroom_s {fast: 1.05}\"; running that case on HEAD gives {'declared_slack_s': 4.35, 'headroom_s': {'fast': 1.86, 'invariant': 1.02}}. Headroom is measured against the PUBLISHED band (eval_adapter.py:961-970, ADR-019's 89.44s), not the ledger max: history.jsonl holds four fast rows at 227 \u2014 89.32, 89.44, 90.46, 90.66 \u2014 so against the real maximum the margin is 91.30 - 90.66 = 0.64s, tighter than the 0.81s D3 raised the debt for, while tasks/TODO.md:169 summarises the round as \"grew by six and got FASTER\". The resolution's stated reason for tagging the new case invariant-only is that \"the fast band ships under one rounding step of headroom ... invariant's band has room\", yet the grader reports invariant headroom 1.02s < fast 1.86s after the move (ADR-019 section 3 discloses the 13.76 -> 16.37 jump, which is why this is LOW).",
+      "repro": "Run published-band-slack-is-declared and print got; count '\"total\": 227' rows in history.jsonl.",
+      "acceptance": "D8 cites the grader's current output or drops the scalar, and the ~0.64s real margin at 227 is stated wherever the round's wall-clock story is told (D3/D8/ADR-019 section 2) rather than only the 1.86s the published band implies."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "CONFIRMED: the new `narrowed: name-case-folded` disclosure is silently dropped whenever a `near` anchor also needed loosening, so a resolution that used BOTH relaxations reports only the anchor one.",
+      "evidence": "resolver.py:454-455 \u2014 `return loc.nth(i), 'structural', ((f'near-{how}' if how in ('normalised','prefix') else None) or fold)`: the `or` short-circuits, so a truthy near-normalised hides fold. On a page with two links both named SAVE FOR LATER beside anchors 'Ada\\u2019s row' / 'Bob row', target {'role':'link','name':'Save for later','near':\"Ada's row\"}: result tier structural note near-normalised \u2014 the case fold is not reported anywhere. resolver-case-fold-is-recorded-in-the-trace uses index: 0, which cannot reach this branch.",
+      "repro": "resolve({'role':'link','name':'Save for later','near':\"Ada's row\"}) on a page whose links are aria-labelled SAVE FOR LATER beside a curly-apostrophe anchor \u2014 note reads near-normalised only.",
+      "acceptance": "Both labels appear when both relaxations were used (e.g. join the non-None parts), pinned by a case whose expected trace_note_contains includes name-case-folded on a near-normalised resolution."
+    }
+  ]
+}

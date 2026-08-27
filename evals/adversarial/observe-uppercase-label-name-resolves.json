@@ -1,0 +1,35 @@
+{
+  "id": "observe-uppercase-label-name-resolves",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "kind": "observe",
+    "fixture": "sec10k-inspector.html"
+  },
+  "expect": {
+    "contains": [
+      {
+        "role": "combobox"
+      }
+    ],
+    "resolve_advertised": [
+      "*"
+    ],
+    "note": "every name this observation advertises is a name resolve() accepts, fed back verbatim, and reaches as many elements as the observation claims",
+    "resolve_advertised_except": [
+      "WebArea",
+      "button"
+    ]
+  },
+  "provenance": "T-M42-20 case (a) — the root cause of M42's unmet headline clause, and the only case in the suite that closes the observe->resolve loop instead of grading each end separately. `observe()` and `resolve()` compute the accessible name with two different engines: Chromium's `accessibility.snapshot()` applies the page's CSS `text-transform`, Playwright's locator engine does not. The inspector's picker is labelled `<label for=\"fx\">select a committed fixture</label>` under a `.mode label{text-transform:uppercase}` rule, so the observation hands the planner `SELECT A COMMITTED FIXTURE` and `resolver.py`'s role tier — `get_by_role(role, name=name, exact=True)`, case-sensitive whole-string — cannot match it. `resolver.py`'s own comment, \"planner names come from the observation verbatim\", is exactly the assumption this breaks. Measured live at $0 on 2026-08-26 against https://whaleforce-sec10k.zeabur.app with 43 `<option>`s in the DOM, so it is not the empty-at-load race the block guessed at second (that half is case `action-select-option-waits-for-fetch-painted-options`); the committed snapshot `src/browser/fixtures/sec10k-inspector.html` reproduces it offline, byte for byte the same name. The case asserts the ROUND TRIP, not the uppercase string: pinning `SELECT A COMMITTED FIXTURE` in `contains` would have made the case red for the other legitimate fix (folding the case inside `observe`), and the invariant that matters is that the two ends agree, whichever end moves. PR #60 R3 strengthened both halves. (1) The check was 'did resolve raise?', which grades green when a name advertised for element A resolves onto element B — demonstrated on a host page with `<button id=HOST-BTN>Continue</button>` and an iframe holding `<button id=INNER-BTN>Continue</button>`: the observation advertises TWO `button \"Continue\"` entries and `resolve` returned HOST-BTN for both, `advertised_name_did_not_resolve = []`, `passed: True`. It is now a COUNT identity — however many elements the observation advertises under one (role, name), that many must be reachable — and on that same page it is red: `ResolveError: {'role': 'button', 'name': 'Continue'} matches in 2 separate documents`. That page is not shipped as a case because main-frame-first tier construction is ADR-028's deliberate design, so it could never go green. (2) The case graded ONE role out of ~60 elements; `\"*\"` now means every role the observation carries, so it keeps covering roles nobody has thought of yet. `button` is the one named exception and it is a real, pre-existing engine disagreement, not a convenience: the file input at `<input type=\"file\" id=\"up\">` is role `button` to Chromium's snapshot and role `textbox` to Playwright's, so `{'role':'button','name':'UPLOAD A FILING (.HTM / .HTML / .TXT)'}` resolves at no tier and no casing fixes it. Logged as T-M42-20-D4. Widening also found a defect in T-M42-20's own fix: `/` inside a name terminated the regex literal Playwright serialises the pattern into, so that same button crashed with `InvalidSelectorError` — a page-content-dependent crash `classify` reads as `act`. `_whole_string` now escapes it. `WebArea` is the second named exception and a different kind of thing: it is Chromium's document-root node, not an ARIA role any locator can match, and this repo already refuses the document root as a target (`plan-lint-refuses-a-document-root-extract`). It is excluded because it is not addressable by design, where `button` is excluded because two engines disagree about one element — the exceptions are listed rather than filtered by a rule so that difference stays visible.",
+  "triage": {
+    "class": "invariant-gap",
+    "red_first": "observed as `{'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}`; fed back, `resolve` raised `ResolveError: no tier resolved {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}`. Case output: `advertised_name_did_not_resolve: [{'target': {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}, 'error': \"ResolveError: no tier resolved {'role': 'combobox', 'name': 'SELECT A COMMITTED FIXTURE'}\"}]`. The same target lowercased resolved at tier `role`.",
+    "note": "213 offline cases were green over this. The gap was structural: `observe` cases graded what the observation says and resolver cases graded targets an author typed, so no case ever handed one end's output to the other. The count identity is a proxy for handle identity, and its ceiling is stated rather than hidden: k elements could still be the WRONG k, which no observation this module produces can distinguish — `observe` returns {role, name} dicts and carries no handle to compare against."
+  }
+}

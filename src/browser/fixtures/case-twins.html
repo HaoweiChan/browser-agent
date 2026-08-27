@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Case twins — Nimbus</title>
+<style>
+  /* The `th` rule is the OTHER half of the page: a stylesheet decides how a
+     label reads, so the only spelling a planner can quote off an observation
+     is the shouted one. Chromium's accessibility snapshot applies this;
+     Playwright's locator engine does not. */
+  th { text-transform: uppercase; }
+  .shout { text-transform: uppercase; }
+</style>
+
+<h1>Case twins</h1>
+
+<!-- Every twin below is named by `aria-label` and reads something ELSE.
+     That is deliberate and load-bearing: the accessible names differ only in
+     case (which is what makes them twins to a case-blind matcher), while the
+     extracted TEXT differs completely — and text is what an `extract` answers
+     with. Naming them by their own text instead would make the two answers
+     differ only in case, and `verifier.normalize` folds case, so the case
+     would pass on the wrong element and grade nothing.
+     The shouting twin comes FIRST in document order in both pairs, so a target
+     carrying `index: 0` picks it the moment case stops counting (PR #60 R1).
+     Uppercase in the MARKUP, not by stylesheet: that is what makes it a
+     different string to the locator engine. -->
+
+<h2>Promotions</h2>
+<p><a id="promo" aria-label="ADD TO CART" href="/fixtures/hello.html">Promo banner offer</a></p>
+
+<h2>Widget A</h2>
+<p>
+  <a id="twin" aria-label="SAVE FOR LATER" href="/fixtures/hello.html">Twin inside Widget A</a>
+</p>
+
+<h2>Catalogue</h2>
+<p><a id="rowcta" aria-label="Add to cart" href="/fixtures/hello.html">Catalogue row CTA</a></p>
+<p><a id="real" aria-label="Save for later" href="/fixtures/hello.html">The real save link</a></p>
+
+<h2>Order summary</h2>
+<!-- `th` is uppercased by the stylesheet, so an observation advertises the
+     anchor as `TOTAL` and that is the only spelling a plan can carry; the
+     `near` exact pass must accept it (PR #60 R5). `Subtotal of Total line` is
+     the substring trap that keeps the exact pass load-bearing. -->
+<table>
+  <tr><th>Total</th><td>10</td></tr>
+  <tr><th>Subtotal of Total line</th><td>99</td></tr>
+</table>
+
+<h2>Export</h2>
+<!-- A name containing `/`, reachable ONLY through the folded role tier: the
+     label is uppercased by stylesheet, so the observation advertises
+     `EXPORT AS .HTM / .HTML / .TXT` and the exact pass finds nothing. Playwright
+     serialises a regex `name=` into its own `/…/flags` selector literal, so an
+     unescaped slash terminates it and `get_by_role` dies with
+     InvalidSelectorError — which `classify` calls `act`. PR #60 R12: the escape
+     shipped with no case that could go red, and this is that case's page.
+     `get_by_text` with the same pattern does NOT crash, so the shape is
+     role-tier-specific and the target below has to be a role+name. -->
+<p><button id="export" class="shout">export as .htm / .html / .txt</button></p>
+
+<h2>Ada's row</h2>
+<!-- Two links sharing ONE accessible name, and that name reachable only through
+     the folded pass: the text is `reserve` in the markup and `RESERVE` in the
+     observation, because `.shout` uppercases it. So the plan's spelling matches
+     neither link exactly, the fold gathers both, and M38's anchor-proximity rung
+     is what settles it — the exact path PR #60 R15 found reporting the rung and
+     never the fold. Distinct headings are the anchors. -->
+<p><a id="ada-reserve" class="shout" href="/fixtures/hello.html">reserve</a></p>
+
+<h2>Bob's row</h2>
+<p><a id="bob-reserve" class="shout" href="/fixtures/hello.html">reserve</a></p>

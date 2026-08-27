@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Late options — Nimbus</title>
+<h1>Filing picker</h1>
+
+<p>The picker below is EMPTY when the document is complete. Its options are
+fetched over the network and appended when the response lands — the other half
+of the 2026-08-24 postmortem's S1 shape, and the half no fixture in this repo
+had (T-M42-20). The control is present at load; its contents are not.</p>
+
+<label for="pick">Filing</label>
+<select id="pick" aria-label="Filing"></select>
+
+<p><span role="status" aria-label="Selection">No filing selected.</span></p>
+
+<!-- The other side of the same branch: a control that is empty at load and
+     STAYS empty, with no script behind it at all. The wait is paid in full
+     here, so this is what bounds it (PR #60 R4). -->
+<label for="arch">Archive</label>
+<select id="arch" aria-label="Archive"></select>
+<p><a href="/fixtures/hello.html">Leave the picker</a></p>
+
+<script>
+  // Fixture code may know its own DOM (CLAUDE.md rule 6); none of it reaches
+  // the executor. Elements are found by aria-label so `ids-renamed` cannot
+  // break the page instead of the agent.
+  var byLabel = function (l) { return document.querySelector('[aria-label="' + l + '"]'); };
+  var sel = byLabel('Filing');
+
+  sel.addEventListener('change', function () {
+    byLabel('Selection').textContent = 'Selected filing: ' + sel.value;
+  });
+
+  // A real fetch, not a timer: the delay lives in the endpoint, so the page is
+  // genuinely waiting on the network the way a fetch-painted control does.
+  fetch('/fixtures/late-options.json').then(function (r) { return r.json(); })
+    .then(function (rows) {
+      rows.forEach(function (row) {
+        var o = document.createElement('option');
+        o.value = row;
+        o.textContent = row;
+        sel.appendChild(o);
+      });
+    });
+</script>

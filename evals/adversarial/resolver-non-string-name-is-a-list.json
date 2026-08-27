@@ -1,0 +1,33 @@
+{
+  "id": "resolver-non-string-name-is-a-list",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the inventory turnover?",
+    "fixture": "hello.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": [
+            "a"
+          ]
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate"
+  },
+  "provenance": "PR #60 R11, third measured shape. A JSON array where a string belongs is what a model actually emits when it tries to name two things at once, and `agent.py`'s plan lint validates target KEYS and not their values, so it reaches the resolver intact. Same mechanism as `resolver-non-string-name-is-a-locate-failure` — it is here because the review measured it separately and an unlisted shape is an untested one.",
+  "triage": {
+    "class": "regression",
+    "red_first": "PENDING",
+    "note": "Kept as its own case rather than folded into the scalar one because a case grades one run; the alternative was a note claiming a shape nobody executes."
+  }
+}
