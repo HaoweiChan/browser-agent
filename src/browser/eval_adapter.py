@@ -2968,6 +2968,40 @@ def _run_adr_header_index_case(case: dict) -> dict:
                     "adr_citations_seen": resolved, "files_scanned": len(citing)}}
 
 
+# An allocated task id, as this repo actually spells them: an all-caps run of
+# letters/digits, optionally hyphen-joined — `M43`, `M0`, `T-M39-15`, `M45-D9`,
+# `T-RANK-MIRROR`, `T-ADR-NUM`. The first version of this probe took `(\S+)`,
+# every token before the em dash, which also swallowed the prose heading
+# `### Reopen — A-phase (2026-08-17)` sitting in TODO.md's Notes section: 189
+# ids for 188 tasks, one false id waiting for a second prose heading — an
+# ordinary edit, no collision anywhere — to redden a suite gated at 100%
+# (PR #69 R2).
+#
+# ponytail: deliberately NOT the `ready.py` ID regex the finding proposed
+# reusing. That pattern is `[A-Z]+\d+`, which matches `M43` but none of
+# `T-M39-15`, `M45-D9` or `T-RANK-MIRROR`; against this tree it finds 18 of the
+# 188 headings, so adopting it literally would have blinded the probe to most
+# of the id space it exists to guard. The SHAPE is borrowed (an id is a
+# typed token, not "anything before the dash"), the vocabulary is this repo's,
+# and `task-id-parse-boundary` fixture 5 pins the forms so a later narrowing
+# cannot quietly drop one.
+_TASK_ID = r"[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*"
+# Fenced blocks quote the heading form to DOCUMENT it; a quoted example is not
+# an allocation. Stripped before extraction, so a fence showing `### M43 — ...`
+# twice is green (PR #69 R2's third demonstrated false red).
+_FENCE = re.compile(r"^```.*?^```", re.M | re.S)
+
+
+def _task_ids(text: str, marker: str) -> list:
+    """Allocated task ids under `marker` (`### ` in TODO.md, `- ` in DONE.md).
+
+    Prose headings and prose bullets are not ids however often they repeat, and
+    a fenced example is not an allocation — both are ordinary content in these
+    two files, and both used to parse as ids.
+    """
+    return re.findall(rf"^{re.escape(marker)}({_TASK_ID}) — ", _FENCE.sub("", text), re.M)
+
+
 def _run_id_uniqueness_case(case: dict) -> dict:
     """Every task id and every ADR number is a singleton — nothing else grades that.
 
@@ -2998,13 +3032,27 @@ def _run_id_uniqueness_case(case: dict) -> dict:
     def dups(ids):
         return sorted(i for i, n in Counter(ids).items() if n > 1)
 
+    # Fixture mode (`task-id-parse-boundary`): grade the PARSE against supplied
+    # text instead of the tree. A probe that only ever reads one tree cannot
+    # show what it would do to a different one, so its extraction rule was
+    # pinned by nothing and drifted into a live false positive (PR #69 R2).
+    if fixtures := case["input"].get("fixtures"):
+        wrong = []
+        for f in fixtures:
+            got = {k: v for k, v in {
+                "duplicate_todo_ids": dups(_task_ids(f.get("todo", ""), "### ")),
+                "duplicate_done_ids": dups(_task_ids(f.get("done", ""), "- ")),
+                "in_todo_and_done": sorted(set(_task_ids(f.get("todo", ""), "### "))
+                                           & set(_task_ids(f.get("done", ""), "- "))),
+            }.items() if v}
+            if got != f["expect_wrong"]:
+                wrong.append({"fixture": f["note"], "want": f["expect_wrong"], "got": got})
+        return {"passed": not wrong, "wrong": wrong, "got": {"fixtures": len(fixtures)}}
+
     todo = (root / "tasks" / "TODO.md").read_text(encoding="utf-8")
     done = (root / "tasks" / "DONE.md").read_text(encoding="utf-8")
-    # Conservative extraction: id = the single token between the marker and
-    # the em-dash separator every real block/line uses. Prose bullets without
-    # an ` — ` after the first token are not id lines and stay out.
-    todo_ids = re.findall(r"^### (\S+) — ", todo, re.M)
-    done_ids = re.findall(r"^- (\S+) — ", done, re.M)
+    todo_ids = _task_ids(todo, "### ")
+    done_ids = _task_ids(done, "- ")
 
     adr_nums = [m.group(1)
                 for p in sorted((root / "specs" / "decisions").glob("ADR-*.md"))

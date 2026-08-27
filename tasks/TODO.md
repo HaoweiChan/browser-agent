@@ -552,12 +552,19 @@ number.
 **Two points on the same timeline, both 2026-08-28, and the cost is the
 argument.** (i) The 034 double-claim above was caught before either branch
 committed, by a session holding the cross-branch view: cost one message, and
-the arbitration to 034/035. (ii) `ADR-033` reached an OPEN pull request. PR #66
-(`task/T-M42-4`) adds `specs/decisions/ADR-033-postcondition-document-scope.md`
-while `origin/main` already carries `ADR-033-build-identity-endpoint.md` from
-merged PR #65; its title carries the number too. Cost there is a renumber, a
-reference sweep, a force-push and a re-review. Same blind spot, and it gets
+the arbitration to 034/035. (ii) `ADR-033` reached an OPEN pull request.
+**Snapshot, observed 2026-08-28, since resolved — read it as dated, not as
+current state:** PR #66 (`task/T-M42-4`) then added
+`specs/decisions/ADR-033-postcondition-document-scope.md` while `origin/main`
+already carried `ADR-033-build-identity-endpoint.md` from merged PR #65, with
+the number in its title too; that branch has since renumbered and rebased onto
+`6089850`, and carries no duplicate today. Cost of the resolution: a renumber,
+a reference sweep, a force-push and a re-review. Same blind spot, and it gets
 more expensive the later it is caught.
+**Every cross-branch fact in this block is a snapshot and decays** — that is
+itself part of the finding. This paragraph was written in the present tense and
+was already obsolete when a reviewer checked it (PR #69 R5). Dates, not tenses,
+for anything read off another branch.
 **What the case does and does not do for instance (ii), stated exactly.** It
 does NOT catch it at authoring time, and no in-tree case could: PR #66's
 merge-base is `fd3ae2a`, the commit BEFORE PR #65 merged its ADR-033, and
@@ -614,6 +621,16 @@ them:
    conflict already told you.
 3. The `pr-loop` skill lives in the **groundwork plugin, not this repo**, so
    this is a cross-repo change. Known now rather than discovered mid-loop.
+**A coordinator holding the allocation table in conversation is not a durable
+fix.** That table went stale twice in opposite directions within hours on
+2026-08-28: the duplicate-033 evidence written into this block was already
+obsolete when a reviewer checked it, and a session acting on a table it had
+been handed earlier reported 036 as a fresh collision when 036 had in fact been
+reassigned deliberately. Both are this block's own defect — allocation state
+that lives only outside every worktree decays between the moment a line reads
+it and the moment it acts. That the blind spot bites even while a coordinator
+is actively arbitrating is the argument for reading the branches at the moment
+of choosing, which is what the SPEC-phase check above does.
 This block is the record; the fix lands in the plugin.
 
 ### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]

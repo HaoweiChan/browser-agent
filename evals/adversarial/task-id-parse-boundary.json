@@ -1,0 +1,61 @@
+{
+  "id": "task-id-parse-boundary",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "input": {
+    "kind": "id-uniqueness",
+    "fixtures": [
+      {
+        "note": "a true duplicate task id is still caught — the property the probe exists for",
+        "todo": "### M43 — first block            [status: todo]\nbody\n\n### M43 — second block, same id            [status: todo]\nbody\n",
+        "done": "",
+        "expect_wrong": {
+          "duplicate_todo_ids": [
+            "M43"
+          ]
+        }
+      },
+      {
+        "note": "a true duplicate DONE id, and one id both open and done",
+        "todo": "### M39 — open block            [status: todo]\n",
+        "done": "- M40 — merged (2026-08-24) — PR #43\n- M40 — merged again, wording drift (2026-08-24) — PR #43\n- M39 — merged (2026-08-26) — PR #50\n",
+        "expect_wrong": {
+          "duplicate_done_ids": [
+            "M40"
+          ],
+          "in_todo_and_done": [
+            "M39"
+          ]
+        }
+      },
+      {
+        "note": "PROSE near-miss: mixed-case headings and bullets are not ids, however often they repeat. `### Reopen — A-phase` is real content in this repo's TODO.md and was extracted as the id `Reopen` (PR #69 R2)",
+        "todo": "### Reopen — A-phase (2026-08-17)\nnotes\n\n### Reopen — B-phase (2026-08-18)\nnotes\n",
+        "done": "- Standing — a qualification, not a task\n- Standing — another one\n",
+        "expect_wrong": {}
+      },
+      {
+        "note": "FENCED near-miss: a code block quoting the heading form twice is documentation of the format, not two allocations of the id",
+        "todo": "### M50 — the real block            [status: todo]\nThe heading format is:\n\n```\n### M43 — example heading            [status: todo]\n### M43 — a second example, same id\n```\n\nend\n",
+        "done": "",
+        "expect_wrong": {}
+      },
+      {
+        "note": "the id vocabulary this repo actually uses must survive: hyphenated, digit-free and numeric-suffixed forms are all real ids here",
+        "todo": "### T-M39-15 — a            [status: todo]\n### T-RANK-MIRROR — b            [status: todo]\n### T-ADR-NUM — c            [status: todo]\n### M45-D9 — d            [status: todo]\n### M0 — e            [status: todo]\n",
+        "done": "",
+        "expect_wrong": {}
+      }
+    ]
+  },
+  "expect": {
+    "note": "the id extraction admits exactly the id-shaped tokens this repo allocates and refuses prose headings, prose bullets and fenced examples, so the 100%-gated invariant suite reddens on a real collision and only on a real collision"
+  },
+  "provenance": "PR #69 R2. `task-and-adr-ids-are-unique` shipped reading only the LIVE tree, so its parse boundary was pinned by nothing and its docstring's claim that prose lines 'stay out' was false: the only filter was the em dash. On the committed tree the extraction already returned 189 ids for 188 tasks, the extra being `Reopen` from the prose heading `### Reopen — A-phase (2026-08-17)` in tasks/TODO.md's Notes section. That is a live false positive waiting for a second prose heading — an ordinary edit, no collision anywhere — to redden a suite gated at 100%. The reviewer demonstrated three such false reds on a mirror tree: a second `### Reopen — ...` note, two `- Standing — ...` bullets in DONE.md, and a fenced block quoting `### M43 — ...` twice. Watched red before the fix (`evals/report/20260827-204821-invariant.json`): with the old `^### (\\S+) — ` extraction, fixtures 3 and 4 below both failed — {'duplicate_todo_ids': ['Reopen'], 'duplicate_done_ids': ['Standing']} and {'duplicate_todo_ids': ['M43']} — while fixtures 1 and 2 passed, which is the shape that matters: the probe was catching real collisions AND inventing false ones, and only the second half was invisible. The fix is an id-shaped token (`[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*`) plus stripping fenced blocks. NOT the `ready.py` ID regex the finding suggested reusing: that pattern is `[A-Z]+\\d+`, which matches `M43` but not `T-M39-15`, `M45-D9` or `T-RANK-MIRROR`, and applied to this tree it finds 18 of the 188 task headings — reusing it literally would have blinded the probe to most of the id space it exists to guard. The shape is borrowed, the pattern is this repo's own vocabulary, and fixture 5 pins that vocabulary so a future narrowing cannot quietly drop a form.",
+  "triage": {
+    "class": "eval-integrity",
+    "note": "the boundary is graded against FIXTURE text, not the live tree, which is the whole point of the finding: a probe that only ever reads one tree has no way to show what it would do to a different one, so its parse rule can only be discovered by a blocked commit. What is still not graded: that every heading in the live TODO.md is intended as a task. A prose heading written in the all-caps id shape would be read as an id, and no machine can settle that — the same human-judgment boundary `adr-header-and-index` stops at."
+  }
+}
