@@ -398,7 +398,12 @@ commit that changed nothing but JSON.
   very margin PR #65 R1 retired (R6). **Margin against the CITABLE
   MAXIMUM, not against the published number** (§8 is what makes it the citable
   one rather than the raw one): the rule gives 35 for anything up
-  to 30.43s, and that is the number to watch. This bullet cites the file the way
+  to 30.43s, and that is the number to watch. Which rows at this count are
+  citable is not written down here either, and for the reason the sentence above
+  gives: §8's fresh-count residual is a property, while WHICH rows are dirty
+  today is a scalar any gate run can move — an earlier version of this bullet
+  claimed every row here was dirty and one run on the committed tree falsified
+  it (PR #68 R5). This bullet cites the file the way
   §2's does — `evals/report/20260828-052604-invariant.json`. The previous band at 90 could name no file, and said so rather than papering over it with a neighbouring run's: ADR-012 writes a per-case report only on a red run or under `--report`, and that maximum was a GREEN gate run, so nothing was produced. This one is red mid-refresh, so the file exists and the ts/file PAIR item 11 (cited-file) grades is a real pair. Naming a different run's file to satisfy the form remains the defect that check was added for (PR #60 R17).
   That pair — the ts this bullet declares and the file it names — is read back
   by item 11 (cited-file), which exists because this very sentence named the
@@ -463,9 +468,11 @@ on trust: the run, its wall clock, its result, and its `dirty` flag. §3 publish
 that made the sentence false — while §2, two sections up, was hand-copying its
 own maximum by the same method, so the two halves of one decision disagreed on
 method (PR #34 R29). A hand-copied scalar sitting beside a computed one is
-exactly the drift class R21 and `T-M32-8` both name. The maximum is whatever
-`published-band-matches-the-ledger` reports as `ledger_slowest`, computed over
-every row at the current case count — red and mid-edit runs included, which is
+exactly the drift class R21 and `T-M32-8` both name. The maximum a band is
+graded against is whatever
+`published-band-matches-the-ledger` reports as `ledger_slowest`, computed since
+§8 over the CITABLE rows at the current case count — red and mid-edit runs
+included, which is
 why it can exceed the band source (§6, and the paragraph above) — and the
 grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
@@ -1352,13 +1359,39 @@ count and environment carries a `ts` at or before its own — exactly the dirty
 allowance item 2 (cited-run) already grants. Item 2 (cited-run) itself is
 unchanged. Item 12 (ledger-max)'s read-back is unchanged too, and deliberately:
 that marker is a factual claim about what the ledger holds, not a target a band
-is held to, so it stays on the raw maximum over every row.
+is held to, so it stays on the raw maximum over every row. **That last decision
+is UNGRADED**, in the same words item 12 (ledger-max) uses for its own blind
+spot: swap it to the citable reading and every suite stays green, because the
+one marker this file carries sits at a count whose rows are all dirty, so the
+two maxima coincide there. It is declared here rather than left to be discovered
+(PR #68 R7). Item 12 (ledger-max) lives inside `_check_published_band`, which
+reads the real ADR and the real ledger, so pinning it would mean a synthetic
+document rather than a synthetic ledger — a cost this decision does not carry.
 
 **Why, in one line: the citable maximum is itself citable.** Publishing it is
 green on item 2 (cited-run) by definition and green on item 3 (same-ceiling) by
-identity, so a publishable citation exists whenever any row at the count exists.
-The deadlock below cannot be assembled — not caught, not worked around, but
+identity, so a publishable citation exists whenever any row at the count exists
+and the committed ceiling covers `rule(citable max)` — item 4
+(committed-ceiling) is a claim about the ceiling and this ruling does not touch
+it. The deadlock below cannot be assembled — not caught, not worked around, but
 absent by construction.
+
+**Two rows can share a `ts`, and the first statement of that construction was
+false because of it.** `stamp()` has one-second resolution and several sessions
+append to one ledger, so `ts` is not a key. Item 2 (cited-run) resolved a
+citation by `ts` alone and took the first match, which made the citable maximum
+UNREACHABLE — citing it reported a neighbour's wall clock — and reassembled the
+whole deadlock through the lookup rather than through the maximum (PR #68 R6).
+The lookup now prefers the CITABLE row whose `ts` and wall clock both match,
+falling back to any row with that `ts` so a genuinely stale published number
+still reports what was actually measured rather than degrading to "cites no
+recorded run". With that, the construction holds for duplicate stamps too, and
+it is pinned rather than asserted: the reviewer's own three-row ledger is a
+probe in `band-is-graded-against-the-citable-maximum`, watched red first.
+`T-M39-13-D1` is a correctness dependency of this section and not tidiness: the
+PostToolUse hook it records appends a row to a shared checkout's ledger on every
+`src/` edit, which is the mechanism that MANUFACTURES same-second rows across
+concurrent worktrees.
 
 **The deadlock this closes.** `T-M39-13`, observed on 2026-08-25 on a worktree of
 this branch and then backed out rather than committed. Five verification runs of
@@ -1381,9 +1414,17 @@ instead — the same treadmill arriving through the other item.
 2026-08-27, in one session, THREE more rows were discarded by hand rather than
 committed: an `invariant` run at 18.03s, and two `fast` runs at 92.52s and
 91.34s — the last of them written by PR #65's own pre-commit hook, i.e. by the
-gate doing its job. All three sat at UNCHANGED counts, and all three are item 4
-(committed-ceiling) ratchets rather than item 3 (same-ceiling) refusals: each
-would have pushed `required_by_adr013_rule` past what this repo commits. They
+gate doing its job. All three sat at UNCHANGED counts, and each fires BOTH
+items: item 3 (same-ceiling) is `rule(published) != rule(slowest)` and every one
+of the three derives a different ceiling from the band beside it, while item 4
+(committed-ceiling) would additionally push `required_by_adr013_rule` past what
+this repo commits. An earlier version of this paragraph called them item 4
+(committed-ceiling) ratchets "rather than" item 3 (same-ceiling) refusals, which
+is false and was contradicted by
+the artifact shipped beside it — `band-is-graded-against-the-citable-maximum`'s
+own red output prints both items firing on that shape (PR #68 R4). The
+discrimination was never the point; that both readers of the maximum are
+involved is, and it is why this ruling names both. They
 were that close because this tree has almost none of the margin §2 opens by
 advertising: the boundary where the rule stops giving `invariant`'s committed
 ceiling is 17.39s (§3 states it), the equivalent boundary for the other suite is
@@ -1434,6 +1475,36 @@ and is not built here.
   removed by removing the property. Worse, it opens a selective-citation
   evasion — cite an early fast row and every later row escapes grading by
   construction. Refused on both counts.
+
+**The population this ruling was written against is standing, not
+hypothetical.** As of 2026-08-28 the committed ledger holds 73 rows scoring
+under 0.9 — one line to re-derive, and a reader should:
+`python3 -c "import json;print(sum(1 for l in open('evals/report/history.jsonl') if l.strip() and json.loads(l).get('score',1)<0.9)")`.
+Several measured nothing at all: `20260827-205100` records `invariant` 43/82 in
+a `wall_s` of 1.17 with `cost_usd` null, which is a depsless interpreter and not
+a run of this suite. That figure is labelled for what it is, on §5's precedent —
+nothing grades it, it can only grow, and it is written with its derivation so a
+reader re-derives instead of trusting a scalar in prose (§3's own rule, and
+PR #68 R5).
+
+**What keeps those rows harmless today is NOT this ruling, and the difference
+matters.** Fifty-four of the 73 are dirty, and at a live count with a clean row
+before them the citable rule does neutralise those. But 19 are CLEAN, and a
+clean row is citable by construction — if one of them sat at a published count
+it would govern the band exactly as a real measurement would, artifact or not.
+What actually disarms them is that every one sits at a case count no band
+publishes any more, which is an accident of the tree having grown, not a
+property this section provides. So the honest statement of the interaction is:
+`T-M38-5`'s unbuilt `--no-history` opt-out is what keeps artifact rows OUT, and
+it is not made redundant by §8 — §8 removes the deadlock, and admission control
+is the thing that would stop a clean 1.17-second "run" from ever being citable
+in the first place. Both are needed and they are not substitutes. And the
+signature that guard should key on is narrower than "let a session opt out",
+which needs a human to remember: 41 of the 73 carry `cost_usd: null`, a run that
+never reached the accounting path at all, which paired with an implausible
+`wall_s` is decidable at write time and needs nobody's judgement — the ledger
+holds 44 null-cost rows in all, so the two conditions are worth requiring
+together rather than either alone.
 
 **Residuals, declared rather than discovered.** The slack §6 bounds is now a
 bound against the CITABLE maximum only: measured against the raw maximum over

@@ -333,6 +333,16 @@ a worktree session silently writes rows into a ledger it is not working in —
 rows nobody in that session will restore away, at whatever case count that tree
 happens to be at. That is the T-M38-5 stray-row problem arriving from outside
 the session entirely, and no `--no-history` opt-out reaches it.
+This is a CORRECTNESS dependency of ADR-019 §8, not tidiness, and PR #68 R6
+(2026-08-28) is why. `stamp()` has one-second resolution, so two rows appended
+within the same second share a `ts`; item 2 (cited-run) resolves a citation by
+`ts`, and on a duplicate it used to take the first match, which made the citable
+maximum unreachable and reassembled the deadlock §8 exists to remove. The lookup
+was repaired in that round, but the row-manufacturing half is THIS block: a hook
+that appends to a shared checkout on every `src/` edit, while several worktree
+sessions edit concurrently, is the mechanism that produces same-second rows in
+one ledger. Whoever picks this up is not tidying a log, they are closing the
+input to a deadlock.
 Repro: edit any file under `src/` from a worktree-isolated session and compare
 the hook's `[eval] suite 'invariant': N/M` against
 `.venv/bin/python -m evals.run --suite invariant` run in the worktree; then

@@ -163,8 +163,11 @@ and cannot be from here, is that anyone ever measured them; the run id is what a
 reader checks instead, and ADR-019 §7 says why this repo does not make CI commit
 a row.
 
-§6 item 3 (same-ceiling) is why the published number can sit below the ledger's
-maximum, by at most one ceiling step (**4.35s**). The table below carries the
+§6 item 3 (same-ceiling) is why the published number can sit below the slowest
+CITABLE row, by at most one ceiling step (**4.35s**). Against the raw maximum
+over EVERY row that gap has no bound at all, because a row no band may legally
+cite is compared against nothing — ADR-019 §8 is the ruling and states it as a
+residual there. The table below carries the
 four values item 7 (readme-row) grades; the run behind them is named in
 ADR-019 §2/§3, which cite it by ledger timestamp and state what it scored — and
 that run is not necessarily the slowest in the ledger today. That is a declared

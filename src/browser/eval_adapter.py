@@ -674,9 +674,10 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         # therefore citable, so this degrades to the old behaviour exactly where
         # bands are first published.
         clean_ts = [r["ts"] for r in at if not r.get("dirty", True)]
-        citable = [r["wall_s"] for r in at
-                   if not r.get("dirty", True)
-                   or not any(t <= r["ts"] for t in clean_ts)]
+        citable_rows = [r for r in at
+                        if not r.get("dirty", True)
+                        or not any(t <= r["ts"] for t in clean_ts)]
+        citable = [r["wall_s"] for r in citable_rows]
         slowest = max(citable) if citable else None
         if cases != now:
             # Item 1 (count). Carry the number the doc needs, not just the fact that it
@@ -699,8 +700,18 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         # band, which is the treadmill §6 exists to refuse. Green is neither
         # required nor requirable — this check is in both suites, so at a new
         # count every run is red until the band is republished (T-R53).
-        at = [r for r in env_rows if r["suite"] == suite and r["total"] == now]
-        src = next((r for r in at if r["ts"] == ts), None)
+        # The CITABLE row this citation names, preferred over a same-`ts`
+        # neighbour, then any same-`ts` row (PR #68 R6). `ts` is not a key:
+        # `stamp()` has one-second resolution and concurrent sessions append to
+        # one file, so two rows can share one. Resolving by `ts` alone took the
+        # FIRST match, which made the citable maximum unreachable — citing it
+        # reported its neighbour's wall clock — and reassembled the very deadlock
+        # §8 removes, through the lookup instead of through the maximum. The
+        # fallback is what keeps a genuinely stale published number reporting
+        # `actually_measured` rather than degrading to `cites_no_recorded_run`.
+        src = next((r for r in citable_rows
+                    if r["ts"] == ts and r["wall_s"] == said),
+                   next((r for r in at if r["ts"] == ts), None))
         if src is None:
             wrong.append({"suite": suite, "env": env,
                           "cites_no_recorded_run": ts, "at": now})
@@ -979,10 +990,15 @@ def _check_published_band() -> dict:
 def _check_published_band_slack() -> dict:
     """ADR-019 §6: the band property's blind spot is declared, bounded, and pinned.
 
-ADR-019 §6 item 3 (same-ceiling) is `rule(published) == rule(ledger max)`, so a
-    published number BELOW the ledger's maximum is green while both derive the
+ADR-019 §6 item 3 (same-ceiling) is `rule(published) == rule(citable max)`, so a
+    published number BELOW that maximum is green while both derive the
     same ceiling. PR #29 R24 asked whether that was a decision or an
-    artefact. This is what makes it a decision.
+    artefact. This is what makes it a decision. The word CITABLE is §8's, and it
+    matters here because the bound below is a bound against the citable maximum
+    alone: measured against the raw maximum over every row it does not hold, and
+    §8's residuals say so. Every row this check synthesises is clean, so the two
+    maxima coincide in the arithmetic below and the bound it measures is the
+    real one.
 
     Driven with a synthetic one-suite ledger and a ceiling of 999 so that only
     item 3 (same-ceiling) can speak — item 4 (committed-ceiling) is graded
@@ -1253,9 +1269,17 @@ def _check_published_band_citable() -> dict:
     the dirty row by item 2 (cited-run) (a clean row predates it, judged as-of
     the cited ts, so the refusal never expires), and item 4 (committed-ceiling)
     demands a ceiling nobody measured on a committable tree. The 2026-08-27
-    discards are the same shape through the other consumer: a dirty 18.03s
-    outlier over a clean 17.05s row raises `required_by_adr013_rule` above the
-    committed ceiling at an unchanged count. A row a band could never legally
+    discards are the same shape reaching BOTH consumers of that maximum — one of
+    the discarded rows was 18.03s at `invariant` 83, whose ceiling-step boundary
+    is 17.39s, so item 3 (same-ceiling) and item 4 (committed-ceiling) each fire
+    on it. Probe 3's pairing below is SYNTHETIC and says so here rather than
+    implying a ledger it does not have: it pairs that row against a clean 17.05s
+    one, where the committed ledger's actual 17.05s row at that count is dirty
+    and its only clean row is 15.82s (ts `20260827-160719`). What the probe pins
+    is the shape, and the shape needs a clean row earlier than the outlier; a
+    number re-typed from a relay rather than re-derived from `history.jsonl` is
+    how the wrong flag reached this docstring in the first place (PR #68 R9).
+    A row a band could never legally
     cite must not set the target bands are graded against; the citable maximum
     is itself citable, so citing it is green by construction and the deadlock
     cannot be assembled. What the ruling must NOT lose is asserted too: a later
@@ -1310,6 +1334,20 @@ def _check_published_band_citable() -> dict:
     fresh_low = cite(73.18, "1", rows(("1", 73.18, True), outlier), 90.0)
     if not any("ledger_derives" in w for w in fresh_low):
         wrong.append({"fresh_count_low_citation_stayed_green": fresh_low})
+    # 7. The existence property again, on the ledger that falsified its first
+    #    statement (PR #68 R6): TWO ROWS SHARING A `ts`. `stamp()` has one-second
+    #    resolution and concurrent sessions append to one file, so this is a
+    #    ledger this repo can produce. Item 2 (cited-run) resolved the citation
+    #    by `ts` alone and took the FIRST match, so the citable maximum was
+    #    unreachable — citing it reported the OTHER row's wall clock — and every
+    #    remaining candidate was red on item 3 (same-ceiling). The deadlock
+    #    reassembled through the lookup rather than through the maximum, which is
+    #    why the claim §8 makes had to be pinned rather than argued.
+    dup = rows(("2", 73.10, True), ("2", 74.11, False), ("1", 73.50, True))
+    dup_verdicts = {f"{r['ts']}@{r['wall_s']}": cite(r["wall_s"], r["ts"], dup, 999.0)
+                    for r in dup}
+    if not any(v == [] for v in dup_verdicts.values()):
+        wrong.append({"duplicate_ts_left_no_publishable_citation": dup_verdicts})
     return {"passed": not wrong, "wrong": wrong}
 
 
