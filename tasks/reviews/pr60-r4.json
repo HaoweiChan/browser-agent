@@ -1,0 +1,68 @@
+{
+  "task": "T-M42-20",
+  "branch": "task/T-M42-20-fix",
+  "pr": 60,
+  "round": 4,
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "Breaker fired after round 3; the human ruled option A (one bounded round). Round 4 reviewed that bounded round and did not approve. Escalated to the human a second time on this PR.",
+  "scope": "repair diff 050d654..2757a81, bounded to R15/R16/R17 and the graded check",
+  "gate": {
+    "invariant": "82/82 = 1.000, wall 16.15s",
+    "fast": "229/229 = 1.000, wall 91.03s",
+    "baseline_file": "unchanged from main",
+    "run_by": "orchestrator, independently, on committed 2757a81"
+  },
+  "verified_clean": [
+    "item 11 (cited-file) landed and item 8 forced section 6 to document it before the code could name it",
+    "R15's fold disclosure appears on both narrowing rungs; existing trace_note_contains cases unchanged",
+    "the three 230-case rows ARE committed to the ledger and section 2 names them \u2014 the suite move was disclosed, not suppressed"
+  ],
+  "band_hazard": "local fast rows at 229 span 90.02-91.04 (nine rows); step boundary 105/1.15 = 91.304; margin 0.264s. Third consecutive round in which the band decided a case's suite tag. T-M42-20-D3/D9 carry it; the fix is a ceiling decision, not routing.",
+  "findings": [
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: R16's new case `resolver-non-string-anchor-is-a-locate-failure` is GREEN on the pre-guard tree fb84a88, so it never graded the guard it ships for, and its committed triage.red_first records an AttributeError/failure:act that could not be reproduced \u2014 running the case verbatim on a detached fb84a88 worktree gives failure:locate.",
+      "evidence": "evals/adversarial/resolver-non-string-anchor-is-a-locate-failure.json:29 claims 'On fb84a88 (the tree before the guard) the same plan is failure:act \u2014 AttributeError: float object has no attribute strip'. Measured on fb84a88 with that exact file copied in: {'status': 'failure:locate', 'reason': \"step 3 (extract): relocation after locate failure: retargeting as {'text': 'History'}; ResolveError: no tier resolved\"} -> passed: true. Root cause: `anchor` is only read at narrowing rung 1 (resolver.py:534 `if anchor:`), reached only when a tier is AMBIGUOUS; the case's input is hello.html + {role: link, name: 'History'}, which matches nothing, so the float anchor never reaches _nearest. The three siblings DO go red on fb84a88. The guard IS real and IS gradable: same tree, resolver-narrows-by-anchor-proximity (forum-thread.html) with anchor: 4.82 gives failure:act / AttributeError on fb84a88 and failure:locate / ResolveError: target anchor is not a string: 4.82 on HEAD.",
+      "repro": "Add a detached worktree at fb84a88, copy the anchor case file in, run it through the adapter \u2014 passed: true, status failure:locate.",
+      "acceptance": "The anchor case's input reaches rung 1 (an ambiguous target \u2014 e.g. forum-thread.html + {role: link, name: 'user profile'} + anchor: 4.82), so it is failure:act with the AttributeError on fb84a88 and failure:locate with ResolveError on HEAD; triage.red_first quotes that measured pre-guard output verbatim."
+    },
+    {
+      "id": "R21",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "CONFIRMED: R17's section 3 republish left an ungraded restatement of the invariant band stale \u2014 the same bullet publishes 16.19s and then states in bold that the band went 'back to 15.88s', the exact one-half-updated-claim defect item 11 was added for.",
+      "evidence": "ADR-019:289 '- Band source \u2014 local invariant at 82 cases, ts 20260827-023305, **16.19s**, 80/82' vs :307 '**This band moved 13.76s -> 17.22s and back to 15.88s**'. git show 4bda01f of the same file shows the two agreed at 15.88s when written; this round moved the band line to 16.19s and left :307. 15.88s is a row at 80 cases (ts 20260826-184041), a superseded count. Nothing grades it: item 10 (restatement) only matches the '(restated \u2014 ...)' form and item 11 only reads evals/report/*.json filenames \u2014 published-band-matches-the-ledger is green with the sentence as written.",
+      "repro": "sed -n '289p;307p' ADR-019 ; filter history.jsonl for invariant rows with wall_s in (15.88, 16.19) and print ts/total.",
+      "acceptance": "The trajectory sentence ends at the band this bullet publishes (16.19s at 82 cases) or cites the ledger instead of restating it; published-band-matches-the-ledger still green."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "CONFIRMED: the judged suite-move disclosure is honest on the load-bearing half \u2014 the three 230-case rows (90.65, 91.06, 91.76) ARE in the committed ledger and section 2 names them accurately \u2014 but the sentence justifying reuse of the 91.04s band contains two false clauses: 'those five rows' (the ledger holds EIGHT rows at 229) and 'byte-for-byte' (resolver.py/server.py/eval_adapter.py all changed since those rows).",
+      "evidence": "ADR-019:102 'fast is byte-for-byte the 229-case tree those five rows measured'. HEAD's history.jsonl holds 8 local fast rows at total=229: 90.02, 91.04, 90.76, 90.99, 90.38, 90.73, 91.03, 90.72 \u2014 five from 0826 and three recorded AFTER round 3. Section 2 itself says 14 lines later (:116) 'How many rows the ledger holds at this count ... are deliberately not written here', and 10 lines earlier (:110-112) that round 3 changed LATE_OPTIONS_DELAY_S and the select budget \u2014 a tree that changed cannot also be byte-for-byte. tasks/TODO.md:225 carries the same pair; TODO.md:185 records a PRIOR finding about 'four sentences claiming byte-for-byte behaviour while it was false'. No gate impact: the three post-round-3 rows are all under the published 91.04 maximum, so the band and the 0.26s margin stand.",
+      "repro": "git show HEAD:evals/report/history.jsonl and count local fast rows at total=229 (eight) and 230 (three); git diff --stat fb84a88..HEAD -- src/browser/.",
+      "acceptance": "The sentence states what is true and graded \u2014 the fast case SET is the same 229 ids, the product tree is not, and the ledger's maximum at 229 is 91.04s across all rows \u2014 without writing a row count section 2 says it deliberately does not write."
+    },
+    {
+      "id": "R23",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "CONFIRMED: R16's SKILL.md repair did not remove the stale count \u2014 the sentence still says 'three invariant siblings' while enumerating four of them, and says 'four cases' when there are five case files.",
+      "evidence": "browser-domain/SKILL.md:63 'resolver-non-string-target-is-a-locate-failure for text, in fast, and its three invariant siblings for name, a list-valued name, near and anchor \u2014 four keys, four cases'. Measured: five files match evals/adversarial/resolver-non-string-*.json, four tagged invariant (name, name-is-a-list, near, anchor) and one fast (text).",
+      "repro": "Print id and suites for each evals/adversarial/resolver-non-string-*.json, then sed -n 63p on the SKILL.md.",
+      "acceptance": "SKILL.md says four invariant siblings and five cases across four keys, or names the keys and cites the case ids without a count."
+    },
+    {
+      "id": "R24",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "CONFIRMED: the in-passing SKILL.md delay repair is half-applied and T-M42-20-D11's own status line is now false \u2014 SKILL.md still states the delay as 1.0s seven lines above the clause corrected to 0.3s, so the file contradicts itself and server.py.",
+      "evidence": "browser-domain/SKILL.md:206 'an endpoint that sleeps server.LATE_OPTIONS_DELAY_S (1.0s)' vs :213 '(0.3s since PR #60's rounds put twelve more cases in the same suite...)' and server.py:1431 LATE_OPTIONS_DELAY_S = 0.3. tasks/TODO.md:646-648 asserts 'Round 3 repaired the SKILL.md half in passing ... so the drift is halved and not closed' \u2014 the SKILL.md half is NOT repaired, so the debt record understates the drift the next round inherits.",
+      "repro": "grep -rn LATE_OPTIONS_DELAY_S src/browser/server.py .claude/skills/browser-domain/SKILL.md",
+      "acceptance": "Either SKILL.md:206 stops stating a number (cites server.py) or D11's evidence records that SKILL.md still carries 1.0s at :206 \u2014 the file and the debt entry agree with server.py."
+    }
+  ]
+}
