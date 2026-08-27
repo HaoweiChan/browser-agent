@@ -657,9 +657,27 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         # deadlock: this check is itself in both suites, so the first run after
         # a band is republished could never be green while the band it needs is
         # the one that run would produce.
-        recorded = [r["wall_s"] for r in env_rows
-                    if r["suite"] == suite and r["total"] == now]
-        slowest = max(recorded) if recorded else None
+        at = [r for r in env_rows if r["suite"] == suite and r["total"] == now]
+        recorded = [r["wall_s"] for r in at]
+        # ADR-019 §8. The rows a band could LEGALLY cite — item 2 (cited-run)'s
+        # own test applied to every row rather than only to the cited one:
+        # clean, or dirty with no clean row at this count stamped at or before
+        # it. Item 3 (same-ceiling) and item 4 (committed-ceiling) are graded
+        # against the maximum of THESE, because a row no band may cite is not a
+        # target any band can be held to — T-M39-13 is the deadlock that proves
+        # it, where a dirty outlier past a ceiling-step boundary left no
+        # publishable citation at all. The citable maximum is itself citable, so
+        # a publishable citation exists whenever any row does. Item 2 (cited-run)
+        # is unchanged, and so is item 12 (ledger-max)'s raw read-back in
+        # `_check_published_band` — that one is a factual claim about the
+        # ledger, not a band target. At a FRESH count every row is dirty and
+        # therefore citable, so this degrades to the old behaviour exactly where
+        # bands are first published.
+        clean_ts = [r["ts"] for r in at if not r.get("dirty", True)]
+        citable = [r["wall_s"] for r in at
+                   if not r.get("dirty", True)
+                   or not any(t <= r["ts"] for t in clean_ts)]
+        slowest = max(citable) if citable else None
         if cases != now:
             # Item 1 (count). Carry the number the doc needs, not just the fact that it
             # is stale: growing a suite reddens this, and the fix is to republish
@@ -707,7 +725,11 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
                           "derives_ceiling": _band_rule(said),
                           "ledger_slowest": slowest,
                           "ledger_derives": _band_rule(slowest),
-                          "runs": len(recorded)})
+                          # Both counts, because `ledger_slowest` is the CITABLE
+                          # maximum since ADR-019 §8 and a reader comparing it
+                          # against a raw row count would be reading two
+                          # different sets (T-M39-13).
+                          "runs": len(recorded), "citable_runs": len(citable)})
         # Item 4 (committed-ceiling).
         required = _band_rule(slowest)
         if ceilings[suite] < required:
@@ -736,10 +758,15 @@ def _check_published_band() -> dict:
     the wrong item is red; a paraphrase carrying no name is still invisible, and
     ADR-019 §6 says so in those terms.
 
-    A run slower than the published band reddens the NEXT gate run, which is the
-    intended cost: the band is a claim about this tree, and a tree that got
-    slower has to say so. That lag is shared with the strict form and is NOT the
-    argument against it — §6 has the argument, which is frequency.
+    A CLEAN run slower than the published band reddens the NEXT gate run, which
+    is the intended cost: the band is a claim about this tree, and a tree that
+    got slower has to say so. Since ADR-019 §8 the word CLEAN is load-bearing —
+    more precisely, a CITABLE run, which is a clean one or a dirty one at a count
+    that has no earlier clean row: a row no band may cite is not a target any
+    band is held to, or a dirty outlier past a rounding step could leave a tree
+    with no publishable citation at all (T-M39-13). That lag is shared with the
+    strict form and is NOT the argument against it — §6 has the argument, which
+    is frequency.
     """
     import json as _json
 
@@ -1212,6 +1239,78 @@ def _check_published_band_ts_orders_real_time() -> dict:
     # which is a worse outcome than no check.
     return {"passed": not wrong, "wrong": wrong,
             "got": {"pair": [band_row, foreign]}}
+
+
+def _check_published_band_citable() -> dict:
+    """ADR-019 §8: item 3 (same-ceiling) and item 4 (committed-ceiling) read the
+    slowest CITABLE row, so a publishable citation exists whenever any row does.
+
+    T-M39-13, replayed with the origin's own numbers: session verification runs
+    of an uncommitted tree at an UNCHANGED count included a dirty 74.11s row —
+    across the ceiling-step boundary at 73.91s — landing after a clean 73.18s
+    row. Committed, it would have made the band unrepublishable: the clean row
+    is refused by item 3 (same-ceiling) (its 85 against the raw maximum's 90),
+    the dirty row by item 2 (cited-run) (a clean row predates it, judged as-of
+    the cited ts, so the refusal never expires), and item 4 (committed-ceiling)
+    demands a ceiling nobody measured on a committable tree. The 2026-08-27
+    discards are the same shape through the other consumer: a dirty 18.03s
+    outlier over a clean 17.05s row raises `required_by_adr013_rule` above the
+    committed ceiling at an unchanged count. A row a band could never legally
+    cite must not set the target bands are graded against; the citable maximum
+    is itself citable, so citing it is green by construction and the deadlock
+    cannot be assembled. What the ruling must NOT lose is asserted too: a later
+    CLEAN slower run still reddens, and at a fresh count — where every row is
+    dirty and therefore citable — the behaviour is exactly the old one.
+    """
+    wrong = []
+
+    def rows(*specs):
+        return [{"suite": "s", "total": 1, "passed": 1, "ts": ts, "wall_s": w,
+                 "dirty": d, "env": "local"} for ts, w, d in specs]
+
+    def cite(wall, ts, ledger, ceiling):
+        return _band_wrong({"s": ("local", 1, ts, wall, 1, 1)}, {"s": 1},
+                           {"s": ceiling}, ledger)
+
+    clean, outlier = ("1", 73.18, False), ("2", 74.11, True)
+    # 1. The deadlock, dead by construction: with the dirty outlier in the
+    #    ledger, at least one row must still be legally publishable. Every row
+    #    is tried as the candidate citation; before the §8 ruling every one was
+    #    red — the clean row on item 3 (same-ceiling) and item 4
+    #    (committed-ceiling), the dirty row on item 2 (cited-run) — so no edit
+    #    to ADR-019 §2 could go green (T-M39-13's Repro).
+    ledger = rows(clean, outlier)
+    verdicts = {ts: cite(w, ts, ledger, 85.0) for ts, w, _ in (clean, outlier)}
+    if not any(v == [] for v in verdicts.values()):
+        wrong.append({"no_publishable_citation_exists": verdicts})
+    # 2. Negative control: with the outlier absent, the clean citation is green
+    #    — so what is pinned is the deadlock, not band grading generally.
+    control = cite(73.18, "1", rows(clean), 85.0)
+    if control:
+        wrong.append({"clean_citation_red_without_the_outlier": control})
+    # 3. The other consumer, with the 2026-08-27 numbers: a dirty outlier at a
+    #    count that has an earlier clean row must not raise
+    #    `required_by_adr013_rule` above what the clean row derives.
+    ratchet = cite(17.05, "1", rows(("1", 17.05, False), ("2", 18.03, True)),
+                   20.0)
+    if any("required_by_adr013_rule" in w for w in ratchet):
+        wrong.append({"dirty_outlier_ratcheted_the_committed_ceiling": ratchet})
+    # 4. The documented intended cost survives: a later CLEAN slower run is
+    #    citable, moves the citable maximum, and reddens item 3 (same-ceiling)
+    #    on the next run — "a tree that got slower has to say so".
+    slower_clean = cite(73.18, "1", rows(clean, ("2", 74.11, False)), 85.0)
+    if not any("ledger_derives" in w for w in slower_clean):
+        wrong.append({"later_clean_slower_run_no_longer_reddens": slower_clean})
+    # 5. At a FRESH count every row is dirty, so every row is citable and the
+    #    dirty maximum governs, exactly as before §8 — citing it is green, and
+    #    citing a lower row still reddens item 3 (same-ceiling).
+    fresh = cite(74.11, "2", rows(("1", 73.18, True), outlier), 90.0)
+    if fresh:
+        wrong.append({"fresh_count_dirty_maximum_was_not_citable": fresh})
+    fresh_low = cite(73.18, "1", rows(("1", 73.18, True), outlier), 90.0)
+    if not any("ledger_derives" in w for w in fresh_low):
+        wrong.append({"fresh_count_low_citation_stayed_green": fresh_low})
+    return {"passed": not wrong, "wrong": wrong}
 
 
 # ==== ADR-019 §6 band section: end ====
@@ -6648,6 +6747,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "published-band-slack": _check_published_band_slack,
               "published-band-environment": _check_published_band_environment,
               "published-band-ts": _check_published_band_ts_orders_real_time,
+              "published-band-citable": _check_published_band_citable,
               "ci-numbers-derived": _check_ci_numbers_are_derived,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,

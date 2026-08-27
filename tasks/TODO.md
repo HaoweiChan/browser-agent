@@ -316,6 +316,33 @@ document the step's target resolved in, and that a consequence painted elsewhere
 on the page needs a `wait_for` — or ADR-036's Consequences amended to state that
 the hatch is available to hand-written plans only, with the live cost declared."
 
+### T-M39-13-D1 — the PostToolUse invariant hook runs in `CLAUDE_PROJECT_DIR`, not in the worktree that was edited            [status: todo]
+Origin: T-M39-13's own implementation session, 2026-08-28, on worktree
+`.claude/worktrees/agent-ace9a347e9c59894c`.
+Priority: P2
+Spec: `.claude/hooks/post-edit-invariant.sh` matches on `*/src/*` and then does
+`cd "$CLAUDE_PROJECT_DIR"` before running `--suite invariant`. In a worktree
+session that directory is a DIFFERENT tree, so every edit under `src/` in the
+worktree graded some other checkout: throughout this task the hook reported
+`invariant: 82/83` — a case count this branch had not had since the first
+commit — while the worktree itself was at 84/84. Two costs, and the second is
+the one that matters. The feedback is noise an implementer has to learn to
+ignore, which is how a real red gets ignored too; and the hook APPENDS a
+history row to the other tree's `evals/report/history.jsonl` on every edit, so
+a worktree session silently writes rows into a ledger it is not working in —
+rows nobody in that session will restore away, at whatever case count that tree
+happens to be at. That is the T-M38-5 stray-row problem arriving from outside
+the session entirely, and no `--no-history` opt-out reaches it.
+Repro: edit any file under `src/` from a worktree-isolated session and compare
+the hook's `[eval] suite 'invariant': N/M` against
+`.venv/bin/python -m evals.run --suite invariant` run in the worktree; then
+`git status` the OTHER checkout's `history.jsonl`.
+Acceptance: the hook resolves the tree from the edited file's path (its own
+`$file` is already absolute) rather than from `CLAUDE_PROJECT_DIR`, or refuses
+to run when the two disagree — with a case pinning whichever rule is chosen.
+NOT fixed here: this is harness configuration, outside T-M39-13's diff, and
+changing a hook from inside a task branch is the wrong place for it.
+
 ### M44-P1-D4 — item 12's rule is still not true of the file it governs            [status: todo]
 Origin: PR #65 R9 (LOW, routed debt).
 Spec: item 12's opening states a rule about its own file — a ledger MAXIMUM stated
@@ -2317,7 +2344,18 @@ citation conjunct below"), matching what ADR-030 and support-matrix D30 now do;
 per site: an ordinal into a list nothing derives is a re-typed number, and this
 is the fourth one this PR found.
 
-### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: todo]
+### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: pr]
+Status 2026-08-28: ruled on in ADR-019 §8 — item 3 (same-ceiling) and item 4
+(committed-ceiling) grade a band against the slowest CITABLE row, which is item
+2 (cited-run)'s own dirty test applied to every row, so the citable maximum is
+itself citable and a publishable citation always exists. Acceptance option (b),
+refined to cover BOTH consumers of `slowest` after the 2026-08-27 discards
+showed the same deadlock arriving through item 4 (committed-ceiling). Pinned by
+`band-is-graded-against-the-citable-maximum`, watched red on the Repro below
+first. Answer to the block's open question, recorded in §8: every run still
+appends (ADR-012 unchanged) and only citable rows govern a band, so `T-M38-5`'s
+by-hand restore stays ledger hygiene rather than band arithmetic — its
+`--no-history` opt-out remains that task's scope.
 Origin: the ADR-027 planning commit, 2026-08-25, on a worktree of this branch.
 Observed live, then backed out rather than committed.
 Priority: P1
