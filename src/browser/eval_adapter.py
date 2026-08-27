@@ -6034,6 +6034,39 @@ def _check_version_never_guesses() -> dict:
                     "env_names_set": list(ENV_NAMES)}}
 
 
+# Self-test rows in `_check_build_sha_is_derived`, counted in one place because
+# two documents stated ELEVEN while the loop held TEN, and the missing row was
+# the one guarding a property the resolution artifact claimed was fixed
+# (PR #67 R11). The check reads this back against the loop, so the number cannot
+# drift from the list again.
+_BUILD_SHA_SELF_TEST_ROWS = 20
+
+
+def _build_sha_mutation_row(text: str, name: str, old: str, new: str,
+                            conjunct: str | None) -> dict:
+    """One self-test row: mutate the real Dockerfile, assert what the check says.
+
+    `conjunct` names the key that must appear in `wrong`; `None` means the
+    mutation is a CORRECT Dockerfile and nothing may fire. The substitution is
+    asserted rather than assumed — a row whose `old` has been renamed out of the
+    file silently exercises an unmutated copy, which is the one failure an
+    exercise set cannot report about itself.
+    """
+    if old not in text:
+        return {f"mutation_{name}_is_vacuous": f"{old!r} is not in the Dockerfile"}
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "Dockerfile"
+        p.write_text(text.replace(old, new, 1), encoding="utf-8")
+        got = _check_build_sha_is_derived(dockerfile=p, shape_only=True)["wrong"]
+    if conjunct is None and got:
+        return {f"mutation_{name}_falsely_red": {"mutation": f"{old} -> {new}",
+                                                 "wrong": got}}
+    if conjunct is not None and conjunct not in got:
+        return {f"mutation_{name}_not_caught": {"mutation": f"{old} -> {new}",
+                                                "expected_conjunct": conjunct}}
+    return {}
+
+
 def _dockerfile_copies(text: str) -> list[dict]:
     """Every `COPY`/`ADD` line as `{sources, dest, flags, line}`, normalised.
 
@@ -6056,7 +6089,13 @@ def _dockerfile_copies(text: str) -> list[dict]:
     (PR #67 R6).
     """
     out = []
-    for m in re.finditer(r"(?m)^(?:COPY|ADD)\s+([^\n]*)$", text):
+    # Docker keywords are case-insensitive and may be indented, and a line
+    # continued with `\` is one instruction. A line this misses contributes no
+    # source, so the allowlist below cannot refuse it: the rule was default-red
+    # for lines the parser matched and default-GREEN for every line it did not
+    # (PR #67 R10). Continuations are joined first, for the same reason.
+    text = re.sub(r"\\\n[ \t]*", " ", text)
+    for m in re.finditer(r"(?mi)^[ \t]*(?:COPY|ADD)\s+([^\n]*)$", text):
         toks = m.group(1).split()
         flags = [t for t in toks if t.startswith("--")]
         paths = [t for t in toks if not t.startswith("--")]
@@ -6189,8 +6228,14 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None,
     #
     # ponytail: an allowlist means a legitimate new final-stage COPY is red
     # until someone adds it here. That is a false red in the SAFE direction —
-    # it fails closed and costs one deliberate edit — and it is exactly what
-    # lets the rule survive Docker syntax it has never seen. No escape hatch.
+    # it fails closed and costs one deliberate edit. What it buys is bounded and
+    # worth stating that way: every source the PARSER hands it must be listed,
+    # so a COPY/ADD spelling nobody here has written is refused rather than
+    # admitted. It buys nothing against an instruction the parser does not read
+    # — a `RUN --mount=type=bind,source=.git` puts the tree in the image with no
+    # COPY line at all, verified green here and declared in ADR-034 rather than
+    # chased, because that is a different instruction class and not one more
+    # spelling.
     SHIPPED = {"src/browser/requirements.txt", "src", "docs/support-matrix.md",
                "/BUILD_SHA"}
     unlisted = [{"line": c["line"], "sources": [s for s in c["sources"] if s not in SHIPPED]}
@@ -6254,7 +6299,7 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None,
     # passing on an unmutated copy.
     if dockerfile is None:
         SRC, FINAL = "COPY . /ctx", "COPY src/ /app/src/"
-        for name, old, new, conjunct in (
+        rows = (
                 # Round 1: the two shapes that were green on the first guards.
                 ("derive-stage-copies-a-subtree", SRC, "COPY src /ctx",
                  "derive_stage_never_copies_the_context"),
@@ -6286,22 +6331,55 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None,
                 # (PR #40 R1's lesson, which is why this list has both).
                 ("derive-stage-copies-the-context-trailing-slash", SRC, "COPY ./ /ctx", None),
                 ("derive-stage-copies-the-context-with-link", SRC, "COPY --link . /ctx", None),
-                ("derive-stage-copies-git-explicitly", SRC, "COPY .git /ctx/.git", None)):
-            if old not in text:
-                wrong[f"mutation_{name}_is_vacuous"] = f"{old!r} is not in the Dockerfile"
-                continue
-            with tempfile.TemporaryDirectory() as tmp:
-                p = Path(tmp) / "Dockerfile"
-                p.write_text(text.replace(old, new, 1), encoding="utf-8")
-                got = _check_build_sha_is_derived(dockerfile=p, shape_only=True)["wrong"]
-                if conjunct is None and got:
-                    wrong[f"mutation_{name}_falsely_red"] = {
-                        "mutation": f"{old} -> {new}", "wrong": got}
-                elif conjunct is not None and conjunct not in got:
-                    wrong[f"mutation_{name}_not_caught"] = {
-                        "mutation": f"{old} -> {new}", "expected_conjunct": conjunct}
+                ("derive-stage-copies-git-explicitly", SRC, "COPY .git /ctx/.git", None),
+                # Round 3, PR #67 R11: the row this list CLAIMED to have and did
+                # not. It guards the half of R8 the round-2 resolution said was
+                # fixed — that the derive conjunct reads every COPY into the
+                # context and not the first one it finds.
+                ("derive-stage-copies-the-context-second", SRC,
+                 "COPY src /ctx\nCOPY . /ctx", None),
+                # Round 3, PR #67 R10: the PARSER's own surface. Docker keywords
+                # are case-insensitive and may be indented, so a line the parser
+                # fails to match contributes no source and therefore cannot be
+                # unlisted — the allowlist was default-red only for lines it
+                # parsed and default-GREEN for every line it did not. Both
+                # directions again: five spellings that must be caught in the
+                # final stage, two that must not redden the derive stage.
+                ("final-stage-copies-the-context-lowercase", FINAL, "copy . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-mixed-case", FINAL, "Copy . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-adds-the-context-lowercase", FINAL, "add . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-indented-space", FINAL, " COPY . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-indented-tab", FINAL, "\tCOPY . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                # A COPY continued across a line break is one instruction; the
+                # parser reads lines, so this is the same hole spelled with a
+                # backslash. Found while fixing R10 rather than reported.
+                ("final-stage-copies-the-context-continued", FINAL, "COPY \\\n  . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("derive-stage-copies-the-context-lowercase", SRC, "copy . /ctx", None),
+                ("derive-stage-copies-the-context-indented", SRC, " COPY . /ctx", None))
+        for name, old, new, conjunct in rows:
+            wrong.update(_build_sha_mutation_row(text, name, old, new, conjunct))
+        # The vacuity guard, exercised rather than trusted. Every row above is
+        # only worth the substitution actually happening, so the guard that says
+        # so is itself a row: a mutation whose `old` is absent must report
+        # `_is_vacuous`. Without this the guard is the one piece of the exercise
+        # set nothing exercises — which is how the parser got here (PR #67 R10).
+        absent = _build_sha_mutation_row(text, "vacuity-guard",
+                                         "COPY __no_such_line__ /nowhere", "x", None)
+        if list(absent) != ["mutation_vacuity-guard_is_vacuous"]:
+            wrong["vacuity_guard_does_not_fire"] = absent or "an absent mutation reported nothing"
+        n_rows = len(rows) + 1
+        if n_rows != _BUILD_SHA_SELF_TEST_ROWS:
+            wrong["self_test_row_count_drifted"] = {
+                "rows": n_rows, "documented": _BUILD_SHA_SELF_TEST_ROWS}
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"stages": len(stages), "head_resolves": head_sha is not None}}
+            "got": {"stages": len(stages), "head_resolves": head_sha is not None,
+                    "self_test_rows": _BUILD_SHA_SELF_TEST_ROWS if dockerfile is None else 0}}
 
 
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,

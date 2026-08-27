@@ -80,3 +80,38 @@ limit ADR-033 ran under. What is exercised instead is the derivation command
 itself: `build-sha-is-derived-not-supplied` extracts it from the Dockerfile
 and runs it, against this repo's root (must write HEAD) and against a git-less
 directory (must exit 0 and leave the file empty).
+
+## What the `.git`-in-the-context tradeoff costs, and what the guard is worth
+
+This is a property of the decision, not a weakness of the check, so it is
+recorded here rather than only in a triage note. Deriving a sha requires `.git`
+in the build context. Once `.git` is in the context, **any instruction that can
+read the context can carry it into the final image** — that is what admitting it
+means, and no amount of guarding the Dockerfile's `COPY` lines changes it.
+
+So the two sentences a reader might take away are not equivalent, and only one
+of them is true:
+
+- TRUE — an accidental context copy is caught. `build-sha-is-derived-not-supplied`
+  reads every `COPY`/`ADD` in the final stage and refuses any source that is not
+  one of the four this image ships, across every spelling the parser reads:
+  case, indentation, line continuation, `--chown=`/`--link`/`--from=` flags, and
+  `ADD` as well as `COPY`. Thirteen bypasses are pinned red as self-test rows the
+  check runs on itself, and six correct spellings are pinned green.
+- NOT TRUE — that `.git` cannot reach the image. It can, through a path that has
+  no `COPY` line in it at all. Verified rather than argued:
+  `RUN --mount=type=bind,source=.git,target=/tmp/g cp -r /tmp/g /app/.git`
+  is GREEN against the case and puts the whole history in the image. A text scan
+  of `COPY`/`ADD` instructions cannot see that, and widening it to chase `RUN`
+  bodies is chasing an unbounded surface — `cp` from a mount, a clone, a fetch —
+  which is why this stops here. (`ARG`-substituted sources, heredoc `COPY`
+  forms and a lowercase `FROM` were probed in the same pass and all three fail
+  closed, loudly.)
+
+The upgrade that would make the stronger sentence true is a CI job that builds
+the image and asserts `/app/.git` does not exist — the only check that reads the
+artifact instead of the recipe. It is filed as `M44-P1-D8` rather than done
+here, with its cost recorded so the next session does not re-derive this: it
+needs a Docker build of the Playwright base in CI, and CI's wall clock is
+already under a separate breach on another line. Until it exists, the guarantee
+is the first bullet and the ADR says so in those words.

@@ -27,7 +27,7 @@
     {
       "id": "R4",
       "status": "debt",
-      "became": "M44-P1-D3",
+      "became": "M44-P1-D7 (logged as D3; renumbered in round 3 when the rebase onto da6d05b brought main's own M44-P1-D3)",
       "note": "Logged verbatim under `## Debt` with Origin: PR #67 R4. Not fixed here on the reviewer's routing; the failure direction is a red on a correct tree, never a false green."
     },
     {

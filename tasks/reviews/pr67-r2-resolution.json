@@ -31,6 +31,7 @@
       "what_changed": "The PR #67 R5 widening now sits on its own `Second instance (PR #67 R5, outside the quoted finding above, which predates it):` line after the closing quotation mark. Everything inside the Evidence quotes is again what PR #65 R4 actually wrote."
     }
   ],
-  "self_test_rows": "Eleven, run by the check itself on every invocation against a mutated copy of the real Dockerfile: seven that must be RED on a named conjunct, four that must stay CLEAN. Each asserts its own substitution happened — a string absent from the Dockerfile reports `mutation_..._is_vacuous` rather than silently passing on an unmutated copy. They run `shape_only`, so the eleven extra invocations spawn no subprocesses and the invariant wall clock is unmoved.",
-  "not_changed": "ADR-019 §3's band (ts 20260827-202417) and the history.jsonl rows, per the round-2 instruction. No published number moved this round: the case count is still 84."
+  "self_test_rows": "Ten at round 2 -- this artifact said eleven, and the missing one guarded the every-COPY half of R8 (PR #67 R11, fixed in round 3; the count is now a constant the check reads back against its own loop, and stands at twenty).",
+  "not_changed": "ADR-019 §3's band (ts 20260827-202417) and the history.jsonl rows, per the round-2 instruction. No published number moved this round: the case count is still 84.",
+  "superseded_by": "tasks/reviews/pr67-r3-resolution.json for the parser surface (R10) and the row count (R11)."
 }

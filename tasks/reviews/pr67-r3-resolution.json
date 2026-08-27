@@ -1,0 +1,54 @@
+{
+  "pr": 67,
+  "round": 3,
+  "task": "M44-P1",
+  "resolved_at_head": "6bb5c12",
+  "rebased_onto": "da6d05b",
+  "resolutions": [
+    {
+      "id": "R10",
+      "status": "fixed",
+      "covered_by": "_dockerfile_copies (the shared parser); self-test rows final-stage-copies-the-context-{lowercase,mixed-case,indented-space,indented-tab,continued}, final-stage-adds-the-context-lowercase, derive-stage-copies-the-context-{lowercase,indented}",
+      "what_changed": "One regex on the shared parser, so both conjuncts move together: `(?mi)^[ \\t]*(?:COPY|ADD)\\s+`. Line continuations are joined first (`re.sub(r\"\\\\\\n[ \\t]*\", \" \", text)`) — a sixth final-stage spelling found while fixing rather than reported: `COPY \\` + newline + `  . /app/` was green too.",
+      "watched_red": "All eight reviewer spellings were added as self-test rows and watched RED against the unfixed parser BEFORE the regex changed: five `_not_caught` rows in the final stage (`copy . /app/`, `Copy . /app/`, `add . /app/`, ` COPY . /app/`, tab-indented) plus the continuation row, and two `_falsely_red` rows in the derive stage (`copy . /ctx`, ` COPY . /ctx`, each reporting `derive_stage_never_copies_the_context` with `copies: null`).",
+      "why_it_mattered": "A line the parser failed to match contributed no source, so the allowlist could not refuse it: default-red for lines it parsed, default-GREEN for every line it did not. Same fail-open-and-fail-closed signature that retired the denylist a round earlier, one layer down."
+    },
+    {
+      "id": "R11",
+      "status": "fixed",
+      "covered_by": "self-test row derive-stage-copies-the-context-second; _BUILD_SHA_SELF_TEST_ROWS",
+      "what_changed": "The absent row is added (`COPY . /ctx` -> `COPY src /ctx\\nCOPY . /ctx`, must stay clean), and the count is no longer retyped anywhere: `_BUILD_SHA_SELF_TEST_ROWS = 20` is read back against the loop's own length, so a document and the list cannot disagree again. Twenty = 13 rows that must be red on a named conjunct + 6 that must stay clean + the vacuity guard.",
+      "watched_red": "Against a first-match-only read of the same parser (the pre-round-2 behaviour the row exists to guard): `{'mutation_derive-stage-copies-the-context-second_falsely_red': {'wrong': {'derive_stage_never_copies_the_context': {'context': '/ctx', 'copies': ['src'], ...}}}}`. Both documents that said ELEVEN are corrected — the case's ceiling (8) and pr67-r2-resolution.json."
+    }
+  ],
+  "condition_1_parser_surface_under_executed_self_test": {
+    "status": "met",
+    "detail": "The parser's own surface is now eight of the twenty rows (case: lowercase/mixed/lowercase-ADD; whitespace: leading space, leading tab; continuation; plus the two derive-stage over-fire rows). The vacuity guard is itself a row, because it was the one piece of the exercise set nothing exercised: an absent mutation must report exactly `mutation_vacuity-guard_is_vacuous`, and the check reddens if it reports anything else. Demonstrated standalone: `_build_sha_mutation_row(orig, 'demo', 'COPY __absent__ /x', 'y', None)` -> `{'mutation_demo_is_vacuous': \"'COPY __absent__ /x' is not in the Dockerfile\"}`."
+  },
+  "condition_2_coverage_sweep": {
+    "status": "met, re-run on the rebased tree",
+    "lines_swept": 12,
+    "same": ["COPY .git /app/.git", "COPY ./.git /app/.git", "COPY --from=build-identity /ctx/.git /app/.git", "COPY .git/HEAD /app/HEAD", "COPY --chown=pwuser .git /app/.git"],
+    "stronger_than_the_retired_scan": ["ADD .git /app/.git", "copy .git /app/.git", " COPY .git /app/.git", "\tADD .git /app/.git", "COPY \\\n  .git /app/.git", "Copy .git /app/.git"],
+    "declared_divergence": "COPY src/ /app/.git — an ALLOWED source copied to a destination merely named `.git`: red under the retired substring scan, green here. Unchanged from round 2 and still the only one; git history reaches an image through a SOURCE, not through a destination's name. Declared as the case's ceiling (7).",
+    "new_undeclared_divergences": "none"
+  },
+  "condition_3_report_even_if_clean": {
+    "status": "met",
+    "detail": "Reported in full, including the one bypass that is NOT fixed and the renumbering the rebase forced."
+  },
+  "run_mount_bypass": {
+    "status": "accepted, not patched — per the round-3 ruling",
+    "probe": "RUN --mount=type=bind,source=.git,target=/tmp/g cp -r /tmp/g /app/.git",
+    "result": "{'passed': True, 'wrong': {}} — the whole history in the image, with no COPY line for the parser to read.",
+    "fail_closed_neighbours": "ARG-substituted source (COPY ${SRC} /app/), heredoc COPY, and a lowercase FROM were probed in the same pass; all three are red.",
+    "recorded_in": "ADR-034 section 'What the `.git`-in-the-context tradeoff costs, and what the guard is worth' (structural: admitting `.git` to the context is what makes any context-reading instruction able to carry it, so this is a property of the tradeoff), the case's ceiling (9), and debt M44-P1-D8 with the probe verbatim and the CI cost note.",
+    "framing": "The guarantee is stated as 'an accidental context copy is caught', NOT '`.git` cannot reach the image'. ADR-034 gives both sentences and says which one is true."
+  },
+  "rebase_bookkeeping": {
+    "case_counts": "verified independently on the rebased tree via evals.run.load_cases: invariant 84, fast 229 — unmoved, so the published band and its citation still hold.",
+    "band": "ADR-019 §3 still cites ts 20260827-202417, 16.18s, 84/84; the row and its report file both survived the union merge (verified: row present, 2173 ledger rows parse).",
+    "id_collision": "The rebase brought main's own M44-P1-D3, which another block's Acceptance already cites, colliding with the D3 this PR logged in round 1. The incoming id keeps the number; this PR's block is renumbered M44-P1-D7 and pr67-r1-resolution.json records the move. The new CI-image-build debt is M44-P1-D8 — D4/D5/D6 also arrived from main.",
+    "do_not_cite": "20260827-205100 is cited nowhere. Observed in passing: it is written by the PostToolUse hook running the suite in the MAIN checkout with the system python, where fastapi/uvicorn/playwright are absent, so every non-pure case errors — that is where 43/82 comes from."
+  }
+}

@@ -263,8 +263,39 @@ figures, the boundaries, the derivation products) and would mean restructuring
 prose this task is a guest in. Take it when §2/§3 are being rewritten for another
 reason, not on its own.
 
-### M44-P1-D3 — the derive-command probes build a shell string by raw replace            [status: todo]
-Origin: PR #67 R4
+### M44-P1-D8 — nothing reads the built image, only the recipe            [status: todo]
+Origin: PR #67 R10 (disposition, round 3)
+Priority: P2
+Spec: `build-sha-is-derived-not-supplied` is a text scan of the Dockerfile's
+`COPY`/`ADD` instructions. It catches an accidental context copy across every
+spelling its parser reads, and it does NOT establish that `.git` cannot reach
+the image — which is a property of admitting `.git` to the build context at all
+(ADR-034, "What the `.git`-in-the-context tradeoff costs"), not a defect in the
+check. The probe, verbatim, run against the shipped Dockerfile with the final
+stage's `COPY src/ /app/src/` replaced by:
+`RUN --mount=type=bind,source=.git,target=/tmp/g cp -r /tmp/g /app/.git` ->
+`{'passed': True, 'wrong': {}}`, with the whole history in the image. Probed in
+the same pass and all failing CLOSED: an `ARG`-substituted source
+(`COPY ${SRC} /app/`), a heredoc `COPY`, and a lowercase `FROM`.
+Not fixed here, and the reason is cost rather than doubt: the only check that
+settles it reads the ARTIFACT instead of the recipe — a CI job that builds the
+image and asserts `/app/.git` does not exist — which needs a Docker build of the
+Playwright base (`mcr.microsoft.com/playwright/python:v1.49.0-noble`) in CI,
+where the wall clock is already under a separate breach on another line (86
+`invariant` cases at 26.97s against a 25s budget). Chasing `RUN` bodies in text
+instead was rejected: `cp` from a mount, a clone and a fetch are an unbounded
+surface, and a guard that cannot enumerate its own surface is the denylist this
+PR spent two rounds removing.
+Acceptance: a CI step builds the image and fails if `/app/.git` exists (`test !
+-e`), run on the same trigger as the eval gate or on a schedule if the wall
+clock cannot take it; ADR-034's two-sentence framing then moves from "an
+accidental context copy is caught" to the stronger one, and this block says which
+run demonstrated it.
+
+### M44-P1-D7 — the derive-command probes build a shell string by raw replace            [status: todo]
+Origin: PR #67 R4 (renumbered D3 -> D7 in PR #67 round 3: the rebase onto
+`da6d05b` brought main's own `M44-P1-D3`, which another block's Acceptance
+already cites, so the incoming id keeps the number)
 Priority: P3
 Spec: verbatim from the finding. The executed probes in
 `_check_build_sha_is_derived` substitute paths into the extracted command with
