@@ -83,6 +83,37 @@ strategy change failed to move it, rather than grinding the budget in a circle;
 and per-run cost is visible in the trace, which is its own clause and IS met.
 Also recorded, not a defect: loop mode cost 100-300x mode B per run
 ($0.4830-$0.9166 vs $0.0015-$0.0043). Total smoke spend ~$1.90.
+Update 2026-08-27 — LOCAL LIVE DEMONSTRATION, and a correction to this block's
+own smoke. Run on the fixed branch tree against the real inspector, 3 reps per
+mode, real LLM (`anthropic/claude-opus-5` for loop), `OPENROUTER_API_KEY` from
+the interactive shell:
+
+| mode | correct | cost | actions |
+|---|---|---|---|
+| plan | **0/3** | $0.0101 | 5 / 5 / 1 |
+| loop | **3/3** | $0.4652 | 6 / 6 / 8 |
+
+Loop mode answered `doc_status: success_with_warning — 19 extracted · 4
+incorporated_by_reference` on every rep; ground truth `counts.extracted = 19`
+from the inspector's own API. Mode B failed 3/3 — D28's declared boundary, met.
+**This is M42's headline capability demonstrated for the first time**: the S1
+shape mode B cannot plan, answered under loop mode. It is a LOCAL run of the
+branch, not the deployment (which still serves pre-fix `main`), so the
+acceptance clause's "against the deployment, run ids published" half remains
+open until this merges and Zeabur redeploys.
+
+CORRECTION to the smoke recorded above: the original task — "report the period
+end date" — was UNANSWERABLE. `period_end` appears only in the JSON of
+`/api/extract/fixture`; the rendered page never contains it or the string
+`2024-01-28`. Ground truth was taken from the API without checking the UI
+displays it, so the six deployment runs and the first six local runs were all
+graded against something no agent could read off the page. What that does NOT
+invalidate: the root cause, which was reproduced directly at the `resolve()`
+level independent of any task, and the finding that both modes died AT
+resolution before reaching an answer. What it does invalidate: any conclusion
+that loop mode could not answer an S1 task — that was never tested until now,
+and the answer is that it can.
+
 Acceptance: TWO red-first cases, both red today, both required (rule 2):
 (a) a fixture whose label carries `text-transform: uppercase`, where the case
 feeds the OBSERVED name back into `resolve` — this is the root cause above;
