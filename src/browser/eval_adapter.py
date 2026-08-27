@@ -11,6 +11,7 @@ Case kinds (`input.kind`):
                    the INVARIANTS registry at the foot of this file, which is the list —
                    so this line cannot go stale by omitting a check
 - `adr-header-index` — decision-first ADR header + INDEX.md hygiene (no browser)
+- `id-uniqueness` — task ids and ADR numbers are singletons in their id spaces (no browser)
 - `observe`      — a11y observation shape
 - `url-guard`    — SSRF guard truth table
 - `screening`    — pre-flight scope screen truth table
@@ -2965,6 +2966,63 @@ def _run_adr_header_index_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong,
             "got": {"adr_files": len(adr_files), "index_entries": len(index_nums),
                     "adr_citations_seen": resolved, "files_scanned": len(citing)}}
+
+
+def _run_id_uniqueness_case(case: dict) -> dict:
+    """Every task id and every ADR number is a singleton — nothing else grades that.
+
+    The failure mode is the absence of a merge conflict: two branches allocate
+    the same id, git auto-merges clean, both suites stay green. Three instances
+    on this repo before this probe existed: `T-M39-1` defined differently on
+    two branches and carried under one id until a hand renumber; ADR-023
+    allocated by two PRs at once (caught by a hand grep, one vacated to
+    ADR-026); ADR-028 allocated by PR #56 and PR #57 (caught only because
+    `adr-header-and-index` gates INDEX.md rows). tasks/DONE.md meanwhile
+    acquired six duplicate ids via three branches doing the same housekeeping.
+    The asymmetry T-M39-15 names: the ADR/INDEX half was gated, the task-id
+    half by nothing — a duplicate `- M39 — ...` line left every suite green.
+
+    Pure code, no browser: `### <id> —` headers in tasks/TODO.md and
+    `- <id> —` lines in tasks/DONE.md must each be unique, and no id may be in
+    both files (open and done at once — the shape d366e1f cleaned by hand).
+    ADR numbers must be unique across specs/decisions/ADR-0NN-*.md filenames
+    and across INDEX.md rows; the filename half is the one two files with the
+    same NN and different slugs slip past `adr-header-and-index`, whose
+    completeness checks compare sets.
+    """
+    import re
+    from collections import Counter
+
+    root = Path(__file__).parents[2]
+
+    def dups(ids):
+        return sorted(i for i, n in Counter(ids).items() if n > 1)
+
+    todo = (root / "tasks" / "TODO.md").read_text(encoding="utf-8")
+    done = (root / "tasks" / "DONE.md").read_text(encoding="utf-8")
+    # Conservative extraction: id = the single token between the marker and
+    # the em-dash separator every real block/line uses. Prose bullets without
+    # an ` — ` after the first token are not id lines and stay out.
+    todo_ids = re.findall(r"^### (\S+) — ", todo, re.M)
+    done_ids = re.findall(r"^- (\S+) — ", done, re.M)
+
+    adr_nums = [m.group(1)
+                for p in sorted((root / "specs" / "decisions").glob("ADR-*.md"))
+                if (m := re.match(r"ADR-(\d+)", p.name))]
+    index_path = root / "specs" / "decisions" / "INDEX.md"
+    index_text = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
+    index_nums = re.findall(r"^- ADR-(\d+)", index_text, re.M)
+
+    wrong = {k: v for k, v in {
+        "duplicate_todo_ids": dups(todo_ids),
+        "duplicate_done_ids": dups(done_ids),
+        "in_todo_and_done": sorted(set(todo_ids) & set(done_ids)),
+        "duplicate_adr_filenames": dups(adr_nums),
+        "duplicate_index_rows": dups(index_nums),
+    }.items() if v}
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"todo_ids": len(todo_ids), "done_ids": len(done_ids),
+                    "adr_files": len(adr_nums), "index_entries": len(index_nums)}}
 
 
 def _run_readyz_case(case: dict) -> dict:
@@ -6743,6 +6801,7 @@ KINDS = {
     "ablation-run-one": _run_ablation_run_one_case,
     "ablation-table": _run_ablation_table_case,
     "adr-header-index": _run_adr_header_index_case,
+    "id-uniqueness": _run_id_uniqueness_case,
     "readyz-transitions": _run_readyz_case,
     "smoke-guard": _run_smoke_guard_case,
     "soak-accounting": _run_soak_accounting_case,

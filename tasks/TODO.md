@@ -505,6 +505,116 @@ Acceptance: the sleep is gone, a build mismatch fails the job with both shas in
 the log, and `unavailable` fails it separately with a message naming the Zeabur
 build-argument question — watched red by pointing the check at a sha that is not
 deployed.
+### T-M39-15-D1 — three committed ledger rows at 230 `fast` cases pre-poison the next `fast` case's band            [status: todo]
+Origin: T-M39-15, while tagging its case. `evals/report/history.jsonl` carries
+three local `fast` rows at total 230 from the mid-PR tree `050d654`
+(ts `20260827-022652`/`022831`/`023132`, slowest **91.76s**) — a tree that was
+never merged at that count; main ships 229. The band machinery pools ledger
+rows by (suite, environment, case count) only, so the moment any branch adds a
+230th `fast` case, `published-band-matches-the-ledger` items 3 and 4 derive its
+ceiling from 91.76s, which under ADR-013's rule is 110 — above the committed
+105 — and the gate demands a ceiling amendment that branch never measured.
+T-M39-15 dodged it by tagging its 0.0s probe `invariant`-only (disclosed in
+ADR-019 §3's bullet), which is a dodge, not a fix: the next contributor with a
+genuinely `fast`-shaped case inherits the trap.
+Priority: P2
+Spec: decide what a ledger row from an abandoned case count means — prune the
+three rows under ADR-012's authority with the reason recorded, or amend the
+band rule to scope rows by more than count, or accept and pre-write the 110
+amendment. A decision, so an ADR either way.
+Acceptance: a 230th `fast`-tagged case can pass the gate without inheriting a
+ceiling move its change did not measure — or an ADR says why it must.
+
+### T-M39-15-D2 — the way this repo actually collides is two clean branches, and no in-tree case can see that            [status: todo]
+Origin: T-M39-15, cross-branch near-miss 2026-08-28 (decision number 034
+double-claimed, arbitrated to 034/035).
+Note on spelling: the two numbers below are written as bare numbers, never in
+the canonical `ADR-0NN` form, because neither decision exists in THIS tree —
+they live on unmerged branches, and `adr-header-and-index` resolves every
+canonical citation against `specs/decisions/`. Writing them the normal way
+reddens the gate, which is this block's own subject demonstrating itself: an
+in-tree check cannot see an out-of-tree number. Same convention, same reason,
+as that case's provenance describing its mutations rather than quoting them.
+Priority: P2
+Spec: `task-and-adr-ids-are-unique` closes the in-tree half — duplicate ids
+inside `tasks/TODO.md`, `tasks/DONE.md`, `specs/decisions/` filenames and
+INDEX.md rows. It cannot close the half that actually produces the collisions.
+Minutes after that case went green, `task/M44-P1-derived` and `task/M43` both
+moved to claim decision number **034**; the orchestrator caught it only by
+holding the cross-branch view and arbitrated M43 to 035. The property that
+matters: the collision was undetectable from inside either worktree. 034 lived
+on an unmerged branch, so it was in neither tree's `specs/decisions/` listing nor
+either rebased INDEX.md; both trees were internally consistent and both passed
+every check that reads the working tree. PR #45's seven duplicate ids arrived
+the same way, each through a separately-clean branch. The only free moment to
+catch this is allocation time, before either branch has spent a round on the
+number.
+**Two points on the same timeline, both 2026-08-28, and the cost is the
+argument.** (i) The 034 double-claim above was caught before either branch
+committed, by a session holding the cross-branch view: cost one message, and
+the arbitration to 034/035. (ii) `ADR-033` reached an OPEN pull request. PR #66
+(`task/T-M42-4`) adds `specs/decisions/ADR-033-postcondition-document-scope.md`
+while `origin/main` already carries `ADR-033-build-identity-endpoint.md` from
+merged PR #65; its title carries the number too. Cost there is a renumber, a
+reference sweep, a force-push and a re-review. Same blind spot, and it gets
+more expensive the later it is caught.
+**What the case does and does not do for instance (ii), stated exactly.** It
+does NOT catch it at authoring time, and no in-tree case could: PR #66's
+merge-base is `fd3ae2a`, the commit BEFORE PR #65 merged its ADR-033, and
+`git ls-tree` on that branch shows exactly ONE ADR-033 file. On the author's
+own tree `task-and-adr-ids-are-unique` is GREEN, correctly, because that tree
+holds no duplicate. What the case does is convert a silent duplicate into a
+loud gate failure at rebase/merge-prep time — the first moment one tree holds
+both files, which for PR #66 is forced anyway since it is `CONFLICTING`/`DIRTY`.
+Verified on the two trees: each carries one ADR-033 file and one `- ADR-033`
+INDEX row, so the rebased union carries two of each and reddens
+`duplicate_adr_filenames` and `duplicate_index_rows` together. Authoring-time
+detection is exactly and only what this block's SPEC-phase check can give,
+which is why instance (ii) strengthens D2 rather than the case.
+**And the condition that hides the id hides the gate evidence too.** PR #66 is
+`CONFLICTING`, and a conflicting PR runs no CI at all, silently. So the tree
+carrying the duplicate number also carries no eval-gate evidence and shows no
+red check to signal either problem — the class is more dangerous than "an id is
+wrong", because one condition produces both the collision and the absence of
+anything that would report it.
+Acceptance (1): the pr-loop SPEC phase refuses or warns when a task is about to
+claim an ADR number already claimed on an unmerged `task/*` branch — e.g.
+`git ls-remote --heads origin` plus a grep of those branches for the number —
+watched red by staging two branches that claim one number.
+Acceptance (2): the same warning when an unmerged `task/*` branch already
+touches the DERIVED-NUMBERS surface the task is about to edit (ADR-019 §3,
+ADR-029 §2, README's band rows). It is the same blind spot with a second
+colliding surface: two branches editing that surface collide exactly as two
+branches allocating one number do — silently, both trees internally consistent.
+This clause now has TWO independent instances, not one. PR #66 edits
+`ADR-019`, `ADR-029`, `README.md` and `docs/analysis.md` from base `fd3ae2a`,
+so it has never seen PR #65's republish either, and is on course for exactly
+the rebase-with-conflicts and the same three red derived-number cases
+(`published-band-matches-the-ledger`, `adr029-scope-matches-the-suites`,
+`docs-numbers-are-derived`) this branch has just worked through — a second
+branch colliding on the same surface, discovered the same day, by the same
+absence of a cross-branch view.
+Both failure modes materialised on 2026-08-28, with five parallel lines live and every one
+blind to the others: (i) `task/M44-P1-derived` and `task/M43` both moved to
+claim decision number 034, arbitrated to 034/035; (ii) PR #65 republished the identical
+band numbers this branch had already republished at 83. What that cost, as it
+actually landed: one rebase with five conflicts and three red derived-number
+cases (`published-band-matches-the-ledger`, `adr029-scope-matches-the-suites`,
+`docs-numbers-are-derived`), plus an arbitration that happened only because a
+session outside every worktree could see both branches.
+Three constraints on the fix, recorded so the next session does not rediscover
+them:
+1. It belongs at the pr-loop SPEC-phase layer, NOT the eval layer. An
+   `invariant` case is loopback-only by design and must stay that way;
+   `git ls-remote` is a network operation. Widening
+   `task-and-adr-ids-are-unique` to cover this cannot be done — stated here so
+   that is learned before the attempt, not during it.
+2. Only worth building if it fires when the number or the surface is CHOSEN,
+   the one moment the fix is free. A warning at merge time tells you what the
+   conflict already told you.
+3. The `pr-loop` skill lives in the **groundwork plugin, not this repo**, so
+   this is a cross-repo change. Known now rather than discovered mid-loop.
+This block is the record; the fix lands in the plugin.
 
 ### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]
 Origin: T-M42-20, while writing case (a). The defect it caught — two different
@@ -907,7 +1017,7 @@ paying for the discovery again — `.claude/skills/eval-protocol/` is the place.
 The rule-set change the original spec contemplated is NOT wanted: §6 item 2 is
 right and the block was reading it as a bug.
 
-### T-M39-15 — nothing grades task-id or ADR-number uniqueness, so both collide silently            [status: todo]
+### T-M39-15 — nothing grades task-id or ADR-number uniqueness, so both collide silently            [status: in-progress]
 Origin: PR #44 pass-5 merge, found by the pr-loop verification agent while
 computing over the merged trees (credited at the request of the session that
 hit the second instance).
