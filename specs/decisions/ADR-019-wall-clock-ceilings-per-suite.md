@@ -91,23 +91,40 @@ repo's ledger and nothing else.
   the addition forces. Here the addition is T-M42-20's cases across three commits:
   two red-first cases for the defect that left M42's headline live clause unmet, five
   more in PR #60's round-1 repair and five in round 2's, most of them red-first cases
-  for regressions an earlier fix introduced. **State the margin against the ledger's
+  for regressions an earlier fix introduced. **Read the margin against the ledger's
   MAXIMUM, not against this published number** (PR #60 R13): the rule gives 105 for
-  anything up to 91.30s and the slowest row at this count is the 91.04s cited above,
-  so the real margin is 0.26s. **The committed ledger also holds three rows at 230
-  cases — 90.65, 91.06 and 91.76s — and they are the reason this suite is 229 and not
-  230.** PR #60's round-3 repair briefly put one more case in `fast`, the tree measured
-  91.76s, and the rule derives **110** from that: a ceiling nobody has committed, which
-  is an ADR and not an edit. The case moved to `invariant`, where its four siblings
-  already are, and `fast` is byte-for-byte the 229-case tree those five rows measured.
-  Three rounds running the band has decided a suite tag rather than a reviewer doing it,
-  and those 230-case rows stay in the ledger because they are the evidence for the
+  anything up to 91.30s, and that boundary — not any figure retyped here — is what to
+  measure against. The maximum itself is deliberately not written down, the same rule
+  §3's bullet states and for a harder reason than symmetry: this bullet DID carry one,
+  with the margin it implied, and M44-P1's own gate runs moved the maximum and shrank
+  that margin sixty-fold while the same diff edited the next sentence and left this one
+  alone (PR #65 R1) — then reported it as a hazard the PR had found rather than one it
+  had caused. A maximum has no republication step to catch a stale copy, because any run
+  moves it — so where one has to be stated it wears item 12 (ledger-max)'s marker and is
+  read back against `history.jsonl` on every run, and
+  `published-band-matches-the-ledger` prints `ledger_slowest` for anyone who wants the
+  arithmetic. **The committed ledger also holds rows at 230 cases, and they are the
+  reason this suite is 229 and not 230.** PR #60's round-3 repair briefly put one more
+  case in `fast` and the tree's slowest run at that count — (ledger max — `fast` at 230
+  cases: **91.76s**) — derives **110**: a ceiling nobody has committed, which is an ADR
+  and not an edit. The case moved to `invariant`, where its four siblings already are,
+  and `fast` is byte-for-byte the 229-case tree those rows measured.
+  Four rounds running the band has decided a suite tag rather than a reviewer doing it:
+  M44-P1 asked the same question from the other side — with its case in `fast` the tree
+  ran 230 cases INSIDE the band, while the marked maximum above still derives 110, so
+  ADR-033 Decision 4 followed this ruling rather than re-opening it on a faster sample.
+  The four individual 230-case wall clocks this bullet used to list are gone with the
+  same edit: four numbers nothing read back, one of them added by M44-P1's own diff, is
+  the defect above wearing a plural (PR #65 R5).
+  Those 230-case rows stay in the ledger because they are the evidence for the
   ceiling decision `T-M42-20-D3`/`-D9` ask for. Which OTHER rows sit at this count, and in what order,
   is deliberately not written here — the same rule §3 states, and the sentence that
   used to enumerate them named a row measured three minutes BEFORE the band row as
   though it followed it, missed a third row entirely, and omitted the one README
-  cites (PR #60 R17). `published-band-slack-is-declared` prints the ledger's own
-  arithmetic for anyone who wants it. Round 3 removed more wall clock than it added
+  cites (PR #60 R17). `published-band-matches-the-ledger` prints `ledger_slowest`, the
+  ledger's own arithmetic, for anyone who wants it — NOT
+  `published-band-slack-is-declared`, which this sentence named for one round and which
+  never opens `history.jsonl` at all (PR #65 R6). Round 3 removed more wall clock than it added
   — the select step got its own 1s budget instead of borrowing `SETTLE_BUDGET_MS`,
   and `LATE_OPTIONS_DELAY_S` went 0.5s -> 0.3s — and the suite is still one bad run
   from the next step; `T-M42-20-D3` and `-D9` are that debt and
@@ -141,7 +158,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 229 cases, 226/229) and
-(restated — `invariant`: 82 cases, 80/82) — are graded against the bullets they
+(restated — `invariant`: 83 cases, 83/83) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -286,20 +303,36 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 82 cases, ts `20260827-023305`, **16.19s**, 80/82
-  (`dirty: true`, and red, for the same structural reason §2's is and stated the
-  same general way: a tree reaches its new case count only while the cases are
-  uncommitted, so 82 exists only while PR #60's invariant-tagged additions are —
-  `action-select-option-never-filled-fails-loud`, the four non-string-target cases (one
-  per string-valued input the resolver takes) and
-  `resolver-narrowing-discloses-the-case-fold`, all `invariant`-only because the `fast`
-  band cannot pay for them (T-M42-20-D3/D9). This suite is where the `fast` band's
-  overflow has landed three rounds running, which is a fact about the ceiling and not
-  about these cases. The two red cases — `docs-numbers-are-derived` and
-  `published-band-matches-the-ledger` — are the two this republish clears; §2's bullet was corrected to three in the same
-  round this one was not (PR #60 R17), which is what an ungraded count does; the
-  run is red, so ADR-012 wrote a per-case report for it and this bullet cites
-  the file the way §2's does — `evals/report/20260827-023305-invariant.json`.
+- Band source — local `invariant` at 83 cases, ts `20260827-153345`, **16.2s**, 83/83
+  (`dirty: true`, for the same structural reason §2's is and stated the same
+  general way: a tree reaches its new case count only while the cases are
+  uncommitted, so 83 exists only while M44-P1's
+  `version-never-guesses-a-build-sha` is — `invariant`-only for the same reason
+  PR #60's five additions were, which is that the `fast` band cannot pay for
+  another case (ADR-033 Decision 4, T-M42-20-D3/D9). This suite is where the `fast`
+  band's overflow has landed four rounds running, which is a fact about the ceiling and not
+  about these cases. GREEN, unlike every band this section has published since
+  M31, and that is a difference in the refresh rather than in the rule: the
+  republish was split in two, so the cases and the counts landed first and this
+  row was measured afterwards on the tree that ships (`--report` forces the file
+  for a green run, since ADR-012 writes one only on red). It is therefore NOT
+  necessarily the maximum at this count, and that is said here rather than left
+  for a reader to find, because a band published below a maximum the author had
+  already seen is the selective presentation this whole section exists to
+  refuse: the mid-refresh runs that were still red on `docs-numbers-are-derived`
+  and `published-band-matches-the-ledger` — the two this republish clears — sit
+  beside it, and one of them is slower. What item 3 (same-ceiling) requires, and
+  all it requires, is that both derive the same **20**. Which rows sit at this
+  count and which is slowest is deliberately not retyped here, the same rule §2
+  states, because it is a scalar every gate run can move and an ungraded copy of
+  it would be stale within the hour; `published-band-matches-the-ledger` prints
+  `ledger_slowest` for anyone who wants the arithmetic. Not
+  `published-band-slack-is-declared`, which never opens the ledger at all and whose
+  `headroom_s` is computed from the PUBLISHED band — for `fast` it still reports the
+  very margin PR #65 R1 retired (R6). **Margin against the
+  MAXIMUM, not against the published number**: the rule gives 20 for anything up
+  to 17.39s, and that is the number to watch. This bullet cites the file the way
+  §2's does — `evals/report/20260827-153345-invariant.json`.
   That pair — the ts this bullet declares and the file it names — is read back
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
@@ -371,7 +404,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 16.19 × 1.15 = 18.62 → **20**, which is the committed
+The same rule gives 16.2 × 1.15 = 18.63 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
@@ -597,6 +630,33 @@ is about this section itself:
    (PR #60 R17). The bullet is the region from the band line to the next blank
    line, and EVERY report file named inside it must match; a bullet naming none is
    not an error, because the ledger row is the claim and the file is a convenience.
+12. (ledger-max) a ledger MAXIMUM stated in this file carries the marker
+   `(ledger max — <suite> at N cases: **X.XXs**)`, and X.XX is read back against
+   `history.jsonl` — same environment, same count — on every run. Every other
+   item grades a copy against its source, which works because a band bullet's
+   scalars move only when the band is republished. A maximum has no such step:
+   any gate run can move it, so a copy is stale the moment somebody runs the
+   suite and nothing is looking. §2 carried one, with the margin it implied, and
+   the PR editing the next sentence moved the maximum and shrank the margin
+   sixty-fold without touching either figure (PR #65 R1).
+   **The first version of this item was a refusal, not a marker, and it was
+   wrong.** It banned the shapes a maximum is usually written in, and inside one
+   round it both under- and over-covered: §2 was still carrying `is still 91.76s`
+   while this item declared the file carried none, and the exemption this item
+   grants the boundary was itself caught the moment anyone spelled the boundary
+   with "highest" (PR #65 R5, R8). A denylist was being asked a semantic question
+   — is this number a claim about the ledger — and the two failures are one
+   guess made twice. A marker asks the author instead, the way
+   item 10 (restatement) already does one level down.
+   **What it does not see, in the words item 10 (restatement) uses for the same
+   hole**: a maximum written with no marker at all is invisible here, exactly as
+   an unmarked restatement is (T-R62). That is the price of asking the author, it is smaller than the price
+   of guessing, and it is written here rather than left to be discovered.
+   The BOUNDARY a ceiling implies — the value up to which the rule still gives
+   that ceiling — is not a maximum, moves only when the ceiling does, and needs
+   no marker. Neither the retired sentences nor the shapes the denylist wore are
+   quoted anywhere in this file, for the reason `REPORT_CITATION_SKIP` spells its
+   own exception out in prose: these sweeps read this file too.
 
 Green is required nowhere in that list and cannot be (T-R53); item 2 (cited-run) requires
 the result to be *stated*, not to be a pass. Item 5 (derivation) states the rule's value and

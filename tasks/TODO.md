@@ -75,6 +75,46 @@ Out of scope: LangGraph or any orchestration dependency (the ruling above); mode
 auto-selection beyond "B first, loop on failure" — a task-difficulty classifier
 is speculative until M44's table shows which tasks actually need the loop.
 
+### M44-P1 — the deployment can report the build it is running            [status: pr]
+Origin: M44's acceptance clause, which is not deliverable without this. M44 must
+publish "matrix rows updated with run ids, repeat counts, both build shas where
+the target is our own deploy (postmortem §2)" — and our own deploy could not
+report a build: `/version` was 404, `/healthz` answers only `{"ok": true}`, and
+nothing in the repo set a build variable, so ADR-030's probe recorded ours by
+hand and T-M41-3 says out loud that nothing here reads either sha back. Same
+ceiling `.github/workflows/deploy-smoke.yml` has carried in a comment since M5
+("the app exposes no /version"), where it is the reason a push-triggered smoke
+cannot prove it tested the new build.
+Priority: P1
+Spec: ADR-033. One route on the gateway, `GET /version` ->
+`{"sha": <7-40 lowercase hex> | null, "source": "image"|"unavailable"|"malformed"}`,
+read from `/app/BUILD_SHA`, a file the Dockerfile writes at build time from
+Zeabur's `ZEABUR_GIT_COMMIT_SHA` build argument. The property that matters is
+the negative one: it never reports a sha it is not sure of. No request-time read
+of the local git checkout (in a container that tree is absent, and anywhere else
+it is a DIFFERENT tree from the one that was built); a value that is not a
+whole-string git sha refused rather than echoed; and no environment variable,
+because a Zeabur service variable shadows an image `ENV` at runtime, so a
+hand-set sha would be correct until the next deploy and a confident lie after
+it. A confidently wrong sha is worse than an honest null, because it is citable.
+Acceptance: `version-never-guesses-a-build-sha` green (13 probes, 8 of them
+asserting a null; watched red twice — as a 404 before any route existed, then
+10-of-13 red against the first, env-reading implementation a cold review
+killed); suites green at $0; ADR-033 committed. **Post-merge, and the reason
+this block stays open until then**: read `/version` on the deployed URL and
+compare it to the merge commit. A sha equal to the merge commit closes this and
+unblocks M44's clause. `{"sha": null, "source": "unavailable"}` means Zeabur
+does not pass the build argument to a Dockerfile build — documented neither way,
+which is why the design fails to the null. **The remedy is a sha the build
+DERIVES** — computing it during the build, which needs `.git` in a context
+`.dockerignore` currently excludes — or the deployment publishes `unavailable`
+and any matrix row says it cannot name our build. Filling the declared `ARG`
+from a dashboard field is NOT the remedy even though it would work: a human
+typing a sha into a form freezes that value into every later build, which is
+ADR-033 Decision 2's rejected path arriving at build time instead of runtime
+(PR #65 R3). What the file buys is immunity to RUNTIME shadowing, and the
+acceptance clause says only that.
+
 ### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
 Depends: M42
 Origin: ADR-027. Depends: M42 (M43 for the vision rows, marked as such).
@@ -134,6 +174,126 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### M44-P1-D4 — item 12's rule is still not true of the file it governs            [status: todo]
+Origin: PR #65 R9 (LOW, routed debt).
+Spec: item 12's opening states a rule about its own file — a ledger MAXIMUM stated
+here carries the marker — and §2's ablation paragraph states two without one:
+"one of them (74.29s, 162/165) its maximum at this case count" and "one of them
+again the maximum (75.02s, 162/168)". `_BAND_LEDGER_MAX.finditer(adr)` returns
+exactly one match, the 230-case one. Unlike R5 there is no staleness exposure —
+both rows were deleted by `820d807`, `fast` is 229 and counts grow monotonically,
+and item 12 declares an unmarked maximum invisible. The committed ledger's
+fast@165 max is 73.36, not 74.29, reconcilable only via the deletion table the
+same paragraph provides.
+Repro: `python3 -c "from src.browser.eval_adapter import _BAND_LEDGER_MAX as R, _ADR019; print(len(R.findall(_ADR019.read_text())))"` -> 1, against two sentences naming "its maximum at this case count".
+Acceptance: M44-P1-D3's Spec names these two as the concrete surviving instances
+(they are the only ones), or item 12's opening is phrased as the rule for a LIVE
+maximum rather than for every maximum the file narrates.
+
+### M44-P1-D5 — the ceiling a marked maximum derives is not itself graded            [status: todo]
+Origin: PR #65 R10 (LOW, routed debt).
+Spec: §2 writes "(ledger max — `fast` at 230 cases: **91.76s**) — derives **110**"
+and "while the marked maximum above still derives 110". `_BAND_DERIVATION` only
+matches the `x × 1.15 = y → **N**` form and only for published bands, so neither
+110 is read back. If `fast` returns to 230 and a 95.7s row lands, the marker goes
+red and is repaired to 95.70 — whose rule value is 115 — and both "110" sentences
+stay green. Repairing the graded scalar leaves the ungraded one beside it wrong,
+which is the shape M44-P1 spent three rounds on.
+Repro: in a scratch copy set the marker to **95.70s** and inject a fast@230 row at
+95.7 — `published-band-matches-the-ledger` is GREEN with "derives **110**" present.
+Acceptance: the derived ceiling either travels inside the marker (one edit moves
+both scalars) or is dropped from the prose, matching item 5's rule for band
+derivations.
+
+### M44-P1-D6 — the new pointer group scans one document and does not say so            [status: todo]
+Origin: PR #65 R11 (LOW, routed debt).
+Spec: `points_at_a_check_that_does_not_read_the_ledger` lists a single doc,
+ADR-019, so the same mis-pointing written into README.md or specs/decisions/INDEX.md
+would be invisible. Both already name `published-band-slack-is-declared`, so both
+are surfaces where the claim can be written. The sibling group's `why` records that
+a scan is only as wide as its document list ("the list is now every surface that
+states the ruling"); this group's does not.
+Repro: insert "`published-band-slack-is-declared` prints the ledger's own arithmetic"
+into README.md:168 -> `docs-numbers-are-derived` stays GREEN.
+Acceptance: README.md and specs/decisions/INDEX.md added to the group's docs, or the
+one-document scope stated in the group's `why`.
+
+### M44-P1-D3 — a ledger maximum written without its marker is still invisible            [status: todo]
+Origin: PR #65 R8
+Priority: P2
+Spec: R8's finding, verbatim, was against the mechanism that shipped in round 1
+and no longer exists: "the ban is over-broad against the exemption item 12
+declares — the boundary fires whenever spelled with 'maximum' or 'highest', and
+so does unrelated prose like 'the largest per-case p95 we tolerate is 2.50s'.
+Green today only by accident of §2's current wording." Both halves were
+reproduced (`the highest value the rule still gives 105 for is 91.30s` and the
+p95 sentence, each CAUGHT by the shipped denylist) alongside R5's evasions, and
+the pair is what retired the denylist: a regex was being asked whether a number
+is a claim about the ledger, which is semantic, and the two findings are that one
+guess failing in both directions at once. ADR-019 §6 item 12 (ledger-max) is now
+a graded marker, so R8's over-breadth is gone with the thing that had it — the
+boundary and any p95 prose are untouched by design, not by wording.
+What is left is the opposite ceiling, which the item now declares in the words
+item 10 (restatement) uses for its own: a maximum written with NO marker is
+invisible. That is the price of asking the author instead of guessing, and it is
+the same open class as T-R62 one level up.
+Acceptance: closed either by T-R62's answer generalising to maxima, or by a
+positive rule — every `NN.NNs` token in §2/§3 must sit inside a recognised marker
+or a declared exemption — which was costed during PR #65 R5 and rejected THEN as
+disproportionate: it flags roughly a dozen legitimate tokens today (the trajectory
+figures, the boundaries, the derivation products) and would mean restructuring
+prose this task is a guest in. Take it when §2/§3 are being rewritten for another
+reason, not on its own.
+
+### M44-P1-D2 — the build-sha case makes a 100%-gated suite need a resolvable HEAD            [status: todo]
+Origin: PR #65 R4
+Priority: P2
+Spec: verbatim from the finding. "The new case makes a 100%-gated suite depend
+on `git rev-parse HEAD` resolving in the process's environment: a correct route
+reddens invariant wherever HEAD does not resolve." Evidence: "`src/browser/
+eval_adapter.py` `_check_version_never_guesses`: on `head_sha is None` it appends
+`wrong['head-does-not-resolve']`, so `passed` is False even when all 13 probes
+matched. A `container:` CI job, a `git archive` tarball, or a git-less image
+fails a suite CLAUDE.md gates at 100%. Declared as ceiling (3) in the case
+triage, so this is disclosure-complete, not hidden." Repro: "Run the case with
+git removed from PATH, or from an export of the tree -> passed False with
+`wrong['head-does-not-resolve']` while the route is correct."
+Not fixed in M44-P1 on the reviewer's own routing: the precondition is what makes
+the `absent` probe a git-fallback guard rather than a tautology, and today it
+holds everywhere the suite runs (`actions/checkout` gives CI a real checkout).
+Acceptance, carrying the reviewer's note: if it ever bites, the non-vacuity
+signal moves to `got` — where `got['head_resolves']` already is — with a separate
+case asserting it, so an unresolvable HEAD reports "this probe was vacuous here"
+rather than "the route is broken". The move is only correct WITH that second
+case: dropping the key from `wrong` and adding nothing makes a vacuous probe
+silently green, which is worse than a loud false red.
+
+### M44-P1-D1 — deploy-smoke still cannot prove it tested the new build            [status: todo]
+Origin: M44-P1
+Priority: P2
+Spec: `.github/workflows/deploy-smoke.yml` names its own fix in a comment — "a
+/version endpoint compared against GITHUB_SHA is the honest fix" — and the
+endpoint now exists (ADR-033), but the workflow is unchanged: it still sleeps a
+fixed 240s on `push` and then tests whatever build answers. Out of M44-P1's
+scope on purpose (one route plus its case), and it belongs with the milestone
+that consumes the sha rather than the one that produces it. The change is a step
+that polls `$BASE/version` until `.sha` equals `$GITHUB_SHA` — or fails loudly
+saying which build it got — replacing the sleep. Two things it must NOT do:
+treat `{"sha": null, "source": "unavailable"}` as a pass (that is the deploy
+misconfiguration ADR-033's Consequences names, and passing on it would restore
+exactly the blindness this removes), and keep the sleep as a fallback beside a
+real check. Two questions it has to settle rather than assume, both raised by
+M44-P1's cold review: the deployed sha may be ABBREVIATED, so equality has to be
+a prefix comparison in the right direction, not `==`; and Zeabur documents
+`ZEABUR_GIT_COMMIT_SHA` as "the commit the deployment belongs to", which for a
+merge or a rollback is not necessarily `GITHUB_SHA` — if they turn out to differ
+systematically, the workflow compares what it can and says which, instead of
+failing honest deploys.
+Acceptance: the sleep is gone, a build mismatch fails the job with both shas in
+the log, and `unavailable` fails it separately with a message naming the Zeabur
+build-argument question — watched red by pointing the check at a sha that is not
+deployed.
 
 ### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]
 Origin: T-M42-20, while writing case (a). The defect it caught — two different

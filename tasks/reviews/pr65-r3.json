@@ -1,0 +1,37 @@
+{
+  "pr": 65, "round": 3, "task": "M44-P1", "result": "APPROVED",
+  "scope": "Round-2 repair diff (d69f4c9) plus standing findings R5/R6/R7 only.",
+  "standing_findings": {
+    "R5": "CONFIRMED FIXED. Item 12 is no longer a denylist. Mutation-verified in a scratch copy: injecting a fast@230 row at 95.0 reddens with ledger_max_marker_is_stale; marker count -> 999 reddens with ledger_max_marker_names_a_count_with_no_rows; marker value 91.76 -> 91.77 reddens. The two self-caught defects are genuinely fixed: _BAND_LEDGER_MAX uses \\s+ at every gap and its live match spans the line break, and the loop sits above the `rows` rebind so the reds executed without TypeError.",
+    "R6": "CONFIRMED FIXED. Restoring the struck pointer reddens the new group points_at_a_check_that_does_not_read_the_ledger. No pointer survives anywhere — ADR-019:8, ADR-019:676, README.md:168 and INDEX.md:28 all use the slack check for §6's BOUND, which is what it does.",
+    "R7": "CONFIRMED FIXED. INDEX.md is genuinely in grp['docs'] and fires: restoring 'that is a finding, not a knob' reddens on INDEX.md; restoring 'no mechanism by which a human can set this value' reddens on ADR-033. ADR-033:6's surviving 'no hand-set FALLBACK' is narrowly true — the operator-fills-ARG path is the primary source, not a fallback.",
+    "R8": "Debt as M44-P1-D3-adjacent. Not re-litigated."
+  },
+  "blind_spot_audit": "The reviewer enumerated every NN.NNs token in ADR-019 §2/§3. Each is a band source (graded), a boundary (91.30 / 17.39, arithmetically correct against _band_rule, declared exempt), the marker, or a figure at a retired count. 17.22s is a row at 80 invariant cases, not 83 — retired, cannot recur. 17.58s / 14.88s are CI, and §5 rules no CI wall clock into the ledger. No unmarked live-count ledger maximum survives. The implementer's §3 claim, which had been false twice before in this PR, holds this time.",
+  "nothing_broken": "All twelve ADR-019-reading cases green: adr029-variance-cites-the-ledger, adr029-scope-matches-the-suites, adr-header-and-index, ci-numbers-are-derived, band-is-graded-against-its-own-environment, history-dirty-precedes-the-report, fast-wall-clock-budget, ledger-ts-orders-real-time, published-band-matches-the-ledger, published-band-slack-is-declared, docs-numbers-are-derived, ui-examples-cover-matrix.",
+  "headroom_not_worsened": "The two rows this diff commits are fast@229 90.93 and invariant@83 16.62; committed maxima remain 91.30 and 17.05, so no derived ceiling moved. The pre-existing ~0.004s / ~0.34s squeeze is untouched by this diff.",
+  "declared_blind_spot": "Deleting the marker entirely leaves the case GREEN, both with a true number and a false one. This is the declared blind spot, in item 12's own words with item 10 / T-R62 as precedent, logged as M44-P1-D3. Declared, so debt, not a block.",
+  "findings": [
+    {
+      "id": "R9", "severity": "LOW", "route": "debt", "became": "M44-P1-D4",
+      "claim": "Item 12's opening states a rule about its own file — 'a ledger MAXIMUM stated in this file carries the marker' — and §2's ablation paragraph states two without one, so the rule is still not true of the file it governs.",
+      "evidence": "ADR-019 §2: 'one of them (74.29s, 162/165) its maximum at this case count' and 'one of them again the maximum (75.02s, 162/168)'. Neither carries the marker; _BAND_LEDGER_MAX.finditer(adr) returns exactly one match, the 230-case one. Unlike R5 there is no staleness exposure: both rows were deleted by 820d807, fast is 229 and counts grow monotonically, and item 12 declares an unmarked maximum invisible. The committed ledger's fast@165 max is 73.36, not 74.29 — reconcilable only via the deletion table the same paragraph provides.",
+      "repro": "python3 -c \"from src.browser.eval_adapter import _BAND_LEDGER_MAX as R, _ADR019; print(len(R.findall(_ADR019.read_text())))\" -> 1, against two sentences naming 'its maximum at this case count'.",
+      "acceptance": "M44-P1-D3's Spec names these two as the concrete surviving instances (they are the only ones), or item 12's opening is phrased as the rule for a LIVE maximum rather than for every maximum the file narrates."
+    },
+    {
+      "id": "R10", "severity": "LOW", "route": "debt", "became": "M44-P1-D5",
+      "claim": "The ceiling the marked maximum derives is not graded, so repairing a reddened marker leaves the derivation beside it silently wrong.",
+      "evidence": "ADR-019 §2: '(ledger max — `fast` at 230 cases: **91.76s**) — derives **110**' and 'while the marked maximum above still derives 110'. _BAND_DERIVATION only matches the 'x x 1.15 = y -> **N**' form and only for published bands, so neither 110 is read back. If fast returns to 230 and a 95.7s row lands, the marker goes red and is repaired to 95.70, whose rule value is 115 — both '110' sentences stay green.",
+      "repro": "In a scratch copy, set the marker to **95.70s** and inject a fast@230 row at 95.7: published-band-matches-the-ledger is GREEN with 'derives **110**' still in the file.",
+      "acceptance": "The derived ceiling either travels inside the marker (so one edit moves both scalars) or is dropped from the prose, matching item 5's rule for band derivations."
+    },
+    {
+      "id": "R11", "severity": "LOW", "route": "debt", "became": "M44-P1-D6",
+      "claim": "The new points_at_a_check_that_does_not_read_the_ledger group scans ADR-019 only, so the same mis-pointing written into README or INDEX.md would be invisible, and the group's `why` does not declare that limit.",
+      "evidence": "evals/adversarial/docs-numbers-are-derived.json:214-216 — docs is the single entry ADR-019. README.md:168 and INDEX.md:28 both already name published-band-slack-is-declared, and the sibling group's `why` records that a scan is only as wide as its document list; this group's does not.",
+      "repro": "Insert '`published-band-slack-is-declared` prints the ledger's own arithmetic' into README.md:168 -> docs-numbers-are-derived stays GREEN.",
+      "acceptance": "README.md and INDEX.md added to the group's docs, or the one-document scope stated in the group's `why`."
+    }
+  ]
+}
