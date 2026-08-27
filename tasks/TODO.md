@@ -528,13 +528,15 @@ ceiling move its change did not measure — or an ADR says why it must.
 ### T-M39-15-D2 — the way this repo actually collides is two clean branches, and no in-tree case can see that            [status: todo]
 Origin: T-M39-15, cross-branch near-miss 2026-08-28 (decision number 034
 double-claimed, arbitrated to 034/035).
-Note on spelling: the two numbers below are written as bare numbers, never in
-the canonical `ADR-0NN` form, because neither decision exists in THIS tree —
-they live on unmerged branches, and `adr-header-and-index` resolves every
-canonical citation against `specs/decisions/`. Writing them the normal way
-reddens the gate, which is this block's own subject demonstrating itself: an
-in-tree check cannot see an out-of-tree number. Same convention, same reason,
-as that case's provenance describing its mutations rather than quoting them.
+Note on spelling: the decision and section numbers below are written bare,
+never in the canonical `ADR-0NN` or `§N` form, because none of them exists in
+THIS tree — they live on unmerged branches, and `adr-header-and-index` resolves
+every canonical citation against `specs/decisions/`. Writing them the normal
+way reddens the gate, which is this block's own subject demonstrating itself:
+an in-tree check cannot see an out-of-tree number. It is not hypothetical —
+drafting this block reddened the gate exactly that way, twice, once on a
+decision number and once on a section number. Same convention, same reason, as
+that case's provenance describing its mutations rather than quoting them.
 Priority: P2
 Spec: `task-and-adr-ids-are-unique` closes the in-tree half — duplicate ids
 inside `tasks/TODO.md`, `tasks/DONE.md`, `specs/decisions/` filenames and
@@ -549,41 +551,33 @@ every check that reads the working tree. PR #45's seven duplicate ids arrived
 the same way, each through a separately-clean branch. The only free moment to
 catch this is allocation time, before either branch has spent a round on the
 number.
-**Two points on the same timeline, both 2026-08-28, and the cost is the
-argument.** (i) The 034 double-claim above was caught before either branch
-committed, by a session holding the cross-branch view: cost one message, and
-the arbitration to 034/035. (ii) `ADR-033` reached an OPEN pull request.
-**Snapshot, observed 2026-08-28, since resolved — read it as dated, not as
-current state:** PR #66 (`task/T-M42-4`) then added
-`specs/decisions/ADR-033-postcondition-document-scope.md` while `origin/main`
-already carried `ADR-033-build-identity-endpoint.md` from merged PR #65, with
-the number in its title too; that branch has since renumbered and rebased onto
-`6089850`, and carries no duplicate today. Cost of the resolution: a renumber,
-a reference sweep, a force-push and a re-review. Same blind spot, and it gets
-more expensive the later it is caught.
-**Every cross-branch fact in this block is a snapshot and decays** — that is
-itself part of the finding. This paragraph was written in the present tense and
-was already obsolete when a reviewer checked it (PR #69 R5). Dates, not tenses,
-for anything read off another branch.
-**What the case does and does not do for instance (ii), stated exactly.** It
-does NOT catch it at authoring time, and no in-tree case could: PR #66's
-merge-base is `fd3ae2a`, the commit BEFORE PR #65 merged its ADR-033, and
-`git ls-tree` on that branch shows exactly ONE ADR-033 file. On the author's
-own tree `task-and-adr-ids-are-unique` is GREEN, correctly, because that tree
-holds no duplicate. What the case does is convert a silent duplicate into a
-loud gate failure at rebase/merge-prep time — the first moment one tree holds
-both files, which for PR #66 is forced anyway since it is `CONFLICTING`/`DIRTY`.
-Verified on the two trees: each carries one ADR-033 file and one `- ADR-033`
-INDEX row, so the rebased union carries two of each and reddens
-`duplicate_adr_filenames` and `duplicate_index_rows` together. Authoring-time
-detection is exactly and only what this block's SPEC-phase check can give,
-which is why instance (ii) strengthens D2 rather than the case.
-**And the condition that hides the id hides the gate evidence too.** PR #66 is
-`CONFLICTING`, and a conflicting PR runs no CI at all, silently. So the tree
-carrying the duplicate number also carries no eval-gate evidence and shows no
-red check to signal either problem — the class is more dangerous than "an id is
-wrong", because one condition produces both the collision and the absence of
-anything that would report it.
+**Four instances on 2026-08-28 alone; PR #69's history carries the full set.**
+Three of them in a line each: 034 claimed by two branches at once, caught
+pre-commit by a coordinator holding the cross-branch view (cost: one message);
+033 reaching an OPEN pull request and costing a renumber, a reference sweep, a
+force-push and a re-review; and PR #45's seven duplicate ids, each arriving
+through a separately-clean branch. Read every cross-branch fact here as DATED —
+they decay, and the 033 one was already obsolete when a reviewer checked it
+(PR #69 R5), which is why this block uses dates rather than tenses.
+**The fourth is the decisive one, because it beat attention rather than
+inattention.** PR #72 (`task/ci-invariant-ceiling`) opened claiming ADR-019
+section number **8**, which PR #68 (`task/T-M39-13`) already holds. That line
+had been told about the conflict in its briefing, and its tree still said 8 was
+free — `adr-header-and-index` confirmed it free, CORRECTLY, because every check
+in this repo reads only the local tree and section 8 exists in no tree it can
+read. The failure survived a human-channel warning AND a passing automated
+check at once. In that line's own words: **"A briefing is not a mechanism."**
+(It has since renumbered to 9.)
+**Scope, stated exactly:** no in-tree case catches any of these at authoring
+time, and none could — on the authoring tree the probe is GREEN, correctly,
+because that tree holds no duplicate. What `task-and-adr-ids-are-unique` does
+is convert a silent duplicate into a loud gate failure at rebase/merge-prep,
+the first moment one tree holds both. Authoring-time detection is only what
+this block's SPEC-phase check can give, which is why every instance strengthens
+D2 rather than the case. The same condition also hides the gate evidence
+(`T-M39-15-D3`), and the reviewer's own findings reach an orchestrator only as
+a relayed terminal message (`M43-D4`) — three gaps at this one pr-loop layer in
+a night.
 Acceptance (1): the pr-loop SPEC phase refuses or warns when a task is about to
 claim an ADR number already claimed on an unmerged `task/*` branch — e.g.
 `git ls-remote --heads origin` plus a grep of those branches for the number —
@@ -593,22 +587,12 @@ touches the DERIVED-NUMBERS surface the task is about to edit (ADR-019 §3,
 ADR-029 §2, README's band rows). It is the same blind spot with a second
 colliding surface: two branches editing that surface collide exactly as two
 branches allocating one number do — silently, both trees internally consistent.
-This clause now has TWO independent instances, not one. PR #66 edits
-`ADR-019`, `ADR-029`, `README.md` and `docs/analysis.md` from base `fd3ae2a`,
-so it has never seen PR #65's republish either, and is on course for exactly
-the rebase-with-conflicts and the same three red derived-number cases
+Two instances, both 2026-08-28: PR #65 republished the identical band numbers
+this branch had already republished, and PR #66 edits the same four files from
+a base that never saw that republish. The measured cost of the first, as it
+landed here: one rebase with five conflicts and three red derived-number cases
 (`published-band-matches-the-ledger`, `adr029-scope-matches-the-suites`,
-`docs-numbers-are-derived`) this branch has just worked through — a second
-branch colliding on the same surface, discovered the same day, by the same
-absence of a cross-branch view.
-Both failure modes materialised on 2026-08-28, with five parallel lines live and every one
-blind to the others: (i) `task/M44-P1-derived` and `task/M43` both moved to
-claim decision number 034, arbitrated to 034/035; (ii) PR #65 republished the identical
-band numbers this branch had already republished at 83. What that cost, as it
-actually landed: one rebase with five conflicts and three red derived-number
-cases (`published-band-matches-the-ledger`, `adr029-scope-matches-the-suites`,
-`docs-numbers-are-derived`), plus an arbitration that happened only because a
-session outside every worktree could see both branches.
+`docs-numbers-are-derived`).
 Three constraints on the fix, recorded so the next session does not rediscover
 them:
 1. It belongs at the pr-loop SPEC-phase layer, NOT the eval layer. An
@@ -622,16 +606,143 @@ them:
 3. The `pr-loop` skill lives in the **groundwork plugin, not this repo**, so
    this is a cross-repo change. Known now rather than discovered mid-loop.
 **A coordinator holding the allocation table in conversation is not a durable
-fix.** That table went stale twice in opposite directions within hours on
-2026-08-28: the duplicate-033 evidence written into this block was already
-obsolete when a reviewer checked it, and a session acting on a table it had
-been handed earlier reported 036 as a fresh collision when 036 had in fact been
-reassigned deliberately. Both are this block's own defect — allocation state
-that lives only outside every worktree decays between the moment a line reads
-it and the moment it acts. That the blind spot bites even while a coordinator
-is actively arbitrating is the argument for reading the branches at the moment
-of choosing, which is what the SPEC-phase check above does.
+fix**: that table went stale four times on 2026-08-28 alone, the two sharpest
+being a session that reported 036 as a fresh collision when 036 had in fact
+been reassigned deliberately — the coordinator wrong while actively
+arbitrating — and an out-of-queue merge (PR #71) that invalidated five
+branches' gate evidence in a single move, its only signal the mergeable flag
+going red, because a CONFLICTING PR runs no CI at all and so fails silently.
+That last instance is why this belongs here rather than in a block of its own:
+it is a severity argument, not new scope — the cost scales with the number of
+concurrent branches rather than per branch, one merge against five branches at
+once, and D2's acceptance is unchanged by it. Allocation and gate state that
+live only outside every worktree decay between the moment a line reads them and
+the moment it acts, which is the argument for reading the branches at the
+moment of choosing, as the SPEC-phase check above does.
 This block is the record; the fix lands in the plugin.
+
+### T-M39-15-D3 — a check that never ran and a check that has not finished read the same, and neither reads as failure            [status: todo]
+Origin: T-M39-15, PR #69 round 1 — the forge-side half of the same
+silent-failure family.
+Separate from D2 deliberately: D2 is about state invisible **between
+worktrees**, D3 about state invisible **between GitHub and every tree** —
+different layer, different mechanism, different fix, and folding them makes
+both vaguer.
+Priority: P2
+Spec: this repo's gate is enforced at 100%, but its CI is not mandatory-to-RUN.
+A `CONFLICTING` PR runs no checks at all, and an empty check list is not a
+failing one — so "not run", "not finished" and "nothing to report" are the same
+pixel. Three things this produced on 2026-08-28, each verified against the API
+and the merged tree rather than relayed:
+1. PR #66 sat `CONFLICTING`/`DIRTY` with **zero** checks
+   (`gh pr view 66 --json statusCheckRollup` -> empty array, `mergeStateStatus`
+   `DIRTY`). Its duplicate ADR-033 and a wall-clock breach were both invisible
+   because nothing ran to find either; the duplicate was caught by a
+   coordinator reading branches from outside the repo.
+2. PR #71 was opened conflicting with no CI, rebased, then merged carrying
+   seven `evals/report/*-invariant.json` files, all at `total: 82`. One —
+   `evals/report/20260827-205100-invariant.json` — is on `main` recording
+   43/82, wall **1.17s**, `cost_usd: null`, its 39 failures
+   `ModuleNotFoundError`, where the other six ran ~16s. An import-failure
+   artifact from a depsless interpreter, not a gate result, merged without the
+   gate ever executing on the tree that carried it.
+3. PR #71's merge flipped PRs #66–#70 to `CONFLICTING` at once — five branches
+   lost their gate evidence in one move, each still displaying a green check
+   from its PREVIOUS head. **A stale green is worse than no check**: it reads as
+   verified.
+**D1 and D3 are one file's opposite failure modes** — D1 is rows at an
+abandoned case count poisoning a future band; this is a row recording a run
+that never happened — so meet the class once, here.
+**Prune nothing, including that row: a decision, not an oversight.** Measured
+against `origin/main`: 2161 rows, of which 44 carry `cost_usd: null` and 43 of
+those also `wall_s < 3` (the single exception is `20260822-174202`, 5.22s).
+Today's specimen is one of 44, so pruning it alone makes the ledger arbitrarily
+clean rather than defensibly clean and leaves the next reader unable to tell
+"pruned" from "never happened" — worse than a lie that can at least be seen.
+The cleanup is blocked on the GUARD EXISTING, not on permission: prune 44 rows
+today and the next depsless run writes the 45th the same afternoon — which is
+`T-M39-15-D4`, the generator. `T-M38-5` cleans the population once, after a
+write-time guard lands; the signature belongs in the residuals of the ADR-019
+amendment `T-M39-13`'s acceptance calls for, so that guard is a two-line check
+and not a policy debate. **The signature is the CONJUNCTION** — `cost_usd is
+None` AND an implausible `wall_s` — never either half alone: 43 of the 44
+satisfy both, while 5 further rows run under 3s with a real recorded cost, so
+the wall-clock half on its own would condemn legitimate runs. (No section
+number here on purpose: that amendment is unwritten, ADR-019 ends at §7, and a
+citation to §8 reddens `adr-header-and-index` — which it did, once.)
+**Inert by coincidence, not by rule**, and the distinction is the argument for
+the guard rather than against it. What disarms the population today is only
+that every one of these rows sits at a case count nothing publishes any more:
+the 19 sub-0.9 rows that are `dirty: false` — clean, therefore citable by
+construction — sit at counts 5, 6, 10, 18, 20, 22, 32, 49, 53, 63 and 96,
+nowhere near the live 85 (`invariant`) or 229 (`fast`). That is the suite
+having grown, not a guarantee. Revisit any of those counts — a case deletion,
+a suite split — and the clean rows among them become citable that moment. The
+ADR-019 amendment removes the deadlock but adds no admission control, so
+nothing stops the next one being written.
+**Not CI, despite the obvious guess.** Both gate scripts select the interpreter
+as `PY=python3; [ -x .venv/bin/python ] && PY=.venv/bin/python`, so a fresh
+worktree — no `.venv` — runs a depsless `python3`, every import fails, and
+`.githooks/pre-commit` deliberately writes a full report on a red run. Artifact
+and ledger row then sit untracked for the next `git add -A` to sweep in.
+Acceptance: an orchestrator may not report a PR as mergeable, nor run a review
+round against it, without first asserting `mergeStateStatus != DIRTY` AND that
+the checks it cites belong to the CURRENT head sha — one
+`gh pr view --json mergeStateStatus,headRefOid,statusCheckRollup` call at the
+moment the claim is made. Watched red by pointing it at a conflicting PR and at
+a PR whose green check belongs to a superseded head.
+Constraints, recorded so the next reader does not rediscover them:
+1. A **pr-loop protocol** item, not an eval case — a forge's check state is not
+   a property of the tree, so no loopback-only suite can grade it.
+2. The `pr-loop` skill lives in the **groundwork plugin, not this repo**, so
+   the fix is a cross-repo change — the same constraint D2 records.
+Not implemented here; this block is the record.
+
+### T-M39-15-D4 — a missing interpreter silently degrades the gate into a non-measurement            [status: todo]
+Origin: T-M39-15, PR #69 round 1 — root cause behind D3's population.
+Priority: P1
+Spec: **a depsless interpreter does not produce a worse measurement, it
+produces a NON-measurement**, and silently substituting one for the other is
+the root of the whole class. That makes this a violation of hard rule 4 — "if a
+live dependency is unreachable, fail loudly; never fabricate output to make a
+run look green" — in the RED direction, which is arguably worse than the green
+direction the rule was written for: a red run is committed with a report file
+attached as evidence that it happened.
+The chain, verified line by line in this worktree:
+1. `.claude/hooks/post-edit-invariant.sh:13` and `.githooks/pre-commit:13` are
+   the identical line
+   `PY=python3; [ -x .venv/bin/python ] && PY=.venv/bin/python`. A fresh
+   worktree has no `.venv` — every one of 2026-08-28's five parallel lines
+   started in one — so the interpreter degrades to a system python without the
+   task dependencies and dozens of cases go red on `ModuleNotFoundError`.
+2. `evals/run.py:311`:
+   `write_report = (args.report or args.suite == "all" or red) and not args.no_report`
+   — a red run writes a full report unless `--no-report` is passed.
+3. `.claude/hooks/post-edit-invariant.sh:14` DOES pass `--no-report`, so the
+   PostToolUse hook cannot write a report file (it still appends the history
+   row, which ADR-012 makes unconditional). `.githooks/pre-commit:14`
+   deliberately does not. **The artifact is manufactured by the pre-commit
+   hook, not the PostToolUse hook** — the distinction was got wrong once
+   already and is recorded here so it is not got wrong again.
+4. Net: commit, and a non-measurement lands in the ledger WITH a report file
+   asserting it happened.
+Three incidents, all 2026-08-28, one root: the 43/82 run this session hit in
+its first minutes on a fresh worktree; two false-red reports this PR's own
+rebase nearly committed, removed before push; and
+`evals/report/20260827-205100-invariant.json` (43/82, 1.17s, `cost_usd: null`)
+reaching `main` via PR #71. Every one was caught by a person or an agent
+noticing an implausible number. Nothing in the repo caught any of them.
+Relation to D3: D3's cleanup is blocked on a write-time guard that stops bad
+rows being RECORDED; D4 is the other write-time guard, the one that stops the
+population being GENERATED. Fix D4 and D3's population stops growing; fix
+neither and pruning is pointless.
+Acceptance: both gate scripts fail with a clear message naming the missing
+interpreter when `.venv/bin/python` is absent, instead of running a depsless
+`python3`. Watched red by invoking either script from a worktree with no
+`.venv`.
+Not implemented here, deliberately: the fix is two lines and they sit in the
+hook that gates every commit in this repo, so it is its own change with its own
+verification, not a rider on a PR about id uniqueness.
 
 ### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]
 Origin: T-M42-20, while writing case (a). The defect it caught — two different
