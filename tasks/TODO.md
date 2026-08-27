@@ -88,8 +88,9 @@ cannot prove it tested the new build.
 Priority: P1
 Spec: ADR-033. One route on the gateway, `GET /version` ->
 `{"sha": <7-40 lowercase hex> | null, "source": "image"|"unavailable"|"malformed"}`,
-read from `/app/BUILD_SHA`, a file the Dockerfile writes at build time from
-Zeabur's `ZEABUR_GIT_COMMIT_SHA` build argument. The property that matters is
+read from `/app/BUILD_SHA`, a file the Dockerfile writes at build time — from
+Zeabur's `ZEABUR_GIT_COMMIT_SHA` build argument as first specced, from the
+context's own HEAD since ADR-034. The property that matters is
 the negative one: it never reports a sha it is not sure of. No request-time read
 of the local git checkout (in a container that tree is absent, and anywhere else
 it is a DIFFERENT tree from the one that was built); a value that is not a
@@ -100,20 +101,36 @@ it. A confidently wrong sha is worse than an honest null, because it is citable.
 Acceptance: `version-never-guesses-a-build-sha` green (13 probes, 8 of them
 asserting a null; watched red twice — as a 404 before any route existed, then
 10-of-13 red against the first, env-reading implementation a cold review
-killed); suites green at $0; ADR-033 committed. **Post-merge, and the reason
-this block stays open until then**: read `/version` on the deployed URL and
-compare it to the merge commit. A sha equal to the merge commit closes this and
-unblocks M44's clause. `{"sha": null, "source": "unavailable"}` means Zeabur
-does not pass the build argument to a Dockerfile build — documented neither way,
-which is why the design fails to the null. **The remedy is a sha the build
-DERIVES** — computing it during the build, which needs `.git` in a context
-`.dockerignore` currently excludes — or the deployment publishes `unavailable`
-and any matrix row says it cannot name our build. Filling the declared `ARG`
-from a dashboard field is NOT the remedy even though it would work: a human
-typing a sha into a form freezes that value into every later build, which is
-ADR-033 Decision 2's rejected path arriving at build time instead of runtime
-(PR #65 R3). What the file buys is immunity to RUNTIME shadowing, and the
-acceptance clause says only that.
+killed); suites green at $0; ADR-033 committed.
+**Post-merge read, done — and it came back `unavailable`.** On 2026-08-28,
+against the deployment running PR #65's merge (`6089850`):
+`curl https://whaleforce-browser-agent.zeabur.app/version` ->
+`{"sha":null,"source":"unavailable"}`, with `/healthz` ok, so the new build was
+serving and the build argument was simply never filled. That settles the one
+fact ADR-033 left open in both directions at once: Zeabur does not pass its
+Git-group variables to a Dockerfile build, and the design failed to the honest
+null exactly as designed rather than guessing.
+**The remedy is implemented in this change (ADR-034).** The build now derives
+its own sha: a build-identity stage on the same base tag runs
+`git rev-parse HEAD` against the context, whose `.git` `.dockerignore` now
+admits, and the final image COPYs the one resulting file — never the tree. A
+derivation that fails for any reason exits 0 and leaves the file empty, which
+`/version` publishes as `unavailable`. The never-filled
+`ARG ZEABUR_GIT_COMMIT_SHA` is dropped: with the platform verifiably not
+supplying it, the only value still able to arrive through it would be one an
+operator types into a dashboard build-arg field, and every later build re-bakes
+a typed value — ADR-033 Decision 2's rejected path arriving at build time
+instead of runtime (PR #65 R3). Graded by
+`build-sha-is-derived-not-supplied`, which extracts the derivation command from
+the Dockerfile and runs it: this checkout's HEAD from the repo root, exit 0 and
+an empty file from a git-less directory.
+**Why this block still stays open**: the same read, once more, against the NEW
+merge commit — `curl https://whaleforce-browser-agent.zeabur.app/version`. A
+sha equal to that commit closes this and unblocks M44's clause. `unavailable`
+again means the builder strips `.git` from the context, which is documented
+neither way and is the second thing this design fails to the null on; the
+honest published state then stands, and any matrix row says it cannot name our
+build rather than naming one.
 
 ### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
 Depends: M42

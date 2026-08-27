@@ -6034,6 +6034,139 @@ def _check_version_never_guesses() -> dict:
                     "env_names_set": list(ENV_NAMES)}}
 
 
+def _check_build_sha_is_derived(dockerfile: Path | None = None) -> dict:
+    """The build derives its own sha from the context's HEAD; nobody hands it one.
+
+    ADR-034. The post-merge live read of ADR-033's design answered
+    `{"sha": null, "source": "unavailable"}` on 2026-08-28: Zeabur does not pass
+    its Git-group variables to a Dockerfile build, so the `ARG` fill mechanism
+    never fired, and the remedy ADR-033's Consequences pre-recorded is the one
+    graded here — a sha the build computes for itself. Four conjuncts, two
+    textual and two EXECUTED, because the fail-to-null half is a behaviour and a
+    behaviour asserted in prose is the thing PR #65 R2 was about:
+
+    - `.dockerignore` admits `.git` into the build context. Textual, with a
+      scan's usual ceiling: a new spelling of the same exclusion (`.git*`, a
+      re-included parent) is invisible here and caught only by the next live
+      read answering `unavailable`.
+    - The Dockerfile no longer declares `ARG ZEABUR_GIT_COMMIT_SHA`. The live
+      check proved the platform does not fill it, so the only feeder left was a
+      value typed into a dashboard build-arg field, which every later build
+      would re-bake — ADR-033 Decision 2's rejected path arriving at build time
+      (PR #65 R3).
+    - The derivation command is EXTRACTED from the Dockerfile's own RUN line and
+      run with substituted paths, not re-implemented here: pointed at this
+      repo's root it must exit 0 and write the checkout's HEAD (compared to
+      `git rev-parse HEAD`, 40 lowercase hex); pointed at a git-less temp dir it
+      must exit 0 and leave the file EMPTY — the fail-to-null property, since an
+      empty `/app/BUILD_SHA` is exactly what `/version` answers `unavailable`
+      for (`version-never-guesses` grades that half). Same non-vacuity
+      precondition as that check: HEAD must RESOLVE where this runs.
+    - `.git` never reaches the final image: the derivation lives in a separate,
+      earlier stage on the same base tag, that stage COPYs the context in, and
+      the final stage COPYs exactly one file back out
+      (`COPY --from=<that stage> ... /app/BUILD_SHA`) and no `.git` anything.
+    """
+    import subprocess
+    import tempfile
+
+    root = Path(__file__).parents[2]
+    df = dockerfile if dockerfile is not None else root / "Dockerfile"
+    wrong = {}
+
+    # (1) `.git` reaches the build context. Comment lines and negations don't
+    # count as exclusions; a bare `.git`, `/.git` or `.git/` does.
+    ignore_lines = (root / ".dockerignore").read_text(encoding="utf-8").splitlines()
+    excludes_git = [ln for ln in (l.strip() for l in ignore_lines)
+                    if not ln.startswith(("#", "!"))
+                    and ln.lstrip("/").rstrip("/") == ".git"]
+    if excludes_git:
+        wrong["dockerignore_excludes_git"] = excludes_git
+
+    text = df.read_text(encoding="utf-8")
+
+    # (2) the supplied-sha channel is gone.
+    args = re.findall(r"(?m)^\s*ARG\s+ZEABUR_GIT_COMMIT_SHA.*$", text)
+    if args:
+        wrong["build_arg_still_declared"] = args
+
+    # (3) shape: a separate derive stage, one file copied into the final stage.
+    stages = list(re.finditer(r"(?m)^FROM\s+\S+(?:\s+[Aa][Ss]\s+(\S+))?\s*$", text))
+    derive = re.search(
+        r"(?m)^RUN\s+(git\s+-C\s+(\S+)\s+rev-parse\s+HEAD\s*>\s*(\S+)"
+        r"(?:\s+2>/dev/null)?(?:\s*\|\|\s*:\s*>\s*(\S+))?)\s*$", text)
+    if len(stages) < 2:
+        wrong["single_stage"] = f"{len(stages)} FROM line(s); the derive stage must not be the image"
+    if derive is None:
+        wrong["derive_command_missing"] = (
+            "no RUN line matches `git -C <ctx> rev-parse HEAD > <file> "
+            "[2>/dev/null] [|| : > <file>]`")
+    final_start = stages[-1].start() if stages else 0
+    final_text = text[final_start:]
+    if derive is not None and stages:
+        if derive.start() >= final_start:
+            wrong["derived_in_the_final_stage"] = derive.group(1)
+        else:
+            # which stage holds it, and does that stage get the context?
+            stage_i = max(i for i, s in enumerate(stages) if s.start() <= derive.start())
+            stage_end = stages[stage_i + 1].start()
+            stage_text = text[stages[stage_i].start():stage_end]
+            ctx = derive.group(2)
+            if not re.search(rf"(?m)^COPY\s+\S+\s+{re.escape(ctx)}\S*\s*$", stage_text):
+                wrong["derive_stage_never_copies_the_context"] = ctx
+            stage_name = stages[stage_i].group(1)
+            copy_from = re.search(r"(?m)^COPY\s+--from=(\S+)\s+\S+\s+/app/BUILD_SHA\s*$",
+                                  final_text)
+            if copy_from is None:
+                wrong["final_stage_missing_copy_from"] = "/app/BUILD_SHA"
+            elif stage_name is not None and copy_from.group(1) != stage_name:
+                wrong["copy_from_names_a_different_stage"] = copy_from.group(1)
+    if re.search(r"(?m)^COPY\s+[^\n]*\.git", final_text):
+        wrong["final_stage_copies_git"] = "the image must carry the one file, not the tree"
+
+    # (4) the command itself, executed. Non-vacuity first: a derivation can only
+    # be shown to produce HEAD where HEAD resolves (same rule as
+    # `version-never-guesses`' git-fallback probe).
+    try:
+        head = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
+                              capture_output=True, text=True, timeout=10)
+        head_sha = head.stdout.strip() if head.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        head_sha = None
+    if head_sha and not re.fullmatch(r"[0-9a-f]{40}", head_sha):
+        head_sha = None
+    if head_sha is None:
+        wrong["head-does-not-resolve"] = (
+            "the derives-this-checkouts-head probe needs a resolvable HEAD; "
+            "run this suite from a git checkout")
+    elif derive is not None:
+        template, ctx, out, fallback_out = (derive.group(1), derive.group(2),
+                                            derive.group(3), derive.group(4))
+        if fallback_out is not None and fallback_out != out:
+            wrong["fallback_writes_a_different_file"] = fallback_out
+        for probe, src, want in (("derives-this-checkouts-head", str(root), head_sha),
+                                 ("gitless-context-empty-file", None, "")):
+            with tempfile.TemporaryDirectory() as tmp:
+                outfile = Path(tmp) / "BUILD_SHA"
+                # out first, then ctx: the out path may start with the ctx path,
+                # never the reverse in the shape the regex admits.
+                cmd = (template.replace(out, str(outfile))
+                       .replace(ctx, src if src is not None else tmp))
+                try:
+                    r = subprocess.run(["sh", "-c", cmd], capture_output=True,
+                                       text=True, timeout=30)
+                    rc = r.returncode
+                except (OSError, subprocess.SubprocessError) as e:
+                    rc = repr(e)
+                got = (outfile.read_text(encoding="utf-8").strip()
+                       if outfile.exists() else None)
+                if rc != 0 or got != want:
+                    wrong[probe] = {"exit": rc, "file": got, "want": want,
+                                    "cmd": cmd}
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"stages": len(stages), "head_resolves": head_sha is not None}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
               "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
@@ -6055,7 +6188,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
               "narrowing-fails-closed": _check_narrowing_fails_closed,
               "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only,
-              "version-never-guesses": _check_version_never_guesses}
+              "version-never-guesses": _check_version_never_guesses,
+              "build-sha-derived": _check_build_sha_is_derived}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

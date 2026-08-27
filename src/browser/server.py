@@ -864,6 +864,7 @@ const ADRS = [
   ["031", "the Chinese-language probe's tasks, its paired English arm and its pass bar are frozen before it runs, so \u201c中文都會失敗” is graded against criteria fixed in advance"],
   ["032", "a locator tier is ONE match set: the case-exact matcher is counted first and the case-folded one used only when it is empty, so index, near and enumeration never select from a set the plan was not written against"],
   ["033", "the deployment says which commit it is running, or says plainly that it does not know \u2014 the build sha is written into the image at build time and read from there, never guessed from a local checkout and never reachable by a runtime setting, because a confidently wrong build id is worse than none"],
+  ["034", "the build works out its own commit sha instead of being handed one — the deployed /version answered “unavailable” because the platform never filled the build argument, so a build stage now reads the context’s HEAD and a derivation that fails writes nothing at all, which the route publishes as “unavailable” rather than guessing"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;
@@ -1368,8 +1369,9 @@ async def healthz():
 # TWO things it never does, and they are the whole decision.
 #
 # It never reads the local git checkout at request time. Inside the image that
-# tree is absent — `.dockerignore` excludes `.git` from the build context
-# entirely — and anywhere else it is a *different* tree from the one that was built, so a
+# tree is absent — the build derives `/app/BUILD_SHA` in a separate stage and
+# only that one file reaches the final image, never `.git` itself (ADR-034)
+# — and anywhere else it is a *different* tree from the one that was built, so a
 # git fallback answers a real sha of the wrong thing. That is strictly worse than
 # silence: postmortem §2's rule is that a live-declared row is a claim about ONE
 # deployed build, and a row carrying a confidently wrong sha expires quietly
@@ -1385,9 +1387,11 @@ async def healthz():
 # when a build does not supply the sha — silently outlives the deploy it was true
 # for, and the route cannot tell it from a baked one.
 # The claim is that narrow, and stating it wider was a review finding of its own
-# (PR #65 R3): what the file removes is the RUNTIME path. A build-time variable
-# an operator sets once is still a way for a stale sha to be frozen in, and this
-# route cannot distinguish it — ADR-033 Decision 2 and its Consequences.
+# (PR #65 R3): what the file removes is the RUNTIME path. At build time the
+# value is one the build DERIVES — the context's HEAD, computed in the
+# Dockerfile's build-identity stage since ADR-034 retired the never-filled
+# build argument — and a failed derivation writes nothing, which this route
+# reports as `unavailable`.
 BUILD_SHA_FILE = Path("/app/BUILD_SHA")  # written by the Dockerfile, under its WORKDIR
 # git's own spelling: lowercase hex, abbreviated (>=7) through full (40),
 # whole-string. Uppercase is refused — git does not emit it, and refusing errs
