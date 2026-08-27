@@ -71,7 +71,7 @@ back against the committed local `fast` rows, so this cannot recur silently.
 The rows were NOT committed after the fact to fit the sentence — that is the
 other way to close a finding like this, and it is the dishonest one.
 
-### 2. CI has measured this tree, and both its ceilings are derived from that
+### 2. CI has measured this tree, and both its ceilings WERE derived from that [historical]
 
 ADR-019 §5's CI numbers are hand-read off the log of a named workflow run,
 because no CI run appends to this repo's ledger (§7, T-R51, T-R73).
@@ -91,17 +91,36 @@ wrong for a CI figure hand-read off a named workflow run of a different commit
 a fabricated claim about a 227-case one, one case addition at a time. The live
 claim is the sentence after this one; the digits stay readable above it. The one
 publisher for CI figures is ADR-019 §5 (T-M42-20-D2).
-The wall clocks are not reprinted here: CI wall clocks are published in ADR-019
-§5, which `ci-numbers-are-derived` grades, and nowhere else (the one-publisher
-rule PR #57 R20-R23 arrived at). §5 carries the table, the arithmetic and the
-`gh run view` command that reprints it.
+The wall clocks are not reprinted here. CI wall clocks live at three graded
+sites, which is §5's own list and not a single publisher: **ADR-019 §5's table is
+the SOURCE**, and `ci-numbers-are-derived` reads it back against two copies —
+README's values and `.github/workflows/eval.yml`'s comment block — so all three
+are graded and drift between any two is red (the rule PR #57 R20-R23 arrived at
+is that there is one source, not that there is one site). §5 carries the table,
+the arithmetic and the `gh run view` command that reprints it.
 
-**Both CI ceilings now come from that table**, by ADR-013 Decision 3's rule
+~~and nowhere else~~ — struck 2026-08-28. That clause was true when written and
+is not now: ADR-019's 2026-08-28 amendment argues its ruling from CI wall clocks
+quoted in prose, and prose is a fourth site. The rule is therefore stated with
+the distinction it always relied on and never wrote down — **the three sites
+above are GRADED against §5's table; the amendment is a fourth, deliberately
+UNGRADED narrative one** — because "nowhere else" is a claim no check enforces,
+and a rule nothing enforces is exactly what this repo keeps discovering it has
+restated instead of built. That amendment carries its own disclosure of what that
+costs.
+
+~~**Both CI ceilings now come from that table**, by ADR-013 Decision 3's rule
 applied to its maxima, and `.github/workflows/eval.yml` declares exactly what
 they derive. `invariant`'s moves too, although CI never breached it: its tree
 grew from 48 cases to 74, and deriving one suite from the new table while
 leaving the other on the old one would publish two trees inside one table —
-the class this PR spent five rounds closing.
+the class this PR spent five rounds closing.~~ — struck 2026-08-28. Both halves
+are superseded and the second is now false: `invariant` HAS breached on CI, and
+`fast` is the suite that never has. ADR-019's 2026-08-28 amendment re-derives
+both ceilings from a cross-commit sample of runs, so this run's table is no
+longer the source. The one-publisher rule is unchanged — ADR-019 §5 carries the
+live table, the arithmetic and the ids, and this section keeps only the record of
+what run 32937020758 measured.
 
 **This supersedes the two positions this section held before it.** It first said
 CI's ceiling was UNMEASURED and scoped every gate claim as local-only; that was

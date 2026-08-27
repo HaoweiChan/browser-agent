@@ -81,13 +81,18 @@ first version of this paragraph published the first two of those runs as
 "59.56 / 59.60s" and was falsified inside the same review round by a run at
 60.64s; this is a sample, not a bound, and the honest statement is that this
 suite straddles its ceiling rather than clears it. The same suite on CI
-(ubuntu-latest) measured **101.73 / 105.14 / 106.75 / 107.89s** across four
-attempts of one run — on byte-identical code, which is why the wall-clock
-ceiling is per-environment rather than one number pretending to be portable.
-Those four are eval-gate run 32937020758 attempts 1-4 on commit `14a6a7b`,
-hand-read off the log and recorded with that id in ADR-019 §5. All four were
-correctness-green and all four were over the 90s ceiling in force when they ran,
-which is what moved it: the breach was in the budget, not the results. They supersede an earlier CI band published
+(ubuntu-latest) measured **113.51 / 116.01 / 117.14 / 117.84s** — the four
+slowest of the 17 `fast` figures in the window ADR-019 §5 names by its endpoints
+(19 runs, two of which breached on `invariant` and so never reached the `fast`
+step), on a runner that is not this laptop,
+which is why the wall-clock ceiling is per-environment rather than one number
+pretending to be portable. The slowest is eval-gate run 33119009870; the ids and
+case counts of all four are in ADR-019 §5, hand-read off their logs. Since §9
+(2026-08-28) the sample is measured RUNS across commits rather than repeated
+attempts of one run: the run that set `invariant`'s ceiling, 33113860608, exited
+at the `invariant` step with `26.97s` against `86/86` passing, so it produced no
+`fast` figure at all — and a table that pairs the two suites per row can only
+hold that observation by dropping it. They supersede an earlier CI band published
 here — 59.77 / 60.84 / 64.61 / 64.67s — which was measured on a 95-case tree and
 so cannot describe this one. That band is NOT unevidenced, and an earlier
 revision of this paragraph struck it on that ground: ADR-013 names its run
@@ -182,13 +187,22 @@ enumerating them here is the snapshot that drifted:
 | `fast` | 238 | 93.44s | 107.46 | **110s** |
 | `invariant` | 84 | 16.18s | 18.61 | **20s** |
 
-**CI has its own two, measured on CI** rather than projected from these — four
-attempts of one run (`14a6a7b`, 213 `fast` / 74 `invariant` cases, the tree this
-branch ships; eval-gate run 32937020758) gave `invariant` 18.59-18.88s and
-`fast` 101.73-107.89s, so **25s** and **125s** by the same rule. `invariant` moves
-although its CI runs were never over budget: its tree grew from 48 cases to 74,
-and deriving one suite from this table while leaving the other on the old one
-would publish two trees in one table (ADR-019 §5). One variable per suite
+**CI has its own two, measured on CI** rather than projected from these — the
+four slowest observed runs per suite, sampled across commits (ADR-019 §5, §9;
+eval-gate runs 33113860608 and 33119009870 set the two ceilings) gave `invariant` 22.71-26.97s and
+`fast` 113.51-117.84s, so **35s** and **140s** by the same rule. Both are the
+sample's range, not the population's: inside the ~4.5-hour window ADR-019 §5
+declares by its endpoints, the fastest `invariant` run was 19.28s and the slowest
+at the same action and judge-call counts was 22.81s — 17 runs — so runner noise
+alone is worth several cases. Those are the WINDOW's extremes and not the day's:
+earlier runs on 2026-08-27 sit outside it, at smaller case counts, and nothing
+here claims to bound them. Neither ceiling moved because
+one branch grew — drop the breaching run and `main`'s own CI numbers still derive
+higher ceilings than were committed, for both suites, which is the finding
+ADR-019 §9 records. `fast` moves
+although its CI runs have never been over budget, because deriving one suite
+from this table while leaving the other on an older one publishes two
+measurements as if they were one (ADR-019 §5). One variable per suite
 (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`) carries them, so
 raising one environment's ceiling for one suite cannot silently raise another's.
 

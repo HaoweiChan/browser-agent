@@ -1250,7 +1250,14 @@ def _in_section_five(text: str, line: str) -> bool:
 
 
 def _check_ci_numbers_are_derived() -> dict:
-    """ADR-019 §5's four CI measurements are one source, and README derives from it.
+    """ADR-019 §5's CI measurements are one source, and README derives from it.
+
+    §9 (2026-08-28) changed what a row IS — four measured runs per suite, sampled
+    across commits, rather than four attempts of one run — and this check follows
+    it: the table is parsed per suite, and the id of the row carrying each suite's
+    maximum is the citation README has to carry. What did not change is the
+    contract, which is drift between three copies and nothing else.
+
 
     T-R51 was closed on the labelling route — CI's wall clocks are hand-read off
     the log of a named workflow run rather than committed to the ledger — and its
@@ -1267,7 +1274,7 @@ def _check_ci_numbers_are_derived() -> dict:
     ceilings §5 derives are the ones the workflow declares.
 
     What is still NOT graded, and cannot be from here: that anyone ever measured
-    those four numbers. The run id is what a reader checks (`gh run view … --log`);
+    those numbers. The run ids are what a reader checks (`gh run view … --log`);
     this only refuses two documents drifting apart, and a run id that no document
     mentions. Both halves are ungradeable locally for the same reason no CI row
     reaches the ledger (T-R51, T-R73).
@@ -1290,14 +1297,46 @@ def _check_ci_numbers_are_derived() -> dict:
     five = adr[adr.index("### 5."):]
     five = five[:five.index("\n### ")] if "\n### " in five else five
 
-    # §5's table is the source: `| 1 | 16.47s | 69.54s |`, invariant then fast.
-    rows = [(float(a), float(b)) for a, b in
-            _re.findall(r"^\| \d+ \| ([\d.]+)s \| ([\d.]+)s \|", five, _re.M)]
-    if len(rows) != 4:
-        return {"passed": False, "wrong": [{"adr_five_table_rows": len(rows)}]}
-    by = {"invariant": [r[0] for r in rows], "fast": [r[1] for r in rows]}
+    # §5's table is the source, one row per measured CI RUN and per suite:
+    # `| 33113860608 | task/T-M42-4 | invariant | 86 | 26.97s |`. It used to be
+    # four ATTEMPTS of one run in two columns, which §9 replaced: a run that
+    # breaches on `invariant` never reaches the `fast` step, so the row that sets
+    # the ceiling has no `fast` cell to sit beside — a two-column shape can only
+    # hold it by dropping it, which censors the sample at exactly the observation
+    # that moves the number. The suites are sampled independently for that reason.
+    rows = [(r, s, float(w)) for r, s, w in _re.findall(
+        r"^\| (\d{6,}) \| [^|]* \| (invariant|fast) \| \d+ \| ([\d.]+)s \|",
+        five, _re.M)]
+    by = {s: [w for _, s2, w in rows if s2 == s] for s in ("fast", "invariant")}
+    if any(len(v) != 4 for v in by.values()):
+        return {"passed": False,
+                "wrong": [{"adr_five_table_rows": {s: len(v) for s, v in by.items()}}]}
 
-    # All eight cells, in attempt order, against the second copy that already
+    # Every id-row must have been RECOGNISED, counted before the suite name is
+    # read. The per-suite regex above skips a row whose `suite` cell is neither
+    # word, and the shape this PR introduced made that skip silent: the pre-PR
+    # check counted rows and refused a fifth, so a bogus row could not be
+    # published at all. Without this line one could — green gate, and
+    # `_in_section_five` exempts §5 from the stray-ceiling sweep as well, so
+    # nothing else was looking either (PR #72 R5). A PR whose whole subject is
+    # making CI numbers graded must not leave a hole that publishes an ungraded
+    # one, so the count is taken over the id-row shape and never over the
+    # vocabulary.
+    id_rows = _re.findall(r"^\| \d{6,} \|[^\n]*\|", five, _re.M)
+    if len(id_rows) != len(rows):
+        wrong.append({"adr_five_table_unrecognised_rows": len(id_rows) - len(rows),
+                      "id_rows": len(id_rows), "parsed": len(rows)})
+
+    # §5 says its rows run slowest first. That was an unbacked claim about the
+    # document until PR #72 R9 — one line grades it, and grading the ADR side
+    # alone is enough: the workflow comment is compared element-wise against
+    # `by[suite]` below, so an out-of-order workflow copy is already red there.
+    for suite in sorted(by):
+        if by[suite] != sorted(by[suite], reverse=True):
+            wrong.append({"suite": suite, "adr_five_table_not_slowest_first":
+                          by[suite]})
+
+    # All eight cells, in table order (slowest first), against the copy that already
     # exists: `.github/workflows/eval.yml`'s own comment block. Without this only
     # `fast` was cell-wise graded — `invariant` is used through `min`/`max` alone,
     # so attempts 2 and 4 were numbers in a spec that nothing read, which is the
@@ -1313,18 +1352,18 @@ def _check_ci_numbers_are_derived() -> dict:
             wrong.append({"suite": suite, "adr_five_table": by[suite],
                           "workflow_comment": wf_cells.get(suite)})
 
-    # The run id that makes them checkable, in both documents.
-    # The id may sit on the NEXT line, inside a markdown link — these are prose
-    # documents and a citation near a line end is not a defect (same reasoning as
-    # `_SIX_REF`'s wrapped slugs). Bounded to exactly that: `\s*` spans blank
-    # lines, so "eval-gate run" and a bare number two paragraphs apart used to
-    # satisfy this (PR #41 R12).
-    run_id = _re.search(r"eval-gate run[ \t]*\n?[ \t]*\[?(\d{6,})", five)
-    if not run_id:
-        wrong.append({"adr": "names_no_workflow_run_for_the_ci_numbers"})
-    elif run_id.group(1) not in readme:
-        wrong.append({"readme": "does_not_name_the_run_the_adr_cites",
-                      "adr_cites": run_id.group(1)})
+    # The run ids that make the numbers checkable, in both documents. Per suite:
+    # the row carrying that suite's MAXIMUM is the one the ceiling is derived
+    # from, so that is the id a reader has to be able to reach (`gh run view …
+    # --log`). Bound to the row rather than searched for in prose, which is
+    # stricter than the `eval-gate run <id>` sentence it replaces — that form
+    # could name any id in the section, and did, two paragraphs from the table
+    # it was supposed to source (PR #41 R12).
+    ceiling_runs = {s: max((w, r) for r, s2, w in rows if s2 == s)[1] for s in by}
+    for suite in sorted(ceiling_runs):
+        if ceiling_runs[suite] not in readme:
+            wrong.append({"readme": "does_not_name_the_run_that_sets_the_ceiling",
+                          "suite": suite, "adr_cites": ceiling_runs[suite]})
 
     # README republishes the four `fast` values as a sorted list. Read back from
     # the table, not compared to a literal typed here.
@@ -1484,7 +1523,7 @@ def _check_ci_numbers_are_derived() -> dict:
                               "workflow_declares": sorted(ok),
                               "context": line.strip()[:110]})
     return {"passed": not wrong, "wrong": wrong,
-            "got": {"adr_five": by, "run": run_id.group(1) if run_id else None,
+            "got": {"adr_five": by, "ceiling_runs": ceiling_runs,
                     "workflow_declares": declared, "decision_docs_scanned": len(docs)}}
 
 
