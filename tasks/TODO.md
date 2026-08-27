@@ -264,31 +264,46 @@ prose this task is a guest in. Take it when §2/§3 are being rewritten for anot
 reason, not on its own.
 
 ### M44-P1-D8 — nothing reads the built image, only the recipe            [status: todo]
-Origin: PR #67 R10 (disposition, round 3)
+Origin: PR #67 R12 (first filed from R10 in round 3; re-filed here as the
+Option A decision, with the third evasion class that settled it)
 Priority: P2
 Spec: `build-sha-is-derived-not-supplied` is a text scan of the Dockerfile's
 `COPY`/`ADD` instructions. It catches an accidental context copy across every
 spelling its parser reads, and it does NOT establish that `.git` cannot reach
 the image — which is a property of admitting `.git` to the build context at all
 (ADR-034, "What the `.git`-in-the-context tradeoff costs"), not a defect in the
-check. The probe, verbatim, run against the shipped Dockerfile with the final
-stage's `COPY src/ /app/src/` replaced by:
-`RUN --mount=type=bind,source=.git,target=/tmp/g cp -r /tmp/g /app/.git` ->
-`{'passed': True, 'wrong': {}}`, with the whole history in the image. Probed in
-the same pass and all failing CLOSED: an `ARG`-substituted source
-(`COPY ${SRC} /app/`), a heredoc `COPY`, and a lowercase `FROM`.
+check. Three evasion classes are demonstrated, each deeper than the last, and
+whoever picks this up has the case already made:
+1. Instruction SPELLING — `copy`, indented, `ADD`, flagged, continued. Closed in
+   PR #67 round 3 and pinned by thirteen self-test rows.
+2. Instruction CLASS — verbatim, run against the shipped Dockerfile with the
+   final stage's `COPY src/ /app/src/` replaced by
+   `RUN --mount=type=bind,source=.git,target=/tmp/g cp -r /tmp/g /app/.git` ->
+   `{'passed': True, 'wrong': {}}`, with the whole history in the image.
+3. PARSER level — `# x \` + newline + `COPY . /app/` parses to no instructions
+   at all and ships the whole context, green, where the retired substring regex
+   caught it. Introduced by round 3's own repair: joining continuations closed
+   class 1, and Docker strips comments before joining, which this parser does
+   not.
+Probed in the same pass and failing CLOSED: an `ARG`-substituted source
+(`COPY ${SRC} /app/`) and a heredoc `COPY`. Probed and NOT fail-closed, recorded
+because an earlier version of this block said otherwise: lowercasing only the
+derive stage's `FROM` raises an uncaught `ValueError: max() iterable argument is
+empty` (a case ERROR — loud, but the named conjunct never reports), and
+`arg ZEABUR_GIT_COMMIT_SHA=""` in lowercase passes green, so that regex fails
+open. See the case's ceiling (4).
 Not fixed here, and the reason is cost rather than doubt: the only check that
 settles it reads the ARTIFACT instead of the recipe — a CI job that builds the
-image and asserts `/app/.git` does not exist — which needs a Docker build of the
-Playwright base (`mcr.microsoft.com/playwright/python:v1.49.0-noble`) in CI,
-where the wall clock is already under a separate breach on another line (86
-`invariant` cases at 26.97s against a 25s budget). Chasing `RUN` bodies in text
-instead was rejected: `cp` from a mount, a clone and a fetch are an unbounded
-surface, and a guard that cannot enumerate its own surface is the denylist this
-PR spent two rounds removing.
+image and asserts `/app/.git` does not exist — which puts a Docker build of the
+Playwright base (`mcr.microsoft.com/playwright/python:v1.49.0-noble`) into every
+CI run it is attached to. That cost is readable off this Dockerfile and does not
+depend on anything else in flight. Chasing `RUN` bodies in text instead was
+rejected: `cp` from a mount, a clone and a fetch are an unbounded surface, and a
+guard that cannot enumerate its own surface is the denylist this PR spent two
+rounds removing.
 Acceptance: a CI step builds the image and fails if `/app/.git` exists (`test !
--e`), run on the same trigger as the eval gate or on a schedule if the wall
-clock cannot take it; ADR-034's two-sentence framing then moves from "an
+-e`), run on the same trigger as the eval gate or on a schedule if the build
+cost cannot ride there; ADR-034's two-sentence framing then moves from "an
 accidental context copy is caught" to the stronger one, and this block says which
 run demonstrated it.
 

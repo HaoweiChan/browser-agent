@@ -1,0 +1,58 @@
+{
+  "pr": 67,
+  "round": 4,
+  "task": "M44-P1",
+  "scope": "confirming review of repair diff 6bb5c12..02d396b plus standing R10/R11",
+  "head": "02d396b",
+  "result": "REQUEST_CHANGES",
+  "hard_stop": "TRIPPED — R12 is a further bypass after the final round. Per the pre-agreed rule, no fifth patching round is opened; the choice between the CI-image-build upgrade and an accepted, honestly-declared ceiling goes to the human.",
+  "standing": {
+    "R10": "fixed — verified: all 11 bypass spellings RED (case, whitespace, flags, ADD, --from .git), all 5 correct-tree variants GREEN including the previously false-red `copy . /ctx`",
+    "R11": "fixed — the row count is now a graded constant `_BUILD_SHA_SELF_TEST_ROWS = 20` asserted against the live row count inside the check, so the documentation-vs-implementation gap cannot silently reopen"
+  },
+  "gate": {
+    "invariant": "84/84 = 1.000, 16.3s, ceiling 20",
+    "fast": "229/229 = 1.000, 90.03s, ceiling 105",
+    "cost": "$0.0000",
+    "ci": "eval-gate run 33118024589 on 02d396b — success (CI executing again after the rebase; it had been silently skipped while CONFLICTING)",
+    "verified_by": "orchestrator on the pushed head"
+  },
+  "findings": [
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "hard-stop — do not patch; fold into the declared ceiling",
+      "claim": "The new line-continuation join creates a fresh default-GREEN hole that did not exist before this repair: a comment line ending in a backslash swallows the following COPY instruction, so `COPY . /app/` becomes invisible to the guard.",
+      "evidence": "src/browser/eval_adapter.py `text = re.sub(r\"\\\\\\n[ \\t]*\", \" \", text)`. Docker strips comment lines BEFORE continuation handling, so in `# x \\<newline>COPY . /app/` the COPY is a real instruction Docker executes. The join rewrites it to `# x  COPY . /app/` and the parser returns []. Regression, not pre-existing: the retired regex returns ['COPY . /app/'] on the same input.",
+      "repro": "Orchestrator-verified: `_dockerfile_copies('# x \\\\\\nCOPY . /app/\\n')` -> `[]`; end-to-end with that substitution -> `passed=True, wrong={}` while the whole context including `.git` ships.",
+      "acceptance": "Under the hard stop this is NOT patched. It is named verbatim in ADR-034's declared ceiling and in the debt block as a third demonstrated evasion class (after instruction spelling and `RUN --mount`), as evidence that text-parsing a Dockerfile cannot carry the guarantee."
+    },
+    {
+      "id": "R13",
+      "severity": "MEDIUM",
+      "route": "repair — prose mandatory, one-character regex fix recommended",
+      "claim": "The diff's own enumeration of which regexes remain case-sensitive is wrong in the dangerous direction: the `ARG ZEABUR_GIT_COMMIT_SHA` conjunct is case-sensitive and fails OPEN, not closed.",
+      "evidence": "Case JSON ceiling (4) states the remaining case-sensitive regexes 'fail CLOSED ... Loud and wrong, never quiet and wrong', omitting `re.findall(r\"(?m)^\\s*ARG\\s+ZEABUR_GIT_COMMIT_SHA.*$\", text)`. `arg ZEABUR_GIT_COMMIT_SHA` is valid Docker and passes, so the supplied-sha channel the conjunct exists to forbid can be reintroduced with the check green.",
+      "repro": "Orchestrator-verified: lowercase `arg ZEABUR_GIT_COMMIT_SHA` -> `passed=True, wrong={}`; uppercase control -> `['build_arg_still_declared']`.",
+      "acceptance": "Ceiling (4) names ARG explicitly as case-sensitive and failing OPEN, and retracts 'never quiet and wrong'. Applying `(?i)` to that one regex is recommended — it is the case-insensitivity fix R10 already established applied to a regex that was missed, not a new spelling chase — but the prose correction is required either way."
+    },
+    {
+      "id": "R14",
+      "severity": "MEDIUM",
+      "route": "repair — mandatory, honesty",
+      "claim": "Four documents added by this diff claim a lowercase `FROM` was probed and 'fails closed / reports single_stage / is red'; lowercasing the derive stage's FROM in fact raises an uncaught ValueError inside the check, so the stated conjunct is never reported.",
+      "evidence": "src/browser/eval_adapter.py `stage_i = max(i for i, s in enumerate(stages) if s.start() <= derive.start())` raises `ValueError: max() iterable argument is empty` when the first FROM is lowercased. Claims falsified in: the case JSON ceiling (4), ADR-034 ('all three fail closed, loudly'), tasks/TODO.md, and tasks/reviews/pr67-r3-resolution.json (`fail_closed_neighbours` 'all three are red'). Lowercasing only the FINAL stage's FROM does report `single_stage` — the derive-stage spelling was evidently not the one probed.",
+      "repro": "Orchestrator-verified: shipped Dockerfile with the first `FROM mcr` -> `from mcr` yields `ValueError('max() iterable argument is empty')`, not `single_stage`.",
+      "acceptance": "Either the check guards the empty-stage case so a lowercase derive-stage FROM reports a named conjunct, or all four documents are corrected to say what actually happens and to name the spelling that WAS probed. A document asserting a verification that did not happen is the failure this repo exists to prevent."
+    },
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair — mandatory, honesty",
+      "claim": "The debt block that defers the only check able to close the declared gap justifies the deferral with a CI wall-clock breach that no run in this repo backs and that the head commit's own CI run does not corroborate.",
+      "evidence": "tasks/TODO.md: '(86 `invariant` cases at 26.97s against a 25s budget)'. `grep -rn 26.97 tasks specs docs evals .github` returns only this line; `git log --all -S26.97` shows 02d396b as its first appearance; the eval-gate run on this head (33118024589) logs invariant 84/84 at 21.26s against a 25s budget, green. ORCHESTRATOR NOTE, recorded because it is the actual provenance: this number was relayed by the orchestrator from the coordinator, where it described a DIFFERENT line's branch (PR #66, 86 cases). It is not fabricated — but it entered a committed document with no attribution, unlocatable by any reader of this repo, which is precisely the failure mode this repo grades against.",
+      "repro": "Orchestrator-verified: `grep -rn 26.97` finds only the introduced line; `gh run list --branch task/M44-P1-derived` shows eval-gate success on 02d396b.",
+      "acceptance": "The parenthetical either attributes the number to the specific PR and CI run it came from, so a reader can locate it, or is removed. The deferral rationale must rest only on facts re-derivable from the committed ledger or a named run."
+    }
+  ]
+}

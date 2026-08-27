@@ -28,10 +28,24 @@
   "condition_2_coverage_sweep": {
     "status": "met, re-run on the rebased tree",
     "lines_swept": 12,
-    "same": ["COPY .git /app/.git", "COPY ./.git /app/.git", "COPY --from=build-identity /ctx/.git /app/.git", "COPY .git/HEAD /app/HEAD", "COPY --chown=pwuser .git /app/.git"],
-    "stronger_than_the_retired_scan": ["ADD .git /app/.git", "copy .git /app/.git", " COPY .git /app/.git", "\tADD .git /app/.git", "COPY \\\n  .git /app/.git", "Copy .git /app/.git"],
+    "same": [
+      "COPY .git /app/.git",
+      "COPY ./.git /app/.git",
+      "COPY --from=build-identity /ctx/.git /app/.git",
+      "COPY .git/HEAD /app/HEAD",
+      "COPY --chown=pwuser .git /app/.git"
+    ],
+    "stronger_than_the_retired_scan": [
+      "ADD .git /app/.git",
+      "copy .git /app/.git",
+      " COPY .git /app/.git",
+      "\tADD .git /app/.git",
+      "COPY \\\n  .git /app/.git",
+      "Copy .git /app/.git"
+    ],
     "declared_divergence": "COPY src/ /app/.git — an ALLOWED source copied to a destination merely named `.git`: red under the retired substring scan, green here. Unchanged from round 2 and still the only one; git history reaches an image through a SOURCE, not through a destination's name. Declared as the case's ceiling (7).",
-    "new_undeclared_divergences": "none"
+    "new_undeclared_divergences": "none",
+    "superseded_note": "Round 4 (PR #67 R12) found a third evasion class at the PARSER level that this sweep could not reach: `# x \\` + newline + `COPY . /app/` parses to no instructions and ships the context green, where the retired regex caught it -- introduced by round 3's own continuation join. Declared, not fixed; ADR-034 and M44-P1-D8 carry it."
   },
   "condition_3_report_even_if_clean": {
     "status": "met",
@@ -41,7 +55,7 @@
     "status": "accepted, not patched — per the round-3 ruling",
     "probe": "RUN --mount=type=bind,source=.git,target=/tmp/g cp -r /tmp/g /app/.git",
     "result": "{'passed': True, 'wrong': {}} — the whole history in the image, with no COPY line for the parser to read.",
-    "fail_closed_neighbours": "ARG-substituted source (COPY ${SRC} /app/), heredoc COPY, and a lowercase FROM were probed in the same pass; all three are red.",
+    "fail_closed_neighbours": "CORRECTED at round 4 (PR #67 R14): what this said was 'ARG-substituted source, heredoc COPY, and a lowercase FROM were probed in the same pass; all three are red'. Re-run and observed: the ARG-substituted source and the heredoc COPY are red. The FROM claim was wrong -- the probe that ran lowercased BOTH `FROM` lines (which does report `single_stage`) and the sentence generalised it. Lowercasing only the DERIVE stage's `FROM` raises an uncaught `ValueError: max() iterable argument is empty`, which the runner reports as a case ERROR: loud, so the gate stops, but the named conjunct never reports. Separately, `arg ZEABUR_GIT_COMMIT_SHA=\"\"` in lowercase passes GREEN -- that regex fails open (R13). Neither is fixed in code; both are named in the case's ceiling (4).",
     "recorded_in": "ADR-034 section 'What the `.git`-in-the-context tradeoff costs, and what the guard is worth' (structural: admitting `.git` to the context is what makes any context-reading instruction able to carry it, so this is a property of the tradeoff), the case's ceiling (9), and debt M44-P1-D8 with the probe verbatim and the CI cost note.",
     "framing": "The guarantee is stated as 'an accidental context copy is caught', NOT '`.git` cannot reach the image'. ADR-034 gives both sentences and says which one is true."
   },

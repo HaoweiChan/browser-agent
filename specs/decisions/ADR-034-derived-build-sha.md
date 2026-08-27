@@ -98,20 +98,36 @@ of them is true:
   case, indentation, line continuation, `--chown=`/`--link`/`--from=` flags, and
   `ADD` as well as `COPY`. Thirteen bypasses are pinned red as self-test rows the
   check runs on itself, and six correct spellings are pinned green.
-- NOT TRUE — that `.git` cannot reach the image. It can, through a path that has
-  no `COPY` line in it at all. Verified rather than argued:
-  `RUN --mount=type=bind,source=.git,target=/tmp/g cp -r /tmp/g /app/.git`
-  is GREEN against the case and puts the whole history in the image. A text scan
-  of `COPY`/`ADD` instructions cannot see that, and widening it to chase `RUN`
-  bodies is chasing an unbounded surface — `cp` from a mount, a clone, a fetch —
-  which is why this stops here. (`ARG`-substituted sources, heredoc `COPY`
-  forms and a lowercase `FROM` were probed in the same pass and all three fail
-  closed, loudly.)
+- NOT TRUE — that `.git` cannot reach the image. Three evasion classes were
+  demonstrated over three review rounds, each deeper than the last:
+
+  1. **Instruction spelling** — `copy`, indented, `ADD`, flagged, or split
+     across a line continuation. Closed in round 3 and pinned by thirteen
+     self-test rows.
+  2. **Instruction class** — no `COPY` line in it at all. Verified rather than
+     argued: `RUN --mount=type=bind,source=.git,target=/tmp/g cp -r /tmp/g
+     /app/.git` is GREEN against the case and puts the whole history in the
+     image. Widening the scan to chase `RUN` bodies means chasing `cp` from a
+     mount, a clone, a fetch — a surface that cannot be enumerated.
+  3. **Parser level** — a comment line ending in a backslash swallows the
+     instruction after it, so `# x \` + newline + `COPY . /app/` parses to no
+     instructions at all and ships the whole context, GREEN. The retired
+     substring regex caught that line. **This class was introduced by round 3's
+     own repair**: joining continuations is what closed class 1, and Docker
+     strips comments before joining continuations, which this parser does not.
+
+  That last fact is the evidence for stopping, not a detail to soften. A guard
+  whose surface grows as fast as it is covered — three rounds, three classes,
+  the newest one manufactured by the fix for the previous one — is not
+  converging, and the honest move is to say what it does and does not carry
+  rather than to add a fourth pattern.
 
 The upgrade that would make the stronger sentence true is a CI job that builds
 the image and asserts `/app/.git` does not exist — the only check that reads the
 artifact instead of the recipe. It is filed as `M44-P1-D8` rather than done
 here, with its cost recorded so the next session does not re-derive this: it
-needs a Docker build of the Playwright base in CI, and CI's wall clock is
-already under a separate breach on another line. Until it exists, the guarantee
-is the first bullet and the ADR says so in those words.
+puts a Docker build of the Playwright base image
+(`mcr.microsoft.com/playwright/python:v1.49.0-noble`) into CI, which is a real
+per-run cost readable off this Dockerfile and independent of anything else in
+flight. Until it exists, the guarantee is the first bullet and the ADR says so
+in those words.
