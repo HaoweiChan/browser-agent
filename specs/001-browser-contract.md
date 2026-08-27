@@ -109,7 +109,7 @@ appears, in order — no post-hoc reconstruction).
 ```json
 {
   "i": 1,
-  "action": "navigate | click | fill | extract | extract_all | observe | select_option | scroll | press | wait_for | go_back | final_answer",
+  "action": "navigate | click | fill | extract | extract_all | observe | select_option | scroll | press | wait_for | go_back | click_at | final_answer",
   "target": {"role": "...", "name": "...", "text": "...", "near": "...", "index": 0} ,
   "value": "string | null",
   "anchor": "string | null",
@@ -149,6 +149,18 @@ appears, in order — no post-hoc reconstruction).
     no predicate is a sleep.
   - `go_back` — one entry back in the tab's history. No history to return to is
     `failure:act`.
+  - `click_at` (ADR-035, M43) — click at `value` = `"x,y"` viewport CSS pixels,
+    no `target`, for the element no tier can name. CLOSED-WORLD about where the
+    coordinates came from (the same ruling unknown target keys get): refused at
+    tool-call time — `failure:task`, recorded as a refused step, reason back to
+    the model — unless the call was emitted from an observation bearing a
+    **viewport** screenshot. A drill's element-scoped image does not arm it
+    (the gate reads the frame LABEL — provenance, not origin arithmetic:
+    ADR-035 Decision 2), and mode B never arms it (its planning
+    observation carries no screenshot). Malformed coordinates are
+    `failure:task`; out-of-viewport coordinates are not pre-checked — nothing
+    is there and the authored `expected_state` fails the step, `click`'s own
+    ruling. Changes state like a click and carries a click's obligation.
   - `final_answer` — loop mode's terminal call. It carries **no answer text**:
     the answer is assembled in code from what was `extract`ed, exactly as in
     mode B, so a model can never assert a value the verifier did not grade.
@@ -156,7 +168,7 @@ appears, in order — no post-hoc reconstruction).
 - `postcondition_ok` is **true / false / null**, and null is not true: it means
   nothing was asserted about this step. Every key in `expected_state` must
   hold. A **state-changing** step with a null postcondition is unverifiable and
-  the run is `failure:semantic`; the set is `{click, press, go_back}`
+  the run is `failure:semantic`; the set is `{click, press, go_back, click_at}`
   (`verifier.STATE_CHANGING`). `fill`, `select_option` and `scroll` verify
   themselves by reading back what the browser holds and need no authored
   postcondition; `navigate` is excluded because its consequence is the URL it
@@ -184,6 +196,16 @@ appears, in order — no post-hoc reconstruction).
     recovery path. Everything else in this document describes it.
   - `loop` — a driver is called after EVERY action with a fresh observation, the
     trace so far and what has been extracted, and returns exactly one tool call.
+    Each loop observation also carries the viewport screenshot that is already
+    the trace's step evidence (the same `step_N.png`, by filename — ADR-035;
+    the pre-plan navigate gets one as the loop starts, filling its existing
+    `screenshot` field), and a drill observation carries an element-scoped
+    `step_N_element.png` beside it — a viewport shot CLIPPED to the element's
+    box, never an element screenshot, because that one scrolls and an
+    observation must not move the page (`loop-drill-capture-does-not-scroll-the-page`);
+    an element wholly outside the viewport simply gets no crop.
+    `live_driver` sends the image as a
+    data-URL content part. The trace schema is unchanged by all of this.
     It replaces the planning **cadence** and nothing else: the same executor
     actions, the same resolver, **the same TraceStep with no additional fields**,
     the same answer assembly, the same verifier and the same judge

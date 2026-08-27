@@ -282,4 +282,11 @@ def render(obs: dict) -> str:
     lines = [f"URL: {obs['url']}", f"Title: {obs['title']}", "Elements (role — name):"]
     lines += [f"- {e['role']} — {e['name']!r}" for e in obs["elements"]]
     lines += ["Page text (head):", obs["text_head"]]
+    # M43 (ADR-035): the text and the image must agree about what was provided.
+    # Only loop-mode observations ever carry the key, so mode B's rendered
+    # prompt is byte-identical to before; the frame matters because only a
+    # viewport frame arms `click_at`, and the model is told which it has.
+    if obs.get("screenshot"):
+        lines.append(f"Screenshot: a {obs.get('screenshot_frame', 'viewport')} screenshot "
+                     "of this view is attached as an image.")
     return "\n".join(lines)

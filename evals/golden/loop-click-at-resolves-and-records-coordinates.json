@@ -1,0 +1,53 @@
+{
+  "id": "loop-click-at-resolves-and-records-coordinates",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "s2-nameless-readout.html",
+    "task": "What flux reading does the meter panel report?",
+    "stub_calls": [
+      {
+        "action": "click_at",
+        "value": "110,228",
+        "expected_state": {
+          "text_visible": "7.41"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "text": "7.41"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "trace_actions": [
+      "navigate",
+      "click_at",
+      "extract",
+      "final_answer"
+    ],
+    "trace_postconditions": [
+      true,
+      true,
+      null,
+      null
+    ],
+    "trace_values": {
+      "2": "110,228"
+    }
+  },
+  "provenance": "M43/ADR-035 Decision 4, the positive direction: a `click_at` emitted from a screenshot-bearing observation acts and records. The fixture's control is a bare <div> — no role, no name, no text — at a fixed viewport position (left 40, top 200, 140x56, so 110,228 is its centre under Playwright's default 1280x720 viewport), unresolvable at every locator tier BY CONSTRUCTION. `trace_postconditions[1]` is the 'acts' half: the readout paints '7.41' only if the click actually landed on the control, and the authored expected_state is what verifies it — click_at is state-changing and carries a click's obligation (`verifier.STATE_CHANGING`). `trace_values` is the 'records' half: the coordinates ride in the trace's existing `value` field, no new schema. Red against the pre-implementation tree as `failure:extract` / 'empty answer or empty trace' — the control was never pressed, so the readout never painted — on `status`, `verdict` and `trace_postconditions`. `trace_values` is green there on its own, because the coordinate string rides in the `value` field a refused step records too; that conjunct grades the recording, not the acting. Evidence reconstructed post-hoc after a session interruption; docs/evals/m43-red-first-ledger.md says so in those words.",
+  "triage": {
+    "class": "capability",
+    "note": "postmortem S2's control half: a target no tier can name, reachable only by looking."
+  }
+}

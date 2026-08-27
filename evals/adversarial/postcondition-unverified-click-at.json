@@ -1,0 +1,49 @@
+{
+  "id": "postcondition-unverified-click-at",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC4",
+  "input": {
+    "mode": "loop",
+    "fixture": "s2-nameless-readout.html",
+    "task": "What flux reading does the meter panel report?",
+    "stub_calls": [
+      {
+        "action": "click_at",
+        "value": "110,228"
+      },
+      {
+        "action": "extract",
+        "target": {
+          "text": "7.41"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "trace_actions": [
+      "navigate",
+      "click_at",
+      "extract",
+      "final_answer"
+    ],
+    "trace_postconditions": [
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "provenance": "PR #70 R3. `click_at`'s membership in `verifier.STATE_CHANGING` was pinned by NOTHING: delete the string and the whole suite still ran green, because every other click_at case authors an expected_state and so is verified either way. `press` and `go_back` were widened into that set by M42 with `postcondition-unverified-click` as the shape to copy, and click_at shipped without the copy. This is that case for click_at, on the same fixture and the same coordinates as `loop-click-at-resolves-and-records-coordinates`, differing from it in exactly one way: no authored `expected_state`. The run is otherwise a SUCCESS — the click lands on the bare <div>, the readout paints 7.41, the extract grounds and the answer is right — and it is failed anyway, because an unverified state change is not a verified one. Watched red on 2026-08-28 with `\"click_at\"` deleted from `verifier.STATE_CHANGING`: the run came back `status: success` against this case's `failure:semantic`. docs/evals/m43-red-first-ledger.md records the output.",
+  "triage": {
+    "class": "invariant-gap",
+    "note": "a state-changing verb that no case forces through the unverified-state-change guard is only in STATE_CHANGING by assertion; fix = the guard's own case, one per verb."
+  }
+}

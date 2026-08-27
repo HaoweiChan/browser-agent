@@ -7,6 +7,8 @@ Status: accepted
 **Because**: M42's additions grew `fast`, which is growth in CASE COUNT and not in per-case cost — the exact condition ADR-021 named when it said "if a future gap comes from per-case cost the answer is removing waste (T-M32-3), not another raise"; the tree measured 73.06s at 181 cases and the new cases cost ~7s of real browser work between them, so the band crosses a ceiling step and ADR-013's rule derives 105 from it.
 **Enforced by**: `published-band-matches-the-ledger` (items 3, 4 and 5 are what force this file to exist rather than letting the band be re-typed), `fast-wall-clock-budget` (whose boundary rows move to 105.00/105.01 in the same change, watched red first), `evals/run.py`'s `over_budget()`.
 
+**Amended by**: ADR-035 Decision 7 (this file's Decision 2 ruling, local `fast` 105 -> **110** [local], on the same instrument and for the same reason — case-COUNT growth, the ledger's slowest run at M43's new count re-derived through ADR-013's rule; the figure is published in ADR-019 §2/Ruling and README's band table and is deliberately not retyped here). Added by PR #70 R14, and the omission is the defect this file's own `Amends` line describes one paragraph down: a reader following the chain from here reached 105 as though it were current, which is exactly what PR #57 R25 found ADR-021 doing to ADR-029.
+
 **Amends**: ADR-019 Decision 2 (local `fast` 90 -> 105 [local]) and ADR-019 §5 (both CI ceilings re-derived from a measurement of the tree that ships) · **overturns ADR-021's CI ruling** ("the ceiling stays at 90, and that is a ruling"), which is struck in place there — for one round that ADR carried no `Amended by` line and a reader following the chain reached a ruling the workflow no longer obeyed (PR #57 R25)
 
 ---
@@ -113,7 +115,7 @@ paragraph: a disclosure that quietly drops its own previous claim is not a
 disclosure.
 
 **Where that leaves the evidence**: correctness is green in both environments —
-locally `invariant` 84/84 and `fast` 229/229, and on CI green across four
+locally `invariant` 84/84 and `fast` 238/238, and on CI green across four
 attempts of the tree that run measured, whose own totals are struck above and
 published live only in ADR-019 §5 — and the wall-clock gate is now derived, not
 breached, in both.

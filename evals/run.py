@@ -91,7 +91,16 @@ def run_case(case):
 # published as the band when the committed ledger held sixteen, the slowest at
 # 13.57s — 13.57 x 1.15 = 15.6, so the rule had always said 20. Both bands are
 # now graded against the ledger by `published-band-matches-the-ledger`.
-WALL_BUDGET_S = {"fast": 105, "invariant": 20}
+# `fast` 105 -> 110 at M43 (ADR-035 Decision 7): nine cases entered the suite
+# and the ledger's slowest run at the new count of 238 is 93.44s (ts
+# `20260827-212200`), which ADR-013's rule derives 110 from. Case-COUNT growth,
+# the condition ADR-021 named as the one a raise answers — the per-case cost did
+# not move. The row is named because a reader re-deriving from a comment that
+# still said 93.26s would be re-deriving from a SUPERSEDED row and getting the
+# right answer for the wrong reason: 236 cases derived 110 too, which is exactly
+# why the stale copy survived a round (PR #70 R8). ADR-019 §2 is the band of
+# record; this comment cites it and never leads it.
+WALL_BUDGET_S = {"fast": 110, "invariant": 20}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its

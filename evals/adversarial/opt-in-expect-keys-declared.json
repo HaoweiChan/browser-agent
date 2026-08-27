@@ -21,7 +21,8 @@
         "probe3-quotes-most-quoted-author",
         "extract-all-undeclared-intent-fails-loud",
         "plan-lint-refuses-a-declared-non-comparison",
-        "plan-lint-refuses-a-document-root-extract"
+        "plan-lint-refuses-a-document-root-extract",
+        "s2-bare-value-mode-b-root-reach-is-pinned"
       ],
       "planner_note_contains": [
         "probe3-quotes-most-quoted-author",
@@ -37,7 +38,8 @@
         "resolver-narrows-by-anchor-proximity",
         "resolver-narrows-identical-matches",
         "resolver-narrows-singular-noun-ending-in-s",
-        "resolver-near-normalises-typography"
+        "resolver-near-normalises-typography",
+        "loop-click-at-from-a-drill-observation-is-refused"
       ],
       "answer_null": [
         "extract-container-dump-is-not-the-answer",
@@ -54,18 +56,32 @@
       ],
       "max_ms": [
         "action-select-option-never-filled-fails-loud"
+      ],
+      "trace_screenshots": [
+        "loop-observation-carries-the-step-screenshot"
+      ],
+      "driver_screenshots": [
+        "loop-click-at-from-a-drill-observation-is-refused",
+        "loop-drill-capture-does-not-scroll-the-page",
+        "loop-drill-observation-carries-an-element-screenshot",
+        "loop-observation-carries-the-step-screenshot",
+        "s2-bare-value-loop-vision-path-answers"
+      ],
+      "trace_values": [
+        "loop-click-at-resolves-and-records-coordinates"
       ]
     }
   },
   "expect": {
     "note": "the opt-in expect keys are carried by exactly the cases the docs name"
   },
-  "provenance": "two `expect` keys exist so a case can say something the harness cannot infer — `mutation_survived: false` (this run succeeded and is still not a survival) and `answer_is_known_wrong: true` (this expectation pins the wrong answer as ground truth). Both are described in prose across ADR-009, docs/support-matrix.md and docs/evals/evaluation-methodology.md, and that prose has already gone stale once: after round 2 removed the key from l4-shop-render-delayed (its status excludes it now), the methodology doc still said the key kept BOTH non-survivors out of the numerator, for a whole review round (PR #12, R12). Sets rather than counts, so a mismatch names the file that moved. Watched red by adding `mutation_survived` to a second case: the check reports declared ['l4-shop-element-reordered'] vs actual two ids. M31 and PR #29 added three more, each for the same reason — the harness cannot infer them from a run: `actions` (a plan rejected before the browser moved spends exactly the pre-plan navigation), `planner_note_contains` (WHICH replan prompt a path sends, since the stub planner discards the note) and `trace_note_contains` (that the trace records why a plan changed). M28 added three more for the shape of a verifier-rejected run, which no status/verdict key can see: `answer_null` (the demoted run carries no answer), `reason_max_chars` (the reason does not quote the rejected dump back) and `evidence_contains` (the extraction is still in evidence, in full). T-M40-2 adds no key: `plan-lint-refuses-a-document-root-extract` reuses `actions`, `planner_note_contains` and `answer_null` — a plan refused before execution is the shape all three were written for — and is declared against each of them here; its mid-run twin (PR #46 R1) reuses `answer_null` and nothing else new. M38 added three cases to `trace_note_contains` rather than a fourth key: WHICH narrowing rung settled an ambiguity is exactly the 'why did this step do that' the trace note already carries, and a run that answered from one of several matches without saying which rung picked it is the reading M38's ADR-026 refuses.",
+  "provenance": "two `expect` keys exist so a case can say something the harness cannot infer \u2014 `mutation_survived: false` (this run succeeded and is still not a survival) and `answer_is_known_wrong: true` (this expectation pins the wrong answer as ground truth). Both are described in prose across ADR-009, docs/support-matrix.md and docs/evals/evaluation-methodology.md, and that prose has already gone stale once: after round 2 removed the key from l4-shop-render-delayed (its status excludes it now), the methodology doc still said the key kept BOTH non-survivors out of the numerator, for a whole review round (PR #12, R12). Sets rather than counts, so a mismatch names the file that moved. Watched red by adding `mutation_survived` to a second case: the check reports declared ['l4-shop-element-reordered'] vs actual two ids. M31 and PR #29 added three more, each for the same reason \u2014 the harness cannot infer them from a run: `actions` (a plan rejected before the browser moved spends exactly the pre-plan navigation), `planner_note_contains` (WHICH replan prompt a path sends, since the stub planner discards the note) and `trace_note_contains` (that the trace records why a plan changed). M28 added three more for the shape of a verifier-rejected run, which no status/verdict key can see: `answer_null` (the demoted run carries no answer), `reason_max_chars` (the reason does not quote the rejected dump back) and `evidence_contains` (the extraction is still in evidence, in full). T-M40-2 adds no key: `plan-lint-refuses-a-document-root-extract` reuses `actions`, `planner_note_contains` and `answer_null` \u2014 a plan refused before execution is the shape all three were written for \u2014 and is declared against each of them here; its mid-run twin (PR #46 R1) reuses `answer_null` and nothing else new. M38 added three cases to `trace_note_contains` rather than a fourth key: WHICH narrowing rung settled an ambiguity is exactly the 'why did this step do that' the trace note already carries, and a run that answered from one of several matches without saying which rung picked it is the reading M38's ADR-026 refuses. M43 (ADR-035) adds three keys of the same opt-in kind and declares them here from birth: `trace_screenshots` (screenshot-per-trace-step, as booleans in step order), `driver_screenshots` (what image frame each driver call's observation actually carried, verified against the PNG file at call time), and `trace_values` (the `value` recorded on a named trace step \u2014 how a coordinate click's coordinates are asserted without a schema change).",
   "triage": {
     "class": "eval-integrity",
-    "note": "guards a documentation claim, not the product — the same shape as support-matrix-cites-real-cases and the MUTATIONS coverage check in mutation-catalog-integrity. Also refuses `answer_is_known_wrong` on a case with no `expect.answer`, where the marker would label nothing."
+    "note": "guards a documentation claim, not the product \u2014 the same shape as support-matrix-cites-real-cases and the MUTATIONS coverage check in mutation-catalog-integrity. Also refuses `answer_is_known_wrong` on a case with no `expect.answer`, where the marker would label nothing."
   },
-  "provenance_m42_2026_08_26": "M42 adds `loop-refuses-a-document-root-extract` to the `trace_note_contains` list. The key carries the same weight there it carries everywhere else — it is the only thing that can see a refusal the run then RECOVERED from, which is the whole shape of the re-homed ADR-024 guard in loop mode: the run ends `success`, so the status says nothing about whether the root read was refused or quietly allowed.",
-  "provenance_pr60_2026_08_27": "PR #60 R4 adds `max_ms`, the first expect key that is an upper BOUND rather than an equality: `budgets` compares exactly and a duration is never equal twice, so the cost half of a finding whose correctness half was already green had nothing to be written in. R1 adds `resolver-case-fold-is-recorded-in-the-trace` to `trace_note_contains` — a name matched case-insensitively is a looser reading of what the plan asked for, and which reading was used is the same 'why did this step do that' the note already carries for M38's rungs.",
-  "provenance_pr60_r3_2026_08_27": "PR #60 R15 adds `resolver-narrowing-discloses-the-case-fold`: a resolution that used BOTH an M38 rung and the T-M42-20 case-fold reported only the rung, so the note is now every relaxation joined and this case is what pins the composed form. `trace_note_contains` is a substring test, so the four rung cases already carrying it are byte-identical."
+  "provenance_m42_2026_08_26": "M42 adds `loop-refuses-a-document-root-extract` to the `trace_note_contains` list. The key carries the same weight there it carries everywhere else \u2014 it is the only thing that can see a refusal the run then RECOVERED from, which is the whole shape of the re-homed ADR-024 guard in loop mode: the run ends `success`, so the status says nothing about whether the root read was refused or quietly allowed.",
+  "provenance_pr60_2026_08_27": "PR #60 R4 adds `max_ms`, the first expect key that is an upper BOUND rather than an equality: `budgets` compares exactly and a duration is never equal twice, so the cost half of a finding whose correctness half was already green had nothing to be written in. R1 adds `resolver-case-fold-is-recorded-in-the-trace` to `trace_note_contains` \u2014 a name matched case-insensitively is a looser reading of what the plan asked for, and which reading was used is the same 'why did this step do that' the note already carries for M38's rungs.",
+  "provenance_pr60_r3_2026_08_27": "PR #60 R15 adds `resolver-narrowing-discloses-the-case-fold`: a resolution that used BOTH an M38 rung and the T-M42-20 case-fold reported only the rung, so the note is now every relaxation joined and this case is what pins the composed form. `trace_note_contains` is a substring test, so the four rung cases already carrying it are byte-identical.",
+  "provenance_pr70_r9_2026_08_28": "PR #70 R9 adds `loop-drill-capture-does-not-scroll-the-page`, the first case to use `false` in a `driver_screenshots` list: the assertion is that a drill whose target lies outside the viewport carries NO crop at all, with the turns either side keeping their viewport frames. Without it the case pinned only the answer, so a build that dropped element crops entirely \u2014 or emitted one for an off-screen element by scrolling to it \u2014 shipped green on a case written to catch exactly that."
 }

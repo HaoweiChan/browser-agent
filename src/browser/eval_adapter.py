@@ -2257,6 +2257,34 @@ def _run_planner_prompt_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong}
 
 
+def _png_dims(path: str) -> tuple | None:
+    """(width, height) straight off a PNG's IHDR, or None if the file is not
+    there or not a PNG. Stdlib bytes, no imaging dependency: the M43 checks only
+    ever compare areas (an element crop must be smaller than the viewport
+    frame), which the header answers without decoding a pixel."""
+    import struct
+    try:
+        head = Path(path).read_bytes()[:24]
+        if head[:8] != b"\x89PNG\r\n\x1a\n":
+            return None
+        return struct.unpack(">II", head[16:24])
+    except Exception:
+        return None
+
+
+def _shot_info(observation) -> dict | None:
+    """What image, if any, an observation ACTUALLY carried — recorded at
+    driver-call time, because `_run_agent`'s run dir is temporary and the file
+    is gone by the time checks run. None when the observation names no
+    screenshot or names one that does not exist / is not a PNG, so a phantom
+    filename grades as no screenshot rather than as a passing claim."""
+    p = (observation or {}).get("screenshot_path")
+    dims = _png_dims(p) if p else None
+    if dims is None:
+        return None
+    return {"frame": observation.get("screenshot_frame"), "dims": dims}
+
+
 def _run_fixture_case(case: dict) -> dict:
     inp, exp = case["input"], case.get("expect", {})
     # Refusal (L5) cases carry no fixture: the run must stop before browsing.
@@ -2302,6 +2330,10 @@ def _run_fixture_case(case: dict) -> dict:
     # received so `expect.planner_saw` can grade the disclosure itself rather
     # than the hand-written plan that follows it.
     shown: list = []
+    # M43: what image each driver call's observation carried, captured at call
+    # time (the run dir is temporary — see _shot_info). One entry per driver
+    # call, None for an image-less observation.
+    shots_seen: list = []
 
     async def recording_planner(task, url, observation=None, note=None):
         shown.append(observation)
@@ -2309,6 +2341,7 @@ def _run_fixture_case(case: dict) -> dict:
 
     async def recording_driver(task, url, observation=None, trace=None, found=None, note=None):
         shown.append(observation)
+        shots_seen.append(_shot_info(observation))
         return await driver(task, url, observation, trace, found, note)
 
     # M36: `judge: "live"` is the same opt-in shape as `planner: "live"` --
@@ -2437,6 +2470,45 @@ def _run_fixture_case(case: dict) -> dict:
     if "trace_postconditions" in exp:
         checks["trace_postconditions"] = [
             s.get("postcondition_ok") for s in trace] == exp["trace_postconditions"]
+    # M43 (ADR-035). Whether each trace step carries screenshot evidence, in
+    # step order. The pre-plan navigate record is entry [0] and is the
+    # load-bearing one: it hardcoded `screenshot: null` for five milestones,
+    # and loop mode's first turn is what now fills it.
+    if "trace_screenshots" in exp:
+        checks["trace_screenshots"] = [
+            bool(s.get("screenshot")) for s in trace] == exp["trace_screenshots"]
+    # What image frame each DRIVER call's observation actually carried:
+    # "viewport", "element", or false for none. Graded against `shots_seen` —
+    # the file was stat'd and its PNG header read at call time, so a filename
+    # with nothing behind it is `false`, and "element" additionally requires the
+    # crop's pixel area to be strictly smaller than every viewport frame this
+    # run showed (a viewport shot relabelled "element" is red). The frame label
+    # itself matters because it is what arms/disarms `click_at`.
+    if "driver_screenshots" in exp:
+        viewport_areas = [s["dims"][0] * s["dims"][1] for s in shots_seen
+                          if s and s["frame"] == "viewport"]
+
+        def _shot_ok(want, got):
+            if want is False:
+                return got is None
+            if got is None or got["frame"] != want:
+                return False
+            if want == "element":
+                area = got["dims"][0] * got["dims"][1]
+                return bool(viewport_areas) and area < min(viewport_areas)
+            return True
+
+        checks["driver_screenshots"] = (
+            len(shots_seen) == len(exp["driver_screenshots"])
+            and all(_shot_ok(w, g) for w, g in zip(exp["driver_screenshots"], shots_seen)))
+    # The `value` recorded on a named trace step (keys are 1-based `i` as
+    # strings, JSON objects having no integer keys). How a coordinate click's
+    # coordinates are asserted to be IN the trace without a schema change —
+    # `value` is where every action keeps its non-target payload.
+    if "trace_values" in exp:
+        by_i = {str(s["i"]): s.get("value") for s in trace}
+        checks["trace_values"] = all(
+            k in by_i and by_i[k] == v for k, v in exp["trace_values"].items())
     # A substring of the terminal `reason`. Used where the STATUS is not the
     # claim: three different guards can end a run `failure:env`, and a
     # no-progress stop that reported a step cap would be exactly the symptom-

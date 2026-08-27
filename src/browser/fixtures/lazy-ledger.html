@@ -1,0 +1,31 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Lazy Ledger</title>
+<!-- PR #70 R1 / ADR-035 Decision 2. An infinite-scroll page: the entry list
+     appends on the first scroll, and the load status is rewritten with it.
+     Nothing here is a locator problem — every element is named — the fixture
+     exists so that SCROLLING is observable in the answer. A loop-mode drill
+     into the detail section below the fold must not move the page: if the
+     capture scrolls, the page loads content nobody acted for and a later read
+     of the status returns a different value, recorded as a step that changed
+     nothing because `observe` is in agent.READ_ONLY_ACTIONS. Do not shorten
+     the spacer — the drill target has to start OUTSIDE the 720px viewport for
+     the hazard to exist at all. -->
+<style>
+  body { font: 16px/1.5 sans-serif; margin: 24px; max-width: 640px; }
+  #spacer { height: 1400px; background: repeating-linear-gradient(
+              #fafafa, #fafafa 40px, #f0f0f0 40px, #f0f0f0 80px); }
+</style>
+<h1>Ledger</h1>
+<p><span role="status" aria-label="Load status">3 entries loaded</span></p>
+<div id="spacer" aria-hidden="true"></div>
+<section aria-label="Entry detail">
+  <h2>Entry detail</h2>
+  <p>Reference NBX-7741, filed 2026-08-01, cleared.</p>
+</section>
+<script>
+  addEventListener('scroll', function () {
+    document.querySelector('[aria-label="Load status"]').textContent =
+      '9 entries loaded';
+  }, { once: true });
+</script>
