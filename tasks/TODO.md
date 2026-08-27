@@ -2154,9 +2154,10 @@ number; the "60 -> 75" T-R35 quotes is gone.
 (3) "ADR-002's parenthetical stops asserting a live 15s invariant ceiling" —
 satisfied by T-M32-9, which dropped both literals from that Ruling.
 (4) "T-R25's Update states what is actually fixed" — satisfied. T-R25 carries
-`[status: fixed at PR #29 R22, kept for the mechanism]` and an Update that
-separates what was corrected from what was not, naming the mechanism as the
-open half. T-R35's premise ("T-R25 asserts ... it is not") no longer holds.
+`Status-note: fixed at PR #29 R22, kept for the mechanism.` (it read
+`[status: fixed at PR #29 R22, kept for the mechanism]` until the status field
+was made parseable; the claim is unchanged) and an Update that separates what
+was corrected from what was not, naming the mechanism as the open half. T-R35's premise ("T-R25 asserts ... it is not") no longer holds.
 Its fifth, optional clause — "ideally one graded row that compares INDEX/ADR
 ceiling numbers against `WALL_BUDGET_S`" — is what T-M32-9 built, narrower;
 T-M32-16 records exactly how much narrower and is the block that inherits it.
@@ -2356,7 +2357,8 @@ Evidence: `src/browser/eval_adapter.py:385` — `wrong = [{"task": t, "plan": [s
 Repro: flip `(AGG, [None], True)` to `False` -> `[FAIL] plan-gap-truth-table (adversarial, 0.0s) AttributeError: 'NoneType' object has no attribute 'get'`, suite 59/60 with INVARIANT VIOLATION.
 Acceptance: the report builder tolerates a non-dict step (e.g. `s.get("action") if isinstance(s, dict) else s`) so a red row names its plan.
 
-### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: both rounds run — see Update]
+### T-M40-5 — D28's rows are declared against a build that predates the WebArea refusal            [status: todo]
+Status-note: both rounds run — see Update.
 Depends: T-M40-2
 Origin: PR #43 (M40) T-M40-2, split at pr-loop SPEC 2026-08-24 — the half of T-M40-2's
 acceptance that cannot be gated inside T-M40-2's own PR.
@@ -3579,7 +3581,8 @@ it — that case grades `run_task(browser=None)`, the production launch branch, 
 `ui-rendered-narrow` never routes through `run_task`. Do not widen that case:
 what is missing is a check on the eval harness's own renderers, not on the agent.
 
-### T-R25 — INDEX.md's ADR-002 line published withdrawn ceilings (both halves)            [status: fixed at PR #29 R22, kept for the mechanism]
+### T-R25 — INDEX.md's ADR-002 line published withdrawn ceilings (both halves)            [status: todo]
+Status-note: fixed at PR #29 R22, kept for the mechanism.
 Origin: PR #23 R8 (LOW, routed debt by the reviewer); local half fixed and CI
 half found at PR #29 R22
 Update (PR #29 R22): the line published BOTH a withdrawn local number (70s) and
