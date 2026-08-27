@@ -542,26 +542,34 @@ _BAND_RESTATE = re.compile(
 # back — and the same fix: read it back.
 _BAND_REPORT = re.compile(r"evals/report/(\d{8}-\d{6})-(fast|invariant)\.json")
 
-# A ledger MAXIMUM or a margin, retyped into prose. Item 12 (no-stale-max).
-# Distinct from every marker above: those grade a copy against its source, and
-# that works because a band bullet's own scalars only move when the band is
-# republished. A maximum does not — any gate run can move it, so a copy of one
-# is stale the moment someone runs the suite, and there is no republication step
-# to catch it. §2 published "the slowest row at this count is the 91.04s ... so
-# the real margin is 0.26s" while the very PR editing the next sentence pushed
-# the maximum to 91.30s and the margin to 0.0043s, sixty times smaller
-# (PR #65 R1). So the rule is not "grade the copy" but "do not keep one":
-# `published-band-slack-is-declared` prints the ledger's arithmetic on demand,
-# and the BOUNDARY (`the rule gives 105 for anything up to 91.30s`) is a
-# function of the ceiling, moves only when the ceiling does, and is deliberately
-# not matched here.
-# ponytail: a phrasing denylist, with the ceiling every grep-shaped check in this
-# repo has — a maximum spelled some third way is invisible. Upgrade path if that
-# ever happens: a positive rule that no `NN.NNs` token may appear in §2/§3
-# outside the graded markers, which today would flag a dozen legitimate ones.
-_BAND_MAX_PROSE = re.compile(
-    r"(?:slowest|largest|maximum|highest)[^.\n]{0,60}?is (?:the )?\*{0,2}\d+\.\d+s"
-    r"|(?:real |actual )?margin is \*{0,2}\d+\.\d+s")
+# A ledger MAXIMUM, written where it has to be written. Item 12 (ledger-max).
+#
+# The first attempt at this was a phrase DENYLIST — ban the shapes a maximum is
+# usually written in — and it failed in both directions inside one round, which
+# is what says the mechanism was wrong rather than the wording. It under-covered:
+# `is still 91.76s`, `stands at 91.30s` and `maximum: 91.30s` all walked past a
+# pattern that required `is <number>s`, and §2 was carrying one of those three at
+# the time this item declared the file carried none (PR #65 R5). It over-covered at
+# the same time: the BOUNDARY the same item declares exempt was caught the moment
+# anyone spelled it with "highest", as was `the largest per-case p95 we tolerate
+# is 2.50s`, which is not a ledger scalar at all (PR #65 R8). No third regex
+# fixes that, because the question a denylist is being asked — "is this number a
+# claim about the ledger?" — is semantic, and the two failure directions are the
+# same regex being asked to guess.
+#
+# So: the same answer item 10 (restatement) already gives one level down. A
+# maximum may be stated, and where it is stated it wears a marker this reads back
+# against `history.jsonl` on every run. A stale one is red on the next gate run
+# rather than at the next review. What the marker cannot do is notice a maximum
+# written WITHOUT one — declared rather than papered over, in ADR-019 §6 and in
+# the same words item 10 (restatement) uses for its own blind spot (T-R62).
+# `\s+` at every gap, not a literal space: these are hard-wrapped documents and
+# the marker's first use in §2 straddles a line break. Written with single spaces
+# it matched nothing, and a marker that matches nothing is green — the same
+# silence `forbidden_claims` collapses whitespace to avoid, found here by the
+# falsification run rather than by reading.
+_BAND_LEDGER_MAX = re.compile(
+    r"\(ledger max\s+—\s+`(fast|invariant)`\s+at\s+(\d+)\s+cases:\s+\*\*([\d.]+)s\*\*\)")
 
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
@@ -757,6 +765,22 @@ def _check_published_band() -> dict:
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
     counts = {s: len(load_cases(s)) for s in WALL_BUDGET_S}
     wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows) + cited
+    # Item 12 (ledger-max). A maximum is a scalar every gate run can move, with no
+    # republication step to catch a stale copy — so where one is stated it carries
+    # this marker and is read back against the ledger, per environment and per case
+    # count, exactly like the band line it sits beside.
+    # Placed HERE, above README's parse, because `rows` is rebound to that table
+    # forty lines down: read after the rebind this indexes 4-tuples by string and
+    # raises, which it did until the falsification run in PR #65 R5 reached it.
+    for m in _BAND_LEDGER_MAX.finditer(adr):
+        suite, cases, said = m.group(1), int(m.group(2)), float(m.group(3))
+        at = [r["wall_s"] for r in rows if r["suite"] == suite and r["total"] == cases
+              and r.get("env", _LEGACY_ENV) == _LEGACY_ENV]
+        if not at:
+            wrong.append({"ledger_max_marker_names_a_count_with_no_rows": m.group(0)})
+        elif max(at) != said:
+            wrong.append({"ledger_max_marker_is_stale": " ".join(m.group(0).split()),
+                          "ledger_max_at_that_count": max(at), "rows_at_that_count": len(at)})
     # README's table is the other half of the same claim and drifted from this
     # file once already (PR #29 R24, the origin of T-R34). The whole row or red:
     # one set of numbers, two documents, no hand-kept copy — ADR-019 §6
@@ -784,13 +808,6 @@ def _check_published_band() -> dict:
         seen = [s for s, _ in pairs]
         for suite in sorted({s for s in seen if seen.count(s) > 1}):
             wrong.append({"suite": suite, f"{where}_publishes_two_bands": True})
-    # Item 12 (no-stale-max). A maximum or a margin retyped into prose is a copy
-    # of a scalar every gate run can move, with no republication step to catch
-    # it — so it is refused outright rather than graded against the ledger. The
-    # boundary a ceiling implies is not this: it moves only when the ceiling
-    # does, and the regex leaves it alone.
-    if retyped := [m.group(0).strip() for m in _BAND_MAX_PROSE.finditer(adr)]:
-        wrong.append({"adr_retypes_a_ledger_maximum_or_margin": retyped})
     # The ceiling the ADR DERIVES from that maximum, in prose, must be the one
     # the RULE gives — not the one `evals/run.py` commits (ADR-019 §6 item 5
     # (derivation)).

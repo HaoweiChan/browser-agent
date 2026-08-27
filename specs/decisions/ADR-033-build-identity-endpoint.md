@@ -53,14 +53,21 @@ to guess whether the build said nothing or said something the route threw
 away — two different misconfigurations with two different fixes, one of which
 would otherwise be a silent `null`.
 
-What `source` deliberately does NOT have to distinguish is a baked sha from a
-hand-set one, and that is Decision 2's doing rather than an omission: there is
-no mechanism by which a human can set this value, so `image` has one meaning.
+What `source` deliberately does NOT distinguish is a sha the platform supplied
+from one an operator caused to be baked, and that limit is stated here rather
+than claimed away. No RUNTIME setting can reach this value — Decision 2 — so
+`image` always means "read from the file this build wrote". It does not mean
+"nobody chose it": an operator who fills the declared `ARG` from a dashboard
+field gets that value frozen into every later build, and `source` reads `image`
+for it exactly as it does for a platform-supplied sha (PR #65 R7; the remedy in
+Consequences exists to keep that path unrecommended).
 The first draft of this ADR read the value from an environment variable and
 claimed `source` made "an injected sha distinguishable from a defaulted one";
 a cold review pointed out that it separated *set* from *unset* and never
-*baked* from *hand-set*, which is the distinction the whole ADR is about. The
-repair was to delete the second case, not to name it.
+*baked* from *hand-set*. Moving to a file removed the runtime half of that and
+this paragraph is what is left of the build-time half — the earlier version of
+these three sentences claimed the whole problem was gone, which was the same
+overreach one paragraph up from where R3 found it.
 
 ### 2. The value is a file the build writes, and no runtime setting can shadow it
 
