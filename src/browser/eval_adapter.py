@@ -2171,7 +2171,7 @@ def _run_observe_case(case: dict) -> dict:
             from .resolver import resolve
 
             if drill := case["input"].get("drill"):
-                loc, _tier, _narrowed = await resolve(page, drill)
+                loc, _tier, _narrowed, _scope = await resolve(page, drill)
                 obs = await observe(page, root=loc, text_head=DRILL_TEXT_HEAD)
             else:
                 obs = await observe(page)
@@ -2214,7 +2214,7 @@ def _run_observe_case(case: dict) -> dict:
                     # either, so `may_narrow` is False — a narrowing is a
                     # RECOVERY, and an invariant that only holds after one is
                     # not the invariant this case claims.
-                    loc, _tier, _fold = await resolve(page, target, many=True)
+                    loc, _tier, _fold, _scope = await resolve(page, target, many=True)
                     got_n = await loc.count()
                 except Exception as exc:
                     unresolvable.append({"target": target,
@@ -2548,6 +2548,17 @@ def _run_fixture_case(case: dict) -> dict:
         by_i = {str(s["i"]): s.get("value") for s in trace}
         checks["trace_values"] = all(
             k in by_i and by_i[k] == v for k, v in exp["trace_values"].items())
+    # `resolved.scope` per step, in trace order: null where nothing resolved,
+    # else the document URL `resolve` returned from, asserted as a URL
+    # SUBSTRING because fixture URLs carry the suite's ephemeral loopback port.
+    # ADR-036: a postcondition is checked in this document, and T-M42-14's
+    # frames-aware `page_changed` repro consumes the same field — so the field
+    # is asserted rather than described.
+    if "resolved_scopes" in exp:
+        got_scopes = [(s.get("resolved") or {}).get("scope") for s in trace]
+        checks["resolved_scopes"] = len(got_scopes) == len(exp["resolved_scopes"]) and all(
+            (w is None and g is None) or (w is not None and g is not None and w in g)
+            for w, g in zip(exp["resolved_scopes"], got_scopes))
     # A substring of the terminal `reason`. Used where the STATUS is not the
     # claim: three different guards can end a run `failure:env`, and a
     # no-progress stop that reported a step cap would be exactly the symptom-
@@ -3272,7 +3283,14 @@ REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
 # exclusion is the one literal name, not the directory. (Spelled out in prose
 # here on purpose: writing the literal path in a comment near the regex would
 # make the comment itself a dangling citation.)
-REPORT_CITATION_SKIP = ("29991231-235959-fast.json",)
+# The second literal is the mirror image of the first, and lands here for the
+# same reason. PR #66 R5 is a finding ABOUT an aborted no-venv report that was
+# left in the working tree; the finding names the file, and its own resolution
+# line records that the orchestrator DELETED it. So the name is the record of a
+# removal, not a claim of evidence — the one case this guard is not asking
+# about — and the alternative is editing a reviewer's verbatim text so a regex
+# stops seeing it, which the paragraph above already refuses.
+REPORT_CITATION_SKIP = ("29991231-235959-fast.json", "20260827-200410-fast.json")
 # Directories inside the scope above that hold PAGES rather than prose. The M41
 # inspector snapshot is a capture of another project's deployed UI, and that UI
 # renders that project's own capability table — including the name of a

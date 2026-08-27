@@ -1,0 +1,49 @@
+{
+  "id": "detached-scope-cannot-be-verified-by-a-decoy",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "input": {
+    "task": "Refresh the filing widget and read the document identifier.",
+    "fixture": "frames-decoy-detach.html",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Refresh"
+        },
+        "expected_state": {
+          "text_visible": "Filing loaded"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Document identifier"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "reason_contains": "carried no checkable postcondition",
+    "trace_postconditions": [
+      true,
+      null,
+      null
+    ],
+    "resolved_scopes": [
+      null,
+      "about:srcdoc",
+      "/fixtures/frames-decoy-detach.html"
+    ]
+  },
+  "provenance": "PR #66 R6, the reviewer's fixture verbatim. ADR-036 §4's first ruling sent a postcondition whose acted document had DETACHED back to page-wide, and justified it with \"a detach is positive evidence the action did something ... a no-op detaches nothing\" — which is false about any page that re-renders on its own schedule. `frames-decoy-detach.html` is that page: a decoy iframe carrying `Filing loaded`, a widget iframe whose `Refresh` button is bound to a handler with an empty body, and a `setTimeout` scheduled AT LOAD that empties the widget's container 1.5s later. The click resolves in the widget (`about:srcdoc`), does nothing whatsoever, the host's timer detaches the widget mid-settle, the fallback then read every frame — and the decoy supplied the predicate. Watched red on the page-wide fallback, verbatim: `checks {\"status\": false, \"trace_postconditions\": false, \"resolved_scopes\": true, \"reason_contains\": false}`, `got {\"status\": \"success\", \"answer\": \"NIMBUS-10K-2025\", \"reason\": null}` — and re-run with the expectations inverted to record what it actually produced, `status success` with `trace_postconditions [true, true, null]` and verdict PASS on every L1 check including `actions_verified`. That is §1's hazard exactly — `postcondition_ok: true` for an action that did nothing — re-entered through the fallback door the same ADR opened. The ruling (ADR-036 §4, as amended by this round): a detached acted scope makes the postcondition UNVERIFIABLE. `check_state` returns None, `verifier.STATE_CHANGING` turns a null postcondition on a click into `failure:semantic` — `verifier FAIL: state-changing step(s) [2] carried no checkable postcondition` — and the answer the run had already extracted is dropped by INV-2. Nothing here tries to attribute the detach to the action: that needs the successor-document identity T-M42-14 owns, and a guess in either direction is a wrong answer stated confidently. The 1.5s timer is the fixture's one tuning knob — long enough that the click always lands while the widget is still mounted (the run reaches the click ~0.3s in) and short enough to fire inside the 2s settle budget.",
+  "triage": {
+    "class": "wrong-success",
+    "note": "the acted frame is detached by the page's own timer, not by the click; the predicate string lives only in an unrelated decoy iframe"
+  }
+}

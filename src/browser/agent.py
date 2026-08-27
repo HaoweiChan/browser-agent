@@ -81,6 +81,19 @@ SELECT_OPTIONS_WAIT_MS = 1_000
 # terminal call — it acts on nothing at all.
 READ_ONLY_ACTIONS = {"observe", "final_answer"}
 
+# Actions whose `expected_state` is checked against the WHOLE page — every
+# frame — rather than the one document the action touched (ADR-036). These
+# three have no single acted document: `navigate` and `go_back` loaded every
+# document on the page, frames included, and `wait_for` performs nothing — it
+# is an authored assertion about where the page will paint, and a page that
+# paints into an iframe legitimately wants the frame (the S1/S4 shape M42's
+# frame reach was built for). Everything else is verified in the document
+# `resolve` returned its target from, or the main document when nothing
+# resolved — so a consent iframe, a chat widget or a display:none tracking
+# frame can no longer earn a click's postcondition
+# (postcondition-decoy-iframe-cannot-satisfy-text-visible).
+PAGE_WIDE_STATE = {"navigate", "go_back", "wait_for"}
+
 MAX_FIXES = 2         # relocation rungs per failed step
 MAX_REPLANS = 2       # replans per task
 SETTLE_TRIES, SETTLE_MS = 10, 200
@@ -551,32 +564,91 @@ def plan_gap(task: str, steps: list) -> str | None:
             "is done in code, so extract the values to compare, not the answer")
 
 
-async def check_state(page, expected: dict | None) -> bool | None:
-    """True / False / None, where None means "nothing was asserted".
+async def check_state(page, expected: dict | None, scope=None) -> bool | None:
+    """True / False / None, where None means "not verified here".
 
-    None is not True. Collapsing them recorded unverified steps as verified and
+    Two ways to reach None and they mean the same thing downstream — nothing
+    was checked, so nothing is verified: nothing was asserted, or the document
+    the assertion was about is GONE (`detached()` below, ADR-036 §4). None is
+    not True. Collapsing them recorded unverified steps as verified and
     made the module docstring's claim false (case postcondition-unverified-click).
     Every key present must hold: an if/elif chain silently graded a compound
     expectation on its first key alone (case postcondition-compound-keys).
+
+    `scope` (ADR-036) is the DOCUMENT the predicates are checked in — the Page
+    or Frame the step's action touched, i.e. the one `resolve` returned its
+    target from, or the page itself (meaning the MAIN document) for a step that
+    resolved nothing. `None` means the whole page, every frame — the caller
+    passes that only for `PAGE_WIDE_STATE` actions, and it is also the
+    back-compat default. The distinction is what a postcondition is FOR: with
+    every frame in scope, a decoy iframe — a consent banner, a chat widget, a
+    display:none tracking frame, all still in `page.frames` — satisfied a
+    click's `expected_state` and the step recorded `postcondition_ok: true`
+    for an action that did nothing (T-M42-4, T-M42-11's repro on
+    `frames-host.html`). `url_contains` reads `page.url` in every scope: one
+    address bar is a page-level fact, which is ADR-036's third carve-out.
     """
     if not expected:
         return None
 
+    def detached() -> bool:
+        """Is the acted document GONE — destroyed while its own step ran?
+
+        A document can be removed out from under the step that acted in it: an
+        SPA re-mounting an embedded widget after an in-frame click, an in-frame
+        link with `target="_top"`, or the host's own poll firing on a timer that
+        owes nothing to the action. The detached Frame then answers nothing
+        rather than answering falsely — `page_text`'s per-frame read swallows
+        the exception and contributes "", and `get_by_role` raises into the
+        settle loop's `except Exception: pass` — so the postcondition burned the
+        full SETTLE_BUDGET_MS and returned False for an action that may well
+        have worked (`postcondition-scope-detached-by-its-own-action`, watched
+        red at `failure:act` in 2.55s). A false negative ADR-036 never declared.
+
+        The answer is None — unverifiable — not a page-wide retry. Page-wide
+        was the first ruling and PR #66 R6 falsified its justification: it
+        assumed a detach is positive evidence the action did something, and a
+        page that re-renders on a timer detaches the acted frame after a
+        LITERAL no-op, whereupon an unrelated decoy iframe supplies the
+        predicate and the step records `postcondition_ok: true` for a click
+        that did nothing — §1's hazard exactly, through the fallback door
+        (`detached-scope-cannot-be-verified-by-a-decoy`, watched red as `status
+        success`, `trace_postconditions [true, true, null]`). Nothing here can
+        tell the two apart: attributing a detach to an action needs a successor-
+        document identity the trace does not carry (T-M42-14). So the step says
+        it does not know, which `verifier.STATE_CHANGING` turns into a loud
+        `failure:semantic` — "carried no checkable postcondition" — rather than
+        into either a false pass or a false accusation that the action failed.
+
+        Re-read on every settle pass, not once: the detach is often the
+        asynchronous consequence being waited for, and a predicate that goes
+        true BEFORE the document dies still returns True. `Page` has no
+        `is_detached`, which is why this is a `getattr` and not a type test.
+        """
+        is_detached = getattr(scope, "is_detached", None)
+        return bool(is_detached and is_detached())
+
     async def holds(key, want) -> bool:
         if key == "url_contains":
             return want in page.url
+        doc = scope
         if key == "text_visible":
             # `page_text`, not `page.inner_text("body")`: a postcondition that
-            # cannot see an iframe or an open shadow root is a postcondition
-            # that fails on a page the run handled correctly
-            # (`shadow-dom-value-is-reachable-and-grounded`).
-            return want in (await page_text(page))
+            # cannot see an open shadow root is a postcondition that fails on a
+            # page the run handled correctly
+            # (`shadow-dom-value-is-reachable-and-grounded`). `frames` only
+            # when no document is scoped: a Frame has no `.frames` attribute,
+            # so a frame scope reads its own document either way, and a page
+            # scope means the main document (ADR-036).
+            return want in (await page_text(doc or page, frames=doc is None))
         if key == "role_visible":
-            # Same widening, one layer down: a locator never crosses a frame
-            # boundary, so the main frame alone is the wrong question to ask.
-            for scope in [page, *(getattr(page, "frames", None) or [page])[1:]]:
-                loc = (scope.get_by_role(want["role"], name=want["name"])
-                       if want.get("name") else scope.get_by_role(want["role"]))
+            # The same scoping, one layer down. A locator never crosses a
+            # frame boundary, so page-wide means asking every frame in turn;
+            # document-scoped means asking exactly one (ADR-036).
+            for s in ([page, *(getattr(page, "frames", None) or [page])[1:]]
+                      if doc is None else [doc]):
+                loc = (s.get_by_role(want["role"], name=want["name"])
+                       if want.get("name") else s.get_by_role(want["role"]))
                 if await loc.count() >= 1 and await loc.first.is_visible():
                     return True
             return False
@@ -590,6 +662,12 @@ async def check_state(page, expected: dict | None) -> bool | None:
             raise
         except Exception:
             pass
+        # ADR-036 §4. Checked AFTER the pass, so a predicate that held while the
+        # document still existed is True; and only for keys that need a
+        # document, since `url_contains` reads the address bar in every scope
+        # (§1's third carve-out) and one address bar survives any frame.
+        if detached() and any(k != "url_contains" for k in expected):
+            return None
         await page.wait_for_timeout(SETTLE_MS)
     return False
 
@@ -899,6 +977,12 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
     # `click_at` refusal reads one cell in both modes. Same no-`nonlocal` shape
     # as `drilled`.
     vision: list[bool] = [False]
+    # The Page or Frame the CURRENT attempt's target resolved in — `execute`
+    # fills it, `attempt` resets it per step and hands it to `check_state` so
+    # the postcondition is checked in the document the action touched
+    # (ADR-036). A one-slot holder like `drilled`'s list, not a trace field:
+    # the trace carries the scope's URL (`resolved.scope`), never the object.
+    acted_scope: list = [None]
 
     answers: list = []
 
@@ -1133,10 +1217,20 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     raise StepError("task", gap)
                 loc = None
                 if step.get("target") or action in NEEDS_TARGET:
-                    loc, tier, narrowed = await resolve(
+                    loc, tier, narrowed, scope = await resolve(
                         page, step.get("target") or {}, many=action == "extract_all",
                         anchor=step.get("anchor"), task=task, action=action)
-                    rec["resolved"] = {"tier": tier, "description": str(step.get("target"))}
+                    # WHICH document the target resolved in (ADR-036, amending
+                    # ADR-028 §7): the postcondition below is checked in this
+                    # scope, and T-M42-14's "frame the step touched vs frame
+                    # that moved on its own" comparison consumes the same
+                    # record. A URL rather than a frame index, because frames
+                    # attach and detach and the URL is the only identity a
+                    # trace reader can resolve later; the scope OBJECT goes to
+                    # `check_state` via `acted_scope`, never via the trace.
+                    acted_scope[0] = scope
+                    rec["resolved"] = {"tier": tier, "description": str(step.get("target")),
+                                       "scope": scope.url}
                 # WHICH narrowing rung settled an ambiguity the plan left open
                 # (M38). It goes in the trace because a run that answered from
                 # one of several matches has to say so — but NOT as
@@ -1463,6 +1557,11 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # one check, because "a failed step leaves no evidence behind" is
                 # the property, and it has two instances already.
                 mark = (len(extractions), len(answers))
+                # Reset per attempt: `execute` fills it when (and only when) a
+                # target resolves, and a stale scope from the PREVIOUS attempt
+                # would hand this step's postcondition a document its action
+                # never touched — the exact defect ADR-036 exists to close.
+                acted_scope[0] = None
                 try:
                     await execute(step, rec)
                     if url_guard and not url_guard(page.url):
@@ -1505,7 +1604,16 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         after = await page_text(page)
                         rec["page_changed"] = after != before
                         page_bodies[page.url] = after
-                    checked = await check_state(page, step.get("expected_state"))
+                    # The postcondition is checked in the document the action
+                    # touched (ADR-036): the scope `resolve` returned from, or
+                    # the main document for a targetless step — an un-focused
+                    # key press or window scroll lands on the top-level
+                    # document. `PAGE_WIDE_STATE` actions keep every frame in
+                    # scope, deliberately (the constant's comment says why).
+                    checked = await check_state(
+                        page, step.get("expected_state"),
+                        scope=None if step["action"] in PAGE_WIDE_STATE
+                        else (acted_scope[0] or page))
                     if checked is not None or rec["postcondition_ok"] is None:
                         rec["postcondition_ok"] = checked
                     if rec["postcondition_ok"] is False:

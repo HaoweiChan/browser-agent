@@ -1,0 +1,54 @@
+{
+  "id": "postcondition-decoy-iframe-cannot-satisfy-role-visible",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "input": {
+    "task": "Sort the inspector's report and confirm the reload control appears.",
+    "fixture": "frames-host.html",
+    "stub_plans": [
+      [
+        {
+          "action": "press",
+          "value": "Shift",
+          "expected_state": {
+            "role_visible": {
+              "role": "button",
+              "name": "Reload source"
+            }
+          }
+        },
+        {
+          "action": "extract",
+          "target": {
+            "role": "status",
+            "name": "Inventory turnover"
+          }
+        }
+      ],
+      [
+        {
+          "action": "extract",
+          "target": {
+            "role": "status",
+            "name": "Inventory turnover"
+          }
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "recovery": false,
+    "trace_postconditions": [
+      true,
+      false
+    ]
+  },
+  "provenance": "T-M42-4, the `role_visible` half of the same defect `postcondition-decoy-iframe-cannot-satisfy-text-visible` pins for `text_visible` — the two keys take different code paths in `check_state` (`page_text` vs a per-scope `get_by_role` loop over `[page, *frames[1:]]`), so one case cannot pin both: a fix that scoped only `text_visible` would leave this exact wrong-success standing. The `Reload source` button exists only inside `frames-inner.html`; the main document's only button lives in an open shadow root and is named `Reveal audit code`, so a main-document-scoped `role_visible` correctly finds nothing (and the shadow root staying reachable in the MAIN document's scope is `shadow-dom-value-is-reachable-and-grounded`'s job, untouched). Watched red as `status success`, `trace_postconditions [true, true, null]` — a press that pressed nothing anyone can see, verified by a control in a document it never touched.",
+  "triage": {
+    "class": "wrong-success",
+    "note": "role_visible's scope loop is separate code from text_visible's page_text read; each key needs its own red"
+  }
+}

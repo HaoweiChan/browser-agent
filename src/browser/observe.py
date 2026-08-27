@@ -132,10 +132,16 @@ async def page_text(page, frames: bool = True) -> str:
     detaches mid-read contributes nothing rather than killing the step, since
     this is evidence capture and the postcondition is the gate.
 
-    `frames=False` reads the main document (and its shadow roots) only. It exists
-    for the before/after comparison behind `page_changed` and, as of PR #57 R13,
-    **no caller uses it** — the argument is kept because the trade-off it names
-    is real and the next reader will re-derive it otherwise:
+    `frames=False` reads the main document (and its shadow roots) only. It is
+    LOAD-BEARING as of ADR-036: `agent.check_state` calls
+    `page_text(scope or page, frames=scope is None)`, so every postcondition on a
+    step whose target resolved in the MAIN document — every non-`PAGE_WIDE_STATE`
+    step with no acted frame — is read through this branch. A frame scope needs
+    no flag (a Frame has no `.frames`), which is why the argument's one caller is
+    the main-document half of that ruling. It was written for the before/after
+    comparison behind `page_changed`, which as of PR #57 R13 reads every frame
+    instead; both hazards below are still true of THAT pipeline, which is what
+    keeps them here:
 
       * frames-BLIND misses a step whose only effect is inside an iframe. That
         is an inspector's source pane, the shape M42 leg (a) exists for, and it
@@ -154,9 +160,11 @@ async def page_text(page, frames: bool = True) -> str:
     picks the direction (T-M42-14 carries the repro that would reopen it —
     a fixture with a frame that mutates on its own).
 
-    ponytail: kept as a parameter with no caller rather than deleted, because
-    deleting it deletes the question. Remove it if T-M42-14 closes the other
-    way."""
+    ponytail: NOT deletable, and no longer deletable-if-T-M42-14-closes-the-
+    other-way either. Whichever way T-M42-14 rules on the EVIDENCE pipeline,
+    ADR-036 keeps a main-document-only read in `check_state`, so removing the
+    argument removes a postcondition's scope. T-M42-14 may take the hazards
+    above; it may not take the parameter."""
     parts = []
     sources = getattr(page, "frames", None) or [page]
     for frame in (sources if frames else sources[:1]):

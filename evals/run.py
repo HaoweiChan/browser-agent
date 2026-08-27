@@ -100,7 +100,14 @@ def run_case(case):
 # right answer for the wrong reason: 236 cases derived 110 too, which is exactly
 # why the stale copy survived a round (PR #70 R8). ADR-019 §2 is the band of
 # record; this comment cites it and never leads it.
-WALL_BUDGET_S = {"fast": 110, "invariant": 20}
+# `invariant` 20 -> 35 at T-M42-4 (ADR-036), in three steps and for two
+# different reasons, which ADR-019 §3 is the band of record for: 20 -> 25 -> 30
+# came from case-COUNT growth, six postcondition-scope cases of which four fail
+# or refuse a postcondition BY DESIGN and burn the full settle budget each;
+# 30 -> 35 came from a single contended outlier the ledger's maximum rule takes
+# whether or not it is representative. Same ADR-013 rule throughout, and §3
+# carries the disclosure rather than this comment.
+WALL_BUDGET_S = {"fast": 110, "invariant": 35}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its

@@ -1,0 +1,83 @@
+{
+  "pr": 66,
+  "round": 1,
+  "task": "T-M42-4",
+  "gate": {
+    "invariant": "88/88 = 1.000, wall 23.63s (ceiling 30)",
+    "fast": "229/229 = 1.000, wall 89.78s (ceiling 105)",
+    "cost": "$0.0000, no paid calls; .eval-baseline.json untouched at 1.0",
+    "reports": [
+      "evals/report/20260827-212648-invariant.json"
+    ]
+  },
+  "resolutions": [
+    {
+      "id": "R1",
+      "status": "fixed",
+      "covered_by": "comment-only, not gradeable",
+      "what_changed": "`observe.page_text`'s docstring no longer says `frames=False` has no caller. It names `agent.check_state` (ADR-036) as the caller and says which half of the ruling routes through the branch: a Frame scope needs no flag (a Frame has no `.frames`), so the argument is exactly the main-document half. The `ponytail:` note is inverted rather than softened — it used to authorise deleting the parameter if T-M42-14 closed the other way, and now says T-M42-14 may take the two `page_changed` hazard bullets but may not take the parameter, because ADR-036 keeps a main-document-only read in `check_state` either way. The two hazard bullets are unchanged, as the acceptance asked: they are still true of the evidence pipeline.",
+      "watched_red": "None, and deliberately: a docstring cannot be graded red. The claim the comment made is now false-by-construction — deleting the parameter breaks `check_state`'s call, which every ADR-036 case exercises — but no case asserts the WORDING, and inventing a grep-for-a-phrase case would be a guard on prose that a rewording defeats.",
+      "docs_updated": [
+        "src/browser/observe.py page_text docstring"
+      ]
+    },
+    {
+      "id": "R2",
+      "status": "fixed",
+      "covered_by": "main-document-click-cannot-verify-a-frame-only-effect",
+      "what_changed": "ADR-036's declared cost is now measured. The new invariant case authors, on the committed `frames-swap.html`, exactly the shape the ADR said no case authored: a main-document `click` whose `expected_state.text_visible` names the FRAME's own text (`Document ID:`). It pins the whole ruling in one trace — the click resolves in the main document (`resolved.scope` = frames-swap.html), `page_changed` is true because the frame really did change, `postcondition_ok` is FALSE anyway, and then the declared recovery: the replan's page-wide `wait_for` (ADR-036's carve-out) verifies the frame and the `extract` resolves in `about:srcdoc`. ADR-036's Consequences bullet no longer says `No committed case authored that shape`; it states what the case pins, states the price (one extra replan on a legitimate frame-effect click) and records that the sentence it replaces was a declared limitation nothing could go red on.",
+      "watched_red": "Against the pre-ADR-036 mechanism, reproduced by passing `scope=None` at `check_state`'s one call site and changing nothing else: `main-document-click-cannot-verify-a-frame-only-effect  passed: False` / `checks {\"status\": true, \"verdict\": true, \"recovery\": false, \"replans\": false, \"trace_postconditions\": false, \"resolved_scopes\": false}` / `got {\"status\": \"success\", \"answer\": \"NIMBUS-10K-2025\", \"reason\": null}`. Page-wide, the click's postcondition is satisfied by the frame, so there is no failure, no replan and no recovery — four checks red at once while status and answer are green, which is precisely the trade-off made visible.",
+      "docs_updated": [
+        "specs/decisions/ADR-036-postcondition-document-scope.md (Consequences bullet 1 rewritten; Enforced-by line)",
+        "specs/decisions/INDEX.md"
+      ]
+    },
+    {
+      "id": "R3",
+      "status": "fixed",
+      "covered_by": "postcondition-scope-detached-by-its-own-action",
+      "route_taken": "(a) fall back to page-wide, with the residual risk declared in the ADR",
+      "what_changed": "`check_state` gained one nested `live_scope()` that re-reads `Frame.is_detached()` on every settle pass and yields `None` (page-wide) once the acted document is gone; both predicates read it, so one guard covers `text_visible` and `role_visible` and both modes. Fallback rather than a loud failure, argued in ADR-036 §4: the hazard ADR-036 exists to close is a NO-OP verified by a decoy, and a detach is positive evidence the action did something (a `press \"Shift\"` detaches nothing), so that case cannot arrive through this door — while failing loud would kill a legitimate run on the shape M44's live target has. New fixture `src/browser/fixtures/frames-detach.html`: the button lives in an iframe, the click asks the host to open the filing, and the host replaces the pane — destroying the acted document and painting the result into the main document.",
+      "watched_red": "postcondition-scope-detached-by-its-own-action  passed: False / checks {\"status\": false, \"verdict\": false, \"trace_postconditions\": false, \"resolved_scopes\": false} / got {\"status\": \"failure:act\", \"answer\": null, \"reason\": \"step 2 (click): StepError: expected_state not reached: {'text_visible': 'Document ID:'}; replan made no progress (identical or empty plan)\"} — 2.55s, the full settle budget burned to reach the wrong answer. Green after the guard in 0.61s.",
+      "docs_updated": [
+        "specs/decisions/ADR-036-postcondition-document-scope.md (§1 table row, new §4, Consequences bullet 3)",
+        "specs/001-browser-contract.md",
+        "specs/decisions/INDEX.md"
+      ]
+    },
+    {
+      "id": "R4",
+      "status": "debt",
+      "debt_id": "T-M42-4-D1",
+      "covered_by": "tasks/TODO.md ## Debt, T-M42-4-D1 (Origin: PR #66 R4)",
+      "what_changed": "Logged, not fixed, with the finding's evidence and acceptance carried verbatim. The reason for routing rather than repairing: the ruling's cost is now measured offline by R2's case, so what remains is a prompt change whose effect is only observable on paid runs — a `full`-suite decision rather than a repair to land beside the mechanism."
+    },
+    {
+      "id": "R5",
+      "status": "fixed",
+      "covered_by": "report-citations-resolve",
+      "what_changed": "Resolved by the orchestrator before the rebase (aborted no-venv report and history rows removed). One consequence surfaced here: committing `tasks/reviews/pr66-r1.json` puts the deleted report's NAME back in the scanned scope, and `report-citations-resolve` read it as a dangling citation. Added to `REPORT_CITATION_SKIP` (and to the case's `skip_exactly`, which pins the set's width) for the same reason the first literal is there — the name is the record of a removal, not a claim of evidence, and the alternative is editing a reviewer's verbatim text so a regex stops seeing it, which that code's own comment refuses."
+    }
+  ],
+  "derived_numbers_republished": {
+    "why": "two new invariant cases: 86 -> 88, and the band with them",
+    "measured_from": "evals/report/history.jsonl rows at 88 cases, local env. The rows this round first measured (20260827-204808/-205359/-205456) did not survive the rebase onto da6d05b, which takes origin/main's ledger, so the band was re-derived from the rows measured on the rebase point (20260827-212648 22.84s clean, -212811 22.9s dirty); `_band_rule` = slowest x 1.15 rounded up to a multiple of five",
+    "surfaces": [
+      "specs/decisions/ADR-019 §3: heading 20s -> 30s; band bullet ts 20260827-212648, 22.84s, 87/88, 88 cases; cited file 20260827-212648-invariant.json; margin-against-the-maximum 21.73s -> 26.08s",
+      "specs/decisions/ADR-019 restatement line: (restated — `invariant`: 88 cases, 88/88)",
+      "specs/decisions/ADR-019 derivation sentence: 23.23 × 1.15 = 26.71 → **30**",
+      "specs/decisions/ADR-019 Ruling line: local `invariant` 20 -> 25 -> **30s**",
+      "evals/run.py WALL_BUDGET_S['invariant'] 25 -> 30, and its comment",
+      "evals/adversarial/fast-wall-clock-budget.json: invariant boundary rows 25.00/25.01 -> 30.00/30.01, both `invariant_override` fallback budgets 25 -> 30, `invariant_wall_seconds` 25 -> 30, expect.note, new provenance entry (`ci_invariant_wall_seconds` stays 25 — CI's number was measured on CI and nothing here re-measured it)",
+      "README band table row: `invariant` | 88 | 23.23s | 26.71 | **30s**",
+      "README 'Where it stands': cites evals/report/20260827-212648-invariant.json, `invariant  87/88`",
+      "README coverage sentence: 252 -> 254 cases",
+      "docs/analysis.md §6: 254 distinct cases (23 golden + 231 adversarial)",
+      "evals/adversarial/docs-numbers-are-derived.json where_it_stands.reports.invariant -> 20260827-212648-invariant.json",
+      "specs/decisions/ADR-029: struck clause now cites ADR-036 (was ADR-033, a different merged ADR) and reads 30s at 88 cases; evidence line locally `invariant` 88/88",
+      "specs/decisions/INDEX.md ADR-029 entry: same ADR-033 -> ADR-036 correction, 25s at 86 then 30s at 88"
+    ],
+    "pruned": "the two invariant reports this branch's own commit added (ts 20260827-202644 and 20260827-202839, both at 86 cases) are uncited after this republish — prune candidates by ADR-012, superseded inside one PR — and the two intermediate runs at 88 (ts 20260827-204808 and 20260827-205359) are likewise not retained. Named by timestamp rather than by path on purpose: a filename under evals/report/ written anywhere in this scope is a citation to `report-citations-resolve`, and a record of a deletion is not a claim of evidence (the same distinction R5 above turns on).",
+    "corrected_by_round_2": "PR #66 R7. Three wall-clock figures in this round-1 record are not values in the committed evals/report/history.jsonl and are labelled here rather than left standing: (a) the two `surfaces` lines reading `23.23 x 1.15 = 26.71` and `README band table row: invariant | 88 | 23.23s | 26.71` describe a band the tree never shipped — what landed was 22.84s -> 26.27 in both places, the value ADR-019 §3's bullet and README carried on merge; (b) `gate.invariant` 23.63s and `gate.fast` 89.78s name real runs of the final tree whose history rows were written after `history.jsonl` was staged, so they ride in no commit and no reader can read them back — the same treatment ADR-019 §3 gives the 23.23s row. Round 2 re-derived the band at 89 cases (ADR-019 §3, ts 20260827-222358, 24.92s, the ledger's slowest at that count as of that republish); every surface listed above moved with it, and the ones listed here are records of what round 1 did, not claims about this tree."
+  }
+}

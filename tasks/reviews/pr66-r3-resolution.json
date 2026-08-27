@@ -1,0 +1,40 @@
+{
+  "pr": 66,
+  "round": 3,
+  "task": "T-M42-4",
+  "note": "Bounded final round, scope set by the orchestrator: correct ADR-036's false Ruling, hand R11's fixture and repro to T-M42-14, fix R12/R13/R14. No document-identity implementation here.",
+  "resolutions": [
+    {
+      "id": "R11",
+      "status": "fixed-as-declaration, residue routed to T-M42-14",
+      "what": "ADR-036's Ruling said the predicates are 'evaluated in exactly ONE document: the one resolve returned the step's target from'. That was false as written: the scope is a live Playwright Frame, so a frame re-navigated IN PLACE is read in its successor document and a no-op can earn its postcondition. The Ruling and the §1 table row now say FRAME rather than document, and both state plainly what that leaves open. §4 gains an explicit 'what this guard does NOT close' block naming the in-place re-navigation.",
+      "handoff": "src/browser/fixtures/frames-renav-decoy.html is committed as T-M42-14's starting evidence — a decoy iframe, a widget iframe whose Refresh button has an empty handler, and a page-owned setTimeout scheduled at LOAD that swaps the widget's srcdoc. The T-M42-14 block carries the verbatim repro (resolve -> click -> check_state returns True with is_detached() False, reproduced with the decoy deleted).",
+      "deliberately_not_a_case": "Pinning today's answer would pin a wrong-success as a desired outcome. The fixture is committed ungraded so the next session reproduces in minutes instead of re-deriving.",
+      "why_not_fixed_here": "Telling 'the document I acted in' from 'its successor' needs an identity resolved.scope cannot supply (both are about:srcdoc). That is the same successor-document identity T-M42-14's page_changed comparison needs; one mechanism closes both, neither closes alone."
+    },
+    {
+      "id": "R12",
+      "status": "fixed",
+      "what": "Three surfaces said the band was re-derived at 89 cases while ADR-019 §3, README and the runner said 90. ADR-029's Ruling, INDEX.md's ADR-029 entry and fast-wall-clock-budget's provenance now either say 90 or defer to ADR-019 §3 for the count, which is the rule those same surfaces already apply to the seconds.",
+      "gradeable": "No case reads case-file provenance or those two prose sites, and that is R7/R12's whole mechanism. The durable fix applied here is to stop retyping the scalar rather than to retype it correctly — deferral to §3 is what cannot go stale."
+    },
+    {
+      "id": "R13",
+      "status": "fixed",
+      "what": "README's 'Where it stands' cited a red invariant report and printed 'invariant 89/90' for a suite the gate requires at 100%. It now cites evals/report/20260828-040000-invariant.json, a committed GREEN 90/90 run at the shipped count, and reads 'invariant 90/90'.",
+      "covered_by": "docs-numbers-are-derived (the block must equal the reports it cites, and the cited report must hold as many results as the suite has cases)"
+    },
+    {
+      "id": "R14",
+      "status": "fixed",
+      "what": "ADR-036 §4 claimed a null scope is 'loud' without qualification. It now states the residual: verifier.STATE_CHANGING is {click, press, go_back}, so only those three fail failure:semantic on a null; fill/select_option/scroll never reach it because they set postcondition_ok True by readback; extract/extract_all/observe record the null and the run continues, and no_failed_postcondition does not see a null.",
+      "gradeable": "Not newly gradeable — this is the pre-existing meaning of null ('None is not True', pinned by postcondition-unverified-click). What was wrong was the ADR's unqualified sentence, not the behaviour."
+    },
+    {
+      "id": "collateral",
+      "status": "fixed",
+      "what": "The local invariant ceiling moved 30 -> 35 during this round, forced by the machinery rather than chosen: a gate run at load average 4.21 (four other sessions' suites running concurrently) measured 28.01s at 90 cases, and _band_wrong takes the ledger maximum with no outlier rejection, so 28.01 x 1.15 = 32.21 -> 35. The row was NOT pruned — it is a real recorded run, and dropping it because quieter rows are prettier is the selective presentation ADR-019 §3 refuses. The outlier is disclosed in the band bullet beside the four quiet rows (25.12-25.50s) and the quiet re-run (25.15s). WALL_BUDGET_S, the Ruling line, README's band row and fast-wall-clock-budget's boundary rows, override fallbacks and invariant_wall_seconds all moved with it, with provenance. ci_invariant_wall_seconds stays 25 — CI is PR #72's and nothing here re-measured it.",
+      "also": "The band bullet names NO report file, and says why: the maximum row is a green gate run and ADR-012 writes a per-case report only on red or under --report. Naming a neighbouring run's file to satisfy the form is exactly the defect item 11 (cited-file) exists for."
+    }
+  ]
+}

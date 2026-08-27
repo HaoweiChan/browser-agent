@@ -1,0 +1,70 @@
+{
+  "id": "main-document-click-cannot-verify-a-frame-only-effect",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "input": {
+    "task": "Load the filing source and read the document identifier.",
+    "fixture": "frames-swap.html",
+    "stub_plans": [
+      [
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Load filing source"
+          },
+          "expected_state": {
+            "text_visible": "Document ID:"
+          }
+        },
+        {
+          "action": "extract",
+          "target": {
+            "role": "status",
+            "name": "Document identifier"
+          }
+        }
+      ],
+      [
+        {
+          "action": "wait_for",
+          "expected_state": {
+            "text_visible": "Document ID:"
+          }
+        },
+        {
+          "action": "extract",
+          "target": {
+            "role": "status",
+            "name": "Document identifier"
+          }
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "NIMBUS-10K-2025",
+    "recovery": true,
+    "replans": 1,
+    "trace_postconditions": [
+      true,
+      false,
+      true,
+      null
+    ],
+    "resolved_scopes": [
+      null,
+      "/fixtures/frames-swap.html",
+      null,
+      "about:srcdoc"
+    ]
+  },
+  "provenance": "PR #66 R2. The PRICE of ADR-036, measured instead of asserted. Its Consequences bullet said a main-document click whose only effect is inside a frame can no longer verify itself with `text_visible`, and then said `No committed case authored that shape` — a limitation declared in prose that no suite could go red on, which is the shape this repo has been burned by three times. The fixture was already in the tree: `frames-swap.html` is a main-document button whose only effect is the iframe's `srcdoc`, and the one case on it (`replan-after-an-iframe-only-change-is-not-laundering`) asserts `Filing loaded`, a string absent on BOTH settings, so it cannot discriminate. This case names the FRAME's own text, `Document ID:`, and pins the whole ruling in one trace: step 2's click resolves in the main document (`resolved.scope` = frames-swap.html), `page_changed` is true because the frame really did change, and `postcondition_ok` is FALSE anyway — the action worked and its postcondition cannot see it. Then it pins the declared way out, the `wait_for` carve-out: the replan's page-wide `wait_for` reads the frame, goes true, and the `extract` resolves in `about:srcdoc`. Watched against the pre-ADR-036 mechanism (`check_state(..., scope=None)` everywhere, one line at the call site) it is red on four checks at once: `checks {\"status\": true, \"verdict\": true, \"recovery\": false, \"replans\": false, \"trace_postconditions\": false, \"resolved_scopes\": false}`, `got {\"status\": \"success\", \"answer\": \"NIMBUS-10K-2025\", \"reason\": null}` — page-wide, the click's postcondition is satisfied by the frame, so there is no failure, no replan and no recovery at all. That difference IS the trade-off: one extra replan on a legitimate frame-effect click, which is the cost this ADR pays for refusing a decoy document's `postcondition_ok: true`.",
+  "triage": {
+    "class": "coverage",
+    "note": "the cost side of ADR-036's ruling, and the pin on its `wait_for` carve-out being a real recovery path rather than a sentence"
+  }
+}

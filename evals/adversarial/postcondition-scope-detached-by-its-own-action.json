@@ -1,0 +1,49 @@
+{
+  "id": "postcondition-scope-detached-by-its-own-action",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "input": {
+    "task": "Open the filing and read the document identifier.",
+    "fixture": "frames-detach.html",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Open filing"
+        },
+        "expected_state": {
+          "text_visible": "Document ID:"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Document identifier"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "reason_contains": "carried no checkable postcondition",
+    "trace_postconditions": [
+      true,
+      null,
+      null
+    ],
+    "resolved_scopes": [
+      null,
+      "about:srcdoc",
+      "/fixtures/frames-detach.html"
+    ]
+  },
+  "provenance": "PR #66 R3. The false negative ADR-036 never declared: when the acted document is a frame the action DESTROYS, the scoped postcondition read False silently rather than failing loudly or falling back. `text_visible` goes through `observe.page_text`, whose per-frame read is `except Exception: continue`, so a detached Frame contributes \"\" and the predicate is false; `role_visible` raises on the detached Frame and `check_state`'s own `except Exception: pass` swallows it — either way the 10x200ms settle burns out and returns False for an action that WORKED. `frames-detach.html` is the shape: the button lives in an iframe, the click asks the host to open the filing, and the host answers by replacing the pane — the acted document is gone and the result is painted into the main document. An SPA re-mounting an embedded widget after an in-frame click, and an in-frame link with `target=\"_top\"`, are the same shape; M44's sec-10k inspector is the live target. Watched red before the guard, verbatim: `checks {\"status\": false, \"verdict\": false, \"trace_postconditions\": false, \"resolved_scopes\": false}`, `got {\"status\": \"failure:act\", \"answer\": null, \"reason\": \"step 2 (click): StepError: expected_state not reached: {'text_visible': 'Document ID:'}; replan made no progress (identical or empty plan)\"}` — 2.55s of settle burned to reach the wrong answer. The ruling (ADR-036 Consequences): a detached acted scope falls back to page-wide, because the hazard ADR-036 exists to close is a NO-OP scoring true off an unrelated document and a detach is proof the action did something. Green in 0.61s. **This case's EXPECTED OUTCOME CHANGED in round 2 of the same PR (R6), and the change is the finding**: the round-1 ruling above — fall back to page-wide — was justified by \"a no-op detaches nothing\", which `detached-scope-cannot-be-verified-by-a-decoy` falsifies with a page that re-mounts its own widget on a timer, so the fallback laundered a decoy iframe into `postcondition_ok: true` for a literal no-op. A detached acted scope is now UNVERIFIABLE (`check_state` returns None), so this case ends `failure:semantic` — `verifier FAIL: state-changing step(s) [2] carried no checkable postcondition` — with `trace_postconditions [true, null, null]` in 0.22s. R3's finding is not reopened by that: R3 was a false NEGATIVE, a run asserting that an action which had worked did not, after burning the full settle budget; the run now says it cannot tell, in 0.22s, which is a true statement, and the honest plan for this shape authors the page-wide `wait_for` carve-out the way `main-document-click-cannot-verify-a-frame-only-effect` does. The cost is stated rather than hidden: a legitimate re-mount no longer verifies itself, and that price bought the refusal of a verified no-op. `resolved_scopes` pins that this really is the detaching shape — the click resolves in `about:srcdoc` and the following `extract` resolves in the MAIN document, so the two steps are in different documents and the frame between them is gone.",
+  "triage": {
+    "class": "false-negative",
+    "note": "the acted document destroyed by its own action; the guard is in `check_state`, so both predicates and every caller get it at once"
+  }
+}

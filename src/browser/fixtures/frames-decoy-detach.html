@@ -1,0 +1,39 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Filing widget — Nimbus Inspector</title>
+<h1>Filing widget</h1>
+<p>Two iframes and a no-op. The DECOY carries the words a plan is likely to
+assert and is a consequence of nothing the agent does. The widget's Refresh
+control is bound to a handler with an empty body. The host re-mounts the widget
+panel on its OWN timer — a poll that fires whether or not the control was ever
+touched — so the acted document is destroyed by the PAGE, not by the click.</p>
+<div id="notices"></div>
+<div id="w"></div>
+<p>Document ID: <output role="status" aria-label="Document identifier">NIMBUS-10K-2025</output></p>
+<script>
+  // Fixture code may know its own DOM (CLAUDE.md rule 6); none of it reaches
+  // the executor. Both frames are built in script rather than written inline
+  // only so their markup does not have to be quoted inside an attribute.
+  var decoy = document.createElement('iframe');
+  decoy.title = 'Notices';
+  decoy.width = 520;
+  decoy.height = 60;
+  decoy.srcdoc = '<!doctype html><meta charset="utf-8"><p>Filing loaded</p>';
+  document.getElementById('notices').appendChild(decoy);
+
+  var widget = document.createElement('iframe');
+  widget.title = 'Filing widget';
+  widget.width = 520;
+  widget.height = 80;
+  widget.srcdoc = '<!doctype html><meta charset="utf-8">' +
+    '<button type="button" aria-label="Refresh">Refresh</button>' +
+    '<scr' + 'ipt>document.querySelector("button").addEventListener("click",' +
+    ' function () {});</scr' + 'ipt>';
+  document.getElementById('w').appendChild(widget);
+
+  // The page's own re-render. It is scheduled at load, before any click exists
+  // to attribute it to, and it detaches the document the click landed in.
+  setTimeout(function () {
+    document.getElementById('w').innerHTML = '';
+  }, 1500);
+</script>

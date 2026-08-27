@@ -1,0 +1,56 @@
+{
+  "pr": 66,
+  "round": 1,
+  "task": "T-M42-4",
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 86/86 (20.49s, ceiling 25) · fast 229/229 (90.08s, ceiling 105) · $0.0000",
+  "note": "Round 1 reviewed the full PR diff at 085164b (pre-rebase). The rebase onto 6089850 and the ADR-033 -> ADR-036 renumber landed after this review and changed no reviewed behaviour; R5 was resolved by the orchestrator as working-tree hygiene before the rebase.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "This PR makes `page_text(..., frames=False)` load-bearing but leaves the parameter's docstring asserting it has no caller — and inviting its deletion.",
+      "evidence": "src/browser/observe.py:135-159 still reads \"`frames=False` ... as of PR #57 R13, **no caller uses it** — the argument is kept because the trade-off it names is real\" and \"ponytail: kept as a parameter with no caller rather than deleted ... Remove it if T-M42-14 closes the other way.\" As of this diff, agent.py:565 calls `page_text(scope or page, frames=scope is None)`, i.e. `frames=False` on every non-`PAGE_WIDE_STATE` step that has an acted document. ADR-036 §2 itself writes `page_text(scope, frames=False)`, so the ADR knows what the docstring denies. T-M42-14 is the very task told to reopen this file, and the note tells its implementer the parameter is dead code.",
+      "repro": "grep -n \"no caller uses it\" src/browser/observe.py  vs  sed -n '557,566p' src/browser/agent.py",
+      "acceptance": "observe.page_text's docstring names `check_state` (ADR-036) as the caller of `frames=False` and the ponytail note no longer authorises deleting the parameter; the two `page_changed` hazard bullets stay as-is since they are still true of the evidence pipeline."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The change's own regression direction — a main-document action whose effect legitimately lands in a frame — flips a previously-true postcondition to false, and no case in any suite can go red on it; the repo already carries the fixture that has that shape.",
+      "evidence": "Demonstrated against this branch's code: a page with a main-document button whose click sets the iframe's `srcdoc`, then `check_state(page, {'text_visible': 'Document ID'}, scope=<the Page>)` returns False after burning the full 2.04s settle, while `scope=None` returns True in 0.0s. That is exactly src/browser/fixtures/frames-swap.html (\"a control in the main document whose only effect is inside an iframe — an inspector's source pane, the sec-10k shape M42 leg (a) was built for\"), which is one stub-plan line away from being the case. The only committed case on that fixture, `replan-after-an-iframe-only-change-is-not-laundering`, asserts `text_visible: \"Filing loaded\"` — a string absent on both settings — so it cannot discriminate, and ADR-036 Consequences says so itself (\"No committed case authored that shape\"). The three new cases cover only the decoy quadrant and the same-document quadrant.",
+      "repro": "frame_effect_probe.py: \"resolved scope is the page: True\" / \"ADR-036 scoped (click) -> False 2.04 s\" / \"page-wide (wait_for/navigate) -> True 0.0 s\"",
+      "acceptance": "A committed case on `frames-swap.html` (or equivalent) whose plan authors `click` + `expected_state.text_visible` naming the frame's text, pinning the declared post-ADR-036 outcome (fails `act`, then recovers via the declared `wait_for` carve-out or the replan path) — watched red/green against the pre-ADR-036 tree so the trade-off is measured rather than only asserted in prose."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "When the acted document is a frame that the action destroys, the scoped postcondition silently reads as \"predicate absent\" (False) instead of failing loudly or falling back — a false negative ADR-036 never declares.",
+      "evidence": "agent.py:565 routes `text_visible` through `observe.page_text`, whose per-frame read is wrapped in `except Exception: continue` (observe.py:163-166), so a detached Frame contributes \"\" and the predicate reads False; `role_visible` (agent.py:570-576) raises on the detached frame and is swallowed by `check_state`'s `except Exception: pass` (agent.py:585), so the 10x200ms settle runs out and returns False. Demonstrated: resolve a button inside an iframe (scope = Frame, url `about:srcdoc`), then have the action remove that iframe and paint the result into the main document — `check_state(..., scope=<Frame>)` -> False in 2.04s, `scope=None` -> True in 0.0s. Realistic input: an SPA that re-mounts an embedded widget after a click inside it, or an in-frame link with `target=\"_top\"`. ADR-036 mentions frame detach only to justify recording a URL instead of an index (section 2), not for the live scope object handed to `check_state`.",
+      "repro": "detach_probe.py: \"scoped check_state -> False in 2.04 s\" / \"page-wide check_state -> True in 0.0 s\"",
+      "acceptance": "A detached acted scope is a declared, graded outcome: either ADR-036 states the ruling (e.g. detached scope falls back to page-wide, or fails loud as `env`/`act` with a reason naming the detach) plus an adversarial case that removes the acted iframe between action and check, or the ADR records it explicitly as an accepted ceiling with the case that would reopen it."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ADR-036's escape hatch — \"the honest plan authors a `wait_for` for that\" — is never communicated to the planner, so no LLM-generated plan can be expected to use it.",
+      "evidence": "src/browser/planner.py:143-149 still says only \"Every `click` MUST carry an expected_state ... Pick the cheapest checkable consequence: a URL fragment, or a role+name that becomes visible\", and the per-action descriptions at planner.py:383-403 say nothing about which document a predicate is checked in. Nothing in the prompt, the tool descriptions or .claude/skills/browser-domain/SKILL.md section \"Postcondition patterns\" (lines 292-305) states the ADR-036 scoping rule. The affected shape is the live target of M44 (the sec-10k inspector's iframe source pane, per the comment in src/browser/fixtures/frames-host.html:5-7), so the cost lands on paid live runs, mitigated only by an extra replan.",
+      "repro": "sed -n '143,150p' src/browser/planner.py ; grep -n \"scope\\|document\" src/browser/planner.py (no hit for the ADR-036 rule)",
+      "acceptance": "One sentence in the planner prompt and in the `wait_for` action description stating that `text_visible`/`role_visible` are checked in the document the step's target resolved in, and that a consequence painted elsewhere on the page needs a `wait_for` — or ADR-036's Consequences amended to state that the hatch is available to hand-written plans only, with the live cost declared."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The worktree carries uncommitted ledger rows and an untracked partial-run report that would poison the graded ledger if swept into the next commit.",
+      "evidence": "`git status` showed `M evals/report/history.jsonl` plus untracked `evals/report/20260827-200410-fast.json`, whose row is `{\"passed\": 55, \"total\": 229, \"score\": 0.240175, \"wall_s\": 0.87}` — an aborted no-venv run that `docs-numbers-are-derived` and `published-band-matches-the-ledger` would read as a real ledger row once committed. Further rows (ts 20260827-200757/200935/201443) were the reviewer's own suite runs.",
+      "repro": "git status --porcelain ; git diff -- evals/report/history.jsonl | tail -6",
+      "acceptance": "history.jsonl carries only rows from real completed runs of this tree, and the aborted report files are removed; git status clean before merge.",
+      "resolution": "RESOLVED by the orchestrator before the rebase: history.jsonl restored, 20260827-200410-fast.json and 20260827-201443-live.json deleted. The rebase then took main's ledger and the branch re-measured from the rebase point, so no aborted row survives in the PR."
+    }
+  ]
+}

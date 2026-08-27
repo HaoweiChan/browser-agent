@@ -1,0 +1,61 @@
+{
+  "pr": 66,
+  "round": 2,
+  "task": "T-M42-4",
+  "result": "REQUEST_CHANGES",
+  "scope": "Round 1's repair diff plus the standing findings, not a fresh full sweep. Reviewed at head 4e254b7 on origin/main da6d05b.",
+  "round_1_status": {
+    "R1": "discharged — observe.py:135-167 names agent.check_state as the frames=False caller, the ponytail note now forbids deletion, both page_changed hazard bullets byte-unchanged",
+    "R2": "discharged — main-document-click-cannot-verify-a-frame-only-effect is invariant-tagged, pins the wait_for recovery leg and resolved_scopes, and the 'No committed case authored that shape' sentence survives only as a quoted record",
+    "R3": "discharged in mechanism (live_scope re-read per settle pass, both predicates, getattr no-ops on a Page, detach-between-check-and-read self-heals next pass) — but its DECLARED BOUND is falsified by R6",
+    "R4": "routed to T-M42-4-D1 with evidence and acceptance verbatim, modulo R10",
+    "R5": "holds; report-citations-resolve's second skip literal is a pinned record-of-a-removal matching the existing 29991231-235959-fast.json precedent, not a widened guard"
+  },
+  "findings": [
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-036 §4's load-bearing justification for the detach fallback — 'a detach is positive evidence the action did something ... so the case this ADR exists to refuse cannot arrive through this door' — is false: a NO-OP action whose acted frame is detached by the page's own timer routes the postcondition page-wide, where a decoy iframe satisfies it, producing exactly the postcondition_ok-true-for-a-no-op that ADR-036 exists to make impossible.",
+      "evidence": "src/browser/agent.py:554-579 (live_scope() returns None on is_detached() with no test for WHAT detached it) and ADR-036 lines 96-103 + Consequences bullet 2 (lines 142-150), which assert 'a no-op detaches nothing'. Reproduced on this tree: main document holds (a) a decoy iframe whose srcdoc is '<p>Filing loaded</p>', (b) a widget iframe with a button 'Refresh' bound to an empty handler, and (c) setTimeout(function(){document.getElementById('w').innerHTML='';}, 900) — the host re-mounting its own panel, not a consequence of the click. resolve returns the widget Frame (about:srcdoc); the click is a literal no-op; check_state(page, {'text_visible': 'Filing loaded'}, scope=<that Frame>) returns True, supplied entirely by the decoy. This is the shape observe.py:151-155 already names as real ('a third-party iframe with a ticking clock, a rotating ad, a chat bubble') and that T-M42-14 exists to fixture. No case in any suite can go red on it.",
+      "repro": "probe: set_content the page above; loc,_,_,scope = await resolve(page,{'role':'button','name':'Refresh'},action='click'); await loc.click(); await check_state(page,{'text_visible':'Filing loaded'},scope=scope) -> 'resolved scope: Frame about:srcdoc' / 'scoped check_state -> True' / 'scope detached now: True'",
+      "acceptance": "Either the ADR's §4/Consequences claim is corrected to state that an acted frame detached for ANY reason (including the page's own re-render) reopens §1's hazard in full — with that fixture committed as an adversarial case pinning the current outcome so T-M42-14 can close it — or the fallback is narrowed so a detach that is not attributable to the action does not launder a decoy (e.g. fail loud / return None rather than page-wide when nothing else changed)."
+    },
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The republished derived numbers disagree with each other: fast-wall-clock-budget.json's new provenance publishes a band of 23.23s -> 26.71 -> 30 while ADR-019 §3 and README publish 22.84s -> 26.27 -> 30, and both surfaces cite invariant band figures (23.23s, and 20.43s at 86 cases) that no row in the committed ledger records.",
+      "evidence": "evals/adversarial/fast-wall-clock-budget.json key provenance_pr66_r2_r3_2026_08_28: 'taking the suite 86 -> 88 cases and the band 20.43s -> 23.23s; 23.23 x 1.15 = 26.71 -> 30, republished in ADR-019 §3'. ADR-019:305 publishes 22.84s and :421 derives '22.84 x 1.15 = 26.27 -> 30'; README.md:183 reads | invariant | 88 | 22.84s | 26.27 | 30s |. ADR-019 §3:314-318 itself states the 23.23s row (ts 20260827-205456) did not survive the rebase and is not in the committed ledger; grep 20260827-205456 evals/report/history.jsonl returns nothing. The 20.43s@86 figure has no backing row either: 0 rows at total 86. published-band-matches-the-ledger does not read case-file provenance, so nothing catches it.",
+      "repro": "grep -n '20.43\\|23.23\\|22.84' evals/adversarial/fast-wall-clock-budget.json specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md README.md ; grep '\"suite\": \"invariant\"' evals/report/history.jsonl | grep -c '\"total\": 86'",
+      "acceptance": "Every surface that names this republish's band names the same number, and every band/wall-clock figure quoted anywhere in this PR is a value present in the committed evals/report/history.jsonl (or is explicitly labelled as a row that no longer exists, the way ADR-019 §3 already labels 23.23s)."
+    },
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §3 publishes 22.84s as the invariant band while the ledger this same PR commits contains five slower runs at the same case count (max 23.45s) — and the diff deletes the very sentence that used to disclose exactly that, which the ADR's own text calls 'the selective presentation this whole section exists to refuse'.",
+      "evidence": "The diff removes from ADR-019 §3: 'It is therefore NOT necessarily the maximum at this count, and that is said here rather than left for a reader to find, because a band published below a maximum the author had already seen is the selective presentation this whole section exists to refuse'. The replacement bullet (ADR-019:305-350) carries no equivalent disclosure. This PR's own history.jsonl diff adds local/invariant rows at total 88: 22.84 (the cited one), 22.90, 23.02, 23.45 (ts 20260827-213935), 23.16, 23.35. It stays green only because _band_wrong item 3 compares _band_rule(said) != _band_rule(slowest) (eval_adapter.py:704) and both derive 30.",
+      "repro": "grep '\"suite\": \"invariant\"' evals/report/history.jsonl | grep '\"total\": 88' vs sed -n '303,310p;418,424p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md and README.md:183",
+      "acceptance": "Either the band bullet and README row publish the ledger maximum at 88 cases (23.45 x 1.15 = 26.97 -> 30, same ceiling), or the deleted disclosure is restored and names the maximum that is actually in the committed ledger."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The diff deletes a paragraph of ADR-019 §5 — including two already-struck, dated sentences and the record of why they were struck (PR #57 R24) — which contradicts the strike-not-delete convention stated 450 lines above in the same file, is outside T-M42-4's scope, and is not listed among the resolution's declared surfaces.",
+      "evidence": "Removed by git diff origin/main...HEAD -- specs/decisions/ADR-019-...md: the 'Both ceilings move, and invariant's moves for a reason worth stating plainly...' paragraph plus the struck 'CI's fast ceiling of 80 was the next coin flip...' and 'the runner is ~1.15x slower than this laptop' sentences. §5 now ends abruptly with no remaining explanation of why CI's invariant ceiling moved. ADR-019:71 states the convention this violates.",
+      "repro": "git diff origin/main...HEAD -- specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md | grep '^-' ; grep -c '1.15x slower' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "The struck §5 paragraph is restored (struck, dated, as the file's own convention requires). Routed repair rather than debt because it is collateral damage this branch inflicted on a section it no longer owns — the CI-ceiling line owns §5 now, and handing it a truncated section is worse than the finding's severity suggests."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The debt block that discharges R4 restates R4's severity wrong.",
+      "evidence": "tasks/TODO.md:178 reads 'Origin: PR #66 R4 (MEDIUM, routed debt).' while tasks/reviews/pr66-r1.json:38 records R4 as severity LOW. The block's spec and acceptance text are otherwise carried verbatim and correct.",
+      "repro": "grep -n 'PR #66 R4' tasks/TODO.md ; grep -n '\"id\": \"R4\"' -A2 tasks/reviews/pr66-r1.json",
+      "acceptance": "The debt block's origin line matches the severity in the committed review record (LOW). Routed repair rather than debt because it is a one-word inaccuracy in this PR's own audit trail."
+    }
+  ]
+}

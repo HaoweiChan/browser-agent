@@ -1,0 +1,57 @@
+{
+  "pr": 66,
+  "round": 2,
+  "task": "T-M42-4",
+  "gate": {
+    "invariant": "PENDING",
+    "fast": "PENDING",
+    "cost": "$0.0000, no paid calls; .eval-baseline.json untouched at 1.0",
+    "reports": [
+      "evals/report/20260827-222358-invariant.json"
+    ]
+  },
+  "resolutions": [
+    {
+      "id": "R6",
+      "status": "fixed",
+      "covered_by": "detached-scope-cannot-be-verified-by-a-decoy (new, invariant), with postcondition-scope-detached-by-its-own-action re-expected to the same ruling",
+      "route": "the guard, not the disclosure — the acceptance's second branch",
+      "what_changed": "`agent.check_state` no longer falls back to page-wide when the acted scope has detached. `live_scope()` is now `detached()`, read after each settle pass, and a detached scope returns None: the postcondition is UNVERIFIABLE, not page-wide and not false. Traced downstream before choosing it: None leaves `rec['postcondition_ok']` null, `verifier.STATE_CHANGING` ({click, press, go_back}) turns a null postcondition on a state-changing verb into a failed `actions_verified` check, `assemble_result` demotes the run to `failure:semantic` with reason `verifier FAIL: state-changing step(s) [N] carried no checkable postcondition`, and INV-2 drops the answer — loud and classified, not a silent pass. `url_contains` is exempt from the None (one address bar survives any frame), which keeps ADR-036 §1's third carve-out literally true. ADR-036 §4 is amended in place: the false sentence ('a detach is positive evidence the action did something ... a no-op detaches nothing') is struck with the strike-not-delete convention and the counter-example named, the §1 scope table's detach row now reads null/unverifiable, Consequences bullet 2 says plainly that ANY detach reopens §1's hazard in full when the fallback is page-wide, and specs/001-browser-contract.md and specs/decisions/INDEX.md carry the same ruling.",
+      "watched_red": "checks {\"status\": false, \"trace_postconditions\": false, \"resolved_scopes\": true, \"reason_contains\": false}, got {\"status\": \"success\", \"answer\": \"NIMBUS-10K-2025\", \"reason\": null} — the reviewer's fixture, committed as src/browser/fixtures/frames-decoy-detach.html, run against the page-wide fallback. Re-run with the expectations inverted to record what the tree actually produced: PASS on {status: success, verdict, trace_postconditions [true, true, null]} — a literal no-op click whose postcondition was earned by a decoy iframe, verdict PASS on every L1 check including `actions_verified`, answer delivered. Green after the guard: failure:semantic, trace_postconditions [true, null, null], 2.08s.",
+      "expectation_changed": "postcondition-scope-detached-by-its-own-action — R3's acceptance case — changes outcome: was {status: success, answer: NIMBUS-10K-2025, trace_postconditions [true, true, null]}, is now {status: failure:semantic, reason_contains 'carried no checkable postcondition', trace_postconditions [true, null, null]}, in 0.22s instead of 0.61s (and instead of the 2.55s settle burn R3 found). R3 is not reopened: R3 was a false NEGATIVE — a run asserting that an action which had worked did not — and the run now says it cannot tell, which is true. The case is kept, not deleted: it is the one case that measures the price of this ruling, and its provenance records the change and why.",
+      "rejected_alternative": "narrowing the fallback to the MAIN document instead of None was considered and rejected: it defeats this particular fixture (the decoy is an iframe) while leaving the identical laundering available with the decoy text in the host document, which is a one-line edit to the fixture. Only 'unverifiable' is sound without the successor-document identity T-M42-14 owns."
+    },
+    {
+      "id": "R7",
+      "status": "fixed",
+      "covered_by": "published-band-matches-the-ledger (items 1, 2, 3, 5, 7, 11) for the band itself; the case-file provenance prose is NOT gradeable — no check reads it, which is exactly how the two surfaces disagreed green, and this resolution says so rather than implying coverage",
+      "what_changed": "evals/adversarial/fast-wall-clock-budget.json's `provenance_pr66_r2_r3_2026_08_28` no longer retypes a band. It records that the figures it used to carry — 20.43s at 86 cases and 23.23s at 88 — are backed by no row in the committed ledger (the 86-case count has no `invariant` row at all; the 23.23s row did not survive the rebase), that ADR-019 §3 and README published 22.84s -> 26.27 for the same republish, and that ADR-019 §3 is the one publisher. tasks/reviews/pr66-r1-resolution.json gains a `corrected_by_round_2` key labelling its own three unbacked figures: the two `surfaces` lines quoting 23.23/26.71 (the tree shipped 22.84/26.27) and `gate` 23.63s / 89.78s, which name runs whose history rows were written after history.jsonl was staged and therefore ride in no commit — the treatment ADR-019 §3 already gives the 23.23s row.",
+      "watched_red": "not gradeable, and stated as such: no case reads a case file's provenance prose. The band half that IS graded was watched red by the same republish R8 drove — published-band-matches-the-ledger [{\"suite\": \"invariant\", \"env\": \"local\", \"published_case_count\": 88, \"actual\": 89, \"ledger_slowest_at_actual\": 24.49}]."
+    },
+    {
+      "id": "R8",
+      "status": "fixed",
+      "covered_by": "published-band-matches-the-ledger, docs-numbers-are-derived, adr029-scope-matches-the-suites",
+      "what_changed": "The band is republished at the ledger MAXIMUM, at the count the tree actually has now that R6 adds a case: local `invariant` at 89 cases, ts 20260827-222358, 24.92s, 87/89 — the slowest of the four rows at 89 in the committed ledger (24.49, 24.92, 24.72, 24.37), measured on this tree and cited with its report file. 24.92 x 1.15 = 28.66 -> 30, the same ceiling, so nothing in WALL_BUDGET_S, evals.run or the workflow moves. The deleted disclosure is restored in the stronger direction the new band allows: the bullet states that this row IS the slowest at this count as of the republish, says why that is stated (the previous round published 22.84s while committing slower rows at the same count and deleted the sentence that disclosed it), and refuses to retype the maximum as a second scalar — `published-band-matches-the-ledger` prints `ledger_slowest` on every run, so a later slower run says so out loud. Surfaces moved with it: ADR-019 §3 heading bullet, its cited report file, the (restated — `invariant`: 89 cases, 87/89) line, the derivation sentence 24.92 x 1.15 = 28.66 -> 30, README's band row and its 'Where it stands' block (report + `invariant 87/89`), README's 255-case sentence, docs/analysis.md's 255 distinct cases (23 golden + 232 adversarial), docs-numbers-are-derived's cited invariant report, ADR-029 §2's local pair (89/89) and its struck clause's case count, INDEX's ADR-029 line.",
+      "watched_red": "published-band-matches-the-ledger [{\"suite\": \"invariant\", \"env\": \"local\", \"published_case_count\": 88, \"actual\": 89, \"ledger_slowest_at_actual\": 24.49}]; docs-numbers-are-derived {\"docs\": [{\"readme_does_not_say\": \"it is 255 cases (229 of them in the offline gate)\"}, {\"cites_a_report_of_a_different_tree\": \"20260827-212648-invariant.json\", \"report_cases\": 88, \"suite_now\": 89}, {\"analysis_does_not_say\": \"255 distinct cases (23 golden + 232 adversarial)\"}]; adr029-scope-matches-the-suites [{\"suite\": \"invariant\", \"adr029_section_2_says\": \"88/88\", \"suite_is\": \"89/89\"}]."
+    },
+    {
+      "id": "R9",
+      "status": "fixed",
+      "covered_by": "not gradeable — no case reads §5's prose; verified instead by diffing the section against origin/main, which is now empty of deletions",
+      "what_changed": "The §5 paragraph this branch deleted is restored byte-identical to `git show origin/main:specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md` — the 'Both ceilings move, and `invariant`'s moves for a reason worth stating plainly...' paragraph plus the two struck, dated sentences and the record of why they were struck (PR #57 R24). Nothing else in §5 is touched; the CI-ceiling line owns that section.",
+      "watched_red": "not gradeable. `git diff origin/main -- specs/decisions/ADR-019-*.md | grep '^-'` no longer shows any §5 line."
+    },
+    {
+      "id": "R10",
+      "status": "fixed",
+      "covered_by": "not gradeable — no case reads a debt block's origin line",
+      "what_changed": "tasks/TODO.md T-M42-4-D1: 'Origin: PR #66 R4 (MEDIUM, routed debt)' -> '(LOW, routed debt)', matching tasks/reviews/pr66-r1.json. The same block gains a dated note that R6 widened the shape it covers — a detached acted scope now needs the same `wait_for` sentence the finding asks for.",
+      "watched_red": "not gradeable."
+    }
+  ],
+  "scope_fence": {
+    "declared": ".github/workflows/eval.yml, evals/adversarial/ci-numbers-are-derived.json and ADR-019 §5's live CI ceiling numbers are owned by another line and were not touched",
+    "verified": "git diff origin/main -- .github/workflows/eval.yml evals/adversarial/ci-numbers-are-derived.json is empty"
+  }
+}
