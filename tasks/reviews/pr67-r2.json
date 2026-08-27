@@ -1,0 +1,60 @@
+{
+  "pr": 67,
+  "round": 2,
+  "task": "M44-P1",
+  "scope": "repair diff 857a22f..c32a55d plus standing round-1 findings",
+  "head": "c32a55d",
+  "result": "REQUEST_CHANGES",
+  "standing_round_1": {
+    "R1": "fixed — verified by orchestrator: `COPY . /ctx` -> `COPY src /ctx` now RED on derive_stage_never_copies_the_context",
+    "R2": "fixed for the spelling tested, but see R6/R7 — the repair regressed one case and misses four spellings",
+    "R3": "fixed — band cites green 84/84 ts 20260827-202417; the 195713 alternative was deliberately rejected and the orchestrator endorses that",
+    "R4": "debt M44-P1-D3",
+    "R5": "debt M44-P1-D2 (widened)"
+  },
+  "gate": {
+    "invariant": "84/84 = 1.000, 16.03s, ceiling 20 (local)",
+    "fast": "229/229 = 1.000, ceiling 105",
+    "cost": "$0.0000",
+    "verified_by": "orchestrator, on the repaired tree c32a55d"
+  },
+  "findings": [
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R2 repair's `(?!--from=)` exclusion is a strict coverage REGRESSION: a final-stage `COPY --from=build-identity /ctx/.git /app/.git` was RED under the round-1 substring scan and is GREEN now, shipping the git history into the public image — and the comment justifying the exclusion (\"`--from=` sources copy from a stage, not from the context\") is false for this Dockerfile, whose only named stage holds the entire context at `/ctx`.",
+      "evidence": "src/browser/eval_adapter.py:6139-6141 `re.finditer(r\"(?m)^COPY\\s+(?!--from=)([^\\n]*)$\", final_text)` vs the round-1 line it replaced, `re.search(r\"(?m)^COPY\\s+[^\\n]*\\.git\", final_text)`. Input: Dockerfile with `COPY --from=build-identity /ctx/.git /app/.git` inserted before `USER pwuser`. `build-identity` did `COPY . /ctx`, so `/ctx/.git` in that stage IS the context's git dir. The `copy_from` conjunct only requires one line ending `/app/BUILD_SHA`, so extra `--from=` lines are ungraded.",
+      "repro": "Orchestrator-verified: mutated Dockerfile -> `_check_build_sha_is_derived(dockerfile=...)` passed=True, while the round-1 regex would have flagged it (`round1_would_flag=True`).",
+      "acceptance": "A final-stage COPY naming `.git` is RED whether or not it carries `--from=` (the `.git` substring test applies to all COPY lines; only the whole-context `.` rule is `--from=`-exempt), demonstrated red-first with the `COPY --from=build-identity /ctx/.git /app/.git` mutation added as a self-test row; or the regression is named verbatim in the case's declared ceilings."
+    },
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The new `final_stage_copies_git` conjunct is defeated by one character: `COPY ./ /app/`, `ADD . /app/` and `COPY --chown=pwuser . /app/` all ship the whole context (now including `.git`, since this PR removed it from `.dockerignore`) into the published image while every conjunct stays green, and none of these spellings is listed in the case's declared ceilings.",
+      "evidence": "src/browser/eval_adapter.py:6139-6141 — the membership test is `(m.group(1).split() or [\"\"])[0] == \".\"` plus a `.git` substring scan, over `^COPY\\s+…` only. Inputs replacing the final-stage `COPY src/ /app/src/`: `COPY ./ /app/` (first token `./` != `.`), `ADD . /app/` (instruction not matched at all), `COPY --chown=pwuser . /app/` and `COPY --link . /app/` (first token is the flag). The self-test row only ever tries the literal `COPY . /app/`, so it proves the guard fires for one spelling, not for the property.",
+      "repro": "Orchestrator-verified: all four spellings -> passed=True.",
+      "acceptance": "The final-stage rule normalises the source token (strip trailing `/`, skip leading `--flag=` options) and covers `ADD` as well as `COPY`, watched red with `COPY ./ /app/` and `ADD . /app/` as additional self-test rows; or those spellings are added verbatim to the triage note's declared ceilings."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The two new source-reading conjuncts disagree about what counts as \"the whole context\": `./` and option flags falsely REDDEN the derive-stage conjunct on a Dockerfile that builds and derives correctly, while the same spellings silently pass the final-stage conjunct (R7).",
+      "evidence": "src/browser/eval_adapter.py:6123-6128 — `src != \".\" and \".git\" not in src`. Input: `COPY . /ctx` -> `COPY ./ /ctx` (identical Docker semantics) or `COPY --link . /ctx`; both report `derive_stage_never_copies_the_context`. Also, if the derive stage has two COPY lines into `/ctx` only the first is read, so a correct stage reddens.",
+      "repro": "Orchestrator-verified: `COPY ./ /ctx` and `COPY --link . /ctx` -> wrong: ['derive_stage_never_copies_the_context'].",
+      "acceptance": "Both conjuncts share one source-token normaliser, so `COPY ./ /ctx` is green and `COPY ./ /app/` is red; or the false-red spellings are named in the triage ceilings alongside the line-continuation one. NOTE: a shared normaliser written for R7 closes this incidentally — if so, record it fixed rather than as debt."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The M44-P1-D2 widening text is inserted INSIDE the block's quoted Evidence string, so a paragraph that begins \"Spec: verbatim from the finding\" now presents PR #67 R5 material as part of a verbatim quotation from PR #65 R4.",
+      "evidence": "tasks/TODO.md M44-P1-D2 — the Evidence quote opens at `Evidence: \"` and does not close until `…not hidden.\"`; the sentence `**Second instance, PR #67 R5**: ...` sits between those two quote marks. PR #65 R4 could not have said anything about PR #67.",
+      "repro": "Read the quote boundaries in the M44-P1-D2 block of tasks/TODO.md.",
+      "acceptance": "The R5 widening sits outside the quoted Evidence string (e.g. its own `Second instance:` line after the Repro line), so everything inside the quotes is what PR #65 R4 actually wrote.",
+      "route_note": "LOW would normally route to debt, but this text was written in c32a55d — this round's own artifact — and the defect is a factual misattribution inside a quotation. Correcting one's own round's quote boundary is not scope creep."
+    }
+  ]
+}

@@ -6034,7 +6034,41 @@ def _check_version_never_guesses() -> dict:
                     "env_names_set": list(ENV_NAMES)}}
 
 
-def _check_build_sha_is_derived(dockerfile: Path | None = None) -> dict:
+def _dockerfile_copies(text: str) -> list[dict]:
+    """Every `COPY`/`ADD` line as `{sources, dest, flags, line}`, normalised.
+
+    ONE normaliser for both COPY conjuncts, because they disagreed about what
+    "the whole context" is and the disagreement went both ways at once
+    (PR #67 R7/R8): the final-stage guard compared the raw first token to `.`,
+    so `COPY ./ /app/`, `ADD . /app/`, `COPY --chown=pwuser . /app/` and
+    `COPY --link . /app/` all shipped the context — `.git` now in it — into the
+    published image and stayed green, while the derive-stage guard reddened a
+    correct Dockerfile for the same two spellings. `ADD` is here because it
+    copies the context exactly as `COPY` does; a guard that names one
+    instruction is a guard against a spelling.
+
+    Flags are separated rather than dropped so a caller can see them, but no
+    rule above exempts a line for carrying one — including `--from=`. That
+    exemption was the round-1 repair's coverage regression: `build-identity`
+    holds the whole context at `/ctx`, so `COPY --from=build-identity /ctx/.git
+    /app/.git` ships the history out of a STAGE, and a comment claiming
+    `--from=` sources cannot be the context was simply false for this file
+    (PR #67 R6).
+    """
+    out = []
+    for m in re.finditer(r"(?m)^(?:COPY|ADD)\s+([^\n]*)$", text):
+        toks = m.group(1).split()
+        flags = [t for t in toks if t.startswith("--")]
+        paths = [t for t in toks if not t.startswith("--")]
+        if len(paths) < 2:
+            continue
+        out.append({"sources": [p.rstrip("/") or "/" for p in paths[:-1]],
+                    "dest": paths[-1], "flags": flags, "line": m.group(0)})
+    return out
+
+
+def _check_build_sha_is_derived(dockerfile: Path | None = None,
+                                shape_only: bool = False) -> dict:
     """The build derives its own sha from the context's HEAD; nobody hands it one.
 
     ADR-034. The post-merge live read of ADR-033's design answered
@@ -6118,11 +6152,15 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None) -> dict:
             # forever, with this conjunct, named for that property, green
             # (PR #67 R1). The executed probes cannot see it: they substitute
             # the live checkout for `ctx` and never read what the stage copies.
-            into_ctx = re.search(rf"(?m)^COPY\s+(\S+)\s+{re.escape(ctx)}\S*\s*$", stage_text)
-            src = into_ctx.group(1) if into_ctx else None
-            if src is None or (src != "." and ".git" not in src):
+            # EVERY line into the context, not the first one found: a stage with
+            # two COPYs was read as if it had one (PR #67 R8).
+            into_ctx = [c for c in _dockerfile_copies(stage_text)
+                        if c["dest"].rstrip("/").startswith(ctx.rstrip("/"))]
+            if not any(s == "." or ".git" in s
+                       for c in into_ctx for s in c["sources"]):
                 wrong["derive_stage_never_copies_the_context"] = {
-                    "context": ctx, "copies": src,
+                    "context": ctx,
+                    "copies": [s for c in into_ctx for s in c["sources"]] or None,
                     "want": "the whole context (`.`) or `.git` itself"}
             stage_name = stages[stage_i].group(1)
             copy_from = re.search(r"(?m)^COPY\s+--from=(\S+)\s+\S+\s+/app/BUILD_SHA\s*$",
@@ -6131,17 +6169,36 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None) -> dict:
                 wrong["final_stage_missing_copy_from"] = "/app/BUILD_SHA"
             elif stage_name is not None and copy_from.group(1) != stage_name:
                 wrong["copy_from_names_a_different_stage"] = copy_from.group(1)
-    # The image carries the one file, not the tree — and the whole-context COPY
-    # is the way that breaks now. `.dockerignore` used to filter `.git` out of
-    # every stage, so `COPY . /app/` was harmless; this change is what makes it
-    # ship a public image with the git history in it, past a substring scan for
-    # `.git` that such a line never contains (PR #67 R2). `--from=` sources copy
-    # from a stage, not from the context, so they are not this.
-    ships_the_context = [m.group(0) for m in
-                         re.finditer(r"(?m)^COPY\s+(?!--from=)([^\n]*)$", final_text)
-                         if (m.group(1).split() or [""])[0] == "." or ".git" in m.group(1)]
-    if ships_the_context:
-        wrong["final_stage_copies_git"] = ships_the_context
+    # The image carries what it is supposed to carry, and the rule is set
+    # MEMBERSHIP rather than a hunt for sources that look dangerous.
+    #
+    # Two rounds of denylist failed in both directions at once, which is what
+    # says the mechanism was wrong and not the wording — the same conclusion
+    # PR #65 R5/R8 reached one file over when it retired a phrase denylist. It
+    # failed OPEN on `COPY ./ /app/`, `ADD . /app/`, `--chown=`, `--link` and on
+    # `COPY --from=build-identity /ctx/.git /app/.git` (PR #67 R6/R7 — and that
+    # last one the round-1 substring scan HAD caught, so the repair lost
+    # coverage), and CLOSED on `COPY ./ /ctx`, reddening a correct Dockerfile
+    # (R8). Docker's grammar has more spellings than anyone will enumerate and
+    # the next one is green by default.
+    #
+    # `--from=` is NOT a blanket pass: `build-identity` holds the whole context
+    # at `/ctx`, so a stage source is not inherently safe. The membership test
+    # applies to it like any other — `/BUILD_SHA` is on the list, `/ctx/.git`
+    # is not.
+    #
+    # ponytail: an allowlist means a legitimate new final-stage COPY is red
+    # until someone adds it here. That is a false red in the SAFE direction —
+    # it fails closed and costs one deliberate edit — and it is exactly what
+    # lets the rule survive Docker syntax it has never seen. No escape hatch.
+    SHIPPED = {"src/browser/requirements.txt", "src", "docs/support-matrix.md",
+               "/BUILD_SHA"}
+    unlisted = [{"line": c["line"], "sources": [s for s in c["sources"] if s not in SHIPPED]}
+                for c in _dockerfile_copies(final_text)
+                if any(s not in SHIPPED for s in c["sources"])]
+    if unlisted:
+        wrong["final_stage_source_not_on_the_allowlist"] = {"unlisted_sources": unlisted,
+                                                        "allowed": sorted(SHIPPED)}
 
     # (4) the command itself, executed. Non-vacuity first: a derivation can only
     # be shown to produce HEAD where HEAD resolves (same rule as
@@ -6154,7 +6211,9 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None) -> dict:
         head_sha = None
     if head_sha and not re.fullmatch(r"[0-9a-f]{40}", head_sha):
         head_sha = None
-    if head_sha is None:
+    if shape_only:
+        head_sha = None  # the self-test rows below grade text, not behaviour
+    elif head_sha is None:
         wrong["head-does-not-resolve"] = (
             "the derives-this-checkouts-head probe needs a resolvable HEAD; "
             "run this suite from a git checkout")
@@ -6194,18 +6253,51 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None) -> dict:
     # happened: a rename that makes `old` absent would otherwise leave the row
     # passing on an unmutated copy.
     if dockerfile is None:
+        SRC, FINAL = "COPY . /ctx", "COPY src/ /app/src/"
         for name, old, new, conjunct in (
-                ("derive-stage-copies-a-subtree", "COPY . /ctx", "COPY src /ctx",
+                # Round 1: the two shapes that were green on the first guards.
+                ("derive-stage-copies-a-subtree", SRC, "COPY src /ctx",
                  "derive_stage_never_copies_the_context"),
-                ("final-stage-copies-the-context", "COPY src/ /app/src/", "COPY . /app/",
-                 "final_stage_copies_git")):
+                ("final-stage-copies-the-context", FINAL, "COPY . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                # Round 2, PR #67 R7: the same property spelled four other ways,
+                # each of which shipped the context past the round-1 repair. A
+                # guard proved on one spelling is proved on a spelling.
+                ("final-stage-copies-the-context-trailing-slash", FINAL, "COPY ./ /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-adds-the-context", FINAL, "ADD . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-with-chown", FINAL,
+                 "COPY --chown=pwuser . /app/", "final_stage_source_not_on_the_allowlist"),
+                ("final-stage-copies-the-context-with-link", FINAL, "COPY --link . /app/",
+                 "final_stage_source_not_on_the_allowlist"),
+                # PR #67 R6: `--from=` is not a pass for a `.git` source. The
+                # derive stage HAS the context's git directory, so this ships the
+                # whole history — and the round-1 repair exempted it.
+                ("final-stage-copies-git-out-of-the-derive-stage",
+                 "COPY --from=build-identity /BUILD_SHA /app/BUILD_SHA",
+                 "COPY --from=build-identity /BUILD_SHA /app/BUILD_SHA\n"
+                 "COPY --from=build-identity /ctx/.git /app/.git",
+                 "final_stage_source_not_on_the_allowlist"),
+                # The over-fire direction, PR #67 R8: the two conjuncts disagreed
+                # about what the whole context is, so these correct spellings
+                # REDDENED a correct Dockerfile. `None` means "must stay clean" —
+                # a guard is only proved by the direction it must not fire in
+                # (PR #40 R1's lesson, which is why this list has both).
+                ("derive-stage-copies-the-context-trailing-slash", SRC, "COPY ./ /ctx", None),
+                ("derive-stage-copies-the-context-with-link", SRC, "COPY --link . /ctx", None),
+                ("derive-stage-copies-git-explicitly", SRC, "COPY .git /ctx/.git", None)):
             if old not in text:
                 wrong[f"mutation_{name}_is_vacuous"] = f"{old!r} is not in the Dockerfile"
                 continue
             with tempfile.TemporaryDirectory() as tmp:
                 p = Path(tmp) / "Dockerfile"
                 p.write_text(text.replace(old, new, 1), encoding="utf-8")
-                if conjunct not in _check_build_sha_is_derived(dockerfile=p)["wrong"]:
+                got = _check_build_sha_is_derived(dockerfile=p, shape_only=True)["wrong"]
+                if conjunct is None and got:
+                    wrong[f"mutation_{name}_falsely_red"] = {
+                        "mutation": f"{old} -> {new}", "wrong": got}
+                elif conjunct is not None and conjunct not in got:
                     wrong[f"mutation_{name}_not_caught"] = {
                         "mutation": f"{old} -> {new}", "expected_conjunct": conjunct}
     return {"passed": not wrong, "wrong": wrong,

@@ -1,0 +1,36 @@
+{
+  "pr": 67,
+  "round": 2,
+  "task": "M44-P1",
+  "resolved_at_head": "c32a55d",
+  "mechanism_change": "The round-1 final-stage guard was a denylist and it failed OPEN (R6, R7) and CLOSED (R8) at the same time, which is the signature PR #65 R5/R8 already acted on one file over. It is replaced, on the reviewer's correction, by SET MEMBERSHIP: every COPY/ADD source in the final stage must be one of the four things this image ships — `src/browser/requirements.txt`, `src`, `docs/support-matrix.md`, `/BUILD_SHA` — normalised (leading `--flag=value` stripped, trailing `/` stripped, `ADD` read like `COPY`). `--from=` gets no exemption: `build-identity` holds the whole context at `/ctx`, so a stage source is not inherently safe. One normaliser, two call sites.",
+  "resolutions": [
+    {
+      "id": "R6",
+      "status": "fixed",
+      "covered_by": "build-sha-is-derived-not-supplied / final_stage_source_not_on_the_allowlist, self-test row `final-stage-copies-git-out-of-the-derive-stage`",
+      "what_changed": "`COPY --from=build-identity /ctx/.git /app/.git` is RED: `/ctx/.git` is not on the allowlist. The `--from=` exemption is gone entirely, and the comment justifying it — `--from=` sources copy from a stage, not from the context — was false for this Dockerfile and is deleted, not reworded.",
+      "coverage_regression_check": "The reviewer's instruction was to verify against the guard that was replaced, not only against the new mutations. Swept seven `.git` lines through both the retired `re.search(r'(?m)^COPY\\s+[^\\n]*\\.git', final_text)` and the new rule. Five agree (`COPY .git /app/.git`, `COPY ./.git /app/.git`, `COPY --from=build-identity /ctx/.git /app/.git`, `COPY .git/HEAD /app/HEAD`, `COPY --chown=pwuser .git /app/.git` — all red under both). One is newly caught: `ADD .git /app/.git`, which the old scan missed because it named a single instruction. Exactly one diverges the other way and it is NOT a coverage loss: `COPY src/ /app/.git` — an allowed source copied to a destination merely named `.git` — was red under the old scan and is green here. That is the old scan's over-fire; git history can only reach the image through a SOURCE, and no allowlisted source is a repository. Recorded in the case's triage as ceiling (7) rather than engineered away."
+    },
+    {
+      "id": "R7",
+      "status": "fixed",
+      "covered_by": "same conjunct; self-test rows `final-stage-copies-the-context`, `-trailing-slash`, `final-stage-adds-the-context`, `-with-chown`, `-with-link`",
+      "what_changed": "Not by enumerating spellings — that was the mechanism error. All five spellings are red because none of `.`, `./`, or a flagged `.` is on a four-entry allowlist, and so is the next spelling nobody has written yet. All six bypasses verified RED by execution: `COPY . /app/`, `COPY ./ /app/`, `ADD . /app/`, `COPY --chown=pwuser . /app/`, `COPY --link . /app/`, `COPY --from=build-identity /ctx/.git /app/.git`."
+    },
+    {
+      "id": "R8",
+      "status": "fixed",
+      "covered_by": "the shared normaliser `_dockerfile_copies`; self-test rows `derive-stage-copies-the-context-trailing-slash`, `-with-link`, `derive-stage-copies-git-explicitly`",
+      "what_changed": "Closed for free by the one normaliser, exactly as the reviewer predicted, so no debt block was created. The derive-stage conjunct now compares normalised sources and reads EVERY COPY into the context rather than the first, which was the second half of the finding. Verified green in the over-fire direction: `COPY ./ /ctx`, `COPY --link . /ctx`, `COPY .git /ctx/.git`, and a stage with two COPY lines into `/ctx`."
+    },
+    {
+      "id": "R9",
+      "status": "fixed",
+      "covered_by": "tasks/TODO.md M44-P1-D2",
+      "what_changed": "The PR #67 R5 widening now sits on its own `Second instance (PR #67 R5, outside the quoted finding above, which predates it):` line after the closing quotation mark. Everything inside the Evidence quotes is again what PR #65 R4 actually wrote."
+    }
+  ],
+  "self_test_rows": "Eleven, run by the check itself on every invocation against a mutated copy of the real Dockerfile: seven that must be RED on a named conjunct, four that must stay CLEAN. Each asserts its own substitution happened — a string absent from the Dockerfile reports `mutation_..._is_vacuous` rather than silently passing on an unmutated copy. They run `shape_only`, so the eleven extra invocations spawn no subprocesses and the invariant wall clock is unmoved.",
+  "not_changed": "ADR-019 §3's band (ts 20260827-202417) and the history.jsonl rows, per the round-2 instruction. No published number moved this round: the case count is still 84."
+}
