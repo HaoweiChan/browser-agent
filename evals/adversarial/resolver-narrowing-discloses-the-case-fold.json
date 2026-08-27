@@ -1,0 +1,33 @@
+{
+  "id": "resolver-narrowing-discloses-the-case-fold",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What does the reserve link in Ada's row say?",
+    "fixture": "case-twins.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "RESERVE"
+        },
+        "anchor": "Ada's row"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "trace_note_contains": "anchor-proximity + name-case-folded"
+  },
+  "provenance": "PR #60 R15: ADR-032's Decision 3 promises a folded resolution 'carries a trace note — narrowed: name-case-folded — rather than being invisible', and on the M38 narrowing path it did not. Both rungs returned their own label and never read `fold`, and `ambiguous` did not carry it, so a resolution that existed ONLY because the fold ran reported the rung alone. `case-twins.html` now carries the shape: two links whose shared accessible name is reachable only through the folded pass (`reserve` in the markup, `RESERVE` in the observation, uppercased by stylesheet), under distinct headings so the anchor settles which one. The fix is a `_note()` join rather than a second label — a rung and a case-fold are not alternatives, a page can need both — and it is byte-identical to the old note wherever `fold` is None, which is why no existing `trace_note_contains` case moves.",
+  "triage": {
+    "class": "invariant-gap",
+    "red_first": "on `4bda01f` the run succeeds and the note reads `narrowed: anchor-proximity` — the fold that made the resolution possible at all is nowhere in the trace. As a case: `trace_note_contains` False against note `narrowed: anchor-proximity`. Base `6b016b5` raises `no tier resolved` for this target, which is what makes the fold load-bearing rather than incidental.",
+    "note": "This case grades the DISCLOSURE, not which element won — both links read `reserve`, so the answer cannot separate them. Which element the anchor picks is already graded by `resolver-narrows-by-anchor-proximity`. The `near` branch's own `or` short-circuit is a different line and stays open as `T-M42-20-D10`. `invariant` and not `fast`, measured rather than preferred: with this case in `fast` the suite recorded 91.76s at 230 cases, and ADR-013's rule derives 110 from anything past 91.30s — a ceiling this repo has not committed and which is an ADR, not an edit. `fast` returns to exactly the 229-case tree that measured 90.02-91.04s, unchanged. That is the THIRD consecutive round in which the `fast` band has decided a case's suite tag, and it is the substance of T-M42-20-D3/D9: the honest fix is a ceiling decision, not more routing."
+  }
+}

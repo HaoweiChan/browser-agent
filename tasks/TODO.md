@@ -200,6 +200,33 @@ ADR-021's own ruling: the select step got its own budget
 (the cliff where the rule stops giving 20 is 17.39s) and `fast` sits at 90.99s
 against a 91.30s cliff — 0.26s from the ledger's slowest row. Stated against the
 LEDGER MAX, not the published band, which is R13's lesson.
+Update 2026-08-27 — PR #60 round 3, bounded, human-ruled after the circuit
+breaker fired. Five findings, three repaired, two logged.
+  - R17 (blocker). The ADR-019 republish contradicted the ledger in three places,
+    none of them read by a grader: a bullet declaring one ts while citing another
+    round's report FILE, a red-case count of two against a row with three, and an
+    enumeration of rows that named one measured BEFORE the band row as though it
+    followed it. The structural half is the point: `published-band-matches-the-ledger`
+    now has **item 11 (cited-file)** and reads the filename back against the ts.
+    Watched red on the shipped text — `band_ts 20260826-184041` vs
+    `bullet_cites_report 20260826-175637-invariant.json`. The enumeration is
+    deleted rather than corrected: §3 already says which rows sit at a count is
+    not written here, and the standing rule is to cite the graded location.
+  - R15. ADR-032's own Decision 3 was false on M38's rungs — a resolution that
+    existed ONLY because the fold ran reported the rung alone. `_note()` now joins
+    every relaxation (`anchor-proximity + name-case-folded`); byte-identical
+    wherever `fold` is None, so no existing case moves. ADR-032 corrected.
+  - R16. The `anchor` key's failure class moved `act` -> `locate` with nothing
+    covering it. Four string-valued inputs, four cases now.
+  - R18, R19 -> debt, T-M42-20-D11 and -D12.
+**The `fast` band crossed its step during this round, and that is the headline.**
+With R15's case in `fast` the suite measured 91.76s at 230 cases and the rule
+derives 110 — a ceiling nobody has committed. The case moved to `invariant` with
+its five siblings and `fast` is byte-for-byte the 229-case tree that measured
+90.02-91.04s. The 230-case rows stay in the ledger as the evidence. **Three
+rounds running the band has decided a suite tag rather than a reviewer doing it**;
+`T-M42-20-D3`/`-D9` are that debt and the honest fix is a ceiling decision, not
+more routing.
 STILL OPEN, and the reason this block is not closed: the deployment tracks
 `main`, so a 3-rep smoke run before this branch merges would measure the
 pre-fix build. No run ids are published here because no run was made (rule 4).
@@ -609,6 +636,52 @@ existing `trace_note_contains` expectation has to be re-read against it first;
 that is why it is not done in the round that found it.
 Acceptance: both labels appear when both relaxations were used, and no existing
 `trace_note_contains` case changes meaning.
+
+### T-M42-20-D11 — a tuned constant's rationale lives in three places and only one of them moves            [status: todo]
+Origin: PR #60 R18 (LOW, routed to debt).
+Evidence, verbatim: `server.py` `LATE_OPTIONS_DELAY_S = 0.3`;
+`action-select-option-waits-for-fetch-painted-options.json` "still says 0.5s and
+'~5x margin' (this file is not in `git diff fb84a88..HEAD`)";
+`browser-domain/SKILL.md` "still says 1.0s, two rounds stale". The margin is now
+3x, not 5x and not 10x. Round 3 repaired the SKILL.md half in passing (it was one
+clause in a sentence that had to move anyway) and left the case provenance, so
+the drift is halved and not closed.
+Also from the same finding, and worth keeping because it is the reassuring half:
+the case is NOT weakened by the tuning. Ablating the wait (timeout -> 1ms) turns
+it red 3/3; unablated it runs 452/453/453ms; and
+`action-select-option-never-filled-fails-loud` runs 1144-1161ms against
+`max_ms` 2500 while still emitting the loud `StepError`.
+Spec: the scalar has one home (`server.py`) and every other mention should cite
+it rather than restate it, the way the band bullets cite the ledger. That is the
+standing rule this repo keeps re-learning; a derived margin ("~3x the measured
+first read") is a second scalar with the same problem and should be a relation,
+not a number.
+Acceptance: no document outside `server.py` states the delay as a number, or a
+check reads the restatements back against the constant.
+
+### T-M42-20-D12 — five cases ship `red_first: "PENDING"`            [status: todo]
+Origin: PR #60 R19 (LOW, routed to debt). **Not a rule-2 violation** — the
+reviewer independently reproduced all five reds verbatim on a detached worktree;
+this is a record-keeping gap, and it is logged rather than fixed because the
+review routed it that way.
+Evidence, verbatim: `grep -rl '"red_first": "PENDING"' evals/adversarial/`
+returns exactly the five files added in PR #60 round 2; 16 cases carry
+`red_first` and the other 11 record real output. The reds, reproduced by the
+reviewer at `fb84a88` with only the five case files and `case-twins.html` copied
+in: index case -> `{'status':'success','answer':'Catalogue row CTA'}`;
+non-string name -> `failure:act AttributeError 'float' has no 'replace'`;
+list -> `'list' object has no 'replace'`; near -> `'float' object has no 'strip'`.
+R12 reproduced at HEAD with only the `/`-escape deleted: `failure:act
+InvalidSelectorError ... unexpected symbol at position 40` — "matching the
+resolution JSON word for word".
+Cause, so it is not repeated: the five files were generated by one script that
+wrote a `red_first` placeholder and the runs that filled it went into
+`tasks/reviews/pr60-r2-resolution.json` instead of back into the case files.
+Spec: backfill the five fields from the resolution artifact (the text above is
+that artifact's), and — the part that stops it recurring — refuse `"PENDING"`
+as a `red_first` value in `opt-in-expect-keys-declared` or a sibling check, so a
+placeholder cannot be committed.
+Acceptance: no case file carries a placeholder `red_first`, and a check says so.
 
 ### T-M39-14 — the front-page baseline cites a run that failed, and the rule set makes it unfixable in place            [status: todo]
 Origin: found on merged `main` (`7e0b662`) by the session that had driven PR #52,

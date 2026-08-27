@@ -79,10 +79,16 @@ is R1 exactly, arriving by another route. Fallback has the stronger property:
 so nothing about such a page changed when T-M42-20 landed, at any tier, for any
 of the four rules.
 
-**3. The fold is disclosed.** A folded resolution is a looser reading of what the
-plan asked for, in the same sense M38's narrowing rungs are, so it carries a
-trace note — `narrowed: name-case-folded` — rather than being invisible.
-`resolver-case-fold-is-recorded-in-the-trace` pins it.
+**3. The fold is disclosed, on every path that can use it.** A folded resolution
+is a looser reading of what the plan asked for, in the same sense M38's
+narrowing rungs are, so it carries a trace note — `narrowed: name-case-folded` —
+rather than being invisible. Relaxations COMPOSE: a rung and a fold are not
+alternatives, so the note is every relaxation that was used, joined
+(`resolver._note`). This sentence was false when first written — the rungs
+returned their own label and never read `fold`, so a resolution that existed only
+because the fold ran reported the rung alone (PR #60 R15). Pinned by
+`resolver-case-fold-is-recorded-in-the-trace` (no rung) and
+`resolver-narrowing-discloses-the-case-fold` (rung 1 plus the fold).
 
 **4. Whole-string survives, in both passes.** Neither matcher is a substring
 match. `resolver-substring-name` exists because substring matching once resolved
@@ -114,5 +120,9 @@ relaxes case and nothing else.
 - **Anchors as a round trip.** `near`'s exact pass folds case (PR #60 R5), but
   nothing feeds an advertised string back as an anchor the way
   `observe-uppercase-label-name-resolves` feeds it back as a name. D32.
-- **Composed disclosures.** A resolution that used both a loosened anchor and
-  the case fold reports only the anchor (`T-M42-20-D10`).
+- **Composed disclosures, on the `near` branch only.** Decision 3 covers the
+  narrowing rungs; the `near` branch still picks one label with an `or`, so a
+  resolution that used both a loosened anchor and the case fold reports only the
+  anchor. `resolver._note` is the one-line adoption and `T-M42-20-D10` is the
+  debt — deliberately left, because it changes the shape of a graded string and
+  every `trace_note_contains` expectation has to be re-read against it first.

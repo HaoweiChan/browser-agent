@@ -94,10 +94,23 @@ repo's ledger and nothing else.
   for regressions an earlier fix introduced. **State the margin against the ledger's
   MAXIMUM, not against this published number** (PR #60 R13): the rule gives 105 for
   anything up to 91.30s and the slowest row at this count is the 91.04s cited above,
-  so the real margin is 0.26s — and the two rows recorded after it, once round 3 cut
-  `LATE_OPTIONS_DELAY_S` to 0.3s and gave the select step its own 1s budget, are
-  90.02s and 90.76s. Round 3 removed more wall clock than it added and the suite is
-  still one bad run from the next step; `T-M42-20-D3` and `-D9` are that debt and
+  so the real margin is 0.26s. **The committed ledger also holds three rows at 230
+  cases — 90.65, 91.06 and 91.76s — and they are the reason this suite is 229 and not
+  230.** PR #60's round-3 repair briefly put one more case in `fast`, the tree measured
+  91.76s, and the rule derives **110** from that: a ceiling nobody has committed, which
+  is an ADR and not an edit. The case moved to `invariant`, where its four siblings
+  already are, and `fast` is byte-for-byte the 229-case tree those five rows measured.
+  Three rounds running the band has decided a suite tag rather than a reviewer doing it,
+  and those 230-case rows stay in the ledger because they are the evidence for the
+  ceiling decision `T-M42-20-D3`/`-D9` ask for. Which OTHER rows sit at this count, and in what order,
+  is deliberately not written here — the same rule §3 states, and the sentence that
+  used to enumerate them named a row measured three minutes BEFORE the band row as
+  though it followed it, missed a third row entirely, and omitted the one README
+  cites (PR #60 R17). `published-band-slack-is-declared` prints the ledger's own
+  arithmetic for anyone who wants it. Round 3 removed more wall clock than it added
+  — the select step got its own 1s budget instead of borrowing `SETTLE_BUDGET_MS`,
+  and `LATE_OPTIONS_DELAY_S` went 0.5s -> 0.3s — and the suite is still one bad run
+  from the next step; `T-M42-20-D3` and `-D9` are that debt and
   ADR-021's ruling — the answer to growth is removing waste, not another raise — is
   what has been applied three times running. The stamp is UTC, as
   every row written since §7 is. How many rows the ledger holds at this count,
@@ -128,7 +141,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 229 cases, 226/229) and
-(restated — `invariant`: 80 cases, 77/80) — are graded against the bullets they
+(restated — `invariant`: 82 cases, 80/82) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -273,16 +286,24 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s
 
-- Band source — local `invariant` at 80 cases, ts `20260826-184041`, **15.88s**, 77/80
+- Band source — local `invariant` at 82 cases, ts `20260827-023305`, **16.19s**, 80/82
   (`dirty: true`, and red, for the same structural reason §2's is and stated the
   same general way: a tree reaches its new case count only while the cases are
-  uncommitted, so 80 exists only while PR #60's invariant-tagged additions are —
-  `action-select-option-never-filled-fails-loud` and round 3's three non-string-target
-  cases, all `invariant`-only because the `fast` band cannot pay for them
-  (T-M42-20-D3/D9). The two red cases — `docs-numbers-are-derived` and
-  `published-band-matches-the-ledger` — are the two this republish clears; the
+  uncommitted, so 82 exists only while PR #60's invariant-tagged additions are —
+  `action-select-option-never-filled-fails-loud`, the four non-string-target cases (one
+  per string-valued input the resolver takes) and
+  `resolver-narrowing-discloses-the-case-fold`, all `invariant`-only because the `fast`
+  band cannot pay for them (T-M42-20-D3/D9). This suite is where the `fast` band's
+  overflow has landed three rounds running, which is a fact about the ceiling and not
+  about these cases. The two red cases — `docs-numbers-are-derived` and
+  `published-band-matches-the-ledger` — are the two this republish clears; §2's bullet was corrected to three in the same
+  round this one was not (PR #60 R17), which is what an ungraded count does; the
   run is red, so ADR-012 wrote a per-case report for it and this bullet cites
-  the file the way §2's does — `evals/report/20260826-175637-invariant.json`.
+  the file the way §2's does — `evals/report/20260827-023305-invariant.json`.
+  That pair — the ts this bullet declares and the file it names — is read back
+  by item 11 (cited-file), which exists because this very sentence named the
+  PREVIOUS round's run, at a different case count and a different wall clock,
+  while the ts beside it was current, and nothing was red (PR #60 R17).
   **This band moved 13.76s -> 17.22s and back to 15.88s**, and both halves are
   stated rather than smoothed. The 2s never-fills case plus three more took a 14s
   suite to 17.22s — within 0.17s of the 17.39s where the rule stops giving 20 — and
@@ -347,7 +368,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 15.88 × 1.15 = 18.26 → **20**, which is the committed
+The same rule gives 16.19 × 1.15 = 18.62 → **20**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
@@ -565,6 +586,14 @@ is about this section itself:
    paragraph summarising it behind (PR #46 R3, then R5 against R3's own fix), so
    the copy is now read back against the original. An unmarked restatement is
    still invisible, the same ceiling item 8 (references) declares (T-R62).
+
+11. (cited-file) the report file a band bullet names in its prose is the file that
+   band's ts produced — same stamp, same suite. The ts and the filename are one
+   claim written twice, and only the ts was graded, so a republish updated one half
+   and left the other pointing at another round's run at another case count, green
+   (PR #60 R17). The bullet is the region from the band line to the next blank
+   line, and EVERY report file named inside it must match; a bullet naming none is
+   not an error, because the ledger row is the claim and the file is a convenience.
 
 Green is required nowhere in that list and cannot be (T-R53); item 2 (cited-run) requires
 the result to be *stated*, not to be a pass. Item 5 (derivation) states the rule's value and

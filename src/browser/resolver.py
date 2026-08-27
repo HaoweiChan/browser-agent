@@ -177,6 +177,26 @@ _PLURAL_ASK = re.compile(
 FOLD_NOTE = "name-case-folded"
 
 
+def _note(*parts):
+    """The trace note for a resolution, as EVERY relaxation that was used.
+
+    A rung and a case-fold are not alternatives — a page can need both, and
+    ADR-032 Decision 3 promises the fold is disclosed "rather than being
+    invisible". It was not: M38's rungs returned their own label and never read
+    `fold`, so a resolution that existed ONLY because the fold ran reported the
+    rung alone (PR #60 R15). Joining is safe for the existing
+    `trace_note_contains` expectations because they are substring tests and the
+    rung is still in the string; where `fold` is None the note is byte-identical
+    to what it always was.
+
+    ponytail: the `near` branch still picks ONE label with an `or` and is not
+    routed through here — that is `T-M42-20-D10`, logged in round 2 and left
+    alone deliberately. Adopting this function there is the one-line fix, once
+    someone has re-read every `trace_note_contains` case against it.
+    """
+    return " + ".join(p for p in parts if p) or None
+
+
 def _whole_string(s: str):
     """Name/text -> an ANCHORED case-insensitive regex: whole-string, case-blind.
 
@@ -499,14 +519,14 @@ async def _resolve_in(page, tiers, target, *, many, index, near, anchor, may_nar
         if n == 1:
             return loc, tier, fold
         if n > 1 and ambiguous is None:
-            ambiguous = (tier, loc, n)
+            ambiguous = (tier, loc, n, fold)
 
     # --- Narrowing (M38) ----------------------------------------------------
     # Only here, after EVERY tier has been given its chance: a clean single
     # match at a later tier is stronger evidence than a narrowed one at an
     # earlier tier, and narrowing inside the loop would pre-empt it.
     if ambiguous:
-        tier, loc, n = ambiguous
+        tier, loc, n, fold = ambiguous
         # Two refusals gate BOTH rungs, because both are about whether this
         # ambiguity may be settled at all — not about which candidate wins.
         #
@@ -543,7 +563,7 @@ async def _resolve_in(page, tiers, target, *, many, index, near, anchor, may_nar
             # diagnosed as an action failure and sent down the wrong ladder.
             i, _ = await _nearest(scope, loc, anchor, loose=True)
             if i is not None and i >= 0:
-                return loc.nth(i), "structural", "anchor-proximity"
+                return loc.nth(i), "structural", _note("anchor-proximity", fold)
         # Rung 2. The first match in document order, and ONLY where that choice
         # cannot change the answer. Four conjuncts, each with a case, because a
         # loose guard here is a silent-wrong-answer generator:
@@ -562,7 +582,7 @@ async def _resolve_in(page, tiers, target, *, many, index, near, anchor, may_nar
         # that may only pick between identical elements is not a proximity rung
         # at all (PR #42 R1's second half, declined for that reason).
         if await scope.evaluate(INTERCHANGEABLE_JS, await loc.element_handles()):
-            return loc.first, tier, "document-order"
+            return loc.first, tier, _note("document-order", fold)
         raise ResolveError("ambiguous-match", f"{n} matches at tier {tier} for {target}")
     return None
 

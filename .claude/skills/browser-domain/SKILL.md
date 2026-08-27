@@ -60,7 +60,7 @@ failure. Refusing inside `_whole_string` was the first attempt and covered one
 key of four: the role tier's exact pass hands `name` straight to Playwright and
 `_nearest` calls `near.strip()`, both before `_whole_string` is reached, so the
 `AttributeError` still got the step classified `act`
-(`resolver-non-string-target-is-a-locate-failure` and its three siblings).
+(`resolver-non-string-target-is-a-locate-failure` for `text`, in `fast`, and its three `invariant` siblings for `name`, a list-valued `name`, `near` and `anchor` — four keys, four cases; `anchor` was the one the guard changed and nothing covered, PR #60 R16).
 
 **`near` anchors fold too, and only at the exact pass** (`_nearest`, PR #60 R5):
 an anchor is quoted off the same observation a name is, so `near: 'TOTAL'` on an
@@ -210,8 +210,7 @@ path. `src/browser/mutate.py` is the transform layer.
   green cases missed the S1 half M42 was built for. The delay is squeezed from
   both sides: shorter and the options land before the select step's first read
   (measured at ~0.1s after `goto`), so the case passes and grades nothing;
-  longer and it is pure wall clock inside a published band (0.5s since PR #60
-  put five more cases in the same suite). It also carries a SECOND
+  longer and it is pure wall clock inside a published band (0.3s since PR #60's rounds put twelve more cases in the same suite, ~3x the ~0.1s first read). It also carries a SECOND
   `<select aria-label="Archive">` that is empty at load with no script behind it
   at all — that one never fills, so it is what bounds the wait, and its case is
   `invariant`-only because it costs the full 2s. Cases:

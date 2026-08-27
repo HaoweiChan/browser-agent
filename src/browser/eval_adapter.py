@@ -533,6 +533,15 @@ _BAND_DEF = re.compile(
 _BAND_RESTATE = re.compile(
     r"\(restated — `(fast|invariant)`: (\d+) cases, (\d+)/(\d+)\)")
 
+# The report file a band bullet cites, beside the ts it cites. Item 11
+# (cited-file). Nothing read this pair, and a republish updated one half of it
+# and not the other: §3 declared ts `20260826-184041` while still naming
+# `evals/report/20260826-175637-invariant.json`, the PREVIOUS round's run at a
+# different case count and a different wall clock, and the whole gate stayed
+# green (PR #60 R17). Same class as T-M39-14 — a prose citation nothing reads
+# back — and the same fix: read it back.
+_BAND_REPORT = re.compile(r"evals/report/(\d{8}-\d{6})-(fast|invariant)\.json")
+
 _BAND_RATE, _BAND_STEP = 1.15, 5
 _BAND_DERIVATION = re.compile(
     rf"([\d.]+) × {re.escape(f'{_BAND_RATE:g}')} = ([\d.]+) → \*\*(\d+)\*\*")
@@ -710,10 +719,23 @@ def _check_published_band() -> dict:
     lines = [(m["suite"], (m["env"], int(m["cases"]), m["ts"], float(m["wall"]),
                            int(m["passed"]), int(m["total"])))
              for m in _BAND_LINE.finditer(adr)]
+    # Item 11 (cited-file). A bullet names a ts AND, in the prose beside it, the
+    # report file that ts produced. The two are one claim and were graded as
+    # half of one: PR #60 R17 found §3 declaring one run and citing another
+    # round's file, green. The bullet is the region between this band line and
+    # the next blank line, which is what a bullet is in this document.
+    cited = []
+    for m in _BAND_LINE.finditer(adr):
+        bullet = adr[m.start():]
+        bullet = bullet[:bullet.index("\n\n")] if "\n\n" in bullet else bullet
+        for ts, suite in _BAND_REPORT.findall(bullet):
+            if (ts, suite) != (m["ts"], m["suite"]):
+                cited.append({"suite": m["suite"], "band_ts": m["ts"],
+                              "bullet_cites_report": f"{ts}-{suite}.json"})
     published = dict(lines)
     rows = [_json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
     counts = {s: len(load_cases(s)) for s in WALL_BUDGET_S}
-    wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows)
+    wrong = _band_wrong(published, counts, dict(WALL_BUDGET_S), rows) + cited
     # README's table is the other half of the same claim and drifted from this
     # file once already (PR #29 R24, the origin of T-R34). The whole row or red:
     # one set of numbers, two documents, no hand-kept copy — ADR-019 §6

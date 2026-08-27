@@ -57,3 +57,15 @@
      `get_by_text` with the same pattern does NOT crash, so the shape is
      role-tier-specific and the target below has to be a role+name. -->
 <p><button id="export" class="shout">export as .htm / .html / .txt</button></p>
+
+<h2>Ada's row</h2>
+<!-- Two links sharing ONE accessible name, and that name reachable only through
+     the folded pass: the text is `reserve` in the markup and `RESERVE` in the
+     observation, because `.shout` uppercases it. So the plan's spelling matches
+     neither link exactly, the fold gathers both, and M38's anchor-proximity rung
+     is what settles it — the exact path PR #60 R15 found reporting the rung and
+     never the fold. Distinct headings are the anchors. -->
+<p><a id="ada-reserve" class="shout" href="/fixtures/hello.html">reserve</a></p>
+
+<h2>Bob's row</h2>
+<p><a id="bob-reserve" class="shout" href="/fixtures/hello.html">reserve</a></p>
