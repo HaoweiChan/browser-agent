@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M43 — loop mode sees the page: screenshot observation for a vision model            [status: in-progress]
+### M43 — loop mode sees the page: screenshot observation for a vision model            [status: pr]
 Origin: ADR-027; postmortem S2 — the failure class "the answer is not the
 accessible name of any small element" (T-M40-2, D28) is unfixable by better
 ARIA targeting alone, and production agents do not have it because they look.
@@ -327,6 +327,29 @@ Acceptance: `_shot_ok` distinguishes "smaller than the viewport" from "clipped
 to the viewport", with the fixture above as its case and the relabelling guard
 still red on a genuine viewport shot — or Decision 2's declaration is promoted
 into the grader's own docstring so the next reader of `_shot_ok` finds it there.
+
+### M43-D7 — wall-clock figures published outside the graded band bullets are ungraded            [status: todo]
+Origin: PR #70 R13 (the residual class, recorded rather than swept).
+Spec: `published-band-matches-the-ledger` reads the Band-source bullet and
+nothing else, so a wall-clock figure quoted anywhere ELSE in the same documents
+— a narrative paragraph, an ablation aside, a README sentence, an ADR's
+consequences section — is published prose that no grader reads back against
+`evals/report/history.jsonl`. It can contradict the ledger committed beside it
+and stay green forever. R13 is the demonstrated instance, not a hypothetical:
+the R8 sweep re-typed the one stale number it was hunting and left three
+neighbouring clauses IN THE SAME PARAGRAPH contradicting the committed ledger —
+a published band that drops rows, PR #29 R21's class, found only because a
+reviewer happened to read that paragraph rather than because anything failed.
+This block deliberately does NOT sweep: recording the class is a finding, and
+running the grep would be widening the implementation that produced it.
+Repro: read the three clauses R13 names in the round-3 artifact against the
+238-count rows in `evals/report/history.jsonl`; nothing in either suite reddens.
+Acceptance: a grep for wall-clock figures (`\d+\.\d+s`, and bare seconds in
+band prose) across ADR-019, ADR-035, README.md and docs/analysis.md, with EVERY
+hit either (a) brought under a grader that reads the ledger, or (b) explicitly
+declared narrative — a figure whose job is to describe history rather than to
+state the tree's current band. Either disposition is fine; an ungraded figure
+that reads as current is not.
 
 ### M44-P1-D4 — item 12's rule is still not true of the file it governs            [status: todo]
 Origin: PR #65 R9 (LOW, routed debt).
