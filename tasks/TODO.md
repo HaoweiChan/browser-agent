@@ -2490,7 +2490,7 @@ Acceptance: the H1 corrected, and `adr-header-and-index` extended to require the
 H1's number to match the filename's — watched red against the current file,
 which is what makes the fix stick.
 
-### T-M42-8 — the reviewer UI cannot select loop mode and describes mode B's guards to every visitor            [status: todo]
+### T-M42-8 — the reviewer UI cannot select loop mode and describes mode B's guards to every visitor            [status: done]
 Depends: M44
 Origin: M42 spec-drift audit, finding 14, 2026-08-26.
 Priority: P1
@@ -2510,6 +2510,25 @@ runs populate it). A mode SELECTOR is a product decision that belongs with M44's
 Acceptance: the guards line reads from the mode the run actually used (the
 result now carries `mode`), and either a mode control in the UI or an explicit
 note that mode is deployment-level — decided with M44's evidence.
+
+Closed on the acceptance's own terms, taking its second alternative for the half
+that belongs to M44.
+The guards line now reads from the mode the deployment will actually run,
+composed from the constants the executor enforces (`RUN_BUDGETS`, `MAX_REPLANS`,
+`LOOP_BUDGETS`) and never retyped — retyping would reproduce the defect. Under
+`BROWSER_AGENT_MODE=loop` a visitor read "30 actions and 2 replans" while watching
+a run bounded by 40 actions, no replans and a $5.00 ceiling that ADR-028 names as
+the ONLY bound on a public unauthenticated endpoint, which makes it the wrong
+sentence to have wrong.
+No mode SELECTOR, deliberately: whether loop mode earns default-ness is M44's
+evidence to give, and a selector shipped ahead of it is a product decision made by
+a UI edit. The acceptance's alternative is taken instead and the page states it —
+mode is deployment-level and named on the page as not selectable there.
+`guards-line-states-the-running-modes-ceilings` grades all three modes, since the
+bug was that only one was ever rendered, and refuses a literal ceiling inside
+`PAGE` because a second copy is a second thing to drift. Three reds measured:
+printing the plan line for every mode, a loop line advertising replans it does not
+have, and a literal ceiling put back into `PAGE`.
 
 ### T-M42-1 — mode B's planner prompt still advertises six actions while the executor implements eleven            [status: todo]
 Origin: M42 implementation, 2026-08-26. Found while widening the vocabulary;
@@ -5846,7 +5865,7 @@ gap predates it). The L3 cell is prose naming cases, which is why nobody regener
 Acceptance: the TC/level counts join `analysis_coverage`'s graded set (derived from the
 tags, same as the split), or the table is cut down to the graded rows and says so.
 
-### T-R82 — the client-disconnect release is graded in-process, never through a real disconnect            [status: todo]
+### T-R82 — the client-disconnect release is graded in-process, never through a real disconnect            [status: done]
 Origin: T-M40-1
 Priority: P1
 Spec: `smoke_events` now holds `SEM` for the length of a browser check and releases it
@@ -5863,6 +5882,24 @@ Acceptance: one case that disconnects a real HTTP client mid-stream and requires
 back within a bound, watched red against a `finally` that is removed — cheaply enough to
 stay in the offline gate, which is the part that needs thought, since the honest version
 of this test waits for a real cancellation.
+
+Closed inside `smoke-stream-takes-the-run-slot` rather than as a new case, because
+it is the second half of one contract. A raw socket disconnects mid-stream —
+`SO_LINGER 0`, so the server sees an RST rather than a FIN, which is what a closed
+laptop lid looks like and is strictly harder to notice than a graceful close — and
+the slot must come back inside a declared bound.
+The "cheap enough to stay in the offline gate" part the acceptance flagged as
+needing thought: it costs 0.1s, because the launch stub this case already installs
+parks the generator exactly where a real check spends its seconds, so the held
+window is event-driven and there is no timing margin to derive.
+Watched red by removing `smoke_events`'s `finally`:
+`slot_never_came_back_after_a_real_disconnect`.
+Recorded because it is the more useful half: the FIRST draft measured nothing
+while looking green in three of its four fields. The earlier half of the same case
+had already set the release event, so the stub returned instantly and the slot was
+back before the socket had read a byte. `release.clear()` is what makes the window
+real — a check that cannot fail the way its claim says it can is this repo's
+recurring shape.
 
 ### T-R83 — `KINDS` registers `readyz-transitions` twice            [status: done]
 CLOSED 2026-08-28. Duplicate removed, and the shape refused: `opt-in-expect-keys-declared`

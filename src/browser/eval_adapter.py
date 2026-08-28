@@ -40,6 +40,7 @@ import os
 import re
 import socket
 import tempfile
+import struct
 import threading
 import time
 import urllib.error
@@ -4061,8 +4062,69 @@ def _run_smoke_guard_case(case: dict) -> dict:
         held_by_generator = S.SEM.locked()
         _await(gen.aclose())
         leaked = S.SEM.locked()
+
+        # T-R82: the LAYER BELOW the generator contract, through a real socket.
+        # Everything above drives `smoke_events()` by hand and asserts that
+        # `GeneratorExit` returns the slot. What it cannot see is who throws
+        # that `GeneratorExit`: Starlette cancels its stream task when it sees
+        # `http.disconnect`, and if that ever stops happening — a Starlette
+        # change, a proxy that holds the socket open — the slot stays held until
+        # the navigation timeout or forever, with every assertion above still
+        # green. A leaked slot bricks the service: `/readyz` says busy and every
+        # run queues behind a browser that is gone.
+        #
+        # A raw socket rather than urllib, because the disconnect has to be
+        # ABRUPT — urlopen's close is polite about a stream it has been reading,
+        # and politeness is the one thing this is not testing. Bounded by the
+        # same `release` event the stub parks on, so there is no sleep to tune.
+        disconnect_s = exp.get("disconnect_releases_within_s")
+        if disconnect_s:
+            import socket as _socket
+            from urllib.parse import urlparse as _urlparse
+
+            u = _urlparse(base)
+            # Park the stub again: the earlier half of this case released it, so
+            # without this the launch stub returns instantly and the slot is
+            # already back before the socket has read a byte — which is how the
+            # first draft of this conjunct measured nothing while looking green
+            # in three of its four fields.
+            release.clear()
+            sock = _socket.create_connection((u.hostname, u.port), timeout=15)
+            try:
+                sock.sendall(b"GET /smoke/stream HTTP/1.1\r\n"
+                             b"Host: " + u.netloc.encode() + b"\r\n"
+                             b"Accept: text/event-stream\r\n\r\n")
+                buf = b""
+                deadline = time.monotonic() + 15
+                while b"launching" not in buf and time.monotonic() < deadline:
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    buf += chunk
+                got["socket_reached"] = "launching" if b"launching" in buf else buf[-120:].decode(
+                    "utf-8", "replace")
+                held_over_socket = S.SEM.locked()
+            finally:
+                # SO_LINGER 0: an RST rather than a FIN, which is what a closed
+                # laptop lid looks like to the server and is strictly harder to
+                # notice than a graceful close.
+                sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_LINGER,
+                                struct.pack("ii", 1, 0))
+                sock.close()
+            deadline = time.monotonic() + disconnect_s
+            while S.SEM.locked() and time.monotonic() < deadline:
+                time.sleep(0.02)
+            got["slot_back_after_s"] = round(disconnect_s - max(0.0, deadline - time.monotonic()), 2)
+            if not held_over_socket:
+                wrong["slot_not_held_over_a_real_http_stream"] = got.get("socket_reached")
+            if S.SEM.locked():
+                wrong["slot_never_came_back_after_a_real_disconnect"] = {
+                    "waited_s": disconnect_s,
+                    "note": "Starlette did not cancel the stream task, or the finally "
+                            "did not run; /readyz is busy behind a browser that is gone"}
     finally:
         _pa.async_playwright = prev
+        release.set()
 
     # A check that reaches Chromium at all is the thing being protected: a guard
     # that refuses every smoke stream passes every other assertion here.
@@ -7133,6 +7195,44 @@ def _check_driver_tools_match_the_executor() -> dict:
             "got": {"tools": sorted(tools), "actions": sorted(actions)}}
 
 
+def _check_guards_line_matches_the_mode() -> dict:
+    """The ceilings the page prints are the ceilings the run will enforce.
+
+    T-M42-8. `#guards` carried mode B's numbers as literal text, printed
+    unconditionally — so under `BROWSER_AGENT_MODE=loop` a visitor read "30
+    actions and 2 replans" while watching a run bounded by 40 actions, no
+    replans and a $5.00 ceiling that ADR-028 names as the only bound on a public
+    unauthenticated endpoint.
+
+    Graded against the CONSTANTS the executor enforces rather than against a
+    frozen string, because the failure is divergence, not wording: retyping a
+    number here would reproduce exactly the defect. All three modes, since the
+    bug was that only one was ever rendered. And the page must carry no literal
+    ceiling of its own — a second copy is a second thing to drift.
+    """
+    from .agent import LOOP_BUDGETS, MAX_REPLANS, RUN_BUDGETS
+    from .server import PAGE, guards_line
+
+    wrong = {}
+    for mode, must in (("plan", [str(RUN_BUDGETS["actions"]), str(MAX_REPLANS)]),
+                       ("loop", [str(LOOP_BUDGETS["actions"]),
+                                 f"{LOOP_BUDGETS['llm_usd']:.2f}"]),
+                       ("escalate", [str(RUN_BUDGETS["actions"]),
+                                     str(LOOP_BUDGETS["actions"]),
+                                     f"{LOOP_BUDGETS['llm_usd']:.2f}"])):
+        line = guards_line(mode)
+        if missing := [w for w in must if w not in line]:
+            wrong[mode] = {"line": line, "does_not_carry": missing}
+    # The loop line must not advertise replans it does not have, which is the
+    # half a "contains the right numbers" test would pass while still lying.
+    if "replan" in guards_line("loop") and "no replans" not in guards_line("loop"):
+        wrong["loop_advertises_replans"] = guards_line("loop")
+    if re.search(r"up to \d+ actions", PAGE):
+        wrong["page_carries_its_own_ceiling"] = "a literal ceiling in PAGE is a second copy"
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {m: guards_line(m) for m in ("plan", "loop", "escalate")}}
+
+
 def _check_ui_adrs_cover_every_decision() -> dict:
     """The reviewer page's ADR digest lists every decision, once, as a 2-tuple.
 
@@ -7990,6 +8090,7 @@ def _check_origin_storage_seed_is_scoped() -> dict:
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
               "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
+              "guards-line-matches-the-mode": _check_guards_line_matches_the_mode,
               "adr029-variance-cites-the-ledger": _check_adr029_variance_cites_the_ledger,
               "driver-tools-match-the-executor": _check_driver_tools_match_the_executor,
               "examples-cover-matrix": _check_examples_cover_matrix,

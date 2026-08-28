@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 262 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 263 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
 ```
@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260828-155048-fast.json`, with
-`evals/report/20260828-155122-invariant.json` and
+Latest offline baseline — `evals/report/20260828-161325-fast.json`, with
+`evals/report/20260828-161359-invariant.json` and
 `evals/report/20260828-153810-live.json`:
 
 ```
-fast  259/262    invariant  103/106    live  12/13    $0.0000    105.4s
+fast  260/263    invariant  104/107    live  12/13    $0.0000    104.8s
 recovery 10/10 verified (25 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 74/74 · 15 replans
 ```
@@ -201,8 +201,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 262 | 105.42s | 121.23 | **125s** |
-| `invariant` | 106 | 33.70s | 38.76 | **40s** |
+| `fast` | 263 | 104.80s | 120.52 | **125s** |
+| `invariant` | 107 | 33.40s | 38.41 | **40s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer,
 and the two are allowed to differ by a step: a short sample may derive UNDER the
@@ -476,7 +476,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 294 cases (262 of them in the offline gate), it
+The eval set is not weak; it is 295 cases (263 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

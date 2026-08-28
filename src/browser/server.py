@@ -666,8 +666,7 @@ PAGE = r"""<!doctype html>
         title="Launches Chromium against example.com — proves the browser works, spends no tokens">Browser check</button>
     </div>
   </div>
-  <p class="note" id="guards">Public http/https pages only · up to 30 actions and 2 replans per run ·
-    one run at a time · a run costs about $0.001 in model tokens.</p>
+  <p class="note" id="guards">Public http/https pages only · one run at a time.</p>
   <pre id="err" hidden></pre>
 </div>
 
@@ -1329,9 +1328,43 @@ fetch("/support-matrix").then(r => r.json()).then(m => {
 """
 
 
+def guards_line(mode: str) -> str:
+    """The ceilings a visitor is actually watching, for the mode that will run.
+
+    T-M42-8. The line was hardcoded with mode B's numbers and printed
+    unconditionally, so under `BROWSER_AGENT_MODE=loop` every visitor read the
+    wrong ceilings for the run in front of them — 30 actions and 2 replans
+    against an actual 40 actions, no replans, and a USD ceiling that ADR-028
+    names as the ONLY bound on a public unauthenticated endpoint. That makes it
+    the wrong sentence to have wrong.
+    Read from the same constants the executor enforces, never retyped: a number
+    in this page that a run does not use is the defect, not a formatting choice.
+    """
+    from .agent import LOOP_BUDGETS, MAX_REPLANS, RUN_BUDGETS
+
+    if mode == "plan":
+        return (f"up to {RUN_BUDGETS['actions']} actions and {MAX_REPLANS} replans per run · "
+                f"a run costs about $0.001 in model tokens")
+    loop = (f"up to {LOOP_BUDGETS['actions']} actions, no replans, and a "
+            f"${LOOP_BUDGETS['llm_usd']:.2f} ceiling on model spend per run")
+    if mode == "escalate":
+        return (f"plan first ({RUN_BUDGETS['actions']} actions, {MAX_REPLANS} replans), "
+                f"then on a failure that changed nothing, {loop}")
+    return loop
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    return PAGE
+    mode = default_mode()
+    # Mode is DEPLOYMENT-LEVEL and the page says so rather than offering a
+    # control: whether loop mode earns default-ness is M44's evidence to give,
+    # and a selector shipped ahead of it would be a product decision made by a
+    # UI edit. What a visitor is owed meanwhile is the truth about the run they
+    # are watching.
+    return PAGE.replace(
+        "Public http/https pages only · one run at a time.",
+        f"Public http/https pages only · {guards_line(mode)} · one run at a time · "
+        f"mode <code>{mode}</code>, set for this deployment and not selectable here.")
 
 
 @app.get("/readyz")
