@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Meter Panel</title>
+<!-- Postmortem S2 fixture (docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md,
+     ADR-035 / M43): the answer is a value in a bare <pre> with no role and no
+     accessible name (role `generic`, dropped by observe.SKIP_ROLES), painted only
+     after a control is pressed — and the control itself is a bare <div> with no
+     role, no name and no text, so NO locator tier can resolve either element BY
+     CONSTRUCTION. This is deliberate, per the S2 failure class ("the answer is
+     not the accessible name of any small element"): do not "fix" the ARIA here —
+     the inspector-legibility fix lives in the other repo, and this fixture exists
+     to pin what an agent can only do by LOOKING. The control's position is fixed
+     in viewport pixels so a coordinate-click case is deterministic under
+     Playwright's default 1280x720 viewport. -->
+<style>
+  body { font: 16px/1.5 sans-serif; margin: 24px; max-width: 640px; }
+  #tap { position: fixed; left: 40px; top: 200px; width: 140px; height: 56px;
+         background: linear-gradient(#e08020, #b05a10); border-radius: 10px;
+         cursor: pointer; }
+  /* clear of the fixed control above, so the painted value is visibly
+     on-screen in a viewport screenshot, not underneath the toggle */
+  #readout { margin-top: 220px; }
+  #readout pre { font: 28px/1.2 monospace; margin: 12px 0 0; }
+</style>
+<h1>Meter panel</h1>
+<p>The current flux reading appears on the readout after the orange toggle
+below is pressed. The toggle is drawn, not labelled — nothing that only reads
+the accessibility tree can find it.</p>
+<div id="tap"></div>
+<div id="readout"><pre></pre></div>
+<script>
+  document.getElementById('tap').addEventListener('click', () => {
+    document.querySelector('#readout pre').textContent = '7.41';
+  });
+</script>

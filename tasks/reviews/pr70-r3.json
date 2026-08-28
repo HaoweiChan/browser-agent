@@ -1,0 +1,57 @@
+{
+  "pr": 70,
+  "round": 3,
+  "task": "M43",
+  "date": "2026-08-28",
+  "scope": "round-2 repair diff plus standing findings — not a fresh full-diff sweep",
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "ARMED, DID NOT TRIP. Three times earlier in this queue a repair introduced the defect class it was fixing, so round 3's primary question was whether round 2's repair did it a fourth time. The reviewer's determination is NO, established by measurement rather than by absence of evidence: the R7 bound timed at 2.00s on a non-matching locator with a `None` box landing in the same degrade path; R9's `false` assertion shown structural rather than incidental; the rebase union proven complete at 2190 rows with zero main rows missing; the ceiling filter confirmed to exclude #67's rows by count (84 and 229 cannot enter a 238-count band); no closed-world regression.",
+  "text_provenance": "Same constraint as rounds 1 and 2, filed as M43-D4: groundwork:pr-reviewer has tools Read/Grep/Glob/Bash and NO message tool, so its findings array could not be returned to the orchestrator that spawned it. Transcribed from the orchestrator-channel relay of the reviewer's terminal message. Recorded as a RELAY, not the reviewer's own bytes.",
+  "findings": [
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "claim": "The R10 text repair was PARTIAL: the falsified origin-arithmetic justification was corrected in two places and left verbatim at five sibling sites, including the INDEX.md digest a reader opens first.",
+      "evidence": "R10's rule was 'the published reason must become true' — but it becomes true only where it is published, and it is published in six places. Survivors included specs/decisions/INDEX.md's ADR-035 digest and the code comments at both `vision[0]` assignment sites.",
+      "repro": "grep the falsified sentence ('its origin is the element's bounding box, so a coordinate read off it lands somewhere else entirely') and its paraphrases across specs/, src/, README.",
+      "acceptance": "Every published instance corrected, the site count reported, and any deliberate survivor explicitly declared as model-facing guidance rather than published rationale.",
+      "route": "repair"
+    },
+    {
+      "id": "R13",
+      "severity": "MEDIUM",
+      "claim": "The R8 sweep was PARTIAL: it re-typed the stale number it was hunting and left three neighbouring clauses in the same paragraph contradicting the ledger committed beside them.",
+      "evidence": "A published band that drops rows — PR #29 R21's class. Ungraded here because `published-band-matches-the-ledger` reads only the Band-source bullet, so the contradicting clauses stay green indefinitely.",
+      "repro": "Read the three clauses against the 238-count rows in evals/report/history.jsonl.",
+      "acceptance": "All three clauses re-derived from the committed ledger. The conclusion (case-count growth, not per-case cost) is unaffected; only the numbers are wrong.",
+      "route": "repair"
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "claim": "ADR-029 is missing its `Amended by` line pointing at ADR-035.",
+      "evidence": "ADR-029's own `Amends` line records PR #57 R25 finding exactly this omission in ADR-021 — the file did to its successor what its predecessor had done to it, and documented the defect in the same breath.",
+      "repro": "Read ADR-029's header block for an Amended-by entry naming ADR-035.",
+      "acceptance": "The link added; the recursion is a better argument for grading the link than any assertion.",
+      "route": "repair"
+    },
+    {
+      "id": "R15",
+      "severity": "LOW",
+      "claim": "The degenerate drill shape is described as an element 'at least as large as' the viewport, when the condition is one that COVERS the viewport in both axes.",
+      "evidence": "M43-D6's own repro already states the covering condition correctly, so the prose and the repro disagreed inside one block.",
+      "repro": "Compare M43-D6's Spec prose against its Repro line.",
+      "acceptance": "Prose agrees with the repro everywhere the shape is described.",
+      "route": "repair"
+    },
+    {
+      "id": "R16",
+      "severity": "LOW",
+      "claim": "`_shot_ok`'s `\"viewport\"` branch tests the label alone and no area, so the grader's authority is one-directional.",
+      "evidence": "The strict inequality catches an element frame that is secretly a viewport shot; nothing catches a viewport frame that is secretly a crop.",
+      "repro": "Read `_shot_ok`'s viewport branch in src/browser/eval_adapter.py.",
+      "acceptance": "The one-directional ceiling recorded in M43-D6's block, in the same sentence that declares the grader authoritative. Widening the grader is deliberately NOT done in this round.",
+      "route": "debt"
+    }
+  ]
+}

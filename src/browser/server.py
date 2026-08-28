@@ -865,6 +865,7 @@ const ADRS = [
   ["032", "a locator tier is ONE match set: the case-exact matcher is counted first and the case-folded one used only when it is empty, so index, near and enumeration never select from a set the plan was not written against"],
   ["033", "the deployment says which commit it is running, or says plainly that it does not know \u2014 the build sha is written into the image at build time and read from there, never guessed from a local checkout and never reachable by a runtime setting, because a confidently wrong build id is worse than none"],
   ["034", "the build works out its own commit sha instead of being handed one — the deployed /version answered “unavailable” because the platform never filled the build argument, so a build stage now reads the context’s HEAD and a derivation that fails writes nothing at all, which the route publishes as “unavailable” rather than guessing"],
+  ["035", "the per-step mode now looks at the page: every turn carries the screenshot the trace already keeps as evidence, and a click by pixel coordinates is allowed only when those pixels came from a screenshot the model was actually shown"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

@@ -1,0 +1,52 @@
+{
+  "id": "loop-drill-observation-carries-an-element-screenshot",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "loop",
+    "fixture": "deep-spec.html",
+    "task": "What is the serial number of the Nimbus Field Notebook?",
+    "stub_calls": [
+      {
+        "action": "observe",
+        "target": {
+          "role": "region",
+          "name": "Product Information"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "cell",
+          "name": "SN-88231"
+        },
+        "anchor": "Nimbus Field Notebook"
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "SN-88231",
+    "trace_actions": [
+      "navigate",
+      "observe",
+      "extract",
+      "final_answer"
+    ],
+    "driver_screenshots": [
+      "viewport",
+      "element",
+      "viewport"
+    ]
+  },
+  "provenance": "M43/ADR-035 Decision 2, on the same fixture and call sequence as `loop-observe-drills-into-a-container` so the two cases differ only in what they grade. The drilled observation must carry an ELEMENT-scoped image — `element` in `driver_screenshots` is verified by the adapter against the PNG headers read at call time: the drill turn's image must have strictly smaller pixel area than the run's viewport frames, so a viewport shot relabelled 'element' is red. The third entry pins the re-arm: the turn after the drill is back on a full observation with a viewport frame, the same one-shot scope rule the drill's own disclosure case pins for elements. Red against the pre-implementation tree; the evidence was reconstructed post-hoc after a session interruption, and docs/evals/m43-red-first-ledger.md says so in those words rather than claiming this case was watched red as it was written.",
+  "triage": {
+    "class": "capability",
+    "note": "a vision model drilling into a dense region should see that region's pixels, not the whole page shrunk."
+  }
+}

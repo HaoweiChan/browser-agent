@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M43 — loop mode sees the page: screenshot observation for a vision model            [status: todo]
+### M43 — loop mode sees the page: screenshot observation for a vision model            [status: pr]
 Origin: ADR-027; postmortem S2 — the failure class "the answer is not the
 accessible name of any small element" (T-M40-2, D28) is unfixable by better
 ARIA targeting alone, and production agents do not have it because they look.
@@ -191,6 +191,165 @@ with the measured gap or amends the A-vs-B table — decided by the numbers,
 with the fast-suite/inspectability cost of A stated either way.
 
 ## Debt
+
+### M43-D1 — `trace_values` does not discriminate on its own            [status: todo]
+Origin: M43 implementation, the red-first reconstruction (docs/evals/m43-red-first-ledger.md).
+Spec: `loop-click-at-resolves-and-records-coordinates` asserts four conjuncts, and
+`trace_values` — the one that grades "the coordinates were RECORDED" — was GREEN
+against the tree with no `click_at` at all. The coordinate string rides in the
+trace's existing `value` field (ADR-035 Decision 4, deliberately: no schema
+change), and a refused step records `value` the same way an executed one does, so
+the conjunct cannot tell the two apart. The case as a whole is carried by
+`status` / `verdict` / `trace_postconditions`, which are red without the
+implementation, so nothing is unguarded today — the conjunct is weaker than it
+reads, not absent.
+Repro: check out `origin/main`'s `src/browser/{agent,observe,planner,verifier}.py`
+into this tree with the case in place and run it: `checks {status: false,
+verdict: false, trace_actions: true, trace_postconditions: false,
+trace_values: true}`.
+Acceptance: either the conjunct asserts the value on a step that cannot exist
+without `click_at` (so it is red on the same ablation the other three are), or
+`opt-in-expect-keys-declared`'s entry for `trace_values` states in words that it
+grades recording and never acting, and the case's provenance stops implying
+otherwise. Watched red on the ablation above before it is called fixed.
+
+### M43-D2 — the vision REQUEST is built by code no case executes            [status: todo]
+Origin: PR #70 R4 (LOW, routed debt).
+Spec: ADR-035 Decision 5 rules that `live_driver` sends the screenshot as a
+data-URL `image_url` content part beside the unchanged text prompt, and raises
+`failure:env` when the file it was handed cannot be read. Both live only in
+`src/browser/planner.py` (the `image_url` / `data:image/png;base64,` content
+part), and no offline case reaches them: `grep -rn 'image_url\|base64'
+src/browser/eval_adapter.py` is empty and no case in `evals/` sets
+`"driver": "live"`. What the offline suite grades is the OBSERVATION — that a
+screenshot was captured, attached to the right observation, and in the right
+frame — never the request assembled from it. A stub driver reads
+`observation["screenshot_path"]` itself, so the whole content-part construction
+is exercised by the live smoke and by nothing else.
+Repro: `grep -rn 'image_url\|base64' src/browser/eval_adapter.py` -> no output;
+`grep -rln '"driver": *"live"' evals/` -> no output.
+Acceptance: a `fast`-tagged case that builds the message body from a fixture
+screenshot path and asserts the content part's shape (and a second for the
+unreadable-path `failure:env` raise), watched red against a driver that drops
+the image — or ADR-035 Decision 5 states in words that the request half is
+live-only and names the smoke run that covers it, the same split Decision 6
+already makes for vision QUALITY.
+
+### M43-D3 — the malformed-coordinate ruling is pinned by no case            [status: todo]
+Origin: PR #70 R5 (LOW, routed debt).
+Spec: specs/001-browser-contract.md's `click_at` bullet rules that "Malformed
+coordinates are `failure:task`". The two refusal cases this milestone ships
+(`click-at-without-a-screenshot-is-refused`,
+`loop-click-at-from-a-drill-observation-is-refused`) both pin the ARMING gate
+and both carry well-formed `"x,y"` values, so nothing in the suite sends a
+`click_at` whose `value` cannot be parsed. A probe confirms the executor does
+refuse one, with the note ``click_at needs `value` as "x,y" viewport CSS
+pixels; got ...`` raised as `StepError("task", ...)`; the ruling is
+therefore true and ungraded, which is the state this repo treats as one bad
+refactor from false.
+Repro: no case file matches a `click_at` with a non-`"x,y"` `value` —
+`grep -rn '"action": "click_at"' evals/` returns only well-formed coordinates.
+Acceptance: an adversarial case sending `click_at` with an unparseable `value`
+from a properly armed observation, expecting `failure:task` and the refusal
+note, watched red with the parse guard removed.
+
+### M43-D4 — pr-loop review artifacts may be reconstructions wearing a verbatim label            [status: todo]
+Origin: PR #70, found while committing `tasks/reviews/pr70-r1.json`.
+Spec: the `groundwork:pr-reviewer` subagent type has tools Read/Grep/Glob/Bash
+and NO message tool, so it cannot return its findings array to the orchestrator
+that spawned it — its output reaches the parent only as its terminal message,
+which in PR #70's case surfaced to the coordinating session rather than to the
+orchestrator. The orchestrator requested the raw array twice and never received
+it in-context, so `tasks/reviews/pr70-r1.json` carries a `text_provenance` field
+declaring its finding text as a RELAY rather than the reviewer's own bytes.
+This matters beyond one PR: the pr-loop protocol makes the artifact the
+reproducible trace that every line of the bounded PR comment must trace back
+to, and a trace whose provenance is "someone retyped it" cannot serve that
+purpose. PRs #66–#69 each committed `prNN-rN.json` files on the same night;
+whether any of them are verbatim depends on a mechanism nobody has checked.
+This is the THIRD pr-loop-layer gap found in one night, alongside T-M39-15's D2
+(no SPEC-phase check for cross-branch id / derived-number collisions) and D3 (an
+orchestrator may report a PR mergeable while it is CONFLICTING and has run no
+CI at all). Three gaps at the same layer is the argument for fixing the layer.
+Repro: read `.claude/agents/` (or the groundwork plugin's agent definition) for
+`pr-reviewer`'s tool list; note the absence of any message/send tool, then read
+`tasks/reviews/pr70-r1.json`'s `text_provenance` field.
+Acceptance: NOT fixable in this repo — the fix belongs in the groundwork
+plugin (give the reviewer agent a message tool, or have the orchestrator write
+the artifact from a file the reviewer produces). Same cross-repo constraint
+T-M39-15 recorded for its own two pr-loop-layer blocks. Closing this block means
+either the plugin change landing upstream, or a recorded decision that review
+artifacts declare their provenance permanently.
+### M43-D5 — a partially visible drill target is cropped to the visible sliver            [status: todo]
+Origin: PR #70 R11 (LOW, routed debt).
+Spec: the drill crop is `page.screenshot(clip=<box ∩ viewport>)`, so an element
+that is only partly on screen yields only the part that is on screen — a model
+drilling into a region scrolled halfway off the bottom sees the top half and is
+told nothing about the rest. ADR-035 Decision 2 discloses it in words ("A
+partially visible element is cropped to the visible intersection"), it is
+strictly better than the behaviour it replaced (which scrolled, and on a
+lazy-load page changed what the run read next — PR #70 R1), and the ARIA half
+of the drill observation is unaffected and complete either way. So this is a
+rendering nicety, not a correctness hole, and it is filed rather than fixed.
+Repro: any loop-mode drill whose target's bounding box straddles the viewport
+edge; the written `step_N_element.png` has the height of the intersection, not
+of the element.
+Acceptance: either the model is told the crop is partial (a field on the scoped
+observation, graded by a case that reddens when a partial crop is presented as
+whole), or Decision 2 states that a partial crop is presented as if complete
+and accepts it in those words. NOTE: the round-2 verbatim finding text for R11
+never reached this session — this block is written from the orchestrator's
+summary plus the ADR clause it cites, and should be replaced with the reviewer's
+own bytes if they differ.
+
+### M43-D6 — a viewport-sized drill target grades red while behaving correctly            [status: todo]
+Origin: PR #70 R10 (the half that is not a text fix).
+Spec: `_shot_ok` in `src/browser/eval_adapter.py` defines an `element` frame as
+one whose pixel area is STRICTLY smaller than every viewport frame the run
+showed — the check that makes "a viewport shot relabelled `element`" red. For a
+drill target whose box COVERS the viewport in both axes the clip `<box ∩ viewport>`
+degenerates to the viewport itself, so a correct run writes a crop of exactly
+viewport area, labels it `element`, and any case asserting `"element"` for that
+turn goes red. Nothing fails today: every drill fixture in this repo targets a
+sub-viewport region, so the shape is unreachable from the committed cases. It is
+recorded because "no fixture shows this shape" is the sentence this repo keeps
+falsifying. ADR-035 Decision 2 declares the eval set authoritative here and says
+why the rule is not relaxed to `<=`: that would retire the relabelling guard,
+which is worth more than the degenerate shape — and the authority it is granted
+is one-directional, because `_shot_ok`'s `"viewport"` branch tests the LABEL
+alone and no area at all, so the strict inequality catches an element frame that
+is secretly a viewport shot and nothing catches a viewport frame that is
+secretly a crop (PR #70 R16, recorded rather than fixed: widening that branch is
+a grader change this round is not making).
+Repro: a fixture whose drill target is >= 1280x720 at the viewport origin, with
+a case asserting `driver_screenshots: [..., "element", ...]` for the drill turn.
+Acceptance: `_shot_ok` distinguishes "smaller than the viewport" from "clipped
+to the viewport", with the fixture above as its case and the relabelling guard
+still red on a genuine viewport shot — or Decision 2's declaration is promoted
+into the grader's own docstring so the next reader of `_shot_ok` finds it there.
+
+### M43-D7 — wall-clock figures published outside the graded band bullets are ungraded            [status: todo]
+Origin: PR #70 R13 (the residual class, recorded rather than swept).
+Spec: `published-band-matches-the-ledger` reads the Band-source bullet and
+nothing else, so a wall-clock figure quoted anywhere ELSE in the same documents
+— a narrative paragraph, an ablation aside, a README sentence, an ADR's
+consequences section — is published prose that no grader reads back against
+`evals/report/history.jsonl`. It can contradict the ledger committed beside it
+and stay green forever. R13 is the demonstrated instance, not a hypothetical:
+the R8 sweep re-typed the one stale number it was hunting and left three
+neighbouring clauses IN THE SAME PARAGRAPH contradicting the committed ledger —
+a published band that drops rows, PR #29 R21's class, found only because a
+reviewer happened to read that paragraph rather than because anything failed.
+This block deliberately does NOT sweep: recording the class is a finding, and
+running the grep would be widening the implementation that produced it.
+Repro: read the three clauses R13 names in the round-3 artifact against the
+238-count rows in `evals/report/history.jsonl`; nothing in either suite reddens.
+Acceptance: a grep for wall-clock figures (`\d+\.\d+s`, and bare seconds in
+band prose) across ADR-019, ADR-035, README.md and docs/analysis.md, with EVERY
+hit either (a) brought under a grader that reads the ledger, or (b) explicitly
+declared narrative — a figure whose job is to describe history rather than to
+state the tree's current band. Either disposition is fine; an ungraded figure
+that reads as current is not.
 
 ### M44-P1-D4 — item 12's rule is still not true of the file it governs            [status: todo]
 Origin: PR #65 R9 (LOW, routed debt).

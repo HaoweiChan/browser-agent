@@ -1,0 +1,30 @@
+{
+  "id": "s2-bare-value-mode-b-root-reach-is-pinned",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "fixture": "s2-nameless-readout.html",
+    "task": "What flux reading does the meter panel report?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "WebArea",
+          "name": "Meter Panel"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "reason_contains": "accessibility root of the document",
+    "actions": 1
+  },
+  "provenance": "M43 acceptance, the contrast half of the S2 pair: mode B's documented failure on the same fixture `s2-bare-value-loop-vision-path-answers` answers under loop mode with vision. The stub plan scripts what the live planner MEASURABLY does on this page shape — T-M40-2 recorded four of five live tasks reaching for the document root when the answer is not the accessible name of any small element (D28), and this fixture is that shape by construction: the value is in a bare <pre>, the control a bare <div>, neither in any observation at any budget. ADR-024's lint refuses the root read, the stubbed replan returns the same plan, and the run ends `failure:task` with the browser never moved past the pre-plan navigation (`actions: 1`) — a deterministic pin of the boundary, not a claim that no other mode B plan exists (none can reach the control: no tier resolves a role-less, name-less, text-less element, and the value does not exist until it is clicked). GREEN against the pre-implementation tree, by design: it is the contrast half of the pair and pins behaviour M43 must NOT change, so reverting M43 cannot redden it. Non-vacuity is shown by ablation instead — `agent.root_target_gap` stubbed to return None, ADR-024's lint disabled — which reddens all three conjuncts and answers `success` with 'Meter panel', the page title read off the accessibility root, where ground truth is 7.41. Recorded, ablation output included, in docs/evals/m43-red-first-ledger.md.",
+  "triage": {
+    "class": "capability",
+    "note": "postmortem S2 pinned as mode B's boundary: unfixable by better ARIA targeting, which is why M43 exists."
+  }
+}

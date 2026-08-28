@@ -1,0 +1,78 @@
+{
+  "pr": 70,
+  "round": 1,
+  "task": "M43",
+  "date": "2026-08-28",
+  "result": "APPROVED_SUBJECT_TO_REPAIRS",
+  "reviewer_gate": {
+    "invariant": "83/83",
+    "fast": "236/236",
+    "wall_s": {"invariant": 16.3, "fast": 91.75},
+    "cost_usd": 0.0
+  },
+  "text_provenance": "The reviewer subagent (groundwork:pr-reviewer) has tools Read/Grep/Glob/Bash and NO message tool, so it could not return its findings array to the orchestrator directly; it emitted the JSON as its final message. The orchestrator requested the raw array twice and never received it in-context. The finding text below was therefore transcribed from the orchestrator-channel relay of that final message. It is recorded as a RELAY, not as the reviewer's own bytes. Field wording may be condensed; the file:line references, measured values and quoted strings are as relayed. If the reviewer's original array is ever recovered, it supersedes this file.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "claim": "A loop-mode drill's element-scoped capture silently SCROLLS the page, and because `observe` sits in READ_ONLY_ACTIONS the resulting state change is recorded as a step that changed nothing (`page_changed` stays null).",
+      "evidence": "Playwright's `locator.screenshot()` scrolls the element into view; scrollY measured moving 0 -> 1346 on a 2000px-spacer fixture. `observe` is in READ_ONLY_ACTIONS so `page_changed` remains null for the step. Sharpest realistic case is a lazy-load / infinite-scroll page, where looking closer loads content the model never acted for.",
+      "repro": "Drive a loop-mode drill against a fixture with a 2000px spacer and observe scrollY before/after the element capture.",
+      "acceptance": "Either declare the scroll in ADR-035 Decision 2, or capture without moving the page — EACH plus a case that goes red if a drill's scroll changes what a later step reads.",
+      "route": "repair"
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "claim": "ADR-035 Decision 1's declared staleness hazard and `see()`'s docstring describe behaviour the code does not have, while the hazard the code does have goes unnamed.",
+      "evidence": "src/browser/agent.py:1520-1533 overwrites the reused observation's screenshot with the CURRENT step's fresh shot, so the documented 'stale image beside stale element list' is not reachable on the `look()`-failure reuse path; the declared hazard is reachable only when BOTH captures fail.",
+      "repro": "Read agent.py:1520-1533 against ADR-035 Decision 1's hazard paragraph and `see()`'s docstring.",
+      "acceptance": "The ADR text and docstring say what the code does: fresh image beside a stale element list on the look()-failure reuse path; stale image only when both captures fail.",
+      "route": "repair"
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "claim": "`click_at`'s membership in `verifier.STATE_CHANGING` is read back by nothing — the property that stops a coordinate click being an unverified state change is pinned by no case.",
+      "evidence": "Republished at specs/001-browser-contract.md:170. Deleting \"click_at\" from verifier.STATE_CHANGING leaves the suite at 236/236 green. A probe returns `failure:semantic` with \"state-changing step(s) [2] carried no checkable postcondition\". Siblings `press` and `go_back` each have a behavioural case.",
+      "repro": "Delete \"click_at\" from verifier.STATE_CHANGING and run --suite fast: still 236/236.",
+      "acceptance": "A behavioural case that goes red with that deletion — a click_at with no authored expected_state leaves postcondition_ok null and demotes the run as unverifiable.",
+      "route": "repair"
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "claim": "ADR-035 Decision 5's data-URL `image_url` content part and its `failure:env` raise are exercised by no case.",
+      "evidence": "`grep -rn 'image_url\\|base64' src/browser/eval_adapter.py` returns empty; no case sets \"driver\": \"live\".",
+      "repro": "grep -rn 'image_url|base64' src/browser/eval_adapter.py",
+      "acceptance": "A case exercising the data-URL content part and the unreadable-path failure:env raise, or the gap logged as debt.",
+      "route": "debt"
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "claim": "The malformed-coordinate ruling is pinned by no case.",
+      "evidence": "specs/001-browser-contract.md:157-159 rules malformed coordinates failure:task; a probe confirms the refusal note reads: click_at needs `value` as \"x,y\" viewport CSS pixels. No case asserts it.",
+      "repro": "Emit click_at with a non-\"x,y\" value from an armed observation and read the refusal note.",
+      "acceptance": "A case asserting the malformed-coordinate refusal, or the gap logged as debt.",
+      "route": "debt"
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "claim": "Two of the seven new cases have byte-identical `input`, so \"the seven cases ARE the milestone\" is true of the assertions but not of the runs the ceiling derivation counts.",
+      "evidence": "`loop-click-at-resolves-and-records-coordinates` and `s2-bare-value-loop-vision-path-answers`, lines 7-29, share an identical input block. The reviewer verified the ceiling derivation survives either way: 90.15 + 1.89 = 92.04 (the new run's exact wall clock), and merging the pair still leaves the 236-case minimum 91.72s above what 105 covers.",
+      "repro": "diff the `input` blocks of the two case files.",
+      "acceptance": "Record the distinction where the band is republished, or merge the pair.",
+      "route": "repair"
+    }
+  ],
+  "reviewer_checked_and_did_not_find": [
+    "The closed-world click_at gate holds structurally: vision[0] is mutated only at agent.py:1518/1533/1691, all inside drive_loop, set in the same iteration as the driver call at 1617 — mode B, replans, ladders and drills cannot arm it. Probes confirmed a drill disarms, a post-drill failure re-arms only after a viewport look, and out-of-viewport and malformed coordinates behave as ADR-035 rules.",
+    "Mode B unchanged: planner.SYSTEM still lists six verbs, TOOL_TABLE is driver-only, drill capture and see() are gated on mode == 'loop', and observe.render adds its line only when the key exists.",
+    "The trace gains no fields and screenshots stay filenames, not inline base64.",
+    "Rule 6 clean: no fixture selector or coordinate in agent/planner/observe/resolver/verifier.",
+    "ADR-035 Decision 3's 'no model added' is true — the frozen snapshot records _input_modalities: ['text','image','file'] for anthropic/claude-opus-5.",
+    "The red-first ledger reproduces: reverting the four modules at merge base in a scratch copy yielded all six documented red rows verbatim (including trace_values: true, the already-logged M43-D1), the seventh green, and the root_target_gap ablation reproducing {\"status\": false, \"actions\": false, \"reason_contains\": false} with success / \"Meter panel\"."
+  ]
+}

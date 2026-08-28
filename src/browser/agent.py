@@ -44,7 +44,8 @@ from .verifier import is_aggregate, rank, verify
 # vice versa — which is what makes `loop-mode-b-cannot-read-the-un-awaited-result`
 # an honest A/B rather than a comparison of two vocabularies.
 ACTIONS = ("navigate", "click", "fill", "extract", "extract_all", "observe",
-           "select_option", "scroll", "press", "wait_for", "go_back", "final_answer")
+           "select_option", "scroll", "press", "wait_for", "go_back", "click_at",
+           "final_answer")
 
 # Actions that CANNOT run without a resolved element. `scroll` and `press` are
 # deliberately absent: both have a page-level form (scroll the window, send a
@@ -856,6 +857,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
     # (nested) can write it without a `nonlocal` dance.
     drilled: list[dict] = []
 
+    # M43 (ADR-035): is the observation the CURRENT driver call was emitted from
+    # bearing a VIEWPORT screenshot? The loop's `see()` arms it, a drill
+    # observation disarms it, and mode B never touches it — so `execute`'s
+    # `click_at` refusal reads one cell in both modes. Same no-`nonlocal` shape
+    # as `drilled`.
+    vision: list[bool] = [False]
+
     answers: list = []
 
     async def finalize(final_url, digest):
@@ -1011,6 +1019,41 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         raise StepError("act", "go_back: this tab has no earlier page to "
                                                "return to")
                     return
+                if action == "click_at":
+                    # M43 (ADR-035 Decision 4): a coordinate click, for the
+                    # element no tier can name — postmortem S2's control half.
+                    # CLOSED-WORLD about where the coordinates came from, the
+                    # same ruling `resolver-unknown-target-key` makes about
+                    # arguments: coordinates the model never saw are a plan
+                    # quietly invented. Refused as the call is emitted unless
+                    # the loop marked the observation this call was emitted
+                    # from as bearing a VIEWPORT screenshot — an element-scoped
+                    # drill image does not arm it (the gate reads the frame
+                    # LABEL: a crop taken to show a sub-region is labelled
+                    # `element` however its pixels happen to line up, which is
+                    # provenance and not origin arithmetic — ADR-035 Decision 2,
+                    # PR #70 R10/R12), and mode B never arms it (its planning
+                    # observation carries no screenshot).
+                    # Out-of-viewport coordinates are deliberately not
+                    # pre-checked: nothing is there, the click changes nothing,
+                    # and the authored expected_state fails the step — the
+                    # postcondition is the gate, `click`'s own ruling.
+                    if not vision[0]:
+                        raise StepError(
+                            "task", "click_at needs coordinates read off the screenshot you "
+                                    "were just shown, and this call was not emitted from a "
+                                    "viewport-screenshot-bearing observation (a drill's "
+                                    "element-scoped image has a different coordinate frame), "
+                                    "so these coordinates cannot come from anything this run "
+                                    "saw. Name an element semantically, or look at the full "
+                                    "page again first")
+                    try:
+                        x, y = (float(v) for v in str(step.get("value") or "").split(","))
+                    except ValueError:
+                        raise StepError("task", "click_at needs `value` as \"x,y\" viewport "
+                                                f"CSS pixels; got {step.get('value')!r}")
+                    await page.mouse.click(x, y)
+                    return
                 # A key the resolver does not implement used to be dropped, and
                 # the step ran against whatever was left of its target — the plan
                 # quietly reinterpreted, the run reported on the weaker task it
@@ -1087,6 +1130,67 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # so like `extract` it has no postcondition of its own.
                     drilled.append(await observe(page, root=loc,
                                                  text_head=DRILL_TEXT_HEAD))
+                    # M43 (ADR-035 Decision 2): in loop mode the drill also
+                    # LOOKS — an element-scoped capture attached to the scoped
+                    # observation, so a vision model examining a dense region
+                    # sees that region's pixels, not the whole page shrunk.
+                    # The step's TRACE evidence stays the viewport shot
+                    # `attempt` takes; this file is model input beside it.
+                    # `screenshot_frame: "element"` is what keeps the crop
+                    # from arming `click_at` — the label records that the crop
+                    # was taken to show a sub-region, and the gate reads the
+                    # label, never the geometry (ADR-035 Decision 2).
+                    # Best-effort like every
+                    # capture: a failed shot leaves an image-less drill, which
+                    # is M42's whole behaviour. Mode B is untouched — its
+                    # planner consumes no images, and a file nothing reads is
+                    # a behaviour change nothing asks for.
+                    #
+                    # The crop is a VIEWPORT shot clipped to the element's box,
+                    # not `loc.screenshot()` (PR #70 R1). Playwright's
+                    # element screenshot runs an actionability check that
+                    # SCROLLS the element into view, and a scroll is a state
+                    # change on any lazy-load page: looking closer loads
+                    # content nobody acted for, recorded as a step that changed
+                    # nothing because `observe` is in READ_ONLY_ACTIONS
+                    # (`loop-drill-capture-does-not-scroll-the-page`). Clipping
+                    # cannot move the page, so an element that is off-screen
+                    # simply gets no crop — the same best-effort degrade a
+                    # failed capture already takes, and cheaper than the
+                    # alternative of scrolling and scrolling back, which
+                    # restores the offset but not what the scroll loaded.
+                    #
+                    # EVERY await in here passes SCREENSHOT_TIMEOUT_MS, the
+                    # `bounding_box` included (PR #70 R7). "Best-effort" and
+                    # "unbounded" cannot both be true — the same rule the
+                    # `attempt` capture states with its receipts (32s and 64s
+                    # inside a suite ADR-002 budgets at 60s), and it applies
+                    # here for the same reason: this block swallows everything
+                    # it raises, so an unbounded wait is invisible rather than
+                    # loud. `bounding_box()` inherits Playwright's 30s default
+                    # and blocks the full 30s on a locator that matches
+                    # nothing — measured, not assumed. The first version of
+                    # this repair dropped the bound while removing the call
+                    # that carried it, which is the defect the repair was
+                    # about, so the constant is named on each await.
+                    if mode == "loop":
+                        shot = f"step_{rec['i']}_element.png"
+                        try:
+                            box = await loc.bounding_box(timeout=SCREENSHOT_TIMEOUT_MS)
+                            vp = page.viewport_size or {}
+                            x0, y0 = max(box["x"], 0.0), max(box["y"], 0.0)
+                            x1 = min(box["x"] + box["width"], vp.get("width", 0))
+                            y1 = min(box["y"] + box["height"], vp.get("height", 0))
+                            if x1 > x0 and y1 > y0:
+                                await page.screenshot(
+                                    path=str(run_dir / shot), timeout=SCREENSHOT_TIMEOUT_MS,
+                                    clip={"x": x0, "y": y0, "width": x1 - x0,
+                                          "height": y1 - y0})
+                                drilled[-1].update(screenshot=shot,
+                                                   screenshot_path=str(run_dir / shot),
+                                                   screenshot_frame="element")
+                        except Exception:
+                            pass
                 elif action == "click":
                     await loc.click(timeout=10_000)
                 elif action == "fill":
@@ -1425,7 +1529,57 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 (`loop-no-progress-revisit-ends-the-run-loudly`) rather than a
                 property anyone asserted.
                 """
-                observation, note, last_state = obs, None, None
+                async def see(o):
+                    """M43 (ADR-035 Decision 1): attach the viewport screenshot
+                    to a loop observation, and arm/disarm `click_at` with it.
+
+                    The image IS the trace's step evidence — the `step_N.png`
+                    `attempt` already captured for the step this observation
+                    follows, referenced by filename, never a second capture of
+                    the same page state. The one step with no capture of its
+                    own is the pre-plan navigate (its record hardcodes
+                    `screenshot: None`); the loop's first turn takes one here
+                    and fills that existing field, so entry [0] of the trace's
+                    screenshot column stops being the only blind step of a
+                    loop run. `screenshot_path` exists because the driver is
+                    handed no run directory and has bytes to read; the
+                    filename alone is what the evidence pipeline keeps.
+
+                    Capture failure disarms rather than lies: no screenshot,
+                    no `Screenshot:` line rendered to the model, no armed
+                    `click_at` — the degraded turn is an ARIA-only turn, which
+                    is M42's whole behaviour. When `look()` fails and the caller
+                    reuses the previous observation, this function still runs
+                    against `trace[-1]`, so the reused observation is
+                    re-attached to the image of the step just executed: the
+                    model gets a FRESH screenshot beside a STALE element list,
+                    which is a mismatched pair rather than a stale one (PR #70
+                    R2 — ADR-035 Decision 1 said the opposite for a round). The
+                    genuinely stale image needs BOTH captures of that step to
+                    fail, `attempt`'s and the retry below; only then does `o`
+                    keep the screenshot keys the previous turn wrote on it and
+                    stay armed on an old image.
+                    """
+                    if o is None:
+                        vision[0] = False
+                        return None
+                    rec = trace[-1] if trace else None
+                    if rec is not None and rec.get("screenshot") is None:
+                        shot = f"step_{rec['i']}.png"
+                        try:
+                            await page.screenshot(path=str(run_dir / shot),
+                                                  timeout=SCREENSHOT_TIMEOUT_MS)
+                            rec["screenshot"] = shot
+                        except Exception:
+                            pass
+                    if rec is not None and rec.get("screenshot"):
+                        o["screenshot"] = rec["screenshot"]
+                        o["screenshot_path"] = str(run_dir / rec["screenshot"])
+                        o["screenshot_frame"] = "viewport"
+                    vision[0] = o.get("screenshot_frame") == "viewport"
+                    return o
+
+                observation, note, last_state = await see(obs), None, None
                 seen: dict = {}
                 while True:
                     if stop := budget_stop(budgets, loop_budgets or LOOP_BUDGETS):
@@ -1544,7 +1698,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                                  None: "Whether the page changed was never checked."}
                         note = (f"Your last call FAILED: {rec['note']}. "
                                 f"{moved[rec['page_changed']]} Do not repeat it unchanged.")
-                        observation = await look() or observation
+                        observation = await see(await look() or observation)
                         continue
                     if call["action"] == "final_answer":
                         digest = (await page_text(page))[:500]
@@ -1575,6 +1729,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # what this branch does by not touching `budgets["replans"]`.
                     if call["action"] == "observe" and drilled:
                         observation = drilled.pop()
+                        # M43: an element-scoped image does not arm `click_at`
+                        # — this reads the frame LABEL, which records that the
+                        # crop was taken to show a sub-region, and never the
+                        # crop's geometry (ADR-035 Decision 2; PR #70 R10 found
+                        # the geometric justification false for a crop that
+                        # covers the viewport, where the refusal is still right)
+                        # (`loop-click-at-from-a-drill-observation-is-refused`).
+                        vision[0] = observation.get("screenshot_frame") == "viewport"
                         # ...and SAY it is a subtree. `observe.render` prints the
                         # PAGE's url and title either way, so without this the
                         # model is handed a scoped observation that looks exactly
@@ -1586,7 +1748,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         note = (f"The observation above is the subtree of "
                                 f"{call.get('target')} ONLY, not the whole page.")
                     else:
-                        observation = await look() or observation
+                        observation = await see(await look() or observation)
 
             if mode == "loop":
                 return await drive_loop()

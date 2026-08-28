@@ -1,0 +1,48 @@
+{
+  "pr": 70,
+  "round": 3,
+  "task": "M43",
+  "date": "2026-08-28",
+  "head": "ed22d6b",
+  "base": "6a416df",
+  "pattern_this_round_exposed": "A distinct pattern from the one tracked in rounds 1-2, and quieter. Rounds 1-2's failure was a repair INTRODUCING a new defect. R12 and R13 are a repair being PARTIAL — the finding is closed, the artifact says `fixed`, the gate stays green, and the falsified claim goes on living at every site the sweep missed. A partial repair is externally indistinguishable from a complete one.",
+  "why_partial_repairs_hide": "The fix site and the finding site are the same place, so the repair always looks complete from where you are standing. Grep-first/grep-after works because it moves the completeness question off the diff and onto the tree. That is a method, not an observation, and the next person to close a finding in this repo should meet it.",
+  "resolutions": [
+    {
+      "id": "R12",
+      "disposition": "fixed",
+      "detail": "Swept by grep rather than at the sites the finding named. The falsified origin-arithmetic justification was published at SEVEN sites in total; five survived the R10 repair and are now corrected, including specs/decisions/INDEX.md's ADR-035 digest and the code comments at both `vision[0]` assignment sites. The site count IS the finding: R10 corrected two of seven and read as complete.",
+      "declared_survivors": "planner.py's TOOL_TABLE and agent.py:1044 keep their wording deliberately. The distinction: those two are MODEL-FACING GUIDANCE — text the model reads to choose an action — not published rationale a human reads to understand why the rule exists. A guidance string that says a coordinate from an element crop is untrustworthy is true and useful to the model regardless of which argument grounds the rule. Published rationale must be true; guidance must be actionable.",
+      "sweep_blind_spot_disclosed": "planner.py:408 escaped the first regex only because the phrase is split across concatenated string literals — not because it was absent. Recorded because a grep result reported without its blind spots is a weaker claim than the same result reported with them."
+    },
+    {
+      "id": "R13",
+      "disposition": "fixed",
+      "detail": "All three neighbouring clauses re-derived from the committed ledger rather than re-typed. The CONCLUSION — case-count growth, not per-case cost — was correct throughout and is untouched; only its numbers were wrong. Residual class filed as M43-D7 (below) rather than swept."
+    },
+    {
+      "id": "R14",
+      "disposition": "fixed",
+      "detail": "ADR-029's `Amended by` line to ADR-035 added. Worth one clause of its own: ADR-029's `Amends` line already records PR #57 R25 finding exactly this omission in ADR-021, so the file did to its successor precisely what its predecessor had done to it, and documented the defect in the same breath. That recursion is a stronger argument for grading the link than any assertion could be."
+    },
+    {
+      "id": "R15",
+      "disposition": "fixed",
+      "detail": "The degenerate shape is now described as one that COVERS the viewport in both axes, not merely 'at least as large as' it — matching M43-D6's repro, which had it right while the prose beside it did not."
+    },
+    {
+      "id": "R16",
+      "disposition": "debt (recorded, grader deliberately not widened)",
+      "became": "recorded inside M43-D6",
+      "detail": "The one-directional ceiling is stated in the same sentence that declares the grader authoritative: the strict inequality catches an element frame that is secretly a viewport shot, and nothing catches a viewport frame that is secretly a crop. Widening `_shot_ok`'s viewport branch is a grader change this round is not making."
+    }
+  ],
+  "debt_logged_this_round": [
+    {
+      "id": "M43-D7",
+      "origin": "PR #70 R13 (the residual class)",
+      "detail": "Wall-clock figures published OUTSIDE the graded band bullets are read by no grader: `published-band-matches-the-ledger` reads the Band-source bullet and nothing else, so a figure quoted in a narrative paragraph can contradict the ledger committed beside it and stay green forever. R13 is the demonstrated instance, found because a reviewer read the paragraph rather than because anything failed. The block deliberately does NOT run the sweep — recording the class is a finding; running the grep would be widening the implementation that produced it."
+    }
+  ],
+  "gate": {"invariant": "84/84", "fast": "238/238", "cost_usd": 0.0, "note": "orchestrator re-measures independently before the round is closed"}
+}

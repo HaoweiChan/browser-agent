@@ -401,6 +401,13 @@ TOOL_TABLE = {
                  ["expected_state"], ["expected_state"]),
     "go_back": ("Go back one entry in this tab's history. Carries an expected_state like any "
                 "state-changing step.", ["expected_state"], ["expected_state"]),
+    "click_at": ("Click at pixel coordinates read off the CURRENT viewport screenshot: `value` "
+                 "is \"x,y\" in CSS pixels, origin top-left. ONLY for an element the "
+                 "observation cannot name — a semantic target is always better when one "
+                 "exists. Refused unless your current observation carries a viewport "
+                 "screenshot (a drill's element-scoped image does not count: its pixels are "
+                 "in a different frame). Changes state like a click, so it MUST carry an "
+                 "expected_state.", ["value", "expected_state"], ["value", "expected_state"]),
     "extract": ("Read one element's text as the answer. Never target the accessibility document "
                 "root (WebArea): its text is the whole page and it answers nothing.",
                 ["target", "anchor"], ["target"]),
@@ -436,7 +443,12 @@ asks which item of a set ranks highest or lowest, read the page exactly once wit
 declare `rank: true`; the comparison is done in code.
 A page painted after an action is the normal case, not an error: if what you expect is not there
 yet, `wait_for` it rather than reading an empty element. If the same page keeps coming back
-unchanged, change strategy — repeating an action that changed nothing will end the run."""
+unchanged, change strategy — repeating an action that changed nothing will end the run.
+When the observation says a screenshot is attached, LOOK at it: a page can hold values and
+controls that have no role and no accessible name, and the screenshot is the only place they
+appear. For a control nothing can name, `click_at` its pixel coordinates from the CURRENT
+viewport screenshot; for a value you can see but not target, find its exact text in the image
+and `extract` it with a `text` target so the answer is still read from the page."""
 
 
 def build_driver_user(task: str, url: str | None, observation: dict | None = None,
@@ -558,12 +570,27 @@ def live_driver(model: str = DEFAULT_LOOP_MODEL):
         raise PlanError("OPENROUTER_API_KEY is not set")
 
     async def drive(task, url, observation=None, trace=None, found=None, note=None):
+        content = build_driver_user(task, url, observation, trace, found, note)
+        # M43 (ADR-035 Decision 5): when the observation carries a screenshot,
+        # the image rides beside the unchanged text as a data-URL content part.
+        # Reading the file is NOT guarded: an observation that names an image
+        # the driver cannot read is a run lying about what the model saw, and
+        # the raise ends it `failure:env` through the loop's ordinary driver
+        # error path (rule 4 — fail loudly, never degrade silently while the
+        # `click_at` gate stays armed). One image per call, the current view
+        # only: the driver is stateless (ADR-028 §7) and keeps no image history.
+        if shot := (observation or {}).get("screenshot_path"):
+            import base64
+            with open(shot, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode()
+            content = [{"type": "text", "text": content},
+                       {"type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{b64}"}}]
         payload = {
             "model": model,
             "messages": [
                 {"role": "system", "content": DRIVER_SYSTEM},
-                {"role": "user", "content": build_driver_user(
-                    task, url, observation, trace, found, note)},
+                {"role": "user", "content": content},
             ],
             "tools": TOOLS,
             "tool_choice": "required",

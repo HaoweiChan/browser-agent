@@ -1,0 +1,56 @@
+{
+  "pr": 70,
+  "round": 2,
+  "task": "M43",
+  "date": "2026-08-28",
+  "head": "a69bd16",
+  "base": "da6d05b",
+  "pattern_this_round_exposed": "A repair round introduced the defect class it was fixing — the third instance across the queue tonight. The sharper half, and the reason it survived review: the replacement was QUIETER than the original. A visible side effect (a scroll that moved the page) was swapped for an unbounded wait inside a block that swallows every exception, so the new defect had no symptom at all until someone timed it. The error is trusting a diff in proportion to its size; quietness, not size, is what lets a repair-introduced defect through. This is the argument for a repair round getting its own falsification pass rather than being trusted because it is small.",
+  "same_signature_caught_in_the_rebase": "The third rebase's history.jsonl conflict resolver reproduced the SAME failure signature by a different mechanism, and was caught before it landed. A first cut returned `lines[:start] + merged` — a plausible-looking ts-ordered union that silently DROPPED the 15 rows after the conflict block, including all five 238-count rows the band depends on. It would have been invisible: the gate stays green, the file looks merged, and the only symptom appears later when `published-band-matches-the-ledger` cannot find its cited source at the current count. Same shape as R7 — reports success while doing nothing useful, with no symptom at the time — from a different mechanism. The fix and the lesson are the same thing: assert the output row count against the sum of both sides' rows rather than eyeballing the merge.",
+  "resolutions": [
+    {
+      "id": "R7",
+      "disposition": "fixed",
+      "detail": "`loc.bounding_box(timeout=SCREENSHOT_TIMEOUT_MS)`. The reasoning was carried into the call-site comment so the next edit does not silently undo it. Watched red first: a non-matching locator took ~30s before the fix and ~2s after, and the block's `except Exception: pass` had been hiding it entirely."
+    },
+    {
+      "id": "R8",
+      "disposition": "fixed",
+      "detail": "Every publication site now cites the current committed row (93.44s at 238) rather than the superseded 93.26s/236, and the clause misattributing 92.04 as the first run at the new count was corrected — 92.04 is the 236-case run. The derived ceiling is 110 either way, which is exactly why the stale citation would have rotted unnoticed."
+    },
+    {
+      "id": "R9",
+      "disposition": "fixed",
+      "covered_by": "loop-drill-capture-does-not-scroll-the-page",
+      "detail": "The case now asserts `\"driver_screenshots\": [\"viewport\", false, \"viewport\"]`, pinning both the absent crop for the off-screen element and that the surrounding turns keep theirs. Watched red against a build that emits a crop anyway. Before this it pinned only the answer, so dropping crops entirely would have shipped green."
+    },
+    {
+      "id": "R10",
+      "disposition": "fixed (text, not code — the behaviour is safe and unchanged)",
+      "detail": "ADR-035 Decision 2's justification for disarming `click_at` no longer rests on coordinate arithmetic. It is grounded in the frame's PROVENANCE: the executor knows which capture produced the image, and a rule that inspected offsets would have to be right about every crop's origin forever. The origin argument is demoted to the ordinary case with the explicit clause that the rule does not rest on it — so the published reason is now true of every shape, including the degenerate one where the clip IS the viewport. Reconciled with the adapter in the same edit: the eval set is declared AUTHORITATIVE, the strict-inequality relabelling guard stays, and the disagreement is declared rather than dissolved. Relaxing `_shot_ok` to `<=` was refused because it would retire a guard that catches a real class — a viewport shot wearing an `element` label — to buy back one degenerate shape.",
+      "residue": "M43-D6"
+    },
+    {
+      "id": "R11",
+      "disposition": "debt",
+      "became": "M43-D5 — a partially visible drill target is cropped to the visible sliver",
+      "detail": "Logged with Origin: PR #70 R11. Disclosed in ADR prose, strictly better than the previous scrolling behaviour, and a rendering nicety rather than a correctness defect."
+    }
+  ],
+  "debt_logged_this_round": [
+    {
+      "id": "M43-D5",
+      "origin": "PR #70 R11"
+    },
+    {
+      "id": "M43-D6",
+      "origin": "PR #70 R10 (the half that is not a text fix)",
+      "why_kept": "'A correct run grades red' is a defect this repo files rather than remembers, and 'no committed fixture shows this shape' is the sentence this repo keeps falsifying within days. The block ships with the fixture that would demonstrate it, so the next session inherits a repro instead of an assertion. Keeping it costs one entry; dropping it costs the knowledge."
+    }
+  ],
+  "notes": [
+    "The published band source (93.44s) is now at the LOW end of the observed spread — three later local runs measured 93.51s, 93.66s and 93.84s. Every one of them derives 110, the same ceiling the published number derives, so ADR-019 §6 item 3 (same-ceiling) is green and re-citation was DECLINED DELIBERATELY, not overlooked. The rule is settled in §6's own text and no debt block was filed: item 3 compares `_band_rule(said) != _band_rule(slowest)` — whether the published number and the ledger's maximum derive the same ceiling — and §6 states outright that a slower later run 'costs nothing while it lands in the same band' and that the property 'is not the same as being the maximum forever'. Re-citing on every ordinary run is the treadmill §6 exists to refuse. The next ceiling step is 95.65s, so the margin is ~2.1s: real, not thin. A run above that boundary WOULD require re-citation, which is the condition to watch rather than the spread itself.",
+    "The R11 debt block carries a relay-provenance note of its own: the verbatim round-2 findings did not reach the orchestrator and were described rather than quoted. That is M43-D4 one layer down, and the two being visible together is the case for fixing the layer rather than each instance."
+  ],
+  "gate": {"invariant": "83/83", "fast": "238/238", "cost_usd": 0.0, "note": "orchestrator re-measures independently before the round is closed"}
+}

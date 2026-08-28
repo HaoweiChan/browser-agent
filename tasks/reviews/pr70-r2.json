@@ -1,0 +1,60 @@
+{
+  "pr": 70,
+  "round": 2,
+  "task": "M43",
+  "date": "2026-08-28",
+  "scope": "repair diff (009d8e2 -> 665369e) plus standing findings — NOT a fresh full-diff sweep",
+  "result": "REQUEST_CHANGES",
+  "text_provenance": "Same constraint as round 1 and now filed as M43-D4: the groundwork:pr-reviewer subagent has tools Read/Grep/Glob/Bash and NO message tool, so its findings array could not be returned to the orchestrator that spawned it. The finding text below was transcribed from the orchestrator-channel relay of the reviewer's terminal message. Recorded as a RELAY, not the reviewer's own bytes; field wording may be condensed, while file:line references, measured values and quoted strings are as relayed. The reviewer's original array supersedes this file if it is ever recovered.",
+  "findings": [
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "claim": "The R1 repair replaced a bounded call with an unbounded one inside a best-effort block — the same defect class R1 was about.",
+      "evidence": "`loc.screenshot(timeout=SCREENSHOT_TIMEOUT_MS)` (2s) was replaced by `loc.bounding_box()`, which inherits Playwright's 30s default, inside a block whose own comment ~300 lines below in the same file reads \"Bounded, because 'best-effort' and 'unbounded' cannot both be true\" and carries the receipts (32s and 64s in a suite ADR-002 budgets at 60s total). Both sibling captures pass the constant. Measured 30.0s on a non-matching locator, swallowed silently by `except Exception: pass`.",
+      "repro": "Drive a loop-mode drill whose target locator matches nothing and time the element-capture block.",
+      "acceptance": "`loc.bounding_box(timeout=SCREENSHOT_TIMEOUT_MS)`, with the same reasoning carried into the call-site comment so the next edit does not undo it.",
+      "route": "repair"
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "claim": "Two publication sites still cite the superseded 93.26s/236 row as current while five cite 93.44s/238.",
+      "evidence": "The derived ceiling is 110 either way, which is why it rots unnoticed: a reader re-deriving from `evals/run.py`'s comment gets a superseded row. A separate clause misattributes 92.04 as the run that first reached the new count — 92.04 is the 236-case run.",
+      "repro": "grep the tree for 93.26 / 93.44 / 236 / 238 across specs/, README, evals/run.py, docs/.",
+      "acceptance": "Every publication site cites the current committed row, and the 92.04 attribution is corrected.",
+      "route": "repair"
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "claim": "`loop-drill-capture-does-not-scroll-the-page` pins only the answer, so the 'degrades to no crop' half of the mechanism is ungraded.",
+      "evidence": "A build that drops crops entirely, or emits one for an off-screen element, ships green. The adapter already exposes the key needed to pin it: `\"driver_screenshots\": [\"viewport\", false, \"viewport\"]` pins both the absent crop and that the surrounding turns keep theirs.",
+      "repro": "Emit a crop for the off-screen element and observe the case still passes.",
+      "acceptance": "The case asserts the driver_screenshots sequence and is watched red against a build that emits a crop anyway.",
+      "route": "repair"
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "claim": "For an element at least viewport-sized the clip IS the viewport, labelled `element` — so a correct run grades red, and ADR-035 Decision 2's published justification for disarming click_at does not hold for that shape.",
+      "evidence": "The adapter's grader defines an element frame as STRICTLY SMALLER than the viewport. Decision 2 justifies the disarm with \"its origin is the element's bounding box, so a coordinate read off it lands somewhere else entirely\"; for this shape the origin IS the viewport origin, so the refusal is correct BY ACCIDENT, for a reason that does not hold.",
+      "repro": "Drill a target at least as large as the viewport and read `screenshot_frame` plus the grader's verdict.",
+      "acceptance": "The ADR text is made true (ground the disarm in the frame's provenance, not coordinate arithmetic) and reconciled with the adapter's strict-inequality rule in the same edit, or one of the two declared authoritative. The behaviour is safe and does not change.",
+      "route": "repair"
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "claim": "A partially visible drill target is cropped to its visible sliver.",
+      "evidence": "Relayed as disclosed in ADR prose, strictly better than the previous scrolling behaviour, and a rendering nicety rather than a correctness defect.",
+      "repro": "Drill a target that straddles the viewport edge and inspect the crop.",
+      "acceptance": "Logged as debt with the evidence carried; not fixed in this PR.",
+      "route": "debt"
+    }
+  ],
+  "reviewer_independent_verification": [
+    "R1's mechanism was verified by byte-comparing `page.screenshot(clip=box)` against `locator.screenshot()` for an in-view element on a scrolled page: identical bytes.",
+    "`bounding_box`, `page.screenshot`, `text_content` and `observe(root=loc)` all leave scrollY at 0, while `loc.screenshot()` moves it to 937 and rewrites the fixture status — independent confirmation that the mechanism change removes the scroll rather than hiding it."
+  ]
+}

@@ -416,7 +416,7 @@ def answers_match(got, want) -> bool:
 # Verbs that change the page and cannot verify themselves. The comment at the
 # `unverified` check inside `verify` carries the argument for every inclusion
 # and every omission.
-STATE_CHANGING = {"click", "press", "go_back"}
+STATE_CHANGING = {"click", "press", "go_back", "click_at"}
 
 
 def verify(*, trace, extractions, answer, expect=None, state=None, task=None) -> dict:

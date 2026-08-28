@@ -1,0 +1,52 @@
+{
+  "id": "loop-drill-capture-does-not-scroll-the-page",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "input": {
+    "mode": "loop",
+    "fixture": "lazy-ledger.html",
+    "task": "How many entries does the ledger report as loaded?",
+    "stub_calls": [
+      {
+        "action": "observe",
+        "target": {
+          "role": "region",
+          "name": "Entry detail"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Load status"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "3 entries loaded",
+    "trace_actions": [
+      "navigate",
+      "observe",
+      "extract",
+      "final_answer"
+    ],
+    "driver_screenshots": [
+      "viewport",
+      false,
+      "viewport"
+    ]
+  },
+  "provenance": "PR #70 R1. ADR-035 Decision 2 gave the loop-mode drill an element-scoped capture, and Playwright's `locator.screenshot()` performs an actionability check that scrolls the element into view first. On a page whose coordinate frames are the only thing that moves that is harmless \u2014 the next viewport shot is taken after the scroll \u2014 but on a lazy-load / infinite-scroll page it is not: looking closer LOADS content the model never acted for, and the run records it as a step that changed nothing, because `observe` sits in `agent.READ_ONLY_ACTIONS` so `page_changed` stays null. An action classified read-only that produces a state change is the shape this repo grades against, so it is graded rather than declared: the drill target is a section 1400px down, outside the 720px viewport, and the step after it reads a status the fixture rewrites on the first scroll event. Watched red on 2026-08-28 against the capture as ADR-035 first shipped it (`loc.screenshot()`): `answer` came back '9 entries loaded' against this case's '3 entries loaded'. Green once the capture became a viewport shot clipped to the element's box, which moves nothing \u2014 and which, for an element outside the viewport, declines to capture at all rather than scrolling to it, the same best-effort degrade Decision 1 already takes when a capture fails. PR #70 R9 adds the `driver_screenshots` conjunct: the answer alone left a build that dropped element crops entirely, or emitted one for an off-screen element without scrolling, shipping GREEN on the case written to catch that. `false` at the drill turn pins the absent crop and the two `\"viewport\"` entries pin that the turns either side keep theirs. Watched red on its own, with the crop emitted for the off-screen element via a full-page clip that does not scroll: `checks {status: true, verdict: true, trace_actions: true, driver_screenshots: false}` \u2014 the conjunct discriminates without leaning on the answer.",
+  "triage": {
+    "class": "invariant-gap",
+    "note": "model-input capture is not a free observation; anything that scrolls to take it can change what the run reads next."
+  }
+}
