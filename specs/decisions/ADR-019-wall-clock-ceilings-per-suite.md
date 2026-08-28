@@ -1282,7 +1282,27 @@ purpose. The sighting is not deleted now that it is closed, because it is the
 clearest statement of what this ruling does NOT buy: §8 makes a dirty outlier
 harmless, while a clean run past a boundary is a real measurement of a real tree
 and the band has to move. It moved. That is the correct outcome and the only one
-a clean row can force. So the honest statement of the interaction is:
+**A second sighting, on the other suite, and this one is still open.** PR #69's
+`invariant` band at 92 cases sits **0.017s** under its step boundary: the rule
+gives 30 up to 26.08695…s and that branch's slowest row measures 26.07s. The two
+cases separate cleanly there, which is why it is worth recording. The dirty row
+in that set is harmless EXACTLY as this section intends — it is stamped after a
+clean row at the same count, so it is not citable, and both derive 30 in any
+case. A CLEAN row at 26.09s would cross, and §8 offers it no shelter for the
+same reason the `fast` one had none: citable by construction, so the band moves
+and no edit to this file clears it. Nothing has closed that one — it is that
+branch's live margin, and where its ceiling goes belongs to whoever hits it.
+**Those rows are another branch's measurements and are cited as a second
+sighting, not as a claim about this ledger**: none of the three
+(`20260828-052604`, `20260828-053100`, `20260828-054414`) is in the
+`history.jsonl` committed here, so `published-band-matches-the-ledger` cannot
+read them back and item 12 (ledger-max)'s marker does not apply to them. What IS
+checkable from here is the arithmetic, and it was re-derived rather than
+relayed — `_band_rule` gives 30 at 26.07 and 35 at 26.0870, and the boundary is
+30/1.15 exactly. Read together with the `fast` sighting above, two suites in one
+night, this is evidence for what §8 leaves OPEN rather than evidence for the
+ruling: a clean row past a boundary is the case it deliberately does not cover.
+So the honest statement of the interaction is:
 `T-M38-5`'s unbuilt `--no-history` opt-out is what keeps artifact rows OUT, and
 it is not made redundant by §8 — §8 removes the deadlock, and admission control
 is the thing that would stop a row like `20260823-210925` from ever being
