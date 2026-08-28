@@ -3096,7 +3096,17 @@ concluding otherwise, which defects this does NOT close — the echo-only
 residual above being the one that matters — so the class this block ends is
 named as narrowly as it actually is.
 
-### T-M39-1 — `stub_judge` certifies on any verdict token it does not recognise            [status: todo]
+### T-M39-1 — `stub_judge` certifies on any verdict token it does not recognise            [status: done]
+CLOSED 2026-08-28. An unrecognised string verdict raises `ValueError` rather than
+being coerced by `bool()`; the four recognised forms are untouched. Graded by
+`judge-fail-closed-on-any-exception`'s new `stub_vocabulary` probe rather than a
+new case, because it is the same case's own subject — what the judge boundary does
+with something it cannot read. Watched red on five payloads at once, including `""`,
+which is the one unrecognised value `bool()` coerced the OTHER way and which a
+vocabulary check trying only truthy junk would have missed. `ValueError` and not
+`JudgeError` on purpose, asserted: a mistyped token is the CASE's fault, and
+`JudgeError` would be swallowed by the fail-closed path this same case grades,
+turning a typo into a plausible-looking rejected verdict.
 Origin: M39, found while watching `judge-two-malformed-completions-fail-closed`
 go red before the fix.
 Priority: P1
@@ -5045,7 +5055,15 @@ Repro: `grep -c '"readyz-transitions"' src/browser/eval_adapter.py` -> 2.
 Acceptance: the duplicate is gone and a check refuses the shape — a one-line invariant
 over the literal keys is enough, and it should be watched red against the current tree.
 
-### T-R84 — `/readyz`'s `reason` is only negatively asserted            [status: todo]
+### T-R84 — `/readyz`'s `reason` is only negatively asserted            [status: done]
+CLOSED 2026-08-28, on the acceptance as written: the assertion requires the
+browser-check wording when `active_run_id` is null and the run wording when it is
+not, both watched red against this block's own repro mutant. It needed TWO probes,
+which is itself the finding — the browser-check path is only reachable through
+`smoke-stream-takes-the-run-slot` and the run path only through
+`readyz-tracks-the-run-slot`, so a single-probe fix would have left half the rule
+ungraded and looking done. Confirmed by running the mutant against both before and
+after: before, `readyz-tracks-the-run-slot` stayed GREEN on it.
 Origin: PR #45 R3
 Priority: P1
 Spec (reviewer's finding, verbatim from `tasks/reviews/pr45-r1.json`):

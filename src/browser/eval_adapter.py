@@ -2127,7 +2127,7 @@ def _run_judge_case(case: dict) -> dict:
     unknown = set(inp) - {"kind", "missing_key", "cache_hit_needs_no_key",
                           "budget_enforced", "fail_closed_on_exception", "injection",
                           "parse_responses", "injection_marker_forge",
-                          "retry_classification"}
+                          "retry_classification", "stub_vocabulary"}
     if unknown:
         return {"passed": False, "error": f"unknown judge probe(s): {sorted(unknown)}"}
 
@@ -2198,6 +2198,35 @@ def _run_judge_case(case: dict) -> dict:
                           "got": second})
 
     # --- fail closed on ANY exception, not just JudgeError ------------------
+    # --- T-M39-1: the STUB's own verdict vocabulary is closed ---------------
+    # `stub_judge` used to coerce any unrecognised string with `bool()`, and a
+    # non-empty string is True -- so a case that mistyped its token got a
+    # CERTIFYING judge and reported the failure it was written to catch as the
+    # code's fault rather than its own typo. PR #33 R1's defect (truthiness
+    # inverting fail-closed) one level up, in the stub the whole `fast` suite
+    # runs on. Both directions, because a vocabulary is only pinned by both:
+    # the four recognised forms must still behave, and anything else must raise.
+    if inp.get("stub_vocabulary"):
+        for good, want in ((True, True), (False, False), ((False, "why"), False)):
+            got = _await(stub_judge([good])("t", "a", "e"))
+            if got[0] is not want:
+                wrong.append({"stub_vocabulary": f"{good!r} certified {got[0]}, want {want}"})
+        for raising, exc in (("error", JudgeError), ("malformed", JudgeError)):
+            try:
+                _await(stub_judge([raising])("t", "a", "e"))
+                wrong.append({"stub_vocabulary": f"{raising!r} did not raise"})
+            except JudgeError:
+                pass
+        for typo in ("reject", "maformed", "fail", "PASS", ""):
+            try:
+                got = _await(stub_judge([typo])("t", "a", "e"))
+                wrong.append({"stub_vocabulary": f"{typo!r} was accepted, certify={got[0]}"})
+            except ValueError:
+                pass
+            except JudgeError:
+                wrong.append({"stub_vocabulary": f"{typo!r} raised JudgeError, want ValueError "
+                                                 "-- a typo is the CASE's fault, not the judge's"})
+
     if inp.get("fail_closed_on_exception"):
         async def boom(task, answer, evidence):
             raise ValueError("not a JudgeError at all")
@@ -3520,6 +3549,17 @@ def _run_readyz_case(case: dict) -> dict:
     if before.get("reason") is not None or after.get("reason") is not None or not during.get("reason"):
         wrong["reason_polarity"] = {"before": before.get("reason"), "during": during.get("reason"),
                                     "after": after.get("reason")}
+    # T-R84, the RUN half. Polarity above says a reason exists; it says nothing
+    # about what it says, and "only negatively asserted" was the finding. A real
+    # run holds the slot here, so the reason must NAME it — the id in the
+    # string, not merely the absence of a blocklisted token. The bare-string
+    # regression (`"a run is executing"`, no id) passes polarity and every
+    # negative form, and is exactly what sends an operator hunting a run id
+    # that was never printed. The browser-check half of the same rule is in the
+    # smoke probe, where `active_run_id` is null by construction.
+    if str(run_id) not in str(during.get("reason")):
+        wrong["readyz_reason_does_not_name_the_running_run"] = {
+            "reason": during.get("reason"), "active_run_id": run_id}
     # /readyz shares the agent's event loop. A prompt `busy` answer WHILE a run
     # holds the slot is positive evidence the loop is not blocked — the point of
     # the endpoint, and one of D18's open candidates. Loose bound: this is a
@@ -3651,8 +3691,26 @@ def _run_smoke_guard_case(case: dict) -> dict:
     # The operator-facing half: `busy` with no run id is a browser check, and
     # "a run is executing (None)" would send someone hunting a run that never
     # existed.
-    if not during.get("reason") or "None" in str(during.get("reason")):
-        wrong["readyz_reason_names_a_run_that_does_not_exist"] = during.get("reason")
+    # T-R84: POSITIVELY, and split on which slot-holder it is. The old form
+    # asserted only "non-empty and does not contain 'None'", which a regression
+    # to a bare `"a run is executing"` — no id interpolated — passes in full
+    # while still sending an operator hunting a run that never existed, the
+    # exact defect server.py's own comment says this wording exists to fix.
+    # A negative assertion cannot pin wording; it can only pin one way of
+    # getting the wording wrong.
+    reason, run_id = during.get("reason"), during.get("active_run_id")
+    if run_id is None:
+        # The browser check holds the slot. The reason must say so and must not
+        # claim a run at all — the bare-string regression fails here, which is
+        # what the old form could not see.
+        if reason != "a browser check is running":
+            wrong["readyz_reason_is_not_the_browser_check_wording"] = reason
+    else:
+        # A real run holds it: the id must be IN the string, not merely absent
+        # from a blocklist.
+        if not reason or str(run_id) not in str(reason):
+            wrong["readyz_reason_does_not_name_the_running_run"] = {
+                "reason": reason, "active_run_id": run_id}
     if not after.get("ready"):
         wrong["slot_not_released_on_the_error_path"] = after
     if not held_by_generator:

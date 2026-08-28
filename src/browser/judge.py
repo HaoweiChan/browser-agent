@@ -260,6 +260,21 @@ def stub_judge(verdicts: list):
             raise JudgeError("stub judge: simulated failure")
         if v == "malformed":
             raise JudgeError("stub judge: unreadable completion", retryable=True)
+        # T-M39-1: an UNRECOGNISED verdict raises rather than certifying. The
+        # line below used to be reached by any string that was not "error" or
+        # "malformed", and `bool()` of a non-empty string is True -- so a case
+        # that mistyped its token ("maformed", "reject", "fail") got a
+        # CERTIFYING judge, and a case written to catch a failure reported that
+        # failure as the code's fault rather than its own typo. This is PR #33
+        # R1's defect (truthiness inverting fail-closed) one level up, in the
+        # stub the whole `fast` suite runs on: R1 was fixed in `live_judge`'s
+        # parser and nobody looked at the stub. Fail LOUD and at the case, not
+        # closed: a stub is eval scaffolding, and a silently-wrong scaffold is
+        # worse than a missing one.
+        if isinstance(v, str):
+            raise ValueError(
+                f"stub_judge: unrecognised verdict {v!r}. Use True, False, "
+                "(bool, reason), 'error' or 'malformed'.")
         certify, reason = v if isinstance(v, (tuple, list)) else (v, "stub")
         return bool(certify), reason, {"llm_tokens": 0, "llm_usd": 0.0, "cached": False}
 
