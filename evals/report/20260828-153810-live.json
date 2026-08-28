@@ -1,18 +1,18 @@
 {
   "suite": "live",
-  "score": 1.0,
+  "score": 0.9230769230769231,
   "totals": {
     "actions": 31,
     "llm_tokens": 0,
     "llm_usd": 0.0,
     "replans": 0,
-    "ms": 20368,
+    "ms": 29851,
     "judge_calls": 10,
     "judge_tokens": 0,
     "judge_usd": 0.0,
-    "wall_seconds": 20.62,
-    "latency_p50": 1.45,
-    "latency_p95": 2.72,
+    "wall_seconds": 30.32,
+    "latency_p50": 1.81,
+    "latency_p95": 6.66,
     "cases_with_budgets": 12
   },
   "metrics": {
@@ -68,12 +68,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1919,
+        "ms": 1966,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.15,
+      "seconds": 2.17,
       "id": "live-books-detail-upc",
       "kind": "golden"
     },
@@ -121,12 +121,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1882,
+        "ms": 2131,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.88,
+      "seconds": 2.13,
       "id": "live-books-travel-price",
       "kind": "golden"
     },
@@ -173,12 +173,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 979,
+        "ms": 1049,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.98,
+      "seconds": 1.05,
       "id": "live-hn-item1-submitter",
       "kind": "golden"
     },
@@ -225,12 +225,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 965,
+        "ms": 1016,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.97,
+      "seconds": 1.02,
       "id": "live-hn-item1-title",
       "kind": "golden"
     },
@@ -277,12 +277,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2666,
+        "ms": 6660,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.67,
+      "seconds": 6.66,
       "id": "live-ol-edition-title",
       "kind": "golden"
     },
@@ -322,7 +322,7 @@
       ],
       "got": {
         "status": "success",
-        "answer": "doc_status: success\n\u2014 18 extracted \u00b7 5 incorporated_by_reference\nfixture: aapl-2025\nrouting: deterministic only \u2014 the escalation trigger stayed quiet, no tier ran, $0.0000 \u00b7 0 calls \u00b7 0 tokens",
+        "answer": "doc_status: success\n\u2014 18 extracted \u00b7 5 incorporated_by_reference\nfixture: aapl-2025\nmodel tier: did not run \u2014 no valid x-escalation-token header on this request \u2014 the deterministic extraction above is complete and free; only the paid model tier is behind the header",
         "reason": null
       },
       "budgets": {
@@ -330,12 +330,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1828,
+        "ms": 2412,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.83,
+      "seconds": 2.41,
       "id": "live-sec10k-authored-wait-reaches-the-doc-status",
       "kind": "golden"
     },
@@ -375,7 +375,7 @@
       ],
       "got": {
         "status": "success",
-        "answer": "doc_status: success\n\u2014 18 extracted \u00b7 5 incorporated_by_reference\nfixture: aapl-2025\nrouting: deterministic only \u2014 the escalation trigger stayed quiet, no tier ran, $0.0000 \u00b7 0 calls \u00b7 0 tokens",
+        "answer": "doc_status: success\n\u2014 18 extracted \u00b7 5 incorporated_by_reference\nfixture: aapl-2025\nmodel tier: did not run \u2014 no valid x-escalation-token header on this request \u2014 the deterministic extraction above is complete and free; only the paid model tier is behind the header",
         "reason": null
       },
       "budgets": {
@@ -383,12 +383,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1663,
+        "ms": 2861,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.66,
+      "seconds": 2.86,
       "id": "live-sec10k-authored-wait-reaches-the-item-count",
       "kind": "golden"
     },
@@ -434,12 +434,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2716,
+        "ms": 5694,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.72,
+      "seconds": 5.7,
       "id": "live-ol-search-a11y-invisible",
       "kind": "adversarial"
     },
@@ -482,12 +482,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1445,
+        "ms": 1477,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.45,
+      "seconds": 1.48,
       "id": "live-quotes-js-delayed-empty",
       "kind": "adversarial"
     },
@@ -534,13 +534,13 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1448,
+        "ms": 1495,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
       "known_wrong_ground_truth": "expect.answer pins the WRONG answer this build produces; a PASS here means 'the agent reproduced the known-wrong answer', never 'the answer is correct'",
-      "seconds": 1.45,
+      "seconds": 1.5,
       "id": "live-quotes-js-role-tier-blind",
       "kind": "adversarial"
     },
@@ -587,12 +587,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1450,
+        "ms": 1279,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.45,
+      "seconds": 1.28,
       "id": "live-quotes-js-text-tier-reaches",
       "kind": "adversarial"
     },
@@ -634,7 +634,7 @@
       ],
       "got": {
         "status": "success",
-        "answer": "doc_status: success\n\u2014 12 extracted \u00b7 4 incorporated_by_reference\nfixture: intc-2002\nrouting: deterministic only \u2014 the escalation trigger stayed quiet, no tier ran, $0.0000 \u00b7 0 calls \u00b7 0 tokens",
+        "answer": "doc_status: success\n\u2014 12 extracted \u00b7 4 incorporated_by_reference\nfixture: intc-2002\nmodel tier: did not run \u2014 no valid x-escalation-token header on this request \u2014 the deterministic extraction above is complete and free; only the paid model tier is behind the header",
         "reason": null
       },
       "budgets": {
@@ -642,13 +642,36 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1407,
+        "ms": 1811,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.41,
+      "seconds": 1.81,
       "id": "live-sec10k-fetch-painted-select-is-plannable",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "snapshot_is_of_a_build_that_is_no_longer_deployed": true,
+        "captured_at": "6b37ffa99d05",
+        "deployed_now": "33a7580964e7",
+        "graded_offline_against_this_snapshot": [
+          "sec10k-doc-status-is-a-named-status",
+          "sec10k-item-count-is-in-the-named-status",
+          "sec10k-item-text-region-resolves",
+          "sec10k-extract-buttons-are-distinguishable",
+          "sec10k-item-text-region-is-past-the-observation-cap"
+        ],
+        "note": "the offline cases still pass; what they pass against is a page that is not being served any more. Re-capturing is a decision, not a repair \u2014 see tasks/TODO.md T-M41-3."
+      },
+      "got": {
+        "captured_at": "6b37ffa99d05",
+        "deployed_now": "33a7580964e7"
+      },
+      "seconds": 0.25,
+      "id": "live-sec10k-snapshot-still-describes-the-deployment",
       "kind": "adversarial"
     }
   ]

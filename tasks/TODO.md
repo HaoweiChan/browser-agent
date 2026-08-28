@@ -2661,7 +2661,7 @@ until that is decided, and whatever is decided lands with its own red-first
 case.
 Out of scope: widening `extract`'s target vocabulary, which is M42's.
 
-### T-M41-3 — nothing detects that the committed inspector snapshot has stopped matching the deployed page            [status: todo]
+### T-M41-3 — nothing detects that the committed inspector snapshot has stopped matching the deployed page            [status: done]
 Origin: M41, 2026-08-26. `src/browser/fixtures/sec10k-inspector.html` is a
 rendered capture of `whaleforce-sec10k.zeabur.app` at the build the page
 reported as `6b37ffa99d05`, and five `fast` cases grade the page shape against
@@ -2684,6 +2684,29 @@ against a wrong sha.
 Out of scope: re-capturing the snapshot automatically. A capture is evidence
 about a build and re-taking it is a decision, the same way declaring a live
 row is (ADR-022).
+
+Closed by `live-sec10k-snapshot-still-describes-the-deployment`, built exactly to
+the spec: one GET of `/api/meta`, no browser, no LLM, $0, `live`-tagged so a stale
+snapshot cannot block a commit. Re-capture stays out of scope for the block's own
+reason.
+One thing done differently, and it is this milestone's own lesson applied: the
+snapshot's sha is read out of the ARTIFACT — the footer the captured page filled
+from that same `/api/meta` field — not out of a provenance sentence. The sha was
+recorded in five case files and a support-matrix row and every one of them said
+the wrong one until a cold review of the committed file caught it. A document that
+describes an artifact can be wrong about it; the artifact cannot.
+IT FIRED ON THE TREE THAT ADDED IT. Snapshot `6b37ffa99d05`, `/api/meta` answering
+`33a7580964e7` on 2026-08-28 — the third build of this target inside three
+milestones (6b37ffa99d05 -> 0b87705fd0aa -> 33a7580964e7), with both intervening
+moves caught only because a person decided to look. So the case ships RED, and the
+red IS the alarm. Verified in the other direction too, against a doctored snapshot
+whose footer carries the deployed sha: green. That is what makes the red a
+statement about the comparison rather than about the plumbing.
+An unreachable endpoint is also red, never a pass: an unreachable target is
+precisely the state in which a stale snapshot goes unnoticed (rule 4).
+What it does NOT claim: that the five offline cases are wrong. They pass; what
+they pass against is a page that is not being served. Whether to re-capture is the
+human's call — the point is that nobody has to notice by hand any more.
 
 ### T-M41-4 — the observe harness compares NAMES as a set, so it cannot see the ambiguity S3 was            [status: todo]
 Origin: M41 cold review, 2026-08-26. `_run_observe_case`

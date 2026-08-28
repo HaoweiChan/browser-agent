@@ -8288,6 +8288,74 @@ def _run_pre_commit_hook_case(case: dict) -> dict:
                     "post_edit": got_post}}
 
 
+
+def _run_snapshot_freshness_case(case: dict) -> dict:
+    """Does the committed capture still describe the page it was captured from?
+
+    T-M41-3. `src/browser/fixtures/sec10k-inspector.html` is a rendered capture
+    of a deployed third-party page, and five `fast` cases grade page SHAPE
+    against it. When that deployment moves, those cases keep passing against a
+    page that no longer exists and the `live` ones start failing for a reason
+    nobody attributes correctly — D28's build-expiry finding arriving from the
+    target's side.
+
+    The snapshot's sha is read out of the ARTIFACT (its own footer, which the
+    captured page filled from the same `/api/meta` field), not out of a
+    provenance sentence. That distinction is the milestone's own lesson: the
+    sha was recorded in five case files and a support-matrix row, all of them
+    said the wrong one, and it took a cold review of the committed file to
+    notice. A document that describes an artifact can be wrong about it; the
+    artifact cannot.
+
+    `live`-tagged, never `fast`: one GET, no browser, no LLM, $0 — and a stale
+    snapshot is a DECLARATION problem, not a gate regression, so it must not be
+    able to block a commit. Re-capturing is deliberately out of scope: a capture
+    is evidence about a build, and re-taking it is a decision (ADR-022's shape).
+    """
+    import re as _re
+    import urllib.request
+
+    inp = case["input"]
+    # Composed from the case's own `domain` tag and a bare PATH, never stored as
+    # a URL. `sec10k-ground-truth-endpoint-eval-only` refuses any `<host>/api/`
+    # string inside a case's `input`, because `input` is what a RUN is given and
+    # an executor handed a fetchable API URL can answer without reading the
+    # page. This case builds no run at all, but the rule is worth obeying at
+    # face value rather than exempting a kind — an exemption is a door, and a
+    # bare path is not a thing anything can fetch.
+    meta_url = f"https://{case['domain']}{inp['meta_path']}"
+    snap = Path(__file__).with_name("fixtures") / inp["fixture"]
+    if not snap.exists():
+        return {"passed": False, "wrong": {"no_snapshot": str(snap)}}
+    m = _re.search(inp.get("sha_pattern", r"build ([0-9a-f]{8,40})"),
+                   snap.read_text(encoding="utf-8"))
+    if not m:
+        return {"passed": False,
+                "wrong": {"snapshot_records_no_build_sha": inp["fixture"],
+                          "note": "the capture cannot say which build it is of, "
+                                  "so nothing can say whether it is stale"}}
+    captured = m.group(1)
+    try:
+        with urllib.request.urlopen(meta_url, timeout=20) as r:
+            deployed = json.loads(r.read().decode("utf-8")).get(inp.get("sha_field", "git_sha"))
+    except Exception as exc:
+        # Loud, and NOT a pass. An unreachable target is exactly the state in
+        # which a stale snapshot goes unnoticed (CLAUDE.md rule 4).
+        return {"passed": False,
+                "wrong": {"meta_unreachable": meta_url,
+                          "error": f"{type(exc).__name__}: {exc}"}}
+    fresh = bool(deployed) and deployed.startswith(captured[:12]) or captured.startswith(
+        (deployed or "")[:12])
+    return {"passed": fresh,
+            "wrong": {} if fresh else {
+                "snapshot_is_of_a_build_that_is_no_longer_deployed": True,
+                "captured_at": captured, "deployed_now": deployed,
+                "graded_offline_against_this_snapshot": inp.get("cases_that_depend_on_it", []),
+                "note": "the offline cases still pass; what they pass against is a page "
+                        "that is not being served any more. Re-capturing is a decision, "
+                        "not a repair — see tasks/TODO.md T-M41-3."},
+            "got": {"captured_at": captured, "deployed_now": deployed}}
+
 def _run_history_ledger_isolated_case(case: dict) -> dict:
     """The wall-clock probe must never write to the real history ledger.
 
@@ -8335,6 +8403,7 @@ KINDS = {
     "gateway-model": _run_gateway_model_case,
     "history-ledger-isolated": _run_history_ledger_isolated_case,
     "pre-commit-hook": _run_pre_commit_hook_case,
+    "snapshot-freshness": _run_snapshot_freshness_case,
     "invariant": _run_invariant_case,
     "judge": _run_judge_case,
     "matrix": _run_matrix_case,

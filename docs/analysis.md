@@ -57,7 +57,7 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-291 distinct cases (28 golden + 263 adversarial).
+292 distinct cases (28 golden + 264 adversarial).
 480 browser actions in a `fast` run; **172 of the 260** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
 `evals/report/20260828-152412-fast.json` rather than tallied by hand (the
@@ -74,7 +74,7 @@ component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
 ablation driver's preflight and its `failure:env` classifier and the ablation
-table's honesty guard; and in M12, the wall-clock ruling). `live` is 12/12 across 5 real sites. The
+table's honesty guard; and in M12, the wall-clock ruling). `live` covers 5 real sites across 13 cases. The
 fourth was added at M8 to be hostile rather than to be passed:
 `quotes.toscrape.com/js` renders its content invisibly to the accessibility tree,
 and the run there answers confidently and wrongly (§ the M8 rows in

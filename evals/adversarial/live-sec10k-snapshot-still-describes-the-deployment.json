@@ -1,0 +1,32 @@
+{
+  "id": "live-sec10k-snapshot-still-describes-the-deployment",
+  "task": "browser",
+  "suites": [
+    "live"
+  ],
+  "level": "L0",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "kind": "snapshot-freshness",
+    "fixture": "sec10k-inspector.html",
+    "sha_field": "git_sha",
+    "sha_pattern": "build ([0-9a-f]{8,40})",
+    "cases_that_depend_on_it": [
+      "sec10k-doc-status-is-a-named-status",
+      "sec10k-item-count-is-in-the-named-status",
+      "sec10k-item-text-region-resolves",
+      "sec10k-extract-buttons-are-distinguishable",
+      "sec10k-item-text-region-is-past-the-observation-cap"
+    ],
+    "meta_path": "/api/meta"
+  },
+  "expect": {
+    "note": "The snapshot's own footer sha must still be the deployment's. Red here is the ALARM, not a bug in the case: it means the five offline cases listed above are grading a page that is no longer served."
+  },
+  "provenance": "T-M41-3 (M41, 2026-08-26). `src/browser/fixtures/sec10k-inspector.html` is a rendered capture of a deployed third-party page and five `fast` cases grade page SHAPE against it. Nothing read the build sha back, which the milestone demonstrated the hard way: `/api/meta` answered a different sha by `curl` at capture time than the captured page's own footer showed, and every document that recorded it recorded the wrong one until a cold review of the committed file caught it. So this reads the sha out of the ARTIFACT \u2014 the footer the captured page filled from that same field \u2014 rather than out of a provenance sentence: a document describing an artifact can be wrong about it, the artifact cannot. `live`, never `fast`: one GET, no browser, no LLM, $0, and a stale snapshot is a DECLARATION problem rather than a gate regression, so it must not be able to block a commit. Re-capturing stays out of scope for the block's own reason \u2014 a capture is evidence about a build, and re-taking it is a decision. **It fired on the tree that added it.** The snapshot is of `6b37ffa99d05`; `/api/meta` answered `33a7580964e7` on 2026-08-28. That is the third build of this target inside three milestones (6b37ffa99d05 -> 0b87705fd0aa -> 33a7580964e7), and the two intervening moves were each caught by a person deciding to look. An unreachable endpoint is also red, not a pass: an unreachable target is precisely the state in which a stale snapshot goes unnoticed (CLAUDE.md rule 4). The endpoint is a bare PATH composed against the case's own `domain` tag, never a URL in `input`: `sec10k-ground-truth-endpoint-eval-only` refuses any `<host>/api/` string there, because `input` is what a run is given. This case builds no run, and the rule is still obeyed at face value rather than by exempting a kind \u2014 an exemption is a door.",
+  "triage": {
+    "class": "drift-detector",
+    "red_first": "Watched red both ways. Against the deployed sha: captured_at 6b37ffa99d05, deployed_now 33a7580964e7 \u2014 which is the state of the world, so the case shipped RED and that is the alarm working. Against a doctored snapshot whose footer sha was replaced with the deployed one, it goes green, which is what proves the red is about the comparison and not about the plumbing.",
+    "note": "What this does NOT claim: that the offline cases are wrong. They pass, and what they pass against is a page that is not being served. Whether to re-capture is the human's call; the point of this case is that nobody has to notice by hand."
+  }
+}
