@@ -1512,7 +1512,17 @@ clean row is citable by construction — if one of them sat at a published count
 it would govern the band exactly as a real measurement would, artifact or not.
 What actually disarms them is that every one sits at a case count no band
 publishes any more, which is an accident of the tree having grown, not a
-property this section provides. So the honest statement of the interaction is:
+property this section provides. **That gap was hit for real while this section
+was being written**: a `fast` verification run on this branch measured 91.85s on
+a clean tree, past the step boundary its published band sits under, and it was
+restored away rather than committed. A clean row is citable by construction, so
+§8 offers it no shelter and no edit to this file clears it — which is the precise
+statement of what this ruling buys and what it does not. It makes a DIRTY
+outlier harmless; a clean run past the boundary is a real measurement of a real
+tree, and the band has to move. Another line hit a clean `fast` row past the
+same boundary hours earlier and also restored it away, so this is a property of
+that band's headroom rather than a fluke of one run; where the ceiling goes is
+being decided elsewhere and deliberately not answered here. So the honest statement of the interaction is:
 `T-M38-5`'s unbuilt `--no-history` opt-out is what keeps artifact rows OUT, and
 it is not made redundant by §8 — §8 removes the deadlock, and admission control
 is the thing that would stop a row like `20260823-210925` from ever being
