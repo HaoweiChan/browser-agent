@@ -4023,9 +4023,29 @@ def _run_matrix_case(case: dict) -> dict:
         for r in doc["rows"] for tc, v in r["cells"].items() if v not in legal
     ]
     dangling = sorted(set(CASE_CITATION.findall(doc["citation_text"])) - known)
+    # T-M32-7-D1: the CONTRACT's citations too. `specs/001-browser-contract.md`
+    # cites case ids exactly the way the matrix does and nothing checked them,
+    # which is how its laundering clause sat at a superseded wording — citing
+    # two cases where D25 and ADR-020 cite three — without anything going red.
+    # The contract is the document a reviewer reads to learn what the system
+    # guarantees, so a dangling citation there is worth more than in the matrix,
+    # not less.
+    #
+    # Same pattern, no new convention: measured on the tree before landing, all
+    # 42 backticked kebab-case tokens in that file are real case ids, so the
+    # matrix's regex needs no widening or narrowing to be correct here.
+    contract_dangling = []
+    for rel in case["expect"].get("also_cite_check", []):
+        f = Path(__file__).parents[2] / rel
+        if not f.is_file():
+            contract_dangling.append({"doc": rel, "missing_file": True})
+            continue
+        for cid in sorted(set(CASE_CITATION.findall(f.read_text(encoding="utf-8"))) - known):
+            contract_dangling.append({"doc": rel, "cites": cid})
     return {
-        "passed": not bad_status and not dangling,
-        "wrong": {"illegal_status": bad_status, "dangling_citations": dangling},
+        "passed": not bad_status and not dangling and not contract_dangling,
+        "wrong": {"illegal_status": bad_status, "dangling_citations": dangling,
+                  "dangling_in_other_documents": contract_dangling},
         "got": {"rows": len(doc["rows"]), "limitations": len(doc["limitations"]),
                 "citations": len(set(CASE_CITATION.findall(doc["citation_text"])))},
     }

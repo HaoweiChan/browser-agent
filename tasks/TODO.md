@@ -4162,7 +4162,19 @@ Acceptance: the clause separates the two statements — the label defers past an
 and in `recovery-label-lands-on-the-extract` is the `extract` the drill-down's
 replan returned while a family-2 recovery is in flight.
 
-### T-M32-7-D1 — nothing grades the CONTRACT's case citations            [status: todo]
+### T-M32-7-D1 — nothing grades the CONTRACT's case citations            [status: done]
+CLOSED 2026-08-28, one commit after being filed — which is the point of having
+filed it rather than leaving it inside T-M32-7's close.
+`support-matrix-cites-real-cases` now resolves the case ids in
+`specs/001-browser-contract.md` as well, with the document list declared in
+`expect` so adding a third is a visible edit to a case file. Watched red on this
+block's own acceptance: one contract citation pointed at a case that does not
+exist — `{"doc": "specs/001-browser-contract.md", "cites":
+"observe-cannot-launder-noop-actions"}`.
+Same regex, no new convention, and that was measured rather than assumed before
+landing: all 42 backticked kebab-case tokens in the contract resolve to real
+cases today, so the matrix's pattern needed neither widening nor narrowing and
+the check starts green for the right reason.
 Origin: T-M32-7's close, 2026-08-28 — that block's own explanation of how it
 drifted, left behind when its first half was fixed.
 Priority: P2
