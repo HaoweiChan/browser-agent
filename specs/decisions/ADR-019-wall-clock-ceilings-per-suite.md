@@ -81,12 +81,12 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 238 cases, ts `20260827-212200`, **93.44s**, 235/238
-  (`evals/report/20260827-212200-fast.json`; `dirty: true`, for the reason the
-  next paragraph gives, and red — the three failures are the three derived-number
-  checks themselves, `docs-numbers-are-derived`, `published-band-matches-the-ledger`
-  and `adr029-scope-matches-the-suites`, all mid-refresh at the moment
-  this row was recorded. That is the general shape of every band republish and
+- Band source — local `fast` at 239 cases, ts `20260828-085719`, **93.67s**, 239/239
+  (`dirty: true`, for the reason the next paragraph gives, and GREEN — it names no
+  report file because ADR-012 writes one only on a red run or under `--report`, and
+  naming a neighbouring run's to satisfy the form is the defect item 11 (cited-file)
+  exists to catch. The count moved 238 → 239 when PR #79 (ADR-038) merged, which is
+  the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
   the addition forces. Here the addition is M43's nine: four golden and five
@@ -98,7 +98,7 @@ repo's ledger and nothing else.
   makes it the citable one rather than the raw one): the rule gives 110 for
   anything up to 95.65s, and that boundary — not any figure retyped here — is what to
   measure against. The boundary below it is the one M43 crossed: 105 covered anything
-  up to 91.30s and the ledger's slowest 238-case run is 93.44s, which is the whole of
+  up to 91.30s and the ledger's slowest 239-case run is 93.67s, which is the whole of
   ADR-035 Decision 7's evidence — and the two cases PR #70's repair round added
   moved the count without moving the answer, which is the rule behaving as a rule. The maximum itself is deliberately not written down, the same rule
   §3's bullet states and for a harder reason than symmetry: this bullet DID carry one,
@@ -172,8 +172,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 238 cases, 235/238) and
-(restated — `invariant`: 93 cases, 93/93) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 239 cases, 239/239) and
+(restated — `invariant`: 94 cases, 91/94) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -295,7 +295,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 93.44 × 1.15 = 107.46 → **110**, which is exactly the
+five — gives 93.67 × 1.15 = 107.72 → **110**, which is exactly the
 committed 110. The ceiling was moved 90 → 105 by ADR-029 and 105 → 110 by
 ADR-035 Decision 7, each derived
 from the band source cited above — a committed row at the shipped case count
@@ -321,14 +321,18 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s → 35s
 
-- Band source — local `invariant` at 93 cases, ts `20260828-090144`, **26.28s**, 93/93
-  (`dirty: false`, and for the strongest reason a band row can be clean: it is a
-  green gate run of the COMMITTED tree, taken at sha `4e449b2`, so it measured
-  exactly what ships rather than a staging state. Item 2 (cited-run)'s dirty
-  allowance is not needed here at all. The row this bullet cited an hour earlier
-  was `dirty: true` while this parenthetical already claimed otherwise — nothing
-  grades a bullet's account of the flag, only the allowance that depends on it,
-  which is the same silent class §9's own numbering paragraph fell into.
+- Band source — local `invariant` at 94 cases, ts `20260828-100846`, **25.81s**, 91/94
+  (`dirty: false` — a gate run of the COMMITTED tree, taken at sha `2cac5ae`, so it
+  measured exactly what ships rather than a staging state, and item 2 (cited-run)'s
+  dirty allowance is not needed. **It is RED, and this bullet says so under the rule
+  §8 states rather than papering over it**: the count moved 93 → 94 when PR #79
+  (ADR-038) merged, no green row exists at 94 yet, and the failures are the
+  derived-number checks themselves mid-refresh — the shape this section describes.
+  Cite the slowest GREEN row where one exists; where none does, cite under item 3
+  (same-ceiling) and state the redness, which is what this is. The row this bullet
+  cited an hour earlier was `dirty: true` while its parenthetical already claimed
+  otherwise — nothing grades a bullet's account of the flag, only the allowance that
+  depends on it, which is the same silent class §9's own numbering paragraph fell into.
   **Where that luck is absent a republish is split across two RUNS inside one
   commit, and the reason is MECHANICAL rather than a matter of which run is
   allowed to be cited**: `evals/run.py` appends the history row AFTER grading, so
@@ -490,11 +494,12 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 26.28 × 1.15 = 30.22 → **35**, which IS the committed
-ceiling, so item 3 (same-ceiling) is an identity here and item 4
-(committed-ceiling) is satisfied exactly rather than with slack. The previous
-citation derived one step BELOW and was green on §6's no-ratchet-down reading;
-this one needs no such allowance. Two decimals on the product because one is not enough to re-derive it:
+The same rule gives 25.81 × 1.15 = 29.68 → **30**, one step BELOW the committed
+35, so this citation is green on §6's no-ratchet-down reading rather than on
+item 3 (same-ceiling) being an identity — a shorter sample may derive under the
+committed ceiling and must never drag it down. The citation this replaced, at 93
+cases, did land on 35 exactly and needed no such allowance; losing that is a
+consequence of the count moving, not a weakening of the rule. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
 
