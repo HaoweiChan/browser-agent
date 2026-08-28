@@ -43,6 +43,16 @@
         "expect_wrong": {}
       },
       {
+        "note": "UNBALANCED fence: a prose line that merely BEGINS with ``` is not a fence opener, and must not pair with a real block further down and swallow the headings between them. tasks/TODO.md carries exactly one such line — a literal-\\n JSON example — and the first fence-stripper paired it with the next real block, hiding ~110 headings and turning a genuine duplicate green (PR #69 R8)",
+        "todo": "### M50 — first            [status: todo]\nbody\n\n```json\\n{\"certify\": true}\\n```\\n\\nIn prose, not a block\n\n### M50 — second, same id            [status: todo]\nbody\n\n```bash\npython3 -m evals.run --suite invariant\n```\n\nend\n",
+        "done": "",
+        "expect_wrong": {
+          "duplicate_todo_ids": [
+            "M50"
+          ]
+        }
+      },
+      {
         "note": "the id vocabulary this repo actually uses must survive: hyphenated, digit-free and numeric-suffixed forms are all real ids here",
         "todo": "### T-M39-15 — a            [status: todo]\n### T-RANK-MIRROR — b            [status: todo]\n### T-ADR-NUM — c            [status: todo]\n### M45-D9 — d            [status: todo]\n### M0 — e            [status: todo]\n",
         "done": "",

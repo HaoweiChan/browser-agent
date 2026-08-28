@@ -638,7 +638,9 @@ closed unbuilt on 2026-08-28 when ADR-035 Decision 7 moved the committed local
 turned on (see `tasks/DONE.md`); the general shape it described was never
 fixed and is inherited here.
 **Prune nothing, including that row: a decision, not an oversight.** Measured
-against `origin/main`: 2161 rows, of which 44 carry `cost_usd: null` and 43 of
+against `origin/main` as of 2026-08-28 (a dated snapshot — the ledger grows on
+every gate run, and it stood at 2192 rows when PR #69 round 2 re-checked it):
+2161 rows, of which 44 carry `cost_usd: null` and 43 of
 those also `wall_s < 3` (the single exception is `20260822-174202`, 5.22s).
 Today's specimen is one of 44, so pruning it alone makes the ledger arbitrarily
 clean rather than defensibly clean and leaves the next reader unable to tell
@@ -652,14 +654,16 @@ and not a policy debate. **The signature is the CONJUNCTION** — `cost_usd is
 None` AND an implausible `wall_s` — never either half alone: 43 of the 44
 satisfy both, while 5 further rows run under 3s with a real recorded cost, so
 the wall-clock half on its own would condemn legitimate runs. (No section
-number here on purpose: that amendment is unwritten, ADR-019 ends at §7, and a
+number here on purpose: that amendment is unwritten, §8 is an unallocated gap
+between ADR-019's §7 and the §9 PR #72's renumber added, and a
 citation to §8 reddens `adr-header-and-index` — which it did, once.)
 **Inert by coincidence, not by rule**, and the distinction is the argument for
 the guard rather than against it. What disarms the population today is only
 that every one of these rows sits at a case count nothing publishes any more:
 the 19 sub-0.9 rows that are `dirty: false` — clean, therefore citable by
 construction — sit at counts 5, 6, 10, 18, 20, 22, 32, 49, 53, 63 and 96,
-nowhere near the live 85 (`invariant`) or 229 (`fast`). That is the suite
+nowhere near the live suite sizes, which were 86 (`invariant`) and 238 (`fast`)
+when this was last checked and move with every merge. That is the suite
 having grown, not a guarantee. Revisit any of those counts — a case deletion,
 a suite split — and the clean rows among them become citable that moment. The
 ADR-019 amendment removes the deadlock but adds no admission control, so
@@ -732,12 +736,21 @@ verification, not a rider on a PR about id uniqueness.
 Origin: T-M39-15, PR #69 — found while repairing R1 and re-pointing the
 baseline at 86.
 Priority: P1
-Spec: every guard that reads a cited report checks that its case COUNT matches
-the current suite. None checks whether the run it cites actually PASSED. So a
-document of record can cite a red run and the gate stays green indefinitely, as
-long as the count still lines up. Put plainly, and this is the part worth
-keeping: **"the suite is green" is not evidence that the published numbers are
-honest** — in a repo whose central claim is that its numbers are graded.
+Spec: the HEADLINE report slot is already guarded — `docs-numbers-are-derived`
+refuses a headline report containing a failure, with the self-exclusion
+fixed-point exemption (PR #34 R4) that keeps the guard from deadlocking on its
+own row (`headline_report_is_red`, `src/browser/eval_adapter.py`). An earlier
+draft of this block asserted no such guard existed anywhere and was wrong
+(PR #69 R12); what follows is the residue that genuinely remains, so the next
+session does not rebuild something that ships.
+**Every NON-headline citation is count-and-tally checked only.** ADR-019's band
+rows, and the `invariant` and `live` slots of README's baseline block, are
+required to name a report of the right case count and to restate that report's
+true passed/total — but nothing anywhere requires the number to be a PASS. A
+red run cited with its redness stated accurately sails through, indefinitely.
+Put plainly, and this is the part worth keeping: **"the suite is green" is not
+evidence that the published numbers are honest** — in a repo whose central
+claim is that its numbers are graded.
 The mechanism is the cause rather than an aside, and it explains both instances
 better than either explains itself. `evals/run.py:311`:
 `write_report = (args.report or args.suite == "all" or red) and not args.no_report`
@@ -758,11 +771,16 @@ problem): a guard asserting that a cited report's score is 1.0, UNLESS the
 citing text explicitly states the run was red and why. It needs **TWO**
 exemptions, not one. (a) ADR-019 §3's band, which legitimately cites red rows
 and says so — §6 item 2 (cited-run) requires a run that HAPPENED and requires
-green nowhere. (b) STRUCTURALLY-REQUIRED redness: `docs-numbers-are-derived`
-excludes its own row when judging a headline report, so once it goes red every
-later report contains it failing — a fixed point — and a report whose only red
-case is that check is a legitimate citation, which is exactly what README's
-`fast 228/229` is today.
+green nowhere; §3's current bullet, citing a 83/86 row, is exactly that and
+must stay green. (b) STRUCTURALLY-REQUIRED redness: `docs-numbers-are-derived`
+excludes its own row, so once it goes red every later report contains it
+failing — a fixed point — and a report whose only red case is that check is a
+legitimate citation. The headline slot already implements (b); a guard extended
+to the non-headline slots has to carry it too, or it reddens the same class of
+correct citation one slot over. (An earlier draft sourced (b) to README's
+`fast 228/229`; that figure is not on this tree — the baseline block cites a
+238/238 report with zero red cases — and the example is dropped rather than
+re-pointed, since (a)'s band row demonstrates the same need and is current.)
 Exemption (b) is why this clause is written down rather than left to the
 implementer: a guard built for (a) alone would have reddened a CORRECT citation
 on its first run. That is the false-red class R2 was worth fixing for in this

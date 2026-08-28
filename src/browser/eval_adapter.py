@@ -2989,7 +2989,23 @@ _TASK_ID = r"[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*"
 # Fenced blocks quote the heading form to DOCUMENT it; a quoted example is not
 # an allocation. Stripped before extraction, so a fence showing `### M43 — ...`
 # twice is green (PR #69 R2's third demonstrated false red).
-_FENCE = re.compile(r"^```.*?^```", re.M | re.S)
+#
+# A delimiter is a WHOLE line — ``` plus an optional info word and nothing else.
+# The first version matched any line merely STARTING with ```, which is a silent
+# false NEGATIVE and strictly worse than the false positive it replaced:
+# tasks/TODO.md carries exactly one such line (a literal-\n JSON example in
+# prose), it never closes, so it paired with the opener of the next real block
+# added anywhere below and deleted every heading in between — ~110 of them,
+# measured — leaving a genuine duplicate id green and unloggable. Requiring the
+# whole line means that prose line is not a delimiter at all, so an unmatched
+# opener can no longer swallow the file (PR #69 R8, fixture 6).
+#
+# ponytail: a full-line match, not a fence state machine. Unbalanced delimiters
+# now simply fail to pair and strip nothing, which is the safe direction — a
+# heading that should have been hidden is at worst a loud false red, never a
+# silent miss. Upgrade to a real line-state scan only if a file starts nesting
+# fences or using ~~~ delimiters, neither of which this repo does.
+_FENCE = re.compile(r"^```[A-Za-z0-9_+-]*[ \t]*$.*?^```[ \t]*$", re.M | re.S)
 
 
 def _task_ids(text: str, marker: str) -> list:
