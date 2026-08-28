@@ -316,6 +316,104 @@ document the step's target resolved in, and that a consequence painted elsewhere
 on the page needs a `wait_for` — or ADR-036's Consequences amended to state that
 the hatch is available to hand-written plans only, with the live cost declared."
 
+### T-M39-13-D3 — a guard credited with a claim it only half checks: the red-report guard covers the headline suite only            [status: todo]
+Origin: PR #68 R15, 2026-08-28.
+Priority: P2
+THE CLASS, which is what makes this worth a block rather than a one-line fix:
+**a guard that checks the EASIER HALF of the claim it is credited with, and is
+then cited as if it checked the whole thing.** The half that is checked is
+usually the half that is cheap to express; the half that is dropped is the one
+that needed judgement, and nothing goes red to say so, because a guard silent by
+construction is indistinguishable from a guard that passes. Ours checks that a
+report is red for the HEADLINE suite and is credited with "no red report is
+cited anywhere". The same shape arrived independently on PR #78 within the hour:
+a screening function verified to RUN, credited with BLOCKING purchase-class
+tasks, which it does not do. Two independent arrivals in one hour is enough to
+name the class rather than treat either as a one-off. Whoever picks this up
+should be hunting the PATTERN — for each guard, write down the claim it is cited
+for and the claim it actually tests, and look at the gap — not merely extending
+one loop over a list of suites.
+Spec: `_run_doc_counts_case` recomputes README's "Where it stands" block from the
+reports `where_it_stands.reports` names, one per suite. The guard that refuses a
+RED report — `headline_report_is_red`, added by PR #34 R4 — is applied only to
+`ws["headline"]`, which is `fast`. Every other suite's report is parsed for its
+`passed/total` and published to README with no check that the run was green, so
+a red run can be cited as the repo's front-page baseline and the whole gate
+stays green. Not theoretical: this branch published `invariant  88/91` in that
+block — a pre-republish red-watch run whose three failures were
+`adr029-scope-matches-the-suites`, `docs-numbers-are-derived` and
+`published-band-matches-the-ledger` — while ADR-029 in the same tree said
+`locally invariant 91/91`. The instance is repaired (the band now cites a green
+93/93 run); the CLASS is this block.
+Repro: point `where_it_stands.reports.invariant` at any report whose `results`
+contain a failure, set README's block to that report's `passed/total`, and run
+`--suite invariant`: green.
+Acceptance: the red-report guard applies to every suite the case is tagged with,
+not just the headline — with the fixed point PR #34 R4 established preserved
+(this case's OWN row stays excluded, or the guard can never go green again once
+it has gone red). An adversarial case pins it, watched red on today's tree
+first: the `88/91` state above is a ready-made red fixture.
+NOT fixed in PR #68: found in the breaker round, and a guard change plus its
+case is real work rather than a prose repair.
+
+### T-M39-13-D2 — ADR-019 §9 publishes a ledger row count that nothing reads back            [status: todo]
+Origin: PR #68 R19, 2026-08-28. INHERITED FROM `origin/main`, not from this
+branch's diff — §9 is PR #72's section and the sentence arrived with it.
+Priority: P3
+Spec: §9 states "The committed ledger holds 2162 rows, every one of them `local`
+or untagged and not one tagged `ci`". The count was true when written and is not
+now — `history.jsonl` grows by a row on every gate run, so the figure is stale
+within the hour and stale by ~150 rows already. The CLAIM the sentence exists to
+make is the `ci`-free one, which is stable and worth keeping; the row count is
+decoration that ages. Same class as item 12 (ledger-max)'s marker: a scalar of a
+growing file, stated in prose, read back by nothing.
+Repro: `grep -c "" evals/report/history.jsonl` and compare against the figure in
+§9.
+Acceptance: either the count is dropped and the `ci`-free claim kept on its own
+(preferred — it is the load-bearing half and it is checkable by grep), or it is
+graded against `history.jsonl` the way item 12 (ledger-max) grades a maximum, or
+it is marked as a dated snapshot in the §5 style so a reader knows not to trust
+it as current.
+NOT fixed in PR #68: it is not this branch's diff, and editing another PR's
+section during a breaker round is how the stale-sentence crop keeps growing.
+
+### T-M39-13-D1 — the PostToolUse invariant hook runs in `CLAUDE_PROJECT_DIR`, not in the worktree that was edited            [status: todo]
+Origin: T-M39-13's own implementation session, 2026-08-28, on worktree
+`.claude/worktrees/agent-ace9a347e9c59894c`.
+Priority: P2
+Spec: `.claude/hooks/post-edit-invariant.sh` matches on `*/src/*` and then does
+`cd "$CLAUDE_PROJECT_DIR"` before running `--suite invariant`. In a worktree
+session that directory is a DIFFERENT tree, so every edit under `src/` in the
+worktree graded some other checkout: throughout this task the hook reported
+`invariant: 82/83` — a case count this branch had not had since the first
+commit — while the worktree itself was at 84/84. Two costs, and the second is
+the one that matters. The feedback is noise an implementer has to learn to
+ignore, which is how a real red gets ignored too; and the hook APPENDS a
+history row to the other tree's `evals/report/history.jsonl` on every edit, so
+a worktree session silently writes rows into a ledger it is not working in —
+rows nobody in that session will restore away, at whatever case count that tree
+happens to be at. That is the T-M38-5 stray-row problem arriving from outside
+the session entirely, and no `--no-history` opt-out reaches it.
+This is a CORRECTNESS dependency of ADR-019 §8, not tidiness, and PR #68 R6
+(2026-08-28) is why. `stamp()` has one-second resolution, so two rows appended
+within the same second share a `ts`; item 2 (cited-run) resolves a citation by
+`ts`, and on a duplicate it used to take the first match, which made the citable
+maximum unreachable and reassembled the deadlock §8 exists to remove. The lookup
+was repaired in that round, but the row-manufacturing half is THIS block: a hook
+that appends to a shared checkout on every `src/` edit, while several worktree
+sessions edit concurrently, is the mechanism that produces same-second rows in
+one ledger. Whoever picks this up is not tidying a log, they are closing the
+input to a deadlock.
+Repro: edit any file under `src/` from a worktree-isolated session and compare
+the hook's `[eval] suite 'invariant': N/M` against
+`.venv/bin/python -m evals.run --suite invariant` run in the worktree; then
+`git status` the OTHER checkout's `history.jsonl`.
+Acceptance: the hook resolves the tree from the edited file's path (its own
+`$file` is already absolute) rather than from `CLAUDE_PROJECT_DIR`, or refuses
+to run when the two disagree — with a case pinning whichever rule is chosen.
+NOT fixed here: this is harness configuration, outside T-M39-13's diff, and
+changing a hook from inside a task branch is the wrong place for it.
+
 ### M44-P1-D4 — item 12's rule is still not true of the file it governs            [status: todo]
 Origin: PR #65 R9 (LOW, routed debt).
 Spec: item 12's opening states a rule about its own file — a ledger MAXIMUM stated
@@ -2317,7 +2415,18 @@ citation conjunct below"), matching what ADR-030 and support-matrix D30 now do;
 per site: an ordinal into a list nothing derives is a re-typed number, and this
 is the fourth one this PR found.
 
-### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: todo]
+### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: pr]
+Status 2026-08-28: ruled on in ADR-019 §8 — item 3 (same-ceiling) and item 4
+(committed-ceiling) grade a band against the slowest CITABLE row, which is item
+2 (cited-run)'s own dirty test applied to every row, so the citable maximum is
+itself citable and a publishable citation always exists. Acceptance option (b),
+refined to cover BOTH consumers of `slowest` after the 2026-08-27 discards
+showed the same deadlock arriving through item 4 (committed-ceiling). Pinned by
+`band-is-graded-against-the-citable-maximum`, watched red on the Repro below
+first. Answer to the block's open question, recorded in §8: every run still
+appends (ADR-012 unchanged) and only citable rows govern a band, so `T-M38-5`'s
+by-hand restore stays ledger hygiene rather than band arithmetic — its
+`--no-history` opt-out remains that task's scope.
 Origin: the ADR-027 planning commit, 2026-08-25, on a worktree of this branch.
 Observed live, then backed out rather than committed.
 Priority: P1

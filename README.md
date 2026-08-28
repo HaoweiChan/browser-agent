@@ -50,12 +50,12 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260828-084011-fast.json`, with
-`evals/report/20260828-084055-invariant.json` and
+Latest offline baseline — `evals/report/20260828-103032-fast.json`, with
+`evals/report/20260828-102859-invariant.json` and
 `evals/report/20260826-132658-live.json`:
 
 ```
-fast  238/239    invariant  92/93    live  11/11    $0.0000    93.2s
+fast  239/239    invariant  94/94    live  11/11    $0.0000    92.9s
 recovery 9/9 verified (20 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 65/65 · 14 replans
 ```
@@ -163,8 +163,11 @@ and cannot be from here, is that anyone ever measured them; the run id is what a
 reader checks instead, and ADR-019 §7 says why this repo does not make CI commit
 a row.
 
-§6 item 3 (same-ceiling) is why the published number can sit below the ledger's
-maximum, by at most one ceiling step (**4.35s**). The table below carries the
+§6 item 3 (same-ceiling) is why the published number can sit below the slowest
+CITABLE row, by at most one ceiling step (**4.35s**). Against the raw maximum
+over EVERY row that gap has no bound at all, because a row no band may legally
+cite is compared against nothing — ADR-019 §8 is the ruling and states it as a
+residual there. The table below carries the
 four values item 7 (readme-row) grades; the run behind them is named in
 ADR-019 §2/§3, which cite it by ledger timestamp and state what it scored — and
 that run is not necessarily the slowest in the ledger today. That is a declared
@@ -184,15 +187,15 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 239 | 93.54s | 107.57 | **110s** |
-| `invariant` | 93 | 29.16s | 33.53 | **35s** |
+| `fast` | 239 | 93.67s | 107.72 | **110s** |
+| `invariant` | 94 | 25.81s | 29.68 | **35s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer,
-and the two can differ by a step: `fast`'s 107.46 rounds up to the 110 beside
-it, but `invariant`'s 29.89 gives **30** under ADR-013's rule, one step below
+and the two can differ by a step: `fast`'s 107.72 rounds up to the 110 beside
+it, but `invariant`'s 29.68 gives **30** under ADR-013's rule, one step below
 the committed 35. That is deliberate — a short sample may derive under the
 committed ceiling and must never drag it down (ADR-019 §6). A reader re-doing
-the arithmetic should expect 29.89 → 30 → *held at 35*, not 29.89 → 35.
+the arithmetic should expect 29.68 → 30 → *held at 35*, not 29.68 → 35.
 
 **CI has its own two, measured on CI** rather than projected from these — the
 four slowest observed runs per suite, sampled across commits (ADR-019 §5, §9;
@@ -443,7 +446,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 268 cases (239 of them in the offline gate), it
+The eval set is not weak; it is 269 cases (239 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
