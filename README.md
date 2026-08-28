@@ -187,6 +187,13 @@ enumerating them here is the snapshot that drifted:
 | `fast` | 238 | 93.44s | 107.46 | **110s** |
 | `invariant` | 92 | 25.99s | 29.89 | **35s** |
 
+The last column is the **committed** ceiling, not the arithmetic's own answer,
+and the two can differ by a step: `fast`'s 107.46 rounds up to the 110 beside
+it, but `invariant`'s 29.89 gives **30** under ADR-013's rule, one step below
+the committed 35. That is deliberate — a short sample may derive under the
+committed ceiling and must never drag it down (ADR-019 §6). A reader re-doing
+the arithmetic should expect 29.89 → 30 → *held at 35*, not 29.89 → 35.
+
 **CI has its own two, measured on CI** rather than projected from these — the
 four slowest observed runs per suite, sampled across commits (ADR-019 §5, §9;
 eval-gate runs 33113860608 and 33119009870 set the two ceilings) gave `invariant` 22.71-26.97s and

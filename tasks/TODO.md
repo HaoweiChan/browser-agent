@@ -752,27 +752,36 @@ Put plainly, and this is the part worth keeping: **"the suite is green" is not
 evidence that the published numbers are honest** — in a repo whose central
 claim is that its numbers are graded.
 The mechanism is the cause rather than an aside, and it explains both instances
-better than either explains itself. `evals/run.py:311`:
-`write_report = (args.report or args.suite == "all" or red) and not args.no_report`
-— a report file is written only when the run is RED, when the suite is `all`,
-or when `--report` is passed explicitly. **Green runs leave no artifact to cite
-by default.** The repo makes red evidence easy to keep and green evidence easy
-to lose, which is a standing structural pressure toward citing exactly the
-wrong run, in every slot that cites one.
-Repro (two, both 2026-08-28, neither caught by the gate):
-1. Round 1 finding R1, found by a reviewer: ADR-019 §3 named two red cases for
-   a row that had three. Trace: `tasks/reviews/pr69-r1.json`.
-2. README's "latest offline baseline" block, found by the coordinator: it cited
-   `evals/report/20260827-222539-invariant.json` and published
-   `invariant 83/86` — the red band-source run — while `invariant` was 86/86
-   green. Repaired in this PR by pointing it at a `--report` green run.
+better than either explains itself. `evals/run.py`'s `write_report` writes a
+report file only when the run is RED, when the suite is `all`, or under
+`--report`. **Green runs leave no artifact to cite by default**, so the repo
+makes red evidence easy to keep and green evidence easy to lose — a standing
+pressure toward citing the wrong run in every slot that cites one. (Named by
+symbol: this block cited `evals/run.py:311` until the line moved to 327,
+which is R21's defect inside the block about R21's defect.)
+**The shortest proof is R16, and it retires the longer ones below.** Running
+the gate on this branch appended a `fast` row at 238 cases measuring 94.08s,
+which falsified ADR-019 §2's present-tense sentence that "the ledger's slowest
+238-case run is 93.44s" — a sentence that lives on `main`, not in this PR. A
+gate run invalidated a committed statement of record, the gate stayed green
+because nothing reads that sentence, and the run that did it was routine. Every
+other instance here is the same shape with more words: PR #69's R15, R17 and
+R18 are three more statements this PR's own re-derive made false (§3's
+"MAXIMUM at this count", §3's "both derive the same 35" when both derive 30,
+and D5's own exemption example below), all found by reading, none by the suite.
+The earlier repros — round 1's R1, and README's baseline block citing a red run
+while the suite was green — are the same class and are kept only in
+`tasks/reviews/pr69-r1.json`, since R16 proves it in one sentence.
 Acceptance (shape only; whether it is the right shape is the next session's
 problem): a guard asserting that a cited report's score is 1.0, UNLESS the
 citing text explicitly states the run was red and why. It needs **TWO**
 exemptions, not one. (a) ADR-019 §3's band, which legitimately cites red rows
 and says so — §6 item 2 (cited-run) requires a run that HAPPENED and requires
-green nowhere; §3's current bullet, citing a 83/86 row, is exactly that and
-must stay green. (b) STRUCTURALLY-REQUIRED redness: `docs-numbers-are-derived`
+green nowhere; §3's band bullet cites a red row by design and must stay green.
+No passed/total is written here on purpose — the figure was `83/86` when this
+exemption was drafted and `89/92` one commit later (PR #69 R18), which is
+D5's own thesis biting D5, and the R13 treatment applies: name the slot, not
+the scalar. (b) STRUCTURALLY-REQUIRED redness: `docs-numbers-are-derived`
 excludes its own row, so once it goes red every later report contains it
 failing — a fixed point — and a report whose only red case is that check is a
 legitimate citation. The headline slot already implements (b); a guard extended
@@ -798,6 +807,36 @@ one exception, is closed. The machinery verifies consistency well and verifies
 truth poorly — consistency is cheap to automate, truth needs a reader. That is
 an argument for keeping the review rounds, not for distrusting the gate.
 Not implemented here; this block is the record.
+
+### T-M39-15-D6 — the fence fix closed the instance and not the class            [status: todo]
+Origin: T-M39-15, PR #69 R19 (round 3, circuit breaker).
+Priority: P2
+Spec: R8's repair stopped `tasks/TODO.md`'s one prose line from acting as a
+fence opener. It **closed the instance and not the class**. `_FENCE` still
+treats a bare whole-line ``` as a valid opener, so a stray one pairs with a
+later block's delimiter and swallows the headings between them.
+Verified repro (orchestrator's, not the reviewer's): two `### B1 — ` headings
+separated by a stray bare whole-line ``` , with a ```bash block below, yield
+`['B1']` — the duplicate is silently missed.
+**Latent, not live.** Neither `tasks/TODO.md` nor `tasks/DONE.md` contains a
+bare whole-line ``` today, and TODO.md's only fence line carries trailing text
+so it no longer parses as an opener. The probe is NOT blinded on this tree,
+which is why this is debt rather than a blocker.
+**What is NOT broken, recorded because it was claimed to be:** the reviewer's
+second variant — an info string outside the opener char class, ```js {hl} —
+reports the duplicate CORRECTLY (`['B2', 'B2']`), because it never parses as an
+opener at all. Falsified by the orchestrator before it reached this block. A
+block that records what is not broken is more useful than one that overstates.
+Acceptance: a fixture with a stray bare whole-line ``` above a genuine
+duplicate, watched red first, plus either a fence state machine or a stripper
+that discards nothing when delimiters fail to balance. The info-string variant
+needs no fix.
+Also in scope, and the part worth doing first: `src/browser/eval_adapter.py`'s
+shipped `ponytail:` comment asserts the fix leaves "at worst a loud false red,
+never a silent miss". That is **not true** — the repro above is exactly a silent
+miss. The comment overstates its own guarantee and must be corrected with the
+fix; a comment that promises a safety property the code does not have is worse
+than no comment, because the next reader stops looking.
 
 ### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]
 Origin: T-M42-20, while writing case (a). The defect it caught — two different
