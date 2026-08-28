@@ -81,8 +81,8 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 253 cases, ts `20260828-113600`, **101.24s**, 251/253
-  (`evals/report/20260828-113600-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 256 cases, ts `20260828-121339`, **101.54s**, 254/256
+  (`evals/report/20260828-121339-fast.json`; `dirty: true`, for the reason the
   next paragraph gives, and red — the three failures are the three derived-number
   checks themselves, `docs-numbers-are-derived`, `published-band-matches-the-ledger`
   and `adr029-scope-matches-the-suites`, all mid-refresh at the moment
@@ -231,8 +231,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 253 cases, 251/253) and
-(restated — `invariant`: 103 cases, 100/103) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 256 cases, 254/256) and
+(restated — `invariant`: 104 cases, 102/104) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -354,7 +354,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 101.24 × 1.15 = 116.43 → **120**, which is exactly the
+five — gives 101.54 × 1.15 = 116.77 → **120**, which is exactly the
 committed 120. The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
 ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
 each derived
@@ -381,8 +381,8 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s → 35s
 
-- Band source — local `invariant` at 103 cases, ts `20260828-113017`, **31.87s**, 100/103
-  (`evals/report/20260828-113017-invariant.json`; `dirty: true` — unlike the row
+- Band source — local `invariant` at 104 cases, ts `20260828-120835`, **30.92s**, 102/104
+  (`evals/report/20260828-120835-invariant.json`; `dirty: true` — unlike the row
   this supersedes, the count moved because THIS branch added two cases
   (`pre-commit-reports-a-broken-interpreter-as-such`,
   `malformed-step-is-a-classified-failure`), so item 2 (cited-run)'s dirty
@@ -544,7 +544,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 31.87 × 1.15 = 36.65 → **40**, which is exactly the committed
+The same rule gives 30.92 × 1.15 = 35.56 → **40**, which is exactly the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

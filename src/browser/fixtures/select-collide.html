@@ -1,0 +1,33 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Filing picker — colliding option values and labels</title>
+<h1>Annual report picker</h1>
+
+<p>The picker below is the T-M42-20-D5 shape and it is not contrived: a filing
+list keyed by FISCAL year whose labels name the CALENDAR year is how regulators
+publish them, so option 2's VALUE is exactly option 3's LABEL. The string
+"2024" therefore names two different filings by two different fields, and a
+matcher that searches the (value, label) pair and takes the first hit selects
+one of them, reads it back against its own match, and reports success.</p>
+
+<label for="fy">Filing year</label>
+<select id="fy" aria-label="Filing year">
+  <option value="">Choose a filing…</option>
+  <option value="2024">FY 2023</option>
+  <option value="fy2024">2024</option>
+  <option value="2025">FY 2025</option>
+</select>
+
+<p><span role="status" aria-label="Selection">No filing selected.</span></p>
+
+<script>
+  // Fixture code may know its own DOM (CLAUDE.md rule 6); none of it reaches
+  // the executor. Found by aria-label so `ids-renamed` cannot break the page
+  // instead of the agent.
+  var sel = document.querySelector('[aria-label="Filing year"]');
+  sel.addEventListener('change', function () {
+    var o = sel.options[sel.selectedIndex];
+    document.querySelector('[aria-label="Selection"]').textContent =
+      'Selected filing: ' + o.textContent + ' (value ' + o.value + ')';
+  });
+</script>

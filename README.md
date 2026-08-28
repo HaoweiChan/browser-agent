@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 253 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 256 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 12 cases, 5 real sites, still $0.00
 ```
@@ -50,14 +50,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260828-114307-fast.json`, with
-`evals/report/20260828-114120-invariant.json` and
+Latest offline baseline — `evals/report/20260828-121606-fast.json`, with
+`evals/report/20260828-121646-invariant.json` and
 `evals/report/20260828-080822-live.json`:
 
 ```
-fast  252/253    invariant  102/103    live  12/12    $0.0000    100.7s
+fast  255/256    invariant  103/104    live  12/12    $0.0000    101.4s
 recovery 10/10 verified (25 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 70/70 · 15 replans
+diagnosis 72/72 · 15 replans
 ```
 
 The one red in each is `docs-numbers-are-derived` reading this very block. It is
@@ -196,8 +196,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 253 | 101.24s | 116.43 | **120s** |
-| `invariant` | 103 | 31.87s | 36.65 | **40s** |
+| `fast` | 256 | 101.54s | 116.77 | **120s** |
+| `invariant` | 104 | 30.92s | 35.56 | **40s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer,
 and the two are allowed to differ by a step: a short sample may derive UNDER the
@@ -462,7 +462,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 284 cases (253 of them in the offline gate), it
+The eval set is not weak; it is 287 cases (256 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

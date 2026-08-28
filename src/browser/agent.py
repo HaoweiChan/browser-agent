@@ -1032,9 +1032,25 @@ def assemble_result(trace, answer, budgets, failure=None, reason=None, final_url
     # extract-container-dump-is-not-the-answer). What was read stays in
     # `evidence.extractions`, in full, where the verifier read it from; the
     # user-facing field says what the verdict says: nothing here answers.
-    if status == "success" and verdict and verdict.get("verdict") != "PASS":
+    # T-M32-15: `and verdict` short-circuits, so a FALSY verdict (`None`, `{}`)
+    # skipped this branch entirely and a caller passing an answer with no
+    # verdict got `status: success` carrying something nothing certified — the
+    # silent-success shape this repo has hit seven times. Not reachable from
+    # `run_task` today (its one `done()` without `failure=` always passes a
+    # `verify()` result, which is never None and never {}), and that is exactly
+    # why it is worth closing: INV-2 is a property of this function, not of the
+    # discipline of its twenty call sites, and "latent" is what every one of
+    # those seven was before it was not.
+    if status == "success" and (not verdict or verdict.get("verdict") != "PASS"):
         status = "failure:semantic"
-        reason = reason or f"verifier {verdict['verdict']}: {verdict.get('reason')}"
+        reason = reason or (f"verifier {verdict['verdict']}: {verdict.get('reason')}"
+                            if verdict else "no verdict: nothing certified this answer")
+        answer = None
+    # The symmetric half of the same finding: `answer` was nulled only INSIDE
+    # the demotion branch, so any `failure:*` assembled with an `answer=` would
+    # carry it. No call site does that today; the rule belongs here rather than
+    # in twenty places that must each remember it.
+    if status != "success":
         answer = None
     return {
         "status": status,
@@ -1684,7 +1700,18 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # on the failure path — 20s per absent option in a suite
                     # budgeted at 90s — and would tell the model nothing about
                     # what it could have picked instead.
-                    want = step.get("value") or ""
+                    # T-M42-20-D5: a `select_option` with no `value` used to
+                    # become `want = ""`, and `"" in anything` is True — so it
+                    # matched the FIRST option, selected it, read it back
+                    # successfully and recorded `postcondition_ok: True` for a
+                    # filter nobody asked for. `press` already refuses its
+                    # missing-value shape and this did not; `plan_gap` type-checks
+                    # neither. A step the executor cannot honour is `task`, which
+                    # is the same ruling and the same class `press` uses.
+                    want = step.get("value")
+                    if not isinstance(want, str) or not want:
+                        raise StepError("task", "select_option needs a `value` naming the option "
+                                                f"to choose; got {step.get('value')!r}")
                     opts = await loc.evaluate(OPTIONS_JS)
                     if opts is None:
                         # The wrong element, not a broken action — the same
@@ -1721,7 +1748,34 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         except Exception:
                             pass  # let the empty-offer message below say it
                         opts = await loc.evaluate(OPTIONS_JS)
-                    match = next((o for o in opts if want in o), None)
+                    # T-M42-20-D5, the other half: `want in o` searched the
+                    # (value, label) PAIR, so a wanted string matched either
+                    # field and the first hit won. On
+                    # `<option value='2024'>FY 2023</option>` beside
+                    # `<option value='2025'>FY 2024</option>`, `want='2024'`
+                    # matched the FY 2023 row by its value, selected it, read it
+                    # back against its own match and reported success — the page
+                    # firing `change` for a filing nobody asked for. The readback
+                    # could not catch it because it compares to `match[0]`, which
+                    # is self-consistent by construction.
+                    #
+                    # Exact before substring, and value before label, because
+                    # "which option did the user mean" has a right answer when
+                    # one field matches exactly and a guess when several match
+                    # loosely. A guess that cannot be told from a hit is what
+                    # this defect was.
+                    exact = [o for o in opts if want in (o[0], o[1])]
+                    if len(exact) > 1:
+                        # Two options genuinely answer to this string. Refusing
+                        # is the same fail-closed ruling the resolver applies to
+                        # an ambiguous target: picking one silently is how the
+                        # wrong filing got selected in the first place.
+                        raise StepError("act", f"{want!r} matches {len(exact)} options "
+                                               f"({[(v, l) for v, l in exact]}); name one exactly")
+                    match = exact[0] if exact else None
+                    if match is None:
+                        loose = [o for o in opts if want in o[0] or want in o[1]]
+                        match = loose[0] if len(loose) == 1 else None
                     if match is None:
                         raise StepError("act", f"no option matches {want!r}; this control offers "
                                                f"{[label for _v, label in opts]}")
@@ -1829,15 +1883,42 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # `extract` contributes exactly one value, so the loop is the
                     # same code for both verbs.
                     other_page_text = " ".join(t for u, t in page_bodies.items() if u != page.url)
-                    for v in vals:
+                    for i, v in enumerate(vals):
                         # M34 R2-1: which occurrence of `v` is this, when it is
                         # not unique on the page? The DOM hint picks the real one
-                        # rather than always taking the first. For `extract_all`
-                        # the hint is the step's locator, which spans every match,
-                        # so each value falls back to its own first occurrence —
-                        # the pre-M34 behaviour, per value.
-                        off = (real_offset if v == vals[0]
-                               else _closest_occurrence(body, v, -1))
+                        # rather than always taking the first.
+                        #
+                        # T-R38: per ROW. This used to be `real_offset if v ==
+                        # vals[0] else _closest_occurrence(body, v, -1)`, so rows
+                        # 2..n of an `extract_all` got hint -1 — plain
+                        # first-occurrence, the pre-M34 behaviour — while
+                        # `docs/support-matrix.md` D24 said the context is
+                        # "anchored to the actual DOM occurrence it was read
+                        # from". `verify()` judges an enumeration row by row, so
+                        # a row anchored to the wrong occurrence is judged on
+                        # somebody else's evidence: `not_page_furniture` compares
+                        # that row's window against the other pages this run
+                        # loaded, and a window centred on the wrong copy of the
+                        # string can clear a check the right copy would fail, or
+                        # fail one it would clear.
+                        #
+                        # `loc.nth(i)`, not `loc.first`: `.first` was correct only
+                        # because Playwright's strict mode refuses `evaluate` on a
+                        # multi-match locator, and `.nth(i)` satisfies that the
+                        # same way while asking about the row actually in hand.
+                        # It costs one `evaluate` per row where the old code cost
+                        # one per step; `extract_all` has no cap on matches
+                        # (T-EXTRACT-ALL-VOLUME), so if that ever shows up in the
+                        # wall clock the answer is that cap, not this hint.
+                        try:
+                            hint = await loc.nth(i).evaluate(TEXT_OFFSET_JS)
+                        except Exception:
+                            # Evidence capture, not an assumption: a row whose
+                            # element went away between the read and here degrades
+                            # to its own first occurrence rather than killing a
+                            # run that already has its answer.
+                            hint = -1
+                        off = _closest_occurrence(body, v, hint)
                         extractions.append(
                             {"value": v,
                              "page_text": evidence_window(body, v, anchor, offset=off),

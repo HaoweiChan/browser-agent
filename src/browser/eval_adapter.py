@@ -226,6 +226,25 @@ def _check_inv2() -> dict:
                             verdict={"verdict": v, "reason": "planted"})
         if r["status"] == "success":
             bad.append(v)
+    # T-M32-15: the two shapes `and verdict` used to let through. A FALSY
+    # verdict skipped the demotion branch entirely, so an answer nothing
+    # certified was reported `success`; and `answer` was nulled only INSIDE that
+    # branch, so any `failure:*` assembled with an `answer=` carried it. Neither
+    # is reachable from `run_task` today — its one `done()` without `failure=`
+    # always passes a `verify()` result, which is never None and never {} — and
+    # that is the argument for grading them here rather than trusting it: INV-2
+    # is a property of this function, not of the discipline of its twenty call
+    # sites, and every silent success this repo has shipped was latent first.
+    for missing in (None, {}):
+        r = assemble_result(trace=_TRACE, answer="an answer", budgets=_BUDGETS,
+                            verdict=missing)
+        if r["status"] == "success" or r["answer"] is not None:
+            bad.append({"falsy_verdict": missing, "status": r["status"],
+                        "answer": r["answer"]})
+    carried = assemble_result(trace=_TRACE, answer="an answer", budgets=_BUDGETS,
+                              failure="task")
+    if carried["answer"] is not None:
+        bad.append({"failure_carried_an_answer": carried["answer"]})
     ok = assemble_result(trace=_TRACE, answer="an answer", budgets=_BUDGETS,
                          verdict={"verdict": "PASS", "reason": None})
     return {"passed": not bad and ok["status"] == "success", "leaked": bad}
@@ -3286,7 +3305,18 @@ def _run_adr_header_index_case(case: dict) -> dict:
     index_path = decisions_dir / "INDEX.md"
     index_text = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
     index_nums = re.findall(r"^- ADR-(\d+)", index_text, re.MULTILINE)
-    missing_index = sorted(set(adr_nums) - set(index_nums))
+    # T-R36: per FILE, not per set. `set(adr_nums) - set(index_nums)` collapses
+    # two files sharing a number into one member, so if only one of them is
+    # indexed the missing entry never appears — which is how R26's dropped M34
+    # INDEX line survived a merge. Counting instead of subtracting makes the
+    # second file its own row. `duplicated_in_index` already caught the
+    # mirror-image case (a doubled INDEX line) and it is the asymmetry that hid
+    # this one: one side was counted and the other was not.
+    import collections as _c
+    file_counts, index_counts = _c.Counter(adr_nums), _c.Counter(index_nums)
+    missing_index = sorted(n for n in file_counts
+                           if index_counts[n] < file_counts[n]
+                           for _ in range(file_counts[n] - index_counts[n]))
     dup_index = sorted({n for n in index_nums if index_nums.count(n) > 1})
 
     # Sections, per ADR: `### 4. ...` headings, the numbering a `§N` citation

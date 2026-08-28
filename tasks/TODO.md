@@ -1216,7 +1216,21 @@ Acceptance: the `button` exclusion gone from that case with a red-first case for
 whichever rule is chosen, or a `docs/support-matrix.md` limitation naming the
 shape — D32 declares it as of PR #60, so the minimum here is the case.
 
-### T-M42-20-D5 — `select_option` matches the wanted string against value OR label            [status: todo]
+### T-M42-20-D5 — `select_option` matches the wanted string against value OR label            [status: done]
+CLOSED 2026-08-28, both shapes, on the acceptance as written ("a run can no longer
+report `success` with `postcondition_ok: True` for a selection nobody asked for").
+(i) The matcher searched the `(value, label)` PAIR and took the first hit, so one
+string could name two different options by two different fields. Now: exact matches
+on either field are collected, TWO of them is a loud refusal rather than a pick, and
+only a single loose match is taken — the same fail-closed ruling `resolve` applies to
+an ambiguous target. Case `select-option-value-collides-with-a-label` on the new
+`select-collide.html`, watched red as `success` with the answer naming the WRONG
+filing. (ii) A step omitting `value` became `want = ""`, and `"" in o` is true for
+every option, so it selected the placeholder and recorded it verified. Now a
+`task`-class refusal, the class and the reasoning `press` already used. Case
+`select-option-without-a-value-is-refused`, watched red at `no_failed_postcondition:
+true` — the no-op recorded as VERIFIED, with the run only going red because INV-0
+caught the empty answer one layer later.
 Origin: PR #60 R2 (MEDIUM, routed to debt). PRE-EXISTING — shipped with M42's
 `select_option`, not introduced by T-M42-20.
 Evidence, verbatim: `agent.py` `match = next((o for o in opts if want in o), None)`
@@ -3692,7 +3706,15 @@ shape that implies verdict PASS — empty, `{"status": "success"}`, and
 `{"verdict": "PASS"}` alike — with the fix watched red on a non-empty `expect`
 first, so it cannot be closed by special-casing the empty one.
 
-### T-M32-15 — `assemble_result` trusts its caller for the verdict, and would emit an uncertified success if one ever forgot            [status: todo]
+### T-M32-15 — `assemble_result` trusts its caller for the verdict, and would emit an uncertified success if one ever forgot            [status: done]
+CLOSED 2026-08-28. `and verdict` no longer short-circuits: a falsy verdict demotes to
+`failure:semantic` with the reason `no verdict: nothing certified this answer`, and
+`answer` is nulled for EVERY non-success status rather than only inside the demotion
+branch. Both shapes graded by `inv2-verifier-outranks-executor`, watched red as three
+rows at once. The block's own enumeration that this is unreachable from `run_task`
+today still holds and is the reason it was worth closing rather than the reason not
+to: INV-2 is a property of this function, not of the discipline of its twenty call
+sites, and every silent success this repo has shipped was latent first.
 Origin: PR #34 round 7, the M28 merge hunt. Latent, not reachable today.
 Priority: P1
 Spec: `src/browser/agent.py:assemble_result` enforces INV-2 as
@@ -4120,7 +4142,14 @@ matches its Ruling; ADR-002's parenthetical stops asserting a live 15s invariant
 T-R25's Update states what is actually fixed. Ideally one graded row that compares INDEX/ADR
 ceiling numbers against `WALL_BUDGET_S`, watched red against the current text.
 
-### T-R36 — `adr-header-and-index` cannot see an ADR file missing from INDEX when another shares its number            [status: todo]
+### T-R36 — `adr-header-and-index` cannot see an ADR file missing from INDEX when another shares its number            [status: done]
+CLOSED 2026-08-28. `sorted(set(adr_nums) - set(index_nums))` collapsed two files
+sharing a number into one member, so if only one was indexed the missing entry never
+appeared — which is how R26's dropped M34 INDEX line survived a merge. Counted rather
+than subtracted, so the second file is its own row. Watched red by copying an ADR to a
+second file with the same number: `{"missing_from_index": ["039"]}`, where the old
+form was green. The asymmetry is what hid it — `duplicated_in_index` already counted
+the INDEX side while the file side was a set.
 Origin: PR #29 R26
 Priority: P1
 Spec: The duplicate this block was opened for is resolved: main's M34 INDEX line
@@ -4158,7 +4187,18 @@ as which-one (no new wording regex needed — the existing match already exposes
 ADR-018's "entitled to contradict" paragraph states this ceiling with this exact input as its
 evidence, and a case pins the behaviour so it is a decision rather than a side effect.
 
-### T-R38 — `extract_all` rows after the first lose M34's DOM-offset anchoring            [status: todo]
+### T-R38 — `extract_all` rows after the first lose M34's DOM-offset anchoring            [status: done]
+CLOSED 2026-08-28 on the acceptance's stronger branch — the hint is taken per row via
+`loc.nth(i)` — AND D24 is amended, because the sentence it carried was wrong rather
+than merely incomplete. Case
+`extract-all-anchors-every-row-to-its-own-element` runs an `extract_all` across two
+pages where one enumerated row's string also sits in a banner that repeats verbatim
+on the first page, watched red against the row-0 anchoring as `not_page_furniture:
+false` on row 2 alone. The failure direction here is the less alarming one (a correct
+answer rejected); it is symmetric, and neither direction was reachable by any existing
+case, since every M34 case uses `extract`. Cost named rather than hidden: one
+`evaluate` per row instead of one per step, and if that ever shows in the wall clock
+the answer is T-EXTRACT-ALL-VOLUME's cap, not this hint.
 Origin: PR #29 R28
 Priority: P1
 Spec: `src/browser/agent.py:675-676` — `off = (real_offset if v == vals[0] else
