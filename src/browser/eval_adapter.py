@@ -31,6 +31,7 @@ The fixture sites are served by the real FastAPI app on loopback (started once
 per process) so eval and production exercise the same serving path.
 """
 
+import ast
 import asyncio
 import atexit
 import collections
@@ -765,9 +766,32 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         # deadlock: this check is itself in both suites, so the first run after
         # a band is republished could never be green while the band it needs is
         # the one that run would produce.
-        recorded = [r["wall_s"] for r in env_rows
-                    if r["suite"] == suite and r["total"] == now]
-        slowest = max(recorded) if recorded else None
+        at = [r for r in env_rows if r["suite"] == suite and r["total"] == now]
+        recorded = [r["wall_s"] for r in at]
+        # ADR-019 §8. The rows a band could LEGALLY cite — item 2 (cited-run)'s
+        # own test applied to every row rather than only to the cited one:
+        # clean, or dirty with no clean row at this count stamped at or before
+        # it. Item 3 (same-ceiling) and item 4 (committed-ceiling) are graded
+        # against the maximum of THESE, because a row no band may cite is not a
+        # target any band can be held to — T-M39-13 is the deadlock that proves
+        # it, where a dirty outlier past a ceiling-step boundary left no
+        # publishable citation at all. The citable maximum is itself citable, and
+        # what that buys — with the condition it rests on, which is a claim about
+        # the committed CEILING and not about citability — is stated once, in
+        # ADR-019 §8, rather than a third time here: a copy of that sentence
+        # without its clause is what PR #68 R11 found in this comment. Item 2
+        # (cited-run)
+        # is unchanged, and so is item 12 (ledger-max)'s raw read-back in
+        # `_check_published_band` — that one is a factual claim about the
+        # ledger, not a band target. At a FRESH count every row is dirty and
+        # therefore citable, so this degrades to the old behaviour exactly where
+        # bands are first published.
+        clean_ts = [r["ts"] for r in at if not r.get("dirty", True)]
+        citable_rows = [r for r in at
+                        if not r.get("dirty", True)
+                        or not any(t <= r["ts"] for t in clean_ts)]
+        citable = [r["wall_s"] for r in citable_rows]
+        slowest = max(citable) if citable else None
         if cases != now:
             # Item 1 (count). Carry the number the doc needs, not just the fact that it
             # is stale: growing a suite reddens this, and the fix is to republish
@@ -789,8 +813,30 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         # band, which is the treadmill §6 exists to refuse. Green is neither
         # required nor requirable — this check is in both suites, so at a new
         # count every run is red until the band is republished (T-R53).
-        at = [r for r in env_rows if r["suite"] == suite and r["total"] == now]
-        src = next((r for r in at if r["ts"] == ts), None)
+        # The CITABLE row this citation names, preferred over a same-`ts`
+        # neighbour, then any same-`ts` row (PR #68 R6). `ts` is not a key:
+        # `stamp()` has one-second resolution and concurrent sessions append to
+        # one file, so two rows can share one. Resolving by `ts` alone took the
+        # FIRST match, which made the citable maximum unreachable — citing it
+        # reported its neighbour's wall clock — and reassembled the very deadlock
+        # §8 removes, through the lookup instead of through the maximum. The
+        # fallback is what keeps a genuinely stale published number reporting
+        # `actually_measured` rather than degrading to `cites_no_recorded_run`.
+        # Three rungs, narrowest first. A wall-clock match is tried among ALL
+        # rows before the bare-`ts` fallback (PR #68 R14): without that middle
+        # rung, citing a row that a clean sibling at the same second outranks
+        # reported `actually_measured` as the SIBLING's wall clock — a number the
+        # cited run did not measure — and swapping the two rows in the file
+        # changed the diagnosis while the verdict stayed red. With it, that
+        # citation is diagnosed as what it is, a dirty row a clean one predates.
+        # The last rung is reached only when no row at that `ts` measured the
+        # published number at all, where naming any of them is the honest answer
+        # to a genuinely stale citation; §8 records that it is the one place the
+        # reported row is still order-dependent.
+        src = next((r for r in citable_rows
+                    if r["ts"] == ts and r["wall_s"] == said),
+                   next((r for r in at if r["ts"] == ts and r["wall_s"] == said),
+                        next((r for r in at if r["ts"] == ts), None)))
         if src is None:
             wrong.append({"suite": suite, "env": env,
                           "cites_no_recorded_run": ts, "at": now})
@@ -815,7 +861,11 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
                           "derives_ceiling": _band_rule(said),
                           "ledger_slowest": slowest,
                           "ledger_derives": _band_rule(slowest),
-                          "runs": len(recorded)})
+                          # Both counts, because `ledger_slowest` is the CITABLE
+                          # maximum since ADR-019 §8 and a reader comparing it
+                          # against a raw row count would be reading two
+                          # different sets (T-M39-13).
+                          "runs": len(recorded), "citable_runs": len(citable)})
         # Item 4 (committed-ceiling).
         required = _band_rule(slowest)
         if ceilings[suite] < required:
@@ -844,10 +894,15 @@ def _check_published_band() -> dict:
     the wrong item is red; a paraphrase carrying no name is still invisible, and
     ADR-019 §6 says so in those terms.
 
-    A run slower than the published band reddens the NEXT gate run, which is the
-    intended cost: the band is a claim about this tree, and a tree that got
-    slower has to say so. That lag is shared with the strict form and is NOT the
-    argument against it — §6 has the argument, which is frequency.
+    A CLEAN run slower than the published band reddens the NEXT gate run, which
+    is the intended cost: the band is a claim about this tree, and a tree that
+    got slower has to say so. Since ADR-019 §8 the word CLEAN is load-bearing —
+    more precisely, a CITABLE run, which is a clean one or a dirty one at a count
+    that has no earlier clean row: a row no band may cite is not a target any
+    band is held to, or a dirty outlier past a rounding step could leave a tree
+    with no publishable citation at all (T-M39-13). That lag is shared with the
+    strict form and is NOT the argument against it — §6 has the argument, which
+    is frequency.
     """
     import json as _json
 
@@ -1060,10 +1115,15 @@ def _check_published_band() -> dict:
 def _check_published_band_slack() -> dict:
     """ADR-019 §6: the band property's blind spot is declared, bounded, and pinned.
 
-ADR-019 §6 item 3 (same-ceiling) is `rule(published) == rule(ledger max)`, so a
-    published number BELOW the ledger's maximum is green while both derive the
+ADR-019 §6 item 3 (same-ceiling) is `rule(published) == rule(citable max)`, so a
+    published number BELOW that maximum is green while both derive the
     same ceiling. PR #29 R24 asked whether that was a decision or an
-    artefact. This is what makes it a decision.
+    artefact. This is what makes it a decision. The word CITABLE is §8's, and it
+    matters here because the bound below is a bound against the citable maximum
+    alone: measured against the raw maximum over every row it does not hold, and
+    §8's residuals say so. Every row this check synthesises is clean, so the two
+    maxima coincide in the arithmetic below and the bound it measures is the
+    real one.
 
     Driven with a synthetic one-suite ledger and a ceiling of 999 so that only
     item 3 (same-ceiling) can speak — item 4 (committed-ceiling) is graded
@@ -1320,6 +1380,100 @@ def _check_published_band_ts_orders_real_time() -> dict:
     # which is a worse outcome than no check.
     return {"passed": not wrong, "wrong": wrong,
             "got": {"pair": [band_row, foreign]}}
+
+
+def _check_published_band_citable() -> dict:
+    """ADR-019 §8: item 3 (same-ceiling) and item 4 (committed-ceiling) read the
+    slowest CITABLE row, so a publishable citation exists whenever any row does.
+
+    T-M39-13, replayed with the origin's own numbers: session verification runs
+    of an uncommitted tree at an UNCHANGED count included a dirty 74.11s row —
+    across the ceiling-step boundary at 73.91s — landing after a clean 73.18s
+    row. Committed, it would have made the band unrepublishable: the clean row
+    is refused by item 3 (same-ceiling) (its 85 against the raw maximum's 90),
+    the dirty row by item 2 (cited-run) (a clean row predates it, judged as-of
+    the cited ts, so the refusal never expires), and item 4 (committed-ceiling)
+    demands a ceiling nobody measured on a committable tree. The 2026-08-27
+    discards are the same shape reaching BOTH consumers of that maximum — one of
+    the discarded rows was 18.03s at `invariant` 83, whose ceiling-step boundary
+    is 17.39s, so item 3 (same-ceiling) and item 4 (committed-ceiling) each fire
+    on it. Probe 3's pairing below is SYNTHETIC and says so here rather than
+    implying a ledger it does not have: it pairs that row against a clean 17.05s
+    one, where the committed ledger's actual 17.05s row at that count is dirty
+    and its only clean row is 15.82s (ts `20260827-160719`). What the probe pins
+    is the shape, and the shape needs a clean row earlier than the outlier; a
+    number re-typed from a relay rather than re-derived from `history.jsonl` is
+    how the wrong flag reached this docstring in the first place (PR #68 R9).
+    A row a band could never legally
+    cite must not set the target bands are graded against; the citable maximum
+    is itself citable, so citing it is green by construction and the deadlock
+    cannot be assembled. What the ruling must NOT lose is asserted too: a later
+    CLEAN slower run still reddens, and at a fresh count — where every row is
+    dirty and therefore citable — the behaviour is exactly the old one.
+    """
+    wrong = []
+
+    def rows(*specs):
+        return [{"suite": "s", "total": 1, "passed": 1, "ts": ts, "wall_s": w,
+                 "dirty": d, "env": "local"} for ts, w, d in specs]
+
+    def cite(wall, ts, ledger, ceiling):
+        return _band_wrong({"s": ("local", 1, ts, wall, 1, 1)}, {"s": 1},
+                           {"s": ceiling}, ledger)
+
+    clean, outlier = ("1", 73.18, False), ("2", 74.11, True)
+    # 1. The deadlock, dead by construction: with the dirty outlier in the
+    #    ledger, at least one row must still be legally publishable. Every row
+    #    is tried as the candidate citation; before the §8 ruling every one was
+    #    red — the clean row on item 3 (same-ceiling) and item 4
+    #    (committed-ceiling), the dirty row on item 2 (cited-run) — so no edit
+    #    to ADR-019 §2 could go green (T-M39-13's Repro).
+    ledger = rows(clean, outlier)
+    verdicts = {ts: cite(w, ts, ledger, 85.0) for ts, w, _ in (clean, outlier)}
+    if not any(v == [] for v in verdicts.values()):
+        wrong.append({"no_publishable_citation_exists": verdicts})
+    # 2. Negative control: with the outlier absent, the clean citation is green
+    #    — so what is pinned is the deadlock, not band grading generally.
+    control = cite(73.18, "1", rows(clean), 85.0)
+    if control:
+        wrong.append({"clean_citation_red_without_the_outlier": control})
+    # 3. The other consumer, with the 2026-08-27 numbers: a dirty outlier at a
+    #    count that has an earlier clean row must not raise
+    #    `required_by_adr013_rule` above what the clean row derives.
+    ratchet = cite(17.05, "1", rows(("1", 17.05, False), ("2", 18.03, True)),
+                   20.0)
+    if any("required_by_adr013_rule" in w for w in ratchet):
+        wrong.append({"dirty_outlier_ratcheted_the_committed_ceiling": ratchet})
+    # 4. The documented intended cost survives: a later CLEAN slower run is
+    #    citable, moves the citable maximum, and reddens item 3 (same-ceiling)
+    #    on the next run — "a tree that got slower has to say so".
+    slower_clean = cite(73.18, "1", rows(clean, ("2", 74.11, False)), 85.0)
+    if not any("ledger_derives" in w for w in slower_clean):
+        wrong.append({"later_clean_slower_run_no_longer_reddens": slower_clean})
+    # 5. At a FRESH count every row is dirty, so every row is citable and the
+    #    dirty maximum governs, exactly as before §8 — citing it is green, and
+    #    citing a lower row still reddens item 3 (same-ceiling).
+    fresh = cite(74.11, "2", rows(("1", 73.18, True), outlier), 90.0)
+    if fresh:
+        wrong.append({"fresh_count_dirty_maximum_was_not_citable": fresh})
+    fresh_low = cite(73.18, "1", rows(("1", 73.18, True), outlier), 90.0)
+    if not any("ledger_derives" in w for w in fresh_low):
+        wrong.append({"fresh_count_low_citation_stayed_green": fresh_low})
+    # 7. The existence property again, on the ledger that falsified its first
+    #    statement (PR #68 R6): TWO ROWS SHARING A `ts`. `stamp()` has one-second
+    #    resolution and concurrent sessions append to one file, so this is a
+    #    ledger this repo can produce. Item 2 (cited-run) resolved the citation
+    #    by `ts` alone and took the FIRST match, so the citable maximum was
+    #    unreachable — citing it reported the OTHER row's wall clock — and every
+    #    remaining candidate was red on item 3 (same-ceiling). The deadlock
+    #    reassembled through the lookup rather than through the maximum, which is
+    #    why the claim §8 makes had to be pinned rather than argued.
+    dup = rows(("2", 73.10, True), ("2", 74.11, False), ("1", 73.50, True))
+    dup_verdicts = {f"{r['ts']}@{r['wall_s']}": cite(r["wall_s"], r["ts"], dup, 999.0)
+                    for r in dup}
+    if not any(v == [] for v in dup_verdicts.values()):
+        wrong.append({"duplicate_ts_left_no_publishable_citation": dup_verdicts})
+    return {"passed": not wrong, "wrong": wrong}
 
 
 # ==== ADR-019 §6 band section: end ====
@@ -5728,7 +5882,17 @@ def _run_doc_counts_case(case: dict) -> dict:
         # there was green forever. `.git`/`.venv` are machinery, not documents;
         # rglob does not follow the `.venv` symlink, so only `.git` is pruned
         # in practice.
-        skip = {".git", ".venv"}
+        #
+        # `worktrees` joined them 2026-08-28. `.claude/worktrees/` is git-IGNORED
+        # (`.git/info/exclude`) and holds zero tracked files: every `.md` under it
+        # belongs to ANOTHER BRANCH's checkout. Grading those made this check
+        # report drift in documents that are not in this tree and that no commit
+        # here can fix — measured: on clean `main` it reported six ceiling
+        # breaches, all of them a stale `blissful-dhawan-037761` checkout of
+        # `claude/groundwork-pr-loop-m38-2275ee` publishing the pre-ADR-029
+        # 15s/75s ceilings. A check that cannot go green by any edit to the tree
+        # it grades is not a gate, and it had made the local gate unpassable.
+        skip = {".git", ".venv", "worktrees"}
         for path in sorted(p for p in RUN_ROOT.rglob("*.md")
                            if not skip & set(p.relative_to(RUN_ROOT).parts)):
             docrel = path.relative_to(RUN_ROOT).as_posix()
@@ -6842,6 +7006,109 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None,
                     "self_test_rows": _BUILD_SHA_SELF_TEST_ROWS if dockerfile is None else 0}}
 
 
+def _check_origin_storage_seed_is_scoped() -> dict:
+    """The page-held-credential seed is origin-scoped, configured, and loud.
+
+    A site can gate something behind a credential the PAGE holds rather than the
+    request. The sec-10k inspector does: its escalation key lives in
+    `localStorage`, and its deep-link start URL — the one this repo's `EXAMPLES`
+    row already carries — extracts ON LOAD, before an agent could type into any
+    field. So a run only reaches that path if the key is seeded before
+    navigation, and `agent.origin_storage_state` is the thing that seeds it.
+
+    This grades the SCOPING, not the feature. Four conjuncts:
+
+    1. **Native `storage_state`, never `add_init_script`.** This agent browses
+       arbitrary sites. An init script is injected into every page's JS context,
+       so the secret's text reaches every origin a run visits, hostile ones
+       included — and an origin guard inside the script does not help, because
+       the guard only decides whether to WRITE and the value is already present
+       to read. `storage_state` is written by the browser into each origin's own
+       partition before any page script runs.
+    2. **Origin-partitioned in fact, not just in intent** — built from a
+       two-origin config and checked entry by entry, so a future refactor that
+       flattened the origins would redden here rather than in production.
+    3. **No per-site knowledge in the package** (rule 6). A credential is not
+       one of the three per-site items rule 6 allows, so no host and no storage
+       key may be hardcoded; both arrive as configuration, and the secret comes
+       from the environment and nowhere else (rule 8).
+    4. **Malformed config raises** (rule 4) — including the two shapes that
+       would otherwise be SILENT no-ops: a bare host with no scheme, and an
+       origin carrying a path. Playwright matches neither, so the seed would do
+       nothing while the run reported success, which is the failure the
+       inspector's own escalation-key decision exists to prevent.
+
+    What it does not do: touch the network, assert the inspector accepts the
+    key, or say anything about the token's value or length. Cookies,
+    sessionStorage and IndexedDB are out of scope — this mechanism writes none.
+    """
+    from .agent import ORIGIN_STORAGE_VAR, origin_storage_state
+    wrong = {}
+
+    # 1 + 3: the package must not inject the secret into pages, and must not
+    # know any site. An allowlist of nothing: no module may do either.
+    # AST, not a substring scan: the reason NOT to use `add_init_script` has to
+    # be written down somewhere, and the natural place is a docstring beside the
+    # code that chose otherwise — which a text scan then reads as the violation
+    # it is warning about. Grading CALLS makes the prose free to explain itself.
+    pkg = Path(__file__).parent
+    init_script, hardcoded = [], []
+    for f in sorted(pkg.glob("*.py")):
+        try:
+            tree = ast.parse(f.read_text(encoding="utf-8"))
+        except SyntaxError:
+            init_script.append(f"{f.name} does not parse")
+            continue
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) \
+                    and n.func.attr == "add_init_script":
+                init_script.append(f.name)
+                break
+        if f.name in {"agent.py", "eval_adapter.py"}:
+            continue
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Constant) and isinstance(n.value, str) \
+                    and ORIGIN_STORAGE_VAR in n.value:
+                hardcoded.append(f.name)
+                break
+    wrong["add_init_script_in_the_package"] = init_script
+    wrong["config_var_read_outside_agent"] = hardcoded
+
+    # 2: two origins in, two partitions out, each holding only its own keys.
+    spec = {"https://a.example": {"k1": "secret-a"},
+            "https://b.example": {"k2": "secret-b"}}
+    st = origin_storage_state(json.dumps(spec))
+    got = {o["origin"]: {e["name"]: e["value"] for e in o["localStorage"]}
+           for o in (st or {}).get("origins", [])}
+    wrong["origins_not_partitioned"] = [] if got == spec else [got]
+    # ...and the one that matters: b's secret must not be in a's partition.
+    bleed = [o for o, kv in got.items()
+             if any(v not in spec.get(o, {}).values() for v in kv.values())]
+    wrong["secret_visible_to_another_origin"] = bleed
+
+    # unset is a no-op, and must be None rather than an empty state — an empty
+    # storage_state is not the same object Playwright treats as "no seeding"
+    wrong["unset_is_not_none"] = [] if origin_storage_state("") is None else ["not None"]
+
+    # 4: every malformed shape raises, including the two SILENT ones.
+    quiet = []
+    for label, bad in (("malformed json", "{not json"),
+                       ("not an object", '["a"]'),
+                       ("entry not an object", '{"https://a.example": "x"}'),
+                       ("bare host, no scheme", '{"a.example": {"k": "v"}}'),
+                       ("origin with a path", '{"https://a.example/app": {"k": "v"}}'),
+                       ("trailing slash", '{"https://a.example/": {"k": "v"}}')):
+        try:
+            origin_storage_state(bad)
+            quiet.append(label)
+        except (ValueError, json.JSONDecodeError):
+            pass
+    wrong["malformed_config_accepted_quietly"] = quiet
+
+    return {"passed": not any(wrong.values()), "wrong": {k: v for k, v in wrong.items() if v},
+            "got": {"origins_built": len(got), "malformed_shapes_refused": 6 - len(quiet)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
               "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
@@ -6859,6 +7126,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "published-band-slack": _check_published_band_slack,
               "published-band-environment": _check_published_band_environment,
               "published-band-ts": _check_published_band_ts_orders_real_time,
+              "published-band-citable": _check_published_band_citable,
               "ci-numbers-derived": _check_ci_numbers_are_derived,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
@@ -6866,7 +7134,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "narrowing-fails-closed": _check_narrowing_fails_closed,
               "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only,
               "version-never-guesses": _check_version_never_guesses,
-              "build-sha-derived": _check_build_sha_is_derived}
+              "build-sha-derived": _check_build_sha_is_derived,
+              "origin-storage-seed-is-scoped": _check_origin_storage_seed_is_scoped}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

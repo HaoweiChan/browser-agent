@@ -24,6 +24,7 @@ Every other class stays a loud classified stop. Output: specs/001-browser-contra
 
 import contextlib
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -1052,6 +1053,62 @@ async def _apply_judge(judge, task, answer, extractions, verdict, budgets) -> di
     return {**verdict, "checks": checks}
 
 
+ORIGIN_STORAGE_VAR = "BROWSER_AGENT_ORIGIN_STORAGE"
+
+
+def origin_storage_state(raw=None):
+    """Playwright `storage_state` seeded from configuration, or None when unset.
+
+    **Why this exists.** A site can put something behind a credential the PAGE
+    holds rather than the request — the sec-10k inspector's escalation key lives
+    in `localStorage`, and its deep-link start URL acts on load, before an agent
+    could type into any field. Seeding is the only way a run reaches that path.
+
+    **Why it is configuration and not code.** CLAUDE.md rule 6 allows exactly
+    three per-site items in this package — start URL, rate limit, ground-truth
+    endpoint — and a credential is none of them, so no host, storage key or
+    selector may be written here. They arrive in `BROWSER_AGENT_ORIGIN_STORAGE`
+    as `{"<origin>": {"<key>": "<value>"}}`. Rule 8 makes the secret an
+    environment variable and nothing else.
+
+    **Why `storage_state` and not `add_init_script`.** This agent browses
+    arbitrary sites. An init script is injected into EVERY page's JS context, so
+    the secret's text would travel to every origin a run visits — including a
+    hostile one — and an origin guard inside the script does not help, because
+    the guard only decides whether to WRITE; the value is already there to read.
+    `storage_state` is written by the browser into each origin's own storage
+    partition before any page script runs, and no page ever sees another's.
+
+    Malformed configuration raises (rule 4). A run that silently drops to the
+    unauthenticated path while reporting success is exactly the failure the
+    inspector's own escalation-key decision was written about.
+    """
+    raw = os.environ.get(ORIGIN_STORAGE_VAR, "") if raw is None else raw
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    spec = json.loads(raw)          # loud on malformed JSON, deliberately
+    if not isinstance(spec, dict):
+        raise ValueError(f"{ORIGIN_STORAGE_VAR} must be a JSON object of "
+                         f"{{origin: {{key: value}}}}, got {type(spec).__name__}")
+    origins = []
+    for origin, kv in spec.items():
+        if not isinstance(kv, dict):
+            raise ValueError(f"{ORIGIN_STORAGE_VAR}[{origin!r}] must be an "
+                             f"object of {{key: value}}, got {type(kv).__name__}")
+        if "://" not in origin or origin.rstrip("/") != origin or origin.count("/") != 2:
+            # A bare host, or one carrying a path, silently matches NOTHING in
+            # Playwright — the seed would be a no-op and the run would look
+            # fine. Refuse instead: `scheme://host`, no path, no trailing slash.
+            raise ValueError(f"{ORIGIN_STORAGE_VAR} key {origin!r} is not an "
+                             f"origin — want scheme://host with no path or "
+                             f"trailing slash, e.g. 'https://example.com'")
+        origins.append({"origin": origin,
+                        "localStorage": [{"name": str(k), "value": str(v)}
+                                         for k, v in kv.items()]})
+    return {"cookies": [], "origins": origins}
+
+
 async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, judge,
                    headless: bool = True, url_guard=None, on_step=None, model=None, browser=None,
                    mode: str = "plan", driver=None, loop_budgets=None,
@@ -1245,7 +1302,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
             pw = await stack.enter_async_context(async_playwright())
             browser = await pw.chromium.launch(headless=headless, args=["--no-sandbox"])
             stack.push_async_callback(browser.close)
-        ctx = await browser.new_context()
+        ctx = await browser.new_context(storage_state=origin_storage_state())
         page = await ctx.new_page()
         try:
             # Pre-plan navigation + observation: the planner never plans blind

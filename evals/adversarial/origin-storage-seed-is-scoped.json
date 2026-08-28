@@ -1,0 +1,21 @@
+{
+  "id": "origin-storage-seed-is-scoped",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "invariant",
+    "check": "origin-storage-seed-is-scoped"
+  },
+  "expect": {
+    "passed": true
+  },
+  "triage": {
+    "class": "credential-leak",
+    "note": "The sec-10k inspector put its paid model tier behind an X-Escalation-Token key (recorded in THAT repo's decision log, 2026-08-28 — deliberately not cited by number here, since an ADR number in this file resolves against THIS repo's specs/), and its D10 deep link — `?fixture=…&run=1`, the start URL this repo's EXAMPLES row already carries — extracts DURING page load, before any agent can type into the page's key field. So the only way a run of this agent escalates on that row is for the key to already be in localStorage when navigation happens. This case grades the mechanism that puts it there, and it grades the SCOPING rather than the feature: this agent browses arbitrary sites, so a seed that is not origin-bound writes the operator's secret into the localStorage of every site the run visits, and a run that visits an attacker's page hands it over. Four conjuncts. (1) The seed is built with Playwright's native `storage_state`, whose origins are partitioned by the browser itself — NOT with `add_init_script`, which would inject the secret's text into every page's JS context including cross-origin ones, and which is the obvious implementation a reviewer would otherwise accept. (2) No site host, storage key or DOM selector appears in the execution-policy modules: the origin and key names arrive as configuration, which is what keeps this inside CLAUDE.md rule 6 (a credential is not one of the three per-site data items rule 6 allows, so it may not be hardcoded at all). (3) The secret is read from the environment only, per rule 8 — no default, no literal, no file. (4) Malformed configuration FAILS LOUDLY rather than silently disabling the seed, per rule 4: a run that quietly drops to the free tier while reporting success is the exact failure shape the inspector's own escalation-key decision was written about, one repo further along.",
+    "note_negative_space": "It does not prove the inspector accepts the key — that is the other repo's `escalation-choke-point` case, and this one deliberately asserts nothing about the token's value or length. It does not prove a live run escalates: no network is touched, the storage_state is built and inspected as data. It says nothing about cookies, sessionStorage or IndexedDB, none of which this mechanism writes."
+  },
+  "provenance": "Created 2026-08-28 alongside the mechanism it grades, per hard rule 2. Origin: the owner's question 'browser agent 想要連到這個網站用 escalation mode 怎麼處理' after the sec-10k inspector put its paid tier behind an escalation key. That repo's ADR number is deliberately not written here: `adr-header-and-index` resolves every `ADR-NNN` token in this tree against THIS repo's specs/, and a cross-repo citation would dangle."
+}

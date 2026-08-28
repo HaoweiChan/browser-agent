@@ -1,0 +1,67 @@
+{
+  "pr": 68,
+  "round": 2,
+  "task": "T-M39-13",
+  "head": "3af401e",
+  "scope": "repair diff 9fcef4e..3af401e plus standing round-1 findings only",
+  "result": "APPROVED",
+  "gate": {
+    "invariant": "84/84 = 1.000, wall 16.48s (orchestrator), 16.1s (reviewer)",
+    "fast": "229/229 = 1.000, wall 90.99s (orchestrator), 90.68s (reviewer)",
+    "baseline": "1.0, .eval-baseline.json byte-identical to origin/main",
+    "cost_usd": 0.0
+  },
+  "standing_findings": {
+    "R1": "RESOLVED — README.md:161-165 bounds the slack against the slowest CITABLE row and states the raw-maximum residual, matching ADR-019:686-693. Reviewer re-derived the bound itself: one ceiling step is 5/1.15 = 4.3478 -> 4.35s, which _SLACK_MARK still matches.",
+    "R2": "RESOLVED — grep 'computed over' returns nothing; ADR-019:405-409 now reads 'computed since section 8 over the CITABLE rows'. Residual imprecision in that same sentence carried forward as R12.",
+    "R3": "RESOLVED — _check_published_band_slack.__doc__ now states rule(published) == rule(citable max). Reviewer verified its added claim that every row the check synthesises is clean, so the two maxima coincide there.",
+    "R4": "RESOLVED — ADR-019:1060-1070 now says each of the three rows fires BOTH items. Reviewer re-derived rather than relayed: 16.2->20 vs 18.03->25; 91.04->105 vs 92.52->110 and 91.34->110; committed ceilings fast 105 / invariant 20 (evals/run.py:94), so item 4 fires on all three too.",
+    "R5": "RESOLVED — the 'every row at this count is dirty' sentence is gone; ADR-019:338-343 states the property and cites the falsification. Reviewer's own invariant run again appended a clean row at count 84 and nothing depended on it.",
+    "R6": "RESOLVED, and adversarially verified. (a) The round-1 ledger is green on the citable maximum. (b) 60,000 random duplicate-ts ledgers, then 80,000 more with wall clocks from a 5-value discrete set to force ties at the maximum, ties between clean and dirty rows, and a citable max sharing a ts with a non-citable row: 0 counterexamples to 'some row attaining the citable maximum is publishable'. (c) Differential sweep old-lookup vs new over 120,000 duplicate-ts ledgers: 16,433 verdicts differ, 0 of them new-stricter, so the fix is strictly looser and never reddens what the old code passed. (d) The actually_measured diagnostic survives and an absent ts still gives cites_no_recorded_run.",
+    "R6_red_watch": "VERIFIED GENUINE — reviewer re-exec'd _band_wrong's source with ONLY the lookup reverted; _check_published_band_citable returns passed:false with a duplicate_ts_left_no_publishable_citation payload identical key-for-key to the case's watched_red (3). Under the same revert _check_published_band and _check_published_band_slack stay green, confirming the claimed 83/84 = 0.988. Premise empirically supported: the committed ledger already holds 11 duplicate timestamps, four of them same-suite (e.g. 20260822-174202 = invariant@39 and invariant@38).",
+    "R7": "RESOLVED — ADR-019:1005-1012 declares the decision UNGRADED in item 12's own blind-spot words. Factual claims check out: _BAND_LEDGER_MAX finds exactly one marker (fast at 230 cases: 91.76s) and all four fast@230 rows are dirty, so raw max == citable max there.",
+    "R8": "RESOLVED — 20260827-195756 and its three scalars appear nowhere in the tree; ADR-019:319-326 states the run without retyping it, and the 'exactly the two cases' count is gone.",
+    "R9": "RESOLVED — eval_adapter.py:1268-1281 labels probe 3's pairing SYNTHETIC and names the real rows. Re-derived: at invariant@83 the 17.05s row (20260827-163027) is dirty:true and the only clean row is 15.82s (20260827-160719).",
+    "R10": "Out of round — orchestrator-resolved in the PR body as a declared two-milestone scope note."
+  },
+  "integrity_checks": "history.jsonl has 2162 lines, all parse as JSON, zero conflict markers, 20260827-195952 appears exactly once. Section 8's population figures re-derive exactly from the file: 73 sub-0.9 rows, 54 dirty, 19 clean, 41 null-cost among them, 44 null-cost overall, zero rows tagged ci, and 20260827-205100 at 43/82 / 1.17s / null cost. Every one of the 73 sits at a case count no band publishes (clean ones top out at invariant@53 and fast@96). The T-M39-13-D1 Spec extension is present at tasks/TODO.md:152-162.",
+  "findings": [
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The item-4 qualifier section 8 added in this very diff was not carried to the two other copies of the same sentence: the band-region comment in the code and the case's provenance still assert the unqualified 'a publishable citation exists whenever any row does', which is false whenever the committed ceiling is below rule(citable max).",
+      "evidence": "specs/decisions/ADR-019-...md:1016-1019 now reads '...whenever any row at the count exists AND the committed ceiling covers rule(citable max)'. The same claim without that clause survives at src/browser/eval_adapter.py:668-670 — inside the _REGION band block — and in evals/adversarial/band-is-graded-against-the-citable-maximum.json:12 provenance. Falsifying state: one dirty row at a FRESH count, invariant, wall 18.03s, ceiling 20 — citable max 18.03, rule 25 > 20, every candidate red on required_by_adr013_rule. Mitigating: section 6 declares item-name-less paraphrases ungraded, which is why nothing goes red.",
+      "repro": ".venv/bin/python -c \"import src.browser.eval_adapter as m; R=lambda t,w,d:{'suite':'s','total':1,'passed':1,'ts':t,'wall_s':w,'dirty':d,'env':'e'}; rows=[R('1',18.03,True)]; print(m._band_wrong({'s':('e',1,'1',18.03,1,1)},{'s':1},{'s':20.0},rows))\"",
+      "acceptance": "The comment at eval_adapter.py:668 and the case provenance carry section 8's ceiling clause, or point at section 8 instead of restating it."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "Section 8's new R4 paragraph states item 3 as its own negation and against the wrong maximum — rule(published) != rule(slowest) — in the diff whose purpose was to stop item 3 being restated wrongly (R3's class), and section 3's amended sentence says the citable maximum includes 'mid-edit runs' unconditionally when section 8 excludes exactly the mid-edit runs a clean row predates.",
+      "evidence": "specs/decisions/ADR-019-...md:1061 'item 3 (same-ceiling) is rule(published) != rule(slowest)' — section 6:599-601 states the item as rule(published) == rule(citable max), and the code's item-3 block reads _band_rule(said) != _band_rule(slowest) (eval_adapter.py:730), i.e. section 8 quotes the FIRING CONDITION as if it were the rule. ADR-019:405-409 'computed since section 8 over the CITABLE rows at the current case count — red and mid-edit runs included': a dirty row with a clean row stamped at or before it is NOT included (eval_adapter.py:676-679).",
+      "repro": "sed -n '1060,1062p;405,409p' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md and compare against ADR-019:599-601 and src/browser/eval_adapter.py:676-679,730",
+      "acceptance": "Section 8:1061 says the three rows FIRE item 3 without restating the item as its negation, and section 3:405-409 says 'red runs and mid-edit runs that no clean row predates'."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The new section 8 residual calls the 1.17s artifact row 'a clean 1.17-second run'; the committed row it names two paragraphs earlier is dirty:true — the same wrong-flag relay R9 was raised for.",
+      "evidence": "specs/decisions/ADR-019-...md:1126-1127 names 20260827-205100 (invariant 43/82, wall 1.17, cost null); ADR-019:1142-1144 then argues 'admission control is the thing that would stop a clean 1.17-second run from ever being citable in the first place'. history.jsonl records that row as dirty:true. The hazard is real but is carried by OTHER rows: 7 of the 19 clean sub-0.9 rows have cost_usd null and wall clocks of 0.04-0.38s (e.g. 20260823-210925, invariant@53, 0.38s, clean, null cost).",
+      "repro": ".venv/bin/python -c \"import json;rows=[json.loads(l) for l in open('evals/report/history.jsonl') if l.strip()];print([r for r in rows if r['ts']=='20260827-205100'])\"",
+      "acceptance": "The sentence either names a clean artifact row that exists (a 0.04s null-cost clean row) or drops the flag from the 1.17s row, which is dirty."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "Section 8's justification for the fallback — 'so a genuinely stale published number still reports what was actually measured' — is order-dependent on a duplicate-ts ledger and can report a wall clock the cited run did not measure; the verdict stays red, so this is a diagnostic defect, not a wrong verdict, and it is not a regression.",
+      "evidence": "src/browser/eval_adapter.py:709-711 falls back to next((r for r in at if r['ts'] == ts), None). Ledger [(ts=2, 74.11, clean), (ts=2, 73.10, dirty)] publishing (ts=2, 73.10): the fallback returns the 74.11 row and the check emits {'published': 73.1, 'cited_run': '2', 'actually_measured': 74.11} — but a run at ts 2 DID measure 73.10. Reverse the two rows in the file and the same citation emits cited_a_dirty_run instead. ADR-019:1028-1031 states the fallback's behaviour without that limit.",
+      "repro": ".venv/bin/python -c \"import src.browser.eval_adapter as m; R=lambda t,w,d:{'suite':'s','total':1,'passed':1,'ts':t,'wall_s':w,'dirty':d,'env':'e'}; [print([(r['wall_s'],r['dirty']) for r in o], m._band_wrong({'s':('e',1,'2',73.10,1,1)},{'s':1},{'s':999.0},o)) for o in ([R('2',74.11,False),R('2',73.10,True)],[R('2',73.10,True),R('2',74.11,False)])]\"",
+      "acceptance": "Either the fallback prefers a wall-clock match among all rows before falling back to bare ts, or section 8:1028-1031 states that on a duplicate ts the reported actually_measured names a sibling row."
+    }
+  ],
+  "orchestrator_note": "All four new findings are LOW and by the scope rule would route to Debt. They are routed 'repair' instead because the rebase onto 6a416df forces a commit to ADR-019 and a re-measured section 3 band anyway, so four one-line prose corrections cost nothing extra — and three of them (R11, R12, R13) are false statements in a document of record, which is the class this repo grades hardest. R13 in particular is R9's exact defect recurring in the repair for R9."
+}

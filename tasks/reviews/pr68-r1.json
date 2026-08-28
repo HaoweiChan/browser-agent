@@ -1,0 +1,110 @@
+{
+  "pr": 68,
+  "round": 1,
+  "task": "T-M39-13",
+  "head": "de35b65",
+  "result": "REQUEST_CHANGES",
+  "gate": {
+    "invariant": "84/84 = 1.000, wall 16.15s (orchestrator), 16.0s (reviewer)",
+    "fast": "229/229 = 1.000, wall 89.84s (orchestrator), 90.08s (reviewer)",
+    "baseline": "1.0, .eval-baseline.json byte-identical to origin/main",
+    "cost_usd": 0.0
+  },
+  "falsification_attempted": "Brute-forced 60,000 random distinct-ts ledgers asserting that citing max(citable) yields _band_wrong(...) == [] (0 counterexamples). Re-ran all four claimed mutations of _band_wrong (revert item 3, revert item 4, widen citable to all rows, narrow to clean-only) with _check_published_band_citable watching; every one produced exactly the key set the case's watched_red claims. Proved citable is empty iff recorded is empty, so the no_recorded_run_at path is unreachable-by-change. Grepped every reader of slowest (items 1, 2-guard, 3, 4 all migrated; item 12 uses its own raw max). Replayed the real 2026-08-27 invariant@83 discard against the committed ledger with an injected 18.03s row (green under section 8). Checked section 3's republished bullet, README's row, the derivation arrow and the restatements against history.jsonl byte for byte.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "README still publishes the retired bound — that a published band understates the ledger's MAXIMUM by at most one ceiling step — which section 8 explicitly makes unbounded, and README is a document this PR edited.",
+      "evidence": "README.md:161-162 `§6 item 3 (same-ceiling) is why the published number can sit below the ledger's maximum, by at most one ceiling step (**4.35s**).` ADR-019 §6 was amended in this same diff (specs/decisions/ADR-019-...md:687-690) to say the opposite: `Against the RAW maximum over every row that gap has no bound at all since §8`. Nothing reads the README sentence back — `_SLACK_MARK` grades only the scalar 4.35, not the claim it is attached to.",
+      "repro": "grep -n \"ledger's$\" README.md; compare README.md:161-162 against ADR-019 §6 'What it lets through' as amended at line 687.",
+      "acceptance": "README's sentence bounds the slack against the CITABLE maximum and states the raw-maximum residual, matching §6/§8; or a probe exists that goes red when the two documents disagree on which maximum the bound is against."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 section 3 still defines ledger_slowest as the maximum over every row, four lines after the same bullet was amended to call it the citable one — the two sentences are in the same section and contradict each other.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:407-411 `The maximum is whatever `published-band-matches-the-ledger` reports as `ledger_slowest`, computed over every row at the current case count — red and mid-edit runs included`. Line 333-334 of the same section, added by this diff, says ``ledger_slowest` — the slowest CITABLE row since §8`. src/browser/eval_adapter.py:679 makes 334 the true one (`slowest = max(citable)`).",
+      "repro": "grep -n 'computed over' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "Line 407-411 reads the citable maximum, or is struck; no sentence in ADR-019 describes ledger_slowest as max-over-every-row."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "_check_published_band_slack's docstring — inside the graded band region — still states section 6 item 3 as rule(published) == rule(ledger max); the diff updated _check_published_band's docstring and missed its sibling.",
+      "evidence": "src/browser/eval_adapter.py:981-982 `ADR-019 §6 item 3 (same-ceiling) is `rule(published) == rule(ledger max)`, so a published number BELOW the ledger's maximum is green while both derive the same ceiling.` ADR-019:593-599 (this diff) now says `rule(published) == rule(citable max)`. The region check (_BAND_DEF matches _check_published_band\\w*) covers this function, so the file is the one §6 item 8 (references) governs.",
+      "repro": ".venv/bin/python -c \"import src.browser.eval_adapter as m; print(m._check_published_band_slack.__doc__[:200])\"",
+      "acceptance": "The docstring states item 3 against the citable maximum, matching §6 item 3's amended text."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 section 8 asserts the three 2026-08-27 discarded rows are item 4 ratchets 'rather than' item 3 refusals; all three fire item 3 as well, and the new case's own watched_red records both items firing on that shape.",
+      "evidence": "specs/decisions/ADR-019-...md:1023-1026 `all three are item 4 (committed-ceiling) ratchets rather than item 3 (same-ceiling) refusals`. Arithmetic: _band_rule(16.2)=20 vs _band_rule(18.03)=25; _band_rule(91.04)=105 vs _band_rule(92.52)=110 and _band_rule(91.34)=110 — item 3 is _band_rule(said) != _band_rule(slowest) (eval_adapter.py:719), so it fires on every one. evals/adversarial/band-is-graded-against-the-citable-maximum.json watched_red prints exactly that for probe 3: {... published_slowest: 17.05, derives_ceiling: 20, ledger_slowest: 18.03, ledger_derives: 25 ...} (item 3) AND {... required_by_adr013_rule: 25 ...} (item 4).",
+      "repro": ".venv/bin/python -c \"from src.browser.eval_adapter import _band_rule as r; print(r(16.2), r(18.03), r(91.04), r(92.52), r(91.34))\"  # 20 25 105 110 110",
+      "acceptance": "Section 8 says the three rows fire both items (which is why the ruling names both consumers), or drops the false discrimination.",
+      "orchestrator_note": "This false framing originated in the orchestrator's own briefing to the implementer, which characterised the three 2026-08-27 rows as item-4 ratchet shapes. The implementer inherited it. Fix the claim, not the blame."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 section 3 asserts 'Every row at this count is dirty and therefore citable' — an ungraded fact about a file that grows on every gate run, falsified by one invariant run on this HEAD, four lines after the same bullet forbids retyping exactly that class of fact.",
+      "evidence": "specs/decisions/ADR-019-...md:340-342. Lines 330-333 of the same bullet: `Which rows sit at this count and which is slowest is deliberately not retyped here ... because it is a scalar every gate run can move and an ungraded copy of it would be stale within the hour`. Running --suite invariant once on the clean HEAD appended {\"ts\": \"20260827-202559\", \"suite\": \"invariant\", \"dirty\": false, \"env\": \"local\", \"total\": 84, \"wall_s\": 16.0} — a CLEAN row at count 84 — and the suite stayed 84/84, because nothing reads the sentence back.",
+      "repro": ".venv/bin/python -m evals.run --suite invariant ; then grep '\"total\": 84' evals/report/history.jsonl and observe a row with \"dirty\": false ; git checkout -- evals/report/history.jsonl",
+      "acceptance": "The sentence is removed, or restated as a property (section 8's fresh-count residual) rather than a claim about which rows the ledger currently holds; if kept, a probe goes red when a clean row lands at the published count."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Section 8's absolute claim that the deadlock is 'absent by construction' and that 'a publishable citation exists whenever any row at the count exists' is false when two rows at the same suite/count/env share a ts; the deadlock reassembles and no probe covers it.",
+      "evidence": "src/browser/eval_adapter.py:701 item 2 resolves the citation with `src = next((r for r in at if r[\"ts\"] == ts), None)` — first match, not the citable one. Ledger [(ts=2, 73.10, dirty), (ts=2, 74.11, clean), (ts=1, 73.50, dirty)], ceiling 999: citable = {74.11, 73.50}, max 74.11, yet citing (2, 74.11) is red {'published': 74.11, 'cited_run': '2', 'actually_measured': 73.1}, citing (1, 73.50) is red on item 3 (derives_ceiling 85 != ledger_derives 90), citing (2, 73.10) is red on item 2 + item 3. No row is publishable. Section 8 (ADR-019:1000-1004, 1130-1136) states no uniqueness assumption, while its own Residuals paragraph flags concurrent branches at one count as a live hazard.",
+      "repro": ".venv/bin/python -c \"import src.browser.eval_adapter as m; R=lambda t,w,d:{'suite':'s','total':1,'passed':1,'ts':t,'wall_s':w,'dirty':d,'env':'e'}; rows=[R('2',73.10,True),R('2',74.11,False),R('1',73.50,True)]; [print(t,w,m._band_wrong({'s':('e',1,t,w,1,1)},{'s':1},{'s':999.0},rows)) for t,w in (('2',74.11),('1',73.50),('2',73.10))]\"",
+      "acceptance": "Either the citation lookup disambiguates on (ts, wall_s) so the citable maximum is always reachable, or section 8 states distinct-ts as the assumption its construction rests on — with a probe in band-is-graded-against-the-citable-maximum that is red on the ledger above.",
+      "orchestrator_note": "Reachability is not theoretical on this repo today: stamp() has one-second resolution, parallel worktree sessions run suites concurrently, T-M39-13-D1 records a PostToolUse hook appending to a shared checkout's ledger on every src/ edit, and section 8's own residual already declares that one case count names several unrelated trees."
+    },
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Section 8 rules that item 12 (ledger-max) 'stays on the raw maximum over every row' and 'deliberately' so, but nothing can go red on that decision — swapping item 12 to the citable reading leaves the entire gate green.",
+      "evidence": "ADR-019:1005-1009. The only _BAND_LEDGER_MAX marker in the file is `(ledger max — `fast` at 230 cases: **91.76s**)` (ADR-019:109); all four rows at fast@230 in evals/report/history.jsonl are dirty: true, so raw max == citable max == 91.76. The new case's six probes never touch item 12.",
+      "repro": ".venv/bin/python -c \"import json,src.browser.eval_adapter as m; rows=[json.loads(l) for l in open('evals/report/history.jsonl') if l.strip()]; adr=m._ADR019.read_text(); [print(mm.group(1),mm.group(2), max(r['wall_s'] for r in rows if r['suite']==mm.group(1) and r['total']==int(mm.group(2)) and r.get('env','local')=='local'), [r.get('dirty') for r in rows if r['suite']==mm.group(1) and r['total']==int(mm.group(2))]) for mm in m._BAND_LEDGER_MAX.finditer(adr)]\"",
+      "acceptance": "A probe in band-is-graded-against-the-citable-maximum drives the item-12 read-back over a synthetic ledger where raw != citable and is red if item 12 switches to the citable maximum; or section 8 records the decision as ungraded, in the words item 12 already uses for its own blind spot."
+    },
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 section 3's band bullet narrates and quotes a run whose ledger row was deleted and whose report was removed, so its three numbers are unverifiable retyped scalars in the section whose own item 11 (cited-file) exists for exactly that class.",
+      "evidence": "specs/decisions/ADR-019-...md:317-327 quotes `ts `20260827-195756`, 15.93s, 82/84` and then states `The first run's row is not in the committed ledger and its report was removed`. _BAND_REPORT only reads back evals/report/<ts>-<suite>.json paths inside the bullet, and this ts names no file, so nothing grades it. The same paragraph calls those `exactly the two cases a case addition always reddens`, while the case shipped in this PR records four (published-band-matches-the-ledger, adr029-scope-matches-the-suites, docs-numbers-are-derived, adr-header-and-index — evals/adversarial/band-is-graded-against-the-citable-maximum.json watched_red).",
+      "repro": "grep -n '20260827-195756' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md evals/report/history.jsonl evals/report/ -r  # ADR only",
+      "acceptance": "The deleted run's numbers are dropped from section 3 (the bullet's own rule: a scalar every gate run can move is not retyped), or its row and report are committed so item 11 / the ledger read them back; and the 'exactly the two cases' claim agrees with the case's watched_red."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The new check's docstring misdescribes the origin data it replays: the 17.05s invariant@83 row it calls clean is dirty: true in the committed ledger, and the clean row at that count is 15.82s.",
+      "evidence": "src/browser/eval_adapter.py:1259-1261 `a dirty 18.03s outlier over a clean 17.05s row`. evals/report/history.jsonl: {\"ts\": \"20260827-163027\", \"suite\": \"invariant\", \"dirty\": true, \"total\": 83, \"wall_s\": 17.05} and {\"ts\": \"20260827-160719\", \"dirty\": false, \"total\": 83, \"wall_s\": 15.82}. Probe 3 depends on the row it calls clean being clean — make both rows dirty and the probe reddens.",
+      "repro": ".venv/bin/python -c \"import json; [print(r['ts'],r['wall_s'],r['dirty']) for r in map(json.loads,open('evals/report/history.jsonl')) if r['suite']=='invariant' and r['total']==83]\"",
+      "acceptance": "The docstring names the actual clean row (15.82s, ts 20260827-160719) or drops the cleanliness attribution; the probe's synthetic numbers are labelled as synthetic.",
+      "orchestrator_note": "Also inherited from the orchestrator's briefing, which passed 17.05s along as a committed maximum without stating its dirty flag."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The PR carries an unrelated milestone-bookkeeping commit (M44-P1 DONE line, TODO block removal, new debt M44-P1-D7) in a branch whose task is T-M39-13.",
+      "evidence": "git log origin/main..HEAD: `ec3b2db tasks: M44-P1 merged as PR #65` sits under task/T-M39-13; tasks/DONE.md:+60 and tasks/TODO.md:-75..-115/+138..+160 are entirely M44-P1.",
+      "repro": "git diff origin/main...HEAD -- tasks/TODO.md tasks/DONE.md",
+      "acceptance": "Either the bookkeeping lands on its own PR, or the PR description states the two-milestone scope so a reviewer of T-M39-13 is not reading M44-P1 debt as part of it.",
+      "orchestrator_note": "The bookkeeping commit is mandated by the pr-loop SPEC state (a status:pr block whose PR has merged is replaced by a DONE.md one-liner). Resolved by the orchestrator in the PR body rather than by the implementer in code."
+    }
+  ]
+}
