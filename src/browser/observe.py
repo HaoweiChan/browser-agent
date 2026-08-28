@@ -49,20 +49,25 @@ DRILL_TEXT_HEAD = 1_500
 # and spends planner tokens on navigation nobody asked about.
 CHROME_ROLES = {"banner", "navigation", "complementary", "contentinfo", "search"}
 MAX_CHROME = 20
-# T-A39-3: the same idea one role down. 49 sibling `option`s under one
-# `combobox` are ONE control, not 49 elements a planner needs enumerated, and
-# they crowd out whatever follows them in document order. Measured on the
-# sec-10k inspector: once ADR-039's settle let the committed-fixture select
-# paint, the page-level observation filled at element 60 several elements
-# BEFORE `status — 'doc_status'`, which the planner had been able to see the
-# day before. Raising MAX_ELEMS is the fix this repo has refused twice — it
-# moves the cliff to the next larger page — so the budget goes per-control
-# instead, PER combobox rather than per page, the way MAX_CHROME is per
-# landmark. A drill-down onto the select gets the whole page budget, exactly
-# as chrome does, so the options a planner actually needs stay one `observe`
-# away rather than gone.
+# T-A39-3: an observation is charged PER CONTROL, not per element. 49 sibling
+# `option`s under one `combobox` are ONE control, and before this they each took
+# a slot out of MAX_ELEMS -- so once ADR-039's settle let the sec-10k
+# inspector's committed-fixture select actually PAINT, the page-level
+# observation filled several elements before `status — 'doc_status'`, which a
+# planner could see the day before.
+#
+# Options therefore sit in `elements` in document order like everything else,
+# but are charged to their own per-control budget rather than to the page's.
+# Raising MAX_ELEMS is the fix this repo has refused three times: it moves the
+# cliff to the next larger page.
+#
+# MAX_OPTIONS is a runaway bound, NOT a summary. The first version of this made
+# it 8 and still charged options to the page, and that broke the one case here
+# that matters most: `intc-2002` is the 20th of 42 options on the live
+# inspector, so truncating to 8 made the user's own task unplannable in order to
+# buy back a status line. A budget must not hide the thing the task is about.
 OPTION_PARENT_ROLES = {"combobox", "listbox", "menu"}
-MAX_OPTIONS = 8
+MAX_OPTIONS = 60
 
 # ARIA forbids an author-supplied accessible name on these roles, so Playwright
 # computes "" for them however loudly the DOM shouts aria-label. Chromium's
@@ -267,9 +272,14 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
     # as the chrome one above.
     max_options = MAX_OPTIONS if root is None else MAX_ELEMS
 
+    # Elements CHARGED to the page budget. Options sit in `elems` in document
+    # order like everything else but are charged to their own control instead,
+    # so `len(elems)` and the budget are no longer the same number.
+    charged = 0
+
     def walk(node, in_chrome=False, opts=None):
-        nonlocal chrome
-        if not node or len(elems) >= MAX_ELEMS:
+        nonlocal chrome, charged
+        if not node or charged >= MAX_ELEMS:
             return
         role = node.get("role", "")
         name = (node.get("name") or "").strip()
@@ -283,7 +293,10 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
                 if opts[0] >= max_options:
                     return  # this control has already shown what it is
                 opts[0] += 1
+                elems.append({"role": role, "name": name})
+                return  # charged to the control above, not to the page
             elems.append({"role": role, "name": "" if role in NAME_PROHIBITED else name})
+            charged += 1
             chrome += in_chrome
         # A one-cell list, not a counter per level: the options are SIBLINGS, so
         # the budget has to be shared across them and reset for the next
@@ -302,9 +315,11 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
     # subtree by construction and is not widened here.
     if root is None:
         for frame in page.frames[1:]:
-            if len(elems) >= MAX_ELEMS:
+            if charged >= MAX_ELEMS:
                 break
-            elems += await _frame_elements(frame, MAX_ELEMS - len(elems))
+            got = await _frame_elements(frame, MAX_ELEMS - charged)
+            elems += got
+            charged += len(got)
     return {
         "url": page.url,
         "title": await page.title(),

@@ -156,10 +156,20 @@ before. T-A39-3 recorded that as the measured cost of §1, and it is the shape
 this repo keeps meeting: 49 siblings under one `combobox` are ONE control, not
 49 things a planner needs enumerated.
 
-`observe.MAX_OPTIONS = 8`, applied PER combobox/listbox/menu subtree — the
-shape `MAX_CHROME` has had per landmark since M32. A drill-down onto the
-control gets the whole page budget, the same exemption chrome has, so the
-options a planner actually needs are one `observe` away rather than gone.
+Options are CHARGED TO THEIR CONTROL, not to the page: they keep their place in
+`elements` in document order, and `MAX_ELEMS` counts everything else.
+`MAX_OPTIONS = 60` per combobox/listbox/menu subtree is a runaway bound, not a
+summary.
+
+The first version of this decision was the other trade — options capped at 8 and
+still charged to the page — and it is recorded because it was WRONG in the way
+that matters. `intc-2002` is the 20th of 42 options on the live inspector, so
+truncating to 8 made `live-sec10k-fetch-painted-select-is-plannable` fail: the
+user's own reported task became unplannable in order to buy back a status line.
+A budget must not hide the thing the task is about. Measured after the
+correction, live: 109 elements of which 49 are options, with
+`status — 'doc_status'` and the combobox both present, and the live suite at
+12/12 for $0.00.
 
 Raising `MAX_ELEMS` is refused here for the third time, on the reason
 `observe.py`'s own comment gives: it moves the cliff to the next larger page

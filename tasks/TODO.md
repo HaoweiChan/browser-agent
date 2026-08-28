@@ -266,15 +266,23 @@ select is still advertised, watched red first, is what closes this. Not closed b
 T-A39-1 or T-A39-2 — those are ADR-039's declared ceilings; this is its measured cost.
 
 Closed by the lever this block's own acceptance called untried, and it bought
-more than it was asked for. `observe.MAX_OPTIONS = 8`, applied PER
-combobox/listbox/menu subtree — the shape `MAX_CHROME` has had per landmark
+more than it was asked for. options CHARGED TO THEIR CONTROL rather than to the page —
+they keep their place in `elements` in document order and `MAX_ELEMS` counts
+everything else, with `MAX_OPTIONS = 60` per combobox/listbox/menu subtree as a
+runaway bound — the shape `MAX_CHROME` has had per landmark
 since M32 — with the whole page budget restored on a drill-down, exactly as
 chrome gets. Raising `MAX_ELEMS` is refused for the third time on `observe.py`'s
 own reason. ADR-039 §6.
-Measured after: 60 elements, 8 options listed, and `status — 'doc_status'`,
-`Item 4 extracted text` and `combobox 'SELECT A COMMITTED FIXTURE'` all present
-together — the third being the half a blunt cap would have got wrong, since a
-budget that hides the control itself trades one invisibility for another.
+The first attempt was the other trade — options capped at 8 and still charged to
+the page — and it FAILED `live-sec10k-fetch-painted-select-is-plannable`:
+`intc-2002` is the 20th of 42 options on the live inspector, so truncating made
+the user's own reported task unplannable in order to buy back a status line. A
+budget must not hide the thing the task is about. That failure is why the live
+suite was run before the commit rather than after.
+Measured after the correction: offline 102 elements of which 42 are options; live
+109 of which 49; `status — 'doc_status'`,
+`Item 4 extracted text` and the combobox all present together, and `--suite live`
+at 12/12 for $0.00 — including the three sec-10k cases on the user's own site.
 The extracted-text region is the part the acceptance did not anticipate: M41 had
 DECLARED it unreachable-by-observation and `sec10k-item-text-region-is-past-the-
 observation-cap` existed to record that. It is now inside the cap, so the case is
@@ -4852,7 +4860,7 @@ filename order, which is not a property either case declares. No red-first was
 watched because the coupling is order, not state: reproducing it means renaming a
 case file, and a case that pins filename order pins the wrong thing.
 
-### T-M35-WALL — the fast suite sits within 0.3s of its 60s wall-clock ceiling            [status: todo]
+### T-M35-WALL — the fast suite sits within 0.3s of its 60s wall-clock ceiling            [status: done]
 Origin: M35 implementer
 Priority: P1
 Spec: `--suite fast` measured 59.01 / 59.06 s before M35 and 59.38 / 59.71 s
@@ -4874,6 +4882,23 @@ Repro: `.venv/bin/python -m evals.run --suite fast` twice and read `wall_s` in
 Acceptance: a decision recorded in an ADR — either the suite sheds wall clock
 (shared contexts, fewer duplicate fixture loads, or the parallel runner M14) or
 the ceiling moves with a reason — and the suite runs with >= 5 s of headroom.
+
+Closed on the acceptance's own terms, by its second branch. "The ceiling moves
+with a reason" happened five times since this was filed, each move derived by
+ADR-013's rule from the committed ledger at the new case count rather than
+chosen: ADR-021 (80 -> 90), ADR-029 (90 -> 105), ADR-035 (105 -> 110), ADR-037
+(110 -> 115), ADR-039 §5 (115 -> 125, and that one states plainly that it is NOT
+under ADR-021's case-count licence — two cases cost ~0.2s and the rest is §1's
+settle, with two waste-removal attempts recorded before the raise).
+"The suite runs with >= 5s of headroom" is measured, not asserted: the six most
+recent local `fast` rows at 258 cases are 104.12 / 104.62 / 104.41 / 104.49 /
+104.01 / 104.53s against a ceiling of 125 — 20.38s of headroom at the slowest,
+against the 0.3s that opened this block.
+What the block got right and is worth keeping: the structural observation that
+~45s of this suite is product timeouts exercised on purpose, so growth is not
+waste. ADR-021 turned that into the standing rule (per-case cost is answered by
+removing waste, case COUNT licenses a raise), and ADR-039 §5 is the first move
+that had to argue against it rather than cite it.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5
