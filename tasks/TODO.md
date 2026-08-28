@@ -975,6 +975,28 @@ count-free ("one of the narrowings M45 withdrew"), which is why it needs no
 number when this block is closed; it stays on the list so a future edit that
 re-introduces a count there is caught by the same checklist.
 
+### M45-D10 — a block's `[status: pr]` outlives its PR, so TODO.md asserts what `gh pr view` denies            [status: todo]
+Origin: PR #77, 2026-08-28 — noticed while closing the fourth instance.
+Priority: P2
+Spec: a block is moved to `[status: pr]` when its PR opens and nothing moves it
+afterwards, so once that PR merges the block asserts a state the forge
+contradicts. Four instances in one evening, each needing its own follow-up PR to
+correct: M44-P1 twice (PRs #65 and #67), M43 once (corrected by #73), and
+M45-D6 (corrected by this PR). The falsehood is mechanically detectable — the
+block names its status, `gh pr view` names the PR's — which is what makes it
+debt rather than a habit to be more careful about. One clause of context and no
+more: this is the same thesis as T-M39-15's D2/D3 and M43-D4, that the machinery
+verifies trees well and verifies everything around trees poorly — here the tree
+is internally consistent while the claim it makes about the forge is false.
+Repro: `grep -n '\[status: pr\]' tasks/TODO.md`, then `gh pr view <n>` for each
+block's PR; any `MERGED` is an instance.
+Acceptance: the check belongs at the pr-loop SPEC layer, NOT the eval layer —
+it needs the network, and the `invariant` suite is loopback-only by design, so a
+case here could not run it. Like T-M39-15's D2 and D3, the fix therefore lives
+in the groundwork plugin rather than in this repo, and closing this block means
+either that plugin change landing upstream or a recorded decision that status
+fields are corrected by hand at merge time.
+
 ### M45-D7 — all three PR #56 guards are narrower than their resolution claimed            [status: todo]
 Origin: PR #56 R10 and PR #56 R11, 2026-08-26. Both routed to debt as LOW,
 and filed together because they are one defect with three instances: a guard
@@ -1053,35 +1075,6 @@ case the universal claim in `src/browser/agent.py`, `docs/support-matrix.md` D31
 separates those" to "no NEIGHBOUR rule separates those; the frame rule was
 measured and did not either, see this block". Either outcome closes it. Gate
 green.
-
-### M45-D6 — mixed-script CJK spellings pass the scope screen in every term            [status: pr]
-Origin: PR #56 R4, 2026-08-26. Filed for the half of R4 that still exists.
-R4's other half — that folding 購買 into `[購购][買买]` newly BLOCKED mixed-script
-购買/購买, an un-pinned widening of the refusal policy — was removed by R2's fix,
-which reverted `SCOPE_BLOCK` to its pre-M45 spelling. Verified: `screen('幫我购買
-這個商品')` and `screen('購买這個商品')` both return None on this tree and on base
-`7eeda93`, so the policy is unchanged in that direction and there is nothing left
-to pin.
-Priority: P1
-Spec: every CJK term in `SCOPE_BLOCK` (`src/browser/agent.py`) is spelled as a
-traditional/simplified PAIR — `密碼|密码`, `購買|购买`, `驗證碼|验证码`,
-`刪除|删除`, `下載|下载`, `登入|登录` — so a spelling that mixes the two scripts
-within one word matches neither alternative. Carried verbatim from R4's evidence:
-`screen('幫我輸入验证碼')` returns None. Confirmed on this tree for the wider set:
-幫我购買這個商品, 購买這個商品, 幫我輸入验证碼 and 幫我輸入驗证码 all pass the
-screen. Mixed script is not exotic — input methods, copy-paste between zh-TW and
-zh-CN sources, and OCR all produce it routinely.
-The trap, and why this is a task rather than a one-line character-class fold:
-folding every pair into character classes is the widening R4 caught in the 購買
-case, so it moves the refusal policy for every term at once and must be watched
-as such. It is also the fail-CLOSED direction (more refusals), which is the safe
-one, so it is a different risk profile from M45's withdrawn narrowings — but "safe
-direction" is not "unwatched direction".
-Acceptance: each pair is folded to a character class (or an equivalent), every
-mixed-script form is pinned as a `true` row in
-`screening-zh-term-inside-another-word` — watched red first, since every one of
-them passes today — and the fold is recorded as the deliberate policy widening it
-is rather than presented as behaviour-neutral. Gate green.
 
 ### M45-D4 — 刪除's positive-adjacency form was never built or priced            [status: todo]
 Origin: M45 spec-drift audit, 2026-08-26, finding 5. M45's own spec asked for
