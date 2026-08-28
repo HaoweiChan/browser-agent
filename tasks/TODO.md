@@ -316,6 +316,53 @@ document the step's target resolved in, and that a consequence painted elsewhere
 on the page needs a `wait_for` — or ADR-036's Consequences amended to state that
 the hatch is available to hand-written plans only, with the live cost declared."
 
+### T-M39-13-D3 — `docs-numbers-are-derived`'s red-report guard covers the headline suite only            [status: todo]
+Origin: PR #68 R15, 2026-08-28.
+Priority: P2
+Spec: `_run_doc_counts_case` recomputes README's "Where it stands" block from the
+reports `where_it_stands.reports` names, one per suite. The guard that refuses a
+RED report — `headline_report_is_red`, added by PR #34 R4 — is applied only to
+`ws["headline"]`, which is `fast`. Every other suite's report is parsed for its
+`passed/total` and published to README with no check that the run was green, so
+a red run can be cited as the repo's front-page baseline and the whole gate
+stays green. Not theoretical: this branch published `invariant  88/91` in that
+block — a pre-republish red-watch run whose three failures were
+`adr029-scope-matches-the-suites`, `docs-numbers-are-derived` and
+`published-band-matches-the-ledger` — while ADR-029 in the same tree said
+`locally invariant 91/91`. The instance is repaired (the band now cites a green
+93/93 run); the CLASS is this block.
+Repro: point `where_it_stands.reports.invariant` at any report whose `results`
+contain a failure, set README's block to that report's `passed/total`, and run
+`--suite invariant`: green.
+Acceptance: the red-report guard applies to every suite the case is tagged with,
+not just the headline — with the fixed point PR #34 R4 established preserved
+(this case's OWN row stays excluded, or the guard can never go green again once
+it has gone red). An adversarial case pins it, watched red on today's tree
+first: the `88/91` state above is a ready-made red fixture.
+NOT fixed in PR #68: found in the breaker round, and a guard change plus its
+case is real work rather than a prose repair.
+
+### T-M39-13-D2 — ADR-019 §9 publishes a ledger row count that nothing reads back            [status: todo]
+Origin: PR #68 R19, 2026-08-28. INHERITED FROM `origin/main`, not from this
+branch's diff — §9 is PR #72's section and the sentence arrived with it.
+Priority: P3
+Spec: §9 states "The committed ledger holds 2162 rows, every one of them `local`
+or untagged and not one tagged `ci`". The count was true when written and is not
+now — `history.jsonl` grows by a row on every gate run, so the figure is stale
+within the hour and stale by ~150 rows already. The CLAIM the sentence exists to
+make is the `ci`-free one, which is stable and worth keeping; the row count is
+decoration that ages. Same class as item 12 (ledger-max)'s marker: a scalar of a
+growing file, stated in prose, read back by nothing.
+Repro: `grep -c "" evals/report/history.jsonl` and compare against the figure in
+§9.
+Acceptance: either the count is dropped and the `ci`-free claim kept on its own
+(preferred — it is the load-bearing half and it is checkable by grep), or it is
+graded against `history.jsonl` the way item 12 (ledger-max) grades a maximum, or
+it is marked as a dated snapshot in the §5 style so a reader knows not to trust
+it as current.
+NOT fixed in PR #68: it is not this branch's diff, and editing another PR's
+section during a breaker round is how the stale-sentence crop keeps growing.
+
 ### T-M39-13-D1 — the PostToolUse invariant hook runs in `CLAUDE_PROJECT_DIR`, not in the worktree that was edited            [status: todo]
 Origin: T-M39-13's own implementation session, 2026-08-28, on worktree
 `.claude/worktrees/agent-ace9a347e9c59894c`.

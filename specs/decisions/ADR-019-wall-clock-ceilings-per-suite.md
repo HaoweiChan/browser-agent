@@ -173,7 +173,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 238 cases, 235/238) and
-(restated — `invariant`: 92 cases, 89/92) — are graded against the bullets they
+(restated — `invariant`: 93 cases, 93/93) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -321,7 +321,7 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s → 35s
 
-- Band source — local `invariant` at 92 cases, ts `20260828-052604`, **25.99s**, 89/92
+- Band source — local `invariant` at 93 cases, ts `20260828-080842`, **25.40s**, 93/93
   (`dirty: false`, because this republish had a clean row available where the
   previous one did not: a tree reaches this count only while T-M39-15's two
   cases are uncommitted, but the first run at 92 was taken before they were
@@ -412,7 +412,7 @@ commit that changed nothing but JSON.
   today is a scalar any gate run can move — an earlier version of this bullet
   claimed every row here was dirty and one run on the committed tree falsified
   it (PR #68 R5). This bullet cites the file the way
-  §2's does — `evals/report/20260828-052604-invariant.json`. The previous band at 90 could name no file, and said so rather than papering over it with a neighbouring run's: ADR-012 writes a per-case report only on a red run or under `--report`, and that maximum was a GREEN gate run, so nothing was produced. This one is red mid-refresh, so the file exists and the ts/file PAIR item 11 (cited-file) grades is a real pair. Naming a different run's file to satisfy the form remains the defect that check was added for (PR #60 R17).
+  §2's does — `evals/report/20260828-080842-invariant.json`. The previous band at 90 could name no file, and said so rather than papering over it with a neighbouring run's: ADR-012 writes a per-case report only on a red run or under `--report`, and that maximum was a GREEN gate run, so nothing was produced. This one is GREEN (93/93) and its file exists because the run was taken with `--report`, not because the policy changed, so the ts/file PAIR item 11 (cited-file) grades is a real pair. A green citation is the point rather than a nicety: README's baseline block is recomputed from this same report, and publishing a RED suite result there — which an earlier revision of this branch did, at `88/91`, from a pre-republish red-watch run — is not caught by anything, because `docs-numbers-are-derived`'s red-report guard is applied to the HEADLINE suite alone (PR #68 R15; the class is filed as `T-M39-13-D3`). Naming a different run's file to satisfy the form remains the defect that check was added for (PR #60 R17).
   That pair — the ts this bullet declares and the file it names — is read back
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
@@ -487,7 +487,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 25.99 × 1.15 = 29.89 → **30**, one step below the committed
+The same rule gives 25.40 × 1.15 = 29.21 → **30**, one step below the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
@@ -1282,6 +1282,8 @@ purpose. The sighting is not deleted now that it is closed, because it is the
 clearest statement of what this ruling does NOT buy: §8 makes a dirty outlier
 harmless, while a clean run past a boundary is a real measurement of a real tree
 and the band has to move. It moved. That is the correct outcome and the only one
+a clean row can force.
+
 **A second sighting, on the other suite, and this one is still open.** PR #69's
 `invariant` band at 92 cases sits **0.017s** under its step boundary: the rule
 gives 30 up to 26.08695…s and that branch's slowest row measures 26.07s. The two
@@ -1482,15 +1484,18 @@ why `published-band-matches-the-ledger` cannot see them. The two mechanisms shar
 `_band_rule` and nothing else. If T-R73 ever routes CI rows into the ledger the
 question becomes live, and the citable reading should be applied to them then.
 
-**This section is numbered 9 and there is no 8 above it yet.** The section
-numbered 8 is a different ruling, on another branch, unmerged when this was
-written and invisible from the tree that wrote it — ADR-019 ends at §7 here, so
-8 looked free and was free by every check that reads this repo. It is not cited
-by number anywhere in this file on purpose: a citation to a section that exists
-only on an unmerged branch reddens `adr-header-and-index`. The gap closes when
-that branch merges; if it never does, this section is renumbered, not left
-straddling a hole. (Filed as debt on the collision class itself, which has now
-produced four instances in one evening — two ADR numbers, a task id, and this.)
+**The numbering collision this section was written under is closed.** It was
+numbered 9 while the ruling numbered 8 sat unmerged on another branch and was
+invisible from the tree that wrote this: ADR-019 ended at §7 here, so 8 looked
+free and was free by every check that reads this repo. That branch merged, §8
+now sits above this section, and the file reads 1..9 in order. The paragraph
+that stood here described the open state and survived the merge that closed it —
+which is this repo's most-repeated defect, a correct repair with its description
+left behind, and it went unnoticed because nothing grades a section's account of
+its own number. It is rewritten rather than deleted for that reason: the
+collision class itself is real and produced four instances in one evening — two
+ADR numbers, a task id, and this — and a renumbering that leaves no trace is how
+the next one gets argued about from memory.
 
 **The confirming runs, and what they do not confirm.** This branch ran CI three
 times while this section was being written — `acd2fd1`
