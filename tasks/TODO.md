@@ -316,9 +316,23 @@ document the step's target resolved in, and that a consequence painted elsewhere
 on the page needs a `wait_for` — or ADR-036's Consequences amended to state that
 the hatch is available to hand-written plans only, with the live cost declared."
 
-### T-M39-13-D3 — `docs-numbers-are-derived`'s red-report guard covers the headline suite only            [status: todo]
+### T-M39-13-D3 — a guard credited with a claim it only half checks: the red-report guard covers the headline suite only            [status: todo]
 Origin: PR #68 R15, 2026-08-28.
 Priority: P2
+THE CLASS, which is what makes this worth a block rather than a one-line fix:
+**a guard that checks the EASIER HALF of the claim it is credited with, and is
+then cited as if it checked the whole thing.** The half that is checked is
+usually the half that is cheap to express; the half that is dropped is the one
+that needed judgement, and nothing goes red to say so, because a guard silent by
+construction is indistinguishable from a guard that passes. Ours checks that a
+report is red for the HEADLINE suite and is credited with "no red report is
+cited anywhere". The same shape arrived independently on PR #78 within the hour:
+a screening function verified to RUN, credited with BLOCKING purchase-class
+tasks, which it does not do. Two independent arrivals in one hour is enough to
+name the class rather than treat either as a one-off. Whoever picks this up
+should be hunting the PATTERN — for each guard, write down the claim it is cited
+for and the claim it actually tests, and look at the gap — not merely extending
+one loop over a list of suites.
 Spec: `_run_doc_counts_case` recomputes README's "Where it stands" block from the
 reports `where_it_stands.reports` names, one per suite. The guard that refuses a
 RED report — `headline_report_is_red`, added by PR #34 R4 — is applied only to
