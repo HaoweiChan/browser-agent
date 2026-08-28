@@ -6364,6 +6364,25 @@ def _run_doc_counts_case(case: dict) -> dict:
             if len(competing) > 1:
                 wrong.append({"readme_block_publishes_more_than_one_figure_for": suite,
                               "found": competing})
+        # T-M39-15-D5: EVERY slot, not just the headline. The block's three
+        # slots are one claim about one tree, and the guard below was written
+        # for `headline` alone -- so `invariant` and `live` could cite a run
+        # that failed cases, state its redness accurately, and sail through
+        # indefinitely. "The suite is green" is not evidence that the published
+        # numbers are honest. Same fixed-point exemption, for the same reason:
+        # a report whose only red case is this check (or one declared in
+        # `headline_may_fail`) is a legitimate citation, and without that a
+        # guard built for the (a) case reddens a CORRECT citation on its first
+        # run -- the false-red class that teaches people to route around a gate.
+        self_ref = {case.get("id")} | set(
+            case.get("expect", {}).get("headline_may_fail", []))
+        for slot, rep in sorted(reports.items()):
+            if slot == ws["headline"]:
+                continue  # graded below, where its redness also voids the figures under it
+            if red := [r["id"] for r in rep["results"]
+                       if not r["passed"] and r["id"] not in self_ref]:
+                wrong.append({"cited_report_is_red": ws["reports"][slot],
+                              "slot": slot, "failed": red})
         head = reports.get(ws["headline"])
         # A baseline block is a claim that the tree is in this state. Citing a
         # run that FAILED cases and publishing its wall clock as the tree's is
@@ -6387,8 +6406,6 @@ def _run_doc_counts_case(case: dict) -> dict:
         # identical treatment: declared in `expect`, not hard-coded, so adding a
         # third is a visible edit to a case file rather than a quiet widening.
         # Any OTHER failing case still disqualifies the report.
-        self_ref = {case.get("id")} | set(
-            case.get("expect", {}).get("headline_may_fail", []))
         if head and (failed := [r["id"] for r in head["results"]
                                 if not r["passed"] and r["id"] not in self_ref]):
             wrong.append({"headline_report_is_red": ws["reports"][ws["headline"]],

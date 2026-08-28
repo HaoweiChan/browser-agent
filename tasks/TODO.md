@@ -1039,7 +1039,7 @@ it, which is the one structural residual: this fix only starts working once it i
 on `main`. Until then the operator remedy is the one the message names, and it is
 what unblocked this commit — a `.venv` symlink to the main checkout's.
 
-### T-M39-15-D5 — the count-reading guards grade the COUNT, never the SCORE, so published prose can cite a red run forever            [status: todo]
+### T-M39-15-D5 — the count-reading guards grade the COUNT, never the SCORE, so published prose can cite a red run forever            [status: done]
 Origin: T-M39-15, PR #69 — found while repairing R1 and re-pointing the
 baseline at 86.
 Priority: P1
@@ -1114,6 +1114,25 @@ one exception, is closed. The machinery verifies consistency well and verifies
 truth poorly — consistency is cheap to automate, truth needs a reader. That is
 an argument for keeping the review rounds, not for distrusting the gate.
 Not implemented here; this block is the record.
+
+Closed, with one half of the block's framing corrected rather than implemented.
+The genuine gap was README's baseline block: the redness guard covered the
+HEADLINE slot only, so `invariant` and `live` could cite a red run, state its
+counts accurately, and never be caught. It now covers every slot, carrying the
+fixed-point exemption D5 insisted on (this case's own id plus `headline_may_fail`)
+— watched both directions: the `invariant` slot pointed at a report red on
+`published-band-matches-the-ledger` goes red; pointed at one whose ONLY red case
+is this check, it does not.
+The other half — ADR-019's band rows — is not an oversight but a decided
+question, and the decision is already argued in `_band_wrong`: a band cites a
+WALL CLOCK, a wall clock from a red run is still a real wall clock, taking the
+maximum is the conservative direction, and requiring green deadlocks because this
+check sits in both suites, so the first run after a republish could never be
+green while the band it needs is the one that run produces. What IS required
+there is that the citation restate the row's own `passed/total` (item 2's result
+half, T-R55/T-R56), so a red row is cited AS red. D5 read "counts, never scores"
+across both slots; for the band rows the score is published, and green is refused
+on record.
 
 ### T-M39-15-D6 — the fence fix closed the instance and not the class            [status: todo]
 Origin: T-M39-15, PR #69 R19 (round 3, circuit breaker).
