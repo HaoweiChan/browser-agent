@@ -234,7 +234,38 @@ ledger row even under `--no-report`, so a verification run taken after a band is
 published can silently make that band no longer cite the maximum — the rows this
 branch commits are the ones its bands were derived from, and post-publication
 verification runs are restored rather than committed.
-### T-A37-1 — the in-flight wait cannot see a fetch issued after `load`            [status: todo]
+### T-A39-3 — ADR-039 traded a paint race for a cap, and on the sec-10k inspector the status line is what fell off            [status: todo]
+Origin: ADR-039's own live verification, 2026-08-28. Measured, not predicted.
+Priority: P1
+Spec: before ADR-039, the pre-plan observation of
+`https://whaleforce-sec10k.zeabur.app/?fixture=aapl-2025&run=1` held **26 elements**
+because the committed-fixture `<select>` had not been painted at `load`, and
+`status — 'doc_status'` was comfortably inside `observe.MAX_ELEMS = 60`. After the
+settle waits for that paint the select contributes **49 `option` elements** and the
+observation fills at element 60 on `button 'Extract the uploaded filing'`, several
+elements before the status line. The trade is real and it is the better direction —
+a drill-down (`observe`, M32) can reach capped content, and nothing can reach content
+that does not exist yet — but it is a trade, and the two live cases
+`live-sec10k-authored-wait-reaches-the-doc-status` / `-item-count` now assert
+`lacks: ["status — 'doc_status'"]` where they used to assert `has`, which is this
+block's evidence sitting in the eval set rather than in prose.
+NOT a reachability defect: the executor resolves the element fine (both live cases
+still pass on `status`), because `resolve` is not capped. It is a PLANNER-visibility
+defect, and the distinction is the whole of what makes it fixable by a drill-down.
+Repro: `observe()` on that URL, before and after the `navigate` settle; count `option`.
+Acceptance: decided by measurement, not by preference, and the two candidate levers
+are already in the tree and already argued against each other —
+`sec10k-item-text-region-is-past-the-observation-cap` records that raising `MAX_ELEMS`
+is the fix this repo has refused twice (it moves the cliff to the next larger page and
+spends planner tokens on a dropdown nobody asked about), and `observe.py`'s own comment
+says the same. The untried lever is a per-ROLE sub-budget of the kind `MAX_CHROME`
+already applies to navigation: 49 sibling `option`s under one `combobox` are one
+control, not 49 elements a planner needs enumerated. An offline case on
+`sec10k-inspector.html` pinning that the status line survives the budget while the
+select is still advertised, watched red first, is what closes this. Not closed by
+T-A39-1 or T-A39-2 — those are ADR-039's declared ceilings; this is its measured cost.
+
+### T-A39-1 — the in-flight wait cannot see a fetch issued after `load`            [status: todo]
 Origin: ADR-039 §2, 2026-08-28, declared by the ruling rather than found after it.
 Priority: P2
 Spec: `navigate`'s settle asks one question — were any requests in flight when `load`
@@ -251,7 +282,7 @@ against ADR-039's mechanism, which is the whole point of writing it. Only then i
 quiescence-window question re-opened, and only with the fast-suite wall clock measured
 before and after, because that is the number that decided ADR-039 §1.
 
-### T-A37-2 — a live case is green for a reason its provenance does not give            [status: todo]
+### T-A39-2 — a live case is green for a reason its provenance does not give            [status: todo]
 Origin: ADR-039 §2, 2026-08-28.
 Priority: P2
 Spec: `live-sec10k-authored-wait-reaches-the-doc-status` asserts

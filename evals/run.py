@@ -139,7 +139,17 @@ def run_case(case):
 # hundredths of a second inside the boundary — and it arrived exactly there, on
 # a run of this branch's own gate. Case-COUNT growth again; ADR-019 §2 is the
 # band of record and this comment cites it rather than leading it.
-WALL_BUDGET_S = {"fast": 115, "invariant": 35}
+# `fast` 115 -> 120 and `invariant` 35 -> 40 at ADR-039, and this pair is NOT
+# purely the case-count growth every previous move on these lines was. Four cases
+# entered `fast` and two `invariant`; the rest is per-case cost from ADR-039 §1's
+# post-`load` settle. ADR-021 answers per-case growth with waste removal first, so
+# that was done first and both attempts are measured in ADR-019 §2: counting every
+# in-flight request cost 7.3s and most of it was Chromium's own /favicon.ico 404,
+# so the settle was narrowed to fetch/xhr and 4.8s came back; dropping the poll
+# tick 20ms -> 5ms was tried next and returned 0.25s, falsifying the theory that
+# rounding dominated. What is left is the page genuinely being waited on.
+# ADR-019 §2/§3 are the bands of record; this comment cites them and never leads.
+WALL_BUDGET_S = {"fast": 120, "invariant": 40}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its

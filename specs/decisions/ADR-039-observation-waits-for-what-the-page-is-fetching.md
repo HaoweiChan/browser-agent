@@ -58,17 +58,34 @@ A page that issues its fetch from a `setTimeout` **after** `load` has an empty
 in-flight set at the instant this is asked, and is read early exactly as
 before. This is deliberate: the fix is not a quiescence window, and a
 quiescence window is what would cost every page again. Upgrade only when a case
-demonstrates that shape — `tasks/TODO.md` T-A37-1.
+demonstrates that shape — `tasks/TODO.md` T-A39-1.
+
+**And the cost, measured on the page this ADR was written for.** Waiting for the
+paint means the planner now SEES the fixture `<select>` — which is the whole
+point — and on `?fixture=aapl-2025&run=1` its 49 options fill `MAX_ELEMS = 60`
+before the observation reaches `status — 'doc_status'`. Before ADR-039 that page
+observed 26 elements and the status line was comfortably inside the budget. So
+this ADR trades a paint race for a cap. That is the better direction — a
+drill-down can reach capped content, and nothing can reach content that does not
+exist yet — but it is a trade, recorded rather than absorbed: `tasks/TODO.md`
+T-A39-3, with the two live cases carrying the evidence as an assertion
+(`lacks: ["status — 'doc_status'"]` where they used to assert `has`). The
+executor is unaffected — `resolve` is not capped and both live cases still pass
+on `status` — and that split is the point: this is planner visibility alone.
 
 `live-sec10k-authored-wait-reaches-the-doc-status`'s `planner_saw.lacks:
-["18 extracted"]` still holds after this change, and its stated reason no
-longer does. The extraction round trip now HAS landed by observation time (the
-per-item sidebar buttons are in the observation, and were not before); the
-string is absent because `observe.TEXT_HEAD` caps the page text at 300
-characters, hundreds of characters before the status line. The case is green
-for a different reason than its provenance gives, which makes its green
-vacuous with respect to its own claim — recorded as T-A37-2 rather than
-quietly left standing.
+["18 extracted"]` still holds after this change and its stated reason no longer
+does, which is T-A39-2. The reason has now moved TWICE, and both moves are
+recorded because each one made the case green for something different from what
+it claims. First: the extraction round trip does land by observation time after
+the settle, so "the deep link removes the click, not the race" stopped being
+why, and `observe.TEXT_HEAD`'s 300-character cap on the page text became why.
+Then, once the target's fixture list reached 49 options, the ELEMENT budget
+became why as well — the status line no longer reaches the observation at all,
+which is the paragraph above. A clause whose reason has moved twice while the
+clause held is the definition of a green that cannot falsify its own claim, and
+T-A39-2 is the block for re-pointing it rather than re-explaining it a third
+time.
 
 ### 3. `semantic` replans, and the two things that had to move with it
 
