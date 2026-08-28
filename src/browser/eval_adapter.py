@@ -3498,12 +3498,44 @@ def _run_id_uniqueness_case(case: dict) -> dict:
     index_text = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
     index_nums = re.findall(r"^- ADR-(\d+)", index_text, re.M)
 
+    # T-M32-12: a task that MERGED and then left both trackers. `tasks/DONE.md`
+    # is the append-only one-line-per-merged-task index; T-R34 merged as PR #35,
+    # a later commit removed its Queue block, and no DONE line was ever written,
+    # so the only record it shipped was the pr-loop ledger and git history. M37
+    # was one step behind it in the same state, which is what made it a missing
+    # STEP rather than a one-off. The block's own preferred fix is that the
+    # pr-loop close step writes the line; this is the cheap guard it names as
+    # the fallback, and the two are not exclusive — a guard still catches the
+    # close step being skipped.
+    #
+    # The ledger is the evidence a task shipped, so: every id with a ledger row
+    # and no Queue heading must have a DONE line. An id still IN the Queue is
+    # mid-flight and not yet expected anywhere else.
+    ledger = root / "tasks" / "pr-loop-ledger.jsonl"
+    orphans = []
+    if ledger.exists():
+        for line in ledger.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            tid = json.loads(line).get("task")
+            # Only well-formed task IDs. The ledger also records phase labels
+            # that were never allocations — `M44-P1-remedy` is the remedy phase
+            # of a task, not a task — and demanding a tracker line for those
+            # would be demanding one for something that never had a block.
+            # Named ceiling: a merged task whose ledger row carries a malformed
+            # id is invisible here, which is the id-space problem one file over
+            # (T-ADR-NUM) rather than this one.
+            if (tid and re.fullmatch(_TASK_ID, tid)
+                    and tid not in todo_ids and tid not in done_ids):
+                orphans.append(tid)
+
     wrong = {k: v for k, v in {
         "duplicate_todo_ids": dups(todo_ids),
         "duplicate_done_ids": dups(done_ids),
         "in_todo_and_done": sorted(set(todo_ids) & set(done_ids)),
         "duplicate_adr_filenames": dups(adr_nums),
         "duplicate_index_rows": dups(index_nums),
+        "merged_but_in_neither_tracker": sorted(set(orphans)),
     }.items() if v}
     return {"passed": not wrong, "wrong": wrong,
             "got": {"todo_ids": len(todo_ids), "done_ids": len(done_ids),

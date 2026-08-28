@@ -3259,6 +3259,21 @@ is the whole defence — argued, not defaulted to. Do not replace the falsified
 enumeration with another one; grade it or drop the literals.
 
 ### T-M32-17 — T-R35 is closed on all four acceptance clauses; delete the block            [status: todo]
+**Clause (1) was FALSE when re-checked, 2026-08-28, and T-R35 is therefore NOT
+deleted.** This block's own instruction — "Do not delete it before confirming (1)
+… If any clause above is wrong, the correction belongs here, in the block that
+made the claim" — is the reason to read this rather than trust it. Clause (1)
+asserts "every ceiling statement in specs/ names the enforced pair", satisfied as
+of PR #40 by dropping the literals from ADR-002's Status line and ADR-013's
+Ruling. But ADR-002 **Decision 4** was never touched and was still publishing
+"**60s locally**, 80s on CI" as the rule, four ceiling moves later — the same
+document, a different line, and the one a reader looking up the threshold would
+actually land on. Struck in place 2026-08-28, deferring to ADR-019 §2/§3/§5 the
+way this ADR's Ruling already did.
+So the audit this block calls done is not done: fixing (1) is not the same as
+re-verifying (2)-(4), and a block whose first clause was wrong is not evidence
+for its other three. What is now true is recorded; the delete waits on a clean
+re-audit of the remaining clauses, which is a smaller job than it was.
 Origin: T-M32-9; clause (1) corrected at PR #40 R4.
 Priority: P2
 Spec: not an audit — the audit is done, and this is the evidence. T-R35 ("three
@@ -3801,7 +3816,20 @@ scope means a symbol table, which is a real static analyser and far past what
 this case is for); declare it and lean on the runtime case. Watch any code fix
 red against the repro above first.
 
-### T-M32-12 — T-R34 left the Queue when it merged but never got its DONE.md line            [status: todo]
+### T-M32-12 — T-R34 left the Queue when it merged but never got its DONE.md line            [status: done]
+CLOSED 2026-08-28 with the acceptance's BETTER fix rather than its cheap one, and
+then both. The symptom was already gone — T-R34 and M37 have DONE.md lines now —
+so what was left was the recurrence, which is what the block actually cared about
+("this is the second instance in two milestones"). `task-and-adr-ids-are-unique`
+now reddens on any id with a `pr-loop-ledger.jsonl` row, no Queue heading and no
+DONE.md line. Watched red by deleting T-R34's own DONE line: exactly
+`{"merged_but_in_neither_tracker": ["T-R34"]}`.
+Two ledger rows had no tracker line at all and got one: `M44-P1-remedy` (PR #67)
+and `PR21`. Named ceiling, because the guard would otherwise look stronger than it
+is: it only considers well-formed task ids, so a phase label like
+`M44-P1-remedy` — a remedy phase, never an allocation — is skipped, and a merged
+task whose ledger row carries a malformed id stays invisible. That is the id-space
+problem T-ADR-NUM owns, one file over.
 Origin: PR #34, found during the fourth `origin/main` merge of round 5 while
 reading the auto-merged `tasks/TODO.md`.
 Priority: P2

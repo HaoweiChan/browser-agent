@@ -62,7 +62,15 @@ file:
    the point sharper than any prose could: it produced three wrong-answer
    inputs the trap set did not contain.
 4. **`fast` suite wall clock ≤ the environment's measured ceiling** —
-   **60s locally**, 80s on CI. At ~13s there is room for M3–M4 cases; past the
+   ~~**60s locally**, 80s on CI~~ [struck 2026-08-28: both numbers have moved
+   four times since and this line was still publishing the pair as current.
+   The ceilings in force are ADR-019 §2/§3/§5 as amended by ADR-021, committed
+   in `evals/run.py`, and are deliberately not restated here — the same
+   treatment this ADR's own Ruling already took, which is why the Ruling was
+   right and this Decision was left stale. Found while closing T-M32-17, whose
+   clause (1) asserted every ceiling statement in `specs/` had already been
+   fixed at PR #40; it had not, and the block that made the claim carries the
+   correction.] At ~13s there is room for M3–M4 cases; past the
    ceiling the pre-commit gate stops being run honestly, which is what the number
    is for. (Breached M8-M12 at 66.6-68.3s and declared rather than reset; closed
    at M12 and applied by `evals/run.py` to the run it measured;
