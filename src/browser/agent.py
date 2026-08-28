@@ -2365,6 +2365,15 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # it recovered nothing, and `recovery_rungs` publishes the count
                 # (PR #34 R2; `specs/001-browser-contract.md`, ADR-020 §2 both
                 # already said so). It waits for the first acting attempt.
+                # The other half of T-M40-2-6's guard, and it is not redundant:
+                # `parse_plan` covers the LIVE planner, and every offline case
+                # injects `stub_planner` at that same boundary, so a malformed
+                # plan reaches this loop without ever passing through it. A step
+                # that is not a step is a plan the executor cannot honour, which
+                # specs/000 already classifies as `task`.
+                if not isinstance(step, dict) or not isinstance(step.get("action"), str):
+                    return done(failure="task", reason=(
+                        f"plan step {si + 1} is not a step: {step!r}"))
                 read_only = step["action"] == "observe"
                 rec, cls = await attempt(step, note=pending,
                                          recovery=("recovery" if pending_recovery

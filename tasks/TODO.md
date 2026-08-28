@@ -3395,7 +3395,17 @@ unresolvable container is a loud `failure:locate` instead of a relocation, and w
 relocation rung on a read-only verb may wear the `recovery` label at all.
 Acceptance: a case pinning whichever answer is taken, watched red first.
 
-### T-M40-2-6 — a plan step that is not a dict kills `run_task` with an uncaught TypeError            [status: todo]
+### T-M40-2-6 — a plan step that is not a dict kills `run_task` with an uncaught TypeError            [status: done]
+CLOSED 2026-08-28. Guarded in BOTH places, and neither is redundant: `parse_plan`
+now asserts every member is an object with a string `action` (the live-planner
+path, graded by `planner-fenced-json`'s new `also_rejects` payloads, including a
+good step followed by a bad one — `steps[0]` being fine is how this survives a
+spot check), and `run_task`'s step loop refuses a non-step as `failure:task`,
+because `stub_planner` is injected at exactly the boundary `parse_plan` guards so
+every offline plan reaches the loop without passing through it. The block's own
+repro is the new case `malformed-step-is-a-classified-failure`, watched red as an
+uncaught `TypeError: string indices must be integers` propagating out of
+`run_case` — no verdict for the harness to compare, which is the defect.
 Priority: P1
 Origin: PR #46 R6, 2026-08-24. `parse_plan` (src/browser/planner.py) validates that the top
 level is a list and nothing below it, so `[None]` or `["extract WebArea"]` is a plan as far as

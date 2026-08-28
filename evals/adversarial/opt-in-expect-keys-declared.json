@@ -22,7 +22,8 @@
         "extract-all-undeclared-intent-fails-loud",
         "plan-lint-refuses-a-declared-non-comparison",
         "plan-lint-refuses-a-document-root-extract",
-        "s2-bare-value-mode-b-root-reach-is-pinned"
+        "s2-bare-value-mode-b-root-reach-is-pinned",
+        "malformed-step-is-a-classified-failure"
       ],
       "planner_note_contains": [
         "probe3-quotes-most-quoted-author",

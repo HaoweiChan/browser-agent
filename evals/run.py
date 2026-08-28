@@ -102,15 +102,17 @@ def run_case(case):
 # the condition ADR-021 named as the one a raise answers — the per-case cost did
 # not move. The row is named because a reader re-deriving from a comment that
 # still said 93.26s would be re-deriving from a SUPERSEDED row and getting the
-# `fast` 110 -> 115 at ADR-037. Five bands were published getting here and four
-# of them were falsified by the next run, in both directions -- the last time by
-# a run taken specifically to CONFIRM a five-sample band of 94.81-95.63s, which
-# came back at 96.70s. Six samples at 242 cases now span 94.81-96.70s and
-# 96.70 x 1.15 = 111.21 -> 115. The lesson is not about this number: a band is a
-# maximum over a distribution nobody has characterised, and every summary of a
-# short sample here was wrong within the hour. ADR-019 section 2 keeps all five.
-# The old note follows because its reasoning about WHY the suite got slower is
-# what the raise actually buys: The settle took the suite
+# `fast` 110 -> 115 at ADR-037, published SEVEN times before it settled, which
+# is the only part of this worth a reader's attention. Full record in ADR-019
+# section 2. Every band taken from two to five samples was falsified by the next
+# run, in both directions -- including a run taken specifically to CONFIRM a
+# five-sample band. Across ~15 runs at 240-243 cases this suite's wall clock is a
+# distribution roughly 2s wide, 94.8s to 97.0s, not a number; 115 covers what has
+# been observed rather than its quietest corner, and section 6's own reasoning
+# says that is the safe direction -- a ceiling loose by one step catches a
+# regression a step later, where one derived from a quiet sample fails on the
+# next busy machine. The old note follows because its account of WHY the suite
+# got slower is what this ceiling covers: The settle took the suite
 # 93.44 -> 96.02s at 240 cases, deriving 115. A third case then took the count
 # to 241, the next two runs measured 94.95s and 94.92s, that derives 110, and
 # 110 was published on the strength of "every run at this count says ~94.9".

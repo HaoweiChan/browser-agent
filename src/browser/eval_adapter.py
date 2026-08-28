@@ -5466,9 +5466,27 @@ def _run_parse_plan_case(case: dict) -> dict:
         steps = parse_plan(case["input"]["content"])
     except PlanError as e:
         return {"passed": False, "error": str(e)[:200]}
+    checks = {"parsed": len(steps) == exp["steps"] and steps[0]["action"] == exp["first_action"]}
+    # T-M40-2-6: the same call, asked the opposite question. `parse_plan`'s only
+    # structural check was `isinstance(steps, list)`, so `[null]` and
+    # `["extract WebArea"]` parsed clean and the step loop raised a bare
+    # TypeError out of `run_task` -- no status, no failure class, none of the
+    # taxonomy. Graded beside the accept case rather than in a case of its own
+    # because a parser is only pinned by both directions: an accept-only case
+    # stays green under a parser that accepts everything.
+    rejected = []
+    for bad in case["input"].get("also_rejects", []):
+        try:
+            parse_plan(bad)
+        except PlanError:
+            continue
+        rejected.append(bad)
+    if "also_rejects" in case["input"]:
+        checks["rejects_non_steps"] = not rejected
     return {
-        "passed": len(steps) == exp["steps"] and steps[0]["action"] == exp["first_action"],
-        "got": {"steps": len(steps), "first_action": steps[0].get("action")},
+        "passed": all(checks.values()), "checks": checks,
+        "got": {"steps": len(steps), "first_action": steps[0].get("action"),
+                "accepted_but_should_not_have": rejected},
     }
 
 
