@@ -5132,6 +5132,29 @@ Acceptance: drop the figure ("the whole adapter") rather than round it, since an
 here goes stale by construction.
 
 ### T-R63 — the band region's guard pins a named set, not everything band-shaped            [status: todo]
+Update (2026-08-28): the R22 RESIDUE — the second acceptance sentence, "the guard
+pins the region's lower edge to something the header comment cannot be moved out
+of" — is CLOSED, by a stronger mechanism than the one it names. Rather than
+pinning the lower edge, the §6-reference sweep no longer reads `region` at all:
+it reads the whole file. The markers exist to bound where band CODE may live,
+which is a different question from where a citation may be wrong, and a
+`§6 item N` reference is wrong wherever it sits — so the sweep had no reason to
+be bounded, and un-bounding it means no marker move can ever narrow it. Verified
+in BOTH directions with this block's own mutation (begin marker moved to
+`_BAND_LINE`, `item 8 (references)` corrupted to `item 8 (wrong-slug)`): GREEN
+before, RED after.
+The PRIMARY acceptance is NOT closed and is not close to closed, which is worth
+saying rather than leaving the update to imply otherwise. "The region's contents
+are pinned positively" or "the pattern is derived from the module namespace"
+both need a definition of what counts as band code, and this block does not have
+one: it names `_ADR019`, `_README`, `_INDEX`, `_DECIMAL_TOKEN`,
+`_README_BAND_ROW` and `_ADR_CEILING` as DELIBERATELY outside, so the rule cannot
+be "everything this check references" and cannot be "everything band-shaped"
+either. Reading `_check_published_band.__code__.co_names` was tried on paper and
+fails on exactly those six. What remains is a naming decision recorded in
+ADR-019 §6, not a grader change — and until it exists, the residual is that band
+code added later under a name `_BAND_DEF` does not match escapes the region
+check silently.
 Origin: T-R56 round 4 (PR #36 R19/R20)
 Priority: P1
 Spec: `published-band-matches-the-ledger` requires every name matching `_band…`,

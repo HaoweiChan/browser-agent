@@ -1152,7 +1152,22 @@ def _check_published_band() -> dict:
                       {"marker_counts": marker_counts, "outside_the_region": strays,
                        "markers_off_a_top_level_boundary": off_boundary,
                        "region_lines": region.count("\n")}})
-    for where, text in (("adr", adr), ("readme", readme), ("eval_adapter", region)):
+    # T-R63 / PR #36 R22: the reference sweep reads the WHOLE FILE, not the
+    # region. Reading `region` made every graded `§6 item N (slug)` reference
+    # depend on where the markers sit — and the 19 lines between the begin
+    # marker and the first pinned name are unpinned comment carrying two of
+    # them, so moving the begin marker down to `_BAND_LINE` left
+    # `marker_counts == [1, 1]`, `outside_the_region == []` and
+    # `markers_off_a_top_level_boundary == False` (green) while a reference
+    # corrupted inside those lines went from red to green.
+    #
+    # The markers exist to bound where band CODE may live, which is a different
+    # question from where a reference may be wrong. A `§6 item N` citation is
+    # wrong wherever it sits, so the sweep has no reason to be bounded at all —
+    # and un-bounding it means no marker move can ever narrow it. Strictly
+    # stronger, and it removes the coupling rather than patching one direction
+    # of it.
+    for where, text in (("adr", adr), ("readme", readme), ("eval_adapter", here)):
         for m in _SIX_REF.finditer(text):
             word, n, slug = m.group(1).lower(), m.group(2), m.group(3)
             # A plural range cannot carry one item's slug, so it
