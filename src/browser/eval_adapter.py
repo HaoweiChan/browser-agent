@@ -2428,10 +2428,24 @@ def _run_judge_case(case: dict) -> dict:
                 # block entirely, which is the honest worst case for billing.
                 bodies = []
                 for a in sc["attempts"]:
-                    choice = {"message": a["message"]}
-                    if "finish_reason" in a:
-                        choice["finish_reason"] = a["finish_reason"]
-                    env = {"choices": [choice]}
+                    # T-M39-3: an attempt may supply the RAW body instead of a
+                    # message, which is the widening that block asks for — the
+                    # probe wrapped every scenario in a well-formed envelope, so
+                    # envelope-level failures could not be expressed at all and
+                    # a case for them was impossible to write before this line.
+                    if "raw" in a:
+                        bodies.append(a["raw"].encode())
+                        continue
+                    # `choices` may be overridden outright, so `[]` and `null`
+                    # — a well-formed envelope carrying no completion — are
+                    # expressible without a message at all.
+                    if "choices" in a:
+                        env = {"choices": a["choices"]}
+                    else:
+                        choice = {"message": a["message"]}
+                        if "finish_reason" in a:
+                            choice["finish_reason"] = a["finish_reason"]
+                        env = {"choices": [choice]}
                     usage = a.get("usage", {"total_tokens": 7, "cost": 0.0})
                     if usage is not None:
                         env["usage"] = usage

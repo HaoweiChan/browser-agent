@@ -3189,7 +3189,18 @@ gateway's per-run cost string, so `judge_usd` never reaches either the ledger
 or the operator. Fixing the printed count without those two leaves the number
 right in one place and absent in the two that a human reads.
 
-### T-M39-3 — an unreadable ENVELOPE is not retried, though an unreadable BODY is            [status: todo]
+### T-M39-3 — an unreadable ENVELOPE is not retried, though an unreadable BODY is            [status: done]
+CLOSED 2026-08-28. Decision: RETRY, recorded as an ADR-023 amendment, on the
+boundary `planner.py` already draws and this function inverted — an unreadable
+ENVELOPE is the provider's fault, unreadable CONTENT is the model's. Scoped to a
+body-parse failure and an empty/absent `choices`, NOT to `except Exception`: a
+timeout or a reset is also the provider's fault and retrying those is the retry
+storm this block was left open for. `JUDGE_ATTEMPTS` bounds it either way.
+The probe had to be widened first, exactly as this block predicted — it wrapped
+every scenario in a well-formed envelope, so an envelope-level failure could not
+be EXPRESSED and no case for one could be written. An attempt may now supply a
+`raw` body or override `choices`. Three scenarios (HTML error page, `choices: []`,
+`choices: null`), all watched red as fail-closed on attempt 1.
 Origin: M39 cold review, finding 2. Named in ADR-023's Consequences as a
 deliberate scope line, not a disagreement.
 Priority: P1
@@ -3217,7 +3228,22 @@ Acceptance: a decision (retry, or refuse and say why) recorded as an ADR
 amendment, with the probe widened to express an envelope-level failure and the
 chosen behaviour watched red first.
 
-### T-M39-4 — truncation without `finish_reason` is indistinguishable from an empty body            [status: todo]
+### T-M39-4 — truncation without `finish_reason` is indistinguishable from an empty body            [status: done]
+CLOSED 2026-08-28 on the acceptance's FIRST option — the signal-free truncation
+test — recorded as an ADR-023 amendment. A completion that OPENS a JSON object
+and never closes it is truncated, not empty, and fails closed instead of being
+resampled. Two scenarios watched red, and the second is the one that matters: a
+truncated REJECT carrying no `finish_reason` was re-rolled into the CERTIFY the
+second attempt returned, which is this block's wrong-answer direction
+demonstrated rather than argued. An existing scenario was also reclassified —
+`{"certi`, filed as "garbled body", is a strict prefix of a JSON object and is
+exactly this shape mislabelled.
+Deliberately narrow, with the narrowness graded: prose that merely mentions `{`
+stays retryable, so the rule cannot swallow the shape ADR-023 exists for.
+NOT closed: `max_tokens` is still unset on the judge payload, so the ceiling is
+the provider's default rather than one this deployment chose. That half of the
+acceptance is a prompt/model change and stays out of scope, as ADR-023's
+amendment says.
 Origin: M39 cold review, finding 1 — the residue of the fix, declared in
 ADR-023's Consequences.
 Priority: P1

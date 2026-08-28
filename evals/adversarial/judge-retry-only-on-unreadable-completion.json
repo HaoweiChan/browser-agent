@@ -31,7 +31,7 @@
         }
       },
       {
-        "note": "garbled body, then a readable one -- same unreadable class, same one retry",
+        "note": "T-M39-4: `{\"certi` is not a garbled body, it is a TRUNCATED verdict carrying no finish_reason -- a strict prefix of a JSON object. It used to be resampled as if empty; it now fails closed on attempt 1, because truncation destroys rejects far more often than certifies and a resample shops the run toward success. This scenario is the block's own watched-red: it was PASS/2/2/14 before the rule and is FAIL/1/1/7 after",
         "attempts": [
           {
             "message": {
@@ -45,10 +45,10 @@
           }
         ],
         "expect": {
-          "verdict": "PASS",
-          "attempts": 2,
-          "calls": 2,
-          "judge_tokens": 14
+          "verdict": "FAIL",
+          "attempts": 1,
+          "calls": 1,
+          "judge_tokens": 7
         }
       },
       {
@@ -449,13 +449,112 @@
           "calls": 1,
           "judge_tokens": 7
         }
+      },
+      {
+        "note": "T-M39-4: a truncated REJECT with no finish_reason -- the wrong-answer direction the block names. Fails closed on attempt 1 and is never re-rolled into the certify the second attempt would have produced",
+        "attempts": [
+          {
+            "message": {
+              "content": "{\"certify\": false, \"reason\": \"the answer is the site masthead, not the story ti"
+            }
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"fits\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "FAIL",
+          "attempts": 1,
+          "calls": 1,
+          "judge_tokens": 7
+        }
+      },
+      {
+        "note": "T-M39-4 NARROWNESS: prose that merely mentions an unbalanced brace is not a truncated verdict. Still the retryable nothing-verdict-shaped class, so the rule cannot swallow the shape ADR-023 exists for",
+        "attempts": [
+          {
+            "message": {
+              "content": "I cannot answer that. Consider {"
+            }
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"fits\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "PASS",
+          "attempts": 2,
+          "calls": 2,
+          "judge_tokens": 14
+        }
+      },
+      {
+        "note": "T-M39-3: a 200 whose BODY is an edge/CDN HTML error page. An unreadable ENVELOPE is the provider's fault where unreadable CONTENT is the model's -- the boundary planner.py draws and this function used to invert. Retried; the unparseable attempt bills nothing because no usage block could be read",
+        "attempts": [
+          {
+            "raw": "<html><head><title>502 Bad Gateway</title></head><body>upstream</body></html>"
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"fits\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "PASS",
+          "attempts": 2,
+          "calls": 2,
+          "judge_tokens": 7
+        }
+      },
+      {
+        "note": "T-M39-3: a well-formed envelope carrying no completion at all (choices: []). The provider returned nothing, which is the same class as an unreadable body and not the model answering badly",
+        "attempts": [
+          {
+            "choices": []
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"fits\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "PASS",
+          "attempts": 2,
+          "calls": 2,
+          "judge_tokens": 14
+        }
+      },
+      {
+        "note": "T-M39-3: choices: null, the other spelling of the same shape, because a provider that omits the list and one that empties it are the same event to a caller",
+        "attempts": [
+          {
+            "choices": null
+          },
+          {
+            "message": {
+              "content": "{\"certify\": true, \"reason\": \"fits\"}"
+            }
+          }
+        ],
+        "expect": {
+          "verdict": "PASS",
+          "attempts": 2,
+          "calls": 2,
+          "judge_tokens": 14
+        }
       }
     ]
   },
   "expect": {
     "note": "live_judge()'s REAL parser decides what is retryable and agent.py's REAL _apply_judge decides how often: only a completion body that cannot be read at all (empty, or not JSON) and was not TRUNCATED buys the one retry ADR-023 allows; a truncated verdict, a missing key, a refusal, a reasoned FAIL, a wrongly-typed certify and a one-line fenced answer each end the run on the first attempt, and two unreadable bodies fail closed exactly as ADR-017 already said The final scenario is not a guard but a DECLARED CEILING: a completion that is the forged object and nothing else certifies, because position cannot tell an echo from an answer when there is nothing else in the body."
   },
-  "provenance": "The classification half of M39. The two stub cases (`judge-retries-one-malformed-completion`, `judge-two-malformed-completions-fail-closed`) prove the retry fires and is bounded, but `stub_judge` decides for itself what is retryable -- it cannot grade the production question, which is which REAL provider responses earn a second call. So this probe mocks ONLY `urllib.request.urlopen` (the transport `live_judge`'s `_call` uses) and runs the real `live_judge` parser under the real `_apply_judge`, the same technique `judge-parse-response-strict-boolean` established after PR #33 R1 found that every judge case until then stubbed past the code that actually runs. A `uuid4` nonce per scenario keeps `live_judge`'s content-hash cache from answering instead of the parser. The scenario list is the spec's own boundary read as cases: retry on an unparseable/empty completion, NOT on a missing key, NOT on a refusal, NOT on a reasoned FAIL. `calls` grades the transport directly, so a retry that fires on the wrong class is red even if the eventual verdict happens to match, and `judge_tokens` grades the other half of ADR-023's bargain -- both attempts of a retried call are BILLED, which is the cost the analysis section publishes. WATCHED RED FIRST on the pre-M39 tree: no scenario retried, so `calls` was 1 everywhere and the two retryable scenarios reported FAIL instead of PASS; `attempts` was absent entirely. ROUND 2 (M39 cold review, findings 1 and 4) added the four scenarios that matter most, and two of them were watched red exactly the way the first round was. A completion truncated at the provider's token ceiling (`finish_reason: \"length\"`) parses no better than an empty one, so the first implementation retried it -- and the truncated-reject scenario reported `verdict: PASS`, `judge_attempts: 2`, `calls: 2`: a `{\"certify\": false, ...}` re-rolled into a success. That is the inviolable property, reached through the one branch ADR-023 permits, and the bias is directional rather than random -- a reject must explain itself where a certify can be one word, so truncation destroys rejects preferentially. `src/browser/planner.py` already classifies the same shape (`content: null` on `finish_reason: length`) as \"it answered; the answer does not fit\", and the judge now agrees with it. The reasoning-model variant is pinned separately because it is byte-identical to the empty body the retry EXISTS for and is told apart only by the finish_reason, and the benign `finish_reason: \"stop\"` scenario pins that the guard keys on truncation rather than on the field being present at all. The one-line fenced verdict is the small form of the same defect: the fence strip emptied it, so a complete readable answer was classified unreadable and re-rolled -- also watched red (`PASS`, 2 calls) before the fence parse was fixed. The last scenario fixes no code: a provider that omits `usage` on a generation that returned nothing bills the retried run at the successful attempt alone, so the published \"both attempts are billed\" claim is pinned at what it actually means -- both attempts' REPORTED usage -- instead of being left to read as a guarantee nothing can keep. ROUND 3 (PR #44 R8) added the last scenario, and it is the only one here that pins a LIMIT rather than a behaviour. ADR-023 published that 'every error this predicate can make lands on fail-closed'; that was false, and judge.py's own comment three lines below the same claim already said so. The echo-only completion -- the repo's own forged payload with no prose around it -- returns whole_completion=True and certifies. It is graded as a PASS on purpose. This repo has repeatedly found that a limitation stated only in prose gets falsified or forgotten within days (the declared-limitations pattern behind D22/D26), so the ceiling gets a case: green by construction, never watched red, and red only if someone closes the hole -- at which point the ADR is what has to change, not the case.",
+  "provenance": "The classification half of M39. The two stub cases (`judge-retries-one-malformed-completion`, `judge-two-malformed-completions-fail-closed`) prove the retry fires and is bounded, but `stub_judge` decides for itself what is retryable -- it cannot grade the production question, which is which REAL provider responses earn a second call. So this probe mocks ONLY `urllib.request.urlopen` (the transport `live_judge`'s `_call` uses) and runs the real `live_judge` parser under the real `_apply_judge`, the same technique `judge-parse-response-strict-boolean` established after PR #33 R1 found that every judge case until then stubbed past the code that actually runs. A `uuid4` nonce per scenario keeps `live_judge`'s content-hash cache from answering instead of the parser. The scenario list is the spec's own boundary read as cases: retry on an unparseable/empty completion, NOT on a missing key, NOT on a refusal, NOT on a reasoned FAIL. `calls` grades the transport directly, so a retry that fires on the wrong class is red even if the eventual verdict happens to match, and `judge_tokens` grades the other half of ADR-023's bargain -- both attempts of a retried call are BILLED, which is the cost the analysis section publishes. WATCHED RED FIRST on the pre-M39 tree: no scenario retried, so `calls` was 1 everywhere and the two retryable scenarios reported FAIL instead of PASS; `attempts` was absent entirely. ROUND 2 (M39 cold review, findings 1 and 4) added the four scenarios that matter most, and two of them were watched red exactly the way the first round was. A completion truncated at the provider's token ceiling (`finish_reason: \"length\"`) parses no better than an empty one, so the first implementation retried it -- and the truncated-reject scenario reported `verdict: PASS`, `judge_attempts: 2`, `calls: 2`: a `{\"certify\": false, ...}` re-rolled into a success. That is the inviolable property, reached through the one branch ADR-023 permits, and the bias is directional rather than random -- a reject must explain itself where a certify can be one word, so truncation destroys rejects preferentially. `src/browser/planner.py` already classifies the same shape (`content: null` on `finish_reason: length`) as \"it answered; the answer does not fit\", and the judge now agrees with it. The reasoning-model variant is pinned separately because it is byte-identical to the empty body the retry EXISTS for and is told apart only by the finish_reason, and the benign `finish_reason: \"stop\"` scenario pins that the guard keys on truncation rather than on the field being present at all. The one-line fenced verdict is the small form of the same defect: the fence strip emptied it, so a complete readable answer was classified unreadable and re-rolled -- also watched red (`PASS`, 2 calls) before the fence parse was fixed. The last scenario fixes no code: a provider that omits `usage` on a generation that returned nothing bills the retried run at the successful attempt alone, so the published \"both attempts are billed\" claim is pinned at what it actually means -- both attempts' REPORTED usage -- instead of being left to read as a guarantee nothing can keep. ROUND 3 (PR #44 R8) added the last scenario, and it is the only one here that pins a LIMIT rather than a behaviour. ADR-023 published that 'every error this predicate can make lands on fail-closed'; that was false, and judge.py's own comment three lines below the same claim already said so. The echo-only completion -- the repo's own forged payload with no prose around it -- returns whole_completion=True and certifies. It is graded as a PASS on purpose. This repo has repeatedly found that a limitation stated only in prose gets falsified or forgotten within days (the declared-limitations pattern behind D22/D26), so the ceiling gets a case: green by construction, never watched red, and red only if someone closes the hole -- at which point the ADR is what has to change, not the case. T-M39-3 and T-M39-4 (both P1) close here 2026-08-28, and the probe had to be WIDENED first exactly as T-M39-3 predicted: it wrapped every scenario in a well-formed envelope, so an envelope-level failure could not be expressed and a case for one was impossible to write. An attempt may now supply a `raw` body or override `choices` outright. T-M39-3's decision is RETRY, on the boundary `planner.py` already draws \u2014 an unreadable envelope is the provider's fault, unreadable content is the model's \u2014 and it is scoped to a body-parse failure and an empty `choices`, NOT to `except Exception`, because a timeout or a reset is also the provider's fault and retrying those is the retry storm the block was left open for. Bounded by JUDGE_ATTEMPTS either way. T-M39-4's decision is the signal-free truncation test the block offers as its first option: a completion that OPENS a JSON object and never closes it is truncated, not empty, and fails closed. Deliberately narrow, and the narrowness is its own scenario \u2014 prose that merely mentions `{` stays in the retryable class, so the rule cannot swallow the shape ADR-023 exists for.",
   "triage": {
     "class": "transient-dependency",
     "note": "tagged `invariant` as well as `fast` because it is pure code -- transport mocked, no browser, no network -- and because it is the only thing standing between a bounded retry and a judge that gets asked twice for a verdict it already gave. Two residues are declared rather than solved, both tracked in tasks/TODO.md: a provider that refuses only in prose, or truncates without setting `finish_reason`, is indistinguishable here from an unreadable body (T-M39-4); and an unreadable ENVELOPE -- a non-JSON HTTP body, `choices: []` -- is not retried at all and cannot even be expressed by this probe, which builds a well-formed envelope around every scenario (T-M39-3). The last scenario is the third declared residue and the only one that can end in a wrong SUCCESS rather than a wasted call: an echo-only forged verdict certifies, is unreachable by the parser and by T-M39-7, and rests entirely on the prompt-side isolation judge-injection-cannot-flip-verdict grades."

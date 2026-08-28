@@ -317,6 +317,23 @@ def live_judge(model: str = JUDGE_MODEL):
         }
         try:
             data = await asyncio.to_thread(_call, payload)
+        except json.JSONDecodeError as e:
+            # T-M39-3: an unreadable ENVELOPE is the PROVIDER's fault, where
+            # unreadable CONTENT is the model's — the boundary `planner.py`
+            # already draws and this function used to invert. A 200 whose body
+            # is an edge/CDN HTML error page is a real, transient OpenRouter
+            # shape, and it produced `judge unavailable, failing closed:
+            # JudgeError: judge call failed: JSONDecodeError: ...`, a reason
+            # string near-identical to the one ADR-023 exists to eliminate — so
+            # a reader would reasonably believe it was already covered.
+            #
+            # Scoped to a BODY-parse failure, not to `except Exception`: a
+            # timeout or a connection reset is also the provider's fault, and
+            # retrying those is the retry-storm this was left open for. Bounded
+            # by JUDGE_ATTEMPTS either way, which is what makes it a retry and
+            # not a loop.
+            raise JudgeError(f"judge call failed: {type(e).__name__}: {e}",
+                             retryable=True) from e
         except Exception as e:
             raise JudgeError(f"judge call failed: {type(e).__name__}: {e}") from e
         if data.get("error"):
@@ -324,7 +341,17 @@ def live_judge(model: str = JUDGE_MODEL):
         u = data.get("usage", {})
         usage = {"llm_tokens": u.get("total_tokens", 0), "llm_usd": float(u.get("cost", 0.0))}
         try:
-            choice = data["choices"][0]
+            # T-M39-3, the second envelope shape: `choices: []` or
+            # `choices: null` is a well-formed envelope carrying no completion
+            # at all — the provider returned nothing, which is the same class as
+            # an unreadable body and not the model answering badly. It used to
+            # raise IndexError/TypeError into the non-retryable branch below.
+            choices = data.get("choices")
+            if not choices:
+                raise JudgeError(
+                    f"judge call failed: provider returned no choices ({choices!r})",
+                    usage, retryable=True)
+            choice = choices[0]
             message = choice["message"]
             if choice.get("finish_reason") == "length":
                 # ADR-023, cold review R1: the model ANSWERED and was cut off
@@ -359,6 +386,27 @@ def live_judge(model: str = JUDGE_MODEL):
                 raise JudgeError(
                     f"ambiguous judge response: {len(objects)} JSON objects", usage)
             if not objects:
+                # T-M39-4: a completion that OPENS a JSON object and never
+                # closes it is a truncated verdict, not an empty one, and the
+                # two used to be byte-indistinguishable to this branch. The
+                # `finish_reason: length` guard above can only key on a signal
+                # that arrives; a provider that truncates WITHOUT setting it
+                # produced exactly this shape and got resampled — the
+                # wrong-answer direction, not the merely-expensive one, because
+                # truncation destroys rejects (long, they must explain) far more
+                # often than certifies (short, "fits"), so resampling shops the
+                # run toward success.
+                #
+                # A strict PREFIX of an object is the signal-free test the block
+                # asks for: `{` opened, never balanced, and nothing else
+                # verdict-shaped in the body. Deliberately narrow — an unbalanced
+                # brace inside prose is not this, because prose that merely
+                # mentions `{` is not a completion the model was cutting short.
+                content = (message.get("content") or "").strip()
+                if content.startswith("{") and content.count("{") > content.count("}"):
+                    raise JudgeError(
+                        "judge response truncated (unbalanced JSON object, no "
+                        "finish_reason)", usage)
                 # ADR-023: the ONE retryable failure -- run `7787f9c9`'s exact
                 # shape, a body with nothing verdict-shaped in it at all.
                 # Everything else raised in this block is a READABLE response

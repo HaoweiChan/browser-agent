@@ -201,6 +201,54 @@ production. It grades the transport call COUNT, not just the verdict, so a
 retry that fires on the wrong class is red even when the eventual verdict
 happens to match.
 
+## Amendment (2026-08-28): the two scope lines this ADR declared are now decided
+
+ADR-023's own Consequences named two shapes as deliberate scope lines rather
+than disagreements. Both are decided here, and both decisions are the one the
+Consequences section already implied rather than a change of mind.
+
+**T-M39-3 — an unreadable ENVELOPE is retried.** The original retry covered a
+completion whose `content` cannot be parsed and not the shapes one layer out: a
+200 whose body is an edge/CDN HTML error page, and a well-formed envelope with
+`choices: []` or `choices: null`. Both are real transient OpenRouter shapes, and
+both are at least as literally "a completion that could not be read". The
+deciding argument is that `planner.py` already draws this boundary and the judge
+inverted it: **an unreadable envelope is the PROVIDER's fault; unreadable
+content is the MODEL's.** The reason string the envelope path produced —
+`judge unavailable, failing closed: JudgeError: judge call failed:
+JSONDecodeError: ...` — is near-identical to the one this ADR exists to
+eliminate, so a reader of `docs/analysis.md` would reasonably have believed it
+was already covered.
+
+Scoped to a body-parse failure (`json.JSONDecodeError`) and an empty `choices`,
+**not** to `except Exception`. A timeout or a connection reset is also the
+provider's fault, and retrying those is the retry-storm hazard T-M39-3 was left
+open for; `JUDGE_ATTEMPTS` bounds it either way, which is what makes this a
+retry and not a loop.
+
+**T-M39-4 — truncation without `finish_reason` is not an empty body.** The
+`finish_reason: "length"` guard can only key on a signal that arrives, and a
+provider that truncates without setting it produced a body this parser could not
+tell from an empty one — so it was RESAMPLED. That is the wrong-answer direction
+rather than the merely-expensive one, for the reason this ADR already gives:
+truncation destroys rejects (long, they must explain) far more often than
+certifies (short, "fits"), so a resample shops the run toward success.
+
+The signal-free test is the first option T-M39-4 offers: a completion that OPENS
+a JSON object and never closes it is truncated, not empty. Deliberately narrow —
+prose that merely mentions `{` stays in the retryable class, and that narrowness
+is its own scenario in `judge-retry-only-on-unreadable-completion`, so the rule
+cannot swallow the shape this ADR was written for. `max_tokens` is still not set
+on the judge payload; that half of T-M39-4's acceptance is a prompt/model change
+and stays out of scope, so the ceiling remains the provider's default.
+
+**What had to be built first**, and T-M39-3 predicted it: the eval probe wrapped
+every scenario in a well-formed envelope, so an envelope-level failure could not
+be EXPRESSED and no case for one could be written. An attempt may now supply a
+raw body or override `choices` outright. Five scenarios, all watched red — and
+the most useful of them is the truncated REJECT, which pre-fix was re-rolled
+into the certify the second attempt returned.
+
 ## Consequences
 
 - Worst case per run: 2 judge calls instead of 1. At the judge model's price
