@@ -744,6 +744,58 @@ Not implemented here, deliberately: the fix is two lines and they sit in the
 hook that gates every commit in this repo, so it is its own change with its own
 verification, not a rider on a PR about id uniqueness.
 
+### T-M39-15-D5 — the count-reading guards grade the COUNT, never the SCORE, so published prose can cite a red run forever            [status: todo]
+Origin: T-M39-15, PR #69 — found while repairing R1 and re-pointing the
+baseline at 86.
+Priority: P1
+Spec: every guard that reads a cited report checks that its case COUNT matches
+the current suite. None checks whether the run it cites actually PASSED. So a
+document of record can cite a red run and the gate stays green indefinitely, as
+long as the count still lines up. Put plainly, and this is the part worth
+keeping: **"the suite is green" is not evidence that the published numbers are
+honest** — in a repo whose central claim is that its numbers are graded.
+The mechanism is the cause rather than an aside, and it explains both instances
+better than either explains itself. `evals/run.py:311`:
+`write_report = (args.report or args.suite == "all" or red) and not args.no_report`
+— a report file is written only when the run is RED, when the suite is `all`,
+or when `--report` is passed explicitly. **Green runs leave no artifact to cite
+by default.** The repo makes red evidence easy to keep and green evidence easy
+to lose, which is a standing structural pressure toward citing exactly the
+wrong run, in every slot that cites one.
+Repro (two, both 2026-08-28, neither caught by the gate):
+1. Round 1 finding R1, found by a reviewer: ADR-019 §3 named two red cases for
+   a row that had three. Trace: `tasks/reviews/pr69-r1.json`.
+2. README's "latest offline baseline" block, found by the coordinator: it cited
+   `evals/report/20260827-222539-invariant.json` and published
+   `invariant 83/86` — the red band-source run — while `invariant` was 86/86
+   green. Repaired in this PR by pointing it at a `--report` green run.
+Acceptance (shape only; whether it is the right shape is the next session's
+problem): a guard asserting that a cited report's score is 1.0, UNLESS the
+citing text explicitly states the run was red and why. It needs **TWO**
+exemptions, not one. (a) ADR-019 §3's band, which legitimately cites red rows
+and says so — §6 item 2 (cited-run) requires a run that HAPPENED and requires
+green nowhere. (b) STRUCTURALLY-REQUIRED redness: `docs-numbers-are-derived`
+excludes its own row when judging a headline report, so once it goes red every
+later report contains it failing — a fixed point — and a report whose only red
+case is that check is a legitimate citation, which is exactly what README's
+`fast 228/229` is today.
+Exemption (b) is why this clause is written down rather than left to the
+implementer: a guard built for (a) alone would have reddened a CORRECT citation
+on its first run. That is the false-red class R2 was worth fixing for in this
+same PR, and a false red in a 100%-gated suite is worse than the silence the
+guard was built to catch, because it teaches people to route around the gate.
+The difference between shipping a guard and shipping one that has to be
+reverted is this paragraph.
+Watched red by pointing a "latest baseline"-style citation at a red report.
+Take D2–D5 as a SET rather than picking them off individually — they share one
+root: cross-branch invisibility (D2), CI that does not run while showing a
+stale green (D3), a fallback that manufactures false evidence (D4), and guards
+that check counts instead of scores (D5). D1 is the odd one out; it came from
+the implementation, where these four came from the machinery that grades the
+implementation. This repo verifies trees well and verifies everything around
+trees poorly.
+Not implemented here; this block is the record.
+
 ### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]
 Origin: T-M42-20, while writing case (a). The defect it caught — two different
 accessible-name engines disagreeing — was invisible to 213 green cases for a
