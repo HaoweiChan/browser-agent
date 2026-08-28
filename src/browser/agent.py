@@ -1842,7 +1842,47 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     vals = [v for v in vals if v]
                     if not vals:
                         raise StepError("extract", "extraction returned empty text")
-                    body = await page_text(page)
+                    bases: dict = {}
+                    body = await page_text(page, bases=bases)
+                    # T-M42-3: the offset hint `TEXT_OFFSET_JS` returns is
+                    # relative to the element's OWN frame's body, while `body`
+                    # above is every frame concatenated — so for an element
+                    # inside an iframe the hint is short by everything before
+                    # that frame, and `_closest_occurrence` chooses among
+                    # duplicate occurrences on an offset that means something
+                    # else. `bases` is where each document starts in `body`;
+                    # adding the acted scope's base makes the two agree. Zero
+                    # for the main frame and for every frameless page, so
+                    # nothing that worked changes.
+                    frame_base = bases.get(acted_scope[0], 0)
+                    # T-M42-5: the DOCUMENT the value was read from, which is
+                    # not the same string as `body` once frames are in play.
+                    # `body` is every frame concatenated (M42 made `page_text`
+                    # frame-piercing), while `not_a_dump`'s 0.35 ratio was
+                    # calibrated by ADR-008 on main-frame `innerText` over a
+                    # 25-record confusion matrix. A page with a substantial
+                    # iframe therefore inflates the DENOMINATOR, and a value
+                    # that is a dump of its own document passes. No committed
+                    # case moved when M42 changed this, because no fixture in
+                    # the calibration set has a frame — the ratio was measured
+                    # on pages that no longer exist in the shape it was measured
+                    # on.
+                    #
+                    # This is the narrower of the two answers T-M42-5 offered,
+                    # and it is chosen over re-deriving DUMP_RATIO because
+                    # guessing a new ratio is exactly what ADR-008 exists to
+                    # prevent: re-deriving needs framed pages in `evals/labels/`
+                    # and a re-run confusion matrix, which is a measurement task,
+                    # not an edit. `acted_scope[0]` is the scope `resolve`
+                    # returned, already recorded for the postcondition; falling
+                    # back to `body` keeps every frameless page byte-identical.
+                    scope_now = acted_scope[0]
+                    try:
+                        doc_len = len(await page_text(scope_now, frames=False)
+                                      if scope_now is page or scope_now is None
+                                      else await page_text(scope_now))
+                    except Exception:
+                        doc_len = len(body)
                     anchor = step.get("anchor")
                     # Identity anchor (verifier L1): the entity the task names
                     # must be present where the answer was read.
@@ -1876,7 +1916,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # vals[0] either way; every later value falls back to its own
                     # first occurrence, below.
                     real_offset = _closest_occurrence(
-                        body, vals[0], await loc.first.evaluate(TEXT_OFFSET_JS))
+                        body, vals[0],
+                        await loc.first.evaluate(TEXT_OFFSET_JS) + frame_base)
                     # body_len is the real page the value was read from -- verify()'s
                     # not_a_dump denominator prefers this over len(page_text), because
                     # page_text is evidence_window()'s output: capped at PAGE_TEXT_KEEP
@@ -1933,11 +1974,12 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # to its own first occurrence rather than killing a
                             # run that already has its answer.
                             hint = -1
-                        off = _closest_occurrence(body, v, hint)
+                        off = _closest_occurrence(
+                            body, v, hint if hint < 0 else hint + frame_base)
                         extractions.append(
                             {"value": v,
                              "page_text": evidence_window(body, v, anchor, offset=off),
-                             "body_len": len(body), "other_page_text": other_page_text,
+                             "body_len": doc_len, "other_page_text": other_page_text,
                              "value_offset": (off - _window_lo(body, off)) if off >= 0 else None})
                     page_bodies[page.url] = body
                     answers.append(vals if action == "extract_all" else vals[0])

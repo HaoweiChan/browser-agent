@@ -3264,6 +3264,17 @@ def _run_fixture_case(case: dict) -> dict:
         checks["evidence_contains"] = any(
             exp["evidence_contains"] in e.get("value", "")
             for e in result["evidence"]["extractions"])
+    # T-M42-3: the WINDOW, not the value. `evidence_contains` grades the
+    # extraction's value alone and deliberately so; this grades the text
+    # captured AROUND it, which is the only place a mis-centred window shows.
+    # The two are different claims and the frame-offset defect is invisible to
+    # the first: the value is byte-identical whichever copy the window landed
+    # on, and a window around a superseded paragraph is evidence for a
+    # different statement than the one the run answered.
+    if "evidence_window_contains" in exp:
+        checks["evidence_window_contains"] = any(
+            exp["evidence_window_contains"] in e.get("page_text", "")
+            for e in result["evidence"]["extractions"])
     # A "recovery" label claims a strategy CHANGED. An attempt identical to the
     # one it replaced is a retry, and specs/001 keeps retries out of the
     # recovery metric by construction, not by intention.

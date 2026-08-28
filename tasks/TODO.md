@@ -2422,7 +2422,7 @@ a `resolved.scope` (or equivalent) on the trace step plus the ADR-028 §7
 amendment that allows it — with a fixture carrying a decoy iframe whose text
 satisfies a predicate the main document does not, watched red first.
 
-### T-M42-5 — `not_a_dump`'s denominator and `evidence_window`'s offset now disagree about what "the page" is            [status: todo]
+### T-M42-5 — `not_a_dump`'s denominator and `evidence_window`'s offset now disagree about what "the page" is            [status: done]
 Origin: M42 cold review, finding 4 (same finding, different consequence),
 2026-08-26. Related to but distinct from T-M42-3, which is about the offset
 alone.
@@ -2443,6 +2443,18 @@ read FROM (the narrower, probably-correct answer, and it composes with T-M42-3's
 per-frame offsets — one change, two debts closed), or ADR-008 is amended with a
 re-derived ratio over a labelled set that includes framed pages. Red-first case:
 a framed fixture where a main-document dump passes today.
+
+Closed by the narrow branch its acceptance preferred: `body_len` is now the length
+of the DOCUMENT the value was read from, taken from the scope `resolve` already
+returns and `agent` already records for the postcondition (`acted_scope`). A
+frameless page is byte-identical. Re-deriving `DUMP_RATIO` is refused for the
+reason the block gives — it needs framed pages in `evals/labels/` and the
+confusion matrix re-run, and guessing a ratio is what ADR-008 exists to prevent.
+Red-first, `framed-page-does-not-inflate-the-dump-denominator`: on a fixture whose
+extracted summary is 230 chars, its own document 253 and the page-with-frame 1954,
+the ratio is 0.909 against the document and 0.118 against the concatenation. Before
+the fix the run came back status success, verdict PASS — the dump ACCEPTED as the
+answer. After: failure:semantic, verdict FAIL, answer null.
 
 ### T-M42-6 — the no-progress harness cannot see a run that repeats one call on one page            [status: todo]
 Origin: M42 cold review, finding 7, 2026-08-26. The `ponytail:` comment in
@@ -2551,7 +2563,7 @@ finds an envelope mismatch, an adversarial case pinning that shape through
 `parse_tool_call` at $0. Blocked on a key, not on design; M42's live smoke is
 the natural place it gets exercised for the first time.
 
-### T-M42-3 — `evidence_window`'s DOM offset hint is computed per frame but consumed against the concatenated page text            [status: todo]
+### T-M42-3 — `evidence_window`'s DOM offset hint is computed per frame but consumed against the concatenated page text            [status: done]
 Origin: M42 implementation, 2026-08-26. A known, bounded imprecision introduced
 by `observe.page_text`, not a defect anything has produced.
 Priority: P2
@@ -2574,6 +2586,30 @@ lengths, and `execute` adding the frame's base), or a declared support-matrix
 row saying evidence-window selection is main-frame-accurate only — whichever
 way, with a fixture carrying the duplicated value across a frame boundary and
 the case watched red first.
+Closed with T-M42-5, as its acceptance predicted (one change, two debts) — though
+they turned out to be two changes in one place rather than one. `page_text` now
+optionally reports where each document STARTS in the string it returns, and
+`execute` adds the acted scope's base to `TEXT_OFFSET_JS`'s hint. Zero for the main
+frame and for every frameless page.
+The premise was verified rather than assumed: raw hint 92, frame base 4220, and
+`_closest_occurrence` lands on 107 (the superseded main-document copy) without the
+base and 4329 (the frame's real figure) with it.
+Two things the block did not know, both found by making the red-first fail to go
+red TWICE:
+  * the fixture must be LONGER than `agent.PAGE_TEXT_KEEP`. Below it,
+    `evidence_window` returns the whole page, so both copies are in evidence
+    whichever offset it centred on and the case is green for an unrelated reason.
+  * an `anchor` MASKS the defect entirely. A distant anchor forces a second window,
+    and an anchor inside the frame covers the frame's copy however the first window
+    landed.
+So the real blast radius is narrower than the block states: the mis-centring is
+observable only on an UNANCHORED extraction from a frame, on a page past the window
+budget, where the value occurs in more than one document. It is still worth the
+fix, because within that shape the run PASSES while its evidence points at a
+superseded paragraph — and graded on the window (`evidence_window_contains`, a new
+declared opt-in key) rather than on the value, since the value is byte-identical
+whichever copy the window landed on. That is exactly why it degraded silently.
+
 ### T-M41-1 — the coverage tables in `docs/analysis.md` §6 drift because nothing grades their cells            [status: todo]
 Origin: M41, 2026-08-26. Found while republishing §6 for M41's eight new
 inspector cases (seven of them domain-tagged, which is the count §6's domain

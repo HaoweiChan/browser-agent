@@ -135,7 +135,7 @@ PAGE_TEXT_JS = """() => {
 _ARIA_LINE = re.compile(r'^\s*-\s+([A-Za-z][\w-]*)(?:\s+"((?:[^"\\]|\\.)*)")?')
 
 
-async def page_text(page, frames: bool = True) -> str:
+async def page_text(page, frames: bool = True, bases: dict | None = None) -> str:
     """Everything on the page a reader can read, main frame first.
 
     The ONE place the system asks what the page says: the evidence window an
@@ -188,10 +188,25 @@ async def page_text(page, frames: bool = True) -> str:
     sources = getattr(page, "frames", None) or [page]
     for frame in (sources if frames else sources[:1]):
         try:
-            parts.append(await frame.evaluate(PAGE_TEXT_JS))
+            parts.append((frame, await frame.evaluate(PAGE_TEXT_JS)))
         except Exception:
             continue
-    return "\n".join(p for p in parts if p)
+    kept = [(f, t) for f, t in parts if t]
+    if bases is None:
+        return "\n".join(t for _, t in kept)
+    # T-M42-3: where each document STARTS in the string above. `TEXT_OFFSET_JS`
+    # walks up to its own frame's `<body>`, so for an element inside an iframe
+    # its hint is short by everything concatenated before that frame, and
+    # `_closest_occurrence` then picks among duplicate occurrences using an
+    # offset that means something else. Returned rather than recomputed by a
+    # second pass, because the pass is the expensive part and the caller
+    # already needs the text.
+    at, out = 0, {}
+    for f, t in kept:
+        out[f] = at
+        at += len(t) + 1  # the "\n" the join inserts
+    bases.update(out)
+    return "\n".join(t for _, t in kept)
 
 
 async def _frame_elements(frame, budget: int) -> list[dict]:

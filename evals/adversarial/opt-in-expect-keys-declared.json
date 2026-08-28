@@ -50,6 +50,7 @@
         "escalate-refuses-after-a-failed-postcondition",
         "escalate-refuses-after-an-unverified-state-change",
         "extract-container-dump-is-not-the-answer",
+        "framed-page-does-not-inflate-the-dump-denominator",
         "loop-abandoned-failure-is-not-a-success",
         "loop-refused-anchor-is-not-an-answer",
         "plan-lint-refuses-a-document-root-extract",
@@ -88,6 +89,9 @@
       ],
       "driver_note_lacks": [
         "escalate-seeded-note-cannot-smuggle-an-instruction"
+      ],
+      "evidence_window_contains": [
+        "frame-extraction-centres-on-its-own-document"
       ]
     },
     "verdictless_run_expect_shapes": true
