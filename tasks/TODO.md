@@ -3914,7 +3914,23 @@ it red first with a case that calls `assemble_result` with an answer and no
 verdict and asserts the status is not `success` — the existing `inv2` case
 cannot see this branch.
 
-### T-M32-14 — `plan-adoption-is-the-only-steps-rebind` has three binding forms it cannot see, and does not say so            [status: todo]
+### T-M32-14 — `plan-adoption-is-the-only-steps-rebind` has three binding forms it cannot see, and does not say so            [status: done]
+CLOSED 2026-08-28 on the two forms a shape check can answer, with the third
+DECLARED in the case's own triage rather than left to be assumed away — which is
+what this block asked for, since its subject is the disclosure gap and not the
+severity.
+`for steps in ...` (`ast.For.target`) and `with ... as steps`
+(`ast.withitem.optional_vars`) now redden; neither can be adopt-derived by
+construction, so both are unconditional. Watched red with each planted
+separately.
+The third — a callable literally named `adopt` shadowing the real nested one —
+stays open and is stated in `triage.note`: `adopt_derived()` matches by NAME and
+does not resolve which `adopt` is in scope. Closing it means writing a name
+resolver over the module, which is a different tool from a shape check, and the
+layered guarantee covers it meanwhile (`observe-drilldown-replan-is-linted` goes
+red at runtime on the only version of that mutation which actually removes a
+lint). The block's own point is that an undeclared exclusion is the defect; it is
+declared now.
 Origin: PR #34 R30. Routed to debt by the reviewer, not repaired here.
 Priority: P2
 Spec: `_check_steps_adopt_only` enumerates `ast.Assign`, `ast.AugAssign`,
@@ -5354,7 +5370,20 @@ Acceptance: the Ruling parse refuses a suite that matches twice (same shape as
 the band. Watched red with a second ceiling phrase, and with a 12.89 band whose only
 derivation is §6's counterexample.
 
-### T-R68 — the `grounded` reason says a value is absent from the page when it only fell outside the evidence window            [status: todo]
+### T-R68 — the `grounded` reason says a value is absent from the page when it only fell outside the evidence window            [status: done]
+CLOSED 2026-08-28. `grounded` now separates the two facts and
+`extract-container-dump-is-not-the-answer` pins the wording so it cannot quietly
+revert. The verdict was always right — an answer that cannot be shown in its own
+evidence is not verifiable — and the stated REASON was the defect: a false reason
+inside a fail-closed path is how a reader learns to distrust the ones that are
+true.
+Two details worth the record. HALF the window, not all of it: `evidence_window`
+centres on the value's own offset, so the room either side is half the budget,
+and a full-width test left the message unchanged on the very extraction it was
+lying about (1271 chars in a 2000-char window — under the width, over the half).
+And the window is read off the RECORD (`len(page_text)`) rather than imported
+from `agent.PAGE_TEXT_KEEP`, because `agent` imports the verifier and naming the
+constant there would be a cycle.
 Origin: PR #38 R1 (LOW)
 Priority: P2
 Spec: The human-readable `reason` for the canonical M28 shape is still factually false: it says the value is 'absent from the page they were read from' when the value is on the page and only fell out of the 2000-char evidence window (value > PAGE_TEXT_KEEP/2). Evidence: src/browser/verifier.py:472-475 (`grounded` message, edited by this diff but wording kept); evals/report/20260823-200546-fast.json row extract-container-dump-is-not-the-answer got.reason = "verifier FAIL: extracted values absent from the page they were read from: ['Port Meridian…(1271 chars)']" while evidence_contains '1,482,317' is true.

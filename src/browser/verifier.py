@@ -504,10 +504,36 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     )
 
     ungrounded = [e["value"] for e in extractions or [] if e["value"] not in e.get("page_text", "")]
+    # T-R68: WHY it is ungrounded, because the two reasons are different facts
+    # and the message asserted the wrong one. `page_text` is the bounded
+    # evidence window, not the page — so a value LONGER than the window cannot
+    # fit inside it however present it is on the page, and the canonical M28
+    # shape (a container dump of 1271 chars) was reported as "absent from the
+    # page they were read from" while the page plainly contained it. The verdict
+    # is right either way: an answer that cannot be shown in its own evidence is
+    # not verifiable. The stated reason was simply false, and a false reason in
+    # a fail-closed path is how a reader learns to distrust the ones that are
+    # true.
+    # The window is read off the RECORD, not imported: `agent.PAGE_TEXT_KEEP` is
+    # the constant that sizes it, and `agent` already imports this module, so
+    # naming it here would be a cycle. `len(page_text)` is the window that
+    # extraction actually got, which is the honest comparison anyway — it is
+    # what "nothing can show this grounded" is true against.
+    too_long = [e["value"] for e in extractions or []
+                if e["value"] not in e.get("page_text", "")
+                and len(e["value"]) > len(e.get("page_text", "")) // 2]
+    absent = [v for v in ungrounded if v not in too_long]
+    reason = "; ".join(
+        part for part in (
+            (f"extracted values absent from the page they were read from: {_cite(absent)}"
+             if absent else ""),
+            ("extracted value(s) too long for the evidence window to centre on them, so "
+             f"nothing can show them grounded: {_cite(too_long)}" if too_long else ""),
+        ) if part)
     check(
         "grounded",
         not ungrounded,
-        f"extracted values absent from the page they were read from: {_cite(ungrounded)}",
+        reason,
     )
 
     # A value that reproduces most of its own evidence window is a dump, not an

@@ -6651,6 +6651,22 @@ def _check_steps_adopt_only() -> dict:
                 "steps" in set(targets(n.target))):
             wrong.append({"line": line, "rebinds_steps_without_adopt":
                           ast.unparse(n)})
+        # T-M32-14: two more forms that BIND the name and were invisible here,
+        # because only assignment nodes were inspected. `for steps in ...` binds
+        # through `ast.For.target` and `with ... as steps` through
+        # `ast.withitem.optional_vars`; neither can be adopt-derived by
+        # construction, so both are unconditionally wrong rather than checked
+        # against `adopt_names`. Neither removes a lint that behaviour does not
+        # also catch — `observe-drilldown-replan-is-linted` goes red on the one
+        # that does — so this closes a DISCLOSURE gap, which is the same class
+        # the check itself was written to close.
+        elif isinstance(n, (ast.For, ast.AsyncFor)) and "steps" in set(targets(n.target)):
+            wrong.append({"line": line, "rebinds_steps_via_for_target":
+                          ast.unparse(n.target)})
+        elif isinstance(n, (ast.With, ast.AsyncWith)) and any(
+                it.optional_vars is not None and "steps" in set(targets(it.optional_vars))
+                for it in n.items):
+            wrong.append({"line": line, "rebinds_steps_via_with_as": ast.unparse(n.items[0])})
         elif isinstance(n, ast.Assign) and any(
                 isinstance(t, ast.Subscript) and isinstance(t.value, ast.Name)
                 and t.value.id == "steps" for t in n.targets):
