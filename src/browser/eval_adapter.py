@@ -8173,6 +8173,23 @@ def _run_pre_commit_hook_case(case: dict) -> dict:
         relayed = subprocess.run(
             ["sh", str(elsewhere)], cwd=root, capture_output=True, text=True,
             timeout=30, env=env)
+        # T-M39-15-D4: the OTHER gate script. Both carried the identical
+        # `PY=python3; [ -x .venv/bin/python ] && ...` line, which is how both
+        # degraded to a depsless interpreter at once; they now source one
+        # resolver, and grading only the pre-commit half would leave the copy
+        # that talks to the agent ungraded. Same seam, so the same reasoning
+        # about recursion applies -- the resolver fails before either script
+        # reaches `evals.run`, and this file refuses to exec a script that does
+        # not honour it.
+        post = root / ".claude" / "hooks" / "post-edit-invariant.sh"
+        post_text = post.read_text() if post.exists() else ""
+        if "EVAL_HOOK_PY" in post_text or "lib-interpreter" in post_text:
+            edited = subprocess.run(
+                ["bash", str(post)], cwd=root, capture_output=True, text=True,
+                timeout=30, env={**env, "CLAUDE_PROJECT_DIR": str(root)},
+                input='{"tool_input": {"file_path": "/x/src/browser/agent.py"}}')
+        else:
+            edited = None
     exp = case["expect"]
     text = out.stdout + out.stderr
     checks = {
@@ -8185,8 +8202,23 @@ def _run_pre_commit_hook_case(case: dict) -> dict:
         "never_suggests_baseline": not any(w in text for w in exp["must_not_say"]),
         "hands_off_to_this_tree": exp["handoff_says"] in (relayed.stdout + relayed.stderr),
     }
+    if exp.get("post_edit_hook_too"):
+        et = "" if edited is None else edited.stdout + edited.stderr
+        checks["post_edit_seam_present"] = edited is not None
+        # Exit 2 is what reaches the agent; 0 would mean the edit was silently
+        # blessed by a suite that never ran.
+        checks["post_edit_blocks"] = edited is not None and edited.returncode == 2
+        checks["post_edit_says_environment"] = any(
+            w in et for w in ("could NOT run", "ENVIRONMENT problem"))
+        checks["post_edit_never_suggests_baseline"] = not any(
+            w in et for w in exp["must_not_say"])
+        got_post = {"exit": None if edited is None else edited.returncode,
+                    "output": et[:400]}
+    else:
+        got_post = None
     return {"passed": all(checks.values()), "checks": checks,
-            "got": {"exit": out.returncode, "output": text[:600]}}
+            "got": {"exit": out.returncode, "output": text[:600],
+                    "post_edit": got_post}}
 
 
 def _run_history_ledger_isolated_case(case: dict) -> dict:

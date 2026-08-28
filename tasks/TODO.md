@@ -973,7 +973,7 @@ Constraints, recorded so the next reader does not rediscover them:
    the fix is a cross-repo change — the same constraint D2 records.
 Not implemented here; this block is the record.
 
-### T-M39-15-D4 — a missing interpreter silently degrades the gate into a non-measurement            [status: todo]
+### T-M39-15-D4 — a missing interpreter silently degrades the gate into a non-measurement            [status: done]
 Origin: T-M39-15, PR #69 round 1 — root cause behind D3's population.
 Priority: P1
 Spec: **a depsless interpreter does not produce a worse measurement, it
@@ -1018,6 +1018,26 @@ interpreter when `.venv/bin/python` is absent, instead of running a depsless
 Not implemented here, deliberately: the fix is two lines and they sit in the
 hook that gates every commit in this repo, so it is its own change with its own
 verification, not a rider on a PR about id uniqueness.
+
+Closed. Both gate scripts now source one resolver, `.githooks/lib-interpreter.sh`:
+`.venv` here, else the MAIN worktree's (via `--git-common-dir`, whose parent is
+the main working tree), then a preflight `import fastapi, playwright, uvicorn`
+that must succeed BEFORE either script runs anything. On failure each fails in
+its own idiom — the pre-commit hook blocks the commit, the PostToolUse hook
+exits 2 so the message reaches the agent — and neither mentions `--update-baseline`.
+One file rather than two copies, because the identical line in two places is the
+mechanism this block describes: they degraded together.
+Graded by `pre-commit-reports-a-broken-interpreter-as-such`, extended to run the
+PostToolUse hook too, watched red by restoring the old line
+(`post_edit_seam_present: false, post_edit_blocks: false`).
+Demonstrated the same day, on this branch, in the direction the block predicted:
+committing here ran MAIN's copy of the hook (`core.hooksPath` is absolute), which
+predates this fix, fell to a system `python3`, and printed
+"REGRESSION: 0.221 < baseline 1.000" with `--update-baseline` as the remedy — on
+a tree measuring 258/258. T-R27's handoff cannot protect the branch that writes
+it, which is the one structural residual: this fix only starts working once it is
+on `main`. Until then the operator remedy is the one the message names, and it is
+what unblocked this commit — a `.venv` symlink to the main checkout's.
 
 ### T-M39-15-D5 — the count-reading guards grade the COUNT, never the SCORE, so published prose can cite a red run forever            [status: todo]
 Origin: T-M39-15, PR #69 — found while repairing R1 and re-pointing the
