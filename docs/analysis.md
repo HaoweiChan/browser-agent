@@ -1337,7 +1337,9 @@ The pattern is the finding. To a regex, **the continuation that makes a term par
 of a different word is indistinguishable from the first character of the object a
 real request is acting on.** Every narrowing therefore buys back a correct refusal
 at the price of a false ALLOW in a security-adjacent screen, and this screen fails
-CLOSED. `SCOPE_BLOCK` is byte-for-byte what it was before M45; the seven
+CLOSED. **No narrowing shipped**, and `SCOPE_BLOCK` stayed byte-for-byte what it
+was before M45 until 2026-08-28, when M45-D6's trad/simp fold widened it (that is
+the opposite direction, and it is recorded in D31); the seven
 over-refusing shapes are declared in D31; and
 `screening-zh-term-inside-another-word` pins all three demonstrated shapes plus
 all six counterexamples, each watched red before the attempt it killed.
