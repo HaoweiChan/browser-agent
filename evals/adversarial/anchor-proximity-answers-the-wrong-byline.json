@@ -1,0 +1,35 @@
+{
+  "id": "anchor-proximity-answers-the-wrong-byline",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L4",
+  "tc": "TC1",
+  "input": {
+    "task": "Who posted the Aurora Desk Lamp teardown?",
+    "fixture": "forum-anchor-misleads.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "link",
+          "name": "user profile"
+        },
+        "anchor": "Aurora Desk Lamp teardown"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "corvin",
+    "answer_is_known_wrong": true,
+    "note": "The right answer is `arden`. This case pins what the build ACTUALLY returns, so a report of it cannot be read as 'verified correct' \u2014 `answer_is_known_wrong` is the same device `l4-shop-element-reordered` uses. If a future change makes this return `arden`, this case goes RED and that red is the good news: read the note, delete the case, and strike D29's second half."
+  },
+  "provenance": "T-M38-1 / support-matrix D29, second half \u2014 ADR-026's accepted risk, DEMONSTRATED. Rung 1 reuses the step's identity `anchor` as a proximity anchor whenever the anchor identifies exactly one place on the page. Where the anchor sits nearest the WRONG candidate the run answers confidently instead of failing loudly. D29 declared that outcome and nothing showed it, which is this repo's most-falsified kind of claim. The fixture is `forum-thread.html`'s shape with the geometry inverted, and nothing about it is exotic: a 'related threads' strip between a title and its body is an ordinary forum layout. Both bylines carry `aria-label=\"user profile\"`, so the target is ambiguous; the identity anchor is the article title; and the nearest 'user profile' link to that title is the RELATED thread's byline, because the strip sits between the title and the article's own byline. Measured: status success, answer `corvin`, verdict PASS, tier `structural`. Grounded, anchored, and wrong \u2014 every layer agrees, because every layer is asking a question this shape answers correctly. The failure is that the question 'which candidate is nearest the anchor' is not the question 'which candidate is the task's', and on this page they diverge.",
+  "triage": {
+    "class": "declared-limitation-demonstrated",
+    "red_first": "The case IS the red-first: it pins a wrong answer, so it is watched by running it and reading `corvin` where `arden` is correct. The inverse check is what proves the fixture is about proximity and not about ordering \u2014 on `forum-thread.html`, whose strip does not exist, the same plan shape answers the article's own byline.",
+    "note": "A pin, not a fix. The fix is a rung that can tell 'nearest the anchor' from 'belongs to the anchor', which needs containment (is the candidate inside the same article as the anchor?) rather than distance \u2014 a real change to ADR-026's ladder and its own decision. What this case buys is that the change, if it ever comes, turns this case red instead of passing unnoticed."
+  }
+}

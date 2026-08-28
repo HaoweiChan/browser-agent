@@ -13,6 +13,7 @@
         "l4-shop-element-reordered"
       ],
       "answer_is_known_wrong": [
+        "anchor-proximity-answers-the-wrong-byline",
         "l4-shop-element-reordered",
         "live-quotes-js-role-tier-blind"
       ],

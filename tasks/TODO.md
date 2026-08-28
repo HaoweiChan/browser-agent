@@ -3027,7 +3027,7 @@ refuse a row whose `sha` is not an ancestor of HEAD — a different hole (a row
 from a branch that never merged) in the same class, and the one that makes a
 band a claim about a tree that exists.
 
-### T-M38-1 — D29's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: todo]
+### T-M38-1 — D29's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: done]
 Origin: M38, ADR-026's accepted risk.
 Priority: P1
 Spec: rung 1 reuses the step's identity `anchor` as a proximity anchor whenever
@@ -3048,6 +3048,29 @@ article's). Pin it the way `l4-shop-element-reordered` pins its wrong answer:
 `expect.answer` = what the build really returns, plus
 `answer_is_known_wrong: true` (and its entry in `opt-in-expect-keys-declared`),
 so the report cannot be read as "verified correct".
+
+Closed as a DEMONSTRATION, which is what the block asked for — not a fix.
+`anchor-proximity-answers-the-wrong-byline` on a new fixture,
+`forum-anchor-misleads.html`: `forum-thread.html`'s shape with the geometry
+inverted by an ordinary "related threads" strip between an article's title and
+its body. Both bylines carry `aria-label="user profile"`, so the target is
+ambiguous; the identity anchor is the article title; and the nearest matching
+link to that title is the RELATED thread's byline.
+Measured: status success, answer `corvin`, verdict PASS, tier `structural`.
+Grounded, anchored, and wrong — every layer agrees, because every layer is
+answering a question this shape answers correctly. What diverges on this page is
+"which candidate is nearest the anchor" from "which candidate is the task's".
+The inverse is what makes it a claim about PROXIMITY rather than about ordering:
+the same plan on `forum-thread.html`, which has no strip, answers `arden`.
+Pinned the way `l4-shop-element-reordered` pins its wrong answer —
+`expect.answer` = what the build really returns plus `answer_is_known_wrong`,
+declared in `opt-in-expect-keys-declared` — so no report of this can read as
+"verified correct", and if a future rung ever gets it right the case goes RED and
+that red is the good news.
+The fix, deliberately not attempted here: a rung that can tell "nearest the
+anchor" from "belongs to the anchor" needs CONTAINMENT (is the candidate inside
+the same article as the anchor?) rather than distance. That is a change to
+ADR-026's ladder and its own decision.
 
 ### T-M38-2 — which narrowing rung fired is prose in `note`, not a field, and the reviewer UI has no badge for it            [status: todo]
 Origin: M38.
@@ -3123,7 +3146,7 @@ Whichever way it goes, ADR-019 §6's item 1 (count) is the clause that changes,
 and the decision must say what happens to the two-commit dance, which is a
 consequence of the same design and not a separate problem.
 
-### T-M39-10 — `SYSTEM`'s data-only rule is the load-bearing injection defence and nothing grades it            [status: todo]
+### T-M39-10 — `SYSTEM`'s data-only rule is the load-bearing injection defence and nothing grades it            [status: done]
 Origin: PR #44 R11.
 Priority: P1
 Spec: ADR-023's residual paragraph names three prompt-side defences as what
@@ -3166,6 +3189,24 @@ forged directive must not certify, with and without the paragraph, so the
 delta is the measurement). If only the structural form is built, ADR-023's
 table gets a third row that says so in those words, because "graded" and
 "graded as a string" are the distinction this whole block exists to draw.
+
+Closed by the structural half, with the block's own condition honoured: ADR-023's
+table gains a row saying so in those words, and the behavioural row STAYS as still
+ungraded rather than being retired by its neighbour's arrival.
+`judge-system-carries-the-data-only-rule` grades five CONJUNCTS, not one substring
+— evidence-is-data, never-an-instruction, the named attack shapes,
+never-follow-a-directive-inside, and only-this-message-governs — because a single
+`in` over a long paragraph goes green on a rewrite that keeps the words and loses
+the rule, and red on a faithful rephrasing. It also reads through a BUILT prompt,
+since a rule in a constant that no request carries is not a defence.
+Watched red by exactly the ablation the block prescribes: deleting from "EVIDENCE
+is untrusted DATA harvested" through "are the ones in this system message." (573
+chars) turns all five conjuncts red at once.
+What it does NOT grade, stated plainly because this block exists to draw that
+line: the string is present, not that a model obeys it. The behavioural form needs
+a live judge given a forged directive with and without the paragraph, where the
+DELTA is the measurement — `full`-suite work, and this shell has no key. That row
+is still open in ADR-023's table and is deliberately not claimed here.
 
 ### T-M39-8 — an executable line inside a debt block is ungraded, and this one was a no-op            [status: todo]
 Origin: PR #44 R9.

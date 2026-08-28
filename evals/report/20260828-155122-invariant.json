@@ -1,18 +1,18 @@
 {
   "suite": "invariant",
-  "score": 0.9714285714285714,
+  "score": 0.9716981132075472,
   "totals": {
     "actions": 88,
     "llm_tokens": 4,
     "llm_usd": 2e-06,
     "replans": 1,
-    "ms": 23356,
+    "ms": 23458,
     "judge_calls": 7,
     "judge_tokens": 0,
     "judge_usd": 0.0,
-    "wall_seconds": 33.73,
+    "wall_seconds": 33.7,
     "latency_p50": 0.05,
-    "latency_p95": 2.27,
+    "latency_p95": 2.28,
     "cases_with_budgets": 36
   },
   "metrics": {
@@ -31,7 +31,7 @@
     {
       "passed": true,
       "wrong": [],
-      "seconds": 1.82,
+      "seconds": 1.83,
       "id": "ablation-env-failure-is-a-result",
       "kind": "adversarial"
     },
@@ -85,12 +85,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1456,
+        "ms": 1498,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 1.64,
+      "seconds": 1.69,
       "id": "action-select-option-never-filled-fails-loud",
       "kind": "adversarial"
     },
@@ -100,10 +100,10 @@
       "got": {
         "adr_files": 40,
         "index_entries": 40,
-        "adr_citations_seen": 2146,
-        "files_scanned": 387
+        "adr_citations_seen": 2159,
+        "files_scanned": 390
       },
-      "seconds": 0.08,
+      "seconds": 0.07,
       "id": "adr-header-and-index",
       "kind": "adversarial"
     },
@@ -112,13 +112,18 @@
       "wrong": [
         {
           "suite": "fast",
-          "adr029_section_2_says": "258/258",
-          "suite_is": "260/260"
+          "adr029_section_2_says": "260/260",
+          "suite_is": "262/262"
+        },
+        {
+          "suite": "invariant",
+          "adr029_section_2_says": "105/105",
+          "suite_is": "106/106"
         }
       ],
       "got": {
-        "fast": 260,
-        "invariant": 105
+        "fast": 262,
+        "invariant": 106
       },
       "seconds": 0.05,
       "id": "adr029-scope-matches-the-suites",
@@ -129,9 +134,10 @@
       "wrong": [],
       "got": {
         "quoted": [],
-        "cases": 260,
+        "cases": 262,
         "rows_at_that_count": [
-          104.73
+          104.65,
+          105.42
         ]
       },
       "seconds": 0.02,
@@ -270,7 +276,7 @@
           "steps"
         ]
       },
-      "seconds": 0.38,
+      "seconds": 0.36,
       "id": "contract-trace-schema-escalate",
       "kind": "adversarial"
     },
@@ -332,7 +338,7 @@
         ],
         "legs_entry": []
       },
-      "seconds": 0.22,
+      "seconds": 0.2,
       "id": "contract-trace-schema-loop-mode",
       "kind": "adversarial"
     },
@@ -394,7 +400,7 @@
         ],
         "legs_entry": []
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -445,7 +451,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 1716,
+        "ms": 1719,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -466,34 +472,39 @@
       "wrong": {
         "docs": [
           {
-            "readme_does_not_say": "offline gate: 260 cases, zero paid calls"
+            "readme_does_not_say": "offline gate: 262 cases, zero paid calls"
           },
           {
-            "readme_does_not_say": "it is 291 cases (260 of them in the offline gate)"
+            "readme_does_not_say": "it is 294 cases (262 of them in the offline gate)"
           },
           {
-            "cites_a_report_of_a_different_tree": "20260828-141049-fast.json",
-            "report_cases": 258,
-            "suite_now": 260
+            "cites_a_report_of_a_different_tree": "20260828-152412-fast.json",
+            "report_cases": 260,
+            "suite_now": 262
           },
           {
-            "analysis_does_not_say": "291 distinct cases (28 golden + 263 adversarial)"
+            "cites_a_report_of_a_different_tree": "20260828-152445-invariant.json",
+            "report_cases": 105,
+            "suite_now": 106
+          },
+          {
+            "analysis_does_not_say": "294 distinct cases (28 golden + 266 adversarial)"
           }
         ]
       },
       "got": {
         "counts": {
-          "fast": 260,
-          "invariant": 105,
-          "live": 12,
+          "fast": 262,
+          "invariant": 106,
+          "live": 13,
           "full": 13,
-          "all": 291,
+          "all": 294,
           "live_sites": 5,
           "gt_conjuncts": 4
         },
         "domains": {
           "books.toscrape.com": 3,
-          "whaleforce-sec10k.zeabur.app": 9,
+          "whaleforce-sec10k.zeabur.app": 10,
           "openlibrary.org": 2,
           "news.ycombinator.com": 2,
           "quotes.toscrape.com": 3
@@ -588,7 +599,7 @@
         "llm_tokens": 2,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 303,
+        "ms": 308,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -614,7 +625,7 @@
         ],
         "legs": 2
       },
-      "seconds": 0.38,
+      "seconds": 0.33,
       "id": "escalate-keeps-both-legs-observations",
       "kind": "adversarial"
     },
@@ -664,12 +675,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 258,
+        "ms": 257,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.27,
+      "seconds": 0.26,
       "id": "escalate-refuses-after-a-completed-state-change",
       "kind": "adversarial"
     },
@@ -719,12 +730,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2238,
+        "ms": 2269,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.25,
+      "seconds": 2.28,
       "id": "escalate-refuses-after-a-failed-postcondition",
       "kind": "adversarial"
     },
@@ -775,12 +786,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 266,
+        "ms": 251,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.28,
+      "seconds": 0.26,
       "id": "escalate-refuses-after-an-unverified-state-change",
       "kind": "adversarial"
     },
@@ -843,12 +854,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 147,
+        "ms": 130,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.15,
+      "seconds": 0.13,
       "id": "extract-all-cheapest-wording-still-reduces",
       "kind": "adversarial"
     },
@@ -895,7 +906,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 132,
+        "ms": 131,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1006,7 +1017,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 247,
+        "ms": 249,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1054,7 +1065,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 94,
+        "ms": 90,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1103,7 +1114,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 91,
+        "ms": 94,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1169,7 +1180,7 @@
       "got": {
         "reports_when_asked": [],
         "written": [
-          "20260828-152423-fast.json"
+          "20260828-155059-fast.json"
         ]
       },
       "seconds": 0.01,
@@ -1207,8 +1218,20 @@
     {
       "passed": true,
       "wrong": [],
-      "seconds": 0.18,
+      "seconds": 0.17,
       "id": "judge-retry-only-on-unreadable-completion",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "conjuncts": 5,
+        "system_chars": 1333,
+        "grades": "the STRING is present, never that a model obeys it"
+      },
+      "seconds": 0.0,
+      "id": "judge-system-carries-the-data-only-rule",
       "kind": "adversarial"
     },
     {
@@ -1283,12 +1306,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 221,
+        "ms": 214,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.23,
+      "seconds": 0.22,
       "id": "loop-refused-anchor-is-not-an-answer",
       "kind": "adversarial"
     },
@@ -1336,12 +1359,12 @@
         "llm_tokens": 2,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 206,
+        "ms": 212,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.21,
+      "seconds": 0.22,
       "id": "loop-token-ceiling-stops-the-run-loudly",
       "kind": "adversarial"
     },
@@ -1389,12 +1412,12 @@
         "llm_tokens": 0,
         "llm_usd": 2e-06,
         "replans": 0,
-        "ms": 197,
+        "ms": 210,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.2,
+      "seconds": 0.22,
       "id": "loop-usd-ceiling-stops-the-run-loudly",
       "kind": "adversarial"
     },
@@ -1450,12 +1473,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 2348,
+        "ms": 2380,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.35,
+      "seconds": 2.38,
       "id": "main-document-click-cannot-verify-a-frame-only-effect",
       "kind": "adversarial"
     },
@@ -1500,7 +1523,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 46,
+        "ms": 44,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1612,7 +1635,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 185,
+        "ms": 186,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1624,7 +1647,7 @@
     {
       "passed": true,
       "wrong": [],
-      "seconds": 0.54,
+      "seconds": 0.51,
       "id": "opt-in-expect-keys-declared",
       "kind": "adversarial"
     },
@@ -1703,12 +1726,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2334,
+        "ms": 2358,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.34,
+      "seconds": 2.37,
       "id": "plan-lint-holds-across-a-midrun-replan",
       "kind": "adversarial"
     },
@@ -1753,7 +1776,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 51,
+        "ms": 52,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1807,12 +1830,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 112,
+        "ms": 105,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "plan-lint-refuses-a-document-root-extract-midrun",
       "kind": "adversarial"
     },
@@ -1860,7 +1883,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 46,
+        "ms": 45,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1924,7 +1947,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2249,
+        "ms": 2250,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1974,12 +1997,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2234,
+        "ms": 2264,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.24,
+      "seconds": 2.27,
       "id": "postcondition-decoy-iframe-cannot-satisfy-text-visible",
       "kind": "adversarial"
     },
@@ -2030,7 +2053,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 216,
+        "ms": 219,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2054,13 +2077,13 @@
       },
       "got": {
         "exit": 1,
-        "output": "This is an ENVIRONMENT problem, not an eval regression.\n  interpreter: /var/folders/l4/lk_d4cpd59l5fv6rvkxj8mtm0000gn/T/tmpz_4w7nj2/broken-python\nThe eval gate never ran, so nothing is known about the suites \u2014 do NOT\nmove the baseline. In a git worktree the usual cause is that no .venv\nwas found here or in the main checkout; point PY at one that has the\ntask deps (a symlink to the main checkout's .venv is enough).\nCOMMIT BLOCKED: the gate could not run.\nRun the gate yourself and commit with --no-verify explaining that in\nthe message (CLAUDE.md rule 5), or fix the interpreter above.\n",
+        "output": "This is an ENVIRONMENT problem, not an eval regression.\n  interpreter: /var/folders/l4/lk_d4cpd59l5fv6rvkxj8mtm0000gn/T/tmprri6r_9k/broken-python\nThe eval gate never ran, so nothing is known about the suites \u2014 do NOT\nmove the baseline. In a git worktree the usual cause is that no .venv\nwas found here or in the main checkout; point PY at one that has the\ntask deps (a symlink to the main checkout's .venv is enough).\nCOMMIT BLOCKED: the gate could not run.\nRun the gate yourself and commit with --no-verify explaining that in\nthe message (CLAUDE.md rule 5), or fix the interpreter above.\n",
         "post_edit": {
           "exit": 2,
-          "output": "This is an ENVIRONMENT problem, not an eval regression.\n  interpreter: /var/folders/l4/lk_d4cpd59l5fv6rvkxj8mtm0000gn/T/tmpz_4w7nj2/broken-python\nThe eval gate never ran, so nothing is known about the suites \u2014 do NOT\nmove the baseline. In a git worktree the usual cause is that no .venv\nwas found here or in the main checkout; point PY at one that has the\ntask deps (a symlink to the main checkout's "
+          "output": "This is an ENVIRONMENT problem, not an eval regression.\n  interpreter: /var/folders/l4/lk_d4cpd59l5fv6rvkxj8mtm0000gn/T/tmprri6r_9k/broken-python\nThe eval gate never ran, so nothing is known about the suites \u2014 do NOT\nmove the baseline. In a git worktree the usual cause is that no .venv\nwas found here or in the main checkout; point PY at one that has the\ntask deps (a symlink to the main checkout's "
         }
       },
-      "seconds": 0.28,
+      "seconds": 0.3,
       "id": "pre-commit-reports-a-broken-interpreter-as-such",
       "kind": "adversarial"
     },
@@ -2070,9 +2093,16 @@
         {
           "suite": "fast",
           "env": "local",
-          "published_case_count": 258,
-          "actual": 260,
-          "ledger_slowest_at_actual": 104.73
+          "published_case_count": 260,
+          "actual": 262,
+          "ledger_slowest_at_actual": 105.42
+        },
+        {
+          "suite": "invariant",
+          "env": "local",
+          "published_case_count": 105,
+          "actual": 106,
+          "ledger_slowest_at_actual": 33.65
         }
       ],
       "seconds": 0.05,
@@ -2085,7 +2115,7 @@
       "got": {
         "declared_slack_s": 4.35,
         "headroom_s": {
-          "fast": 3.97,
+          "fast": 3.96,
           "invariant": 1.38
         }
       },
@@ -2109,7 +2139,7 @@
           "busy",
           "idle"
         ],
-        "during_latency_s": 0.003,
+        "during_latency_s": 0.005,
         "run_seconds": 2.54
       },
       "seconds": 2.54,
@@ -2165,7 +2195,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2293,
+        "ms": 2290,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2237,7 +2267,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 222,
+        "ms": 220,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2290,12 +2320,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 113,
+        "ms": 111,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "resolver-narrowing-discloses-the-case-fold",
       "kind": "adversarial"
     },
@@ -2349,12 +2379,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 144,
+        "ms": 129,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.15,
+      "seconds": 0.14,
       "id": "resolver-non-string-anchor-is-a-locate-failure",
       "kind": "adversarial"
     },
@@ -2398,12 +2428,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 143,
+        "ms": 125,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.15,
+      "seconds": 0.13,
       "id": "resolver-non-string-name-is-a-list",
       "kind": "adversarial"
     },
@@ -2447,12 +2477,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 144,
+        "ms": 126,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.15,
+      "seconds": 0.13,
       "id": "resolver-non-string-name-is-a-locate-failure",
       "kind": "adversarial"
     },
@@ -2495,12 +2525,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 97,
+        "ms": 99,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.1,
+      "seconds": 0.11,
       "id": "resolver-non-string-near-is-a-locate-failure",
       "kind": "adversarial"
     },
@@ -2546,12 +2576,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2258,
+        "ms": 2276,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.27,
+      "seconds": 2.28,
       "id": "role-visible-refuses-a-superstring-heading",
       "kind": "adversarial"
     },
@@ -2620,7 +2650,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 104,
+        "ms": 106,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2683,7 +2713,7 @@
       "got": {
         "rows": 13,
         "limitations": 72,
-        "citations": 112
+        "citations": 113
       },
       "seconds": 0.0,
       "id": "support-matrix-cites-real-cases",
@@ -2772,14 +2802,14 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:58657/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:63467/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 147,
+        "ms": 145,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2843,7 +2873,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 49,
+        "ms": 47,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2902,8 +2932,8 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 2586,
-        "after": 2586
+        "before": 2601,
+        "after": 2601
       },
       "seconds": 0.05,
       "id": "wall-clock-probe-history-isolated",
