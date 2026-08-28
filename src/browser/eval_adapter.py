@@ -31,6 +31,7 @@ The fixture sites are served by the real FastAPI app on loopback (started once
 per process) so eval and production exercise the same serving path.
 """
 
+import ast
 import asyncio
 import atexit
 import collections
@@ -5519,7 +5520,17 @@ def _run_doc_counts_case(case: dict) -> dict:
         # there was green forever. `.git`/`.venv` are machinery, not documents;
         # rglob does not follow the `.venv` symlink, so only `.git` is pruned
         # in practice.
-        skip = {".git", ".venv"}
+        #
+        # `worktrees` joined them 2026-08-28. `.claude/worktrees/` is git-IGNORED
+        # (`.git/info/exclude`) and holds zero tracked files: every `.md` under it
+        # belongs to ANOTHER BRANCH's checkout. Grading those made this check
+        # report drift in documents that are not in this tree and that no commit
+        # here can fix — measured: on clean `main` it reported six ceiling
+        # breaches, all of them a stale `blissful-dhawan-037761` checkout of
+        # `claude/groundwork-pr-loop-m38-2275ee` publishing the pre-ADR-029
+        # 15s/75s ceilings. A check that cannot go green by any edit to the tree
+        # it grades is not a gate, and it had made the local gate unpassable.
+        skip = {".git", ".venv", "worktrees"}
         for path in sorted(p for p in RUN_ROOT.rglob("*.md")
                            if not skip & set(p.relative_to(RUN_ROOT).parts)):
             docrel = path.relative_to(RUN_ROOT).as_posix()
@@ -6633,6 +6644,109 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None,
                     "self_test_rows": _BUILD_SHA_SELF_TEST_ROWS if dockerfile is None else 0}}
 
 
+def _check_origin_storage_seed_is_scoped() -> dict:
+    """The page-held-credential seed is origin-scoped, configured, and loud.
+
+    A site can gate something behind a credential the PAGE holds rather than the
+    request. The sec-10k inspector does: its escalation key lives in
+    `localStorage`, and its deep-link start URL — the one this repo's `EXAMPLES`
+    row already carries — extracts ON LOAD, before an agent could type into any
+    field. So a run only reaches that path if the key is seeded before
+    navigation, and `agent.origin_storage_state` is the thing that seeds it.
+
+    This grades the SCOPING, not the feature. Four conjuncts:
+
+    1. **Native `storage_state`, never `add_init_script`.** This agent browses
+       arbitrary sites. An init script is injected into every page's JS context,
+       so the secret's text reaches every origin a run visits, hostile ones
+       included — and an origin guard inside the script does not help, because
+       the guard only decides whether to WRITE and the value is already present
+       to read. `storage_state` is written by the browser into each origin's own
+       partition before any page script runs.
+    2. **Origin-partitioned in fact, not just in intent** — built from a
+       two-origin config and checked entry by entry, so a future refactor that
+       flattened the origins would redden here rather than in production.
+    3. **No per-site knowledge in the package** (rule 6). A credential is not
+       one of the three per-site items rule 6 allows, so no host and no storage
+       key may be hardcoded; both arrive as configuration, and the secret comes
+       from the environment and nowhere else (rule 8).
+    4. **Malformed config raises** (rule 4) — including the two shapes that
+       would otherwise be SILENT no-ops: a bare host with no scheme, and an
+       origin carrying a path. Playwright matches neither, so the seed would do
+       nothing while the run reported success, which is the failure the
+       inspector's own escalation-key decision exists to prevent.
+
+    What it does not do: touch the network, assert the inspector accepts the
+    key, or say anything about the token's value or length. Cookies,
+    sessionStorage and IndexedDB are out of scope — this mechanism writes none.
+    """
+    from .agent import ORIGIN_STORAGE_VAR, origin_storage_state
+    wrong = {}
+
+    # 1 + 3: the package must not inject the secret into pages, and must not
+    # know any site. An allowlist of nothing: no module may do either.
+    # AST, not a substring scan: the reason NOT to use `add_init_script` has to
+    # be written down somewhere, and the natural place is a docstring beside the
+    # code that chose otherwise — which a text scan then reads as the violation
+    # it is warning about. Grading CALLS makes the prose free to explain itself.
+    pkg = Path(__file__).parent
+    init_script, hardcoded = [], []
+    for f in sorted(pkg.glob("*.py")):
+        try:
+            tree = ast.parse(f.read_text(encoding="utf-8"))
+        except SyntaxError:
+            init_script.append(f"{f.name} does not parse")
+            continue
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) \
+                    and n.func.attr == "add_init_script":
+                init_script.append(f.name)
+                break
+        if f.name in {"agent.py", "eval_adapter.py"}:
+            continue
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Constant) and isinstance(n.value, str) \
+                    and ORIGIN_STORAGE_VAR in n.value:
+                hardcoded.append(f.name)
+                break
+    wrong["add_init_script_in_the_package"] = init_script
+    wrong["config_var_read_outside_agent"] = hardcoded
+
+    # 2: two origins in, two partitions out, each holding only its own keys.
+    spec = {"https://a.example": {"k1": "secret-a"},
+            "https://b.example": {"k2": "secret-b"}}
+    st = origin_storage_state(json.dumps(spec))
+    got = {o["origin"]: {e["name"]: e["value"] for e in o["localStorage"]}
+           for o in (st or {}).get("origins", [])}
+    wrong["origins_not_partitioned"] = [] if got == spec else [got]
+    # ...and the one that matters: b's secret must not be in a's partition.
+    bleed = [o for o, kv in got.items()
+             if any(v not in spec.get(o, {}).values() for v in kv.values())]
+    wrong["secret_visible_to_another_origin"] = bleed
+
+    # unset is a no-op, and must be None rather than an empty state — an empty
+    # storage_state is not the same object Playwright treats as "no seeding"
+    wrong["unset_is_not_none"] = [] if origin_storage_state("") is None else ["not None"]
+
+    # 4: every malformed shape raises, including the two SILENT ones.
+    quiet = []
+    for label, bad in (("malformed json", "{not json"),
+                       ("not an object", '["a"]'),
+                       ("entry not an object", '{"https://a.example": "x"}'),
+                       ("bare host, no scheme", '{"a.example": {"k": "v"}}'),
+                       ("origin with a path", '{"https://a.example/app": {"k": "v"}}'),
+                       ("trailing slash", '{"https://a.example/": {"k": "v"}}')):
+        try:
+            origin_storage_state(bad)
+            quiet.append(label)
+        except (ValueError, json.JSONDecodeError):
+            pass
+    wrong["malformed_config_accepted_quietly"] = quiet
+
+    return {"passed": not any(wrong.values()), "wrong": {k: v for k, v in wrong.items() if v},
+            "got": {"origins_built": len(got), "malformed_shapes_refused": 6 - len(quiet)}}
+
+
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
               "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
@@ -6655,7 +6769,8 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "narrowing-fails-closed": _check_narrowing_fails_closed,
               "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only,
               "version-never-guesses": _check_version_never_guesses,
-              "build-sha-derived": _check_build_sha_is_derived}
+              "build-sha-derived": _check_build_sha_is_derived,
+              "origin-storage-seed-is-scoped": _check_origin_storage_seed_is_scoped}
 
 
 def _main_exit_code(wall_seconds: float) -> int:

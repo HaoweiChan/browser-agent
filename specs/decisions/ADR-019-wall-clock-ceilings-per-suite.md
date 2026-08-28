@@ -81,8 +81,8 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 238 cases, ts `20260827-212200`, **93.44s**, 235/238
-  (`evals/report/20260827-212200-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 239 cases, ts `20260828-083155`, **93.54s**, 236/239
+  (`evals/report/20260828-083155-fast.json`; `dirty: true`, for the reason the
   next paragraph gives, and red — the three failures are the three derived-number
   checks themselves, `docs-numbers-are-derived`, `published-band-matches-the-ledger`
   and `adr029-scope-matches-the-suites`, all mid-refresh at the moment
@@ -97,7 +97,7 @@ repo's ledger and nothing else.
   MAXIMUM, not against this published number** (PR #60 R13): the rule gives 110 for
   anything up to 95.65s, and that boundary — not any figure retyped here — is what to
   measure against. The boundary below it is the one M43 crossed: 105 covered anything
-  up to 91.30s and the ledger's slowest 238-case run is 93.44s, which is the whole of
+  up to 91.30s and the ledger's slowest 239-case run is 93.54s, which is the whole of
   ADR-035 Decision 7's evidence — and the two cases PR #70's repair round added
   moved the count without moving the answer, which is the rule behaving as a rule. The maximum itself is deliberately not written down, the same rule
   §3's bullet states and for a harder reason than symmetry: this bullet DID carry one,
@@ -171,8 +171,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 238 cases, 235/238) and
-(restated — `invariant`: 92 cases, 89/92) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 239 cases, 236/239) and
+(restated — `invariant`: 93 cases, 88/93) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -292,7 +292,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 93.44 × 1.15 = 107.46 → **110**, which is exactly the
+five — gives 93.54 × 1.15 = 107.57 → **110**, which is exactly the
 committed 110. The ceiling was moved 90 → 105 by ADR-029 and 105 → 110 by
 ADR-035 Decision 7, each derived
 from the band source cited above — a committed row at the shipped case count
@@ -318,11 +318,15 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s → 35s
 
-- Band source — local `invariant` at 92 cases, ts `20260828-052604`, **25.99s**, 89/92
-  (`dirty: false`, because this republish had a clean row available where the
-  previous one did not: a tree reaches this count only while T-M39-15's two
-  cases are uncommitted, but the first run at 92 was taken before they were
-  staged, so item 2 (cited-run)'s dirty allowance is not needed here at all.
+- Band source — local `invariant` at 93 cases, ts `20260828-082443`, **29.16s**, 88/93
+  (`evals/report/20260828-082443-invariant.json`; `dirty: true`, under item 2
+  (cited-run)'s allowance and for the reason the `fast` bullet above gives — a
+  tree reaches a new case count only while the case that made it is still
+  uncommitted. Red for the same mid-refresh reason too: the failures are the
+  derived-number checks themselves. This run is also the COLDEST at this count
+  — it is the first one after the environment was built, and the three runs
+  after it sit at 25.58–26.24s — which is the conservative direction for a
+  ceiling and is why it is not discarded as an outlier.
   **This row is the MAXIMUM at this count in the committed ledger**, not the
   smallest of a set — the distinction PR #67 R3 had to make here, kept. It is
   also clean; it is NOT described as the only clean row, because that adjective
@@ -394,7 +398,7 @@ commit that changed nothing but JSON.
   very margin PR #65 R1 retired (R6). **Margin against the
   MAXIMUM, not against the published number**: the rule gives 35 for anything up
   to 30.43s, and that is the number to watch. This bullet cites the file the way
-  §2's does — `evals/report/20260828-052604-invariant.json`. The previous band at 90 could name no file, and said so rather than papering over it with a neighbouring run's: ADR-012 writes a per-case report only on a red run or under `--report`, and that maximum was a GREEN gate run, so nothing was produced. This one is red mid-refresh, so the file exists and the ts/file PAIR item 11 (cited-file) grades is a real pair. Naming a different run's file to satisfy the form remains the defect that check was added for (PR #60 R17).
+  §2's does — `evals/report/20260828-082443-invariant.json`. The previous band at 90 could name no file, and said so rather than papering over it with a neighbouring run's: ADR-012 writes a per-case report only on a red run or under `--report`, and that maximum was a GREEN gate run, so nothing was produced. This one is red mid-refresh, so the file exists and the ts/file PAIR item 11 (cited-file) grades is a real pair. Naming a different run's file to satisfy the form remains the defect that check was added for (PR #60 R17).
   That pair — the ts this bullet declares and the file it names — is read back
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
@@ -466,7 +470,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 25.99 × 1.15 = 29.89 → **30**, one step below the committed
+The same rule gives 29.16 × 1.15 = 33.53 → **35**, exactly the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
