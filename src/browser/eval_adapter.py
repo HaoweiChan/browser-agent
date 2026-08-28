@@ -1511,7 +1511,36 @@ _CI_CEILING_LINE = re.compile(r"ceiling|budget|wall[- ]clock|\bstays\b", re.I)
 # What a ceiling looks like as a NUMBER: seconds-suffixed, or an operand of a
 # move. Never preceded by a word character — that is what keeps `M42`, `M31`,
 # `R16` and `ADR-019` out, and case counts and run ids are neither shape.
-_CI_SECONDS = re.compile(r"(?<![\w.\-§#])(\d{2,4})s\b")
+# T-M42-19: unit-form-agnostic. The rule matched `<n>s` only, so a stale CI
+# ceiling phrased "tolerates 90 seconds" or "for invariant is 20." was invisible
+# — verified by injection on the merged tree, one sentence per file: README's
+# "On CI the fast gate tolerates 90 seconds." and ADR-002's "The CI wall-clock
+# ceiling for invariant is 20." both passed GREEN while "CI budget for fast:
+# 90s." was correctly red. The allowlist inversion earned its keep (it found two
+# stale ceilings six rounds of shape patterns never looked for); it was the
+# DETECTION half that stayed shape-bound.
+#
+# Three forms, one alternation: bare-`s` suffix, the unit spelled out, and a
+# naked number. The naked form is the reason `_CI_CEILING_LINE` and `_CI_TOKEN`
+# exist — a number alone means nothing, and it is only a ceiling claim when the
+# line already says ceiling/budget/wall-clock AND `CI` sits inside the window.
+# Without those two gates this would flag every case count in the repo.
+# Two forms, and the second is deliberately narrow. `<n>s` and `<n> seconds`
+# are self-labelling. A NAKED number is not, and the first attempt at this
+# matched "its tree grew from 48 cases to 74" — which the case's own assert
+# caught, correctly. So the naked form requires a value-assigning word
+# immediately before it (`is`, `of`, `=`, `:`), which binds the number to the
+# ceiling the line is already talking about; `to`/`from` are excluded because
+# that is the shape of a RANGE or a count, not a declared value. `:` and `=`
+# were in that set for one iteration and came straight back out: they match
+# STRUCTURED text, and ADR-019 quotes grader output verbatim in its narrative
+# (`derives_ceiling: 15, ledger_slowest: 16.02`), so a colon form flags a
+# quoted diagnostic as a published ceiling. Prose copulas only — the block's
+# own three injections need no more than that, and the `<n>s` branch still
+# covers "CI budget for fast: 90s".
+_CI_SECONDS = re.compile(
+    r"(?<![\w.\-§#])(\d{2,4})(?:s\b|\s*(?:seconds?|secs?)\b)"
+    r"|(?:\bis\s+|\bof\s+)(?<![\w.\-§#])(\d{2,4})(?=\s*[.,;)]|\s*$)")
 _CI_MOVE = re.compile(r"(?<![\w.\-§#])(\d{2,4})\s*(?:->|→|vs)\s*(\d{2,4})\b")
 # The two explicit labels a figure may carry instead of being the live value:
 # `[historical]` (true then, kept as the record) and `[local]` (not CI's number
@@ -1773,11 +1802,24 @@ def _check_ci_numbers_are_derived() -> dict:
     # The site sweep's own exercise, on the SAME compiled objects it runs — the
     # three shapes six rounds of patterns each missed one of, plus the two the
     # figure rule must NOT match (PR #57 R34).
-    assert _CI_SECONDS.findall("CI's ceiling is ... (90s since ADR-019 §5)") == ["90"]
+    # T-M42-19: `findall` now returns a tuple per match (two alternatives), so
+    # the asserts read the groups the way the sweep does. Six sentences, and the
+    # three injected ones are the block's own — each was a stale CI ceiling that
+    # passed GREEN on the merged tree before this.
+    def _ci_figs(t):
+        return [g for m in _CI_SECONDS.finditer(t) for g in m.groups() if g]
+
+    assert _ci_figs("CI's ceiling is ... (90s since ADR-019 §5)") == ["90"]
+    assert _ci_figs("On CI the fast gate tolerates 90 seconds.") == ["90"]
+    assert _ci_figs("The CI wall-clock ceiling for invariant is 20.") == ["20"]
+    assert _ci_figs("CI budget for fast: 90s.") == ["90"]
     assert _CI_MOVE.findall("CI `fast` 80 -> 90, CI `invariant` 20") == [("80", "90")]
     assert _CI_MOVE.findall("different `fast` ceilings (105 vs 90)") == [("105", "90")]
-    assert _CI_SECONDS.findall("its tree grew from 48 cases to 74") == []
-    assert _CI_SECONDS.findall("M42 ships and R16 found it") == []
+    # The two directions the naked form must NOT reach: a count in a range,
+    # and a bare identifier. The first attempt at the widening matched "74"
+    # here and this assert is what caught it.
+    assert _ci_figs("its tree grew from 48 cases to 74") == []
+    assert _ci_figs("M42 ships and R16 found it") == []
     assert _CI_LABELLED.search("CI's ceiling was 90s [historical]")
     for doc in docs:
         text = _re.sub(r"~~.*?~~", "", doc.read_text(encoding="utf-8"), flags=_re.DOTALL)
@@ -1795,7 +1837,9 @@ def _check_ci_numbers_are_derived() -> dict:
         for i, line in enumerate(text.splitlines(), 1):
             if not _CI_CEILING_LINE.search(line):
                 continue
-            figures = [(m.start(), m.end(), m.group(1)) for m in _CI_SECONDS.finditer(line)]
+            # Two alternatives, so take whichever group matched (T-M42-19).
+            figures = [(m.start(), m.end(), m.group(1) or m.group(2))
+                       for m in _CI_SECONDS.finditer(line)]
             for m in _CI_MOVE.finditer(line):
                 figures += [(m.start(), m.end(), g) for g in (m.group(1), m.group(2))]
             for s, e, num in figures:

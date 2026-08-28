@@ -1917,7 +1917,44 @@ Acceptance: the H1 is corrected to `# ADR-022:`, and `adr-header-and-index`
 grows a clause asserting every `specs/decisions/ADR-0NN-*.md` file's H1 number
 equals the NN in its filename — watched red on the current tree first, since
 the tree is red for it today.
-### T-M42-19 — the CI-ceiling site sweep still fails OPEN on a figure without an `s`            [status: todo]
+### T-M42-19-D1 — the CI-ceiling sweep's LINE gate is a four-word vocabulary            [status: todo]
+Origin: T-M42-19's close, 2026-08-28 — one of that block's own three injections
+turned out to be evidence for this mechanism instead of the figure rule.
+Priority: P2
+Spec: the sweep only inspects a line if `_CI_CEILING_LINE`
+(`ceiling|budget|wall[- ]clock|\bstays\b`) matches it. "On CI the fast gate
+tolerates 90 seconds." is a stale CI ceiling by any reading, and it passes green
+with a correct figure rule and a correct CI token, because "tolerates" is not one
+of the four words. Verified directly: `_CI_SECONDS` finds `90`, `_CI_TOKEN` finds
+`CI`, `_CI_CEILING_LINE` does not match.
+This is the same shape-vs-allowlist tension PR #57 spent six rounds on, one layer
+in: the SITE list was inverted to an allowlist and earned its keep, and the LINE
+gate is still a shape. Adding "tolerates" is whack-a-mole and is explicitly not
+the fix being asked for.
+Acceptance: either the line gate is inverted the way the site list was — every
+line in an allowlisted document is inspected, with the CI token and the figure
+rule doing the discriminating — measured for false positives on the current tree
+before it lands; or the four-word vocabulary is declared as the sweep's stated
+ceiling in the case's triage, so the next reader does not assume a stale ceiling
+in an allowlisted file is caught however it is phrased. NOT closable by adding
+words to the list.
+
+### T-M42-19 — the CI-ceiling site sweep still fails OPEN on a figure without an `s`            [status: done]
+CLOSED 2026-08-28 on the acceptance as written ("the figure rule matches a CI
+ceiling regardless of unit form"). `_CI_SECONDS` takes three forms now; the naked
+one needs a prose copula before it and punctuation after, narrowed twice — once by
+this case's own assert (the first attempt matched "grew from 48 cases to 74") and
+once by the tree (the second allowed `:`/`=` and flagged ADR-019's verbatim
+quotation of grader output as a published ceiling).
+**One of this block's three injections was misattributed, and the correction
+belongs here.** "On CI the fast gate tolerates 90 seconds." still passes green,
+and NOT because of the figure rule: measured, `_CI_SECONDS` finds `90` in it and
+`_CI_TOKEN` finds `CI`; `_CI_CEILING_LINE` is what rejects it, because
+"tolerates" is not in `ceiling|budget|wall[- ]clock|stays`. So that sentence was
+evidence for a different hole than the one it was filed under. Split out as
+T-M42-19-D1 rather than folded in silently — the block's diagnosis was half
+right, and a fix that claimed all three would be the eighth crop of the class it
+warns about.
 Origin: PR #57, orchestrator verification after round 7 (the round the human's
 stopping rule made the last one). Logged, not fixed, under that rule.
 Priority: P1
