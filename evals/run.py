@@ -102,8 +102,15 @@ def run_case(case):
 # the condition ADR-021 named as the one a raise answers — the per-case cost did
 # not move. The row is named because a reader re-deriving from a comment that
 # still said 93.26s would be re-deriving from a SUPERSEDED row and getting the
-# `fast` 110 -> 115 at ADR-037, and the number was reached by being wrong about
-# it first, which is the part worth writing down. The settle took the suite
+# `fast` 110 -> 115 at ADR-037. Five bands were published getting here and four
+# of them were falsified by the next run, in both directions -- the last time by
+# a run taken specifically to CONFIRM a five-sample band of 94.81-95.63s, which
+# came back at 96.70s. Six samples at 242 cases now span 94.81-96.70s and
+# 96.70 x 1.15 = 111.21 -> 115. The lesson is not about this number: a band is a
+# maximum over a distribution nobody has characterised, and every summary of a
+# short sample here was wrong within the hour. ADR-019 section 2 keeps all five.
+# The old note follows because its reasoning about WHY the suite got slower is
+# what the raise actually buys: The settle took the suite
 # 93.44 -> 96.02s at 240 cases, deriving 115. A third case then took the count
 # to 241, the next two runs measured 94.95s and 94.92s, that derives 110, and
 # 110 was published on the strength of "every run at this count says ~94.9".

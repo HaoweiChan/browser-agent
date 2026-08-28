@@ -3171,6 +3171,27 @@ def _run_declared_keys_case(case: dict) -> dict:
                    and "answer" not in (c.get("expect") or {}))
     if empty:
         wrong.append({"key": "answer_is_known_wrong", "marks_nothing_no_expect_answer": empty})
+
+    # T-R83: the OTHER registry in this file, graded here because it is the same
+    # property — a key that says which grader runs, and a duplicate that nothing
+    # notices. `KINDS` carried `"readyz-transitions"` twice for a milestone. Both
+    # entries named the same handler, so nothing misbehaved; the next duplicate
+    # is two entries pointing at DIFFERENT handlers, last-wins, with the losing
+    # case silently running the wrong grader and no error anywhere. A dict
+    # literal cannot be asked this at runtime -- by the time it exists the loser
+    # is gone -- so the source is parsed instead.
+    import ast
+    src = Path(__file__).read_text(encoding="utf-8")
+    for node in ast.walk(ast.parse(src)):
+        if not (isinstance(node, ast.Assign)
+                and any(getattr(t, "id", None) == "KINDS" for t in node.targets)
+                and isinstance(node.value, ast.Dict)):
+            continue
+        keys = [k.value for k in node.value.keys
+                if isinstance(k, ast.Constant) and isinstance(k.value, str)]
+        dupes = sorted({k for k in keys if keys.count(k) > 1})
+        if dupes:
+            wrong.append({"registry": "KINDS", "duplicate_keys": dupes})
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -3204,10 +3225,22 @@ def _run_adr_header_index_case(case: dict) -> dict:
 
     decisions_dir = Path(__file__).parents[2] / "specs" / "decisions"
     adr_files = sorted(decisions_dir.glob("ADR-*.md"))
-    missing_ruling, bad_length = [], []
+    missing_ruling, bad_length, title_number = [], [], []
     for p in adr_files:
         before_hr = p.read_text(encoding="utf-8").split("\n---\n", 1)[0]
         lines = before_hr.splitlines()
+        # T-M41-5 / T-M42-7 / M45-D2 — three blocks, one defect, and the reason
+        # it survived three audits is that nothing compared these two numbers.
+        # Everything else here keys on the FILENAME (which is right) or on the
+        # INDEX (which is right), so a body that announces a different number is
+        # unguarded: ADR-022's file opened `# ADR-020:` for a milestone and a
+        # half while ADR-020's own file opened the same way, and every reader
+        # who quoted the title propagated the wrong one. M41 nearly attributed a
+        # rule to ADR-022 that ADR-022 does not contain.
+        head = next((l for l in lines if l.startswith("# ")), "")
+        if (m := re.match(r"# ADR-(\d+)", head)) and (f := re.match(r"ADR-(\d+)", p.name)):
+            if m.group(1) != f.group(1):
+                title_number.append({"file": p.name, "title_says": f"ADR-{m.group(1)}"})
         starts = [i for i, l in enumerate(lines) if l.startswith("**Ruling**:")]
         if not starts:
             missing_ruling.append(p.name)
@@ -3274,6 +3307,7 @@ def _run_adr_header_index_case(case: dict) -> dict:
 
     wrong = {k: v for k, v in {
         "missing_ruling": missing_ruling, "ruling_too_long": bad_length,
+        "title_number_is_not_the_filename": title_number,
         "missing_from_index": missing_index, "duplicated_in_index": dup_index,
         "cites_no_such_adr": dangling, "cites_no_such_section": bad_section,
     }.items() if v}
@@ -7431,7 +7465,6 @@ KINDS = {
     "observe": _run_observe_case,
     "parse-plan": _run_parse_plan_case,
     "planner-prompt": _run_planner_prompt_case,
-    "readyz-transitions": _run_readyz_case,
     "relocate": _run_relocate_case,
     "schema": _run_schema_case,
     "screening": _run_screening_case,

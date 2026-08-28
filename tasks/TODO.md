@@ -1495,7 +1495,18 @@ paying for the discovery again — `.claude/skills/eval-protocol/` is the place.
 The rule-set change the original spec contemplated is NOT wanted: §6 item 2 is
 right and the block was reading it as a bug.
 
-### T-M39-15 — nothing grades task-id or ADR-number uniqueness, so both collide silently            [status: in-progress]
+### T-M39-15 — nothing grades task-id or ADR-number uniqueness, so both collide silently            [status: done]
+CLOSED 2026-08-28. `task-and-adr-ids-are-unique` (`invariant`, pure code — MAIN's implementation,
+kind `id-uniqueness`; this branch wrote a second one independently and dropped it on
+rebase, which is this block's own defect arriving one layer up)
+reddens on a duplicate task id across `tasks/TODO.md` + `tasks/DONE.md` and on a
+duplicate ADR number across `specs/decisions/` filenames and `INDEX.md` rows.
+Watched red on a LIVE duplicate rather than a planted one — `M40` had two DONE.md
+lines, one a stale earlier wording, which is instance (b) of this block's own
+evidence list still sitting in the tree — and the stale line is deleted here. Out-of-scope items stay out of scope: no id is renamed, and no allocation
+protocol is decided. Named ceiling: it reddens at the MERGE, which is the first
+moment the tree can be asked; a collision living in two unmerged branches is still
+invisible, and that is where every recorded instance was born.
 Origin: PR #44 pass-5 merge, found by the pr-loop verification agent while
 computing over the merged trees (credited at the request of the session that
 hit the second instance).
@@ -1822,7 +1833,11 @@ L5 measures 9 and the table publishes 8. Same defect, same section's blast
 radius, and M45's own case is one of the three the sentence is short by — so it
 is repaired by the same recount rather than left to drift a fourth time.
 
-### M45-D2 — the ADR-022 file's H1 says ADR-020            [status: todo]
+### M45-D2 — the ADR-022 file's H1 says ADR-020            [status: done]
+CLOSED 2026-08-28 with T-M41-5 and T-M42-7 — one defect, three blocks. See T-M41-5.
+This block's own observation was the sharpest of the three: the comparison that would
+have caught it is a file's H1 number against its own filename, and that is exactly the
+conjunct that was added.
 Origin: M45, 2026-08-26, while reading ADR-022 for the live-declaration rule
 that leg 3 required. One-line fix, deliberately not taken in M45's PR under the
 debt rule.
@@ -2272,7 +2287,8 @@ until the run ends, watched red (it currently ends `budget exhausted: actions
 40/40`, naming a resource rather than a cause), then a (state, call-intent)
 repeat counter sharing `LOOP_REVISIT_CAP`'s threshold.
 
-### T-M42-7 — `ADR-022`'s file is titled `ADR-020`            [status: todo]
+### T-M42-7 — `ADR-022`'s file is titled `ADR-020`            [status: done]
+CLOSED 2026-08-28 with T-M41-5 and M45-D2 — one defect, three blocks. See T-M41-5.
 Origin: M42 spec-drift audit, finding 13, 2026-08-26. Pre-existing, unrelated to
 M42; logged rather than fixed under the debt rule.
 Priority: P2
@@ -2485,7 +2501,11 @@ Out of scope: changing what the M41 cases claim — their triage notes already
 state these two ceilings; this block is the harness change that would let them
 claim more.
 
-### T-M41-5 — ADR-022's file names one number and its title another            [status: todo]
+### T-M41-5 — ADR-022's file names one number and its title another            [status: done]
+CLOSED 2026-08-28. H1 corrected to `# ADR-022:`, and the one-line conjunct this block
+asked for is in `adr-header-and-index` as `title_number_is_not_the_filename` — watched
+red against the live defect rather than a planted digit. Closes T-M42-7 and M45-D2 in
+the same edit; all three describe this one file.
 Origin: M41 spec-drift audit, 2026-08-26; pre-existing, found while auditing this
 milestone rather than caused by it. `specs/decisions/ADR-022-m40-declaring-a-
 domain-from-live-runs.md` opens `# ADR-020:`. `adr-header-and-index` reads the
@@ -4967,7 +4987,12 @@ back within a bound, watched red against a `finally` that is removed — cheaply
 stay in the offline gate, which is the part that needs thought, since the honest version
 of this test waits for a real cancellation.
 
-### T-R83 — `KINDS` registers `readyz-transitions` twice            [status: todo]
+### T-R83 — `KINDS` registers `readyz-transitions` twice            [status: done]
+CLOSED 2026-08-28. Duplicate removed, and the shape refused: `opt-in-expect-keys-declared`
+now parses this module with `ast` and reddens on any duplicate literal key in `KINDS`.
+Graded there rather than in a new case because it is the same property that case already
+grades — a registry key deciding which grader runs. Watched red by re-introducing the
+duplicate.
 Origin: T-M40-1, found while registering a new kind
 Priority: P2
 Spec: `src/browser/eval_adapter.py`'s `KINDS` dict has `"readyz-transitions": _run_readyz_case`

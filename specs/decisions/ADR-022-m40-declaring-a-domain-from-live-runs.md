@@ -1,4 +1,4 @@
-# ADR-020: Declaring a domain from live runs with no eval case, and a demo surface that says what a run is doing
+# ADR-022: Declaring a domain from live runs with no eval case, and a demo surface that says what a run is doing
 
 Date: 2026-08-23
 Status: accepted
