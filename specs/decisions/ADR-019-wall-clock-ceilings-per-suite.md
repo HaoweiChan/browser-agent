@@ -81,8 +81,8 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 248 cases, ts `20260828-093157`, **99.17s**, 248/248
-  (`evals/report/20260828-093157-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 249 cases, ts `20260828-104510`, **97.98s**, 246/249
+  (`evals/report/20260828-104510-fast.json`; `dirty: true`, for the reason the
   next paragraph gives, and red — the three failures are the three derived-number
   checks themselves, `docs-numbers-are-derived`, `published-band-matches-the-ledger`
   and `adr029-scope-matches-the-suites`, all mid-refresh at the moment
@@ -196,8 +196,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 248 cases, 248/248) and
-(restated — `invariant`: 99 cases, 96/99) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 249 cases, 246/249) and
+(restated — `invariant`: 101 cases, 98/101) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -319,7 +319,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 99.17 × 1.15 = 114.05 → **115**, which is exactly the
+five — gives 97.98 × 1.15 = 112.68 → **115**, which is exactly the
 committed 110. The ceiling was moved 90 → 105 by ADR-029 and 105 → 110 by
 ADR-035 Decision 7, each derived
 from the band source cited above — a committed row at the shipped case count
@@ -345,11 +345,11 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s → 35s
 
-- Band source — local `invariant` at 99 cases, ts `20260828-092446`, **29.72s**, 96/99
-  (`evals/report/20260828-092446-invariant.json`; `dirty: true`, the usual shape:
-  a tree reaches this count only while the cases are uncommitted, and item 2
-  (cited-run)'s allowance applies because no clean row at 99 was available when
-  this band was published. Red, and the three
+- Band source — local `invariant` at 101 cases, ts `20260828-104314`, **29.29s**, 98/101
+  (`evals/report/20260828-104314-invariant.json`; `dirty: false` — the count moved
+  when PR #68 and PR #79 merged rather than because this branch added a case, so
+  the merge commit was already made when this row was measured and item 2
+  (cited-run)'s dirty allowance is not needed here at all. Red, and the three
   failures are the three derived-number checks this republication is the subject
   of, the same shape §2's row has. Whether it is the MAXIMUM at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger
@@ -504,7 +504,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 29.72 × 1.15 = 34.18 → **35**, which is exactly the committed
+The same rule gives 29.29 × 1.15 = 33.68 → **35**, which is exactly the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
