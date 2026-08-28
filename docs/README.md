@@ -17,6 +17,7 @@ date, not the tense.
 | [`product/problem-definition.md`](product/problem-definition.md) | record | Operational problem definition and MUST/SHOULD/BACKLOG scope, written before code | M0 |
 | [`evals/scope-checkpoint.md`](evals/scope-checkpoint.md) | record | The 12 observed failures that chose the two recovery families before M3 | M2→M3 |
 | [`evals/2026-08-24-demo-sec10k-inspector-postmortem.md`](evals/2026-08-24-demo-sec10k-inspector-postmortem.md) | record | Why the 2026-08-24 demo's "drive our own sec-10k inspector" ask failed: four page shapes vs the declared matrix, and the two-repo remediation split behind M41 | M40→M41 |
+| [`plans/active/m47-two-day-agentic-hardening.md`](plans/active/m47-two-day-agentic-hardening.md) | living | The 12-hour slice that closes exact-repeat loops and projects the existing trace as a terminal-style decision console | M47 |
 | [`plans/completed/task1-b-level-plan.md`](plans/completed/task1-b-level-plan.md) | record | B-phase plan and exit criteria, final status | M5 |
 | [`plans/completed/task1-a-level-plan.md`](plans/completed/task1-a-level-plan.md) | record | A-phase plan and the six exit criteria the freeze walked | M10 |
 | [`ui.png`](ui.png) | asset | README screenshot — a real run on the deployment (`8b588f84`, 2026-08-22, dark scheme) rendered through the current page | — |

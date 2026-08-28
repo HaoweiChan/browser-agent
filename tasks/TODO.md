@@ -12,6 +12,29 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
+### M47 — two-day agentic hardening: stop exact repeats and show the decision trail            [status: todo]
+Depends: M42
+Priority: P0
+Spec: implement the 12-hour vertical slice in
+`docs/plans/active/m47-two-day-agentic-hardening.md`. Close `T-M42-6` at the
+loop boundary with a site-agnostic exact-repeat guard, then project the existing
+`TraceStep` -> SSE stream into a plain terminal-style decision console. Reuse
+the current trace and inline UI; add no framework, event bus or dependency.
+Acceptance: red-first adversarial cases prove that one identical choice on an
+unchanged page receives a forced strategy-change diagnosis and the next one is
+refused before the general action ceiling; a changed strategy resets the streak
+and an unchanged `wait_for` gets exactly one bounded retry. The reviewer console
+renders escaped/clipped action, target, outcome, recovery and terminal budget
+lines from provisional `step` events, then rebuilds from the final authoritative
+trace; it renders no model prompt, raw page dump or hidden chain-of-thought.
+`python3 -m evals.run --suite invariant` is 100% and
+`python3 -m evals.run --suite fast` meets its committed score and wall ceiling.
+Any post-deploy evidence names build SHA/run ids and stays within a $0.50 total
+spend cap.
+Out of scope: choosing the deployment default, closing M44's exact SEC/INTC
+three-mode campaign, Nasdaq auth/date workarounds, Chinese over-refusal, custom
+ARIA widgets, virtual lists, and production `INCONCLUSIVE`.
+
 ### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
 Depends: M42
 Origin: ADR-027. Depends: M42 (M43 for the vision rows, marked as such).
