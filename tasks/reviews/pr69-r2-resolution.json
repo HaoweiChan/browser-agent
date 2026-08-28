@@ -1,0 +1,54 @@
+{
+  "pr": 69, "round": 2, "task": "T-M39-15", "commit": "33dbf42+1",
+  "traces_to": "tasks/reviews/pr69-r2.json",
+  "gate_after_repair": {"invariant": "86/86 = 1.000, 16.65s / 20", "fast": "238/238 = 1.000, hook run / 110", "cost_usd": 0.0},
+  "resolutions": [
+    {
+      "id": "R7", "severity": "HIGH", "outcome": "fixed",
+      "covered_by": "no eval case — a merge-resolution property of a committed artifact, not of the tree's content; nothing offline can grade what a future rebase will drop",
+      "split": "Ledger file repaired by the orchestrator in 33dbf42. The implementer's half was the false claim in tasks/reviews/pr69-r1-resolution.json's rebase_note.",
+      "note": "The note swore two things that were both false — 'zero rows present in origin/main are missing from the branch' and that a literal ts-dedup 'would have destroyed one of each, and did not'. Corrected in place, with the original wording restated rather than edited out, all 11 lost ts named, and the collateral spelled out: 20260822-174202 is the row T-M39-15-D3 cites as 'the single exception' in its own arithmetic, so the PR had deleted evidence its own debt block depends on.",
+      "root_cause_of_the_false_claim": "The original verification compared SETS of row bodies. A set comparison cannot see a multiplicity dropping from 2 to 1, so it reported 0 missing while 11 rows were gone. Re-verified with a MULTISET comparison: 2192 rows on origin/main, 0 missing by multiplicity, 20260822-174202 present twice again. Worth recording because it is the id-collision class this whole PR exists for, one level down — a duplicate that is invisible to the check looking at it."
+    },
+    {
+      "id": "R8", "severity": "HIGH", "outcome": "fixed",
+      "covered_by": "task-id-parse-boundary fixture 6 (new) — an unbalanced fence: a prose line that merely BEGINS with ``` sitting above a later real block, with a genuine duplicate id between them",
+      "watched_red": "evals/report/20260828-045259-invariant.json, before the fix: {'fixture': 'UNBALANCED fence...', 'want': {'duplicate_todo_ids': ['M50']}, 'got': {}} — the silent false negative exactly.",
+      "regression_owned": "This was introduced by the implementer's own R2 fix in round 1, and it is strictly worse than the defect it replaced: R2's bug was a false POSITIVE, which is loud, and this was a false NEGATIVE, which is silent. Measured on the live tree before the fix: appending a genuinely duplicated `### T-M39-7` block containing an ordinary ```bash fence made the probe report [] while swallowing 110 headings.",
+      "fix": "_FENCE now requires a delimiter to be a WHOLE line — ``` plus an optional info word and nothing else — so tasks/TODO.md's single literal-\\n prose line is not an opener and cannot pair with a real block below it. Verified after: 198 headings raw, 198 after stripping, 0 lost, and the reviewer's own repro now reports duplicate_todo_ids ['T-M39-7'].",
+      "deliberate_simplification": "A full-line match, not a fence state machine. Unbalanced delimiters now fail to pair and strip nothing, which is the safe direction — the worst case becomes a loud false red rather than a silent miss. Recorded as a ponytail comment naming the upgrade trigger: nested fences or ~~~ delimiters, neither of which this repo uses."
+    },
+    {
+      "id": "R9", "severity": "MEDIUM", "outcome": "fixed",
+      "covered_by": "no eval case — a prose claim about ledger contents; published-band-matches-the-ledger grades the row's numbers, not the adjectives beside them",
+      "note": "Both 'the only clean one' sentences in ADR-019 §3 dropped. The ledger holds three clean rows at 86 (20260827-222539, the cited 20260828-041555, and 20260828-044752), not one. The item 2 argument now rests on what is true and is all it needed: the cited row is the SLOWEST at this count and is clean, so the dirty clause does not bite."
+    },
+    {
+      "id": "R10", "severity": "MEDIUM", "outcome": "fixed",
+      "covered_by": "no eval case — the T-R57 class (two prose counts, ungradeable without false positives)",
+      "note": "Round 1's R4 repair set both counts to five; the next re-derive raised §3's to six and left §6's at four. Rather than re-synchronise a third time, BOTH sentences stop counting — this repo's own T-M32-9 precedent, where publications that had drifted off a moving number were dropped rather than corrected 'wherever the prose allows'. A pair that states no number cannot disagree. The round-1 artifact's R4 note is corrected in the same commit, since it asserted 'both now say five' about a tree where that is no longer true."
+    },
+    {
+      "id": "R11", "severity": "MEDIUM", "outcome": "fixed",
+      "covered_by": "no eval case — cross-document consistency between a case provenance, an ADR and DONE.md",
+      "note": "task-and-adr-ids-are-unique's provenance restated as a dated snapshot: the 230-row trap as it stood 2026-08-27, then its closure by ADR-035 Decision 7 raising the committed local fast ceiling to 110 (evals/run.py:103), so rule(91.76) now equals the committed number. It no longer names T-M39-15-D1 as tracking live work — D1 is closed in tasks/DONE.md — and points the surviving general class at T-M39-15-D3, matching what ADR-019 §3 already says."
+    },
+    {
+      "id": "R12", "severity": "MEDIUM", "outcome": "fixed",
+      "covered_by": "no eval case — a debt block's premise about existing code",
+      "note": "D5's premise was wrong and is narrowed to the residue that actually remains. The headline slot IS guarded: docs-numbers-are-derived refuses a headline report containing a failure, with the PR #34 R4 self-exclusion fixed point — which is D5's own exemption (b), already shipped. What remains true is narrower and now stated as such: every NON-headline citation (ADR-019's band rows, README's invariant and live slots) is count-and-tally checked only, so a red run cited with its redness stated accurately passes indefinitely.",
+      "example_dropped": "The '228/229' example does not exist on this tree (README's baseline cites a 238/238 report, zero red). Dropped rather than re-pointed: exemption (a)'s band row, currently 83/86, demonstrates the same need and is current. Exemption (b) is kept because a guard extended to the non-headline slots would need it too, and that is now said explicitly."
+    },
+    {
+      "id": "R13", "severity": "LOW", "outcome": "fixed",
+      "covered_by": "no eval case — same class as R5, a snapshot fact that decays",
+      "note": "D3's suite sizes and ledger size are marked as dated snapshots the way D2's cross-branch facts already are, rather than re-typed to values that go stale on the next merge: the 2161-row figure carries its date and the 2192 re-check, and 'the live 85/229' becomes 'the live suite sizes, which were 86 and 238 when this was last checked and move with every merge'. The 44/43 and 20260822-174202 figures in the same paragraph were re-verified and stand."
+    },
+    {
+      "id": "R14", "severity": "LOW", "outcome": "fixed",
+      "covered_by": "adr-header-and-index — which is what makes the operative half true, and what reddened on the §8 citation in the first place",
+      "note": "'ADR-019 ends at §7' replaced with '§8 is an unallocated gap between ADR-019's §7 and the §9 PR #72's renumber added'. Verified against the file: sections run 1-7 then 9. The operative half — a §8 citation still reddens, because 8 resolves to nothing — is unchanged and is why the surrounding convention still holds."
+    }
+  ],
+  "verification_note": "Every finding was re-derived from the tree before being acted on rather than accepted on the review's text: R8 reproduced on the live TODO.md (110 headings lost, duplicate reported as []), R7 re-checked by multiset comparison, R9 by listing clean rows at 86, R12 by locating headline_report_is_red in src/browser/eval_adapter.py and grepping README for 228/229 (0 hits), R14 by listing ADR-019's section headings. No finding was rejected; all eight are repaired."
+}

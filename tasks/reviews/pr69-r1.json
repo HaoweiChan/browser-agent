@@ -1,0 +1,64 @@
+{
+  "pr": 69,
+  "round": 1,
+  "task": "T-M39-15",
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 84/84 = 1.000 (15.94s / ceiling 20) · fast 229/229 = 1.000 (89.61s / ceiling 105) · $0.0000 · baseline met",
+  "routing_note": "All six routed repair. R1-R3 are MEDIUM and each makes a published claim dishonest or can turn the 100%-gated suite red. R4-R6 are LOW and would normally be debt, but each is a factual error in text THIS PR introduces; filing debt for a wrong statement the same PR is adding would be shipping a known-wrong document of record. Debt remains reserved for work beyond the spec.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §3's republished band bullet states the wrong set of red cases for the row it cites — the row has three failures, not the two it names, and the third is one this same PR clears.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:331-335 says \"the two cases red in this row are `docs-numbers-are-derived` and `published-band-matches-the-ledger`\", while the same bullet (line 306) and line 161 restate the row as 81/84. evals/report/20260827-195412-invariant.json contains three red cases: adr029-scope-matches-the-suites ({\"suite\":\"invariant\",\"adr029_section_2_says\":\"83/83\",\"suite_is\":\"84/84\"}), docs-numbers-are-derived, published-band-matches-the-ledger. The unnamed third is cleared by this PR's own ADR-029 §2 edit (83/83 -> 84/84). The commit message repeats the error (\"the two cases red in it are the two the republish clears\").",
+      "repro": "python3 -c \"import json;d=json.load(open('evals/report/20260827-195412-invariant.json'));print([c['id'] for c in d['results'] if not c['passed']])\"  # -> 3 ids",
+      "acceptance": "§3's sentence (and the commit/PR text) names all three cases red in 20260827-195412, or states the count, so the prose and the 81/84 restatement agree."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The id extraction is not conservative as documented: it already mis-parses an existing legitimate prose heading in tasks/TODO.md as a task id, so ordinary future content can turn the 100%-gated invariant suite red on a non-collision.",
+      "evidence": "src/browser/eval_adapter.py:247 `re.findall(r\"^### (\\S+) — \", todo, re.M)` extracts 189 ids from tasks/TODO.md, one of which is `Reopen` from tasks/TODO.md:4340 `### Reopen — A-phase (2026-08-17)` — a Notes-section prose heading, not a task (the repo's own parser, groundwork pr-loop `ready.py` ID regex, correctly excludes it and finds 188 tasks). The docstring at src/browser/eval_adapter.py:244-246 claims prose lines \"stay out\"; the only filter is the em dash. Verified false reds on a mirror tree: a second `### Reopen — ...` note -> {'duplicate_todo_ids': ['Reopen']}; two `- Standing — ...` prose bullets in DONE.md -> {'duplicate_done_ids': ['Standing']}; a fenced code block in TODO.md quoting `### M43 — ...` twice -> {'duplicate_todo_ids': ['M43']} (fences are not skipped). No fixture-driven case pins the parse boundary — the probe only ever reads the live tree, so this can only be discovered by a blocked commit.",
+      "repro": "printf '\\n### Reopen — A-phase, second note (2026-08-28)\\n' >> tasks/TODO.md && python3 -m evals.run --suite invariant   # -> task-and-adr-ids-are-unique RED on a non-collision; revert",
+      "acceptance": "The extraction accepts only id-shaped tokens (e.g. the `ready.py` ID pattern) and ignores fenced blocks, with an adversarial case pinning both a true duplicate (red) and a prose/fenced near-miss (green)."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The two runs the PR presents as its red-watch evidence have no rows in evals/report/history.jsonl, so their sha, timestamp and dirty state are unrecorded — ADR-012 Decision 1 says every run appends one line.",
+      "evidence": "evals/report/20260827-173009-invariant.json and 20260827-173907-invariant.json are added by this diff and cited as the red-first evidence in the commit message and in evals/adversarial/task-and-adr-ids-are-unique.json (\"provenance\"), but grep of evals/report/history.jsonl for 20260827-173009/173907 returns nothing; the ledger jumps 20260827-165737 -> 20260827-195412. Those report JSONs carry only {suite, score, totals, metrics, results} — no ts/sha/dirty — so the ledger row was the only record of which tree they ran on. ADR-012:31 \"Every run appends one JSONL line to evals/report/history.jsonl\". ORCHESTRATOR NOTE: the rows existed and were dropped by the orchestrator's rebase, which restored history.jsonl to origin/main to clear a conflict; the honest repair is to say so, not to reconstruct rows.",
+      "repro": "grep -c '20260827-173009\\|20260827-173907' evals/report/history.jsonl   # -> 0",
+      "acceptance": "The two red-watch runs have ledger rows (or the PR states plainly that the rows were dropped at rebase and how the runs' tree is otherwise identified), so the red-first claim is verifiable from the ledger the repo treats as the run record."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The diff increments the 'rounds running' count in ADR-019 §3 but leaves the same count in §6 at the old value, so one file now states four and five for the same fact.",
+      "evidence": "specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md:329-331 (changed by this diff) \"This suite is where the `fast` band's overflow has landed five rounds running\"; line 112 (untouched) \"Four rounds running the band has decided a suite tag rather than a reviewer doing it: M44-P1 asked the same question from the other side…\". Both describe the band deciding a case's suite tag; §3's was 'four' on origin/main.",
+      "repro": "grep -n 'rounds running' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "Both sentences state the same number, or one of them stops counting."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "T-M39-15-D2's instance (ii), presented as 'verified against the branches rather than relayed', no longer matches the branch it cites.",
+      "evidence": "tasks/TODO.md:345-352 claims PR #66 (`task/T-M42-4`) adds `specs/decisions/ADR-033-postcondition-document-scope.md` with merge-base `fd3ae2a` while main carries ADR-033-build-identity-endpoint.md. Actual: `git merge-base origin/task/T-M42-4 origin/main` = 6089850 (current main) and `git ls-tree --name-only origin/task/T-M42-4 specs/decisions/` shows ADR-033-build-identity-endpoint.md plus ADR-036-postcondition-document-scope.md — no duplicate 033, and the branch is no longer CONFLICTING against that base.",
+      "repro": "git merge-base origin/task/T-M42-4 origin/main; git ls-tree --name-only origin/task/T-M42-4 specs/decisions/ | grep 'ADR-03'",
+      "acceptance": "D2 either dates the observation as a snapshot that has since been renumbered, or restates instance (ii) against the branch's current state; the derived-numbers half of the clause (T-M42-4 still edits ADR-019/ADR-029/README/docs/analysis.md) is unaffected either way."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The commit message's 'Orphaned reports pruned per ADR-012' is not backed by the diff, which deletes no report and leaves behind the report this PR itself orphaned.",
+      "evidence": "git diff origin/main...task/T-M39-15 --stat shows four report files added and none deleted. evals/report/20260827-153345-invariant.json is still tracked, but this diff removed its last citations (README.md:51-52 and evals/adversarial/docs-numbers-are-derived.json now point at 20260827-195941), so it is now uncited under ADR-012 Decision 4's scope.",
+      "repro": "git diff --diff-filter=D --name-only origin/main...task/T-M39-15 -- evals/report/   # -> empty; grep -rn 20260827-153345 README.md docs specs tasks src evals/golden evals/adversarial   # -> no hits",
+      "acceptance": "Either the newly-orphaned report is pruned (or kept with a stated reason), or the commit message drops the pruning claim."
+    }
+  ]
+}

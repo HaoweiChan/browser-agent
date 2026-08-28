@@ -1,0 +1,40 @@
+{
+  "pr": 69, "round": 3, "task": "T-M39-15", "commit": "557c4a2+1",
+  "traces_to": "tasks/reviews/pr69-r3.json",
+  "circuit_breaker": "TRIPPED after three review rounds without approval, escalated to the human per the pr-loop protocol. The human chose OPTION B: stop reviewing, start recording. This round therefore files R15-R19 as debt rather than repairing them, fixes only the two LOW findings whose repair is a single sentence each, and closes the PR to further additions.",
+  "gate_after_repair": {"invariant": "92/92 = 1.000, 25.64s / ceiling 35", "fast": "238/238 = 1.000, hook run / ceiling 110", "cost_usd": 0.0},
+  "resolutions": [
+    {
+      "id": "R15", "severity": "MEDIUM", "outcome": "debt", "became": "T-M39-15-D5 (folded, one clause)",
+      "note": "ADR-019 §3's 'MAXIMUM at this count' claim is false against the ledger the same commit ships. Not repaired under Option B: repairing it means another re-derive, which is the loop the breaker was tripped to stop. Folded into D5 as one of the four statements this PR's own re-derive made false."
+    },
+    {
+      "id": "R16", "severity": "MEDIUM", "outcome": "debt", "became": "T-M39-15-D5 (folded — and it is now D5's PRIMARY proof)",
+      "note": "The sharpest instance of D5's thesis found so far, and it replaced the block's two longer repros rather than being appended to them. A routine gate run appended a fast@238 row at 94.08s that falsified ADR-019 §2's present-tense 'slowest 238-case run is 93.44s' — a sentence living on main, not in this PR. The gate stayed green because nothing reads that sentence. Note whose run it was: the ORCHESTRATOR's, not the implementer's, which is why it demonstrates the class rather than any one session's carelessness."
+    },
+    {
+      "id": "R17", "severity": "MEDIUM", "outcome": "debt", "became": "T-M39-15-D5 (folded, one clause)",
+      "note": "§3's item-3 sentence still says both sides derive 35 where both now derive 30, contradicting the derivation sentence below it in the same file. Same reason as R15 for not repairing now; named in D5's clause."
+    },
+    {
+      "id": "R18", "severity": "MEDIUM", "outcome": "debt", "became": "T-M39-15-D5 (folded) — with its one-line half FIXED",
+      "note": "The finding is D5's own exemption example carrying a passed/total that the next commit invalidated (83/86 -> 89/92). Filed as debt with the others, but the decaying scalar itself is removed rather than re-typed: exemption (a) now names the slot and not the figure, the R13 treatment. Recorded here because it is D5's thesis biting D5, one paragraph from where D5 states it."
+    },
+    {
+      "id": "R19", "severity": "MEDIUM", "outcome": "debt", "became": "T-M39-15-D6",
+      "note": "R8's fix closed the instance and not the class. Both variants re-verified by the implementer before filing: a stray bare whole-line fence above a later block yields ['B1'] — duplicate silently missed, REAL; the reviewer's info-string variant ```js {hl} yields ['B2','B2'] — duplicate correctly reported, FALSE. Only the true half is recorded, and D6 states what is not broken as well as what is. Latent not live: no bare whole-line fence exists in TODO.md or DONE.md today, so the probe is not blinded on this tree. D6's acceptance carries the un-done half of R8's original acceptance (state machine or balance-or-discard-nothing) plus correcting the shipped ponytail comment, which currently promises 'at worst a loud false red, never a silent miss' — a guarantee the repro falsifies."
+    },
+    {
+      "id": "R20", "severity": "LOW", "outcome": "fixed",
+      "covered_by": "no eval case — the graded shape reads the COMMITTED ceiling deliberately, so the arithmetic residue is invisible to it by design",
+      "note": "README's band table now carries a sentence saying the last column is the committed ceiling and may sit a step above what the band derives, with invariant's own chain spelled out (25.99 -> 29.89 -> rule gives 30, held at 35) so a reader re-doing the arithmetic does not read 29.89 -> 35 as the rule. ADR-019 §3 already explained the residue; README carried no equivalent."
+    },
+    {
+      "id": "R21", "severity": "LOW", "outcome": "fixed",
+      "covered_by": "no eval case — nothing grades a source line citation",
+      "note": "The provenance cited evals/run.py:103 for WALL_BUDGET_S, which sits at 110. Fixed by naming the SYMBOL rather than correcting the number, so the citation cannot rot again. The finding's sting is fair and is recorded: the number was copied from a finding's text rather than re-derived, which is the one thing the round-2 resolution's verification note claimed was done for every finding.",
+      "same_defect_found_and_fixed_beyond_the_finding": "Re-deriving R21 rather than trusting it surfaced a second instance the review did not catch: T-M39-15-D5 itself cited evals/run.py:311 for write_report, which had moved to 327 — a false line citation inside the block about false citations. Also converted to a symbol reference in this commit."
+    }
+  ],
+  "scope_note": "No numbers were re-derived, no rebase, no force-push, nothing added beyond the four items the coordinator specified plus the one-word D5 line-number correction described under R21, which was in-class and would otherwise have shipped false."
+}

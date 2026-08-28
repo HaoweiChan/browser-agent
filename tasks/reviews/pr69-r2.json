@@ -1,0 +1,87 @@
+{
+  "pr": 69,
+  "round": 2,
+  "task": "T-M39-15",
+  "result": "REQUEST_CHANGES",
+  "base": "ecc9098",
+  "scope": "repair diff after round 1's artifact commit, plus verification that R1-R6 stayed fixed across three rebases",
+  "gate": "invariant 86/86 = 1.000 · fast 238/238 = 1.000 (94.6s / ceiling 110) · $0.0000 · baseline met",
+  "r1_r6_status": "R1, R2 (false-positive half), R3, R5, R6 verified still fixed. R4 regressed -> R10. R2's fix introduced a new false-negative -> R8.",
+  "routing_note": "All eight routed repair. R7/R8 are HIGH. R9-R12 are MEDIUM and each makes a committed statement of record false. R13/R14 are LOW but are factual errors in text this PR introduces, so the round-1 rationale applies: filing debt for a wrong statement the same PR is adding would ship a known-wrong document.",
+  "orchestrator_note": "R7 is the orchestrator's own error, not the implementer's. The ledger conflict resolution used across four rebases deduplicated by ts; origin/main legitimately holds duplicate-ts rows, so one of each pair was destroyed. The orchestrator has repaired evals/report/history.jsonl in this commit: the branch is now a strict superset of origin/main (11 rows restored, 0 missing, verified). The implementer's remaining R7 work is correcting the false claim in tasks/reviews/pr69-r1-resolution.json.",
+  "findings": [
+    {
+      "id": "R7",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "Merging this branch deletes 11 pre-existing ledger rows that exist on origin/main — exactly the de-duplication-by-ts the round-1 resolution artifact swears did not happen.",
+      "evidence": "Every removed row is one half of a duplicate-ts pair (main has 2 copies, branch had 1) for ts 20260821-214528, 20260822-111646, 20260822-161720, 20260822-174202, 20260822-234414, 20260822-235019, 20260823-164337, 20260823-212444, 20260823-215850, 20260823-232059, 20260824-013503. tasks/reviews/pr69-r1-resolution.json 'rebase_note' claims 'zero rows present in origin/main are missing from the branch' and 'a literal de-duplication by ts would have destroyed one of each, and did not' — both were false. Collateral: the deleted 20260822-174202 (5.22s, cost_usd null) is the row T-M39-15-D3 cites as 'the single exception' in its 44 null-cost / 43 sub-3s arithmetic, so the PR deleted the evidence its own debt block cites.",
+      "repro": "Counter-compare origin/main's history.jsonl against the branch's; count rows where main's multiplicity exceeds the branch's -> was 11, must be 0.",
+      "acceptance": "history.jsonl on the branch is a strict superset of origin/main's rows (multiset check returns 0), and the resolution artifact's rebase_note is corrected.",
+      "orchestrator_status": "ledger file REPAIRED by orchestrator in this commit (11 restored, multiset check now 0). Implementer must still correct the resolution artifact's rebase_note."
+    },
+    {
+      "id": "R8",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The R2 fix traded a false positive for a silent false NEGATIVE: tasks/TODO.md:2607 carries an unmatched ``` opener, so the fence stripper pairs it with the next fenced block added anywhere below and deletes ~1900 lines of headings before extraction — a real duplicate task id in that region reports green.",
+      "evidence": "src/browser/eval_adapter.py `_FENCE = re.compile(r\"^```.*?^```\", re.M|re.S)` and `_task_ids` strip fences before matching. tasks/TODO.md contains exactly ONE line starting with ``` (line 2607, a literal-\\n prose line, not a real block). Simulated on the live file: append a genuinely duplicated `### T-M39-7 — ...` block that itself contains an ordinary ```bash fence; the old parser reports duplicate_todo_ids ['T-M39-7'], the new one reports []. evals/adversarial/task-id-parse-boundary.json fixture 4 pins only a BALANCED fence, so no case can go red on this.",
+      "repro": "Append a duplicate `### T-M39-7 — ` block containing a balanced ```bash fence to tasks/TODO.md and run the invariant suite: the probe stays green.",
+      "acceptance": "A fixture in task-id-parse-boundary with an UNBALANCED fence (a stray ``` opener above a later real block) still reports the real duplicate, and the extraction handles unmatched fences (strip only well-formed blocks, or use a fence state machine) — watched red first."
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §3 asserts twice that the cited band row is 'the only clean one' at 86 cases, but the ledger this same PR commits holds two clean rows at that count.",
+      "evidence": "ADR-019 §3 ('This row is also the SLOWEST at this count and the only clean one...') and again ('the cited row is both the slowest at this count and the only clean one'). history.jsonl holds ts 20260827-222539 (dirty:false, 83/86, 16.46s) alongside the cited 20260828-041555 (dirty:false, 83/86, 17.33s). Everything else in the bullet checks out: 17.33s IS the ledger max at 86, and its three red cases are exactly adr029-scope-matches-the-suites / docs-numbers-are-derived / published-band-matches-the-ledger, so R1 stayed fixed.",
+      "repro": "List local invariant rows at total 86 with dirty false -> two rows.",
+      "acceptance": "The sentence states what the ledger holds (slowest at this count, and clean — dropping 'only', or naming both clean rows), so the item 2 argument rests on a true premise."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Round 1's R4 regressed: the two 'rounds running' counts in ADR-019 disagree again (four vs six), and the resolution artifact's claim that 'both now say five' is false on this tree.",
+      "evidence": "ADR-019 'band's overflow has landed six rounds running' (raised in the last re-derive) vs the untouched 'Four rounds running the band has decided a suite tag rather than a reviewer doing it'. tasks/reviews/pr69-r1-resolution.json R4 says 'Both now say five'.",
+      "repro": "grep -n 'rounds running' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md",
+      "acceptance": "Both sentences state the same number (or one stops counting), and the resolution artifact's R4 note matches the tree."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "task-and-adr-ids-are-unique's provenance still republishes T-M39-15-D1's now-dead premise and points at D1 as a live tracker, contradicting ADR-019 §3 and tasks/DONE.md in the same PR.",
+      "evidence": "evals/adversarial/task-and-adr-ids-are-unique.json provenance: '...the 230th fast case ... inherits a band whose ceiling under ADR-013's rule exceeds the committed one ... and T-M39-15-D1 tracks the poisoned rows'. On this tree evals/run.py:103 is WALL_BUDGET_S = {\"fast\": 110, \"invariant\": 20}, so rule(91.76s) = 110 EQUALS the committed ceiling, and D1 is closed in tasks/DONE.md. ADR-019 §3 states that closure explicitly, so the PR ships two contradictory statements of record plus a dangling live reference to a closed debt item.",
+      "repro": "grep 'T-M39-15-D1 tracks the poisoned rows' evals/adversarial/task-and-adr-ids-are-unique.json; grep -n 'WALL_BUDGET_S = ' evals/run.py",
+      "acceptance": "The provenance's tagging rationale is restated as a dated snapshot with the closure noted (as ADR-019 §3 does) and stops naming D1 as tracking live work."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "T-M39-15-D5's premise is false against the file it is filed against: the guard it says does not exist — refusing a cited headline report that is red, with the self-exclusion exemption it calls (b) — is already implemented, and its supporting 'README's fast 228/229' example does not exist on this tree.",
+      "evidence": "tasks/TODO.md D5: 'every guard that reads a cited report checks that its case COUNT matches the current suite. None checks whether the run it cites actually PASSED'. src/browser/eval_adapter.py does exactly that: `if head and (failed := [r[\"id\"] for r in head[\"results\"] if not r[\"passed\"] and r[\"id\"] != case.get(\"id\")]): wrong.append({\"headline_report_is_red\": ...})`, with a comment documenting the self-exclusion fixed point as PR #34 R4. D5 also says exemption (b) 'is exactly what README's fast 228/229 is today' — README contains no '228/229'; its baseline block cites a 238/238 report with zero red cases.",
+      "repro": "grep -n 'headline_report_is_red' src/browser/eval_adapter.py; grep -c '228/229' README.md  # -> 0",
+      "acceptance": "D5 states the residue that actually remains (non-headline citations — ADR-019 band rows, the invariant/live slots — are count-and-tally checked only) and drops or re-sources the 228/229 example, so the next session does not re-build a guard that exists."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "T-M39-15-D3 publishes suite counts and a ledger size that are already stale on the tree it ships in.",
+      "evidence": "D3: 'nowhere near the live 85 (invariant) or 229 (fast)' — this tree's suites are 86 and 238. D3: 'Measured against origin/main: 2161 rows' — origin/main now holds 2192. The 44/43/20260822-174202 figures in the same paragraph do check out.",
+      "repro": "Run both suites; compare to D3's stated counts. git show origin/main:evals/report/history.jsonl | wc -l",
+      "acceptance": "The counts match the tree or are marked as a dated snapshot the way D2's cross-branch facts now are."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "T-M39-15-D3's parenthetical says ADR-019 ends at §7, but this tree's ADR-019 has a §9 — added by the very PR #72 renumber D2 describes two blocks earlier.",
+      "evidence": "D3: '(No section number here on purpose: that amendment is unwritten, ADR-019 ends at §7, and a citation to §8 reddens adr-header-and-index — which it did, once.)' vs ADR-019 '### 9. (2026-08-28) A CI ceiling is derived from runs, not from one run's attempts'. The operative half (a §8 citation still reddens, since 8 is a gap) survives; the 'ends at §7' clause does not.",
+      "repro": "grep -n '^### [0-9]' specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md  # -> 1..7, 9",
+      "acceptance": "The parenthetical says §8 is unallocated (a gap between §7 and §9) rather than that the file ends at §7."
+    }
+  ]
+}

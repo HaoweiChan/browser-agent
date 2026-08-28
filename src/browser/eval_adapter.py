@@ -11,6 +11,7 @@ Case kinds (`input.kind`):
                    the INVARIANTS registry at the foot of this file, which is the list —
                    so this line cannot go stale by omitting a check
 - `adr-header-index` — decision-first ADR header + INDEX.md hygiene (no browser)
+- `id-uniqueness` — task ids and ADR numbers are singletons in their id spaces (no browser)
 - `observe`      — a11y observation shape
 - `url-guard`    — SSRF guard truth table
 - `screening`    — pre-flight scope screen truth table
@@ -2965,6 +2966,127 @@ def _run_adr_header_index_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong,
             "got": {"adr_files": len(adr_files), "index_entries": len(index_nums),
                     "adr_citations_seen": resolved, "files_scanned": len(citing)}}
+
+
+# An allocated task id, as this repo actually spells them: an all-caps run of
+# letters/digits, optionally hyphen-joined — `M43`, `M0`, `T-M39-15`, `M45-D9`,
+# `T-RANK-MIRROR`, `T-ADR-NUM`. The first version of this probe took `(\S+)`,
+# every token before the em dash, which also swallowed the prose heading
+# `### Reopen — A-phase (2026-08-17)` sitting in TODO.md's Notes section: 189
+# ids for 188 tasks, one false id waiting for a second prose heading — an
+# ordinary edit, no collision anywhere — to redden a suite gated at 100%
+# (PR #69 R2).
+#
+# ponytail: deliberately NOT the `ready.py` ID regex the finding proposed
+# reusing. That pattern is `[A-Z]+\d+`, which matches `M43` but none of
+# `T-M39-15`, `M45-D9` or `T-RANK-MIRROR`; against this tree it finds 18 of the
+# 188 headings, so adopting it literally would have blinded the probe to most
+# of the id space it exists to guard. The SHAPE is borrowed (an id is a
+# typed token, not "anything before the dash"), the vocabulary is this repo's,
+# and `task-id-parse-boundary` fixture 5 pins the forms so a later narrowing
+# cannot quietly drop one.
+_TASK_ID = r"[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*"
+# Fenced blocks quote the heading form to DOCUMENT it; a quoted example is not
+# an allocation. Stripped before extraction, so a fence showing `### M43 — ...`
+# twice is green (PR #69 R2's third demonstrated false red).
+#
+# A delimiter is a WHOLE line — ``` plus an optional info word and nothing else.
+# The first version matched any line merely STARTING with ```, which is a silent
+# false NEGATIVE and strictly worse than the false positive it replaced:
+# tasks/TODO.md carries exactly one such line (a literal-\n JSON example in
+# prose), it never closes, so it paired with the opener of the next real block
+# added anywhere below and deleted every heading in between — ~110 of them,
+# measured — leaving a genuine duplicate id green and unloggable. Requiring the
+# whole line means that prose line is not a delimiter at all, so an unmatched
+# opener can no longer swallow the file (PR #69 R8, fixture 6).
+#
+# ponytail: a full-line match, not a fence state machine. Unbalanced delimiters
+# now simply fail to pair and strip nothing, which is the safe direction — a
+# heading that should have been hidden is at worst a loud false red, never a
+# silent miss. Upgrade to a real line-state scan only if a file starts nesting
+# fences or using ~~~ delimiters, neither of which this repo does.
+_FENCE = re.compile(r"^```[A-Za-z0-9_+-]*[ \t]*$.*?^```[ \t]*$", re.M | re.S)
+
+
+def _task_ids(text: str, marker: str) -> list:
+    """Allocated task ids under `marker` (`### ` in TODO.md, `- ` in DONE.md).
+
+    Prose headings and prose bullets are not ids however often they repeat, and
+    a fenced example is not an allocation — both are ordinary content in these
+    two files, and both used to parse as ids.
+    """
+    return re.findall(rf"^{re.escape(marker)}({_TASK_ID}) — ", _FENCE.sub("", text), re.M)
+
+
+def _run_id_uniqueness_case(case: dict) -> dict:
+    """Every task id and every ADR number is a singleton — nothing else grades that.
+
+    The failure mode is the absence of a merge conflict: two branches allocate
+    the same id, git auto-merges clean, both suites stay green. Three instances
+    on this repo before this probe existed: `T-M39-1` defined differently on
+    two branches and carried under one id until a hand renumber; ADR-023
+    allocated by two PRs at once (caught by a hand grep, one vacated to
+    ADR-026); ADR-028 allocated by PR #56 and PR #57 (caught only because
+    `adr-header-and-index` gates INDEX.md rows). tasks/DONE.md meanwhile
+    acquired six duplicate ids via three branches doing the same housekeeping.
+    The asymmetry T-M39-15 names: the ADR/INDEX half was gated, the task-id
+    half by nothing — a duplicate `- M39 — ...` line left every suite green.
+
+    Pure code, no browser: `### <id> —` headers in tasks/TODO.md and
+    `- <id> —` lines in tasks/DONE.md must each be unique, and no id may be in
+    both files (open and done at once — the shape d366e1f cleaned by hand).
+    ADR numbers must be unique across specs/decisions/ADR-0NN-*.md filenames
+    and across INDEX.md rows; the filename half is the one two files with the
+    same NN and different slugs slip past `adr-header-and-index`, whose
+    completeness checks compare sets.
+    """
+    import re
+    from collections import Counter
+
+    root = Path(__file__).parents[2]
+
+    def dups(ids):
+        return sorted(i for i, n in Counter(ids).items() if n > 1)
+
+    # Fixture mode (`task-id-parse-boundary`): grade the PARSE against supplied
+    # text instead of the tree. A probe that only ever reads one tree cannot
+    # show what it would do to a different one, so its extraction rule was
+    # pinned by nothing and drifted into a live false positive (PR #69 R2).
+    if fixtures := case["input"].get("fixtures"):
+        wrong = []
+        for f in fixtures:
+            got = {k: v for k, v in {
+                "duplicate_todo_ids": dups(_task_ids(f.get("todo", ""), "### ")),
+                "duplicate_done_ids": dups(_task_ids(f.get("done", ""), "- ")),
+                "in_todo_and_done": sorted(set(_task_ids(f.get("todo", ""), "### "))
+                                           & set(_task_ids(f.get("done", ""), "- "))),
+            }.items() if v}
+            if got != f["expect_wrong"]:
+                wrong.append({"fixture": f["note"], "want": f["expect_wrong"], "got": got})
+        return {"passed": not wrong, "wrong": wrong, "got": {"fixtures": len(fixtures)}}
+
+    todo = (root / "tasks" / "TODO.md").read_text(encoding="utf-8")
+    done = (root / "tasks" / "DONE.md").read_text(encoding="utf-8")
+    todo_ids = _task_ids(todo, "### ")
+    done_ids = _task_ids(done, "- ")
+
+    adr_nums = [m.group(1)
+                for p in sorted((root / "specs" / "decisions").glob("ADR-*.md"))
+                if (m := re.match(r"ADR-(\d+)", p.name))]
+    index_path = root / "specs" / "decisions" / "INDEX.md"
+    index_text = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
+    index_nums = re.findall(r"^- ADR-(\d+)", index_text, re.M)
+
+    wrong = {k: v for k, v in {
+        "duplicate_todo_ids": dups(todo_ids),
+        "duplicate_done_ids": dups(done_ids),
+        "in_todo_and_done": sorted(set(todo_ids) & set(done_ids)),
+        "duplicate_adr_filenames": dups(adr_nums),
+        "duplicate_index_rows": dups(index_nums),
+    }.items() if v}
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"todo_ids": len(todo_ids), "done_ids": len(done_ids),
+                    "adr_files": len(adr_nums), "index_entries": len(index_nums)}}
 
 
 def _run_readyz_case(case: dict) -> dict:
@@ -6743,6 +6865,7 @@ KINDS = {
     "ablation-run-one": _run_ablation_run_one_case,
     "ablation-table": _run_ablation_table_case,
     "adr-header-index": _run_adr_header_index_case,
+    "id-uniqueness": _run_id_uniqueness_case,
     "readyz-transitions": _run_readyz_case,
     "smoke-guard": _run_smoke_guard_case,
     "soak-accounting": _run_soak_accounting_case,
