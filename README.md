@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 238 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 248 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00
 ```
@@ -50,14 +50,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260827-213057-fast.json`, with
-`evals/report/20260828-053100-invariant.json` and
+Latest offline baseline — `evals/report/20260828-093157-fast.json`, with
+`evals/report/20260828-093018-invariant.json` and
 `evals/report/20260826-132658-live.json`:
 
 ```
-fast  238/238    invariant  92/92    live  11/11    $0.0000    92.6s
-recovery 9/9 verified (20 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 65/65 · 14 replans
+fast  248/248    invariant  99/99    live  11/11    $0.0000    99.2s
+recovery 9/9 verified (24 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
+diagnosis 69/69 · 14 replans
 ```
 
 `live` is not part of the gate, and it goes red when a site is having a bad
@@ -184,15 +184,22 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 238 | 93.44s | 107.46 | **110s** |
-| `invariant` | 92 | 25.99s | 29.89 | **35s** |
+| `fast` | 248 | 99.17s | 114.05 | **115s** |
+| `invariant` | 99 | 29.72s | 34.18 | **35s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer,
-and the two can differ by a step: `fast`'s 107.46 rounds up to the 110 beside
-it, but `invariant`'s 29.89 gives **30** under ADR-013's rule, one step below
-the committed 35. That is deliberate — a short sample may derive under the
-committed ceiling and must never drag it down (ADR-019 §6). A reader re-doing
-the arithmetic should expect 29.89 → 30 → *held at 35*, not 29.89 → 35.
+and the two are allowed to differ by a step: a short sample may derive UNDER the
+committed ceiling, and must never drag it down (ADR-019 §6). At the counts in
+this table both rows' arithmetic happens to land exactly on the committed
+ceiling, so there is no divergence on display — a reader re-doing the sums
+should get the fourth column from the third and the fifth from the fourth, and
+should not read that agreement as a rule. The rule is one-directional: derived
+BELOW the committed ceiling is held, derived ABOVE it is an ADR.
+(This paragraph used to illustrate the divergence with `invariant`'s
+`29.89 → 30 → held at 35` and a `fast` product of `107.46`. Both numbers left
+the table two ceiling moves ago and the example they carried had stopped being
+true of any row in it — the table was republished and the prose under it was
+not, which is the drift this section warns about two paragraphs up. PR #78 R9.)
 
 **CI has its own two, measured on CI** rather than projected from these — the
 four slowest observed runs per suite, sampled across commits (ADR-019 §5, §9;
@@ -443,7 +450,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 267 cases (238 of them in the offline gate), it
+The eval set is not weak; it is 277 cases (248 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

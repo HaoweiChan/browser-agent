@@ -1,0 +1,68 @@
+{
+  "id": "escalate-budget-exhaustion-stays-loud",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "mode": "escalate",
+    "fixture": "hello.html",
+    "task": "What does the greeting page say?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "There Is No Such Heading"
+        }
+      }
+    ],
+    "stub_calls": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello Fixture"
+        },
+        "_usage": {
+          "llm_tokens": 2,
+          "llm_usd": 0.0
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ],
+    "loop_budgets": {
+      "actions": 40,
+      "llm_tokens": 1,
+      "llm_usd": 5.0
+    }
+  },
+  "expect": {
+    "status": "failure:env",
+    "reason_contains": "budget exhausted",
+    "trace_actions": [
+      "navigate",
+      "extract",
+      "extract",
+      "navigate",
+      "extract"
+    ],
+    "legs": [
+      {
+        "mode": "plan",
+        "status": "failure:locate"
+      },
+      {
+        "mode": "loop",
+        "status": "failure:env"
+      }
+    ],
+    "budgets": {
+      "llm_tokens": 2
+    }
+  },
+  "provenance": "M46/ADR-037 Decision 6, acceptance (c). INV-3's shape for the new policy, and tagged `invariant` for the same reason `loop-token-ceiling-stops-the-run-loudly` is: a budget stop that goes quiet is INV-0 and INV-1 defeated through the side door, and an escalation is exactly where a run could go quiet \u2014 the plan leg already failed, so a merge that reported the FIRST leg's status, or that swallowed the second leg's stop because a leg had already ended, would hide a run that stopped mid-escalation. The cap is injected (1 token against a 2-token scripted turn) rather than the spend simulated, per ADR-028's ruling that a $0.00 suite may not put four figures of fake spend on its own headline. `budgets` pins that the run still ACCOUNTED for what the stub reported after the merge \u2014 and only that: the plan leg's stub planner reports zero tokens, so this conjunct cannot see the SUMMATION and does not claim to (cold review of M46). `escalate-fires-on-a-failed-plan-leg`'s `actions: 6` is what pins the sum, over two legs that both spend actions. `trace_actions` carries the other half here: the loop leg's steps up to the stop are in the merged trace, so the run says where it died and not just that it did."
+}

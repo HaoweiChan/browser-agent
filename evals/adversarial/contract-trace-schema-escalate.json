@@ -1,0 +1,102 @@
+{
+  "id": "contract-trace-schema-escalate",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "schema",
+    "mode": "escalate",
+    "fixture": "hello.html",
+    "task": "What is the greeting?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "There Is No Such Heading"
+        }
+      }
+    ],
+    "stub_calls": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello Fixture"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "keys": {
+      "result": [
+        "status",
+        "mode",
+        "model",
+        "answer",
+        "reason",
+        "verdict",
+        "evidence",
+        "budgets_spent",
+        "legs"
+      ],
+      "legs_entry": [
+        "mode",
+        "status",
+        "reason",
+        "answer",
+        "steps",
+        "budgets_spent",
+        "extractions"
+      ],
+      "evidence": [
+        "trace",
+        "screenshots",
+        "extractions",
+        "final_url",
+        "final_page_digest"
+      ],
+      "verdict": [
+        "verdict",
+        "layer",
+        "ground_truth",
+        "checks",
+        "reason"
+      ],
+      "budgets_spent": [
+        "actions",
+        "llm_tokens",
+        "llm_usd",
+        "replans",
+        "ms",
+        "judge_calls",
+        "judge_tokens",
+        "judge_usd"
+      ],
+      "trace_step": [
+        "i",
+        "action",
+        "target",
+        "value",
+        "anchor",
+        "rank",
+        "resolved",
+        "expected_state",
+        "postcondition_ok",
+        "failure_class",
+        "note",
+        "retry_or_recovery",
+        "superseded_by",
+        "page_changed",
+        "screenshot",
+        "ms"
+      ]
+    }
+  },
+  "provenance": "M46/ADR-037 Decision 5. The third schema twin: an escalate run carries exactly one field the other two modes do not (`legs`), the TraceStep is untouched \u2014 ADR-028 \u00a77's 'the trace gains no fields' survives a policy that concatenates two runs' traces, because the concatenation uses `i` and `superseded_by` as they already are \u2014 and `legs_entry` pins the new sub-shape, so a leg record that quietly stopped reporting its own budgets or its superseded extractions is red here. The plan leg is scripted to fail so that a two-leg run is what gets graded: a one-leg escalate run would leave every claim about the second entry unmade."
+}

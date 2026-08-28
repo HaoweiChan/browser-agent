@@ -176,11 +176,13 @@ def url_ok(u: str) -> bool:
 
 
 # ADR-027 Decision 1: loop mode is a peer mode, selected per task, and mode B
-# stays the default. Two spellings and no more — an unknown mode is refused at
+# stays the default. Three spellings and no more — an unknown mode is refused at
 # the boundary rather than silently defaulting, because a flag that is accepted
 # and ignored looks identical over HTTP to one that works
 # (`gateway-mode-selects-the-driver`).
-MODES = ("plan", "loop")
+# `escalate` (M46, ADR-037) is the third: mode B first, the loop only if that
+# leg ends in a failure class, one RunResult carrying both legs.
+MODES = ("plan", "loop", "escalate")
 MODE_ENV = "BROWSER_AGENT_MODE"
 
 
@@ -231,12 +233,13 @@ async def _execute(run_id: str, task: str, url: str | None, model: str, mode: st
         try:
             result = await run_task(
                 task, url,
-                # Exactly one of the two factories is constructed: each
-                # validates the API key on the way in, so building the unused
-                # one would raise on a deployment that only meant to use the
-                # other.
+                # Exactly one of the two factories is constructed — except in
+                # `escalate`, which runs a leg of each and needs both (ADR-037
+                # Decision 7). Each validates the API key on the way in, so
+                # building an unused one would raise on a deployment that only
+                # meant to use the other.
                 None if mode == "loop" else live_planner(model), RUN_ROOT / run_id,
-                mode=mode, driver=live_driver(model) if mode == "loop" else None,
+                mode=mode, driver=live_driver(model) if mode != "plan" else None,
                 judge=live_judge(), url_guard=url_ok,
                 # Echoed back on the record so a committed ablation report is
                 # self-attributing rather than trusting the driver's loop variable.
@@ -291,10 +294,14 @@ async def submit_task(t: TaskIn):
     # requires (spec-drift audit, `gateway-mode-selects-the-driver`). An
     # explicit `model` still wins over both: the ablation and any A/B have to be
     # able to pin it.
+    # `escalate` takes the LOOP's default for both of its legs (ADR-037
+    # Decision 7): the loop leg is the one with a hard capability requirement —
+    # native tool calling, verified for that model and no other — while the plan
+    # leg has none, and one model per run keeps the record self-attributing.
     mode = t.mode or default_mode()
     asyncio.get_event_loop().create_task(
         _execute(run_id, t.task, t.url,
-                 t.model or (DEFAULT_LOOP_MODEL if mode == "loop" else DEFAULT_MODEL), mode))
+                 t.model or (DEFAULT_MODEL if mode == "plan" else DEFAULT_LOOP_MODEL), mode))
     return {"run_id": run_id}
 
 
@@ -867,6 +874,7 @@ const ADRS = [
   ["034", "the build works out its own commit sha instead of being handed one — the deployed /version answered “unavailable” because the platform never filled the build argument, so a build stage now reads the context’s HEAD and a derivation that fails writes nothing at all, which the route publishes as “unavailable” rather than guessing"],
   ["035", "the per-step mode now looks at the page: every turn carries the screenshot the trace already keeps as evidence, and a click by pixel coordinates is allowed only when those pixels came from a screenshot the model was actually shown"],
   ["036", "a postcondition is checked in the document its action touched — the trace records which document resolved (resolved.scope), so a decoy iframe can no longer satisfy a click's expected_state; waits and navigations stay page-wide by nature"],
+  ["037", "a third way to run a task: try the cheap fixed-plan mode first and fall back to the per-step mode only if it fails, in one run that shows both attempts — and the only thing the fallback is told about the first attempt is which step died, doing what, and how, so nothing a website wrote can be passed along as an instruction"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

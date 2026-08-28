@@ -30,7 +30,9 @@ contract-drift (spec-drift audits field-by-field).
     "judge_calls": 0,
     "judge_tokens": 0,
     "judge_usd": 0.0
-  }
+  },
+  "legs": [ {"mode": "plan", "status": "failure:<class>", "reason": "…", "answer": null,
+             "steps": 0, "budgets_spent": {}, "extractions": []} ]
 }
 ```
 
@@ -41,9 +43,22 @@ contract-drift (spec-drift audits field-by-field).
   attribution of every row is the driver's own assertion about a deployment that
   can redeploy mid-sweep (`specs/decisions/ADR-010-m9-model-ablation.md`
   Decision 13).
+- `legs` — **`escalate` runs only** (M46, `specs/decisions/ADR-037-m46-plan-then-loop-escalation.md`):
+  one entry per leg that RAN, in order, carrying that leg's `mode`, `status`,
+  `reason`, `answer`, step count, its own `budgets_spent`, and its own
+  `extractions`. Absent on `plan` and `loop` runs, and on a run that never got
+  off the ground (the gateway's pre-run `env` failure, which is mode-agnostic).
+  The top-level `budgets_spent` is the per-key SUM over the legs, so the run's
+  cost line is the run's cost; `evidence.trace` is their concatenation, with
+  every step of a superseded leg pointing `superseded_by` at the next leg's
+  first step. `evidence.extractions`, by contrast, is the FINAL leg's alone —
+  that field is what the verdict was computed from, and a superseded leg's
+  readings are in its `legs[]` entry rather than mixed into the graded evidence.
 - `status` — `failure:<class>` uses exactly one of the 7 top-level classes in
   `docs/evals/failure-taxonomy.md` (nav, locate, act, extract, semantic, env,
   task). `unsupported` comes from pre-flight screening or mid-run discovery.
+  On an `escalate` run it is the FINAL leg's status, re-derived through
+  `assemble_result` so INV-0/1/2 hold of the merged record too.
 - `answer` — the user-facing result. **INV-0: `status` = `success` requires a
   non-empty `answer` AND a non-empty `evidence.trace`.** An empty extraction is
   `failure:extract`, never a quiet success. The converse holds too (M28): a run
@@ -67,7 +82,14 @@ contract-drift (spec-drift audits field-by-field).
   timeout, malformed response, budget exhausted) and the run failed CLOSED —
   `src/browser/agent.py`'s `_apply_judge`. `budgets_spent.judge_calls` is 0 or
   1 (`RUN_JUDGE_BUDGET`, `src/browser/judge.py`): at most one judge call per
-  run, at this boundary, never per extraction. `judge_tokens`/`judge_usd` are
+  LEG, at this boundary, never per extraction — one leg is one `run_task`, so
+  for `plan` and `loop` that is per run. An `escalate` run has two legs and its
+  SUMMED `judge_calls` can therefore be 2, on exactly one path: a plan leg that
+  reached the boundary and was rejected there is a `failure:semantic` leg, which
+  is a trigger (ADR-037 Decisions 2 and 6), and the loop leg then reaches its own
+  boundary with its own budget. Capping it across the legs would demote the loop
+  leg's answer for the plan leg's spending, which is ADR-017's fail-closed firing
+  on the wrong subject. `judge_tokens`/`judge_usd` are
   0 for every stub (fast/live suites) and for a cache hit; only a live,
   uncached call spends either.
 - `verdict.checks.judge_attempts` (M39, ADR-023) — present alongside
@@ -241,6 +263,28 @@ appears, in order — no post-hoc reconstruction).
     **answer assembly** over the executed trace. Both are the same functions
     mode B uses (`agent.root_target_gap`, `agent.plan_gap`), asked at a second
     anchor.
+  - `escalate` (M46, ADR-037) — a POLICY over the other two, not a third
+    cadence: mode B runs once, and only if that leg ends in a `failure:<class>`
+    **and attempted no state-changing action** does the same task re-run in loop
+    mode, with the loop's opening note seeded by `agent.escalation_note`.
+    ANY plan-leg step whose action is in `verifier.STATE_CHANGING` refuses the
+    escalation, whatever its `postcondition_ok` — that field is a verification
+    outcome, not an execution fact, so `false` ("the predicate did not hold")
+    and `null` ("nobody checked") are both compatible with the action having
+    taken full effect (ADR-037 Decision 2a). The run then carries the plan leg's
+    own failure and one `legs` entry, and `reason` says which step and which
+    verb stopped it. No new status class: nothing new failed. That note carries four facts and nothing else —
+    the failure class, the dying step's index, its action verb and its target
+    KEY NAMES, each from a closed vocabulary — so no page text, target value or
+    error string crosses between legs (rule 6 and the injection boundary in one
+    clause). Both legs need their own factory (`planner` AND `driver`, refused
+    otherwise), each spends its OWN mode's budgets, the traces concatenate into
+    one run under supersede semantics (`legs` above), and the verifier and the
+    judge run in the legs' own `finalize`, once per leg that reaches an answer:
+    the RunResult's verdict is the final leg's, and a plan leg the judge
+    rejected has already spent its own single boundary call, which the summed
+    `judge_calls` reports. `unsupported` does not
+    escalate: `screen()` refuses identically at the top of both legs.
   - A failed call does not end a loop run: the model is told what happened and
     chooses again. What bounds that is the budgets and the no-progress harness —
     arriving at the same `(URL, page signature)` state `LOOP_REVISIT_CAP` times

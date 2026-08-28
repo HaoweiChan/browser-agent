@@ -1,0 +1,58 @@
+{
+  "id": "escalate-plan-success-never-starts-the-loop",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "escalate",
+    "fixture": "hello.html",
+    "task": "What does the greeting page say?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello Fixture"
+        }
+      }
+    ],
+    "stub_calls": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello Fixture"
+        },
+        "_usage": {
+          "llm_tokens": 99,
+          "llm_usd": 0.0
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Hello Fixture",
+    "trace_actions": [
+      "navigate",
+      "extract"
+    ],
+    "legs": [
+      {
+        "mode": "plan",
+        "status": "success",
+        "steps": 2
+      }
+    ],
+    "budgets": {
+      "actions": 2,
+      "llm_tokens": 0,
+      "llm_usd": 0.0
+    }
+  },
+  "provenance": "M46/ADR-037 Decision 2, acceptance (a). The fast path: the plan leg answers, so the loop never starts. Three conjuncts discriminate separately. `legs` has exactly one entry, so a policy that ran the loop anyway is red on it; `trace_actions` is mode B's two steps with no second `navigate`, so a loop leg appended to the trace is red there; and `budgets` pins the loop's scripted spend at zero — the driver script's first call reports 99 tokens, so a run that called the driver even ONCE carries them in the total and goes red, which is the only conjunct that can see a loop leg whose steps were somehow kept out of the trace. A driver script is provided precisely so that 'never started' is a measurement rather than the absence of a means to start. The scripted spend is tokens and not dollars on purpose: a stubbed USD figure would put money on the headline of a suite whose whole claim is $0.00 (cost-discipline rule 4, ADR-028 §4's `$99.0000` incident — this case published `cost $0.2500` on its first green run before the same lesson was re-learned here)."
+}

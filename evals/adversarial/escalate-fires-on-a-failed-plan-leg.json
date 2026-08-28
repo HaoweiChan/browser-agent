@@ -1,0 +1,76 @@
+{
+  "id": "escalate-fires-on-a-failed-plan-leg",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "mode": "escalate",
+    "fixture": "hello.html",
+    "task": "What does the greeting page say?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "There Is No Such Heading"
+        }
+      }
+    ],
+    "stub_calls": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Hello Fixture"
+        },
+        "_usage": {
+          "llm_tokens": 7,
+          "llm_usd": 0.0
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Hello Fixture",
+    "trace_actions": [
+      "navigate",
+      "extract",
+      "extract",
+      "navigate",
+      "extract",
+      "final_answer"
+    ],
+    "legs": [
+      {
+        "mode": "plan",
+        "status": "failure:locate",
+        "steps": 3,
+        "budgets": {
+          "actions": 3,
+          "llm_tokens": 0
+        }
+      },
+      {
+        "mode": "loop",
+        "status": "success",
+        "steps": 3,
+        "budgets": {
+          "actions": 3,
+          "llm_tokens": 7
+        }
+      }
+    ],
+    "budgets": {
+      "actions": 6,
+      "llm_tokens": 7,
+      "llm_usd": 0.0
+    },
+    "driver_note_contains": "failure class `locate` at step 3, action `extract`"
+  },
+  "provenance": "M46/ADR-037 Decisions 1, 4 and 5, acceptance (b). The plan leg dies `locate` (the target is on no page here, and mode B's relocation rung dies too, which is why the dying step is 3 and not 2); the loop leg then answers the same task. Every conjunct is a separate claim and each can be red alone: `legs` that the escalation fired and what each leg spent; `trace_actions` that the two legs are ONE trace, in order, with the loop leg's own pre-plan navigate in it; `budgets` that the totals are totals, which is the only place the plan leg's 3 actions and the loop's 7 tokens are added up; `driver_note_contains` that the seeded note reached the driver carrying the plan leg's terminal facts. `expect.answer` is doing structural work beyond ground truth: it puts the eval's re-verification at layer 2, so `verify()` runs over the MERGED trace \u2014 and the plan leg's abandoned `locate` failures would fail `no_abandoned_failure` there unless ADR-037 Decision 4's supersede pointers are written. A merged trace that concatenated without them is red on `verdict` while every other conjunct stays green."
+}

@@ -27,6 +27,12 @@
         "factory": "driver"
       },
       {
+        "mode": "escalate",
+        "http": 200,
+        "planner_model": "anthropic/claude-opus-5",
+        "factory": "planner"
+      },
+      {
         "mode": "sideways",
         "http": 422,
         "planner_model": null,
@@ -45,5 +51,6 @@
     "note": "`POST /tasks` takes a per-task mode flag (ADR-027 Decision 1). Absent means the env default, which is mode B; `loop` reaches `live_driver` and not `live_planner`; anything else is refused before a run exists. The factories are recorded from the eval side — a flag that is accepted and silently ignored looks identical over HTTP to one that works, which is exactly how the M9 ablation nearly measured one model four times (PR #15)."
   },
   "provenance": "M42/ADR-028. The `factory` column is the half nothing else can see: without it this case would pass with the mode field parsed, validated and dropped.",
+  "provenance_m46": "M46/ADR-037 Decision 7 adds the `escalate` row. `factory` records the FIRST factory a request constructs, and for escalate that is the planner — the recorder raises there, so this row cannot prove the driver is also built (the escalate fixture cases do that). What it does prove is the half that would otherwise be invisible: the flag is accepted, and the run it starts is built on `DEFAULT_LOOP_MODEL`, not mode B's default — so an `escalate` that was validated and then dropped, falling back to plan mode, is red on `planner_model`. ADR-037 Decision 7's ruling that both legs run on ONE model, defaulting to the loop's, is pinned here and nowhere else: the loop leg is the one with a hard tool-calling requirement, and the plan leg's share of the price is 3-4 actions.",
   "provenance_drift_2026_08_26": "Spec-drift audit finding 3, watched red: `_execute` passed `t.model or DEFAULT_MODEL` whatever the mode, so a loop-mode request with no explicit model drove the loop with `openai/gpt-5.6-luna` — the model ADR-010's COST ablation picked under a ceiling ADR-027 deliberately lifted for this mode. `DEFAULT_LOOP_MODEL` existed, was documented as 'the loop driver's default', and was dead in production: every call site overrode it. The consequence is not cosmetic — ADR-028 §6 justifies the USD ceiling by 'loop mode calls a frontier model once per step', and §8 records `input_modalities: image` and `supported_parameters: tools` for `claude-opus-5` and for nothing else, so the model that would actually have run was never verified to support the tool-calling the driver requires. The last row is the other direction: an EXPLICIT model still wins over the mode default, because the ablation and any future A/B need to pin the model themselves."
 }

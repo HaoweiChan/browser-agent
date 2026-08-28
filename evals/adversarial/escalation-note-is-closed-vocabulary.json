@@ -1,0 +1,14 @@
+{
+  "id": "escalation-note-is-closed-vocabulary",
+  "task": "browser",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "escalation-note-closed-vocabulary"
+  },
+  "provenance": "M46/ADR-037 Decision 3. The end-to-end half is `escalate-seeded-note-cannot-smuggle-an-instruction`, which drives a real page and can only attack the fields that page can reach; this is the other half — `agent.escalation_note` is called directly with a result whose EVERY string field is an attack (status, reason, answer, the step's note and action, and the target's keys AND values), and the output must contain none of them. Pure code, no browser: the property is about what this function can emit, not about what any one page can author, and a closed vocabulary is checkable by reading the four slots rather than by trusting a filter to have anticipated the payload. The check has a second half that keeps the first from being satisfied by returning nothing: a WELL-FORMED result must still produce a note carrying its class, step index, action and target key names — a builder that emits the empty string smuggles nothing and is useless, and one conjunct without the other would accept it."
+}

@@ -107,7 +107,13 @@ def run_case(case):
 # 30 -> 35 came from a single contended outlier the ledger's maximum rule takes
 # whether or not it is representative. Same ADR-013 rule throughout, and §3
 # carries the disclosure rather than this comment.
-WALL_BUDGET_S = {"fast": 110, "invariant": 35}
+# `fast` 110 -> 115 at M46 (ADR-037 Decision 9): eight cases entered that suite
+# and the ledger's slowest run at the new count of 246 derives 115. The move was
+# forecast one round earlier and filed as T-M46-2 — the 244-case band sat
+# hundredths of a second inside the boundary — and it arrived exactly there, on
+# a run of this branch's own gate. Case-COUNT growth again; ADR-019 §2 is the
+# band of record and this comment cites it rather than leading it.
+WALL_BUDGET_S = {"fast": 115, "invariant": 35}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its

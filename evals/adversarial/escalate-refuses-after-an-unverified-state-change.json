@@ -1,0 +1,79 @@
+{
+  "id": "escalate-refuses-after-an-unverified-state-change",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "mode": "escalate",
+    "fixture": "shop.html",
+    "task": "Open the Aurora Desk Lamp page and read its SKU.",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "There Is No Such Heading"
+        }
+      }
+    ],
+    "stub_calls": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "url_contains": "shop-lamp-std"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Aurora Desk Lamp"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate",
+    "reason_contains": "escalation refused: step 2 (click) was attempted",
+    "trace_actions": [
+      "navigate",
+      "click",
+      "extract",
+      "extract"
+    ],
+    "trace_postconditions": [
+      true,
+      null,
+      null,
+      null
+    ],
+    "legs": [
+      {
+        "mode": "plan",
+        "status": "failure:locate"
+      }
+    ],
+    "answer_null": true
+  },
+  "provenance": "M46/ADR-037 Decision 2a, branch `postcondition_ok is None` — PR #78 R8's scenario (A). The plan's click carries no `expected_state`, so nothing was asserted about it and `postcondition_ok` is null: nobody checked. **An unknown is not an absence.** The click still navigated, and on a real site the same shape is a submit whose consequence the plan never named — so escalation is refused and the plan leg's own `failure:locate` is the run's answer. `trace_postconditions` is what pins the branch rather than describing it: the click's cell is `null`, so a guard reading `postcondition_ok is True` (the shipped condition before R8) does not fire here and the run escalates, clicking a second time. Watched red against exactly that guard: `checks {status: false, reason_contains: false, legs: false, answer_null: false}`, `got {status: \"success\", answer: \"Aurora Desk Lamp\"}` with the merged trace carrying `click` at step 2 and `click` again at step 5.",
+  "triage": {
+    "class": "unsafe-side-effect",
+    "note": "one of the three postcondition branches, each with its own case; the set is what makes the guard's claim ('a state-changing action was attempted') exactly what it tests."
+  }
+}
