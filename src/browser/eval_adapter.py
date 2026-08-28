@@ -1626,10 +1626,24 @@ def _check_ci_numbers_are_derived() -> dict:
     # T-R51 residue this case exists to close (PR #41 R14). The workflow copy was
     # itself ungraded, so this closes a third-copy drift in the same stroke; what
     # it cannot do is tell either copy from the measurement, which stays T-R73.
-    wf_cells = {m[1]: [float(m[2]), float(m[3]), float(m[4]), float(m[5])]
-                for m in _re.finditer(
-                    r"^\s*#\s+(invariant|fast)\s+([\d.]+) / ([\d.]+) / ([\d.]+) / "
-                    r"([\d.]+)s\s*$", wf, _re.M)}
+    # T-R80: collect every match per suite, not a dict comprehension that keeps
+    # the LAST. A contradictory band inserted ABOVE the real line was invisible
+    # — the same line BELOW it reddened — which is T-R51's "Compounding" clause
+    # (one document publishing the CI band twice, incompatibly) reproduced in
+    # the workflow, the document PR #41 round 3 promoted to a graded source.
+    # README already refuses this via `publishes_more_than_one_ci_band`; this
+    # gives the third copy the same one-band rule instead of a note saying it
+    # has none.
+    wf_all = {}
+    for m in _re.finditer(
+            r"^\s*#\s+(invariant|fast)\s+([\d.]+) / ([\d.]+) / ([\d.]+) / "
+            r"([\d.]+)s\s*$", wf, _re.M):
+        wf_all.setdefault(m[1], []).append(
+            [float(m[2]), float(m[3]), float(m[4]), float(m[5])])
+    for suite, bands in sorted(wf_all.items()):
+        if len(bands) > 1:
+            wrong.append({"suite": suite, "workflow_publishes_more_than_one_band": bands})
+    wf_cells = {k: v[0] for k, v in wf_all.items()}
     for suite in sorted(by):
         if wf_cells.get(suite) != by[suite]:
             wrong.append({"suite": suite, "adr_five_table": by[suite],
@@ -3896,6 +3910,27 @@ def _run_report_citations_case(case: dict) -> dict:
     wrong: dict = {}
     if missing:
         wrong["missing_reports"] = missing
+    # T-R19: the OTHER direction. This checked citation -> file and never file ->
+    # citation, so the merge at 94f1a42/7a2869a re-added 41-46 uncited routine
+    # gate dumps that ADR-012 had just pruned and no case saw it — 38 of them
+    # were deleted by hand, which is not a guard. Enumerate the directory and
+    # ask whether anything in scope cites each file.
+    #
+    # The exempt kinds are ADR-012's own ("non-prunable by policy regardless of
+    # citation"), not a convenience: a `live`/`soak`/`ablation`/`bench` report is
+    # a measurement nothing else can reproduce, so it stays whether or not a
+    # document happens to point at it. Routine `fast`/`invariant` dumps are the
+    # opposite — reproducible by running the suite — which is why citation is
+    # what earns them a place on disk.
+    exempt = case.get("expect", {}).get("uncited_kinds_allowed", [])
+    report_dir = root / "evals" / "report"
+    uncited = sorted(
+        f.name for f in report_dir.glob("*.json")
+        if f.name != "history.jsonl"
+        and not any(k in f.name for k in exempt)
+        and f.name not in cited)
+    if uncited:
+        wrong["uncited_reports"] = uncited
     want_skip = sorted(case.get("expect", {}).get("skip_exactly", []))
     got_skip = sorted(REPORT_CITATION_SKIP)
     if want_skip and got_skip != want_skip:
@@ -5829,6 +5864,7 @@ def _run_doc_counts_case(case: dict) -> dict:
     read out of those report files, so the block can only be stale by citing a
     stale report, which the citation check makes visible.
     """
+    import re as _re
     from evals.run import ROOT as RUN_ROOT
     from evals.run import WALL_BUDGET_S, load_cases
 
@@ -5897,11 +5933,27 @@ def _run_doc_counts_case(case: dict) -> dict:
             if suite in case.get("suites", []) and n != counts[suite]:
                 wrong.append({"cites_a_report_of_a_different_tree": rid,
                               "report_cases": n, "suite_now": counts[suite]})
+        # T-R29: the block's CONTENT, not the presence of strings within it. The
+        # R4 repair made these numbers recompute from the reports they cite, and
+        # left the assertion as `expected in readme` — so a README that keeps
+        # the correct line and adds a contradicting one beside it is still
+        # green, which is the same class of drift R4 was filed for, one step
+        # removed. Each suite's line may appear exactly once in the block.
+        fence = _re.search(r"```\n(fast .*?)```", readme, _re.S)
+        block = fence.group(1) if fence else ""
         for suite, rep in reports.items():
             n = len(rep["results"])
             want = f"{suite}  {sum(1 for r in rep['results'] if r['passed'])}/{n}"
             if want not in readme:
                 wrong.append({"readme_does_not_say": want, "from": ws["reports"][suite]})
+            # One line per suite inside the fenced block, and it must be the
+            # right one. `\d+/\d+` rather than the expected literal, because
+            # the failure being caught is a COMPETING figure, which by
+            # definition is not the literal.
+            competing = _re.findall(rf"(?<![\w-]){_re.escape(suite)}\s+(\d+/\d+)", block)
+            if len(competing) > 1:
+                wrong.append({"readme_block_publishes_more_than_one_figure_for": suite,
+                              "found": competing})
         head = reports.get(ws["headline"])
         # A baseline block is a claim that the tree is in this state. Citing a
         # run that FAILED cases and publishing its wall clock as the tree's is
@@ -5964,10 +6016,27 @@ def _run_doc_counts_case(case: dict) -> dict:
                 "with_browser": int(head["totals"]["cases_with_budgets"]),
                 "total": len(head["results"]),
                 "remaining": len(head["results"]) - int(head["totals"]["cases_with_budgets"])}
-        text = (RUN_ROOT / s1["doc"]).read_text(encoding="utf-8")
+        whole = (RUN_ROOT / s1["doc"]).read_text(encoding="utf-8")
+        # T-M32-4: SCOPED, the way `analysis_coverage` already slices §6. The
+        # unscoped read let a contradicting sentence anywhere in the document
+        # satisfy an `in text` assertion — verified by inserting "Actually only
+        # 170 browser actions run..." above the correct line and watching the
+        # case stay green.
+        start = whole.find(s1.get("section_start", "")) if s1.get("section_start") else 0
+        end = whole.find(s1["section_end"], start + 1) if s1.get("section_end") else len(whole)
+        text = whole[start if start >= 0 else 0: end if end > 0 else len(whole)]
         for q in s1["quotes"]:
             if (want := q.format(**vals)) not in text:
                 wrong.append({"analysis_section1_does_not_say": want})
+        # T-M32-4 / T-R29: presence is not enough. A line that PARSES as a
+        # competing figure for the same field, sitting beside the correct one,
+        # is the drift these checks exist to catch — and an `in text` assertion
+        # is blind to it by construction, because the correct string is still
+        # there. Each pattern must match exactly once in the section.
+        for pat in s1.get("at_most_one", []):
+            hits = _re.findall(pat, text)
+            if len(hits) > 1:
+                wrong.append({"analysis_section1_says_it_twice": pat, "hits": hits[:6]})
         # ...and the prose has to NAME the report those values came from. The
         # numbers were derived here from the headline report while the sentence
         # beside them credited a different file — "read out of the committed

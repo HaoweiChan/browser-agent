@@ -105,8 +105,15 @@
         "{actions} browser actions in a `fast` run; **{with_browser} of the {total}** `fast` cases drive a real Chromium end to end",
         "The\nremaining {remaining} are those refusals plus pure-code probes of a single"
       ],
-      "why": "T-M39-5 / PR #44 R4: this pair sat three lines under a preamble saying every count in the section is current, read out of a report two trees old, while the split quote beside it was being kept honest. Recomputed from the headline report the same way, so it cannot drift again without going red. PR #57 R4 added the citation half: the two figures were recomputed correctly from the headline report while the sentence carrying them credited `20260824-052304-fast.json`, a 181-case report holding 287 actions and 109 browser cases. Deriving a number and naming its source are two claims; grading only the first is how a paragraph stays arithmetically true and evidentially false.",
-      "cites_report": true
+      "why": "T-M39-5 / PR #44 R4: this pair sat three lines under a preamble saying every count in the section is current, read out of a report two trees old, while the split quote beside it was being kept honest. Recomputed from the headline report the same way, so it cannot drift again without going red. PR #57 R4 added the citation half: the two figures were recomputed correctly from the headline report while the sentence carrying them credited `20260824-052304-fast.json`, a 181-case report holding 287 actions and 109 browser cases. Deriving a number and naming its source are two claims; grading only the first is how a paragraph stays arithmetically true and evidentially false. T-M32-4 / T-R29 (both P1, one defect at two sites): the assertion was `want in text` over the WHOLE document, with no section scoping \u2014 unlike `analysis_coverage`, which already slices \u00a76 \u2014 and no uniqueness check, so a contradicting sentence beside the correct one stayed green. Verified before the fix by inserting \"Actually only 170 browser actions run\u2026\" above the correct line: `passed: True`. Now the read is sliced to \u00a71 and each figure's PATTERN \u2014 not its expected literal, which a competing figure is by definition not \u2014 may match at most once. The same rule is applied to README's fenced \"Where it stands\" block, which had the identical weakness for the identical reason (T-R29 owns it there; T-M32-4 is the narrower \u00a71 instance and both close here).",
+      "cites_report": true,
+      "section_start": "## 1. What was measured, and on what",
+      "section_end": "## 2. Cost",
+      "at_most_one": [
+        "\\d+ browser actions",
+        "\\*\\*\\d+ of the \\d+\\*\\*",
+        "remaining \\d+ are those refusals"
+      ]
     },
     "doc_quotes": [
       {

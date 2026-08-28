@@ -3566,7 +3566,13 @@ Acceptance: either the parse is scoped to the comment region preceding the
 `EVAL_WALL_BUDGET_S_*` env block, watched red by relocating the copy, or §5 says "a comment in
 `.github/workflows/eval.yml`" rather than "comment block".
 
-### T-R80 — the third copy has no one-band rule, so a contradictory band above the real one is invisible            [status: todo]
+### T-R80 — the third copy has no one-band rule, so a contradictory band above the real one is invisible            [status: done]
+CLOSED 2026-08-28 on the acceptance's stronger branch — duplicate suite lines in the
+workflow redden, matching README's one-band rule, rather than the triage note naming
+the gap. `wf_cells` was a dict comprehension keeping the LAST match, so a contradictory
+band ABOVE the real line was invisible while the same line BELOW it reddened. Now every
+match per suite is collected and more than one is its own row. Watched red with the
+block's own repro inserted above: `workflow_publishes_more_than_one_band`.
 Origin: PR #41 R19
 Priority: P1
 Spec: `src/browser/eval_adapter.py`:1114-1117 builds `wf_cells` as a dict comprehension, which
@@ -3904,7 +3910,14 @@ Repro: edit any file under `src/` from a worktree whose parent checkout has no
 Acceptance: the hook resolves the tree from the edited file's path (or from
 `git rev-parse --show-toplevel` on it) rather than from `$CLAUDE_PROJECT_DIR`.
 
-### T-M32-4 — the `analysis_section1` grader asserts presence, not absence of contradiction            [status: todo]
+### T-M32-4 — the `analysis_section1` grader asserts presence, not absence of contradiction            [status: done]
+CLOSED 2026-08-28 with T-R29, in the one place that block asked for ("fix it once, for
+every half, there"). §1 is now section-scoped and uniqueness-checked. The block's own
+repro — inserting a contradicting browser-actions sentence above the correct one — was
+used as the red-first and reddens on two patterns at once. Note the first attempt at
+the fix did NOT catch it: the patterns were written from the correct line's full
+wording (`\d+ browser actions in a \`fast\` run`) and a competing sentence phrases it
+differently, so they had to be broadened to the figure itself.
 Origin: PR #34 R10
 Priority: P1
 Spec: `docs-numbers-are-derived`'s new `analysis_section1` block reads the whole
@@ -4553,7 +4566,21 @@ raise on the shared path. Acceptance: `ctx` created inside the exit stack
 (`stack.push_async_callback(ctx.close)`) or inside the `try`, so both paths
 close it on any failure, with a case that leaks before the fix.
 
-### T-R19 — `report-citations-resolve` only checks citation->file, never file->citation            [status: todo]
+### T-R19 — `report-citations-resolve` only checks citation->file, never file->citation            [status: done]
+CLOSED 2026-08-28. The case now enumerates `evals/report/*.json` and fails on any
+file nothing in `REPORT_CITATION_SCOPE` cites, with ADR-012's policy-exempt kinds
+(`-live`, `-soak`, `-ablation`, `-bench`, `-probe`, `-smoke`) declared in `expect`
+rather than hard-coded, so widening them is a visible edit to a case file. It did
+not need a planted red: it went red on the tree, naming **405** uncited routine
+dumps totalling 41.3MB — the accumulation ADR-012 pruned once (159 reports, 4.8MB)
+and that came straight back because only one direction was ever enforced.
+The prune itself is ADR-012 Decision 4 and is a SEPARATE commit. Decision 3's
+losslessness rule was honoured rather than assumed: 387 of the 405 already had a
+`history.jsonl` row, the other 18 did not, and pruning those would have been lossy —
+so they were backfilled from their own report contents first, every field read out of
+the file and marked `backfilled`, and the prune was gated on an assertion that every
+candidate is summarised in the ledger. Recovery, per Decision 4's own convention:
+`git show 0a5710d:evals/report/<name>`.
 Origin: PR #20 R19 (MEDIUM, routed repair; the reverse-direction guard itself is
 logged here as debt rather than built, since it is more than a "prune to fix" fix)
 Priority: P1
@@ -4860,7 +4887,15 @@ only when the case is already erroring, which is why it did not block PR #23.
 Acceptance: `go()` wraps its context in try/finally, and a case asserts the
 shared browser holds no contexts after a deliberately-erroring render.
 
-### T-R29 — `docs-numbers-are-derived` asserts substring presence, so a contradicting line beside a correct one stays green            [status: todo]
+### T-R29 — `docs-numbers-are-derived` asserts substring presence, so a contradicting line beside a correct one stays green            [status: done]
+CLOSED 2026-08-28, together with T-M32-4 — one defect at two sites, which is what
+that block already said. README's fenced "Where it stands" block is now parsed and
+each suite may carry exactly ONE `\d+/\d+` figure inside it; §1 of `docs/analysis.md`
+is sliced to §1 (the way `analysis_coverage` already slices §6) and each figure's
+PATTERN may match at most once. Patterns, not the expected literals — a competing
+figure is by definition not the literal, which is why an `in text` assertion is blind
+to it by construction. Watched red both ways: a duplicated `fast 999/999` line inside
+the README block, and T-M32-4's own repro sentence inserted above the correct one in §1.
 Origin: PR #23 round-5 verification (out-of-scope note, no finding id)
 Priority: P1
 Spec: the R4 repair made README's "Where it stands" block recompute from the
