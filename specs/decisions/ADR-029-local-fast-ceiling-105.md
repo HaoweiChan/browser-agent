@@ -42,8 +42,12 @@ band bullet is the one place this repo publishes the band figure and the arrow
 it derives**, because it is the one place `published-band-matches-the-ledger`
 grades — its item 2 (cited-run) against the ledger row, its item 5 (derivation)
 against the rule. Read the number there. What this ADR commits is the ceiling
-that arrow lands on, **105s**, which `WALL_BUDGET_S` holds and
-`fast-wall-clock-budget` enforces.
+that arrow lands on, 105s [historical]. `WALL_BUDGET_S` has been raised
+three times since (ADR-035, ADR-037, ADR-039), so this sentence's original
+present tense — "which `WALL_BUDGET_S` holds" — was false from the next
+raise onward and stayed green for four milestones. The live value is not
+retyped here: ADR-019 §2's band bullet publishes it and
+`published-band-matches-the-ledger` grades it (T-R35).
 
 Two steps, not one, and the second step is machine variance rather than case
 count: the rows at this count differ from one another, while the band this

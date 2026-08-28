@@ -120,10 +120,15 @@ reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
 58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
 further post-commit runs found the honest band is 58.83-60.26s, one run
-over the line by a few tenths and unexplained by load.
+over the line by a few tenths and unexplained by load. Both bands are
+ADR-013's, Decision 4's round-5 correction and Decision 5's post-commit
+sample; they predate the convention that a published figure cites a
+committed report (ADR-012), so the ADR is the record and no report file
+will ever back them (T-M32-5).
 
 **M31 grew the suite and the 60s ceiling stopped being tenable.** It refused a
-commit that changed nothing but JSON, at 60.24s, with 109/109 passing. The
+commit that changed nothing but JSON, at 60.24s, with 109/109 passing
+(ADR-019 Decision 1's opening). The
 first repair moved three browser cases to `invariant`-only tags, which took
 ~4.9s out of the measured number and left the gate a coin flip while the
 published `fast` figure stayed at 59.7s — the wrong instrument. The cases are
@@ -239,10 +244,13 @@ is to catch drift cannot also be the thing that fails on drift-free commits.
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
 measured where the time went instead of assuming: 42.2s is deliberate waiting
 at bounds the suite exists to exercise, 13.5s is real work, and 11.3s was 58
-cold Chromium launches, one per case. The ceiling is now applied by
+cold Chromium launches, one per case — the breakdown is ADR-013 Decision 1's
+and docs/analysis.md keeps it, both pre-ADR-012 and so report-less by date
+rather than by omission. The ceiling is now applied by
 `evals/run.py` to the run it just measured, so a slow tree exits non-zero
 instead of reporting 1.000. It fired twice in a day, and neither time on what
-anyone would have guessed: M9's merge took the suite to 63.3s over a completion
+anyone would have guessed: M9's merge took the suite to 63.3s (ADR-013
+Decision 1) over a completion
 poll sleeping 2s between checks on runs that finish in under a second, and the
 branch's first CI run showed CI had been ~50% over the same ceiling for its whole
 existence with nothing checking. ~~`main` runs `fast` in 89.62s~~ — struck

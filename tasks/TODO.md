@@ -3327,7 +3327,7 @@ strict PREFIX of valid JSON is treated as truncated rather than empty), or an
 explicit `max_tokens` on the judge call plus a support-matrix row declaring the
 residue; watched red on a truncated-reject scenario carrying no
 `finish_reason`.
-### T-M32-16 — a live ceiling published in any shape other than a gate command is still ungraded            [status: todo]
+### T-M32-16 — a live ceiling published in any shape other than a gate command is still ungraded            [status: done]
 Origin: T-M32-9; enumeration corrected at PR #40 R3.
 Priority: P1
 Spec: the sweep T-M32-9 added (`docs-numbers-are-derived`,
@@ -3362,6 +3362,29 @@ swept (the `**Ns**` form `_ADR_CEILING` already relies on inside ADR-019 is the
 obvious candidate), or the honest finding that dropping the literal everywhere
 is the whole defence — argued, not defaulted to. Do not replace the falsified
 enumeration with another one; grade it or drop the literals.
+
+Closed together with T-R25 and T-M32-16 — they are one defect, and each round had
+answered the other two by pointing at them. `docs-numbers-are-derived` gained
+`_local_ceiling_drift`, the local twin of the CI sweep, reading `WALL_BUDGET_S`
+instead of prose. It grades two SHAPES exhaustively rather than guessing tense:
+a **bold** seconds literal on a local-ceiling line, and a heading that publishes
+one. Move operands (`80 -> 90`, `moves from 90s to 105s`), `[historical]`/`[local]`
+and struck text are exempt. That choice is T-M32-16's first acceptance branch,
+taken deliberately: ~77 tracked lines pair a seconds literal with a ceiling word,
+nearly all are the record, and an enumeration of the live ones is what T-M32-16
+was REOPENED for after its own was falsified.
+Watched red against the tree as it stood — seven hits, two of them genuinely
+stale live publications inside the ceiling machinery's own publisher of record:
+ADR-019 §2's HEADING read "The local `fast` ceiling is 90s" against a committed
+125, and ADR-029:45 read "**105s**, which `WALL_BUDGET_S` holds" after three
+raises. `published-band-matches-the-ledger` reads the band BULLET inside those
+sections and has never read their titles. The other five were true records
+wearing the live shape and now carry `[historical]`.
+Residual, declared rather than covered: unbolded body prose is still ungraded.
+Tense is not decidable by regex; the defence there is that the literals have been
+dropped from the prose that mattered (ADR-002's and ADR-013's Rulings), which is
+an argument and not coverage. It is written into the case's row table, in the
+direction that fails loudly if someone later mistakes it for coverage.
 
 ### T-M32-17 — T-R35 is closed on all four acceptance clauses; delete the block            [status: todo]
 **Clause (1) was FALSE when re-checked, 2026-08-28, and T-R35 is therefore NOT
@@ -4145,7 +4168,7 @@ Acceptance: the §1 block scans only §1, and/or asserts no other
 `\d+ browser actions` / `\*\*\d+ of the \d+\*\* cases` string appears in the
 section; the contradicting-line probe above reddens.
 
-### T-M32-5 — README publishes 28 wall clocks no committed report backs            [status: todo]
+### T-M32-5 — README publishes 28 wall clocks no committed report backs            [status: done]
 Origin: PR #34 R12
 Priority: P1
 Spec: `README.md:68`, `:71-73`, `:78`, `:85`, `:90`, `:96` and `:99` publish
@@ -4159,6 +4182,22 @@ Repro: `grep -n '59.62\|58.96\|59.77\|68.1s\|89.62s\|63.3s' README.md` and
 try to resolve any of them to a report in `evals/report/`.
 Acceptance: each remaining README wall clock names the report it came from and
 is recomputed by `docs-numbers-are-derived`, or is deleted.
+
+Closed, and NOT by either exit the acceptance named. "Recompute each figure from
+a committed report, or delete it" is wrong for most of the 28: the M9, M12, M31
+and ADR-013-era bands PREDATE ADR-012's convention that a published figure cites
+a committed report, so no report file will ever back them, and deleting them
+would delete the record of a local ceiling that was withdrawn twice — which is
+the reason the ceiling machinery exists at all. The third exit is the one this
+repo already uses everywhere else: a figure names where its record lives.
+Swept with `_unsourced_wall_clocks` (a wall clock with no run id, ADR number,
+report path, PR or section reference within five lines), watched red at four
+sites — ADR-013 Decision 4's withdrawn band and Decision 5's post-commit band,
+M31's 60.24s, M12's 68.1s breakdown, M9's 63.3s — each of which now names the
+ADR that holds it. Table rows are exempt because they are RECOMPUTED
+(`published-band-matches-the-ledger`, `where_it_stands`), which is a stronger
+claim than a citation. Graded from now on, so the choice cannot rot back into
+the drift class R4 and R5 were about.
 
 ### T-M32-6 — the recovery-label clause credits the drill-down path with a label it never sets            [status: done]
 CLOSED 2026-08-28. `specs/001` now separates the two statements it ran together:
@@ -4422,7 +4461,7 @@ tolerates one red row and then requires green (the same as-of trick would work),
 `_band_wrong`'s comment and ADR-019 §6 state that a band's source run may be red and say
 what that costs. Watched red with the two rows above.
 
-### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: todo]
+### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: done]
 Origin: PR #29 R25
 Priority: P1
 Spec: `specs/decisions/INDEX.md:11` (rewritten by 3699b87) reads "fast 75s local / 90s CI"
@@ -4437,6 +4476,29 @@ Acceptance: every ceiling statement in specs/ names 80/90/20/20; ADR-019's Amend
 matches its Ruling; ADR-002's parenthetical stops asserting a live 15s invariant ceiling;
 T-R25's Update states what is actually fixed. Ideally one graded row that compares INDEX/ADR
 ceiling numbers against `WALL_BUDGET_S`, watched red against the current text.
+
+Closed together with T-R25 and T-M32-16 — they are one defect, and each round had
+answered the other two by pointing at them. `docs-numbers-are-derived` gained
+`_local_ceiling_drift`, the local twin of the CI sweep, reading `WALL_BUDGET_S`
+instead of prose. It grades two SHAPES exhaustively rather than guessing tense:
+a **bold** seconds literal on a local-ceiling line, and a heading that publishes
+one. Move operands (`80 -> 90`, `moves from 90s to 105s`), `[historical]`/`[local]`
+and struck text are exempt. That choice is T-M32-16's first acceptance branch,
+taken deliberately: ~77 tracked lines pair a seconds literal with a ceiling word,
+nearly all are the record, and an enumeration of the live ones is what T-M32-16
+was REOPENED for after its own was falsified.
+Watched red against the tree as it stood — seven hits, two of them genuinely
+stale live publications inside the ceiling machinery's own publisher of record:
+ADR-019 §2's HEADING read "The local `fast` ceiling is 90s" against a committed
+125, and ADR-029:45 read "**105s**, which `WALL_BUDGET_S` holds" after three
+raises. `published-band-matches-the-ledger` reads the band BULLET inside those
+sections and has never read their titles. The other five were true records
+wearing the live shape and now carry `[historical]`.
+Residual, declared rather than covered: unbolded body prose is still ungraded.
+Tense is not decidable by regex; the defence there is that the literals have been
+dropped from the prose that mattered (ADR-002's and ADR-013's Rulings), which is
+an argument and not coverage. It is written into the case's row table, in the
+direction that fails loudly if someone later mistakes it for coverage.
 
 ### T-R36 — `adr-header-and-index` cannot see an ADR file missing from INDEX when another shares its number            [status: done]
 CLOSED 2026-08-28. `sorted(set(adr_nums) - set(index_nums))` collapsed two files
@@ -5161,7 +5223,7 @@ it — that case grades `run_task(browser=None)`, the production launch branch, 
 `ui-rendered-narrow` never routes through `run_task`. Do not widen that case:
 what is missing is a check on the eval harness's own renderers, not on the agent.
 
-### T-R25 — INDEX.md's ADR-002 line published withdrawn ceilings (both halves)            [status: todo]
+### T-R25 — INDEX.md's ADR-002 line published withdrawn ceilings (both halves)            [status: done]
 Status-note: fixed at PR #29 R22, kept for the mechanism.
 Origin: PR #23 R8 (LOW, routed debt by the reviewer); local half fixed and CI
 half found at PR #29 R22
@@ -5190,6 +5252,29 @@ Acceptance: INDEX.md:11 reads "60s local, 80s CI", matching ADR-002:4,
 INDEX.md:22 and `WALL_BUDGET_S`. Held out of PR #23 deliberately: the one-word
 edit is not the point, a guard that reads the ceiling out of `WALL_BUDGET_S`
 instead of out of prose is.
+
+Closed together with T-R25 and T-M32-16 — they are one defect, and each round had
+answered the other two by pointing at them. `docs-numbers-are-derived` gained
+`_local_ceiling_drift`, the local twin of the CI sweep, reading `WALL_BUDGET_S`
+instead of prose. It grades two SHAPES exhaustively rather than guessing tense:
+a **bold** seconds literal on a local-ceiling line, and a heading that publishes
+one. Move operands (`80 -> 90`, `moves from 90s to 105s`), `[historical]`/`[local]`
+and struck text are exempt. That choice is T-M32-16's first acceptance branch,
+taken deliberately: ~77 tracked lines pair a seconds literal with a ceiling word,
+nearly all are the record, and an enumeration of the live ones is what T-M32-16
+was REOPENED for after its own was falsified.
+Watched red against the tree as it stood — seven hits, two of them genuinely
+stale live publications inside the ceiling machinery's own publisher of record:
+ADR-019 §2's HEADING read "The local `fast` ceiling is 90s" against a committed
+125, and ADR-029:45 read "**105s**, which `WALL_BUDGET_S` holds" after three
+raises. `published-band-matches-the-ledger` reads the band BULLET inside those
+sections and has never read their titles. The other five were true records
+wearing the live shape and now carry `[historical]`.
+Residual, declared rather than covered: unbolded body prose is still ungraded.
+Tense is not decidable by regex; the defence there is that the literals have been
+dropped from the prose that mattered (ADR-002's and ADR-013's Rulings), which is
+an argument and not coverage. It is written into the case's row table, in the
+direction that fails loudly if someone later mistakes it for coverage.
 
 ### T-R26 — two review artifacts route to task ids that no longer resolve            [status: todo]
 Origin: PR #23 R9 (LOW, routed debt by the reviewer)

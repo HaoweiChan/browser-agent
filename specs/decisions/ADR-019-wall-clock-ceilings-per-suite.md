@@ -44,7 +44,7 @@ They are regression guards for three silent-success defects (PR #29 R1, R2, R3)
 and the local pre-commit hook runs `fast` alone. A guard the hook does not run
 is worth less than the 4.9s it costs.
 
-### 2. The local `fast` ceiling is 90s, computed from the ledger
+### 2. The local `fast` ceiling, computed from the ledger
 
 Every LOCAL band here — this section's and §3's — is computed from
 `evals/report/history.jsonl`, the ledger committed in this repo, and
@@ -380,7 +380,7 @@ a real loosening, and it is the point: a ceiling whose job is to catch drift
 cannot also be the thing that fails on drift-free commits — this one refused a
 commit that changed nothing but JSON.
 
-### 3. `invariant` gets a ceiling: 20s → 35s
+### 3. `invariant` gets a ceiling of its own
 
 - Band source — local `invariant` at 105 cases, ts `20260828-124652`, **33.40s**, 101/105
   (`evals/report/20260828-124652-invariant.json`; `dirty: true` — unlike the row

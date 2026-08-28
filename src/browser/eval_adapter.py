@@ -1615,6 +1615,90 @@ _CI_MOVE = re.compile(r"(?<![\w.\-§#])(\d{2,4})\s*(?:->|→|vs)\s*(\d{2,4})\b")
 _CI_LABELLED = re.compile(r"\[(?:historical|local)\]")
 
 
+# T-R25/T-M32-16/T-R35: the local twin of the CI sweep above. Those three blocks
+# stayed open across ~15 PRs asking for "a guard that reads the ceiling out of
+# `WALL_BUDGET_S` instead of out of prose", and each time the answer was that no
+# cheap pattern separates a LIVE claim from the RECORD: ~77 lines of tracked
+# markdown pair a seconds literal with a ceiling word and nearly all of them are
+# history ("was moved to 70s", "reverts to 60"). Tense is not decidable by regex
+# and an enumeration of the live ones is what T-M32-16 was reopened for after
+# its own enumeration was falsified.
+#
+# So this grades two SHAPES, exhaustively within each, instead of guessing at
+# tense:
+#   1. a **bold** seconds literal on a local-ceiling line, and
+#   2. a heading that publishes one,
+# because both are how this repo writes a number it means NOW. Everything else
+# is prose, and the defence there is that the literal has been dropped from it
+# (ADR-002, ADR-013 Rulings) — stated as the residual, not as coverage.
+# A move operand (`80 -> 90`, `moves from 90s to 105s`) is a record of a
+# transition by construction and is exempt in both shapes; `[historical]`/
+# `[local]` and struck text exempt as they do in the CI sweep.
+#
+# Found on the tree it was written against: ADR-019 §2's own HEADING said the
+# local `fast` ceiling "is 90s" and §3's said 35s while `WALL_BUDGET_S` held
+# 125/40 — `published-band-matches-the-ledger` reads the band BULLET inside
+# those sections and never their titles — and ADR-029:45 said "**105s**, which
+# `WALL_BUDGET_S` holds". Two stale live publications, both in the file the
+# ceiling machinery calls its publisher of record.
+_LOCAL_TOKEN = re.compile(r"\blocal(?:ly)?\b|WALL_BUDGET_S", re.I)
+_LOCAL_MOVE = re.compile(
+    r"(?<![\w.])(\d{2,4})s?\s*(?:->|→|\bto\b|\bvs\b)\s*[*`]{0,2}(\d{2,4})s?\b")
+_BOLD_SECONDS = re.compile(r"\*\*[^*]*?(?<![\w.])(\d{2,4})\s*s?\b[^*]*?\*\*")
+
+
+# T-M32-5: README published ~28 wall clocks and `docs-numbers-are-derived`
+# recomputed three case counts and the fenced baseline block. Its acceptance
+# offered two exits -- recompute each figure from a committed report, or delete
+# it -- and BOTH are wrong for most of them: the M9/M12/M31/ADR-013-era bands
+# predate ADR-012's convention that a published figure cites a committed report,
+# so no report file will ever back them, and deleting the record of a ceiling
+# that was withdrawn twice would delete the reason the ceiling machinery exists.
+# The third exit is the one the repo already uses everywhere else: a figure names
+# where its record lives. Graded here so the choice cannot rot back.
+#
+# A `|`-table row is exempt: those are the band table and the headline block,
+# both RECOMPUTED (by `published-band-matches-the-ledger` and by the
+# `where_it_stands` conjunct above), which is stronger than a citation.
+_README_BAND = re.compile(r"(?<![\w.£$])(\d{2,3}\.\d{1,2})s\b")
+_README_PROV = re.compile(r"run \d{8,}|\b\d{11}\b|ADR-\d{3}|`[0-9a-f]{7}`"
+                          r"|evals/report/|§\d|PR #\d+|~~")
+_README_PROV_WINDOW = 5
+
+
+def _unsourced_wall_clocks(text: str):
+    """README wall clocks with no provenance token within five lines."""
+    lines = text.splitlines()
+    out = []
+    for i, line in enumerate(lines):
+        if not _README_BAND.search(line) or line.lstrip().startswith("|"):
+            continue
+        lo = max(0, i - _README_PROV_WINDOW)
+        if not _README_PROV.search(" ".join(lines[lo:i + _README_PROV_WINDOW])):
+            out.append((i + 1, _README_BAND.findall(line), line.strip()[:100]))
+    return out
+
+
+def _local_ceiling_drift(text: str, budgets: dict):
+    """Bold/heading local-ceiling literals that disagree with `budgets`."""
+    out = []
+    ok = set(budgets.values())
+    for i, line in enumerate(re.sub(r"~~.*?~~", "", text, flags=re.DOTALL).splitlines(), 1):
+        if not _CI_CEILING_LINE.search(line) or _CI_LABELLED.search(line):
+            continue
+        if not _LOCAL_TOKEN.search(line):
+            continue
+        moved = {g for m in _LOCAL_MOVE.finditer(line) for g in m.groups()}
+        bold = {m.group(1) for m in _BOLD_SECONDS.finditer(line)}
+        heading = line.lstrip().startswith("#")
+        for m in _CI_SECONDS.finditer(line):
+            num = m.group(1) or m.group(2)
+            if num in moved or int(num) in ok or not (heading or num in bold):
+                continue
+            out.append((i, int(num), "heading" if heading else "bold", line.strip()[:120]))
+    return out
+
+
 def _in_section_five(text: str, line: str) -> bool:
     """Is `line` inside ADR-019 §5 — one of the two allowlisted publishers?
 
@@ -6458,6 +6542,38 @@ def _run_doc_counts_case(case: dict) -> dict:
             got = bool(_ceiling_drift(row["line"], WALL_BUDGET_S))
             if got != row["flags"]:
                 wrong.append({"ceiling_row": row["line"],
+                              "should_flag": row["flags"], "got": got,
+                              "why": row.get("note")})
+
+        # The prose half (T-R25/T-M32-16/T-R35). Same two-directional row table,
+        # for the same reason: the dangerous failure is a sweep that goes quiet.
+        for path in sorted(p for p in RUN_ROOT.rglob("*.md")
+                           if not skip & set(p.relative_to(RUN_ROOT).parts)
+                           and p.relative_to(RUN_ROOT).parts[0] in ("specs", "docs")
+                           or p.name == "README.md"):
+            if skip & set(path.relative_to(RUN_ROOT).parts):
+                continue
+            for line_no, lit, shape, ctx in _local_ceiling_drift(
+                    path.read_text(encoding="utf-8"), WALL_BUDGET_S):
+                wrong.append({"publishes_a_local_ceiling_nothing_enforces": lit,
+                              "shape": shape, "committed": WALL_BUDGET_S,
+                              "doc": path.relative_to(RUN_ROOT).as_posix(),
+                              "line": line_no, "context": ctx})
+        if inp.get("readme_wall_clocks_cite_a_source"):
+            for line_no, figs, ctx in _unsourced_wall_clocks(
+                    (RUN_ROOT / "README.md").read_text(encoding="utf-8")):
+                wrong.append({"wall_clock_with_no_record_behind_it": figs,
+                              "doc": "README.md", "line": line_no, "context": ctx})
+        for row in inp.get("wall_clock_source_rows", []):
+            got = bool(_unsourced_wall_clocks(row["text"]))
+            if got != row["flags"]:
+                wrong.append({"wall_clock_row": row["text"][:80],
+                              "should_flag": row["flags"], "got": got,
+                              "why": row.get("note")})
+        for row in inp.get("local_ceiling_rows", []):
+            got = bool(_local_ceiling_drift(row["line"], WALL_BUDGET_S))
+            if got != row["flags"]:
+                wrong.append({"local_ceiling_row": row["line"],
                               "should_flag": row["flags"], "got": got,
                               "why": row.get("note")})
 

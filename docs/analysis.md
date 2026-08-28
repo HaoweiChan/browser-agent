@@ -113,10 +113,10 @@ re-measurement was withdrawn: the M9-stage-2 merge added a readiness case
 that holds a run slot for 3.0s on purpose, the suite straddled 60s across
 seven runs (59.35-60.16s), a fix to the hold recovered ~1s/run but a
 post-fix seven-run band was published as still straddling 60s — so ADR-002
-Decision 4's local ceiling was moved to **70s** — but round-5 review could
+Decision 4's local ceiling was moved to 70s [historical] — but round-5 review could
 not reproduce that band (~22 runs across three independent measurers, idle
 and under deliberate CPU load, all landed at 58.96-59.87s), so the amendment
-was withdrawn the same day and the local ceiling ships at **60s** — with a
+was withdrawn the same day and the local ceiling shipped at 60s [historical] — with a
 thin, not clean, margin: 21 further post-commit runs found the band is
 really 58.83-60.26s, one run over the line by a few tenths against 20 that
 were not. CI's ceiling
