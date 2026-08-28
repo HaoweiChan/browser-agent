@@ -1253,7 +1253,23 @@ shape `press` already uses. Or a declared limitation naming both shapes.
 Acceptance: a run can no longer report `success` with `postcondition_ok: True`
 for a selection nobody asked for.
 
-### T-M42-20-D6 — `role_visible` postconditions still match on a SUBSTRING            [status: todo]
+### T-M42-20-D6 — `role_visible` postconditions still match on a SUBSTRING            [status: done]
+CLOSED 2026-08-28 on the acceptance's first branch — the matcher IS shared, not
+documented as different. `check_state`'s `role_visible` now builds
+`get_by_role(role, name=_whole_string(name))`, the same anchored case-insensitive
+whole-string matcher the resolver uses, and `_whole_string` rather than
+`exact=True` for the reason the resolver gives (exact is case-SENSITIVE, a promise
+about the page's stylesheet nothing here can keep).
+The block declined to fix it in place because "tightening a postcondition changes
+which authored `expected_state` values hold across the existing suite, which is a
+change with its own blast radius". That was the right caution and it was measured
+rather than assumed: the blast radius is ZERO — 256/256 fast, 104/104 invariant,
+no authored `expected_state` changed truth value. Case
+`role-visible-refuses-a-superstring-heading` on the block's own evidence
+(`<h1>Shopping Cart is empty</h1>` vs an asserted `heading "Cart"`), watched red
+as `status: success` with `trace_postconditions [true, true, null]` — a click
+certified by a heading that says the cart is EMPTY, the opposite of the asserted
+state, and the run then answering from it.
 Origin: PR #60 R7 (LOW, routed to debt). Pre-existing and untouched, but now
 inconsistent with the invariant T-M42-20 establishes one file over.
 Evidence, verbatim: `agent.py` builds `get_by_role(role, name=<str>)` with
@@ -3696,7 +3712,19 @@ whose score supports it — the parse only has to be good enough to catch
 "9/9 ... <red report>", not to understand arbitrary prose — watched red against
 the ADR-020 sentence as it stood before this fix.
 
-### T-M32-11 — any `expect` that implies verdict PASS crashes the adapter on a run that fails before grading            [status: todo]
+### T-M32-11 — any `expect` that implies verdict PASS crashes the adapter on a run that fails before grading            [status: done]
+CLOSED 2026-08-28. `_run_fixture_case` reads `(result.get("verdict") or {}).get(
+"verdict")`, so a run with no verdict reports the mismatch rather than exploding.
+None, not a crash: a run that ended before grading genuinely has no verdict to
+compare, and the check must FAIL so the case reports what it exists to report.
+All three shapes the acceptance names — `{}`, `{"status": "success"}`,
+`{"verdict": "PASS"}` — are probed in `opt-in-expect-keys-declared`, and all three
+were watched red with the same `TypeError: 'NoneType' object is not subscriptable`,
+which is what makes the fix un-closable by special-casing the empty one.
+Found LIVE rather than from this block: widening `_AGGREGATE` while working
+T-CHEAPEST-WORDING flipped `verifier-precision-recall` onto a verdictless path and
+the adapter crashed exactly as described here. A latent block and an experiment
+met in the middle.
 Origin: PR #34, found while reproducing R16 with the reviewer's own probe;
 trigger restated per PR #34 R26 — the first version of this block said "an
 empty `expect`", which is narrower than the real condition and would have
@@ -4283,6 +4311,28 @@ in front of a real planner and it is `full`-tagged and unrun, so there is no
 measurement of how often a real model gets `rank` right.
 
 ### T-CHEAPEST-WORDING — the plan lint does not fire on price-worded rankings, so nothing sends such a plan back            [status: todo]
+Update (2026-08-28): the widening was IMPLEMENTED and MEASURED, then reverted, and
+the block stays open with the cost now quantified instead of argued. Adding
+`cheapest|most expensive|priciest|dearest` to `_AGGREGATE`'s second half does what
+this block wants — `is_aggregate("Which product is the cheapest, and what is its
+price?")` becomes True — and the `which|what|who` frame requirement does protect
+the fifteen shop-fixture cases exactly as hoped: "Sort the catalogue by price, low
+to high, and name the cheapest product" stays False, because it has no frame.
+So the fear M31 declined on is NOT what stops it. What stops it is measured:
+exactly FOUR committed cases change classification, and three of them break —
+`extract-all-undeclared-intent-fails-loud` (now refused by the lint before it can
+demonstrate what it grades), `verifier-catches-listing-dump`, and
+`verifier-precision-recall`, which is a labelled-ACCURACY measurement whose
+numbers would move. Changing what an accuracy case measures is a decision with its
+own ADR, not a debt cleanup, which is why this is reverted rather than landed.
+Also note the second half of the block's own evidence is NOT fixed by this
+widening: `live-books-cheapest-travel`'s "In the Travel category, find the
+cheapest book and tell me its exact price" has no `which|what|who` frame either,
+so it stays False. Any real fix has to reach frameless phrasings, and that is a
+bigger predicate than a vocabulary addition — which is the honest restatement of
+what this block is asking for.
+The one thing that came out of it and stayed: the experiment crashed the adapter
+and that closed T-M32-11.
 Origin: PR #29 R4, restated at PR #29 R9 and R12
 Priority: P1
 Spec (claim): the plan lint (`agent.plan_gap`) is gated on `verifier.is_aggregate`.

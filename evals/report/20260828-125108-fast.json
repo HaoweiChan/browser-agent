@@ -1,26 +1,26 @@
 {
   "suite": "fast",
-  "score": 0.99609375,
+  "score": 0.9883268482490273,
   "totals": {
-    "actions": 472,
+    "actions": 474,
     "llm_tokens": 11,
     "llm_usd": 2e-06,
     "replans": 15,
-    "ms": 89984,
+    "ms": 92240,
     "judge_calls": 94,
     "judge_tokens": 0,
     "judge_usd": 0.0,
-    "wall_seconds": 101.44,
+    "wall_seconds": 103.58,
     "latency_p50": 0.12,
-    "latency_p95": 2.3,
-    "cases_with_budgets": 168
+    "latency_p95": 2.31,
+    "cases_with_budgets": 169
   },
   "metrics": {
     "verdict_evaluated": 101,
     "judge_invoked": 93,
     "judge_certified": 90,
-    "diagnosis_cases": 72,
-    "diagnosis_correct": 72,
+    "diagnosis_cases": 73,
+    "diagnosis_correct": 73,
     "recovery_rungs": 25,
     "replans": 15,
     "l1_rejected_before_judge": 8,
@@ -83,12 +83,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 139,
+        "ms": 134,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.44,
+      "seconds": 0.43,
       "id": "escalate-plan-success-never-starts-the-loop",
       "kind": "golden"
     },
@@ -138,12 +138,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 259,
+        "ms": 239,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.27,
+      "seconds": 0.25,
       "id": "loop-click-at-resolves-and-records-coordinates",
       "kind": "golden"
     },
@@ -193,12 +193,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 312,
+        "ms": 296,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.32,
+      "seconds": 0.3,
       "id": "loop-drill-observation-carries-an-element-screenshot",
       "kind": "golden"
     },
@@ -249,12 +249,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 861,
+        "ms": 878,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.87,
+      "seconds": 0.88,
       "id": "loop-drives-a-fetch-then-render-page",
       "kind": "golden"
     },
@@ -304,7 +304,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 209,
+        "ms": 205,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -371,12 +371,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 251,
+        "ms": 272,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.26,
+      "seconds": 0.28,
       "id": "s2-bare-value-loop-vision-path-answers",
       "kind": "golden"
     },
@@ -423,12 +423,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114,
+        "ms": 112,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "tc1-hello-heading",
       "kind": "golden"
     },
@@ -528,12 +528,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114,
+        "ms": 132,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.13,
       "id": "tc1-shop-price-near",
       "kind": "golden"
     },
@@ -580,12 +580,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 98,
+        "ms": 113,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.1,
+      "seconds": 0.11,
       "id": "tc1-shop-price-zh",
       "kind": "golden"
     },
@@ -632,12 +632,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 97,
+        "ms": 117,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.1,
+      "seconds": 0.12,
       "id": "tc1-shop-price",
       "kind": "golden"
     },
@@ -687,12 +687,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 367,
+        "ms": 346,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.37,
+      "seconds": 0.35,
       "id": "tc2-shop-search-zh",
       "kind": "golden"
     },
@@ -741,12 +741,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 280,
+        "ms": 285,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.28,
+      "seconds": 0.29,
       "id": "tc2-shop-search",
       "kind": "golden"
     },
@@ -794,12 +794,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 214,
+        "ms": 230,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.22,
+      "seconds": 0.23,
       "id": "tc3-shop-detail-nav-zh",
       "kind": "golden"
     },
@@ -847,12 +847,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 197,
+        "ms": 232,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.2,
+      "seconds": 0.23,
       "id": "tc3-shop-detail-nav",
       "kind": "golden"
     },
@@ -900,12 +900,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 217,
+        "ms": 231,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.22,
+      "seconds": 0.23,
       "id": "tc4-shop-sort-cheapest",
       "kind": "golden"
     },
@@ -953,12 +953,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 214,
+        "ms": 231,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.22,
+      "seconds": 0.23,
       "id": "tc4-shop-sort-zh",
       "kind": "golden"
     },
@@ -1010,12 +1010,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 398,
+        "ms": 415,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.4,
+      "seconds": 0.42,
       "id": "tc5-forms-submit-zh",
       "kind": "golden"
     },
@@ -1067,12 +1067,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 397,
+        "ms": 345,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.4,
+      "seconds": 0.35,
       "id": "tc5-forms-submit",
       "kind": "golden"
     },
@@ -1136,7 +1136,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 295,
+        "ms": 299,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1192,12 +1192,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 250,
+        "ms": 283,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.25,
+      "seconds": 0.28,
       "id": "action-press-carries-a-postcondition",
       "kind": "adversarial"
     },
@@ -1246,12 +1246,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 179,
+        "ms": 199,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.18,
+      "seconds": 0.2,
       "id": "action-scroll-moves-the-viewport",
       "kind": "adversarial"
     },
@@ -1295,7 +1295,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 95,
+        "ms": 93,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1346,7 +1346,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 130,
+        "ms": 133,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1401,12 +1401,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 195,
+        "ms": 192,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.2,
+      "seconds": 0.19,
       "id": "action-select-option-verifies-by-readback",
       "kind": "adversarial"
     },
@@ -1512,12 +1512,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 766,
+        "ms": 783,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.77,
+      "seconds": 0.78,
       "id": "action-wait-for-reaches-a-late-predicate",
       "kind": "adversarial"
     },
@@ -1561,12 +1561,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2243,
+        "ms": 2229,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.25,
+      "seconds": 2.24,
       "id": "action-wait-for-that-never-holds-is-loud",
       "kind": "adversarial"
     },
@@ -1576,10 +1576,10 @@
       "got": {
         "adr_files": 40,
         "index_entries": 40,
-        "adr_citations_seen": 2003,
-        "files_scanned": 383
+        "adr_citations_seen": 2020,
+        "files_scanned": 384
       },
-      "seconds": 0.08,
+      "seconds": 0.07,
       "id": "adr-header-and-index",
       "kind": "adversarial"
     },
@@ -1587,8 +1587,8 @@
       "passed": true,
       "wrong": [],
       "got": {
-        "fast": 256,
-        "invariant": 104
+        "fast": 257,
+        "invariant": 105
       },
       "seconds": 0.05,
       "id": "adr029-scope-matches-the-suites",
@@ -1599,14 +1599,13 @@
       "wrong": [],
       "got": {
         "quoted": [],
-        "cases": 256,
+        "cases": 257,
         "rows_at_that_count": [
-          101.17,
-          101.27,
-          101.54
+          102.48,
+          103.39
         ]
       },
-      "seconds": 0.01,
+      "seconds": 0.02,
       "id": "adr029-variance-cites-the-ledger",
       "kind": "adversarial"
     },
@@ -1653,7 +1652,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 316,
+        "ms": 314,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1721,12 +1720,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 2,
-        "ms": 6736,
+        "ms": 6752,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 6.74,
+      "seconds": 6.76,
       "id": "budget-replans-exhausted",
       "kind": "adversarial"
     },
@@ -1803,7 +1802,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 97,
+        "ms": 89,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -1879,7 +1878,7 @@
           "steps"
         ]
       },
-      "seconds": 0.34,
+      "seconds": 0.32,
       "id": "contract-trace-schema-escalate",
       "kind": "adversarial"
     },
@@ -1941,7 +1940,7 @@
         ],
         "legs_entry": []
       },
-      "seconds": 0.22,
+      "seconds": 0.2,
       "id": "contract-trace-schema-loop-mode",
       "kind": "adversarial"
     },
@@ -2003,7 +2002,7 @@
         ],
         "legs_entry": []
       },
-      "seconds": 0.11,
+      "seconds": 0.12,
       "id": "contract-trace-schema",
       "kind": "adversarial"
     },
@@ -2019,24 +2018,24 @@
       "wrong": {
         "docs": [
           {
-            "cites_a_report_of_a_different_tree": "20260828-114307-fast.json",
-            "report_cases": 253,
-            "suite_now": 256
+            "cites_a_report_of_a_different_tree": "20260828-121606-fast.json",
+            "report_cases": 256,
+            "suite_now": 257
           },
           {
-            "cites_a_report_of_a_different_tree": "20260828-114120-invariant.json",
-            "report_cases": 103,
-            "suite_now": 104
+            "cites_a_report_of_a_different_tree": "20260828-121646-invariant.json",
+            "report_cases": 104,
+            "suite_now": 105
           }
         ]
       },
       "got": {
         "counts": {
-          "fast": 256,
-          "invariant": 104,
+          "fast": 257,
+          "invariant": 105,
           "live": 12,
           "full": 13,
-          "all": 287,
+          "all": 288,
           "live_sites": 5,
           "gt_conjuncts": 4
         },
@@ -2048,7 +2047,7 @@
           "quotes.toscrape.com": 3
         }
       },
-      "seconds": 0.31,
+      "seconds": 0.2,
       "id": "docs-numbers-are-derived",
       "kind": "adversarial"
     },
@@ -2137,12 +2136,12 @@
         "llm_tokens": 2,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 317,
+        "ms": 291,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.33,
+      "seconds": 0.3,
       "id": "escalate-budget-exhaustion-stays-loud",
       "kind": "adversarial"
     },
@@ -2194,7 +2193,7 @@
         "llm_tokens": 7,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 318,
+        "ms": 320,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2220,7 +2219,7 @@
         ],
         "legs": 2
       },
-      "seconds": 0.35,
+      "seconds": 0.33,
       "id": "escalate-keeps-both-legs-observations",
       "kind": "adversarial"
     },
@@ -2270,7 +2269,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 261,
+        "ms": 259,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2381,7 +2380,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 254,
+        "ms": 253,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2438,12 +2437,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 345,
+        "ms": 312,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.35,
+      "seconds": 0.32,
       "id": "escalate-seeded-note-cannot-smuggle-an-instruction",
       "kind": "adversarial"
     },
@@ -2498,12 +2497,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 115,
+        "ms": 98,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "evidence-window-keeps-the-anchor",
       "kind": "adversarial"
     },
@@ -2563,7 +2562,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 212,
+        "ms": 213,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2615,7 +2614,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 130,
+        "ms": 132,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2667,7 +2666,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 132,
+        "ms": 131,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2720,7 +2719,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 216,
+        "ms": 215,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2778,12 +2777,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 231,
+        "ms": 250,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.23,
+      "seconds": 0.25,
       "id": "extract-all-list-task-keeps-every-row",
       "kind": "adversarial"
     },
@@ -2826,7 +2825,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 91,
+        "ms": 89,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2877,7 +2876,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 219,
+        "ms": 221,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2926,7 +2925,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 83,
+        "ms": 84,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -2982,12 +2981,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 122,
+        "ms": 102,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "extract-container-dump-is-not-the-answer",
       "kind": "adversarial"
     },
@@ -3049,7 +3048,7 @@
         "planner",
         "driver"
       ],
-      "seconds": 0.01,
+      "seconds": 0.0,
       "id": "gateway-mode-selects-the-driver",
       "kind": "adversarial"
     },
@@ -3095,7 +3094,7 @@
       "got": {
         "reports_when_asked": [],
         "written": [
-          "20260828-121451-fast.json"
+          "20260828-124950-fast.json"
         ]
       },
       "seconds": 0.01,
@@ -3183,12 +3182,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 231,
+        "ms": 219,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.23,
+      "seconds": 0.22,
       "id": "judge-catches-varying-context-furniture",
       "kind": "adversarial"
     },
@@ -3244,12 +3243,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 113,
+        "ms": 94,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "judge-fail-closed-on-error",
       "kind": "adversarial"
     },
@@ -3297,7 +3296,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 96,
+        "ms": 99,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -3379,12 +3378,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 117,
+        "ms": 97,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "judge-retries-one-malformed-completion",
       "kind": "adversarial"
     },
@@ -3449,7 +3448,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 95,
+        "ms": 98,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -3514,12 +3513,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 433,
+        "ms": 484,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.44,
+      "seconds": 0.49,
       "id": "l4-forms-a11y-stripped",
       "kind": "adversarial"
     },
@@ -3637,12 +3636,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 333,
+        "ms": 330,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.34,
+      "seconds": 0.33,
       "id": "l4-shop-a11y-stripped",
       "kind": "adversarial"
     },
@@ -3698,12 +3697,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 246,
+        "ms": 264,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.25,
+      "seconds": 0.27,
       "id": "l4-shop-button-text-renamed",
       "kind": "adversarial"
     },
@@ -3760,12 +3759,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 331,
+        "ms": 315,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.33,
+      "seconds": 0.32,
       "id": "l4-shop-duplicate-labels",
       "kind": "adversarial"
     },
@@ -3816,12 +3815,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 113,
+        "ms": 114,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.11,
+      "seconds": 0.12,
       "id": "l4-shop-element-reordered-near",
       "kind": "adversarial"
     },
@@ -3872,7 +3871,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 117,
+        "ms": 115,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -3930,12 +3929,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 216,
+        "ms": 232,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.22,
+      "seconds": 0.23,
       "id": "l4-shop-ids-renamed",
       "kind": "adversarial"
     },
@@ -3995,12 +3994,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 10398,
+        "ms": 10382,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 10.4,
+      "seconds": 10.38,
       "id": "l4-shop-overlay-modal",
       "kind": "adversarial"
     },
@@ -4048,12 +4047,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 140,
+        "ms": 156,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.15,
+      "seconds": 0.16,
       "id": "l4-shop-render-delayed",
       "kind": "adversarial"
     },
@@ -4106,12 +4105,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 282,
+        "ms": 264,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.28,
+      "seconds": 0.27,
       "id": "l4-shop-wrapper-nesting",
       "kind": "adversarial"
     },
@@ -4412,12 +4411,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 258,
+        "ms": 260,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.26,
+      "seconds": 0.27,
       "id": "loop-abandoned-failure-is-not-a-success",
       "kind": "adversarial"
     },
@@ -4627,12 +4626,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 227,
+        "ms": 243,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.23,
+      "seconds": 0.25,
       "id": "loop-drill-capture-does-not-scroll-the-page",
       "kind": "adversarial"
     },
@@ -4680,12 +4679,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 278,
+        "ms": 279,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.28,
+      "seconds": 0.29,
       "id": "loop-failed-enumeration-does-not-disarm-rank",
       "kind": "adversarial"
     },
@@ -4733,12 +4732,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 261,
+        "ms": 275,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.27,
+      "seconds": 0.28,
       "id": "loop-mode-b-cannot-read-the-un-awaited-result",
       "kind": "adversarial"
     },
@@ -4780,14 +4779,14 @@
       "got": {
         "status": "failure:env",
         "answer": null,
-        "reason": "no progress: step 7 arrived at http://127.0.0.1:60997/fixtures/shop.html in the same page state for the 4th time with nothing new extracted, and the forced strategy change did not move it"
+        "reason": "no progress: step 7 arrived at http://127.0.0.1:49729/fixtures/shop.html in the same page state for the 4th time with nothing new extracted, and the forced strategy change did not move it"
       },
       "budgets": {
         "actions": 7,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 511,
+        "ms": 513,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -4843,12 +4842,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 308,
+        "ms": 275,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.31,
+      "seconds": 0.28,
       "id": "loop-observe-drills-into-a-container",
       "kind": "adversarial"
     },
@@ -4897,12 +4896,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2394,
+        "ms": 2375,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.4,
+      "seconds": 2.38,
       "id": "loop-recovered-failure-still-verifies",
       "kind": "adversarial"
     },
@@ -4951,7 +4950,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 192,
+        "ms": 197,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -5006,12 +5005,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 275,
+        "ms": 260,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.28,
+      "seconds": 0.27,
       "id": "loop-refuses-a-document-root-extract",
       "kind": "adversarial"
     },
@@ -5059,7 +5058,7 @@
         "llm_tokens": 2,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 192,
+        "ms": 195,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -5112,12 +5111,12 @@
         "llm_tokens": 0,
         "llm_usd": 2e-06,
         "replans": 0,
-        "ms": 207,
+        "ms": 192,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.21,
+      "seconds": 0.2,
       "id": "loop-usd-ceiling-stops-the-run-loudly",
       "kind": "adversarial"
     },
@@ -5162,12 +5161,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 52,
+        "ms": 46,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.06,
+      "seconds": 0.05,
       "id": "malformed-step-is-a-classified-failure",
       "kind": "adversarial"
     },
@@ -5228,12 +5227,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 284,
+        "ms": 258,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.29,
+      "seconds": 0.26,
       "id": "multi-extract-list",
       "kind": "adversarial"
     },
@@ -5294,12 +5293,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 8193,
+        "ms": 8167,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 8.2,
+      "seconds": 8.17,
       "id": "nav-action-load-event-never-fires",
       "kind": "adversarial"
     },
@@ -5346,7 +5345,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 4124,
+        "ms": 4123,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -5398,7 +5397,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 124,
+        "ms": 132,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -5446,7 +5445,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 113,
+        "ms": 115,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -5550,7 +5549,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 128,
+        "ms": 126,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -5603,12 +5602,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114,
+        "ms": 96,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "observe-blind-plan-dumps-the-container",
       "kind": "adversarial"
     },
@@ -5656,12 +5655,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114,
+        "ms": 135,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.14,
       "id": "observe-cannot-launder-extract-all",
       "kind": "adversarial"
     },
@@ -5709,12 +5708,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2275,
+        "ms": 2299,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.28,
+      "seconds": 2.31,
       "id": "observe-cannot-launder-noop-action",
       "kind": "adversarial"
     },
@@ -5740,7 +5739,7 @@
       "inside_the_cap_after_all": [],
       "text_head_missing": [],
       "n_elements": 26,
-      "seconds": 0.05,
+      "seconds": 0.04,
       "id": "observe-content-survives-chrome",
       "kind": "adversarial"
     },
@@ -5804,7 +5803,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 162,
+        "ms": 158,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -5857,12 +5856,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 2344,
+        "ms": 2328,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.35,
+      "seconds": 2.34,
       "id": "observe-drilldown-cannot-launder-noop-action",
       "kind": "adversarial"
     },
@@ -5910,7 +5909,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 176,
+        "ms": 175,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -5962,12 +5961,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 109,
+        "ms": 107,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "observe-drilldown-no-progress-stops-the-run",
       "kind": "adversarial"
     },
@@ -6019,7 +6018,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 148,
+        "ms": 151,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -6073,7 +6072,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 175,
+        "ms": 174,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -6139,7 +6138,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 111,
+        "ms": 109,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -6246,12 +6245,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 91,
+        "ms": 110,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.1,
+      "seconds": 0.12,
       "id": "observe-step-cannot-carry-expected-state",
       "kind": "adversarial"
     },
@@ -6264,14 +6263,14 @@
       "inside_the_cap_after_all": [],
       "text_head_missing": [],
       "n_elements": 60,
-      "seconds": 0.28,
+      "seconds": 0.27,
       "id": "observe-uppercase-label-name-resolves",
       "kind": "adversarial"
     },
     {
       "passed": true,
       "wrong": [],
-      "seconds": 0.06,
+      "seconds": 0.49,
       "id": "opt-in-expect-keys-declared",
       "kind": "adversarial"
     },
@@ -6282,7 +6281,7 @@
         "origins_built": 2,
         "malformed_shapes_refused": 6
       },
-      "seconds": 0.06,
+      "seconds": 0.05,
       "id": "origin-storage-seed-is-scoped",
       "kind": "adversarial"
     },
@@ -6350,12 +6349,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2341,
+        "ms": 2337,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.35,
+      "seconds": 2.34,
       "id": "plan-lint-holds-across-a-midrun-replan",
       "kind": "adversarial"
     },
@@ -6454,7 +6453,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114,
+        "ms": 109,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -6507,7 +6506,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 44,
+        "ms": 45,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -6590,12 +6589,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 433,
+        "ms": 454,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.44,
+      "seconds": 0.46,
       "id": "planner-sees-a-fetch-painted-select",
       "kind": "adversarial"
     },
@@ -6640,7 +6639,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2278,
+        "ms": 2274,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -6767,9 +6766,9 @@
       },
       "got": {
         "exit": 1,
-        "output": "COMMIT BLOCKED: this is an ENVIRONMENT problem, not an eval regression.\n  interpreter: /var/folders/l4/lk_d4cpd59l5fv6rvkxj8mtm0000gn/T/tmprjhc7ptf/broken-python\nThe eval gate never ran, so nothing is known about the suites \u2014 do NOT\nmove the baseline. In a git worktree the usual cause is that no .venv\nwas found here or in the main checkout; point PY at one that has the\ntask deps, or run the gate yourself and commit with --no-verify\nexplaining that in the message (CLAUDE.md rule 5).\n"
+        "output": "COMMIT BLOCKED: this is an ENVIRONMENT problem, not an eval regression.\n  interpreter: /var/folders/l4/lk_d4cpd59l5fv6rvkxj8mtm0000gn/T/tmp7ytxdnjs/broken-python\nThe eval gate never ran, so nothing is known about the suites \u2014 do NOT\nmove the baseline. In a git worktree the usual cause is that no .venv\nwas found here or in the main checkout; point PY at one that has the\ntask deps, or run the gate yourself and commit with --no-verify\nexplaining that in the message (CLAUDE.md rule 5).\n"
       },
-      "seconds": 0.3,
+      "seconds": 0.23,
       "id": "pre-commit-reports-a-broken-interpreter-as-such",
       "kind": "adversarial"
     },
@@ -6822,18 +6821,33 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 162,
+        "ms": 144,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.17,
+      "seconds": 0.15,
       "id": "probe3-quotes-most-quoted-author",
       "kind": "adversarial"
     },
     {
-      "passed": true,
-      "wrong": [],
+      "passed": false,
+      "wrong": [
+        {
+          "suite": "fast",
+          "env": "local",
+          "published_case_count": 256,
+          "actual": 257,
+          "ledger_slowest_at_actual": 103.39
+        },
+        {
+          "suite": "invariant",
+          "env": "local",
+          "published_case_count": 104,
+          "actual": 105,
+          "ledger_slowest_at_actual": 33.4
+        }
+      ],
       "seconds": 0.04,
       "id": "published-band-matches-the-ledger",
       "kind": "adversarial"
@@ -6868,10 +6882,10 @@
           "busy",
           "idle"
         ],
-        "during_latency_s": 0.008,
-        "run_seconds": 2.56
+        "during_latency_s": 0.005,
+        "run_seconds": 2.54
       },
-      "seconds": 2.56,
+      "seconds": 2.54,
       "id": "readyz-tracks-the-run-slot",
       "kind": "adversarial"
     },
@@ -6926,12 +6940,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 2,
-        "ms": 2426,
+        "ms": 2452,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.43,
+      "seconds": 2.46,
       "id": "recovery-label-lands-on-the-extract",
       "kind": "adversarial"
     },
@@ -6979,12 +6993,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2284,
+        "ms": 2302,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.29,
+      "seconds": 2.31,
       "id": "recovery-label-requires-strategy-change",
       "kind": "adversarial"
     },
@@ -7039,12 +7053,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 2375,
+        "ms": 2355,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.38,
+      "seconds": 2.36,
       "id": "recovery-replan-postcondition",
       "kind": "adversarial"
     },
@@ -7091,12 +7105,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 156,
+        "ms": 173,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.16,
+      "seconds": 0.18,
       "id": "relocate-fill-non-editable",
       "kind": "adversarial"
     },
@@ -7147,12 +7161,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 161,
+        "ms": 158,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.17,
+      "seconds": 0.16,
       "id": "relocation-preserves-near",
       "kind": "adversarial"
     },
@@ -7207,7 +7221,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 167,
+        "ms": 166,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -7266,7 +7280,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 1,
-        "ms": 2348,
+        "ms": 2351,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -7317,12 +7331,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2300,
+        "ms": 2280,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.31,
+      "seconds": 2.29,
       "id": "replan-cannot-launder-noop-action-extract-all",
       "kind": "adversarial"
     },
@@ -7368,12 +7382,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2291,
+        "ms": 2279,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.3,
+      "seconds": 2.29,
       "id": "replan-cannot-launder-noop-action-in-a-frame",
       "kind": "adversarial"
     },
@@ -7419,18 +7433,25 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 2279,
+        "ms": 2288,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 2.29,
+      "seconds": 2.3,
       "id": "replan-cannot-launder-noop-action",
       "kind": "adversarial"
     },
     {
-      "passed": true,
-      "wrong": {},
+      "passed": false,
+      "wrong": {
+        "uncited_reports": [
+          "20260828-124315-fast.json",
+          "20260828-124652-invariant.json",
+          "20260828-124836-fast.json",
+          "20260828-124924-invariant.json"
+        ]
+      },
       "got": {
         "citations": 75,
         "skip": [
@@ -7441,7 +7462,7 @@
           "src/browser/fixtures"
         ]
       },
-      "seconds": 0.07,
+      "seconds": 0.04,
       "id": "report-citations-resolve",
       "kind": "adversarial"
     },
@@ -7489,7 +7510,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 121,
+        "ms": 119,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -7542,7 +7563,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 96,
+        "ms": 98,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -7595,12 +7616,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 117,
+        "ms": 97,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "resolver-case-twin-near-picks-the-exact-spelling",
       "kind": "adversarial"
     },
@@ -7648,7 +7669,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 95,
+        "ms": 99,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -7697,12 +7718,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 145,
+        "ms": 126,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.15,
+      "seconds": 0.13,
       "id": "resolver-index-selects-from-one-match-set",
       "kind": "adversarial"
     },
@@ -7760,7 +7781,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 114,
+        "ms": 116,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -7813,7 +7834,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 115,
+        "ms": 114,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -7866,12 +7887,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 133,
+        "ms": 115,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.14,
+      "seconds": 0.12,
       "id": "resolver-narrows-singular-noun-ending-in-s",
       "kind": "adversarial"
     },
@@ -7919,12 +7940,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 113,
+        "ms": 125,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.11,
+      "seconds": 0.13,
       "id": "resolver-near-anchor-is-case-insensitive",
       "kind": "adversarial"
     },
@@ -7972,12 +7993,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 134,
+        "ms": 103,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.14,
+      "seconds": 0.1,
       "id": "resolver-near-normalises-typography",
       "kind": "adversarial"
     },
@@ -8020,7 +8041,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 94,
+        "ms": 98,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -8068,12 +8089,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 94,
+        "ms": 112,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.1,
+      "seconds": 0.12,
       "id": "resolver-refuses-a-click-on-a-loose-anchor",
       "kind": "adversarial"
     },
@@ -8117,12 +8138,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 141,
+        "ms": 138,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.15,
+      "seconds": 0.14,
       "id": "resolver-refuses-different-readings",
       "kind": "adversarial"
     },
@@ -8165,12 +8186,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 115,
+        "ms": 99,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.11,
       "id": "resolver-refuses-mixed-roles",
       "kind": "adversarial"
     },
@@ -8214,12 +8235,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 157,
+        "ms": 140,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.16,
+      "seconds": 0.15,
       "id": "resolver-refuses-narrowing-a-click",
       "kind": "adversarial"
     },
@@ -8262,7 +8283,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 94,
+        "ms": 97,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -8311,12 +8332,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 124,
+        "ms": 157,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.13,
+      "seconds": 0.16,
       "id": "resolver-refuses-plural-menus",
       "kind": "adversarial"
     },
@@ -8359,7 +8380,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 98,
+        "ms": 97,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -8407,12 +8428,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 94,
+        "ms": 112,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.1,
+      "seconds": 0.12,
       "id": "resolver-refuses-plural-on-a-loose-anchor",
       "kind": "adversarial"
     },
@@ -8455,7 +8476,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 94,
+        "ms": 91,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -8504,7 +8525,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 140,
+        "ms": 139,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -8552,7 +8573,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 97,
+        "ms": 98,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -8600,7 +8621,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 96,
+        "ms": 95,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -8697,13 +8718,64 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 92,
+        "ms": 95,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
       "seconds": 0.1,
       "id": "resolver-unknown-target-key",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "status": true,
+        "trace_postconditions": true
+      },
+      "audit": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": false,
+          "answer_nonempty": false,
+          "no_abandoned_failure": false,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "a step's postcondition was not reached; answer is empty; step(s) [2] failed and nothing replaced them"
+      },
+      "metrics": {
+        "diagnosis_cases": 1,
+        "diagnosis_correct": 1
+      },
+      "tiers": [
+        "role"
+      ],
+      "got": {
+        "status": "failure:act",
+        "answer": null,
+        "reason": "step 2 (click): StepError: expected_state not reached: {'role_visible': {'role': 'heading', 'name': 'Cart'}}; replan made no progress (identical or empty plan)"
+      },
+      "budgets": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2246,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "seconds": 2.25,
+      "id": "role-visible-refuses-a-superstring-heading",
       "kind": "adversarial"
     },
     {
@@ -8747,7 +8819,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 45,
+        "ms": 47,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -8814,12 +8886,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 157,
+        "ms": 150,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.16,
+      "seconds": 0.15,
       "id": "sec10k-doc-status-is-a-named-status",
       "kind": "adversarial"
     },
@@ -8847,7 +8919,7 @@
       "got": {
         "cases_scanned": 5
       },
-      "seconds": 0.22,
+      "seconds": 0.03,
       "id": "sec10k-ground-truth-endpoint-eval-only",
       "kind": "adversarial"
     },
@@ -8894,12 +8966,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 133,
+        "ms": 160,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.13,
+      "seconds": 0.16,
       "id": "sec10k-item-count-is-in-the-named-status",
       "kind": "adversarial"
     },
@@ -8959,12 +9031,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 158,
+        "ms": 132,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.16,
+      "seconds": 0.13,
       "id": "sec10k-item-text-region-resolves",
       "kind": "adversarial"
     },
@@ -9011,12 +9083,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 105,
+        "ms": 111,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.11,
+      "seconds": 0.12,
       "id": "select-option-value-collides-with-a-label",
       "kind": "adversarial"
     },
@@ -9063,12 +9135,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 126,
+        "ms": 105,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.13,
+      "seconds": 0.11,
       "id": "select-option-without-a-value-is-refused",
       "kind": "adversarial"
     },
@@ -9117,7 +9189,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 215,
+        "ms": 218,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -9203,12 +9275,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 264,
+        "ms": 281,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.27,
+      "seconds": 0.28,
       "id": "stream-shows-every-step",
       "kind": "adversarial"
     },
@@ -9221,7 +9293,7 @@
         "status": "failure:env",
         "steps": 2
       },
-      "seconds": 2.3,
+      "seconds": 2.29,
       "id": "supersede-never-dangles",
       "kind": "adversarial"
     },
@@ -9281,7 +9353,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 99,
+        "ms": 102,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -9336,12 +9408,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 266,
+        "ms": 334,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.27,
+      "seconds": 0.34,
       "id": "trap-form-not-submitted",
       "kind": "adversarial"
     },
@@ -9389,7 +9461,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 232,
+        "ms": 229,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -9442,7 +9514,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 163,
+        "ms": 164,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -9494,12 +9566,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 113,
+        "ms": 117,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.11,
+      "seconds": 0.12,
       "id": "trap-unsorted-cheapest",
       "kind": "adversarial"
     },
@@ -9546,7 +9618,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 98,
+        "ms": 96,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -10123,19 +10195,19 @@
       "got": {
         "status": "failure:task",
         "answer": null,
-        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:60997/fixtures/hello.html'"
+        "reason": "step 2 (click): StepError: navigated to blocked URL: 'http://127.0.0.1:49729/fixtures/hello.html'"
       },
       "budgets": {
         "actions": 2,
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 148,
+        "ms": 149,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.15,
+      "seconds": 0.16,
       "id": "url-guard-holds-after-navigation",
       "kind": "adversarial"
     },
@@ -10255,7 +10327,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 231,
+        "ms": 228,
         "judge_calls": 0,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -10308,12 +10380,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 231,
+        "ms": 217,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.23,
+      "seconds": 0.22,
       "id": "verifier-context-anchors-real-occurrence",
       "kind": "adversarial"
     },
@@ -10378,7 +10450,7 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 381,
+        "ms": 379,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
@@ -10431,12 +10503,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 211,
+        "ms": 215,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.21,
+      "seconds": 0.22,
       "id": "verifier-listing-detail-title-not-furniture",
       "kind": "adversarial"
     },
@@ -10590,12 +10662,12 @@
         "llm_tokens": 0,
         "llm_usd": 0.0,
         "replans": 0,
-        "ms": 116,
+        "ms": 95,
         "judge_calls": 1,
         "judge_tokens": 0,
         "judge_usd": 0.0
       },
-      "seconds": 0.12,
+      "seconds": 0.1,
       "id": "verifier-sparse-page-not-a-dump",
       "kind": "adversarial"
     },
@@ -10620,8 +10692,8 @@
       "passed": true,
       "wrong": {},
       "got": {
-        "before": 2491,
-        "after": 2491
+        "before": 2525,
+        "after": 2525
       },
       "seconds": 0.05,
       "id": "wall-clock-probe-history-isolated",

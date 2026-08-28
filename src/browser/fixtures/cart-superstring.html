@@ -1,0 +1,14 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nimbus Shop — cart</title>
+
+<!-- T-M42-20-D6's own evidence, as a page. A postcondition asserting the
+     heading "Cart" must NOT be satisfied by "Shopping Cart is empty", which is
+     the superstring shape the resolver already refuses one file over. The
+     heading is deliberately the empty-state message: a plan that clicks
+     something expecting a cart to appear is asserting a state change, and the
+     page saying the cart is EMPTY is the opposite of that state. -->
+<h1>Shopping Cart is empty</h1>
+
+<button id="refresh" aria-label="Refresh the cart">Refresh the cart</button>
+<p><span role="status" aria-label="Cart status">0 items</span></p>

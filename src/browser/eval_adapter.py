@@ -2784,7 +2784,22 @@ def _run_fixture_case(case: dict) -> dict:
         # exactly as it did for `l4-shop-element-reordered`'s pinned-wrong-
         # answer shape, and the runtime never has that ground truth to have
         # decided it WITH.
-        v = audit["verdict"] if audit["layer"] > 1 else result["verdict"]["verdict"]
+        # T-M32-11: `result["verdict"]` is None for any run that ends BEFORE
+        # grading — every refusal path and every `failure:*` exit — and
+        # `want_verdict` is truthy whenever `expect` omits `status`, sets
+        # `status: success`, or names a verdict, i.e. for most cases. The
+        # subscript raised `TypeError: 'NoneType' object is not subscriptable`
+        # and the case reported a TRACEBACK instead of the failure it had just
+        # produced, turning "the run failed loudly" into "the harness broke".
+        # Every committed case happens to pair such an `expect` with ground
+        # truth or a non-success status, so it only bit ad-hoc probes — which is
+        # exactly the tool someone reaches for when hunting a defect.
+        #
+        # `None` and not a crash: a run with no verdict genuinely has no verdict
+        # to compare, and the check must FAIL rather than explode, so the case
+        # reports the mismatch it exists to report.
+        runtime_verdict = (result.get("verdict") or {}).get("verdict")
+        v = audit["verdict"] if audit["layer"] > 1 else runtime_verdict
         checks["verdict"] = v == want_verdict
 
     trace = result["evidence"]["trace"]
@@ -3233,6 +3248,31 @@ def _run_declared_keys_case(case: dict) -> dict:
                    and "answer" not in (c.get("expect") or {}))
     if empty:
         wrong.append({"key": "answer_is_known_wrong", "marks_nothing_no_expect_answer": empty})
+
+    # T-M32-11: every `expect` shape that implies verdict PASS, against a run
+    # that ends BEFORE grading — so the fix cannot be closed by special-casing
+    # the empty one, which is what the block's acceptance asks for in as many
+    # words. `result["verdict"]` is None on every refusal path and every
+    # `failure:*` exit, and `_run_fixture_case` used to subscript it, reporting
+    # a TRACEBACK instead of the failure the run had just produced.
+    if case["input"].get("verdictless_run_expect_shapes"):
+        probe = {"id": "t-m32-11-probe", "task": "browser",
+                 "input": {"fixture": "hello.html", "task": "probe",
+                           "stub_plan": [{"action": "click",
+                                          "target": {"role": "button",
+                                                     "name": "no such control"},
+                                          "expected_state": {"text_visible": "nope"}}]}}
+        for shape in ({}, {"status": "success"}, {"verdict": "PASS"}):
+            try:
+                r = _run_fixture_case({**probe, "expect": dict(shape)})
+            except Exception as e:
+                wrong.append({"verdictless_run_raised": f"{type(e).__name__}: {e}",
+                              "expect_shape": shape})
+                continue
+            # It must REPORT, not pass: there is no verdict, so the check fails.
+            if r.get("passed") or r.get("checks", {}).get("verdict") is not False:
+                wrong.append({"verdictless_run_did_not_report": shape,
+                              "checks": r.get("checks")})
 
     # T-R83: the OTHER registry in this file, graded here because it is the same
     # property — a key that says which grader runs, and a duplicate that nothing
@@ -5999,8 +6039,20 @@ def _run_doc_counts_case(case: dict) -> dict:
         # it failing, so no green report can ever be produced to cite (found by
         # merging origin/main into task/M32 — the numbers all had to move at
         # once). Any OTHER failing case still disqualifies the report.
+        # T-R19's own fixed-point problem, and the same argument one paragraph
+        # up rather than a new one. `report-citations-resolve` now reddens on any
+        # UNCITED report, and a `--report` run's own artifact is uncited until
+        # this block is re-pointed at it — so the run that produces the headline
+        # is red on the guard that produced it, and no green report can ever be
+        # made to cite. That is the identical no-fixed-point shape the exclusion
+        # above exists for, arriving through a second case, so it gets the
+        # identical treatment: declared in `expect`, not hard-coded, so adding a
+        # third is a visible edit to a case file rather than a quiet widening.
+        # Any OTHER failing case still disqualifies the report.
+        self_ref = {case.get("id")} | set(
+            case.get("expect", {}).get("headline_may_fail", []))
         if head and (failed := [r["id"] for r in head["results"]
-                                if not r["passed"] and r["id"] != case.get("id")]):
+                                if not r["passed"] and r["id"] not in self_ref]):
             wrong.append({"headline_report_is_red": ws["reports"][ws["headline"]],
                           "failed": failed})
             head = None  # the red baseline IS the finding; nothing under it is worth recomputing

@@ -33,8 +33,8 @@ from pathlib import Path
 from .judge import JUDGE_ATTEMPTS, RUN_JUDGE_BUDGET
 from .observe import page_text
 from .planner import PlanError
-from .resolver import (DOC_ROOT_ROLES, TARGET_KEYS, ResolveError,
-                        relocation_candidates, resolve)
+from .resolver import (DOC_ROOT_ROLES, ResolveError, TARGET_KEYS,
+                       relocation_candidates, resolve, _whole_string)
 from .verifier import STATE_CHANGING, is_aggregate, rank, verify
 
 # The executor's whole vocabulary (ADR-027 Decision 2 widens it; ADR-028 records
@@ -649,7 +649,22 @@ async def check_state(page, expected: dict | None, scope=None) -> bool | None:
             # document-scoped means asking exactly one (ADR-036).
             for s in ([page, *(getattr(page, "frames", None) or [page])[1:]]
                       if doc is None else [doc]):
-                loc = (s.get_by_role(want["role"], name=want["name"])
+                # T-M42-20-D6: WHOLE-STRING, the same matcher the resolver
+                # uses. This built `get_by_role(role, name=<str>)` with neither
+                # `exact` nor `_whole_string`, i.e. a case-insensitive
+                # SUBSTRING — so on `<h1>Shopping Cart is empty</h1>` a
+                # postcondition asserting `heading "Cart"` held. The whole
+                # argument whole-string matching rests on one file over
+                # ("substring matching resolved absent targets to superstring
+                # siblings and extracted the wrong element as a success")
+                # applies verbatim here, and harder: a postcondition is what
+                # `verify` treats as proof the action landed, so a superstring
+                # match is a no-op certified as a state change.
+                #
+                # `_whole_string`, not `exact=True`: exact is case-SENSITIVE,
+                # which is a promise about the page's stylesheet nothing here
+                # can keep — the same reason the resolver rejected it.
+                loc = (s.get_by_role(want["role"], name=_whole_string(want["name"]))
                        if want.get("name") else s.get_by_role(want["role"]))
                 if await loc.count() >= 1 and await loc.first.is_visible():
                     return True

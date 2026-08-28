@@ -1,0 +1,48 @@
+{
+  "id": "role-visible-refuses-a-superstring-heading",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "fixture": "cart-superstring.html",
+    "task": "Refresh the cart and confirm it is showing.",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Refresh the cart"
+        },
+        "expected_state": {
+          "role_visible": {
+            "role": "heading",
+            "name": "Cart"
+          }
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Cart status"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "trace_postconditions": [
+      true,
+      false
+    ]
+  },
+  "provenance": "T-M42-20-D6, from PR #60 R7. `check_state` built `get_by_role(role, name=<str>)` with neither `exact` nor `_whole_string` — a case-insensitive SUBSTRING — while the resolver one file over matches whole-string. The asymmetry was pre-existing and became inconsistent when T-M42-20 established the invariant next door. The block's own executed evidence is this page's heading: on `<h1>Shopping Cart is empty</h1>`, `check_state(page, {'role_visible': {'role':'heading','name':'Cart'}})` returned True. The argument whole-string matching rests on — \"substring matching resolved absent targets to superstring siblings and extracted the wrong element as a success\" — applies verbatim here and harder, because a postcondition is what `verify()` treats as proof the action landed: a superstring match is a no-op certified as a state change. `_whole_string` and not `exact=True`, for the reason the resolver gives: `exact` is case-SENSITIVE, a promise about the page's stylesheet that nothing here can keep, and it killed M42's live clause 3/3 on a control the page rendered perfectly under `text-transform: uppercase`. The block declined to fix it in place because \"tightening a postcondition changes which authored `expected_state` values hold across the existing suite, which is a change with its own blast radius\". Measured rather than assumed: the blast radius is ZERO — 256/256 fast and 104/104 invariant with the matcher shared.",
+  "triage": {
+    "class": "silent-failure",
+    "red_first": "RED as `status: success` with `trace_postconditions [true, true, null]` — the click's postcondition satisfied by a heading that says the cart is EMPTY, which is the opposite of the state the plan asserted, and the run then answering from it.",
+    "note": "The expectation is the click's postcondition going FALSE, not the run succeeding. `Cart` is genuinely not the name of any heading on this page, so the honest outcome is that the authored predicate does not hold and the step is a `failure:act` — the class ADR-003's ladder then replans on. Tagged `invariant` because 'a postcondition may not be satisfied by an element the plan did not name' is the same property INV-1 protects, not a fact about one page. The heading is the empty-state message on purpose: a superstring match here does not merely find the wrong element, it certifies a state that contradicts the one being asserted."
+  }
+}
