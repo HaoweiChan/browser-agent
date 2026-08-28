@@ -120,7 +120,10 @@ repo's ledger and nothing else.
   different at 238 is that the nine cases are the milestone, so there is nothing to
   move out — which is exactly ADR-021's split between case-count growth and per-case
   cost, arriving at the raise from the side ADR-021 said licenses one.
-  Four rounds running the band has decided a suite tag rather than a reviewer doing it:
+  Round after round now, the band has decided a suite tag rather than a reviewer doing it
+  (neither this sentence nor §3's counts the rounds any more: the two counts
+  disagreed twice, PR #69 R4 then R10, and an ungraded scalar that has already
+  regressed is cheaper deleted than re-typed — the T-M32-9 precedent):
   M44-P1 asked the same question from the other side — with its case in `fast` the tree
   ran 230 cases INSIDE the band, while the marked maximum above still derives 110, so
   ADR-033 Decision 4 followed this ruling rather than re-opening it on a faster sample.
@@ -169,7 +172,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 238 cases, 235/238) and
-(restated — `invariant`: 90 cases, 90/90) — are graded against the bullets they
+(restated — `invariant`: 92 cases, 89/92) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -315,39 +318,47 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s → 35s
 
-- Band source — local `invariant` at 90 cases, ts `20260828-040041`, **28.01s**, 90/90
-  (`dirty: true`, because a tree reaches this count only while the six cases are
-  uncommitted, and item 2 (cited-run)'s allowance applies: no clean row at 90
-  was available when this band was published.
+- Band source — local `invariant` at 92 cases, ts `20260828-052604`, **25.99s**, 89/92
+  (`dirty: false`, because this republish had a clean row available where the
+  previous one did not: a tree reaches this count only while T-M39-15's two
+  cases are uncommitted, but the first run at 92 was taken before they were
+  staged, so item 2 (cited-run)'s dirty allowance is not needed here at all.
   **This row is the MAXIMUM at this count in the committed ledger**, not the
-  smallest of a set — the distinction PR #67 R3 had to make here, kept, and this
-  time it cost a ceiling step rather than saving one.
-  **It is also an outlier, and that is disclosed rather than pruned**: it sits
-  roughly two and a half seconds above the rest of the rows at this count, and
-  was taken at load average 4.21 on a laptop running four other sessions' suites
-  concurrently. The rows themselves are deliberately NOT enumerated here — PR #66
+  smallest of a set — the distinction PR #67 R3 had to make here, kept. It is
+  also clean; it is NOT described as the only clean row, because that adjective
+  was false the last time it was written (PR #69 R9) and what the rule asks for
+  is the slowest.
+  RED, 89/92 — the three cases red in this row are
+  `adr029-scope-matches-the-suites`, `docs-numbers-are-derived` and
+  `published-band-matches-the-ledger`, all three mid-refresh when it was
+  recorded and all three cleared by this republish. Naming all three rather than
+  a subset is PR #69 R1.
+  **The previous band at 90 was an outlier and said so; this one is not**, and
+  the difference is worth one line because it changes what a reader should
+  watch. That row sat seconds above its neighbours, taken on a contended
+  laptop, and the ceiling it derived landed a step high — the safe direction,
+  since §6's no-ratchet-down reasoning is that a short sample bounds a ceiling
+  too TIGHT rather than too loose. The rows at 92 sit inside a second of each
+  other, so the band and the quiet rows have converged and there is no gap left
+  to watch. The rows themselves are deliberately NOT enumerated here — PR #66
   R18 found this sentence listing four of them as though they were all of them,
   which is the subset-presented-as-the-set defect this section records against
   PR #29 R21, one paragraph after refusing it. `published-band-matches-the-ledger`
   prints `ledger_slowest` and the ledger holds every row; a count re-typed here
-  is stale on the next gate run. The rule
-  still takes it — `_band_wrong` reads the ledger's maximum with no outlier
-  rejection, deliberately ("a wall clock is a wall clock"), and dropping a real
-  row because a later one is prettier is the selective presentation this section
-  exists to refuse. So the ceiling lands a step higher on a contended sample, which
-  is the safe direction: §6's no-ratchet-down reasoning is that a short sample
-  bounds the ceiling too TIGHT, never too loose, and a ceiling that is loose by
-  one step catches a regression a step later rather than not at all. What is
-  worth watching is the gap between the band and the quiet rows — ~2.9s of it —
-  not the ceiling. 90 exists only while T-M42-4's six additions do — the three postcondition
-  scope cases, the two PR #66 R2/R3 cases and R6's decoy-detach case — all
+  is stale on the next gate run. The rule takes whatever the maximum is —
+  `_band_wrong` applies no outlier rejection, deliberately ("a wall clock is a
+  wall clock"), and dropping a real row because a later one is prettier is the
+  selective presentation this section exists to refuse. 92 exists only while
+  T-M39-15's two id probes do, on top of T-M42-4's six additions that brought
+  90 — all
   `invariant`-only for the same reason PR #60's five and M44-P1's one were,
   which is that the `fast` band cannot pay for them (T-M42-20-D3/D9). This suite
-  is where the `fast` band's overflow has landed six rounds running, which is a
-  fact about the ceiling and not about these cases. **This republish moves the
-  ceiling 20 -> 35**, those two endpoints being the ceiling `origin/main` commits
-  and the one `evals/run.py` commits here — the only two numbers in the sentence a
-  reader can check without opening the ledger. The wall clocks behind them are the
+  is where the `fast` band's overflow keeps landing, which is a
+  fact about the ceiling and not about these cases. **This republish moves no
+  ceiling**: 35 is what `origin/main` commits and what `evals/run.py` commits
+  here, and the rule applied to this band derives 30 — one step BELOW the
+  committed ceiling, which is the residue §6 declares and not a defect: a
+  sample may derive under the committed ceiling and must never drag it down. The wall clocks behind them are the
   bullet's own, above, and at the superseded count a scalar deliberately not
   retyped, for the reason the rest of this bullet gives: PR #66 R16 found this
   sentence deriving 30 from a `25.32s at 90` that no row of the committed ledger
@@ -383,7 +394,7 @@ commit that changed nothing but JSON.
   very margin PR #65 R1 retired (R6). **Margin against the
   MAXIMUM, not against the published number**: the rule gives 35 for anything up
   to 30.43s, and that is the number to watch. This bullet cites the file the way
-  §2's does — except that this band has no report file to cite, and that is stated rather than papered over with a neighbouring run's: ADR-012 writes a per-case report only on a red run or under `--report`, and the maximum row here is a GREEN gate run (90/90), so no file was produced. Item 11 (cited-file) grades the ts/file PAIR when a bullet names a file; naming a different run's file to satisfy the form is exactly the defect that check was added for (PR #60 R17). The row is `evals/report/history.jsonl`'s, at the ts above, and `--report` on a re-run would produce a DIFFERENT wall clock, not this one's evidence.
+  §2's does — `evals/report/20260828-052604-invariant.json`. The previous band at 90 could name no file, and said so rather than papering over it with a neighbouring run's: ADR-012 writes a per-case report only on a red run or under `--report`, and that maximum was a GREEN gate run, so nothing was produced. This one is red mid-refresh, so the file exists and the ts/file PAIR item 11 (cited-file) grades is a real pair. Naming a different run's file to satisfy the form remains the defect that check was added for (PR #60 R17).
   That pair — the ts this bullet declares and the file it names — is read back
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
@@ -455,7 +466,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 28.01 × 1.15 = 32.21 → **35**, which is the committed
+The same rule gives 25.99 × 1.15 = 29.89 → **30**, one step below the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

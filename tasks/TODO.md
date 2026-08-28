@@ -639,7 +639,7 @@ turned on (see `tasks/DONE.md`); the general shape it described was never
 fixed and is inherited here.
 **Prune nothing, including that row: a decision, not an oversight.** Measured
 against `origin/main` as of 2026-08-28 (a dated snapshot — the ledger grows on
-every gate run, and it stood at 2192 rows when PR #69 round 2 re-checked it):
+every gate run, and it stood at 2245 rows when PR #69 last re-checked it):
 2161 rows, of which 44 carry `cost_usd: null` and 43 of
 those also `wall_s < 3` (the single exception is `20260822-174202`, 5.22s).
 Today's specimen is one of 44, so pruning it alone makes the ledger arbitrarily
@@ -662,7 +662,7 @@ the guard rather than against it. What disarms the population today is only
 that every one of these rows sits at a case count nothing publishes any more:
 the 19 sub-0.9 rows that are `dirty: false` — clean, therefore citable by
 construction — sit at counts 5, 6, 10, 18, 20, 22, 32, 49, 53, 63 and 96,
-nowhere near the live suite sizes, which were 86 (`invariant`) and 238 (`fast`)
+nowhere near the live suite sizes, which were 92 (`invariant`) and 238 (`fast`)
 when this was last checked and move with every merge. That is the suite
 having grown, not a guarantee. Revisit any of those counts — a case deletion,
 a suite split — and the clean rows among them become citable that moment. The
