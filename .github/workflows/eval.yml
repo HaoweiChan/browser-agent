@@ -19,25 +19,26 @@ jobs:
       # enforcing a locally-measured 15s that CI had never run, and CI went red
       # at 15.06s and 15.22s with 46/46 passing (PR #29 R15).
       #
-      # Measured here, on this runner, not projected from local numbers: four
-      # attempts of one run (32937020758 on 14a6a7b, 213 fast / 74 invariant
-      # cases) gave
-      #   invariant  18.59 / 18.65 / 18.88 / 18.72s
-      #   fast       105.14 / 101.73 / 106.75 / 107.89s
+      # Measured here, on this runner, not projected from local numbers. Since
+      # ADR-019 §9 (2026-08-28) the sample is the four slowest observed RUNS per
+      # suite, across commits, rather than four attempts of one run — slowest
+      # first, ids and case counts in §5's table:
+      #   invariant  26.97 / 25.61 / 22.81 / 22.71s
+      #   fast       117.84 / 117.14 / 116.01 / 113.51s
       # ADR-013 Decision 3's rule is the slowest observed run +15%, rounded up
-      # to a multiple of five: 18.88 x 1.15 = 21.71 -> 25, and
-      # 107.89 x 1.15 = 124.07 -> 125. Every one of those attempts was
-      # correctness-green (213/213, 74/74) and every one was over the 90s this
-      # file used to declare, which is what moved these numbers: the breach was
-      # in the budget, never in the results. `invariant` moves with it although
-      # it was never over budget — its tree grew 48 -> 74 cases, and deriving
-      # one suite from this table while leaving the other on the old one would
-      # publish two trees in one table (PR #57 R7). ADR-019 §5 is the graded
+      # to a multiple of five: 26.97 x 1.15 = 31.02 -> 35, and
+      # 117.84 x 1.15 = 135.52 -> 140. Every one of those runs was
+      # correctness-green on the suite it is quoted for — 26.97s was 86/86 with
+      # OVER BUDGET printed above it, which is what moved these numbers: the
+      # breach was in the budget, never in the results. `fast` moves with it
+      # although it has never been over budget, because deriving one suite from
+      # this table while leaving the other on an older one publishes two
+      # measurements as if they were one (PR #57 R7). ADR-019 §5 is the graded
       # source for all eight cells above; `ci-numbers-are-derived` compares them
       # cell-by-cell against it, and `fast-wall-clock-budget` grades both values
       # declared below.
-      EVAL_WALL_BUDGET_S_FAST: "125"
-      EVAL_WALL_BUDGET_S_INVARIANT: "25"
+      EVAL_WALL_BUDGET_S_FAST: "140"
+      EVAL_WALL_BUDGET_S_INVARIANT: "35"
       # Which environment measured a history row (ADR-019 §7). The `invariant`
       # step below appends its row to this job's copy of the ledger before the
       # `fast` step grades ADR-019 §3's band against it. Untagged, that row is

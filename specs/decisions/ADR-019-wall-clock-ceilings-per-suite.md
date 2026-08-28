@@ -3,11 +3,12 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → **110s** [local] (ADR-021, then ADR-029, then ADR-035), local `invariant` **20s** [local], and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 from run `32937020758` and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → **110s** [local] (ADR-021, then ADR-029, then ADR-035), local `invariant` **20s** [local], and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 — from one run's attempts until §9 (2026-08-28) made the input a cross-commit sample of runs — and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `evals/run.py` `over_budget()`
 
-**Amended by**: ADR-035 (Decision 7's local `fast` ceiling 105 -> 110 [local] — the same instrument ADR-029 and ADR-021 used and for the same reason, case-COUNT growth: M43 put nine cases in `fast` and the ledger's slowest run at the new count derives 110. `invariant` is untouched; CI's two are untouched and stay in §5) · ADR-029 (Decision 2's local `fast` ceiling 90 -> 105 [local], and §5's two CI ceilings re-derived from run `32937020758` — the values themselves live in §5 and in the workflow, graded against each other, on the number `published-band-matches-the-ledger` derived after M42 grew the suite (the count is `git diff main --stat` away and is published nowhere, because three documents published three different values for it — PR #57 R16); ~~CI's stays 90 because nothing in that change measured CI~~ — struck 2026-08-26 (PR #57 R24), and it contradicted the opening of its own sentence for a round: §5's CI ceilings were re-derived from run `32937020758` and the workflow declares them. No CI ceiling is written on this line; §5 publishes them) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
+**Amended by**: §9 of this file (2026-08-28: both CI ceilings re-derived from a cross-commit sample of runs, superseding the single-run derivation ADR-029 recorded) · ADR-035 (Decision 7's local `fast` ceiling 105 -> 110 [local] — the same instrument ADR-029 and ADR-021 used and for the same reason, case-COUNT growth: M43 put nine cases in `fast` and the ledger's slowest run at the new count derives 110. `invariant` is untouched; CI's two are untouched and stay in §5) · ADR-029 (Decision 2's local `fast` ceiling 90 -> 105 [local], and §5's two CI ceilings re-derived from run `32937020758` — the values themselves live in §5 and in the workflow, graded against each other, on the number `published-band-matches-the-ledger` derived after M42 grew the suite (the count is `git diff main --stat` away and is published nowhere, because three documents published three different values for it — PR #57 R16); ~~CI's stays 90 because nothing in that change measured CI~~ — struck 2026-08-26 (PR #57 R24), and it contradicted the opening of its own sentence for a round: §5's CI ceilings were re-derived from run `32937020758` and the workflow declares them. No CI ceiling is written on this line; §5 publishes them) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
+
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 80) and ADR-002 Decision 4 (a second suite now has a ceiling)
 
@@ -483,64 +484,108 @@ its `invariant` ceiling — the relief-valve property §3 is about — and each 
 can be measured where it is enforced, which is what ADR-013 Decision 3 already
 ruled `fast` needed. `fast-wall-clock-budget` pins both directions.
 
-### 5. CI's two numbers, measured on CI: 125 and 25
+### 5. CI's two numbers, measured on CI: 140 and 35
 
 Not projected from local runs, which is the mistake §3 made. **Hand-read off the
-workflow log, not from the ledger** (§7): four attempts of eval-gate run
-[32937020758](https://github.com/HaoweiChan/browser-agent/actions/runs/32937020758)
-on commit `14a6a7b` — 213 `fast`, 74 `invariant`, the tree this branch ships.
-`gh run view 32937020758 --attempt N --log` reprints each line below.
+workflow logs, not from the ledger** (§7). Since §9 (2026-08-28) a row is one
+measured RUN of `.github/workflows/eval.yml`, and the two suites are sampled
+independently — the run that sets `invariant`'s ceiling breached on `invariant`
+and so never reached the `fast` step at all, which is the shape §9 exists for.
+The sample is **the four slowest observed runs per suite**, and the population it
+is drawn from is stated by its endpoints so a reader can rebuild it: **every
+eval-gate run from `33098541355` (2026-08-27T17:28:00Z) through `33120495080`
+(21:57:55Z) — 19 consecutive runs, ending with the last one that existed before
+this branch did.** It is NOT every run that existed before this branch: eval-gate
+has run on this repo since long before 17:28Z, and the first version of this
+sentence claimed the larger thing and was wrong by dozens of runs.
 
-| attempt | `invariant` | `fast` |
-|---|---|---|
-| 1 | 18.59s | 105.14s |
-| 2 | 18.65s | 101.73s |
-| 3 | 18.88s | 106.75s |
-| 4 | 18.72s | 107.89s |
+**The start boundary is arbitrary, and saying so is the only honest account of
+it.** It is `main`'s 17:28:00Z push — a declared endpoint, not a principled one.
+Two attempts to give it a principle were both wrong. It does not mark where "the
+tree stopped resembling the one the ceiling covers", and it is not simply "at
+smaller case counts": that is true of `invariant` and **false of `fast`**, which
+ran 229 cases in every run that day, including runs from 02:40Z onward whose
+`invariant` was 82. Five runs in the 78 minutes before the boundary
+(`task/M44-P1`, 16:09:55Z to 17:22:12Z) sat at exactly 83 `invariant` / 229
+`fast` — the same counts as the smallest rows published above.
 
-Each cell is one `[eval] cost … wall Ns` line of that attempt's log, with
-`invariant` 74/74 and `fast` 213/213 in all four — **every attempt
-correctness-green, every attempt over the 90s `fast` ceiling that was declared
-when they ran.** That is the whole reason this section moved: the breach was in
-the budget, never in the results. **All eight cells of this table are graded**,
-by `ci-numbers-are-derived`, and each of the eight was watched red one at a time:
-they are compared cell-by-cell, in attempt order, against the copy in
+**And the boundary is nearly consequential, which is a better reason to declare
+it arbitrary than to dress it up.** The slowest of those five, run 33091786995,
+measured `fast` 115.02s — above the fourth `fast` row this table publishes,
+though below its maximum, so the ceiling is 140 either way — and `invariant`
+22.69s, which misses the fourth `invariant` row by **0.02s**. That column clears
+the boundary by two hundredths of a second. A window that changes what a table
+publishes while changing no ceiling is exactly the kind of edge a reader should
+be told about rather than left to find.
+Only the maximum can move a ceiling, so the four that could is a rule rather than
+a selection. Two of the 19 breached and so produced no `fast` figure, leaving 17
+in that column. `gh run view <id> --log` reprints each line below.
+
+| run | branch | suite | cases | wall |
+|---|---|---|---|---|
+| 33113860608 | task/T-M42-4 | invariant | 86 | 26.97s |
+| 33120495080 | task/T-M42-4 | invariant | 88 | 25.61s |
+| 33113986233 | task/M43 | invariant | 83 | 22.81s |
+| 33119009870 | task/M43 | invariant | 83 | 22.71s |
+| 33119009870 | task/M43 | fast | 238 | 117.84s |
+| 33113986233 | task/M43 | fast | 236 | 117.14s |
+| 33119673100 | task/M43 | fast | 238 | 116.01s |
+| 33114650675 | task/T-M39-15 | fast | 229 | 113.51s |
+
+Each cell is one `[eval] cost … wall Ns` line of that run's log, and every one
+of these runs was correctness-green on the suite it is quoted for — `26.97s` was
+`86/86 = 1.000` with `OVER BUDGET` printed above it. That is the whole reason
+this section keeps moving: the breach is in the budget, never in the results.
+**Eighteen of this table's forty cells are graded** — the eight wall clocks, the
+eight `suite` cells, and the two run ids on the rows carrying each suite's
+maximum — by
+`ci-numbers-are-derived`, and each was watched red one at a time.
+The `suite` column is load-bearing rather than decorative: it selects which
+per-suite list a wall clock joins, so changing one reddens the row-count check.
+A row whose `suite` cell is neither word is refused outright rather than skipped,
+which it was not until PR #72 R5 caught the hole this reshaping had opened.
+The branch and case-count columns are the ones parsed and discarded: they are
+there for a reader following an id back to a log, and nothing reads them back (T-R73's
+territory, named here rather than left to be found — this sentence read "all
+eight cells" and survived the reshaping that took the table from eight cells to
+forty, so it went on claiming total coverage of a table that had quadrupled
+under it, which is the review finding that produced this wording).
+The eight wall clocks are compared cell-by-cell, in table order, against the copy in
 `.github/workflows/eval.yml`'s comment block, so editing either copy reddens the
 gate and deleting the workflow's block does too. Round 1 of that case did NOT do
-this: `invariant`'s column was only ever read through `min`/`max`, so attempts 2
-and 4 could be edited freely with everything green — two numbers in a spec that
+this: `invariant`'s column was only ever read through `min`/`max`, so two of its
+cells could be edited freely with everything green — numbers in a spec that
 nothing read, which is the exact residue this case exists to close (PR #41 R14).
 
 From this table the same case also reads back README's four `fast` values, both
-min-max ranges, both ceilings those ranges derive, and the run id above, which
-must appear in both documents; and it requires the ceilings derived here to be
-the ones the workflow declares. `published-band-matches-the-ledger` still does
+min-max ranges, both ceilings those ranges derive, and the id of the row that
+sets each ceiling, which must appear in both documents; and it requires the
+ceilings derived here to be the ones the workflow declares.
+`published-band-matches-the-ledger` still does
 not see any of these numbers — it reads the committed ledger and no CI row is in
 it — which is why a second case exists at all.
 
 Three things are NOT pinned, stated because the alternative is a sentence
-claiming more than it does. First: that anyone ever ran these four attempts.
+claiming more than it does. First: that anyone ever ran these runs.
 Both copies could be wrong together and the gate would stay green; the run id is
 what a reader checks (`gh run view … --log`), and T-R73 carries the ledger route
 that would make it a mechanism. Second: CI figures published anywhere other than
 this section, README and the workflow comment — ADR-013's copy of the superseded
-95-case band is not read here, and is owned by `task/T-M32-9`. Third, and it
-applies to the previous four-attempt table as much as to this one: **four
-attempts of one run sample the runner's variance, not variance across commits or
-runner allocations.** Re-running one workflow run holds the commit, the image and
-the allocation fixed by construction. That is a narrower sample than the number
-of attempts suggests, and §6's no-ratchet-down rule is what makes it safe to
-publish from — a short sample is a lower bound on what the tree costs, so the
-ceiling it derives can only be too tight, never too loose.
+95-case band is not read here, and is owned by `task/T-M32-9`. Third: **this
+sample spans commits, and therefore spans trees.** Rows sit at 83 to 88
+`invariant` cases and 229 to 238 `fast` cases, which is not one tree measured
+four ways. §9 argues that is the correct input for a ceiling — the ceiling has
+to hold over the commits that will run under it — and it is the deliberate
+reversal of the rule the previous version of this section stated, that a table
+must not publish two trees at once.
 
-Same rule: 18.88 × 1.15 = 21.71 → **25**; 107.89 × 1.15 = 124.07 → **125**.
+Same rule: 26.97 × 1.15 = 31.02 → **35**; 117.84 × 1.15 = 135.52 → **140**.
 
-Both ceilings move, and `invariant`'s moves for a reason worth stating plainly:
-its CI runs were never over budget and are not now. But a ceiling is a derived
-number, and the tree deriving it grew from 48 `invariant` cases to 74. Deriving
-`fast` from this table while leaving `invariant` derived from the old one would
-publish two numbers from two different trees inside one table — the class this
-PR spent five rounds closing. Both come from this table or neither does.
+Both ceilings move together, which is the rule this section has kept through
+three re-derivations: `fast` has never breached and does not now, but a ceiling
+is a derived number, and deriving one suite from this table while leaving the
+other on an older one publishes two measurements as if they were one. Both come
+from this table or neither does.
 
 ~~**CI's `fast` ceiling of 80 was the next coin flip, and this is the measurement
 that says so**~~ and ~~the runner is ~1.15x slower than this laptop~~ — struck
@@ -989,6 +1034,256 @@ by anything (T-R74). The first CI run of this branch is the measurement, and thi
 ADR does not promise the answer — the last time this file did, it came due
 immediately and the answer was no, twice over (Consequences, below).
 
+### 9. (2026-08-28) A CI ceiling is derived from runs, not from one run's attempts
+
+**Ruling**: CI's ceilings become `invariant` **35s** and `fast` **140s**, and the
+input to ADR-013's rule changes with them: §5's sample is now the four slowest
+observed RUNS per suite, sampled across commits, in place of four attempts of one
+run. The rule itself is untouched — slowest observed +15%, rounded up to a
+multiple of five. What was wrong was never the rule; it was what the rule was
+being applied to.
+
+**What forced it, and it is not the branch that failed.** Run
+[33113860608](https://github.com/HaoweiChan/browser-agent/actions/runs/33113860608)
+(`task/T-M42-4`, PR #66) printed
+`OVER BUDGET: suite 'invariant' wall clock 26.97s`, above `86/86 = 1.000`. Every
+case passed; the job failed on the budget alone, and PR #66 cannot go green until
+this number moves. That is the occasion. The cause is older, and the first
+account this amendment gave — "a tree grew past a ceiling derived on a smaller
+one" — was true and still understated it.
+
+**Take BOTH breaching runs out of the sample entirely.** The next-slowest
+`invariant` runs are then 22.81s, 22.71s and 22.1s, and ADR-013's rule sends every
+one of them to 30 — above the ceiling that was committed [historical]. The last of
+those, run 33116533591, is `main`'s own push. `fast` is in the same state: `main`
+measured 111.93s in that run, which the rule sends to 130, also above what was
+committed [historical]. **Both CI ceilings had been out of compliance with the
+rule that derives them for some time, on `main`, and nothing noticed** —
+`ci-numbers-are-derived` grades the published table against the workflow, and the
+table was internally consistent; what no case can see is that the table stopped
+describing the runner. PR #66 did not push CI over a line. It landed on the far
+side of the runner's variance from a line that was already in the wrong place,
+which is why the fix is the derivation input and not this branch's cases.
+
+The ceiling it breached was derived from four attempts of one
+run on a tree of 74 `invariant` cases — a tree twelve cases smaller than the one
+that breached, measured in a sample that held the commit, the image and the
+runner allocation fixed by construction. §5 said so itself, in the paragraph this
+amendment is the collection on.
+
+**The derivation, from the table in §5.** `invariant`: 26.97 × 1.15 = 31.02, up
+to the next multiple of five, **35**. `fast`: 117.84 × 1.15 = 135.52, **140**.
+`fast` has not breached — it moves because §5's standing rule is that both
+ceilings come from one table or neither does, and, as the paragraph above
+records, because it was out of compliance too.
+
+**Why a run and not an attempt, mechanically.** Run 33113860608 has no `fast`
+figure at all: the `invariant` step exited 1, so the `fast` step never ran. A
+two-column table, one row per run, can only hold that observation by dropping it
+— and dropping it censors the sample at exactly the run that moves the number,
+because the thing that disqualified the row is the breach being measured. Every
+scheme that pairs the suites per row has this defect, so §5 samples them
+independently and `ci-numbers-are-derived` parses them that way.
+
+**On variance, because a derivation from a maximum invites the question.** Across
+the 19 runs in the window, **17** ran the same `invariant` workload —
+51 actions, 5 judge calls — and spanned 19.28s (run 33114270405) to 22.81s (run
+33113986233), an 18% spread at 83 to 85 cases. That is not byte-identical work,
+since the trees differ by up to two cases; what is identical is the action and
+judge-call count, and the spread is far larger than two cases can account for.
+Case count does not order it either: an 84-case run is the fastest in it and an
+83-case run the slowest. So runner noise alone is comparable to several cases'
+work, and a ceiling only 15% above the fastest run in a sample would fail
+intermittently whoever added the next case.
+
+**But the breaches are not that noise, and saying so was the correction this
+amendment needed.** The two runs that breached are **exactly** the two that are
+not among the 17: run 33113860608 at 58 actions and 6 judge calls, and run
+33120495080 at 65 and 8 — both on `task/T-M42-4`, about 85 minutes apart
+(20:33:01Z and 21:57:55Z), the second having grown again. Every run that held the workload fixed stayed under
+23s; both runs that grew it went over. Their 26.97s and 25.61s are workload steps
+on a median near 21.4s, with noise on top. Both terms are present, neither
+explains a breach alone, and the two have different
+remedies: noise is absorbed by deriving from a maximum, workload growth is not,
+and only a ceiling re-derived on the tree that actually runs covers both.
+
+**What this does NOT change.** The rule stays as ADR-013 wrote it and ADR-021
+amended it. Two alternatives were considered and both are rejected, with the
+arithmetic rather than as a preference — a future session will otherwise propose
+the percentile again:
+
+| candidate | on this sample | ceiling |
+|---|---|---|
+| the rule (max +15%) | 26.97 | **35** |
+| p95, `evals/run.py`'s own nearest-rank `pctl` | 26.97 — *identical to the max* | 35 |
+| p90, same definition | 25.61 | 30 |
+| max + a fixed 5s pad | 31.97 | 35 |
+| max + a fixed 3s pad | 29.97 | 30 |
+
+The percentile is the sharper rejection: at n=19, nearest-rank p95 selects index
+19 of 19 — **it IS the maximum**, so it is not a different policy at all, only a
+more expensive way to write one. Every candidate that does differ lands one
+ceiling step away, so none of them buys a property the rule lacks, and each
+replaces a number a reader can recompute in their head with one they cannot.
+§6's no-ratchet-down rule is untouched and unneeded here: both ceilings move up.
+
+**Does this survive §6 item 3 (same-ceiling) and item 4 (committed-ceiling) being
+rewritten to read the slowest CITABLE row instead of the raw maximum?** That
+rewrite is in flight on another branch as this is written, and the answer is yes,
+for a stronger reason than "every row here is citable": **citability is not
+defined on these rows at all.** It is a property of a `history.jsonl` row — clean,
+or dirty with no clean row at that count and environment stamped at or before it
+— and no CI figure in §5 is a ledger row. The committed ledger holds 2162 rows,
+every one of them `local` or untagged and not one tagged `ci`; CI's numbers are
+hand-read off workflow logs, which is what §5 has said since it was written and
+why `published-band-matches-the-ledger` cannot see them. The two mechanisms share
+`_band_rule` and nothing else. If T-R73 ever routes CI rows into the ledger the
+question becomes live, and the citable reading should be applied to them then.
+
+**This section is numbered 9 and there is no 8 above it yet.** The section
+numbered 8 is a different ruling, on another branch, unmerged when this was
+written and invisible from the tree that wrote it — ADR-019 ends at §7 here, so
+8 looked free and was free by every check that reads this repo. It is not cited
+by number anywhere in this file on purpose: a citation to a section that exists
+only on an unmerged branch reddens `adr-header-and-index`. The gap closes when
+that branch merges; if it never does, this section is renumbered, not left
+straddling a hole. (Filed as debt on the collision class itself, which has now
+produced four instances in one evening — two ADR numbers, a task id, and this.)
+
+**The confirming runs, and what they do not confirm.** This branch ran CI three
+times while this section was being written — `acd2fd1`
+([33121040452](https://github.com/HaoweiChan/browser-agent/actions/runs/33121040452)),
+`738b69d`
+([33121576970](https://github.com/HaoweiChan/browser-agent/actions/runs/33121576970))
+and `088f3a9`
+([33122270213](https://github.com/HaoweiChan/browser-agent/actions/runs/33122270213)) —
+all green under the new ceilings, and all three outside the sample by its declared
+endpoints. Their `fast` figures (110.97s, 111.19s, 111.91s) each derive 130, above
+the ceiling this amendment replaces, so each is one more instance of the
+compliance gap. Their `invariant` figures are NOT uniformly evidence of it, which
+is said plainly because the tempting sentence — "even this PR's own runs prove it"
+— is true of one suite and only sometimes true of the other.
+
+**What those three do show is the variance argument with the workload term
+removed entirely.** All three ran `invariant` 83/83 at **51 actions and 5 judge
+calls** — the same workload as the 17 in-window runs, on three commits that
+differ only in documentation and one grader function — and measured **21.21s,
+21.64s and 23.17s**. The fastest and the slowest of them land on opposite sides of
+a ceiling-step boundary: two derive the superseded ceiling, the third derives 30.
+Nothing about the tree changed between them. **One run cannot settle which step a
+tree belongs on**, and here that is demonstrated three times on one branch inside
+half an hour rather than argued from across the fleet. That is the whole case for
+sampling across runs, and it is why the sample's endpoints are declared rather
+than left to end wherever the writing stopped.
+
+**This branch's LATER runs are deliberately not in that comparison, and they are
+not counted here.** After the rebase onto `6a416df` this branch went on running
+CI at 84 `invariant` cases rather than 83 — the first of those,
+[33138949938](https://github.com/HaoweiChan/browser-agent/actions/runs/33138949938)
+on `198bdee`, measured `fast` 113.33s, which derives 135: a **different** step
+from the 130 the three above derive, and also above the ceiling this amendment
+replaces. All of them are held out of the comparison because they change the case
+count those three hold fixed, and that count is the variable the paragraph exists
+to pin. The exclusion is named rather than left in the CI history for a reader to
+stumble on, because it should be visible as a control and not mistaken for an
+inconvenient number quietly dropped — the failure this section already has on its
+record once. Two different steps, derived on two different case counts, both above
+what was committed, also say more about the gap than one boundary case could.
+
+**How many such runs there are is deliberately not written.** An earlier version
+of this paragraph said "a fourth run exists", and a fifth had already run by the
+time it was reviewed. A count of this branch's own CI runs is stale the moment
+anyone pushes — it is a number the act of publishing it invalidates — so the
+paragraph names the first of them, states the property they share, and leaves the
+tally to `gh run list`. Same reasoning as the ledger maxima §6 refuses to retype.
+
+**The residue, declared.** The sample is 19 runs from a single ~4.5-hour window on
+2026-08-27 UTC, all `ubuntu-latest`. It says nothing about a different runner image or
+a quiet weekend, and the four-slowest-per-suite rule means the min this table
+publishes is a fourth-place row rather than the fastest run observed — the range
+in README is the sample's, not the population's, and the variance figures above
+are quoted from the full 19 rather than from the table. T-R73's ledger route is
+still what would turn any of this into a mechanism instead of a hand-read.
+
+**Everything in this section is UNGRADED prose, and that is the largest thing it
+has to disclose.** §5's table is read cell-by-cell by `ci-numbers-are-derived`.
+This section is not: the check slices §5 alone, and the sweep that polices stray
+CI ceilings elsewhere matches only integer-and-`s` figures, so a decimal like
+`26.97s` is invisible to it by construction. That leaves roughly fifteen CI wall
+clocks here that nothing reads back. **This section therefore reproduces, in its
+own body, the defect the ruling above exists to correct** — numbers published
+about CI that no check derives — and it is a fourth instance in this PR of a
+repair creating the class it repairs, which is why it is written down instead of
+smoothed over.
+
+**The count of actual misses, which is the honest form of that disclosure.**
+Across three review rounds, **ten** statements in this ungraded region were
+wrong, and every one was caught by a person reading logs rather than by a check.
+Four were plain figures: the case-count span said 83 to 86 where the table
+publishes 88; the rejected-alternatives p90 row was computed on the pre-repair
+18-run window, reading 22.81 where 19 runs give 25.61; the drop-the-breach
+premise said "the breaching run" after a second had entered the sample; and the
+interval between the two breaches was written as twenty minutes when it is
+about 85 minutes. One was a repair that never landed — round 2 recorded it as fixed in
+its commit message while the sentence itself stayed singular, a record of work
+that did not happen. One was a coverage count left behind when its subject
+changed. **And four were boundary or scope claims**: a window that closed eleven
+minutes before the second breaching run; "every run that existed before this
+branch", wrong by dozens; a start boundary justified by "smaller case counts",
+true of `invariant` and false of `fast`; and "a fourth run exists" when a fifth
+had already run. None of the ten changed a ceiling. None could go red.
+
+**That the boundary claims are the largest group is the finding, not a
+coincidence.** A sample's edges are where prose is weakest and a grader is
+strongest: every one of the four was a sentence describing the extent of
+something, and every one was wrong in the direction of claiming more extent than
+the evidence had. This section argues that a ceiling must be derived from a
+declared sample; its own history is the evidence that declaring a sample in prose
+is not the same as having one.
+
+**And this count is itself an ungraded claim inside the ungraded region.** It can
+go stale the moment anyone finds an eleventh, and nothing here would notice — the
+recursion is real and is the thesis rather than an embarrassment to it. A reader
+who finds a miss this paragraph does not list has confirmed the section's
+argument, not refuted it. T-R73 remains the only route that would end the
+regress.
+
+**The evidence for that is this PR's own record, and it is better evidence than
+any assertion here could be.** Three times the prose described a sample as
+broader than it was: the first window ended eleven minutes before the second
+breaching run; the sentence declaring the window claimed "every run that existed
+before this branch", short by dozens; and README claimed 19.28s as the fastest
+run "that day" when it is the minimum of a 4.5-hour window. Every one was found
+by a reviewer reading logs, none by a check, and each was a boundary claim —
+which is precisely the kind of statement prose cannot hold and a grader can. The
+substantive rulings above were not what drifted; the descriptions of scope
+around them were, three times in three rounds.
+
+**What is NOT done about it, deliberately.** The figures are not moved into §5's
+table. §5 is a record and this section is an argument, and the argument's force
+comes from a controlled comparison — same case count, same workload, three
+commits — that flattening into a table of maxima would destroy. The honest
+alternative is to say what is graded and what is not, which is what this
+paragraph does, and to leave T-R73's ledger route as the thing that would end the
+distinction. A reader deciding whether to trust a number in this section should
+check the run id beside it; that is the only mechanism this section has, and it
+is a reader's, not the gate's.
+
+**And the residue that was a defect, because the first version of this section got
+it wrong.** The `fast` column originally published 112.28s as its fourth row while
+run 33119673100 had measured 116.01s inside the same window — a genuine
+fifth-place row published under a sentence claiming the four slowest, on the same
+branch as two rows that were in the table. The window also ended eleven minutes
+before run 33120495080, the SECOND breaching run, so the section argued from one
+breach while a second sat just past a boundary it had not declared. Both were
+found by review, from the logs, with every published cell transcribed correctly —
+the selection was wrong, not the transcription, and no case could see it because
+`ci-numbers-are-derived` grades the published cells against two copies and never
+against the log. That is the same defect this file already records at ADR-021's
+band ("published five of sixteen runs and dropped the two slowest") and it is why
+the window is now stated by its endpoints instead of by a count. **What still
+cannot go red is a sample that omits a run**; T-R73 is the only route to it.
+
 ## Consequences
 
 - **CI's numbers are measured, not promised.** The first version of this ADR
@@ -996,8 +1291,9 @@ immediately and the answer was no, twice over (Consequences, below).
   immediately and the answer was no, twice over — `invariant` red at 15.06s and
   `fast` at 74.06s against 80. Both are now set from CI runs of the shipped
   tree (§5). `fast-wall-clock-budget`'s own `not_covered` still says this case
-  cannot tell a measured number from an invented one; the four attempts are in
-  §5 and in the workflow comment so a reader can check rather than trust.
+  cannot tell a measured number from an invented one; the measured runs are in
+  §5 and in the workflow comment, each with its id, so a reader can check rather
+  than trust.
 - **The declared limitation stays declared.** Total wall clock is all that is
   graded: a case that gets 10s slower while another gets 10s faster is still
   invisible, and per-case timings still live in the committed reports.
