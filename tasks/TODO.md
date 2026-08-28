@@ -12,27 +12,6 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M43 — loop mode sees the page: screenshot observation for a vision model            [status: pr]
-Origin: ADR-027; postmortem S2 — the failure class "the answer is not the
-accessible name of any small element" (T-M40-2, D28) is unfixable by better
-ARIA targeting alone, and production agents do not have it because they look.
-Depends: M42.
-Spec: in loop mode, each per-step observation may carry a viewport screenshot
-(and on drill, an element-scoped one) alongside the a11y/text observation;
-`ALLOWED_MODELS` gains a vision-capable frontier model; the executor gains a
-coordinate-click action usable ONLY from a screenshot-bearing observation, so
-a plan cannot invent coordinates it never saw (same closed-world rule as
-unknown target keys). Screenshots enter the trace as the step evidence the UI
-already renders (ADR-022's page view precedent). Offline: stub-driven cases
-grade the plumbing (screenshot captured, attached, traced; coordinate-click
-resolves and records) on fixtures at $0; vision quality itself is graded by
-M44's live probes, stated as such.
-Acceptance: the S2 fixture shape — a value in a bare `<div>`/`<pre>` with no
-role/name, unreachable by role tier by construction — answered under loop mode
-with vision in a live smoke (3 reps, run ids published), while mode B's
-documented failure on the same fixture is pinned as the contrast case; suites
-green at $0; implementation ADR; cold-reviewer + spec-drift before commit.
-
 ### M46 — plan-then-loop escalation: mode B is the fast path, loop mode is the fallback, one RunResult carries both            [status: todo]
 Depends: T-M42-20
 Origin: owner, 2026-08-26 — after PR #59's smoke measured both modes dying on
