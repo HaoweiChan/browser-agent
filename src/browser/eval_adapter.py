@@ -4034,6 +4034,12 @@ def _run_matrix_case(case: dict) -> dict:
 REPORT_CITATION_SCOPE = ("docs", "specs", "tasks", "README.md", "src",
                           "evals/golden", "evals/adversarial", ".github", "prompts")
 REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
+# T-M32-10: how far from a citation a pass-rate claim still counts as being
+# ABOUT it, and the shape of such a claim. 400 characters is roughly a
+# paragraph — wide enough for "9/9 after this change (evals/report/…)" and its
+# inversions, narrow enough that a figure two paragraphs away is not roped in.
+_CLAIM_WINDOW = 400
+_PASS_RATE = re.compile(r"(?<![\d/])(\d{1,4})\s*/\s*(\d{1,4})(?![\d/])")
 # `tasks/reviews/` holds verbatim reviewer records, and one repro instruction
 # names a file it tells you to CREATE — R1 of PR #20 says to write a report
 # dated 29991231 into evals/report/ and then run the case. That is not a
@@ -4087,13 +4093,16 @@ def _run_report_citations_case(case: dict) -> dict:
     """
     root = Path(__file__).parents[2]
     cited: set[str] = set()
+    scanned: list = []
     for rel in REPORT_CITATION_SCOPE:
         p = root / rel
         for f in ([p] if p.is_file() else p.rglob("*") if p.is_dir() else []):
             if not f.is_file() or any(f.is_relative_to(root / d)
                                       for d in REPORT_CITATION_EXCLUDE):
                 continue
-            cited |= set(REPORT_CITATION.findall(f.read_text(encoding="utf-8", errors="ignore")))
+            body = f.read_text(encoding="utf-8", errors="ignore")
+            cited |= set(REPORT_CITATION.findall(body))
+            scanned.append((str(f.relative_to(root)), body))
     cited -= set(REPORT_CITATION_SKIP)
     missing = sorted(n for n in cited if not (root / "evals" / "report" / n).exists())
     wrong: dict = {}
@@ -4111,6 +4120,78 @@ def _run_report_citations_case(case: dict) -> dict:
     # document happens to point at it. Routine `fast`/`invariant` dumps are the
     # opposite — reproducible by running the suite — which is why citation is
     # what earns them a place on disk.
+    # T-M32-10: a citation that RESOLVES is not a citation that SUPPORTS. ADR-020
+    # claimed "`live` suite 9/9 after this change" and cited a report whose score
+    # is 0.889 — 8/9, with `live-ol-edition-title` failing — and nothing could
+    # see it, because this case graded only that the file EXISTS. A green claim
+    # hung on a red artifact inside a review's own surface.
+    #
+    # The parse only has to be good enough to catch "9/9 … <red report>", which
+    # is what the block asks for: a `N/N` or `N/M` figure within `_CLAIM_WINDOW`
+    # characters of the citation, compared against the report's own results. It
+    # is NOT a general prose reader, and a claim phrased any other way is
+    # invisible — stated here rather than implied, because the neighbouring
+    # checks have been over-read before.
+    claim_wrong = []
+    for f, text in scanned:
+        # `tasks/reviews/` is verbatim reviewer record and is deliberately
+        # exempt from the CLAIM check while staying inside the citation check.
+        # The distinction is not convenience: `pr34-r4.json` is R17 REPORTING
+        # this exact defect — "ADR-020 cites a RED live report as the evidence
+        # for a 'live suite 9/9 after this change' claim" — so a reviewer
+        # quoting a false pair is the record of the finding, not a new instance
+        # of it. Editing that text to satisfy a regex would delete the evidence,
+        # which is the same ruling REPORT_CITATION_SKIP already makes one field
+        # over.
+        if f.startswith("tasks/reviews/"):
+            continue
+        for m in REPORT_CITATION.finditer(text):
+            rid = m.group(1)
+            path = root / "evals" / "report" / rid
+            if rid in REPORT_CITATION_SKIP or not path.is_file():
+                continue
+            lo = max(0, m.start() - _CLAIM_WINDOW)
+            near = text[lo:m.end() + _CLAIM_WINDOW]
+            # Distance from the citation matters. A paragraph legitimately
+            # carries the before and the after — "was 8/9, is 9/9 after this
+            # change (report)" — and a rule of "any figure in the window
+            # matches" is satisfied by the WRONG one of that pair, which is how
+            # the first version of this check passed ADR-020's own defect
+            # replayed. The NEAREST figure of the right denominator is the one
+            # the citation is offered as evidence for.
+            claims = sorted(
+                ((int(a.group(1)), int(a.group(2))),
+                 min(abs(lo + a.start() - m.start()), abs(lo + a.end() - m.end())))
+                for a in _PASS_RATE.finditer(near))
+            if not claims:
+                continue
+            rep = json.loads(path.read_text(encoding="utf-8"))
+            results = rep.get("results", [])
+            # Suite reports only. A soak report also has `results`, but its
+            # entries are sequences with no `passed` key at all, so counting
+            # them reads every soak row as a failure and turns a correct
+            # "10/10" into a false positive — measured, not imagined.
+            if not results or "passed" not in results[0]:
+                continue
+            passed, total = sum(1 for r in results if r.get("passed")), len(results)
+            # Only a claim whose DENOMINATOR is this report's size is about this
+            # report; "4 of 6 probe runs" beside a citation is not a suite score.
+            # And it is enough that ONE of them matches: a paragraph legitimately
+            # carries the before and the after ("was 8/9, is 9/9 after this
+            # change"), so requiring every figure to match would flag the very
+            # sentences that show their work. What the block is about is a claim
+            # with NO support — ADR-020's "9/9" beside a 0.889 report, where
+            # nothing in the window equalled what the artifact said.
+            same_size = sorted(((a, b), d) for (a, b), d in claims if b == total)
+            if not same_size:
+                continue
+            (a, b), _ = min(same_size, key=lambda x: x[1])
+            if a != passed:
+                claim_wrong.append({"doc": f, "cites": rid, "nearest_claim": f"{a}/{b}",
+                                    "report_is": f"{passed}/{total}"})
+    if claim_wrong:
+        wrong["claims_the_report_does_not_support"] = claim_wrong
+
     exempt = case.get("expect", {}).get("uncited_kinds_allowed", [])
     report_dir = root / "evals" / "report"
     uncited = sorted(

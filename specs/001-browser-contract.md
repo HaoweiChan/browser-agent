@@ -306,12 +306,19 @@ appears, in order — no post-hoc reconstruction).
   never wears `retry_or_recovery: "recovery"` and never consumes a pending
   `superseded_by` pointer — it replaces nothing and recovers nothing, and it
   produces no answer either, so counting it as a rung inflates a published
-  metric with an attempt that could not have saved anything. Both skip PAST an
-  `observe` and land on the next attempt of any other kind, which is usually
-  the `extract` the drill-down was asked for: an `extract` is read-only too,
-  but it is the attempt that completes a recovery, and `recovery-replan-
-  postcondition` is the shape where it is the ONLY step the new plan has
-  (`recovery-label-lands-on-the-extract` pins where the label lands). An
+  metric with an attempt that could not have saved anything. Both DEFER past an
+  `observe` and land on the next non-`observe` attempt: an `extract` is
+  read-only too, but it is the attempt that completes a recovery.
+  Two statements, and T-M32-6 was filed because this clause used to run them
+  together. (1) The deferral is real and graded, and the case for it is
+  `recovery-label-lands-on-the-extract`. (2) `recovery-replan-postcondition` is
+  the shape where the new plan's only step is a bare `extract` — and there is no
+  `observe` in its stub plans at all, so nothing is deferred past anything
+  there; it pins that the label lands on an `extract`, not that it skipped an
+  observation to get there. The label itself is assigned in exactly one place
+  (family 2's act→replan branch); the drill-down branch sets only the note, so
+  no drill-down has ever produced a `"recovery"` label and the earlier wording
+  credited it with one. ADR-020 §2 carried the same conflation. An
   `expected_state` on an `observe` step is refused as `failure:task`: there is
   nothing for it to assert (`observe-step-cannot-carry-expected-state`). In **mode B** it
   spends one call from the existing `MAX_REPLANS` budget and adds no budget of
@@ -328,9 +335,20 @@ appears, in order — no post-hoc reconstruction).
   `observe-drilldown-no-progress-stops-the-run`). A plan that reaches an
   `extract` with no page-changing step before it — leading `observe` steps do
   not count as one — is refused by both replan paths while a failed action that
-  changed nothing is outstanding, and the run ends as that action's failure
+  changed nothing is outstanding, and the run ends as that action's failure.
+  **"Changed nothing" covers BOTH halves**, word for word with
+  `docs/support-matrix.md` D25 and ADR-020: an attempt that RAN and moved
+  nothing (`page_changed: false`), and one that never got far enough to be
+  compared (`page_changed: null`) — every act failure raised inside `execute`
+  leaves it null, because the before/after comparison is on the line after
+  `execute` returns, and neither value is evidence that anything moved
   (`observe-cannot-launder-noop-action`,
-  `observe-drilldown-cannot-launder-noop-action`).
+  `observe-drilldown-cannot-launder-noop-action`,
+  `observe-drilldown-cannot-launder-unchecked-action`). This paragraph was the
+  one document of three left at the earlier wording when D25 and ADR-020 were
+  rewritten — nothing grades the contract's case citations the way
+  `support-matrix-cites-real-cases` grades the matrix's, which is how it drifted
+  silently (T-M32-7).
 - `target.index` (0-based) selects the k-th match instead of requiring
   uniqueness — "the first search result" is a browsing primitive, not site
   knowledge. Without it, several matches remain a loud `locate` failure.

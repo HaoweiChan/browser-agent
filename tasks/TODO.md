@@ -3784,7 +3784,26 @@ environment dimension and its timestamp, and bolting an unrelated ruling onto it
 the scope creep the debt rule exists to prevent. The other session declined it for
 `task/T-M32-9` on the symmetric ground that #40 allocated no ADR by design.
 
-### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
+### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: done]
+CLOSED 2026-08-28. The nearest `N/M` figure of the report's own size, within 400
+characters of the citation, must equal what the report holds. Watched red against
+the ADR-020 sentence as it stood — `{nearest_claim: "9/9", report_is: "8/9"}`,
+which is this block's own evidence reproduced.
+NEAREST took two tries and the first one is worth recording: "some figure in the
+window matches" passed the replayed defect, because ADR-020's paragraph now
+explains its own history and carries BOTH 8/9 and 9/9 — so the wrong one
+satisfied the check. A paragraph legitimately shows its work; the figure a
+citation is offered as evidence FOR is the one beside it.
+Two exemptions, both found by measurement rather than reasoned in advance: soak
+reports have `results` entries with no `passed` key, so counting them turned a
+correct "10/10" into a false positive; and `tasks/reviews/` is exempt from the
+claim check while staying inside the citation check, because `pr34-r4.json` is
+finding R17 REPORTING this exact defect — a reviewer quoting a false pair is the
+record of the finding, and editing it to satisfy a regex would delete the
+evidence.
+Declared ceiling: the parse is a figure near a citation, not a prose reader. A
+claim phrased any other way is invisible, which is what the block asked for
+("good enough to catch 9/9 ... <red report>") and no more.
 Origin: PR #34 R17.
 Priority: P1
 Spec: ADR-020 claimed "`live` suite 9/9 after this change" and cited a report
@@ -4110,7 +4129,19 @@ try to resolve any of them to a report in `evals/report/`.
 Acceptance: each remaining README wall clock names the report it came from and
 is recomputed by `docs-numbers-are-derived`, or is deleted.
 
-### T-M32-6 — the recovery-label clause credits the drill-down path with a label it never sets            [status: todo]
+### T-M32-6 — the recovery-label clause credits the drill-down path with a label it never sets            [status: done]
+CLOSED 2026-08-28. `specs/001` now separates the two statements it ran together:
+the label DEFERS past an `observe` and lands on the next non-`observe` attempt
+(graded by `recovery-label-lands-on-the-extract`), and separately
+`recovery-replan-postcondition` is the shape where the new plan's only step is a
+bare `extract` — with no `observe` in its stub plans at all, so nothing is
+deferred past anything there. It pins where the label lands, not that an
+observation was skipped to get there. The clause also now says that the label is
+assigned in exactly one place (family 2's act→replan branch) and that the
+drill-down branch sets only the note, so no drill-down has ever produced a
+`"recovery"` label. The block is right that the code is correct and graded and
+only the prose was wrong; ADR-020 §2's copy is named as carrying the same
+conflation.
 Origin: PR #34 R14
 Priority: P2
 Spec: `specs/001-browser-contract.md:130-135` says the `recovery` label and the
@@ -4131,7 +4162,36 @@ Acceptance: the clause separates the two statements — the label defers past an
 and in `recovery-label-lands-on-the-extract` is the `extract` the drill-down's
 replan returned while a family-2 recovery is in flight.
 
-### T-M32-7 — the contract's laundering clause omits the `page_changed: null` half            [status: todo]
+### T-M32-7-D1 — nothing grades the CONTRACT's case citations            [status: todo]
+Origin: T-M32-7's close, 2026-08-28 — that block's own explanation of how it
+drifted, left behind when its first half was fixed.
+Priority: P2
+Spec: `support-matrix-cites-real-cases` grades that every case id
+`docs/support-matrix.md` cites resolves to a real case file. `specs/001-browser-
+contract.md` cites case ids the same way, throughout, and nothing checks them —
+which is exactly why its laundering clause could sit at a superseded wording,
+citing two cases where D25 and ADR-020 cite three, without anything going red.
+The contract is the document a reviewer reads to learn what the system
+guarantees, so a dangling or missing citation there is worth more than in the
+matrix, not less.
+Acceptance: `support-matrix-cites-real-cases` (or a sibling) resolves the case
+ids in `specs/001-browser-contract.md` too, watched red by pointing one at a
+case that does not exist. NOT closable by adding the citations by hand — the
+block it came from was fixed by hand, and this exists because hand-fixing is
+what leaves the next drift invisible.
+
+### T-M32-7 — the contract's laundering clause omits the `page_changed: null` half            [status: done]
+CLOSED 2026-08-28 on the first half of the acceptance: `specs/001` states the
+null half and cites the third case, word for word with D25 and ADR-020 on the
+predicate — an attempt that RAN and moved nothing, and one that never got far
+enough to be compared, with the reason (`page_changed` is null for every act
+failure raised inside `execute`, because the before/after comparison is on the
+line after it returns).
+The second half — "ideally a grader covers the contract's case citations the way
+`support-matrix-cites-real-cases` covers the matrix's" — is NOT done, and the
+block's own diagnosis of why this drifted is that grader's absence. Filed as
+T-M32-7-D1 rather than left inside a closed block, because a closed block is
+where a residual goes to be forgotten.
 Origin: PR #34 R15
 Priority: P2
 Spec: `docs/support-matrix.md` D25 and `specs/decisions/ADR-020` were both
