@@ -36,6 +36,7 @@ import asyncio
 import atexit
 import collections
 import json
+import os
 import re
 import socket
 import tempfile
@@ -6765,7 +6766,6 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None,
       (`COPY --from=<that stage> ... /app/BUILD_SHA`) and no `.git` anything.
     """
     import subprocess
-    import tempfile
 
     root = Path(__file__).parents[2]
     df = dockerfile if dockerfile is not None else root / "Dockerfile"
@@ -7310,6 +7310,71 @@ def _run_browser_liveness_case(case: dict) -> dict:
                     "reason_after": after.get("reason")}}
 
 
+def _run_pre_commit_hook_case(case: dict) -> dict:
+    """T-R91: the hook must tell "the suite regressed" from "the suite could not
+    run", and must NOT name `--update-baseline` in the second case.
+
+    Exercised by RUNNING the hook with `EVAL_HOOK_PY` pointed at an executable
+    that fails every invocation, rather than by grepping it. A grep would pass
+    on a hook whose branch is unreachable, which is the shape this repo keeps
+    finding: a check that cannot fail the way its claim says it can.
+
+    The hook exits before the gate runs, so this costs one `sh` and no suite."""
+    import subprocess
+    import tempfile
+
+    root = Path(__file__).parents[2]
+    hook = root / ".githooks" / "pre-commit"
+    if not hook.exists():
+        return {"passed": False, "wrong": {"no_hook": str(hook)}}
+    # NEVER exec a hook that does not honour the seam, and this is not caution
+    # for its own sake: a hook that ignores `EVAL_HOOK_PY` falls through to
+    # `evals.run --suite fast`, that suite contains THIS case, and this case
+    # runs the hook. Watching the case red against the un-seamed hook did
+    # exactly that -- 408 `evals.run` processes before it was killed. The seam
+    # is part of what is graded, so its absence is a legitimate red, and a red
+    # that costs one `grep` is strictly better than one that costs the machine.
+    text = hook.read_text()
+    if "EVAL_HOOK_PY" not in text:
+        return {"passed": False,
+                "checks": {"seam_present": False},
+                "wrong": {"hook_ignores_the_seam": "EVAL_HOOK_PY",
+                          "note": "not executed -- an un-seamed hook runs the "
+                                  "fast suite, which runs this case"}}
+    with tempfile.TemporaryDirectory() as d:
+        broken = Path(d) / "broken-python"
+        broken.write_text("#!/bin/sh\nexit 1\n")
+        broken.chmod(0o755)
+        env = {**os.environ, "EVAL_HOOK_PY": str(broken)}
+        out = subprocess.run(
+            ["sh", str(hook)], cwd=root, capture_output=True, text=True,
+            timeout=30, env=env)
+        # T-R27's half, exercised rather than described: run a COPY from
+        # somewhere else, the way `core.hooksPath`'s absolute path makes every
+        # worktree commit run the main checkout's copy. The tree's own hook
+        # must take over, and say so.
+        elsewhere = Path(d) / "hook-from-another-checkout"
+        elsewhere.write_text(text)
+        elsewhere.chmod(0o755)
+        relayed = subprocess.run(
+            ["sh", str(elsewhere)], cwd=root, capture_output=True, text=True,
+            timeout=30, env=env)
+    exp = case["expect"]
+    text = out.stdout + out.stderr
+    checks = {
+        "seam_present": True,
+        "blocks": out.returncode != 0,
+        "says_environment": all(w in text for w in exp["must_say"]),
+        # The whole point of the block. A hook that suggests the one remedy
+        # CLAUDE.md rule 1 forbids, on a failure that is not a regression, has
+        # talked its author into the thing it exists to prevent.
+        "never_suggests_baseline": not any(w in text for w in exp["must_not_say"]),
+        "hands_off_to_this_tree": exp["handoff_says"] in (relayed.stdout + relayed.stderr),
+    }
+    return {"passed": all(checks.values()), "checks": checks,
+            "got": {"exit": out.returncode, "output": text[:600]}}
+
+
 def _run_history_ledger_isolated_case(case: dict) -> dict:
     """The wall-clock probe must never write to the real history ledger.
 
@@ -7356,6 +7421,7 @@ KINDS = {
     "gateway-error": _run_gateway_error_case,
     "gateway-model": _run_gateway_model_case,
     "history-ledger-isolated": _run_history_ledger_isolated_case,
+    "pre-commit-hook": _run_pre_commit_hook_case,
     "invariant": _run_invariant_case,
     "judge": _run_judge_case,
     "matrix": _run_matrix_case,

@@ -1,0 +1,31 @@
+{
+  "id": "pre-commit-reports-a-broken-interpreter-as-such",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "pre-commit-hook"
+  },
+  "expect": {
+    "must_say": [
+      "ENVIRONMENT problem",
+      "not an eval regression",
+      "The eval gate never ran"
+    ],
+    "must_not_say": [
+      "--update-baseline",
+      "COMMIT BLOCKED by the eval gate"
+    ],
+    "note": "an interpreter that cannot import the harness is an environment failure, and the hook must not offer the one remedy CLAUDE.md rule 1 forbids; and a copy of the hook run from outside the tree hands off to the tree's own copy, which is T-R27 \u2014 `core.hooksPath` is absolute, so every worktree commit runs the MAIN checkout's script",
+    "handoff_says": "handing off to this tree's hook"
+  },
+  "provenance": "T-R91, open since PR #49 and hit again on ADR-037's own commit \u2014 which is what finally bought it a case. `.githooks/pre-commit` chose `PY=python3` unless `.venv/bin/python` existed in the WORKTREE, and a `git worktree` has no `.venv`, so the hook ran a system interpreter with no `fastapi`/`playwright`/`uvicorn`, every browser-driving case died on import, and the result was reported as `[eval] REGRESSION: 0.229 < baseline 1.000` followed by `COMMIT BLOCKED by the eval gate. Fix the regression, or if the baseline move is deliberate: --suite fast --update-baseline`. Both suites were green at that moment (invariant 90/90, fast 240/240, run under the main checkout's interpreter minutes earlier). A hook that names `--update-baseline` on a run that never happened has talked its author into the exact thing it exists to prevent. Two fixes, because there were two defects: the interpreter search now also looks in the MAIN worktree (`git rev-parse --git-common-dir`'s parent, the one path every worktree knows), and a preflight import check runs BEFORE the gate so 'could not run' can never be reported as 'regressed'. `EVAL_HOOK_PY` exists so this case can point the hook at an executable that fails every invocation; it is a test seam, not an operator knob, and the discovery path is skipped only when it is set. T-R27 is folded in for the same reason T-R91 was: it blocked this commit too, and in the same breath. With the T-R91 fix committed to this worktree's `.githooks/`, `git commit` still ran the OLD hook and still reported the phantom regression \u2014 because `core.hooksPath` is repo-level and absolute (`/Users/willy/Documents/browser-agent/.githooks`), so the branch that fixes the gate does not get the gate it fixed. The hook now hands off to `$PWD/.githooks/pre-commit` when it is not already that file, bounded to one hop by `EVAL_HOOK_REEXEC` so two checkouts that disagree cannot ping-pong. The hand-off is exercised, not described: the case writes a copy of the hook into a temp directory and runs THAT, which is exactly the shape `core.hooksPath` produces.",
+  "triage": {
+    "class": "silent-failure",
+    "red_first": "RED against the committed hook two ways, and the second one matters more than the first. (1) The real thing, before any of this existed: committing ADR-037 from this worktree printed `[eval] REGRESSION: 0.229 < baseline 1.000` with 185 of 240 cases failing `ModuleNotFoundError: No module named 'uvicorn' / 'fastapi' / 'playwright'`, and the `--update-baseline` suggestion, while both suites were green under the main checkout's interpreter minutes earlier. (2) Through the case itself: `{seam_present: false}`, `hook_ignores_the_seam: EVAL_HOOK_PY`, hook NOT executed \u2014 see the note below for why that refusal is the case working rather than the case dodging.",
+    "note": "It RUNS the hook rather than grepping it, because a grep passes on a hook whose branch is unreachable. It refuses to run a hook that does not honour `EVAL_HOOK_PY`, because the first attempt at watching this red did not refuse and fork-bombed the machine: the un-seamed hook falls through to `evals.run --suite fast`, that suite contains this case, this case runs the hook \u2014 408 `evals.run` processes before it was killed. So the seam is now part of what is graded, in both directions: the case will not exec a hook without it (a one-`grep` red), and the hook exits at the probe whenever it is set (never reaching the gate even with a working interpreter). A case that can take the machine down while proving a point about a five-line message is a worse defect than the one it grades, and this note is here so the next person to widen it knows which wall they are standing next to. Ceiling: the environment branch is graded; that the SUCCESS path still runs the gate is pinned by every commit in this repo going through it, not by an assertion."
+  }
+}

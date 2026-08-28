@@ -234,6 +234,43 @@ ledger row even under `--no-report`, so a verification run taken after a band is
 published can silently make that band no longer cite the maximum — the rows this
 branch commits are the ones its bands were derived from, and post-publication
 verification runs are restored rather than committed.
+### T-A37-1 — the in-flight wait cannot see a fetch issued after `load`            [status: todo]
+Origin: ADR-037 §2, 2026-08-28, declared by the ruling rather than found after it.
+Priority: P2
+Spec: `navigate`'s settle asks one question — were any requests in flight when `load`
+fired? — and a page whose script schedules its `fetch` from a `setTimeout` (or an
+`IntersectionObserver`, or a `requestIdleCallback`) after `load` answers "no" truthfully
+and is read early exactly as it was before ADR-037. The fix for THAT shape is a
+quiescence window, which is the mechanism ADR-037 rejected on measured cost, so this is
+a deliberate ceiling and not an oversight. No fixture in this repo has the shape:
+`late-options.html` issues its fetch from an inline script during parse, which is
+precisely why it is in flight at `load` and why the accepted mechanism catches it.
+Acceptance: a fixture whose control is painted from a post-`load` timer, and an
+adversarial case over it watched RED first per CLAUDE.md rule 2 — the case must be red
+against ADR-037's mechanism, which is the whole point of writing it. Only then is the
+quiescence-window question re-opened, and only with the fast-suite wall clock measured
+before and after, because that is the number that decided ADR-037 §1.
+
+### T-A37-2 — a live case is green for a reason its provenance does not give            [status: todo]
+Origin: ADR-037 §2, 2026-08-28.
+Priority: P2
+Spec: `live-sec10k-authored-wait-reaches-the-doc-status` asserts
+`planner_saw.lacks: ["18 extracted"]` and its provenance explains the absence as claim
+(1): "the deep link removes the click, not the race" — the observation is taken before
+the page's own extraction round trip lands. After ADR-037 that explanation is false and
+the assertion still holds. Measured 2026-08-28 against the deployed inspector: the
+observation now CONTAINS the per-item sidebar buttons (`button — '1 Business EXTRACTED
+CONF 0.95 HEADING_STRICT 16,053 CH'`), which only exist after the round trip lands, so
+the race the provenance describes is over by observation time. `18 extracted` is absent
+because `observe.TEXT_HEAD` caps the rendered page text at 300 characters, hundreds of
+characters before the status line — a claim about a text cap wearing a provenance about
+a network race. This is the shape `evals/labels`-adjacent review keeps finding and
+CLAUDE.md rule 2's cousin: a green whose stated claim it can no longer falsify.
+Acceptance: either (a) the case is re-pointed at something the S1 fix genuinely leaves
+absent and its provenance rewritten to say what it now grades, or (b) the `lacks` clause
+is dropped and the S1 claim moves to a case that can falsify it — decided by running the
+case with `TEXT_HEAD` raised, which is the one-line probe that separates the two
+explanations. Not closed by editing the provenance alone: the prose was never the defect.
 
 ### M43-D1 — `trace_values` does not discriminate on its own            [status: todo]
 Origin: M43 implementation, the red-first reconstruction (docs/evals/m43-red-first-ledger.md).
@@ -2684,6 +2721,17 @@ same request produces different resolver/extraction outcomes) is attempted. Not 
 T-M40-5-1 or T-M40-5-2 individually — check both before assuming this is already covered.
 
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
+Update (2026-08-28, ADR-037 §4): a general mechanism now exists — `EVAL_PROBE=1`
+routes a run's history line to `evals/report/history-probe.jsonl` (gitignored)
+instead of the committed ledger. It was built because this block's shape happened
+again, verbatim: ADR-037's drafting put three rows in the ledger measuring code the
+tree does not contain (144.87s on `networkidle`, 100.61s and 100.86s on a discarded
+count-every-request variant), any one of which would have set the band, since the
+band is a MAXIMUM. Those rows were dropped before the ledger was committed and
+ADR-019 §2 records it. This block is NOT closed by that: the variable has to be set
+by the operator, so a probe run without it still reaches the ledger, and nothing
+grades that an ablation probe used it. That residual is the whole of what is left
+here — the acceptance below is unchanged.
 Origin: PR #42, R2/R3's acceptance and the coordinator's round-1 disposition.
 Re-checked against `origin/main` after T-R44 merged (2026-08-24): **both halves
 are still open**, and what T-R44 closed is the neighbouring coupling, not this.
@@ -3206,7 +3254,18 @@ it does not claim CI will now be green — the demonstration above is a construc
 laptop, and that CI tags its rows `ci` at all is still asserted rather than graded (T-R74). The
 second branch of the acceptance is therefore still available and may still be the better one.
 
-### T-R91 — the pre-commit hook reports a missing interpreter as an eval regression, and points at `--update-baseline`            [status: todo]
+### T-R91 — the pre-commit hook reports a missing interpreter as an eval regression, and points at `--update-baseline`            [status: done]
+CLOSED 2026-08-28 (ADR-037's commit, which is what hit it again). Both halves
+fixed: the interpreter search now also looks in the MAIN worktree
+(`git rev-parse --git-common-dir`'s parent), and a preflight import check runs
+BEFORE the gate so "could not run" can never be reported as "regressed" — the
+environment message never mentions the baseline. Graded by
+`pre-commit-reports-a-broken-interpreter-as-such`, which RUNS the hook through
+an `EVAL_HOOK_PY` seam rather than grepping it. Read that case's triage before
+touching it: watching it red against the un-seamed hook fork-bombed the machine
+(408 `evals.run` processes) because the un-seamed hook runs the fast suite that
+contains the case, and both the case and the hook now carry a guard against
+exactly that.
 Origin: PR #49, hit while committing the T-M40-1 DONE.md line
 Priority: P1
 Spec: `.githooks/pre-commit` picks `PY=python3` unless `.venv/bin/python` exists in the
@@ -4635,7 +4694,19 @@ Acceptance: pr21-r1-resolution.json's debt id reads M27 (or carries a
 is corrected. Same root cause as T-ADR-NUM's fourth instance — fix them together
 or the next renumber re-opens this.
 
-### T-R27 — in a git worktree the pre-commit gate runs the MAIN checkout's hook script            [status: todo]
+### T-R27 — in a git worktree the pre-commit gate runs the MAIN checkout's hook script            [status: done]
+CLOSED 2026-08-28, alongside T-R91 and for the same reason: it blocked this
+milestone's commit. With T-R91's fix committed to the worktree's `.githooks/`,
+`git commit` still ran the OLD script and still reported the phantom regression,
+because `core.hooksPath` is absolute — the branch that fixes the gate does not
+get the gate it fixed, exactly as this block predicted. Acceptance's first
+option taken: the hook hands off to `$PWD/.githooks/pre-commit` when it is not
+already that file, one hop, bounded by `EVAL_HOOK_REEXEC`. Graded behaviourally
+by `pre-commit-reports-a-broken-interpreter-as-such`, which runs a COPY of the
+hook from a temp directory — the shape `core.hooksPath` actually produces — and
+asserts the tree's own copy takes over. Note the ordering this does NOT fix: it
+takes effect for worktrees only once a checkout carrying it is on `main`, since
+until then the main copy is what runs and it has no hand-off.
 Origin: PR #23 R4 repair (discovered mid-task, no finding id)
 Priority: P1
 Spec (claim): `core.hooksPath` is repo-level and absolute

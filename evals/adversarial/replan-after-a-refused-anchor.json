@@ -1,0 +1,51 @@
+{
+  "id": "replan-after-a-refused-anchor",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L4",
+  "tc": "TC4",
+  "input": {
+    "task": "What is the name of the cheapest product in the Nimbus Archive catalogue?",
+    "fixture": "shop.html",
+    "stub_plans": [
+      [
+        {
+          "action": "extract",
+          "target": {
+            "role": "link",
+            "index": 0
+          },
+          "anchor": "Nimbus Archive"
+        }
+      ],
+      [
+        {
+          "action": "extract",
+          "target": {
+            "role": "link",
+            "index": 3
+          },
+          "anchor": "Cobalt Floor Rug"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Cobalt Floor Rug",
+    "anchors": [
+      "Cobalt Floor Rug"
+    ],
+    "recovery": true,
+    "replans": 1,
+    "planner_note_contains": "identity anchor 'Nimbus Archive' absent"
+  },
+  "provenance": "ADR-037 \u00a73. The recovery half of deployed run `46883372` (see `planner-sees-a-fetch-painted-select` for that run's full record). The executor raises exactly one `semantic` failure \u2014 the identity anchor, `agent.py`'s \"the value I read was not on a page about the entity you asked about\" \u2014 and the recovery ladder dispatched on `locate` and `act` only, so `semantic` fell straight through to `return done(failure=cls)`. The live run therefore ended having spent 0 of its 2 replans while holding the single most actionable signal a run produces. This case is that shape on a committed fixture: plan 1 extracts `shop.html`'s first link under `anchor: \"Nimbus Archive\"`, a string absent from the page; plan 2 reads the fourth link under an anchor that is present. It grades three things at once \u2014 that the ladder now fires (`replans: 1`, `recovery: true`), that the planner is told WHY (`planner_note_contains` carries the anchor refusal verbatim, so the note is not a generic \"a previous attempt failed\"), and that the REFUSED read is not carried into the answer. The third is why the anchor check moved ahead of the `answers`/`extractions` appends: before ADR-037 the appends ran first, which was harmless only while a semantic failure ended the run on the spot. With the replan behind it, `answers` would have held `[\"Aurora Desk Lamp\", \"Cobalt Floor Rug\"]` and `expect.answer` grades that it holds the second alone.",
+  "triage": {
+    "class": "capability-gap",
+    "red_first": "RED on the pre-ADR-037 executor, restored from git for the run: `status failure:semantic`, `answer null`, `replans 0`, reason `step 2 (extract): StepError: identity anchor 'Nimbus Archive' absent from the page the answer was read from` \u2014 the deployed run's shape verbatim, checks `{status, verdict, recovery, replans, planner_note_contains}` all false.",
+    "note": "The laundering guard is the reason this case is not a one-word change. `drops_action and changed_nothing(rec)` refuses a replan that drops a failed action and reads the page as if it had worked; a failed EXTRACTION never changed the page and the replan after one is always a read, so the guard as written refuses every semantic replan and this case stays red with `cls in (\"act\", \"semantic\")` alone. `not reads_without_acting([step])` scopes it to a failed step that was supposed to change something. `replan-cannot-launder-noop-action` and its `extract_all` / `observe` siblings hold the direction that must not move."
+  }
+}

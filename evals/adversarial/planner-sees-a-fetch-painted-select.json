@@ -1,0 +1,45 @@
+{
+  "id": "planner-sees-a-fetch-painted-select",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "fixture": "late-options.html",
+    "task": "What does the filing picker's Selection status say?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Selection"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "No filing selected.",
+    "planner_saw": [
+      {
+        "has": [
+          "option \u2014 'aapl-2025'",
+          "option \u2014 'msft-2013'",
+          "option \u2014 'nvda-2024'"
+        ]
+      }
+    ],
+    "trace_actions": [
+      "navigate",
+      "extract"
+    ]
+  },
+  "provenance": "ADR-037 \u00a71. The 2026-08-24 postmortem's S1 (fetch-then-render) measured on the OBSERVATION rather than on an answer, and the half no case held: `sec10k-doc-status-is-a-named-status`'s own triage note says a rendered snapshot is post-render by construction and therefore cannot measure S1, and the live case it hands the claim to grades S1 as UNFIXED. `late-options.html` is the offline shape \u2014 a `<select>` present in the document at `load` with zero `<option>`s, painted from `/fixtures/late-options.json`, an endpoint that sleeps `server.LATE_OPTIONS_DELAY_S` server-side so the page waits on the network rather than on a timer someone chose. `planner_saw` is the only key that can see this: it renders the observation the planner call was actually given, exactly as `observe.render` renders it into the prompt. Provenance for the defect being worth a case at all is a deployed run, not a hypothesis: run `46883372` against `https://whaleforce-sec10k.zeabur.app/`, task `use extractor to get 10k report of intel 2025`, mode B, model `openai/gpt-5.6-luna`, `failure:semantic` at $0.0024 with 0 of 2 replans spent. That page's committed-fixture `<select>` offers 42 filings including `intc-2002`, and is painted from `/api/meta` after `load`; the pre-plan observation contained a `combobox`, a `MenuListPopup` and zero `option` elements. Measured both ways on the deployed page with `observe()` directly: 26 elements immediately after `agent.navigate()`, 60 elements with 42 options three seconds later, 42 options in the DOM \u2014 so the cap was never the constraint (`MAX_ELEMS` is 60 and the observation stopped at 26). Blind to the one control that could answer the task, the planner used the EDGAR-URL field and invented an accession number.",
+  "triage": {
+    "class": "silent-failure",
+    "red_first": "RED with every other check on the case GREEN \u2014 `{\"status\": true, \"verdict\": true, \"trace_actions\": true, \"planner_saw\": false}`, run `success`, answer `No filing selected.` correct, verifier certified. That combination IS the finding: the run this defect kills passes every check the harness had, because nothing before `planner_saw` looked at what the planner was shown. Fast suite 235/239 at the moment of the red run.",
+    "note": "Deliberately NOT an `observe`-kind case. `_run_observe_case` uses a strict `page.goto` rather than `agent.navigate`, on purpose and with a comment saying so \u2014 observe ground truth asks what a fully settled page exposes. That contract is correct for what those cases grade and it is exactly why they cannot grade this: the defect lives in the production navigation path, one layer below them. A fixture RUN is the only shape that reaches it."
+  }
+}

@@ -2,6 +2,18 @@
 # Eval gate: no commit may regress the fast suite below the recorded baseline.
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
+# T-R27: `core.hooksPath` is repo-level and ABSOLUTE, so a commit made in a
+# `git worktree` runs the MAIN checkout's copy of this script against the
+# worktree's tree -- the right tree graded by the wrong enforcement, and a
+# branch that fixes its own gate does not get the gate it fixed. Hand off to
+# the copy that belongs to the tree being committed. `EVAL_HOOK_REEXEC` bounds
+# it to one hop, so two checkouts that disagree cannot ping-pong.
+SELF=$PWD/.githooks/pre-commit
+if [ -z "$EVAL_HOOK_REEXEC" ] && [ -x "$SELF" ] && [ "$SELF" != "$0" ]; then
+  echo "pre-commit: handing off to this tree's hook ($SELF)"
+  EVAL_HOOK_REEXEC=1 exec "$SELF" "$@"
+fi
+
 # Secret guard: no API key material ever enters history (repo goes public at submission).
 # ponytail: one pattern per provider we actually use; extend when a new provider is added.
 if git diff --cached | grep -qE 'sk-or-v1-[A-Za-z0-9]{8,}'; then
@@ -10,7 +22,51 @@ if git diff --cached | grep -qE 'sk-or-v1-[A-Za-z0-9]{8,}'; then
   exit 1
 fi
 [ -f evals/run.py ] || exit 0  # project removed the eval harness — no gate
-PY=python3; [ -x .venv/bin/python ] && PY=.venv/bin/python  # task deps live in .venv
+# Interpreter, in order of preference. `.venv` first if this checkout has one;
+# then the MAIN worktree's, because `git worktree` copies no `.venv` and the one
+# thing every worktree does know is where the shared `.git` lives
+# (`--git-common-dir`, whose parent is the main working tree). Falling straight
+# to a system `python3` there is T-R91's first half.
+# `EVAL_HOOK_PY` is not an operator knob, it is what makes the branch below
+# gradeable: `pre-commit-reports-a-broken-interpreter-as-such` runs this file
+# with it pointed at an interpreter that cannot import anything, which is the
+# only way to exercise T-R91's message without breaking the developer's own
+# environment to do it.
+PY=${EVAL_HOOK_PY:-python3}
+if [ -z "$EVAL_HOOK_PY" ]; then
+  COMMON=$(git rev-parse --git-common-dir 2>/dev/null)
+  for cand in .venv/bin/python "$(dirname "$COMMON")/.venv/bin/python"; do
+    [ -x "$cand" ] && { PY=$cand; break; }
+  done
+fi
+
+# T-R91's second half, and the one that matters: "the suite could not run" is not
+# "the suite regressed". A system interpreter without `fastapi`/`playwright`
+# makes `evals.run` die on import, and the message below then names
+# `--update-baseline` — the single remedy CLAUDE.md rule 1 forbids — on a tree
+# whose suites are green. A tired author takes the suggestion and the hook has
+# talked them into the thing it exists to prevent. So: prove the interpreter can
+# reach the harness BEFORE running it, and fail with an environment message that
+# never mentions the baseline.
+if ! "$PY" -c 'import fastapi, playwright, uvicorn' 2>/dev/null; then
+  echo "COMMIT BLOCKED: this is an ENVIRONMENT problem, not an eval regression."
+  echo "  interpreter: $PY"
+  "$PY" -c 'import fastapi, playwright, uvicorn' 2>&1 | tail -1 | sed 's/^/  /'
+  echo "The eval gate never ran, so nothing is known about the suites — do NOT"
+  echo "move the baseline. In a git worktree the usual cause is that no .venv"
+  echo "was found here or in the main checkout; point PY at one that has the"
+  echo "task deps, or run the gate yourself and commit with --no-verify"
+  echo "explaining that in the message (CLAUDE.md rule 5)."
+  exit 1
+fi
+# The seam ends here, ALWAYS. `EVAL_HOOK_PY` is set only by the case that
+# grades the branch above, and that case reaches this file from inside a `fast`
+# run -- so a hook that fell through to the gate would start a suite that starts
+# this hook that starts a suite. Not hypothetical: it happened, 408 `evals.run`
+# processes deep, while watching that case red against the un-seamed hook. The
+# case now refuses to exec a hook without this seam; this line is the other half
+# of the same guarantee.
+[ -n "$EVAL_HOOK_PY" ] && { echo "EVAL_HOOK_PY set: probe only, gate not run."; exit 0; }
 # No --no-report: a green run writes only the history line (evals/run.py's
 # default policy); a red run (which blocks the commit below) also gets the
 # full per-case report so the failure is inspectable. The history line lands

@@ -27,7 +27,8 @@
       "planner_note_contains": [
         "probe3-quotes-most-quoted-author",
         "recovery-replan-postcondition",
-        "plan-lint-refuses-a-document-root-extract"
+        "plan-lint-refuses-a-document-root-extract",
+        "replan-after-a-refused-anchor"
       ],
       "trace_note_contains": [
         "loop-refuses-a-document-root-extract",

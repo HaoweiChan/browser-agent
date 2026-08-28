@@ -22,6 +22,7 @@ Two recovery ladders, both chosen from the observed failure distribution
 Every other class stays a loud classified stop. Output: specs/001-browser-contract.md.
 """
 
+import asyncio
 import contextlib
 import json
 import os
@@ -709,6 +710,52 @@ async def navigate(page, url: str) -> None:
     Worst case is 22s, not the 20s the goto argument suggests: the document has
     its own 20s, then the settle adds up to 2s on top.
     """
+    # Attached BEFORE `goto`, because the requests that matter here are the ones
+    # a page issues while it parses -- a `fetch` in an inline script is in
+    # flight before `load` fires, which is the only reason this can be tested
+    # at `load` time at all. Removed in the `finally` below: `navigate` is
+    # called once per hop on a page that survives the whole run, and listeners
+    # left behind would accumulate one set per navigation.
+    inflight = set()
+
+    # Plain functions, not `inflight.add` / `inflight.discard`: Playwright
+    # stamps an attribute on every handler it wraps, and a builtin method
+    # cannot carry one (`AttributeError: 'builtin_function_or_method'`).
+    def started(request):
+        # `fetch`/`xhr` only, and the narrowing is what makes the wait cheap
+        # enough to keep. Counting EVERY request bought a 7.3s fast-suite
+        # regression (93.5 -> 100.9) for nothing: `load` already waited on
+        # images, styles and subframes, and what was left over it was mostly
+        # Chromium's own `/favicon.ico` -- a 404 round trip, on every
+        # navigation, that no observation has ever read. The question this
+        # settle asks is "is the page still fetching DATA it will paint with",
+        # and these two resource types are that question.
+        if request.resource_type in ("fetch", "xhr"):
+            inflight.add(request)
+
+    def finished(request):
+        inflight.discard(request)
+
+    page.on("request", started)
+    page.on("requestfinished", finished)
+    page.on("requestfailed", finished)
+    try:
+        await _navigate(page, url, inflight)
+    finally:
+        # `suppress`, because this runs on the failure path too: a page that
+        # crashed or was closed inside `_navigate` is exactly when teardown can
+        # raise, and a teardown error here would replace the real navigation
+        # failure with a misleading one -- the misattribution family this
+        # function exists to close.
+        for event, fn in (("request", started), ("requestfinished", finished),
+                          ("requestfailed", finished)):
+            with contextlib.suppress(Exception):
+                page.remove_listener(event, fn)
+
+
+async def _navigate(page, url: str, inflight: set) -> None:
+    """`navigate`'s body, split out only so the listener teardown above is a
+    `finally` rather than a repeated line on every return path."""
     from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
     await page.goto(url, timeout=20_000, wait_until="domcontentloaded")
@@ -716,6 +763,42 @@ async def navigate(page, url: str) -> None:
         await page.wait_for_load_state("load", timeout=SETTLE_BUDGET_MS)
     except PlaywrightTimeoutError:
         pass  # the page never went quiet; read it anyway, that is the point
+    # S1 (the 2026-08-24 postmortem's fetch-then-render shape): `load` fires
+    # when the DOCUMENT is complete, and a page that paints from `fetch` is not
+    # done at that point. The observation on the very next line is what the
+    # planner plans against, so a control that is empty at `load` -- a
+    # `<select>` filled from an endpoint, a status region still reading
+    # "Extracting..." -- is a control the planner cannot see, and it plans
+    # around a page that no longer exists by the time the plan executes. It was
+    # declared unfixed by `live-sec10k-authored-wait-reaches-the-doc-status`
+    # (claim 1) and then killed a real run: a task naming a filing the picker
+    # DID offer was planned as an EDGAR-URL fetch, because the 42 options had
+    # not been painted when the planner looked.
+    #
+    # `networkidle` is the obvious mechanism and it is the wrong one, twice
+    # measured: it waits 500ms past the last request on EVERY navigation, cost
+    # +34s on the fast suite when ADR-002 rejected it, and +51.4s (93.5 -> 144.9,
+    # over a 110s ceiling) when this fix was first written that way -- even
+    # gated on the page carrying a `<script>` at all. It buys a guarantee by
+    # charging every page for the sins of the few.
+    #
+    # What is actually being asked is narrower: is the page still WAITING on
+    # something? `_inflight` answers exactly that and nothing else, so a static
+    # document -- every script-free fixture, and every script-bearing one whose
+    # script has already finished -- pays one set-emptiness test and moves on.
+    # Ceiling, named rather than hidden: a page that issues its fetch from a
+    # `setTimeout` AFTER `load` has an empty in-flight set at this instant and
+    # is read early exactly as before. The fix is deliberately not a quiescence
+    # window; upgrade to one only if a case ever demonstrates that shape.
+    # 5ms rather than 20ms, and the reason is NOT the one this comment first
+    # gave. The guess was that the tick dominated -- 20ms x ~100 navigations of
+    # pure rounding -- and it was measured and falsified: the fast suite moved
+    # 96.02s -> 95.77s, 0.25s. What the suite pays is the fetches themselves,
+    # which is the wait doing its job. 5ms is kept because it is free and
+    # slightly tighter; nobody should read a saving into it.
+    deadline = time.monotonic() + SETTLE_BUDGET_MS / 1000
+    while inflight and time.monotonic() < deadline:
+        await asyncio.sleep(0.005)
     # Anything else — a crash or a close inside that window — propagates and is
     # classified. Swallowing it here would discard the real cause and let it
     # resurface as a `locate` failure on the next line, which is the
@@ -1692,6 +1775,22 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         raise StepError("extract", "extraction returned empty text")
                     body = await page_text(page)
                     anchor = step.get("anchor")
+                    # Identity anchor (verifier L1): the entity the task names
+                    # must be present where the answer was read.
+                    #
+                    # Checked BEFORE the appends below, not after them. It used
+                    # to fire once `answers` and `extractions` already held the
+                    # rejected read, which was harmless only because a semantic
+                    # failure ended the run on the spot. It no longer does (the
+                    # ladder in family 3 replans on it), and a rejected value
+                    # left in `answers` would be carried into the replan's
+                    # answer -- turning a scalar into a list, or answering with
+                    # the very read the anchor just refused.
+                    if anchor and anchor not in body:
+                        raise StepError(
+                            "semantic",
+                            f"identity anchor {anchor!r} absent from the page "
+                            "the answer was read from")
                     # M34 R2-1: which occurrence of `val` is this, when it is not
                     # unique on the page (a decoy blurb beside the real answer,
                     # case verifier-context-anchors-real-occurrence)? A DOM-derived
@@ -1746,10 +1845,6 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                              "value_offset": (off - _window_lo(body, off)) if off >= 0 else None})
                     page_bodies[page.url] = body
                     answers.append(vals if action == "extract_all" else vals[0])
-                    # Identity anchor (verifier L1): the entity the task names
-                    # must be present where the answer was read.
-                    if anchor and anchor not in body:
-                        raise StepError("semantic", f"identity anchor {anchor!r} absent from the page the answer was read from")
 
             async def attempt(step, note=None, recovery=None):
                 """One execution of one step: appends its trace record, returns
@@ -2382,7 +2477,17 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             continue
 
                 # --- Family 2: act -> postcondition invalidated -> replan -----
-                if cls == "act":
+                # `semantic` joins this family rather than getting one of its
+                # own, because the recovery is identical: replan from the page
+                # as it actually is. The only `semantic` failure the executor
+                # raises is the identity anchor -- "the answer I just read was
+                # not on a page about the thing you asked about" -- which is
+                # the single most informative signal a run produces and was,
+                # until now, the one the ladder threw away. It fell straight to
+                # `return done(failure=cls)`, so a live run answered a task
+                # about Intel from a page that never said Intel, spent 0 of its
+                # 2 replans, and stopped (`replan-after-a-refused-anchor`).
+                if cls in ("act", "semantic"):
                     if budgets["replans"] >= MAX_REPLANS:
                         rec["note"] += f"; replan budget exhausted ({MAX_REPLANS})"
                     elif (fresh := await look()) is not None:
@@ -2425,7 +2530,16 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # that just failed is a retry, and specs/001 keeps
                             # retries out of the recovery metric by construction.
                             rec["note"] += "; replan re-issued the step that just failed"
-                        elif drops_action and changed_nothing(rec):
+                        # `not reads_without_acting([step])` scopes the
+                        # laundering guard to what it is actually about: a
+                        # failed step that was SUPPOSED to change the page. An
+                        # extraction never was, so "the replan only reads" is
+                        # not evidence of laundering there -- it is the correct
+                        # recovery, and without this clause every semantic
+                        # replan would be refused by a guard written about
+                        # clicks (`replan-after-a-refused-anchor` red).
+                        elif (drops_action and changed_nothing(rec)
+                              and not reads_without_acting([step])):
                             rec["note"] += ("; replan would skip a failed action that changed "
                                             "nothing on the page")
                         # The lint runs at EVERY point the executor adopts a plan,

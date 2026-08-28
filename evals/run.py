@@ -43,6 +43,11 @@ CASE_DIRS = [ROOT / "evals" / "golden", ROOT / "evals" / "adversarial"]
 BASELINE = ROOT / ".eval-baseline.json"
 REPORT_DIR = ROOT / "evals" / "report"
 HISTORY = REPORT_DIR / "history.jsonl"
+# Where an `EVAL_PROBE=1` run's row goes instead. A sibling of the real ledger
+# so a probe is still recorded and still readable, and `.gitignore`d so it never
+# becomes a second source of truth (ADR-037 §4).
+PROBE_HISTORY = REPORT_DIR / "history-probe.jsonl"
+PROBE_ENV = "EVAL_PROBE"
 
 
 def load_cases(suite):
@@ -97,6 +102,18 @@ def run_case(case):
 # the condition ADR-021 named as the one a raise answers — the per-case cost did
 # not move. The row is named because a reader re-deriving from a comment that
 # still said 93.26s would be re-deriving from a SUPERSEDED row and getting the
+# `fast` 110 -> 115 at ADR-037, and the number was reached by being wrong about
+# it first, which is the part worth writing down. The settle took the suite
+# 93.44 -> 96.02s at 240 cases, deriving 115. A third case then took the count
+# to 241, the next two runs measured 94.95s and 94.92s, that derives 110, and
+# 110 was published on the strength of "every run at this count says ~94.9".
+# The very next run measured 96.99s (ts `20260828-083202`) -- a two-sample band
+# presented as a settled one, falsified by the third sample, which is this
+# repo's own recurring failure and the reason `published-band-matches-the-ledger`
+# reads the ledger MAXIMUM rather than anyone's summary of it. 96.99 x 1.15 =
+# 111.54 -> 115. ADR-021's waste removal was still done first and still
+# mattered: counting every in-flight request cost 7.3s, most of it Chromium's
+# own /favicon.ico 404, and narrowing the settle to fetch/xhr gave 4.8s back.
 # right answer for the wrong reason: 236 cases derived 110 too, which is exactly
 # why the stale copy survived a round (PR #70 R8). ADR-019 §2 is the band of
 # record; this comment cites it and never leads it.
@@ -362,7 +379,22 @@ def main():
         history_line["recovery"] = f"{int(metrics['recovery_verified'])}/{int(metrics['recovery_expected'])}"
     if metrics.get("mutation_cases"):
         history_line["mutation"] = f"{int(metrics['mutation_passed'])}/{int(metrics['mutation_cases'])}"
-    with open(HISTORY, "a") as f:
+    # T-M38-5 / ADR-037 §4: an EXPLORATORY run must not reach the ledger the
+    # band is derived from. The band is `max(wall_s)` over every row at the
+    # current case count, so one measurement of a mechanism that was tried and
+    # rejected raises the derived ceiling permanently, and the only remedies
+    # left are re-typing a ceiling nothing measured or editing the committed
+    # ledger by hand. Both of those happened before this line existed: ADR-037's
+    # own first draft measured `networkidle` at 144.87s and a discarded
+    # count-every-request variant at 100.86s, and both rows sat in the ledger
+    # claiming to describe the tree that shipped.
+    #
+    # `EVAL_PROBE=1` sends the row to a sibling file instead. Deliberately NOT a
+    # switch that drops the row: a probe that leaves no trace is a probe nobody
+    # can audit, and the whole complaint T-M38-5 makes is about measurements
+    # whose provenance went missing.
+    ledger = HISTORY if not os.environ.get(PROBE_ENV) else PROBE_HISTORY
+    with open(ledger, "a") as f:
         f.write(json.dumps(history_line) + "\n")
 
     if args.update_baseline:

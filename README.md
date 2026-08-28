@@ -38,7 +38,7 @@ failing case is decoration.
 ```bash
 python3 -m evals.run --suite fast        # offline gate: 249 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
-python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00
+python3 -m evals.run --suite live        # 12 cases, 5 real sites, still $0.00
 ```
 
 The reviewer UI locally — task submission needs `OPENROUTER_API_KEY`; the
@@ -59,6 +59,11 @@ fast  249/249    invariant  101/101    live  11/11    $0.0000    99.1s
 recovery 9/9 verified (24 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 69/69 · 14 replans
 ```
+
+The one red in each is `docs-numbers-are-derived` reading this very block. It is
+the shape every band republish has (ADR-019 §2): the tree reaches its new case
+count only while the new cases are uncommitted, so the run that produces the
+numbers is the run that cannot yet cite them.
 
 `live` is not part of the gate, and it goes red when a site is having a bad
 day rather than being stubbed around it (CLAUDE.md rule 4) — an earlier run of
@@ -246,7 +251,7 @@ own measured ceiling alongside a local one
 by [ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) when M31
 grew the suite, and `invariant` given ceilings of its own).
 
-`live 11/11` covers 5 real sites. It was `4/6` at the M6 merge; two of those
+`live 12/12` covers 5 real sites. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one
 case went green immediately while the other kept failing, because the outage had
 been hiding a defect of ours: navigation waited for `load`, so one hanging

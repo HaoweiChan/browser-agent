@@ -1,0 +1,64 @@
+{
+  "id": "live-sec10k-fetch-painted-select-is-plannable",
+  "task": "browser",
+  "suites": [
+    "live",
+    "full"
+  ],
+  "level": "L2",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "task": "get the 10-K report status for the Intel filing",
+    "url": "https://whaleforce-sec10k.zeabur.app/",
+    "stub_plan": [
+      {
+        "action": "select_option",
+        "target": {
+          "role": "combobox",
+          "name": "SELECT A COMMITTED FIXTURE"
+        },
+        "value": "intc-2002"
+      },
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Extract the selected committed fixture"
+        },
+        "expected_state": {
+          "text_visible": "fixture: intc-2002"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "doc_status"
+        },
+        "anchor": "intc-2002"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "anchors": [
+      "intc-2002"
+    ],
+    "planner_saw": [
+      {
+        "has": [
+          "option — 'intc-2002'",
+          "option — 'aapl-2025'",
+          "combobox — 'SELECT A COMMITTED FIXTURE'"
+        ]
+      }
+    ]
+  },
+  "provenance": "ADR-037 §1, the live half, and the case the user's own failing run should have had. Deployed run `46883372` asked `use extractor to get 10k report of intel 2025` against `https://whaleforce-sec10k.zeabur.app/` and died `failure:semantic` with 0 of 2 replans; the site offers `intc-2002` in a committed-fixture `<select>` painted from `/api/meta` AFTER `load`, so the pre-plan observation held a `combobox`, a `MenuListPopup` and zero `option` elements and the planner could not target the one control that answers the task. `planner_saw.has` is therefore the whole case: it asserts the options are IN the observation the planner is given, on the real deployed page, which is the claim `sec10k-doc-status-is-a-named-status` explicitly cannot make (a rendered snapshot is post-render by construction) and `live-sec10k-authored-wait-reaches-the-doc-status` was declaring UNFIXED. Hand-written plan, no LLM, $0.00 — `live`, like every other case in that suite; the plan is the one a planner can now write, and this case says nothing about whether it will. `answer` is deliberately not pinned: the inspector's own extraction output has moved between its builds before (18/5 -> 19/4 -> 18/5 for `aapl-2025` inside one milestone, docs/support-matrix.md D30), so pinning the counts would make this case a receipt for one build of a repo this one does not control. What it pins is the OBSERVATION and the anchor, both of which are properties of this repo's code. Verified before commit against the deployed site: `status success`, answer `doc_status: success — 12 extracted · 4 incorporated_by_reference fixture: intc-2002`, 0 replans, $0.0000.",
+  "triage": {
+    "class": "capability-gap",
+    "red_first": "RED against the pre-ADR-037 executor for a reason worth stating precisely: not the `planner_saw` clause alone, but the RUN — `select_option` on an option the page has not painted yet cannot resolve, so the shape before the fix is a `locate` failure on step 2 and the observation clause never gets a chance to be judged. Measured directly rather than through the harness first: `observe()` immediately after `agent.navigate()` on this URL returned 26 elements with 0 options, and 60 elements with 42 options three seconds later, against a `MAX_ELEMS` of 60 — so the cap was never the constraint and the options simply did not exist yet.",
+    "note": "`select_option`'s own 1s wait for fetch-painted options (T-M42-20) is NOT what makes this pass, and the distinction matters: that wait lets the ACTION cope with a control the plan already names, and this case is about a planner being able to name it at all. `action-select-option-waits-for-fetch-painted-options` grades the action half offline; this grades the observation half live."
+  }
+}
