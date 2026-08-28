@@ -321,11 +321,14 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling: 20s → 35s
 
-- Band source — local `invariant` at 93 cases, ts `20260828-080842`, **25.40s**, 93/93
-  (`dirty: false`, because this republish had a clean row available where the
-  previous one did not: a tree reaches this count only while T-M39-15's two
-  cases are uncommitted, but the first run at 92 was taken before they were
-  staged, so item 2 (cited-run)'s dirty allowance is not needed here at all.
+- Band source — local `invariant` at 93 cases, ts `20260828-090144`, **26.28s**, 93/93
+  (`dirty: false`, and for the strongest reason a band row can be clean: it is a
+  green gate run of the COMMITTED tree, taken at sha `4e449b2`, so it measured
+  exactly what ships rather than a staging state. Item 2 (cited-run)'s dirty
+  allowance is not needed here at all. The row this bullet cited an hour earlier
+  was `dirty: true` while this parenthetical already claimed otherwise — nothing
+  grades a bullet's account of the flag, only the allowance that depends on it,
+  which is the same silent class §9's own numbering paragraph fell into.
   **Where that luck is absent a republish is split across two RUNS inside one
   commit, and the reason is MECHANICAL rather than a matter of which run is
   allowed to be cited**: `evals/run.py` appends the history row AFTER grading, so
@@ -412,7 +415,7 @@ commit that changed nothing but JSON.
   today is a scalar any gate run can move — an earlier version of this bullet
   claimed every row here was dirty and one run on the committed tree falsified
   it (PR #68 R5). This bullet cites the file the way
-  §2's does — `evals/report/20260828-080842-invariant.json`. The previous band at 90 could name no file, and said so rather than papering over it with a neighbouring run's: ADR-012 writes a per-case report only on a red run or under `--report`, and that maximum was a GREEN gate run, so nothing was produced. This one is GREEN (93/93) and its file exists because the run was taken with `--report`, not because the policy changed, so the ts/file PAIR item 11 (cited-file) grades is a real pair. A green citation is the point rather than a nicety: README's baseline block is recomputed from this same report, and publishing a RED suite result there — which an earlier revision of this branch did, at `88/91`, from a pre-republish red-watch run — is not caught by anything, because `docs-numbers-are-derived`'s red-report guard is applied to the HEADLINE suite alone (PR #68 R15; the class is filed as `T-M39-13-D3`). **So the rule, when the two citation habits disagree: cite the slowest row that is GREEN, and if no row at that count is green, cite under item 3 (same-ceiling) and say in the bullet why the citation is red.** They protect different things, which is what makes green-first safe rather than a trade-off: "cite the slowest" stops a band understating HOW SLOW the tree is, while "cite a green report" stops a document of record publishing a failure that never happened on the shipping tree, and only the second can put a false statement about correctness on the front page — which is the defect R15 caught. Slowness is not left unguarded by the choice, because item 3 (same-ceiling) already carries it: a faster green citation survives only while it derives the same ceiling as the citable maximum, so a discarded slower row that would derive a different one reddens the band and the conflict resolves itself. Naming a different run's file to satisfy the form remains the defect that check was added for (PR #60 R17).
+  §2's does — except that this band, like the one at 90 cases, names NO report file, and says so rather than papering over it with a neighbouring run's. ADR-012 writes a per-case report only on a red run or under `--report`, and this row is a GREEN gate run, so none was produced. Re-running with `--report` to manufacture one would measure a DIFFERENT wall clock and produce a different row, which is a substitution and not evidence. Item 11 (cited-file) grades the ts/file PAIR only where a bullet names a file, so naming none is the honest form here; naming another run's file to satisfy it is the defect that check was added for. A green citation is the point rather than a nicety: README's baseline block is recomputed from this same report, and publishing a RED suite result there — which an earlier revision of this branch did, at `88/91`, from a pre-republish red-watch run — is not caught by anything, because `docs-numbers-are-derived`'s red-report guard is applied to the HEADLINE suite alone (PR #68 R15; the class is filed as `T-M39-13-D3`). **So the rule, when the two citation habits disagree: cite the slowest row that is GREEN, and if no row at that count is green, cite under item 3 (same-ceiling) and say in the bullet why the citation is red.** They protect different things, which is what makes green-first safe rather than a trade-off: "cite the slowest" stops a band understating HOW SLOW the tree is, while "cite a green report" stops a document of record publishing a failure that never happened on the shipping tree, and only the second can put a false statement about correctness on the front page — which is the defect R15 caught. Slowness is not left unguarded by the choice, because item 3 (same-ceiling) already carries it: a faster green citation survives only while it derives the same ceiling as the citable maximum, so a discarded slower row that would derive a different one reddens the band and the conflict resolves itself. Naming a different run's file to satisfy the form remains the defect that check was added for (PR #60 R17).
   That pair — the ts this bullet declares and the file it names — is read back
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
@@ -487,8 +490,11 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 25.40 × 1.15 = 29.21 → **30**, one step below the committed
-ceiling. Two decimals on the product because one is not enough to re-derive it:
+The same rule gives 26.28 × 1.15 = 30.22 → **35**, which IS the committed
+ceiling, so item 3 (same-ceiling) is an identity here and item 4
+(committed-ceiling) is satisfied exactly rather than with slack. The previous
+citation derived one step BELOW and was green on §6's no-ratchet-down reading;
+this one needs no such allowance. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).
 
@@ -1304,6 +1310,16 @@ relayed — `_band_rule` gives 30 at 26.07 and 35 at 26.0870, and the boundary i
 30/1.15 exactly. Read together with the `fast` sighting above, two suites in one
 night, this is evidence for what §8 leaves OPEN rather than evidence for the
 ruling: a clean row past a boundary is the case it deliberately does not cover.
+**And the fourth sighting was this file's own gate.** The run that verified the
+commit publishing this section came in at 26.28s on a clean tree, past the
+boundary the band then cited sat under, and `published-band-matches-the-ledger`
+reddened on item 3 (same-ceiling) — on the branch whose subject is that very
+item. The row was NOT restored away: it is a green gate run of the shipping
+tree, which is the row most entitled to be in the ledger, and discarding it is
+the practice §8 exists to make unnecessary. §3's band was re-cited to it
+instead, which is the ruling's own answer — the band moves, the ledger keeps
+the measurement. A residual demonstrated on its author is better evidence than
+two borrowed from other branches.
 So the honest statement of the interaction is:
 `T-M38-5`'s unbuilt `--no-history` opt-out is what keeps artifact rows OUT, and
 it is not made redundant by §8 — §8 removes the deadlock, and admission control

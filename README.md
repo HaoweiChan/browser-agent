@@ -188,7 +188,7 @@ enumerating them here is the snapshot that drifted:
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
 | `fast` | 238 | 93.44s | 107.46 | **110s** |
-| `invariant` | 93 | 25.4s | 29.21 | **35s** |
+| `invariant` | 93 | 26.28s | 30.22 | **35s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer,
 and the two can differ by a step: `fast`'s 107.46 rounds up to the 110 beside
