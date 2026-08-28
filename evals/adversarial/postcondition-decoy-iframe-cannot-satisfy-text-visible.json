@@ -1,0 +1,51 @@
+{
+  "id": "postcondition-decoy-iframe-cannot-satisfy-text-visible",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "input": {
+    "task": "Sort the inspector's report and read the sorted inventory turnover.",
+    "fixture": "frames-host.html",
+    "stub_plans": [
+      [
+        {
+          "action": "press",
+          "value": "Shift",
+          "expected_state": {
+            "text_visible": "Reported inventory turnover"
+          }
+        },
+        {
+          "action": "extract",
+          "target": {
+            "role": "status",
+            "name": "Inventory turnover"
+          }
+        }
+      ],
+      [
+        {
+          "action": "extract",
+          "target": {
+            "role": "status",
+            "name": "Inventory turnover"
+          }
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "recovery": false,
+    "trace_postconditions": [
+      true,
+      false
+    ]
+  },
+  "provenance": "T-M42-4 / T-M42-11 (PR #57 R10), the verbatim repro: a `press \"Shift\"` that touches ONLY the main document, asserting a string that exists ONLY inside the iframe's source pane. Before the fix, `check_state`'s `text_visible` read `page_text(page)` — every frame — so the step recorded `postcondition_ok: true` for an action that did nothing, which is the one thing a postcondition exists to make impossible; the run then extracted from the frame and reported `success` on the strength of a no-op's verified state change. Watched red exactly so: `status success` with `trace_postconditions [true, true, null]`. ADR-036's ruling: a postcondition is checked in the document its action touched — a targetless press touched the main document, whose text does not contain the predicate, so the press fails `act`, the stubbed replan then drops the failed action and reads as if it had worked, and the anti-laundering guard ends the run `failure:act` (the same terminal shape as `replan-cannot-launder-noop-action-in-a-frame`, which pins the guard; this case pins the postcondition scope that feeds it).",
+  "triage": {
+    "class": "wrong-success",
+    "note": "the decoy document is frames-inner.html; the predicate string appears nowhere in the main document"
+  }
+}

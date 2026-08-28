@@ -345,7 +345,15 @@ async def _nearest(page, loc, near: str, *, loose: bool) -> tuple[int | None, st
 
 async def resolve(page, target: dict, many: bool = False,
                   anchor: str | None = None, task: str = "", action: str = ""):
-    """Return (locator, tier, narrowing rung or None). Raises ResolveError.
+    """Return (locator, tier, narrowing rung or None, scope). Raises ResolveError.
+
+    `scope` is the Page or Frame the winning locator was built in — the
+    DOCUMENT the match lives in. The executor records its URL on the trace as
+    `resolved.scope` and `check_state` evaluates the step's document-scoped
+    postcondition predicates in it (ADR-036, amending ADR-028 §7): without it,
+    a click's `expected_state` could be satisfied by a decoy iframe the action
+    never touched, which is the one thing a postcondition exists to make
+    impossible (T-M42-4, demonstrated by T-M42-11's repro).
 
     `many` is `extract_all`'s resolution: the first tier with ANY match wins and
     the whole match set is returned, because "every author on this page" is a
@@ -449,7 +457,7 @@ async def resolve(page, target: dict, many: bool = False,
         if got is None:
             continue
         if not many:
-            return got
+            return (*got, scope)
         # `extract_all` wants EVERY match, and a Playwright locator cannot span
         # a frame boundary — there is no union to return. Returning the first
         # document that matched is what this did first, and it answers a
@@ -468,7 +476,7 @@ async def resolve(page, target: dict, many: bool = False,
             f"{len(hits) - 1} frame(s)); an enumeration cannot span a frame boundary, so name "
             "the one you mean — a container inside a single document")
     if hits:
-        return hits[0][0]
+        return (*hits[0][0], hits[0][1])
     raise ResolveError("element-not-found", f"no tier resolved {target}")
 
 

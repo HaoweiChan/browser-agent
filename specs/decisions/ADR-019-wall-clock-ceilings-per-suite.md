@@ -3,7 +3,7 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → **110s** [local] (ADR-021, then ADR-029, then ADR-035), local `invariant` **20s** [local], and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 — from one run's attempts until §9 (2026-08-28) made the input a cross-commit sample of runs — and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → **110s** [local] (ADR-021, then ADR-029, then ADR-035), local `invariant` 20 → **35s** [local] (T-M42-4, republished in §3 at each rebase), and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 — from one run's attempts until §9 (2026-08-28) made the input a cross-commit sample of runs — and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `evals/run.py` `over_budget()`
 
@@ -169,7 +169,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 238 cases, 235/238) and
-(restated — `invariant`: 84 cases, 84/84) — are graded against the bullets they
+(restated — `invariant`: 90 cases, 90/90) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -313,17 +313,49 @@ a real loosening, and it is the point: a ceiling whose job is to catch drift
 cannot also be the thing that fails on drift-free commits — this one refused a
 commit that changed nothing but JSON.
 
-### 3. `invariant` gets a ceiling: 20s
+### 3. `invariant` gets a ceiling: 20s → 35s
 
-- Band source — local `invariant` at 84 cases, ts `20260827-202417`, **16.18s**, 84/84
-  (`dirty: true`, for the same structural reason §2's is and stated the same
-  general way: a tree reaches its new case count only while the cases are
-  uncommitted, so 84 exists only while M44-P1's
-  `build-sha-is-derived-not-supplied` is — `invariant`-only for the same reason
-  PR #60's five additions were, which is that the `fast` band cannot pay for
-  another case (ADR-033 Decision 4, T-M42-20-D3/D9). This suite is where the `fast`
-  band's overflow has landed five rounds running, which is a fact about the ceiling and not
-  about these cases. GREEN, 84/84, and the first version of this bullet was not:
+- Band source — local `invariant` at 90 cases, ts `20260828-040041`, **28.01s**, 90/90
+  (`dirty: true`, because a tree reaches this count only while the six cases are
+  uncommitted, and item 2 (cited-run)'s allowance applies: no clean row at 90
+  was available when this band was published.
+  **This row is the MAXIMUM at this count in the committed ledger**, not the
+  smallest of a set — the distinction PR #67 R3 had to make here, kept, and this
+  time it cost a ceiling step rather than saving one.
+  **It is also an outlier, and that is disclosed rather than pruned**: it sits
+  roughly two and a half seconds above the rest of the rows at this count, and
+  was taken at load average 4.21 on a laptop running four other sessions' suites
+  concurrently. The rows themselves are deliberately NOT enumerated here — PR #66
+  R18 found this sentence listing four of them as though they were all of them,
+  which is the subset-presented-as-the-set defect this section records against
+  PR #29 R21, one paragraph after refusing it. `published-band-matches-the-ledger`
+  prints `ledger_slowest` and the ledger holds every row; a count re-typed here
+  is stale on the next gate run. The rule
+  still takes it — `_band_wrong` reads the ledger's maximum with no outlier
+  rejection, deliberately ("a wall clock is a wall clock"), and dropping a real
+  row because a later one is prettier is the selective presentation this section
+  exists to refuse. So the ceiling lands a step higher on a contended sample, which
+  is the safe direction: §6's no-ratchet-down reasoning is that a short sample
+  bounds the ceiling too TIGHT, never too loose, and a ceiling that is loose by
+  one step catches a regression a step later rather than not at all. What is
+  worth watching is the gap between the band and the quiet rows — ~2.9s of it —
+  not the ceiling. 90 exists only while T-M42-4's six additions do — the three postcondition
+  scope cases, the two PR #66 R2/R3 cases and R6's decoy-detach case — all
+  `invariant`-only for the same reason PR #60's five and M44-P1's one were,
+  which is that the `fast` band cannot pay for them (T-M42-20-D3/D9). This suite
+  is where the `fast` band's overflow has landed six rounds running, which is a
+  fact about the ceiling and not about these cases. **This republish moves the
+  ceiling 20 -> 35**, those two endpoints being the ceiling `origin/main` commits
+  and the one `evals/run.py` commits here — the only two numbers in the sentence a
+  reader can check without opening the ledger. The wall clocks behind them are the
+  bullet's own, above, and at the superseded count a scalar deliberately not
+  retyped, for the reason the rest of this bullet gives: PR #66 R16 found this
+  sentence deriving 30 from a `25.32s at 90` that no row of the committed ledger
+  has ever held. The suite got slower because four of
+  the six new cases fail or refuse a postcondition BY DESIGN and each burns the
+  settle budget in full — the same shape ADR-029 refused to trim for, since the
+  expensive cases are the ones that measure the thing. PR #67's own lesson is
+  kept and applies here unchanged:
   it published the 82/84 row `20260827-195119` and justified it with the claim
   that only a run taken before the bullet was written could carry the bullet's
   own numbers. That is false, and PR #67 R3 falsified it against this file's own
@@ -341,7 +373,7 @@ commit that changed nothing but JSON.
   re-measurement to describe a changed tree is not the same act as a
   re-measurement to find a prettier number, and the distinction is the whole
   reason this sentence exists. What item 3 (same-ceiling) requires, and
-  all it requires, is that both derive the same **20**. Which rows sit at this
+  all it requires, is that both derive the same **35**. Which rows sit at this
   count and which is slowest is deliberately not retyped here, the same rule §2
   states, because it is a scalar every gate run can move and an ungraded copy of
   it would be stale within the hour; `published-band-matches-the-ledger` prints
@@ -349,9 +381,9 @@ commit that changed nothing but JSON.
   `published-band-slack-is-declared`, which never opens the ledger at all and whose
   `headroom_s` is computed from the PUBLISHED band — for `fast` it still reports the
   very margin PR #65 R1 retired (R6). **Margin against the
-  MAXIMUM, not against the published number**: the rule gives 20 for anything up
-  to 17.39s, and that is the number to watch. This bullet cites the file the way
-  §2's does — `evals/report/20260827-202417-invariant.json`.
+  MAXIMUM, not against the published number**: the rule gives 35 for anything up
+  to 30.43s, and that is the number to watch. This bullet cites the file the way
+  §2's does — except that this band has no report file to cite, and that is stated rather than papered over with a neighbouring run's: ADR-012 writes a per-case report only on a red run or under `--report`, and the maximum row here is a GREEN gate run (90/90), so no file was produced. Item 11 (cited-file) grades the ts/file PAIR when a bullet names a file; naming a different run's file to satisfy the form is exactly the defect that check was added for (PR #60 R17). The row is `evals/report/history.jsonl`'s, at the ts above, and `--report` on a re-run would produce a DIFFERENT wall clock, not this one's evidence.
   That pair — the ts this bullet declares and the file it names — is read back
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
@@ -423,7 +455,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 16.18 × 1.15 = 18.61 → **20**, which is the committed
+The same rule gives 28.01 × 1.15 = 32.21 → **35**, which is the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

@@ -208,6 +208,19 @@ unchanged and there is no second evidence pipeline.
 `contract-trace-schema-loop-mode` is the case that reddens the day someone adds
 a loop-only key.
 
+**Amended 2026-08-28 (ADR-036, T-M42-4):** `resolved` gains one key, `scope` —
+the URL of the document `resolve` returned the step's target from. This is the
+narrow exception this section anticipated being asked for and the reason it
+could be granted: it is not a loop-only key (both modes write it, from the one
+resolver they share), it is not a second evidence pipeline (it lives inside the
+existing `resolved` object, whose top-level TraceStep key is unchanged, so both
+schema cases assert exactly what they did), and two accepted debts named it as
+their prerequisite — T-M42-4's postcondition scoping (a click's
+`expected_state` could be satisfied by a document the action never touched;
+`check_state` now checks in the recorded scope) and T-M42-14's
+"a frame the step touched" vs "a frame that moved on its own". The rule for
+any FURTHER field is unchanged and stays this section.
+
 The RESULT does gain one field, and it is not a trace field: `mode`, beside
 `model`, because a run record has to be self-attributing. Without it a loop run
 and a mode B run of the same task on the same model are byte-identical in shape

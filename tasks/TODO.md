@@ -272,6 +272,34 @@ hit either (a) brought under a grader that reads the ledger, or (b) explicitly
 declared narrative — a figure whose job is to describe history rather than to
 state the tree's current band. Either disposition is fine; an ungraded figure
 that reads as current is not.
+### T-M42-4-D1 — nothing tells a PLANNER which document a predicate is checked in            [status: todo]
+Origin: PR #66 R4 (LOW, routed debt).
+Priority: P2
+Spec, verbatim from the finding: "src/browser/planner.py:143-149 still says only
+'Every `click` MUST carry an expected_state ... Pick the cheapest checkable
+consequence: a URL fragment, or a role+name that becomes visible', and the
+per-action descriptions at planner.py:383-403 say nothing about which document a
+predicate is checked in. Nothing in the prompt, the tool descriptions or
+.claude/skills/browser-domain/SKILL.md 'Postcondition patterns' (lines 292-305)
+states the ADR-036 scoping rule. The affected shape is the live target of M44
+(the sec-10k inspector's iframe source pane), so the cost lands on paid live
+runs, mitigated only by an extra replan."
+Not fixed in this PR: the ruling's cost is now measured offline
+(`main-document-click-cannot-verify-a-frame-only-effect` pins the extra replan
+and the `wait_for` recovery), so the open question is a prompt change whose
+effect is only observable on paid runs — which is a `full`-suite decision, not a
+repair to land beside the mechanism.
+Widened 2026-08-28 (PR #66 R6, same PR, round 2): the shape this row covers is
+no longer only the frame-effect click. A step whose acted document is detached —
+by the action or by the page's own re-render — now records `postcondition_ok:
+null` and fails the run `failure:semantic`, so the `wait_for` sentence this row
+asks for is the recovery for two shapes rather than one. The finding's own text
+is unchanged above; this is what it now costs.
+Acceptance, verbatim: "One sentence in the planner prompt and in the `wait_for`
+action description stating that `text_visible`/`role_visible` are checked in the
+document the step's target resolved in, and that a consequence painted elsewhere
+on the page needs a `wait_for` — or ADR-036's Consequences amended to state that
+the hatch is available to hand-written plans only, with the live cost declared."
 
 ### M44-P1-D4 — item 12's rule is still not true of the file it governs            [status: todo]
 Origin: PR #65 R9 (LOW, routed debt).
@@ -1321,12 +1349,54 @@ shipped ruling and withdraws the opposite one it argued for before the reversal
 Repro that would reopen it: a fixture whose iframe rewrites its own content on a
 timer, driven by the `replan-cannot-launder-noop-action` plan shape — a no-op
 click, a postcondition that does not hold, and a replan that reads without
-acting. Green today only because no such fixture exists.
+acting. Green today only because no such fixture exists. **Half of that is no
+longer true, 2026-08-28 (PR #66 R6):** `src/browser/fixtures/frames-decoy-detach.html`
+is a page that re-mounts an embedded widget on its own timer, committed with
+`detached-scope-cannot-be-verified-by-a-decoy`. What is still missing is this
+row's PLAN shape driven against it — a no-op click, a postcondition that does
+not hold, and a replan that reads without acting — and the rule that would
+follow. The fixture half is done; the rule half is untouched, and ADR-036 §4 now
+leans on this row's question in a second place (it cannot attribute a detach to
+an action either).
 Acceptance: that fixture, watched red, and then a rule that distinguishes "a
 frame the step touched" from "a frame that moved on its own" — which needs the
-executor to record which document `resolve` returned from, the same trace field
-T-M42-4 needs and ADR-028 §7 currently forbids. The two debts close together or
-not at all.
+executor to record which document `resolve` returned from. **Unblocked
+2026-08-28 (T-M42-4 / ADR-036):** that field now exists as `resolved.scope` (the
+resolving document's URL, on every step that resolves, in both modes), and
+ADR-028 §7 is amended to admit it, so the prerequisite this row was waiting on
+is discharged and only the fixture and the rule remain. ~~The two debts close
+together or not at all.~~ — struck: T-M42-4 closed on its own once the field it
+needed was ruled on; this one still needs its own self-mutating-iframe fixture,
+watched red, before `page_changed` may be narrowed. ADR-036 deliberately did NOT
+touch the evidence pipeline (`page_text`, `page_changed`, `grounded`, the
+digest), which is this row's territory and stays open here.
+**Scope grew 2026-08-28 (PR #66 R11), and a running demonstration is attached.**
+The same successor-document identity this row needs for `page_changed` is what
+ADR-036's postcondition scope needs too, so the two questions are one question
+and this row now owns both. ADR-036 scopes a postcondition to the FRAME
+`resolve` returned from, and its §4 guard is `Frame.is_detached()` — object
+liveness, not document identity. So a page that re-navigates the acted frame IN
+PLACE (same `<iframe>` element, new document) keeps `is_detached()` False, and
+`check_state` reads the successor document as though it were the acted one: a
+literal no-op click earns `postcondition_ok: true`, which is ADR-036 §1's
+hazard reached through the gap between "frame" and "document".
+Fixture, committed and runnable: `src/browser/fixtures/frames-renav-decoy.html`
+— a decoy iframe, a widget iframe whose `Refresh` button is bound to an empty
+handler, and a page-owned `setTimeout` scheduled at LOAD that swaps the widget
+iframe's `srcdoc`. It is deliberately NOT a case: pinning today's answer would
+pin a wrong-success as desired.
+Repro, verbatim: resolve the in-frame control, click it, then read the
+postcondition in the scope `resolve` returned —
+`loc, _tier, _narrowed, scope = await resolve(page, {"role": "button", "name":
+"Refresh"}, action="click")`; `await loc.click()`; `await check_state(page,
+{"text_visible": "Filing loaded"}, scope=scope)` → `True`, with
+`scope.is_detached()` `False`. Measured again with the decoy iframe deleted and
+still `True`, which is the point: the value comes from the successor document
+INSIDE the acted frame, not from a neighbour, so no decoy is even required.
+Why it is here and not in T-M42-4: telling "the document I acted in" from "its
+successor" needs an identity `resolved.scope` cannot supply — both are
+`about:srcdoc` — and that identity is exactly what this row's `page_changed`
+comparison needs. One mechanism closes both; neither closes alone.
 
 ### T-M42-15 — ADR-028 still credits the mechanism R6 falsified, and no ADR records `no_abandoned_failure`            [status: todo]
 Origin: PR #57 R17 (LOW).
@@ -1462,6 +1532,13 @@ not changed. What this finding kills is the excuse attached to it. It is also
 the third time in this repo's history that a declared limitation was falsified
 by a fixture already committed, which is the pattern worth carrying forward more
 than the row itself.
+**Half discharged 2026-08-28 (T-M42-4 / ADR-036):** the repro is now the
+red-first case `postcondition-decoy-iframe-cannot-satisfy-text-visible`, and
+T-M42-4's "nothing offline can see it" sentence is struck in place with the
+falsification named. What remains here — and why the row stays open — is the
+GUARD half of its own acceptance: the standing check against declaring a
+limitation that a committed fixture already falsifies, which is a process rule
+this repo has now needed three times and still enforces nowhere.
 Acceptance, verbatim: "T-M42-4 carries this repro (it is the red-first case its
 own acceptance asks for), and the 'nothing offline can see it' sentence is
 corrected — the guard against declaring a limitation that a committed fixture
@@ -1525,7 +1602,7 @@ Acceptance, verbatim: "The 'greened by' column names a commit that exists (or
 says 'folded into 1ac8a19 under CLAUDE.md rule 7'), so every row is checkable
 from `git log` without trusting the prose."
 
-### T-M42-4 — a postcondition can be satisfied by a document the action never touched            [status: todo]
+### T-M42-4 — a postcondition can be satisfied by a document the action never touched            [status: pr]
 Origin: M42 cold review, finding 4 (HIGH), 2026-08-26. Accepted deliberately as
 the cost of leg (a); logged rather than fixed because the fix is a scoping
 decision, not a repair.
@@ -1537,8 +1614,15 @@ by an element in a completely unrelated document: a consent iframe, a chat
 widget, a `display:none` tracking iframe (still in `page.frames`, still
 evaluable). The step then records `postcondition_ok: true` for an action that
 did nothing, which is the one thing a postcondition exists to make impossible.
-Nothing offline can see it: every fixture with a frame in this repo has exactly
-one, and it is the frame the task is about.
+~~Nothing offline can see it: every fixture with a frame in this repo has exactly
+one, and it is the frame the task is about.~~ **False when written, struck
+2026-08-28 (T-M42-11, PR #57 R10).** The committed `frames-host.html` shows it
+with a two-line stub plan, and that repro IS this task's red-first case:
+`postcondition-decoy-iframe-cannot-satisfy-text-visible`, watched red as
+`status success` / `answer "4.82"` — a no-op `press "Shift"` verified by the
+iframe and the run reported successful on the strength of it. Third time in this
+repo a declared limitation was falsified by a fixture already in the tree; the
+pattern is what T-M42-11 asks to be carried forward, not the row.
 Why not fixed here: the honest fix is to scope a postcondition to the document
 its action touched, which needs the executor to record which scope `resolve`
 returned from — a trace field, and ADR-028 §7 rules that the trace gains no

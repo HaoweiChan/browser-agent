@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Filing widget, re-navigated in place — Nimbus Inspector</title>
+<h1>Filing widget (re-navigated in place)</h1>
+<p>T-M42-14's starting evidence, committed by PR #66 R11. Identical to
+frames-decoy-detach.html in every respect but one: the host's own timer
+RE-NAVIGATES the widget iframe instead of removing it — same &lt;iframe&gt;
+element, new document. `Frame.is_detached()` therefore stays False, ADR-036
+§4's guard does not fire, and `check_state` reads the SUCCESSOR document as
+though it were the one the click landed in. A literal no-op then earns
+`postcondition_ok: true` on `{"text_visible": "Filing loaded"}` — ADR-036 §1's
+hazard, reached through the frame-versus-document gap its Ruling now declares.
+The decoy iframe is here only to show the two are separable: delete it and the
+no-op still scores true, because the value comes from the successor document
+INSIDE the acted frame. Nothing grades this fixture: pinning today's answer
+would pin a wrong-success as desired. It exists so T-M42-14 inherits a running
+demonstration instead of a description.</p>
+<div id="notices"></div>
+<div id="w"></div>
+<p>Document ID: <output role="status" aria-label="Document identifier">NIMBUS-10K-2025</output></p>
+<script>
+  // Fixture code may know its own DOM (CLAUDE.md rule 6); none of it reaches
+  // the executor.
+  var decoy = document.createElement('iframe');
+  decoy.title = 'Notices';
+  decoy.width = 520;
+  decoy.height = 60;
+  decoy.srcdoc = '<!doctype html><meta charset="utf-8"><p>Notices: none</p>';
+  document.getElementById('notices').appendChild(decoy);
+
+  var widget = document.createElement('iframe');
+  widget.title = 'Filing widget';
+  widget.width = 520;
+  widget.height = 80;
+  widget.srcdoc = '<!doctype html><meta charset="utf-8">' +
+    '<button type="button" aria-label="Refresh">Refresh</button>' +
+    '<scr' + 'ipt>document.querySelector("button").addEventListener("click",' +
+    ' function () {});</scr' + 'ipt>';
+  document.getElementById('w').appendChild(widget);
+
+  // The page's own re-render, scheduled at load — before any click exists to
+  // attribute it to. It REPLACES the widget's document in place rather than
+  // detaching the frame, which is the whole point of this fixture: the frame
+  // object survives, so is_detached() never becomes true.
+  setTimeout(function () {
+    document.querySelector('#w iframe').srcdoc =
+      '<!doctype html><meta charset="utf-8"><p>Filing loaded</p>';
+  }, 1500);
+</script>

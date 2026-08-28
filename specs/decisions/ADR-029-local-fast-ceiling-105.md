@@ -3,7 +3,7 @@
 Date: 2026-08-26
 Status: accepted
 
-**Ruling**: `WALL_BUDGET_S["fast"]` moves from 90s to **105s** for the LOCAL environment only, taken from ADR-013 Decision 3's rule applied to this tree's own committed ledger rather than chosen; ~~CI's `EVAL_WALL_BUDGET_S_FAST` **stays at 90** because nothing in this change measured CI~~ — struck 2026-08-26 (PR #57 R24): CI has since measured this tree and §2 records both ceilings it derives, which the workflow declares. ADR-019 §5 is where CI's numbers are published and `ci-numbers-are-derived` grades them against the workflow, so no ceiling is repeated in this line; `invariant` is untouched at 20s, which its own ledger rows still derive.
+**Ruling**: `WALL_BUDGET_S["fast"]` moves from 90s to **105s** for the LOCAL environment only, taken from ADR-013 Decision 3's rule applied to this tree's own committed ledger rather than chosen; ~~CI's `EVAL_WALL_BUDGET_S_FAST` **stays at 90** because nothing in this change measured CI~~ — struck 2026-08-26 (PR #57 R24): CI has since measured this tree and §2 records both ceilings it derives, which the workflow declares. ADR-019 §5 is where CI's numbers are published and `ci-numbers-are-derived` grades them against the workflow, so no ceiling is repeated in this line; ~~`invariant` is untouched at 20s, which its own ledger rows still derive.~~ — struck 2026-08-28 (ADR-036, T-M42-4): true of THIS change, which measured nothing in that suite, and superseded by the next one that did — `invariant` was re-derived by the same rule at a larger count and republished in ADR-019 §3, which is where the ceiling, the count and the band live. Neither the seconds nor the count is retyped here, and that is the fix rather than an omission: PR #66 R15 found an earlier repair updating the count on this line and leaving the seconds behind, so this line published a ceiling the branch had already moved past. This ADR's own ceiling is unaffected.
 **Because**: M42's additions grew `fast`, which is growth in CASE COUNT and not in per-case cost — the exact condition ADR-021 named when it said "if a future gap comes from per-case cost the answer is removing waste (T-M32-3), not another raise"; the tree measured 73.06s at 181 cases and the new cases cost ~7s of real browser work between them, so the band crosses a ceiling step and ADR-013's rule derives 105 from it.
 **Enforced by**: `published-band-matches-the-ledger` (items 3, 4 and 5 are what force this file to exist rather than letting the band be re-typed), `fast-wall-clock-budget` (whose boundary rows move to 105.00/105.01 in the same change, watched red first), `evals/run.py`'s `over_budget()`.
 
@@ -134,7 +134,7 @@ paragraph: a disclosure that quietly drops its own previous claim is not a
 disclosure.
 
 **Where that leaves the evidence**: correctness is green in both environments —
-locally `invariant` 84/84 and `fast` 238/238, and on CI green across four
+locally `invariant` 90/90 and `fast` 238/238, and on CI green across four
 attempts of the tree that run measured, whose own totals are struck above and
 published live only in ADR-019 §5 — and the wall-clock gate is now derived, not
 breached, in both.

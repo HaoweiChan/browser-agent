@@ -1,0 +1,49 @@
+{
+  "id": "resolved-scope-names-the-acted-document",
+  "task": "browser",
+  "suites": [
+    "invariant"
+  ],
+  "input": {
+    "task": "Reload the inspector's source pane and report the inventory turnover.",
+    "fixture": "frames-host.html",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "button",
+          "name": "Reload source"
+        },
+        "expected_state": {
+          "text_visible": "Reported inventory turnover"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Inventory turnover"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "4.82",
+    "trace_postconditions": [
+      true,
+      true,
+      null
+    ],
+    "resolved_scopes": [
+      null,
+      "/fixtures/frames-inner.html",
+      "/fixtures/frames-inner.html"
+    ]
+  },
+  "provenance": "T-M42-4, the direction the decoy cases must not break: scoping a postcondition to the acted document is only correct if the frame-scoped click keeps its OWN document as its verification scope — the iframe'd page has to stay verifiable, which is what M42 leg (a) bought and what `check_state`'s frame reach existed for in the first place. The `Reload source` button and the predicate string both live in `frames-inner.html`, so the click resolves in the frame and its `text_visible` holds THERE; a fix that scoped every postcondition to the main document would turn this red (`postcondition_ok: false` on a click verified by its own pane). `resolved_scopes` also pins the trace field itself — `resolved.scope`, the document URL `resolve` returned from (asserted as a URL-substring per step, because fixture URLs carry the suite's ephemeral loopback port; null where nothing resolved) — which is the field T-M42-14's frames-aware `page_changed` repro is specified to consume, and which ADR-028 §7 as amended by ADR-036 permits. Watched red first: before the fix `resolved` carried no `scope` key at all, so this case failed on `resolved_scopes` while its status, answer and postconditions were already green.",
+  "triage": {
+    "class": "coverage",
+    "note": "the positive twin of the two decoy cases; also the pin on the resolved.scope trace field"
+  }
+}

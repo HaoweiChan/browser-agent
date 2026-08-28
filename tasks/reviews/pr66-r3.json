@@ -1,0 +1,53 @@
+{
+  "pr": 66,
+  "round": 3,
+  "task": "T-M42-4",
+  "result": "REQUEST_CHANGES",
+  "scope": "Convergence check at head 21ef362 on origin/main 6a416df: whether round 2's R6-R10 are discharged, plus collateral from the round-2 repair and the rebase.",
+  "round_2_status": {
+    "R6": "discharged for the DETACH case (no-op + detached frame + decoy no longer earns a postcondition) — but NOT for the class: R11 shows a frame re-navigated IN PLACE reopens it",
+    "R7": "discharged for wall-clock seconds; NOT discharged for the case count of the same republish (R12)",
+    "R8": "band now publishes the ledger maximum with the disclosure restored — but the repair moved README's baseline onto a red report (R13)",
+    "R9": "discharged — ADR-019 §5 paragraph restored byte-identical to origin/main",
+    "R10": "discharged — debt block origin line now reads LOW"
+  },
+  "circuit_breaker": "Fired. Three review rounds without approval. Escalated to the human per the pr-loop protocol rather than opening round 4 unilaterally.",
+  "findings": [
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "blocker — human decision",
+      "claim": "R6's guard closes the detach door but not the class: when the page re-renders the acted frame IN PLACE (same <iframe> element, new document) instead of removing it, Frame.is_detached() stays False, check_state reads the successor document as if it were the acted one, and a literal no-op click again records postcondition_ok: true — falsifying ADR-036's Ruling sentence that the predicates are 'evaluated in exactly ONE document: the one resolve returned the step's target from'.",
+      "evidence": "src/browser/agent.py:557 (detached() tests is_detached, i.e. frame-object liveness, never document identity) and :632 (the None guard fires only on that test); src/browser/resolver.py:460 returns the Frame OBJECT as scope, and agent.py:606/611 evaluate the predicates in whatever document that frame currently hosts. Measured on this tree: src/browser/fixtures/frames-decoy-detach.html with its timer line changed from document.getElementById('w').innerHTML = '' to document.querySelector('#w iframe').srcdoc = '<p>Filing loaded</p>' — same page-owned timer scheduled at LOAD, same empty click handler. Probe output: scope about:srcdoc / check_state -> True / detached False. Verified with the decoy iframe deleted too, so the True comes from the successor document inside the acted frame, which the click never touched. ADR-036:6 and the §1 table row at :39 assert this cannot happen; §4 declares only the DETACH case. No case in any suite can go red on it.",
+      "repro": "resolve the in-frame button, click it, then check_state(page, {'text_visible':'Filing loaded'}, scope=<that Frame>) against the srcdoc-swap variant of the fixture -> True with is_detached() False",
+      "acceptance": "Either the scope test becomes document-identity-based rather than frame-object-based (a frame whose document changed under the step is as unverifiable as one that detached), or ADR-036 §1/§4 state plainly that the ruling scopes to a FRAME and that a frame re-navigated by the page between action and check reopens §1's hazard in full — with a committed adversarial case pinning whichever outcome is chosen."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R7 is discharged for the wall-clock seconds but not for the case COUNT of the same republish: three surfaces say the invariant band was re-derived at 89 cases while ADR-019 §3, README and the runner all say 90.",
+      "evidence": "ADR-029:6 ('invariant is 30s at 89 cases, re-derived by the same rule and republished in ADR-019 §3'); INDEX.md:39 ('re-derived again at 89 by PR #66 R6-R8'); fast-wall-clock-budget.json:169 ('the band was re-derived at 89 cases'). Against ADR-019:306 (90 cases, ts 20260828-033258, 26.02s, 89/90), README.md:183 (| invariant | 90 | 26.02s | 29.92 | 30s |) and load_cases('invariant') == 90. All three 89s are text this branch added; nothing grades them — the same green-disagreement mechanism R7 named.",
+      "repro": "python -c \"from evals.run import load_cases; print(len(load_cases('invariant')))\" -> 90 ; grep -n 'at 89 cases\\|again at 89' specs/decisions/ADR-029-local-fast-ceiling-105.md specs/decisions/INDEX.md evals/adversarial/fast-wall-clock-budget.json",
+      "acceptance": "Every surface that names this republish's case count names 90, or drops the count and defers to ADR-019 §3 the way those same surfaces already defer for the seconds."
+    },
+    {
+      "id": "R13",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R8 repair moved README's 'Where it stands' block onto a RED invariant report — the front page publishes 'invariant 89/90' for a suite the gate requires at 100% and that this tree runs 90/90 — while the same commit's ledger already records a green 90/90 run whose report was not committed.",
+      "evidence": "README.md:54-58 cites evals/report/20260828-033258-invariant.json and prints 'fast 228/229 invariant 89/90'; that report's one failure is published-band-matches-the-ledger. main's block published a green 84/84, so this is a regression this branch introduced. The committed ledger holds {\"ts\": \"20260828-033348\", \"suite\": \"invariant\", \"passed\": 90, \"total\": 90, \"wall_s\": 25.12} but no such report file is committed, so the block had a green option and cites the red one with no disclosure (ADR-019:306 discloses its own red row; README does not).",
+      "repro": "evals.run --suite invariant -> 90/90 ; compare README.md:58 ; git show HEAD:evals/report/history.jsonl | grep '\"ts\": \"20260828-0333'",
+      "acceptance": "The block either cites a committed green invariant report at 90 cases and reads 'invariant 90/90', or states in-block — as ADR-019 §3 does — that the cited run is red on exactly the bookkeeping case this commit clears."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The 'None is loud' claim holds only for {click, press, go_back}: on any other verb an authored expected_state whose acted frame dies is now silently unverified, where the same input previously produced a graded True/False.",
+      "evidence": "agent.py:632 returns None for every action, but verifier.py:419 STATE_CHANGING = {click, press, go_back} and :498-504 flag null only for those; fill/select_option/scroll are protected because agent.py:1203/1258/1288 set postcondition_ok = True by readback before the check, but extract/extract_all/observe carry neither. An extract step whose authored text_visible is genuinely absent AND whose acted frame detaches records postcondition_ok: null, no_failed_postcondition no longer sees it, and the run answers. ADR-036 §4:104-108 names the three verbs but does not state that other steps' nulls are silent.",
+      "repro": "the committed postcondition-scope-detached-by-its-own-action fixture with the step's action changed from click to extract and a target in the detaching frame: trace records postcondition_ok: null and the run does not fail semantic",
+      "acceptance": "Either ADR-036 §4 states the residual explicitly (a null from a dead scope is loud only for the state-changing verbs), or the null is graded for any step that AUTHORED an expected_state, with a case pinning whichever is chosen."
+    }
+  ]
+}

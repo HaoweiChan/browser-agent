@@ -114,7 +114,7 @@ appears, in order — no post-hoc reconstruction).
   "value": "string | null",
   "anchor": "string | null",
   "rank": "true | false | null",
-  "resolved": {"tier": "role|text|attrs|structural", "description": "..."} ,
+  "resolved": {"tier": "role|text|attrs|structural", "description": "...", "scope": "url"} ,
   "expected_state": {"url_contains": "..."} ,
   "postcondition_ok": true,
   "failure_class": null,
@@ -166,8 +166,23 @@ appears, in order — no post-hoc reconstruction).
     mode B, so a model can never assert a value the verifier did not grade.
     A `final_answer` with nothing extracted is INV-0's empty answer.
 - `postcondition_ok` is **true / false / null**, and null is not true: it means
-  nothing was asserted about this step. Every key in `expected_state` must
-  hold. A **state-changing** step with a null postcondition is unverifiable and
+  nothing was verified about this step. Every key in `expected_state` must
+  hold. `text_visible` and `role_visible` are checked **in the frame the
+  action touched** (ADR-036): the one `resolve` returned the target from
+  (`resolved.scope`), or the main document for a step that resolved no target —
+  so a decoy iframe cannot earn a click's postcondition. A FRAME, not a
+  document: if the page re-navigates that same frame in place, the predicates
+  are read in the successor document and that guarantee does not hold
+  (ADR-036 §4's declared limit, T-M42-14). `url_contains` is
+  page-level by nature, and the whole `expected_state` of `navigate`,
+  `go_back` and `wait_for` stays page-wide, every frame: those actions have no
+  single acted document, and a wait for a page that paints into an iframe
+  legitimately wants the frame. An acted document that is GONE — a frame
+  detached while its own step ran, by that step or by the page's own re-render —
+  makes the postcondition **null**: not false, which would accuse an action
+  that may have worked, and not page-wide, which let a decoy iframe verify a
+  no-op whose frame the page detached on a timer (ADR-036 §4, PR #66 R6).
+  A **state-changing** step with a null postcondition is unverifiable and
   the run is `failure:semantic`; the set is `{click, press, go_back, click_at}`
   (`verifier.STATE_CHANGING`). `fill`, `select_option` and `scroll` verify
   themselves by reading back what the browser holds and need no authored
@@ -187,6 +202,12 @@ appears, in order — no post-hoc reconstruction).
   only. That is *not* why two of the three mutations pass without recovering
   anything — the reason for that is that no plan was standing on the tiers they
   break (ADR-003).
+  `resolved.scope` (ADR-036, amending ADR-028 §7) is the URL of the document
+  the winning locator lives in — the main document's URL, or a frame's. It is
+  what scopes the step's own postcondition, and it is the record T-M42-14's
+  "a frame the step touched vs a frame that moved on its own" comparison is
+  specified to consume. Written by the one resolver both modes share; a step
+  that resolves nothing keeps `resolved: null`.
 - **Modes** (ADR-027, ADR-028). `run_task` takes `mode`, selected per task by
   `POST /tasks`'s `mode` field and defaulting to `BROWSER_AGENT_MODE`, itself
   defaulting to `plan`.

@@ -1,0 +1,33 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Filing widget — Nimbus Inspector</title>
+<h1>Filing widget</h1>
+<p>The widget below is an iframe, and its button asks the host to open the
+filing. The host answers by REPLACING the widget: the document the click landed
+in is destroyed by the click's own effect, and the result is painted into the
+main document instead. An SPA re-mounting an embedded widget after an in-frame
+click, and an in-frame link with <code>target="_top"</code>, are this same
+shape.</p>
+<div id="pane"></div>
+<script>
+  // Fixture code may know its own DOM (CLAUDE.md rule 6); none of it reaches
+  // the executor. Built in script rather than written inline only so the
+  // frame's own markup does not have to be quoted inside an attribute.
+  var pane = document.getElementById('pane');
+  var frame = document.createElement('iframe');
+  frame.title = 'Filing widget';
+  frame.width = 520;
+  frame.height = 80;
+  frame.srcdoc = '<!doctype html><meta charset="utf-8">' +
+    '<button type="button" aria-label="Open filing">Open filing</button>' +
+    '<scr' + 'ipt>document.querySelector("button").addEventListener("click",' +
+    ' function () { parent.postMessage("open", "*"); });</scr' + 'ipt>';
+  pane.appendChild(frame);
+  addEventListener('message', function (e) {
+    if (e.data !== 'open') return;
+    // The acted document goes away here: replacing the pane detaches the iframe
+    // the click resolved in, and the consequence lands in the main document.
+    pane.innerHTML = '<p>Document ID: <output role="status" ' +
+      'aria-label="Document identifier">NIMBUS-10K-2025</output></p>';
+  });
+</script>
