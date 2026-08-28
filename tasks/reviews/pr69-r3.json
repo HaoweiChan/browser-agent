@@ -1,0 +1,81 @@
+{
+  "pr": 69,
+  "round": 3,
+  "task": "T-M39-15",
+  "result": "REQUEST_CHANGES",
+  "base": "6f144a4",
+  "head": "a8989ab",
+  "scope": "repair diff since round 2's artifact (73740d2..a8989ab), plus re-verification of R1-R14",
+  "gate": "invariant 92/92 = 1.000 (25.58s / ceiling 35) · fast 238/238 = 1.000 (92.85s / ceiling 110) · $0.0000 · baseline met",
+  "prior_findings_status": "R1, R7, R9, R10, R13, R14 verified still fixed. R8's specific instance is closed; its CLASS is not (see R19).",
+  "circuit_breaker": "TRIPPED — three review rounds without approval. Escalated to the human per the pr-loop protocol.",
+  "orchestrator_verification": {
+    "R19": "CONFIRMED IN PART, verified independently by the orchestrator. (a) A stray bare whole-line ``` above a later fenced block DOES silently miss a real duplicate — reproduced: _task_ids returns ['B1'] for two B1 headings. (b) The claimed info-string variant ```js {hl} is FALSE: it correctly reports the duplicate (['B2','B2']), because the info string fails the opener char class and so never acts as an opener. Severity is latent, not live: tasks/TODO.md's only fence line carries trailing text and no longer parses as an opener, and neither TODO.md nor DONE.md contains a bare whole-line fence, so the probe is not blinded on today's tree.",
+    "R16": "Notable: the falsifying row (fast@238 94.08s) was appended by the ORCHESTRATOR's own gate run, and the sentence it falsifies is main's text, not this PR's. Running the gate invalidated a prose claim on main. That is itself the D5 class arriving from a new direction."
+  },
+  "findings": [
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-019 §3's bolded band claim \"This row is the MAXIMUM at this count in the committed ledger\" is false against the ledger this same commit ships, and the same bullet contradicts it twice below.",
+      "evidence": "ADR-019 §3 cites ts 20260828-052604 at 25.99s and calls it the maximum at 92 cases. history.jsonl holds 20260828-053100 at 26.07s (> 25.99) plus 20260828-054414 at 25.79. The grader's own maximum applies no dirty filter, so 26.07 is the ledger max. The same bullet then says \"It is NOT necessarily the maximum at this count either\" and \"which of them is slowest is deliberately not retyped here\". Ungraded: item 12 reads only the `(ledger max — <suite> at N cases: **X.XXs**)` marker form, which this sentence does not use. This is the R9 class recurring one round later.",
+      "repro": "List local invariant rows at total 92 -> 25.99 clean, 26.07 dirty, 25.79 clean.",
+      "acceptance": "The bullet states only what is true and what the rule needs (the cited row happened, is clean, derives the same ceiling as the ledger max), or names the actual maximum with item 12's graded marker."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "This repair diff commits a fast ledger row that falsifies ADR-019 §2's present-tense maximum statement — the same self-caused-hazard defect §2 records against PR #65 R1 four lines later.",
+      "evidence": "ADR-019 §2 states \"the ledger's slowest 238-case run is 93.44s, which is the whole of ADR-035 Decision 7's evidence\". The diff adds ts 20260828-045028, fast, total 238, wall_s 94.08, absent from origin/main. The slowest 238-case run is now 94.08s. §2 also writes \"The maximum itself is deliberately not written down\" while writing it down. Ungraded: no marker, so the band case stays green (rule(93.44) == rule(94.08) == 110).",
+      "repro": "max wall_s over fast rows at total 238 -> 94.08",
+      "acceptance": "Either the sentence stops restating a maximum (as its own paragraph says it should) or it carries item 12's graded marker so a new gate row reddens instead of silently invalidating it."
+    },
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The 90->92 re-derive left ADR-019 §3's item-3 sentence publishing the pre-re-derive ceiling: it says both sides derive 35 when both now derive 30.",
+      "evidence": "ADR-019 §3 \"What item 3 (same-ceiling) requires, and all it requires, is that both derive the same **35**.\" published=25.99, ledger max at 92=26.07, and _band_rule gives 30 for both. The same bullet and the derivation sentence both correctly say 30, so the file states 30 and 35 for one quantity. Ungraded: _ADR_CEILING requires `**Ns**` with the trailing s, so `**35**` is read by nothing.",
+      "repro": "_band_rule(25.99) and _band_rule(26.07) -> 30, 30",
+      "acceptance": "The sentence names the number the rule gives on this band (30), or states the requirement without a scalar, and agrees with the derivation sentence below it."
+    },
+    {
+      "id": "R18",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R12's repair to T-M39-15-D5 shipped a figure the next commit in the same PR invalidated: D5 says ADR-019 §3 cites an 83/86 row, but §3 cites 89/92.",
+      "evidence": "tasks/TODO.md D5: \"§3's current bullet, citing a 83/86 row, is exactly that and must stay green\" (written as the R12 fix). ADR-019 §3 now reads \"Band source — local invariant at 92 cases, ts 20260828-052604, 25.99s, 89/92\". tasks/reviews/pr69-r2-resolution.json repeats the 83/86 figure. This is the R13 class the same PR claims to have closed by dating snapshots; D3's sibling figure was dated, this one was not.",
+      "repro": "grep -n '83/86' tasks/TODO.md tasks/reviews/pr69-r2-resolution.json",
+      "acceptance": "D5's exemption-(a) example names §3's actual current row or is written without a passed/total figure, the way R13's repair handled D3's decaying counts."
+    },
+    {
+      "id": "R19",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R8's fix closes the one instance in tasks/TODO.md but not the class: a stray bare whole-line ``` still pairs with a later block's closer and silently swallows a real duplicate id, and the shipped comment asserts a safety property that does not hold.",
+      "evidence": "src/browser/eval_adapter.py comment claims \"an unmatched opener can no longer swallow the file\" and \"at worst a loud false red, never a silent miss\". `_FENCE` treats a bare ``` as a valid opener, so a stray whole-line ``` above a later fenced block leaves a closer acting as an opener. ORCHESTRATOR-VERIFIED: two `### B1 — ` headings separated by a stray bare fence, with a ```bash block below, yield ids ['B1'] — the duplicate is missed. The reviewer's second variant (info string ```js {hl}) is FALSE — orchestrator reproduced ['B2','B2'], duplicate correctly reported. Latency: tasks/TODO.md's only fence line has trailing text so it is not an opener, and no bare whole-line fence exists in TODO.md or DONE.md, so the probe is NOT blinded today. R8's stated acceptance (strip only well-formed blocks, or a fence state machine) was not done. task-id-parse-boundary fixture 6 pins only the literal-\\n prose line.",
+      "repro": "_task_ids on '### B1 — x' + stray bare fence + '### B1 — x again' + a ```bash block -> ['B1'], duplicate missed.",
+      "acceptance": "A fixture with a stray bare whole-line ``` above a genuine duplicate, watched red first, and either a fence state machine or a stripper that discards nothing when delimiters do not balance; the comment's stated ceiling names the real trigger. The info-string variant needs no fix — it already reports correctly."
+    },
+    {
+      "id": "R20",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "README's band table prints a derivation chain whose last step the rule does not produce, with no note, while the fast row beside it does derive.",
+      "evidence": "README band table row `| invariant | 92 | 25.99s | 29.89 | **35s** |`. The rule gives 30 from 29.89; 35 is the committed ceiling. fast's row (93.44 -> 107.46 -> 110) does follow, so both rows read as if derived. ADR-019 §3 explains the one-step residue; README carries no equivalent line. The graded shape uses the committed ceiling deliberately, so nothing reddens.",
+      "repro": "Read README's band table; _band_rule(25.99) -> 30",
+      "acceptance": "The table or a sentence beside it says the ceiling column is the committed ceiling and may sit a step above what the band derives."
+    },
+    {
+      "id": "R21",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "R11's rewritten provenance cites a line number that does not hold the code it names.",
+      "evidence": "task-and-adr-ids-are-unique.json provenance says ADR-035 Decision 7 raised the ceiling '(evals/run.py:103)'. WALL_BUDGET_S is at line 110; 103 is a comment. It was already 110 at the round-2 base, so the number was copied from the finding text rather than re-derived — the one thing the r2 resolution's verification note claims was done for every finding.",
+      "repro": "grep -n 'WALL_BUDGET_S = ' evals/run.py -> 110",
+      "acceptance": "The provenance cites evals/run.py:110 or drops the line number and names the symbol only."
+    }
+  ]
+}
