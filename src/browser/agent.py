@@ -150,15 +150,51 @@ PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, 
 # different word is indistinguishable, to a regex, from the first character of
 # the object a real request is acting on. Every narrowing therefore trades a
 # false refusal for a false ALLOW in a security-adjacent screen, and this screen
-# fails CLOSED. So the alternation below is byte-for-byte what it was before
-# M45, and M45's contribution here is the measurement, the cases that pin every
-# falsified attempt, and the residual declared in docs/support-matrix.md D31.
+# fails CLOSED. So NO NARROWING ever shipped: M45's contribution here is the
+# measurement, the cases that pin every falsified attempt, and the residual
+# declared in docs/support-matrix.md D31. The alternation stayed byte-for-byte
+# what it was before M45 until 2026-08-28, when the trad/simp fold below changed
+# it in the other direction — wider, not narrower. That sentence used to read
+# "the alternation below IS byte-for-byte what it was", which the fold falsified
+# while leaving it in place (PR #75 R2).
 #
 # What might actually work is a rule about the REQUEST FRAME rather than about
 # the term's neighbours — every false positive above is a question about a page
 # (…是什麼？ / …的定義 / …會保留多久？) and every false negative is an imperative
 # (幫我… / 請… / 我要…). That is a different mechanism, unprobed in either
 # language, and it is filed as tasks/TODO.md M45-D8 rather than guessed at here.
+# M45-D6: every CJK term above was spelled as a traditional|simplified PAIR, so a
+# spelling that mixes the two scripts INSIDE one word matched neither alternative
+# and sailed through. Measured on this tree before the fix: `screen('幫我輸入验证
+# 碼')`, `screen('幫我购買這個商品')`, `screen('購买這個商品')` and
+# `screen('幫我輸入驗证码')` all returned None. Mixed script is not exotic — input
+# methods, copy-paste between zh-TW and zh-CN sources, and OCR all produce it.
+#
+# Folding each pair to a character class fixes it per character rather than per
+# spelling. Only terms with more than ONE variant character have a mixed form at
+# all, so the surface is exactly 驗證碼 (2^3 spellings, 2 covered before) and
+# 購買 (2^2, 2 covered): 密[碼码], [刪删]除 and 下[載载] are the same two strings
+# they always were, written differently.
+#
+# THIS IS A DELIBERATE WIDENING OF THE REFUSAL POLICY, not a behaviour-neutral
+# refactor, and it moves every folded term at once: nine spellings that were
+# allowed now refuse. It fails CLOSED, which is the safe direction for this
+# screen — but "safe direction" is not "unwatched direction", so every one of the
+# nine is a row in `screening-zh-term-inside-another-word`, watched red first.
+# The false positives already declared in docs/support-matrix.md D31 widen with
+# it by construction: 购買力平價 now refuses exactly as 購買力平價 always did.
+#
+# M45-D3 rides the same fold for its uncontroversial half and stops short of the
+# rest. 登錄 is the traditional spelling of the already-blocked 登录, so 登[入录錄]
+# is that pair folded like any other. 登陸 and 登陆 are NOT added, though they are
+# ordinary — and in the mainland dominant — spellings of the same verb, because
+# they also mean *to make landfall*: 颱風什麼時候登陸？ and 登陸月球 are read tasks,
+# and adding the term verbatim manufactures a fresh instance of the very defect
+# M45 closed. That is not a guess; the three readings are pinned in the ALLOW
+# direction in the same case, so a later verbatim widening turns them red instead
+# of shipping three false refusals. Separating them needs a rule about the request
+# FRAME rather than the term's neighbours — tasks/TODO.md M45-D8 — so M45-D3 stays
+# open at three of five spellings, with the residual in docs/support-matrix.md D31.
 SCOPE_BLOCK = re.compile(
     r"\b(?:log|sign)(?:g?ed|g?ing)?[\s-]?in(?:to)?\b"
     r"|\b(?:password|captcha|payment|purchase|buy|pay|download)\b"
@@ -166,7 +202,7 @@ SCOPE_BLOCK = re.compile(
     r"|\bcredit card\b"
     r"|\bplace (?:an?|the) order\b"
     r"|\bdelet(?:e|es|ed|ing)\s+(?:my|the|this|these|those|all|every|any|our)\b"
-    r"|登入|登录|密碼|密码|驗證碼|验证码|付款|購買|购买|刪除|删除|下載|下载",
+    r"|登[入录錄]|密[碼码]|[驗验][證证][碼码]|付款|[購购][買买]|[刪删]除|下[載载]",
     re.IGNORECASE,
 )
 

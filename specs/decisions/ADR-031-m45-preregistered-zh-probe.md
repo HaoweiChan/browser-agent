@@ -242,7 +242,9 @@ shape — a Chinese task that merely names a blocked concept inside a longer wor
 That part is real, is three shapes wide, and costs `$0.00` and no browser exactly
 as described. **It is declared, not repaired.** M45's leg 2 wrote a narrowing for
 each shape and every one of them was falsified by an ordinary Chinese sentence it
-un-refused, so `SCOPE_BLOCK` ships byte-for-byte as it was and the over-refusals
+un-refused, so no narrowing shipped — `SCOPE_BLOCK` stayed byte-for-byte as it
+was, until M45-D6 widened it on 2026-08-28 by folding every trad/simp pair to a
+character class, which is the opposite direction and repairs none of this — and the over-refusals
 stand as a declared limitation — `docs/support-matrix.md` D31 for the shapes and
 the reasoning, `screening-zh-term-inside-another-word` for the rows that pin
 every one of them. A reader arriving at this ADR for the probe's verdict should

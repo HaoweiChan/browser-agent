@@ -1026,7 +1026,7 @@ separates those" to "no NEIGHBOUR rule separates those; the frame rule was
 measured and did not either, see this block". Either outcome closes it. Gate
 green.
 
-### M45-D6 — mixed-script CJK spellings pass the scope screen in every term            [status: todo]
+### M45-D6 — mixed-script CJK spellings pass the scope screen in every term            [status: pr]
 Origin: PR #56 R4, 2026-08-26. Filed for the half of R4 that still exists.
 R4's other half — that folding 購買 into `[購购][買买]` newly BLOCKED mixed-script
 购買/購买, an un-pinned widening of the refusal policy — was removed by R2's fix,
@@ -1093,7 +1093,8 @@ underneath them. M45's four zh rows (`docs/support-matrix.md`, "Chinese-language
 (zh) evidence") were measured against `main@9c3340c`; merging M45 moves `main`
 and the deployment follows it, so the shipping build is a different build from
 the measured one. It is not a different BEHAVIOUR — M45 ships no production code
-change and `SCOPE_BLOCK` is byte-for-byte what it was — but 1a is a rule about
+change and `SCOPE_BLOCK` was byte-for-byte what it was, and stayed so until
+M45-D6's fold on 2026-08-28 — but 1a is a rule about
 the build, written that way because the rows it was created for were invalidated
 by a build change nobody expected to matter. No re-probe is possible pre-merge
 because the deployment only moves when `main` does — the same wall ADR-025 hit,
@@ -1138,6 +1139,29 @@ widened only as far as that evidence reaches, both directions pinned in
 `screening-zh-term-inside-another-word` or a sibling, the false-positive rows
 watched red first, and any residual declared in `docs/support-matrix.md` D31.
 Gate green.
+PARTIAL, 2026-08-28 (PR for M45-D6): three of the five spellings are now covered
+and this task STAYS OPEN for the other two. 登錄 arrived free with M45-D6's
+trad/simp fold — it is the traditional spelling of the already-blocked 登录, so
+`登[入录錄]` is that pair folded like every other — and the new false positive it
+brings (登錄資料, *to record* data) is pinned as a `true` row and declared in D31.
+登陸 and 登陆 are deliberately NOT added: the landfall sense this entry warns
+about is real, and the three readings 颱風什麼時候登陸？, 登陸月球的太空人是誰？
+and 这次台风从哪里登陆？ are now pinned in the ALLOW direction in
+`screening-zh-term-inside-another-word`, so a later verbatim widening turns them
+red rather than shipping three false refusals. The two auth asks themselves —
+帮我登陆这个网站并查看消息 and 幫我登陸這個網站 — are pinned too, as `false` rows
+declared in the triage note as DELIBERATE false negatives, so when the frame rule
+lands they flip green on purpose and their author has to come here and say so.
+That is the both-directions evidence this entry asks for, and it says the
+alternation must NOT move further on a regex alone: separating "log in to this
+site" from "the typhoon made landfall" is a request-FRAME judgement, which is
+M45-D8.
+**What remains here is not a gap so much as a tripwire.** The unfixed half is now
+guarded in both directions, which is stronger evidence than the fix would have
+been: it demonstrates WHY the alternation cannot move on a regex alone, rather
+than asserting it, and a later session that reaches for the one-line widening
+turns five rows red before it can ship. The remaining two spellings are blocked
+on M45-D8's mechanism, and this entry stays open until that lands.
 
 ### M45-D1 — docs/analysis.md §6's two tag tables have never matched the case files            [status: todo]
 Origin: M45, 2026-08-26. Found while refreshing §6's total for the one case
