@@ -604,10 +604,10 @@ in that column. `gh run view <id> --log` reprints each line below.
 
 | run | branch | suite | cases | wall |
 |---|---|---|---|---|
+| 33165425989 | task/M46 | invariant | 101 | 37.44s |
 | 33113860608 | task/T-M42-4 | invariant | 86 | 26.97s |
 | 33120495080 | task/T-M42-4 | invariant | 88 | 25.61s |
 | 33113986233 | task/M43 | invariant | 83 | 22.81s |
-| 33119009870 | task/M43 | invariant | 83 | 22.71s |
 | 33119009870 | task/M43 | fast | 238 | 117.84s |
 | 33113986233 | task/M43 | fast | 236 | 117.14s |
 | 33119673100 | task/M43 | fast | 238 | 116.01s |
@@ -1407,7 +1407,7 @@ later-clean-slower-run cost that must survive, and the fresh-count degeneration
 in both directions.
 ### 9. (2026-08-28) A CI ceiling is derived from runs, not from one run's attempts
 
-**Ruling**: CI's ceilings become `invariant` **35s** and `fast` **140s**, and the
+**Ruling**: CI's ceilings become `invariant` **45s** and `fast` **140s**, and the
 input to ADR-013's rule changes with them: §5's sample is now the four slowest
 observed RUNS per suite, sampled across commits, in place of four attempts of one
 run. The rule itself is untouched — slowest observed +15%, rounded up to a

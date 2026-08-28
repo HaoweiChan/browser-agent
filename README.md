@@ -89,10 +89,14 @@ which is why the wall-clock ceiling is per-environment rather than one number
 pretending to be portable. The slowest is eval-gate run 33119009870; the ids and
 case counts of all four are in ADR-019 §5, hand-read off their logs. Since §9
 (2026-08-28) the sample is measured RUNS across commits rather than repeated
-attempts of one run: the run that set `invariant`'s ceiling, 33113860608, exited
-at the `invariant` step with `26.97s` against `86/86` passing, so it produced no
+attempts of one run: the run that set `invariant`'s ceiling, 33165425989, exited
+at the `invariant` step with `37.44s` against `101/101` passing, so it produced no
 `fast` figure at all — and a table that pairs the two suites per row can only
-hold that observation by dropping it. They supersede an earlier CI band published
+hold that observation by dropping it. That run is ONE row although it was
+re-run three times (37.44 / 37.42 / 35.26s): §9 samples runs, not attempts, so
+the three collapse to their slowest — which is also the conservative direction
+for a ceiling, and the reason the third attempt was taken at all, since it
+raised the maximum the first two had suggested. They supersede an earlier CI band published
 here — 59.77 / 60.84 / 64.61 / 64.67s — which was measured on a 95-case tree and
 so cannot describe this one. That band is NOT unevidenced, and an earlier
 revision of this paragraph struck it on that ground: ADR-013 names its run
@@ -206,8 +210,8 @@ not, which is the drift this section warns about two paragraphs up. PR #78 R9.)
 
 **CI has its own two, measured on CI** rather than projected from these — the
 four slowest observed runs per suite, sampled across commits (ADR-019 §5, §9;
-eval-gate runs 33113860608 and 33119009870 set the two ceilings) gave `invariant` 22.71-26.97s and
-`fast` 113.51-117.84s, so **35s** and **140s** by the same rule. Both are the
+eval-gate runs 33165425989 and 33119009870 set the two ceilings) gave `invariant` 22.81-37.44s and
+`fast` 113.51-117.84s, so **45s** and **140s** by the same rule. Both are the
 sample's range, not the population's: inside the ~4.5-hour window ADR-019 §5
 declares by its endpoints, the fastest `invariant` run was 19.28s and the slowest
 at the same action and judge-call counts was 22.81s — 17 runs — so runner noise
