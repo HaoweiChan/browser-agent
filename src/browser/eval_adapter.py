@@ -666,8 +666,12 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         # against the maximum of THESE, because a row no band may cite is not a
         # target any band can be held to — T-M39-13 is the deadlock that proves
         # it, where a dirty outlier past a ceiling-step boundary left no
-        # publishable citation at all. The citable maximum is itself citable, so
-        # a publishable citation exists whenever any row does. Item 2 (cited-run)
+        # publishable citation at all. The citable maximum is itself citable, and
+        # what that buys — with the condition it rests on, which is a claim about
+        # the committed CEILING and not about citability — is stated once, in
+        # ADR-019 §8, rather than a third time here: a copy of that sentence
+        # without its clause is what PR #68 R11 found in this comment. Item 2
+        # (cited-run)
         # is unchanged, and so is item 12 (ledger-max)'s raw read-back in
         # `_check_published_band` — that one is a factual claim about the
         # ledger, not a band target. At a FRESH count every row is dirty and
@@ -709,9 +713,21 @@ def _band_wrong(published: dict, counts: dict, ceilings: dict, rows: list) -> li
         # §8 removes, through the lookup instead of through the maximum. The
         # fallback is what keeps a genuinely stale published number reporting
         # `actually_measured` rather than degrading to `cites_no_recorded_run`.
+        # Three rungs, narrowest first. A wall-clock match is tried among ALL
+        # rows before the bare-`ts` fallback (PR #68 R14): without that middle
+        # rung, citing a row that a clean sibling at the same second outranks
+        # reported `actually_measured` as the SIBLING's wall clock — a number the
+        # cited run did not measure — and swapping the two rows in the file
+        # changed the diagnosis while the verdict stayed red. With it, that
+        # citation is diagnosed as what it is, a dirty row a clean one predates.
+        # The last rung is reached only when no row at that `ts` measured the
+        # published number at all, where naming any of them is the honest answer
+        # to a genuinely stale citation; §8 records that it is the one place the
+        # reported row is still order-dependent.
         src = next((r for r in citable_rows
                     if r["ts"] == ts and r["wall_s"] == said),
-                   next((r for r in at if r["ts"] == ts), None))
+                   next((r for r in at if r["ts"] == ts and r["wall_s"] == said),
+                        next((r for r in at if r["ts"] == ts), None)))
         if src is None:
             wrong.append({"suite": suite, "env": env,
                           "cites_no_recorded_run": ts, "at": now})

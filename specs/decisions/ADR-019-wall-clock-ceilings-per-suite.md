@@ -326,6 +326,14 @@ commit that changed nothing but JSON.
   previous one did not: a tree reaches this count only while T-M39-15's two
   cases are uncommitted, but the first run at 92 was taken before they were
   staged, so item 2 (cited-run)'s dirty allowance is not needed here at all.
+  **Where that luck is absent a republish is split across two RUNS inside one
+  commit, and the reason is MECHANICAL rather than a matter of which run is
+  allowed to be cited**: `evals/run.py` appends the history row AFTER grading, so
+  the first run at a new count has nothing to cite and the band it needs is the
+  row it is about to write (§8's residuals state it). Splitting across two
+  COMMITS is not available either: the cases a case addition reddens are in
+  `fast` as well, so a first commit would have to pass a `fast` gate they are
+  red in.
   **This row is the MAXIMUM at this count in the committed ledger**, not the
   smallest of a set — the distinction PR #67 R3 had to make here, kept. It is
   also clean; it is NOT described as the only clean row, because that adjective
@@ -471,8 +479,8 @@ method (PR #34 R29). A hand-copied scalar sitting beside a computed one is
 exactly the drift class R21 and `T-M32-8` both name. The maximum a band is
 graded against is whatever
 `published-band-matches-the-ledger` reports as `ledger_slowest`, computed since
-§8 over the CITABLE rows at the current case count — red and mid-edit runs
-included, which is
+§8 over the CITABLE rows at the current case count — red runs and mid-edit runs
+that no clean row predates, which is
 why it can exceed the band source (§6, and the paragraph above) — and the
 grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
@@ -1382,10 +1390,17 @@ append to one ledger, so `ts` is not a key. Item 2 (cited-run) resolved a
 citation by `ts` alone and took the first match, which made the citable maximum
 UNREACHABLE — citing it reported a neighbour's wall clock — and reassembled the
 whole deadlock through the lookup rather than through the maximum (PR #68 R6).
-The lookup now prefers the CITABLE row whose `ts` and wall clock both match,
-falling back to any row with that `ts` so a genuinely stale published number
-still reports what was actually measured rather than degrading to "cites no
-recorded run". With that, the construction holds for duplicate stamps too, and
+The lookup now tries three rungs, narrowest first: the CITABLE row whose `ts`
+and wall clock both match, then ANY row matching both, then any row with that
+`ts`. The middle rung is PR #68 R14 — without it, citing a row that a clean
+sibling at the same second outranks reported a wall clock the cited run never
+measured, and reordering the two rows in the file changed the diagnosis while
+the verdict stayed red; with it that citation is diagnosed as what it is, a
+dirty row a clean one predates, in either order. The last rung is reached only
+when no row at that `ts` measured the published number at all, and keeps a
+genuinely stale citation reporting what was measured rather than degrading to
+"cites no recorded run"; there, and only there, WHICH sibling gets named is
+still file-order dependent — a diagnostic, never a verdict. With that, the construction holds for duplicate stamps too, and
 it is pinned rather than asserted: the reviewer's own three-row ledger is a
 probe in `band-is-graded-against-the-citable-maximum`, watched red first.
 `T-M39-13-D1` is a correctness dependency of this section and not tidiness: the
@@ -1414,11 +1429,14 @@ instead — the same treadmill arriving through the other item.
 2026-08-27, in one session, THREE more rows were discarded by hand rather than
 committed: an `invariant` run at 18.03s, and two `fast` runs at 92.52s and
 91.34s — the last of them written by PR #65's own pre-commit hook, i.e. by the
-gate doing its job. All three sat at UNCHANGED counts, and each fires BOTH
-items: item 3 (same-ceiling) is `rule(published) != rule(slowest)` and every one
-of the three derives a different ceiling from the band beside it, while item 4
-(committed-ceiling) would additionally push `required_by_adr013_rule` past what
-this repo commits. An earlier version of this paragraph called them item 4
+gate doing its job. All three sat at UNCHANGED counts, and each FIRES BOTH
+items: every one of the three derives a different ceiling from the band beside
+it, which is what item 3 (same-ceiling) refuses, and each would additionally
+push `required_by_adr013_rule` past what this repo commits, which is what item 4
+(committed-ceiling) refuses. Neither item is restated here — §6 states them, and
+an earlier version of this paragraph quoted item 3 (same-ceiling)'s FIRING
+CONDITION as though it were the rule, in the diff whose purpose was to stop that
+exact class (PR #68 R12). An earlier version of this paragraph called them item 4
 (committed-ceiling) ratchets "rather than" item 3 (same-ceiling) refusals, which
 is false and was contradicted by
 the artifact shipped beside it — `band-is-graded-against-the-citable-maximum`'s
@@ -1497,8 +1515,14 @@ publishes any more, which is an accident of the tree having grown, not a
 property this section provides. So the honest statement of the interaction is:
 `T-M38-5`'s unbuilt `--no-history` opt-out is what keeps artifact rows OUT, and
 it is not made redundant by §8 — §8 removes the deadlock, and admission control
-is the thing that would stop a clean 1.17-second "run" from ever being citable
-in the first place. Both are needed and they are not substitutes. And the
+is the thing that would stop a row like `20260823-210925` from ever being
+citable in the first place: `invariant` 30/53 in a `wall_s` of 0.38 with
+`cost_usd` null, and `dirty: false`, so nothing in this ruling touches it. That
+row is named instead of the 1.17-second one because the 1.17-second one is
+`dirty: true` and an earlier version of this sentence called it clean — R9's own
+defect recurring inside R9's repair, caught as PR #68 R13, which is the third
+time a flag has travelled in prose without being re-derived from the ledger.
+Both mechanisms are needed and they are not substitutes. And the
 signature that guard should key on is narrower than "let a session opt out",
 which needs a human to remember: 41 of the 73 carry `cost_usd: null`, a run that
 never reached the accounting path at all, which paired with an implausible
@@ -1522,7 +1546,14 @@ again, but `history.jsonl` keeps those 84-row entries for good, so anything that
 ever returns a suite to a count it has been at before — a case deletion, a suite
 split, a tag move — meets them again. `T-M38-5`'s ancestor-of-HEAD half is the
 fix for both, and stays its scope; this ruling
-neither creates nor closes it. A dirty outlier at a FRESH count,
+neither creates nor closes it. **No run can cite itself, which is why a republish takes two runs.**
+`evals/run.py` appends the history row AFTER every case has been graded, so the
+band check never sees the row its own run is about to write. At a new case count
+that means the first run has nothing to cite and reports
+`ledger_slowest_at_actual: null` — the conditional form of the existence claim
+above already covers it, but a reader meeting that `null` will not connect the
+two, and it is the mechanical reason §3's bullet is written from one run and
+measured by the next. A dirty outlier at a FRESH count,
 before any clean row lands, is citable and can still ratchet a band — identical
 to the behaviour before this section, and unavoidable for the same reason the
 clean-only maximum is refused. And none of this is the guard that actually stops
