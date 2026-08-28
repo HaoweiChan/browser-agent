@@ -4222,11 +4222,27 @@ def _run_report_citations_case(case: dict) -> dict:
 
     exempt = case.get("expect", {}).get("uncited_kinds_allowed", [])
     report_dir = root / "evals" / "report"
+    # TRACKED reports only. ADR-012 makes a report "of record" by something
+    # outside evals/report citing it, and this half keeps the committed
+    # directory pruned to exactly those. An UNTRACKED file is not in the record
+    # yet, and grading it makes this check poison the next run: a `--report` run
+    # that blocks its own commit leaves its artifact behind, so the retry goes
+    # red naming a file the retry did not write and no commit ever saw. Observed
+    # three times; the third cost a commit cycle to a run that measured 258/258.
+    # `case.get("id")` and `headline_may_fail` already excluded the CURRENT run's
+    # own report -- same defect, patched one file at a time.
+    import subprocess
+
+    ls = subprocess.run(["git", "-C", str(root), "ls-files", "evals/report"],
+                        capture_output=True, text=True, timeout=10)
+    # Fail CLOSED: if git cannot answer, grade everything, as before.
+    tracked = set(ls.stdout.split()) if ls.returncode == 0 else None
     uncited = sorted(
         f.name for f in report_dir.glob("*.json")
         if f.name != "history.jsonl"
         and not any(k in f.name for k in exempt)
-        and f.name not in cited)
+        and f.name not in cited
+        and (tracked is None or f"evals/report/{f.name}" in tracked))
     if uncited:
         wrong["uncited_reports"] = uncited
     want_skip = sorted(case.get("expect", {}).get("skip_exactly", []))
@@ -5381,6 +5397,7 @@ def _run_ui_form_case(case: dict) -> dict:
         page = await _ui_page(inp["viewport_width"], inp["scheme"])
         got = await page.evaluate("""async (inp) => {
           const calls = [];
+          const realFetch = window.fetch;
           window.fetch = (u, o) => {
             calls.push({url: String(u), body: o && o.body ? JSON.parse(o.body) : null});
             return Promise.reject(new Error("stubbed: no run"));
@@ -5411,6 +5428,17 @@ def _run_ui_form_case(case: dict) -> dict:
           out.card_list = [...document.querySelectorAll("#matrix tr:has(td)")].map(card => ({
             text: card.textContent, buttons: card.querySelectorAll("[data-example]").length,
             key: (card.querySelector("[data-example]") || {dataset: {}}).dataset.example}));
+          // T-R41: hand the page back as it was found. `_ui_page` CACHES the
+          // (390, dark) render, and `ui-rendered-narrow` reuses it — so this
+          // case's stubbed `window.fetch`, its visible `#err` and its filled
+          // `#task`/`#url` leaked into a different case's preconditions, and
+          // the two were order-coupled through `sorted(rglob)`. Nothing fails
+          // today; what is wrong is that whether it fails depends on filename
+          // order, which is not a property either case declares.
+          window.fetch = realFetch;
+          $("task").value = ""; $("url").value = "";
+          $("err").textContent = ""; $("err").hidden = true;
+          $("go").disabled = false;
           return out;
         }""", inp)
         return got
@@ -6701,13 +6729,60 @@ def _check_examples_cover_matrix() -> dict:
     from .server import parse_matrix
 
     page = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
-    block = page.split("const EXAMPLES = {", 1)[1].split("\n};", 1)[0]
-    examples = set(re.findall(r'^\s*"([^"]+)":\s*\{', block, re.M))
+    examples = _js_object_keys(page, "EXAMPLES")
     rows = {r["domain"] for r in parse_matrix()["rows"] if not r["domain"].endswith(" fixture")}
-    return {"passed": examples == rows,
-            "wrong": {"rows_without_example": sorted(rows - examples),
-                      "examples_without_row": sorted(examples - rows)},
+    wrong = {"rows_without_example": sorted(rows - examples),
+             "examples_without_row": sorted(examples - rows)}
+    # T-R42: the parser used to require a key to START a line, so an entry
+    # written mid-line was dropped from the parsed set -- and a dropped key
+    # reads exactly like a doc row with no example. Every consequence happened
+    # to fail safely, which is precisely why nothing would have caught the
+    # parser changing that. Probe it here rather than in a second case: the
+    # claim is about THIS function's reader, and a source it never reads in
+    # production cannot drift away from the one it does.
+    probe = 'const EXAMPLES = {"a.example": {t: "x"}, "b.example": {t: "y"}};'
+    if _js_object_keys(probe, "EXAMPLES") != {"a.example", "b.example"}:
+        wrong["mid_line_key_not_counted"] = sorted(_js_object_keys(probe, "EXAMPLES"))
+    return {"passed": not any(wrong.values()),
+            "wrong": {k: v for k, v in wrong.items() if v},
             "got": {"examples": sorted(examples), "rows": sorted(rows)}}
+
+
+def _js_object_keys(src: str, name: str) -> set:
+    """Top-level string keys of the JS object literal `const <name> = {...}`.
+
+    Brace-matched rather than line-matched, so neither `const X={` nor an entry
+    written mid-line changes what is seen (T-R42). Depth-aware and
+    string-aware: a `{` or a quote inside a value is not a key boundary.
+    """
+    m = re.search(r"\bconst\s+" + re.escape(name) + r"\s*=\s*\{", src)
+    if not m:
+        return set()
+    i, depth, keys = m.end(), 1, set()
+    while i < len(src) and depth:
+        c = src[i]
+        # Comments before strings: this block carries prose with apostrophes
+        # in it ("A Student's Guide"), and reading one as a string opener
+        # swallowed the rest of the file -- the scan then ran to EOF with
+        # depth never returning to 0. URLs are safe because a `//` inside a
+        # string is consumed by the string branch below before it is seen here.
+        if src.startswith("//", i):
+            i = src.find("\n", i) + 1 or len(src)
+            continue
+        if src.startswith("/*", i):
+            i = src.find("*/", i) + 2
+            continue
+        if c in '"\'`':
+            j = i + 1
+            while j < len(src) and src[j] != c:
+                j += 2 if src[j] == "\\" else 1
+            if depth == 1 and re.match(r'\s*:\s*', src[j + 1:j + 8]):
+                keys.add(src[i + 1:j])
+            i = j + 1
+            continue
+        depth += (c == "{") - (c == "}")
+        i += 1
+    return keys
 
 
 def _check_narrowing_fails_closed() -> dict:
@@ -7808,6 +7883,38 @@ def _run_wall_clock_case(case: dict) -> dict:
         # under-budget green one must not. Deleting that clause reddened
         # nothing before this, which is the same shape as PR #20 R8: a rule
         # nobody asks is a comment.
+        # T-R13: the module TAIL, which is the only thing CI and the pre-commit
+        # hook actually read. `_main_exit_code` grades what `main()` RETURNS;
+        # changing `sys.exit(main())` to a bare `main()` silently disables the
+        # wall-clock gate — and the invariant and regression gates with it —
+        # while every probe above stays green, because none of them goes
+        # through the tail. Graded structurally: the module must end in an
+        # `if __name__ == "__main__":` whose body passes `main()` to
+        # `sys.exit`, which is the one shape that turns a return value into a
+        # process exit code.
+        if case["expect"].get("module_tail_exits_with_main"):
+            import ast as _ast
+            tail_ok = False
+            tree = _ast.parse((Path(__file__).parents[2] / "evals" / "run.py")
+                              .read_text(encoding="utf-8"))
+            for node in tree.body:
+                if not (isinstance(node, _ast.If) and _ast.unparse(node.test)
+                        == "__name__ == '__main__'"):
+                    continue
+                for stmt in node.body:
+                    call = getattr(stmt, "value", None)
+                    if (isinstance(call, _ast.Call)
+                            and _ast.unparse(call.func) == "sys.exit"
+                            and any(isinstance(a, _ast.Call)
+                                    and _ast.unparse(a.func) == "main"
+                                    for a in call.args)):
+                        tail_ok = True
+            if not tail_ok:
+                wrong.append({"module_tail": "evals/run.py does not end in "
+                                             "`sys.exit(main())` under a __main__ guard, so "
+                                             "main()'s return value never becomes an exit "
+                                             "code and every gate it carries is inert"})
+
         for row in case["input"].get("report_written_when_red", []):
             code, files, ledger_row = _main_exit_code(row["wall_seconds"], want_report=True)
             got = {"exit": code, "wrote_a_report": bool(files)}

@@ -3449,6 +3449,21 @@ it does not claim CI will now be green — the demonstration above is a construc
 laptop, and that CI tags its rows `ci` at all is still asserted rather than graded (T-R74). The
 second branch of the acceptance is therefore still available and may still be the better one.
 
+### T-R92 — `report-citations-resolve` graded untracked reports, so a blocked commit poisoned its own retry            [status: done]
+Origin: this session, found while committing T-R13/40/41/42
+Priority: P1
+Spec: the file->citation half (T-R19) globbed `evals/report/*.json` and required every hit to be
+cited. A red `--report` run leaves its artifact in the working tree; the next run then reddens on
+`uncited_reports`, naming a file that run did not write. The failure is self-inflicted and
+outlives the thing that caused it, so the retry of a green tree fails for a reason the retry
+cannot see. Two earlier patches — `case.get("id")` and `expect.headline_may_fail` — each excluded
+ONE such file, which is the same defect handled one filename at a time.
+Closed. Restricted to `git ls-files evals/report`. That is not a loosening: ADR-012 defines a
+report of record as one CITED from outside `evals/report/`, and an uncommitted file cannot be
+cited by a commit. Fails closed if git cannot answer. Watched red against a tracked uncited
+report, which is the 405-file shape the check was built for:
+uncited_reports ["20260828-999999-fast.json"].
+
 ### T-R91 — the pre-commit hook reports a missing interpreter as an eval regression, and points at `--update-baseline`            [status: done]
 CLOSED 2026-08-28 (ADR-039's commit, which is what hit it again). Both halves
 fixed: the interpreter search now also looks in the MAIN worktree
@@ -4648,11 +4663,25 @@ already is (`ValueError` -> `failure:semantic`), watched red first. Deliberately
 NOT done in M31: no enumeration in this repo produces one — every `extract_all`
 in the eval set reads one column of one page — and the ponytail comment on
 `rank` names the ceiling and this upgrade path.
-### T-R42 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: todo]
+### T-R42 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: done]
 Origin: PR #32 R7 (LOW)
 Priority: P2
 Spec: `_check_examples_cover_matrix` finds keys with `^\s*"([^"]+)":\s*\{` over the `const EXAMPLES = {` block, so an entry written mid-line is silently dropped from the parsed set. Every consequence reproduced fails in the safe direction today (added/renamed doc row → red; `const EXAMPLES={` reformat → IndexError → passed=False; a mid-line real-site key → red as rows_without_example), so this is robustness, not a gap.
 Acceptance: the check parses the object (whole-block regex or a JSON export of EXAMPLES) so formatting cannot change what it sees; a case pins that a mid-line key is counted.
+
+Closed. `_js_object_keys(src, name)` brace-matches the literal instead of matching
+keys by line start, so neither `const EXAMPLES={` nor a mid-line entry changes what
+is seen. The mid-line claim is pinned INSIDE the check, on a synthetic one-line
+source, rather than in a second case: the claim is about this function's reader,
+and a source it never reads in production is a source that can drift away from the
+one it does. Watched red with the old regex swapped back in:
+`mid_line_key_not_counted: ["a.example"]`.
+What the acceptance did not anticipate: the first brace-matched draft was WORSE
+than the line regex — 5 keys instead of 9. The block carries prose comments, one
+of which contains `Student's`, and reading that apostrophe as a string opener
+swallowed the rest of the file; the scan ran to EOF with depth never returning to
+0. So the scanner skips `//` and `/* */` first. This is the second time a
+robustness fix in this file was itself the defect on its first draft.
 
 ### T-R39 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
 Origin: PR #32 R2 (LOW)
@@ -4660,17 +4689,36 @@ Priority: P2
 Spec: the page's no-URL guard derives a start URL from any `label.tld` token in the task text. Measured false positives: "What version of node.js is listed?" → `https://node.js`, "Open README.md and read the title" → `https://README.md`, "Find setup.exe download link" → `https://setup.exe`, "email john@example.com about it" → `https://example.com`. The lifted URL is written to `#url` and POSTed in the same click, so the run is spent (ends `failure:nav`, $0, but a slot and a red result the visitor did not intend).
 Acceptance: common file extensions and e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the `ui-no-url-guard-and-example-chips` case gains one such input asserting no POST and the guidance shown.
 
-### T-R40 — two case provenances cite dangling pre-rebase shas            [status: todo]
+### T-R40 — two case provenances cite dangling pre-rebase shas            [status: done]
 Origin: PR #32 R5 (LOW)
 Priority: P2
 Spec: `evals/adversarial/ui-no-url-guard.json` says "watched red against the pre-M35 page (main 2a11142)" and `ui-execution-progress.json` cites `e07ac07`; neither commit is on any branch after the rebase onto `2e94bed`, so the red-first evidence becomes unreachable after gc and "2a11142" is not main.
 Acceptance: provenance cites reachable shas (`b7daac4` as the pre-M35 page; the watched-red amendment against the branch's own prior commit or a described patch); `report-citations-resolve`-style check if one exists for shas.
 
-### T-R41 — the shared `_ui_page` render leaks the form case's state into `ui-rendered-narrow`            [status: todo]
+Closed, but NOT the way the acceptance proposed. It named `b7daac4` as the
+reachable pre-M35 sha to re-point at; `git branch -a --contains` returns nothing
+for `b7daac4` either, exactly as for `2a11142` and `e07ac07`. Re-pointing would
+have relocated the problem to a sha with the same lifetime. Both provenances now
+DESCRIBE the red-first state ("the console before the no-URL guard existed", "the
+state while the page still carried both forbidden strings") and carry a note
+recording all three shas as unreachable so nobody re-tries the acceptance's fix.
+No sha check was added: the general form is a repo-wide gc-liveness rule that would
+red the whole ledger, and the lesson is cheaper stated than enforced — red-first
+evidence is the OBSERVATION, and a sha is only ever a pointer to it.
+
+### T-R41 — the shared `_ui_page` render leaks the form case's state into `ui-rendered-narrow`            [status: done]
 Origin: PR #32 R6 (LOW)
 Priority: P2
 Spec: `_run_ui_form_case` stubs `window.fetch` and never restores it, and leaves `#err` visible and `#task`/`#url` filled on the cached (390, dark) page that `ui-rendered-narrow` then reuses; the two cases are order-coupled through `sorted(rglob)`. Passes today; no failure reproduced.
 Acceptance: the form case restores `window.fetch` and resets `#err`/`#task`/`#url` at the end (or the rendered case asserts its own preconditions) so the two cases are order-independent in either order.
+
+Closed. `_run_ui_form_case` restores `window.fetch` from a saved reference and
+clears `#task`/`#url`/`#err`/`#go` before returning, so the cached (390, dark)
+render is handed back as it was found. Nothing failed before and nothing fails
+now — what was wrong is that WHETHER it failed depended on `sorted(rglob)`
+filename order, which is not a property either case declares. No red-first was
+watched because the coupling is order, not state: reproducing it means renaming a
+case file, and a case that pins filename order pins the wrong thing.
 
 ### T-M35-WALL — the fast suite sits within 0.3s of its 60s wall-clock ceiling            [status: todo]
 Origin: M35 implementer
@@ -4814,7 +4862,7 @@ so the debt block was renumbered to M27 on merge. "Next free" fails for every
 id sequence in this repo, not just `specs/decisions/`; whatever rule lands here
 should cover `tasks/TODO.md` ids too.
 
-### T-R13 — the module tail that turns `main()`'s return into an exit code is ungraded            [status: todo]
+### T-R13 — the module tail that turns `main()`'s return into an exit code is ungraded            [status: done]
 Origin: PR #20 R13 (LOW, routed debt by the reviewer, which approved alongside it)
 Not specific to M12's ceiling: the same tail gates the pre-existing invariant and
 regression rules identically, and nothing in PR #20's diff made it worse. The
@@ -4840,6 +4888,17 @@ over-budget tree -> 0, and
 -> True. Acceptance: the case drives the process — one
 `subprocess.run([sys.executable, '-m', 'evals.run', ...])` over-budget probe
 reading `returncode` — rather than calling `main()` in-process.
+
+Closed. `_run_wall_clock_case` gained a module-tail AST check under
+`expect.module_tail_exits_with_main`: `evals/run.py` must end in an
+`if __name__ == "__main__":` guard whose body passes `main()` to `sys.exit`.
+Watched red by replacing `sys.exit(main())` with a bare `main()`:
+"evals/run.py does not end in `sys.exit(main())` under a __main__ guard, so
+main()'s return value never becomes an exit code and every gate it carries is
+inert". Graded by AST rather than by running the module, because the failure is
+that the return value is DISCARDED — a run that exits 0 for the right reason and
+a run that exits 0 because nothing read the code are the same observation from
+outside.
 
 ### T-R12 — `--update-baseline` records a baseline over the wall-clock ceiling, silently            [status: todo]
 Origin: PR #20 R12 (LOW, routed debt — what should happen there is a repo-owner call)
