@@ -5157,7 +5157,21 @@ what it contains rather than by markers — e.g. the check reads its own `__code
 the pattern is derived from the module namespace rather than written out. Watched red by
 moving an unpinned constant that carries a §6 reference out of the region.
 
-### T-R60 — two band parses are still last-wins, and derivations are matched document-wide            [status: todo]
+### T-R60 — two band parses are still last-wins, and derivations are matched document-wide            [status: done]
+CLOSED 2026-08-28, both halves, on the acceptance as written and with this
+block's own two mutations as the red-first.
+(1) The Ruling parse refuses a suite that matches twice, the same shape as
+`adr_publishes_two_bands`. Red on a planted second `**999s**` phrase:
+`{adr_publishes_two_ruling_ceilings: [120, 999]}`.
+(2) item 5 (derivation) reads derivations only from the section that publishes
+the band — §2 for `fast`, §3 for `invariant`, the same two sections the bands
+themselves come from, so no new convention. Verified in BOTH directions, which is
+what makes the red mean anything: `fast`'s derivation moved out of §2 to the end
+of the file is RED under the scoping and was GREEN under the old whole-file
+search. The helper falls back to the whole document if the headings move, because
+a scoping helper that silently matches nothing would make item 5 (derivation) a
+guaranteed red and get itself deleted — the `tasks/reviews` path-prefix failure
+(PR #20 R20) is the precedent.
 Origin: T-R56 cold review (secondary findings)
 Priority: P1
 Spec: two holes the T-R56 sweep found and left, both in `_check_published_band`, both the

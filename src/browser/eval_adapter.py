@@ -713,6 +713,30 @@ _BAND_DERIVATION = re.compile(
 _ADR_CEILING = re.compile(r"local `(fast|invariant)`[^,]*?\*\*(\d+)s\*\*")
 
 
+def _band_section(adr: str, suite: str) -> str:
+    """The ADR-019 section that publishes `suite`'s band, or the whole file.
+
+    T-R60 (2): item 5 (derivation) used to search the entire document, so a
+    derivation written anywhere satisfied it — including §6's deliberate
+    counterexample, a paragraph whose whole purpose is to describe a state the
+    rule calls a residue. `fast`'s band is §2 and `invariant`'s is §3, which
+    are the two sections `published-band-matches-the-ledger` already reads the
+    bands out of, so the scoping needs no new convention.
+
+    Falls back to the whole document if the headings ever move, because a
+    scoping helper that silently matches NOTHING would turn
+    item 5 (derivation) into a guaranteed red and get itself deleted — the failure mode this repo has
+    already had once with a `tasks/reviews` path prefix (PR #20 R20).
+    """
+    starts = {"fast": "### 2.", "invariant": "### 3."}
+    ends = {"fast": "### 3.", "invariant": "### 4."}
+    i = adr.find(starts.get(suite, "\0"))
+    if i < 0:
+        return adr
+    j = adr.find(ends.get(suite, "\0"), i + 1)
+    return adr[i:j if j > 0 else len(adr)]
+
+
 def _band_rule(x: float) -> int:
     """ADR-013 Decision 3's rule: slowest observed +15%, rounded up to a five."""
     return ((int(x * _BAND_RATE) // _BAND_STEP) + 1) * _BAND_STEP
@@ -1002,8 +1026,16 @@ def _check_published_band() -> dict:
     # what is graded is that the arrow is arithmetically the rule's own answer
     # and never above the committed ceiling.
     for suite, (_env, _c, _ts, said, _p, _t) in sorted(published.items()):
+        # T-R60 (2): from the SECTION that publishes this band, not the whole
+        # file. `findall(adr)` searched everything, so §6's counterexample
+        # `12.89 × 1.15 = 14.82 → **15**` — a paragraph that exists to call
+        # that state a residue — could satisfy this item for a band republished
+        # at 12.89 with no derivation in its own section at all. §5's CI
+        # sentences sit in the same pool and were kept out only by their
+        # multiplicands, which is luck, not a rule.
         stated = [(float(a), float(b), int(c))
-                  for a, b, c in _BAND_DERIVATION.findall(adr) if float(a) == said]
+                  for a, b, c in _BAND_DERIVATION.findall(_band_section(adr, suite))
+                  if float(a) == said]
         if not stated:
             wrong.append({"suite": suite, "no_derivation_of": said})
             continue
@@ -1023,7 +1055,19 @@ def _check_published_band() -> dict:
     # from the derivation on purpose: the rule applied to a fresh short sample
     # can come out below the committed ceiling and must not drag it down (§6),
     # but the number the ADR advertises can never be a number nothing enforces.
-    ruling = {m.group(1): int(m.group(2)) for m in _ADR_CEILING.finditer(adr)}
+    # T-R60 (1): a dict comprehension over `finditer` is LAST-WINS, so a second
+    # bolded ``local `fast` … **Ns**`` phrase anywhere in ADR-019 silently
+    # overrode the Ruling line this item grades and INDEX digests. Same
+    # shadowing class already guarded for band lines and README rows (PR #29
+    # R24, PR #35 R2) — and the same shape as `adr_publishes_two_bands`, which
+    # is why it gets the same answer: two is a refusal, not a preference.
+    ruling_all = {}
+    for m in _ADR_CEILING.finditer(adr):
+        ruling_all.setdefault(m.group(1), []).append(int(m.group(2)))
+    for suite, seen in sorted(ruling_all.items()):
+        if len(seen) > 1:
+            wrong.append({"suite": suite, "adr_publishes_two_ruling_ceilings": seen})
+    ruling = {k: v[0] for k, v in ruling_all.items()}
     for suite in sorted(WALL_BUDGET_S):
         if ruling.get(suite) != WALL_BUDGET_S[suite]:
             wrong.append({"suite": suite, "adr_ruling_ceiling": ruling.get(suite),
