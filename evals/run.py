@@ -43,6 +43,11 @@ CASE_DIRS = [ROOT / "evals" / "golden", ROOT / "evals" / "adversarial"]
 BASELINE = ROOT / ".eval-baseline.json"
 REPORT_DIR = ROOT / "evals" / "report"
 HISTORY = REPORT_DIR / "history.jsonl"
+# Where an `EVAL_PROBE=1` run's row goes instead. A sibling of the real ledger
+# so a probe is still recorded and still readable, and `.gitignore`d so it never
+# becomes a second source of truth (ADR-039 §4).
+PROBE_HISTORY = REPORT_DIR / "history-probe.jsonl"
+PROBE_ENV = "EVAL_PROBE"
 
 
 def load_cases(suite):
@@ -97,6 +102,27 @@ def run_case(case):
 # the condition ADR-021 named as the one a raise answers — the per-case cost did
 # not move. The row is named because a reader re-deriving from a comment that
 # still said 93.26s would be re-deriving from a SUPERSEDED row and getting the
+# `fast` 110 -> 115 at ADR-039, published SEVEN times before it settled, which
+# is the only part of this worth a reader's attention. Full record in ADR-019
+# section 2. Every band taken from two to five samples was falsified by the next
+# run, in both directions -- including a run taken specifically to CONFIRM a
+# five-sample band. Across ~15 runs at 240-243 cases this suite's wall clock is a
+# distribution roughly 2s wide, 94.8s to 97.0s, not a number; 115 covers what has
+# been observed rather than its quietest corner, and section 6's own reasoning
+# says that is the safe direction -- a ceiling loose by one step catches a
+# regression a step later, where one derived from a quiet sample fails on the
+# next busy machine. The old note follows because its account of WHY the suite
+# got slower is what this ceiling covers: The settle took the suite
+# 93.44 -> 96.02s at 240 cases, deriving 115. A third case then took the count
+# to 241, the next two runs measured 94.95s and 94.92s, that derives 110, and
+# 110 was published on the strength of "every run at this count says ~94.9".
+# The very next run measured 96.99s (ts `20260828-083202`) -- a two-sample band
+# presented as a settled one, falsified by the third sample, which is this
+# repo's own recurring failure and the reason `published-band-matches-the-ledger`
+# reads the ledger MAXIMUM rather than anyone's summary of it. 96.99 x 1.15 =
+# 111.54 -> 115. ADR-021's waste removal was still done first and still
+# mattered: counting every in-flight request cost 7.3s, most of it Chromium's
+# own /favicon.ico 404, and narrowing the settle to fetch/xhr gave 4.8s back.
 # right answer for the wrong reason: 236 cases derived 110 too, which is exactly
 # why the stale copy survived a round (PR #70 R8). ADR-019 §2 is the band of
 # record; this comment cites it and never leads it.
@@ -113,7 +139,27 @@ def run_case(case):
 # hundredths of a second inside the boundary — and it arrived exactly there, on
 # a run of this branch's own gate. Case-COUNT growth again; ADR-019 §2 is the
 # band of record and this comment cites it rather than leading it.
-WALL_BUDGET_S = {"fast": 115, "invariant": 35}
+# `fast` 115 -> 120 and `invariant` 35 -> 40 at ADR-039, and this pair is NOT
+# purely the case-count growth every previous move on these lines was. Four cases
+# entered `fast` and two `invariant`; the rest is per-case cost from ADR-039 §1's
+# post-`load` settle. ADR-021 answers per-case growth with waste removal first, so
+# that was done first and both attempts are measured in ADR-019 §2: counting every
+# in-flight request cost 7.3s and most of it was Chromium's own /favicon.ico 404,
+# so the settle was narrowed to fetch/xhr and 4.8s came back; dropping the poll
+# tick 20ms -> 5ms was tried next and returned 0.25s, falsifying the theory that
+# rounding dominated. What is left is the page genuinely being waited on.
+# ADR-019 §2/§3 are the bands of record; this comment cites them and never leads.
+# `fast` 120 -> 125 at ADR-039's debt-clearing batch. Eleven runs at 257 cases
+# span 103.10-105.44s and the maximum derives 125. Mixed growth and it is split
+# rather than blurred: 17 cases entered the suite since the 240-case band (~0.2s
+# each, ~3.4s), and the rest is per-case cost from ADR-039 §1's settle plus
+# T-R38's per-row DOM hint, which costs one `evaluate` per enumerated row where
+# the old code cost one per step. ADR-021's waste-removal step was taken first
+# and is on the record in ADR-019 §2 (the favicon narrowing returned 4.8s of a
+# 7.3s regression). The remaining per-case cost buys two things a case pins:
+# a planner that can see a fetch-painted control, and an enumeration judged on
+# the evidence each row was actually read from.
+WALL_BUDGET_S = {"fast": 125, "invariant": 40}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its
@@ -298,7 +344,7 @@ def main():
           f"{int(totals.get('actions', 0))} actions · wall {totals['wall_seconds']}s · "
           f"p50 {totals['latency_p50']}s p95 {totals['latency_p95']}s · "
           f"judge ${totals.get('judge_usd', 0):.4f} · {int(totals.get('judge_tokens', 0))} tok · "
-          f"{int(totals.get('judge_calls', 0))} calls")
+          f"{int(totals.get('judge_calls', 0))} boundary calls")
     if metrics:
         # Ratios are printed as x/y, never as a bare rate: the denominator is
         # the number of cases that could have exercised the mechanism, and it is
@@ -351,6 +397,14 @@ def main():
         "env": env_tag(),
         "passed": passed, "total": len(results), "score": round(score, 6),
         "wall_s": totals.get("wall_seconds", 0.0), "cost_usd": totals.get("llm_usd"),
+        # T-M39-2's second symptom: judge spend was invisible outside this
+        # runner's own stdout. `cost_usd` is planner spend and stays that, on
+        # purpose — every committed row means that today, and redefining a
+        # field in place makes old rows and new rows silently incomparable,
+        # which is the drift this ledger exists to make impossible. So the
+        # judge gets its own key. Absent on the ~2500 rows written before this,
+        # which is the honest shape: `None` means "not recorded", not "zero".
+        "judge_usd": totals.get("judge_usd"),
         "report": report_name,
     }
     # Repo-specific extras (this fork's recovery/mutation/cost/p50-p95 metrics)
@@ -362,7 +416,22 @@ def main():
         history_line["recovery"] = f"{int(metrics['recovery_verified'])}/{int(metrics['recovery_expected'])}"
     if metrics.get("mutation_cases"):
         history_line["mutation"] = f"{int(metrics['mutation_passed'])}/{int(metrics['mutation_cases'])}"
-    with open(HISTORY, "a") as f:
+    # T-M38-5 / ADR-039 §4: an EXPLORATORY run must not reach the ledger the
+    # band is derived from. The band is `max(wall_s)` over every row at the
+    # current case count, so one measurement of a mechanism that was tried and
+    # rejected raises the derived ceiling permanently, and the only remedies
+    # left are re-typing a ceiling nothing measured or editing the committed
+    # ledger by hand. Both of those happened before this line existed: ADR-039's
+    # own first draft measured `networkidle` at 144.87s and a discarded
+    # count-every-request variant at 100.86s, and both rows sat in the ledger
+    # claiming to describe the tree that shipped.
+    #
+    # `EVAL_PROBE=1` sends the row to a sibling file instead. Deliberately NOT a
+    # switch that drops the row: a probe that leaves no trace is a probe nobody
+    # can audit, and the whole complaint T-M38-5 makes is about measurements
+    # whose provenance went missing.
+    ledger = HISTORY if not os.environ.get(PROBE_ENV) else PROBE_HISTORY
+    with open(ledger, "a") as f:
         f.write(json.dumps(history_line) + "\n")
 
     if args.update_baseline:

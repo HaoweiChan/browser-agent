@@ -1,12 +1,26 @@
 {
   "id": "planner-fenced-json",
   "task": "browser",
-  "suites": ["fast"],
+  "suites": [
+    "fast"
+  ],
   "input": {
     "kind": "parse-plan",
-    "content": "```json\n[\n  {\n    \"action\": \"navigate\",\n    \"target\": null,\n    \"value\": \"https://whaleforce-browser-agent.zeabur.app/fixtures/hello.html\",\n    \"expected_state\": null\n  }\n]\n```"
+    "content": "```json\n[\n  {\n    \"action\": \"navigate\",\n    \"target\": null,\n    \"value\": \"https://whaleforce-browser-agent.zeabur.app/fixtures/hello.html\",\n    \"expected_state\": null\n  }\n]\n```",
+    "also_rejects": [
+      "[null]",
+      "[\"extract WebArea\"]",
+      "[{\"action\": 3}]",
+      "[{\"action\": \"navigate\"}, \"extract WebArea\"]"
+    ]
   },
-  "expect": { "steps": 1, "first_action": "navigate" },
-  "provenance": "real production failure, run 5a52f0aa on the deployed instance (2026-08-15): claude-sonnet-4.5 via OpenRouter wrapped the plan in a markdown fence; json.loads failed -> failure:env. Content here is the actual payload, trimmed.",
-  "triage": { "class": "input-variant", "note": "LLM output format variance at the planner boundary; fix = fence-tolerant parse_plan, not a retry" }
+  "expect": {
+    "steps": 1,
+    "first_action": "navigate"
+  },
+  "provenance": "real production failure, run 5a52f0aa on the deployed instance (2026-08-15): claude-sonnet-4.5 via OpenRouter wrapped the plan in a markdown fence; json.loads failed -> failure:env. Content here is the actual payload, trimmed. Extended 2026-08-28 with `also_rejects`, closing the `parse_plan` half of T-M40-2-6 (P1). The only structural check was `isinstance(steps, list)`, so `[null]` and `[\"extract WebArea\"]` were plans as far as every layer below was concerned; the step loop then read `step[\"action\"]` off a string and a bare TypeError left `run_task` with no status and no failure class \u2014 `server.py:_execute` caught it into `failure:env` so a DEPLOYED run reported something, while an eval-adapter caller got the raw exception. Both directions are graded here on purpose: an accept-only case stays green under a parser that accepts everything, which is what this one was. The fourth payload is a well-formed step followed by a bad one, because `steps[0]` being fine is exactly how this survives a spot check. Watched red before the guard: all four parsed.",
+  "triage": {
+    "class": "input-variant",
+    "note": "LLM output format variance at the planner boundary; fix = fence-tolerant parse_plan, not a retry"
+  }
 }

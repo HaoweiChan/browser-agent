@@ -42,8 +42,12 @@ band bullet is the one place this repo publishes the band figure and the arrow
 it derives**, because it is the one place `published-band-matches-the-ledger`
 grades — its item 2 (cited-run) against the ledger row, its item 5 (derivation)
 against the rule. Read the number there. What this ADR commits is the ceiling
-that arrow lands on, **105s**, which `WALL_BUDGET_S` holds and
-`fast-wall-clock-budget` enforces.
+that arrow lands on, 105s [historical]. `WALL_BUDGET_S` has been raised
+three times since (ADR-035, ADR-037, ADR-039), so this sentence's original
+present tense — "which `WALL_BUDGET_S` holds" — was false from the next
+raise onward and stayed green for four milestones. The live value is not
+retyped here: ADR-019 §2's band bullet publishes it and
+`published-band-matches-the-ledger` grades it (T-R35).
 
 Two steps, not one, and the second step is machine variance rather than case
 count: the rows at this count differ from one another, while the band this
@@ -134,7 +138,7 @@ paragraph: a disclosure that quietly drops its own previous claim is not a
 disclosure.
 
 **Where that leaves the evidence**: correctness is green in both environments —
-locally `invariant` 101/101 and `fast` 249/249, and on CI green across four
+locally `invariant` 107/107 and `fast` 263/263, and on CI green across four
 attempts of the tree that run measured, whose own totals are struck above and
 published live only in ADR-019 §5 — and the wall-clock gate is now derived, not
 breached, in both.

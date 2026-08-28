@@ -1,0 +1,35 @@
+{
+  "id": "framed-page-does-not-inflate-the-dump-denominator",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What did Vantage Industries report for fiscal year 2024?",
+    "fixture": "frames-inflated-denominator.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Filing summary"
+        },
+        "anchor": "Vantage"
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "verdict": "FAIL",
+    "answer_null": true,
+    "reason_contains": "reproduces most of"
+  },
+  "provenance": "T-M42-5 (M42 cold review, finding 4). `not_a_dump`'s denominator was `len(page_text(page))` \u2014 every frame concatenated, since M42 made `page_text` frame-piercing \u2014 while ADR-008 calibrated the 0.35 ratio on MAIN-FRAME innerText over a 25-record confusion matrix. Any page with a substantial iframe therefore inflates the denominator, and a value that IS a dump of its own document passes. No committed case moved when M42 made that change, because no fixture in the calibration set has a frame: the ratio was still being applied, but to pages that no longer existed in the shape it was measured on. Measured on this fixture: the extracted summary is 230 chars, its own document is 253, and the page with the frame is 1954 \u2014 so the ratio is 0.909 against the document it was read from and 0.118 against the concatenated page. One is a dump by any reading; the other clears 0.35 with room to spare. Fixed the narrow way T-M42-5's acceptance preferred: `body_len` becomes the length of the DOCUMENT the value was read from, using the scope `resolve` already returned and `agent` already records for the postcondition (`acted_scope`). The other option \u2014 re-deriving DUMP_RATIO \u2014 is refused because it needs framed pages in `evals/labels/` and the confusion matrix re-run, and guessing a new ratio is precisely what ADR-008 exists to prevent. A frameless page is byte-identical either way.",
+  "triage": {
+    "class": "calibration-drift",
+    "red_first": "Watched red before the fix with these expectations in place: the run came back status success, verdict PASS \u2014 the dump was ACCEPTED as the answer, because 230/1954 = 0.118 is under DUMP_RATIO. After the fix: failure:semantic, verdict FAIL, answer null, the reason naming the dump.",
+    "note": "The fixture is general, not site-shaped: a small main document beside a substantial iframe is the commonest form of this, and the sec-10k inspector's own source pane is one instance of it. Rule 6 holds \u2014 nothing here reaches the executor."
+  }
+}

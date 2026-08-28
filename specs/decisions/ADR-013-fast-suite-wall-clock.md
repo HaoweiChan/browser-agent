@@ -243,7 +243,7 @@ not asserted blind either time.
    seven over), and treated as ruling out branch 1 (`fast < 60s again`): the
    honest band's ceiling, by the same rule as Decision 3 — the *slowest
    observed run* plus 15%, rounded up to a multiple of five — was
-   60.59 × 1.15 = 69.7 → **70s**. `WALL_BUDGET_S` moved to 70 on that basis.
+   60.59 × 1.15 = 69.7 → 70s [historical]. `WALL_BUDGET_S` moved to 70 on that basis.
 
    **It does not reproduce, and round-5 review (PR #20 R24) caught it.**
    Neither of the two runs over 60s — 60.44, 60.59 — showed up again anywhere
@@ -272,7 +272,7 @@ not asserted blind either time.
    rather than kept, averaged away, or rationalized.
 
    That reopens the acceptance criterion's **first branch**
-   (`fast < 60s again`), not the second: **`WALL_BUDGET_S` reverts to 60**,
+   (`fast < 60s again`), not the second: **`WALL_BUDGET_S` reverts** to 60 [historical],
    unchanged from Decision 1. The alternative — keeping 70 on the argument
    that the suite "clears 60 idle, exceeds it under load" — was considered
    and rejected here on the evidence actually measured: the loaded run did
@@ -332,7 +332,7 @@ scaffolding left the suite, not growing with it. That snapshot predates both
 the readyz-hold fix and the round-5 correction above; the reproducible band
 today is **58.83-60.26s** (Decision 4, including the one post-commit
 verification run that landed over 60s and the 21 that did not). Against the
-**60s** local ceiling — reverted, not re-measured, in Decision 4's round-5
+60s [historical] local ceiling — reverted, not re-measured, in Decision 4's round-5
 correction — that is not a clean margin the way "~10s" once was: most runs
 clear it by roughly a second, one in the fifty measured for this ADR did not,
 by a few tenths. The 42.2s of deliberate waiting is the floor this route cannot

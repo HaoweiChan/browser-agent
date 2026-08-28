@@ -57,10 +57,10 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-279 distinct cases (28 golden + 251 adversarial).
-459 browser actions in a `fast` run; **162 of the 249** `fast` cases drive a real Chromium end to end — counted here as
+295 distinct cases (28 golden + 267 adversarial).
+482 browser actions in a `fast` run; **173 of the 263** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260828-105542-fast.json` rather than tallied by hand (the
+`evals/report/20260828-161325-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number; PR #57 R4 caught the next
 variant of the same defect — the two figures WERE recomputed, from the headline
@@ -69,12 +69,12 @@ and 109 browser cases, so the paragraph was arithmetically true and evidentially
 false. `docs-numbers-are-derived` now checks the citation as well as the
 arithmetic). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 87 are those refusals plus pure-code probes of a single
+remaining 90 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
 ablation driver's preflight and its `failure:env` classifier and the ablation
-table's honesty guard; and in M12, the wall-clock ruling). `live` is 11/11 across 5 real sites. The
+table's honesty guard; and in M12, the wall-clock ruling). `live` covers 5 real sites across 13 cases. The
 fourth was added at M8 to be hostile rather than to be passed:
 `quotes.toscrape.com/js` renders its content invisibly to the accessibility tree,
 and the run there answers confidently and wrongly (§ the M8 rows in
@@ -113,10 +113,10 @@ re-measurement was withdrawn: the M9-stage-2 merge added a readiness case
 that holds a run slot for 3.0s on purpose, the suite straddled 60s across
 seven runs (59.35-60.16s), a fix to the hold recovered ~1s/run but a
 post-fix seven-run band was published as still straddling 60s — so ADR-002
-Decision 4's local ceiling was moved to **70s** — but round-5 review could
+Decision 4's local ceiling was moved to 70s [historical] — but round-5 review could
 not reproduce that band (~22 runs across three independent measurers, idle
 and under deliberate CPU load, all landed at 58.96-59.87s), so the amendment
-was withdrawn the same day and the local ceiling ships at **60s** — with a
+was withdrawn the same day and the local ceiling shipped at 60s [historical] — with a
 thin, not clean, margin: 21 further post-commit runs found the band is
 really 58.83-60.26s, one run over the line by a few tenths against 20 that
 were not. CI's ceiling

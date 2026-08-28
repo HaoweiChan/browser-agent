@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nimbus Reports — per-unit prices</title>
+<h1>Per-unit prices</h1>
+
+<!-- Byte-identical to the banner on rows-decoy-home.html. `not_page_furniture`
+     exists to catch exactly this: a repeated widget carries its neighbours with
+     it wherever it recurs. The figure it quotes is ALSO the second row below,
+     with completely different neighbours — so which occurrence a row's evidence
+     window is centred on decides whether that row reads as furniture. -->
+<p class="promo">Quarterly note: revenue of 41.20 EUR per unit is the figure
+everyone keeps asking about, so we have pinned it here as well.</p>
+
+<p>Products, in order: Ardent Mk I, Beacon Mk II, Cinder Mk III.</p>
+
+<!-- The prices are their own list, so an `extract_all` on `listitem` enumerates
+     exactly three values and each row's VALUE is precisely the string the
+     banner above also contains. That is what makes WHICH occurrence a row is
+     anchored to decide the row's verdict. -->
+<ul>
+  <li>18.50 EUR</li>
+  <li>41.20 EUR</li>
+  <li>67.05 EUR</li>
+</ul>

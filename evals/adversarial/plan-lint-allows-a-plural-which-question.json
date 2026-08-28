@@ -1,0 +1,37 @@
+{
+  "id": "plan-lint-allows-a-plural-which-question",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L4",
+  "tc": "TC4",
+  "input": {
+    "fixture": "shop.html",
+    "task": "Which products in this catalogue have the lowest prices?",
+    "stub_plan": [
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "link"
+        },
+        "rank": false
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": [
+      "Aurora Desk Lamp",
+      "Aurora Desk Lamp Pro",
+      "Meridian Wall Clock",
+      "Cobalt Floor Rug"
+    ]
+  },
+  "provenance": "T-R37 (P1), from PR #29 R27. `_AGGREGATE` matches \"Which products in this catalogue have the lowest prices?\" — a which-SEVERAL question, not a which-ONE-of-a-set question — and the plan lint then REFUSED the plan for declaring `rank: false`, which is the only honest declaration such a task can carry. Measured end to end on this fixture before the fix: `status failure:task`, `answer null`, `budgets.actions 1`, with the reason telling the planner to \"declare `rank: true` and let code do the comparison\" — which would return ONE product for a question that asked for several. At `117301e` the same input returned the four-row list as success, so it was a regression introduced by PR #29's round-4 repair, and ADR-018's justification for letting code contradict a declaration (\"`_AGGREGATE` is narrow and high-precision: when it matches, code is entitled to contradict a `rank: false`\") is falsified by this one input. The precondition is narrowed in `plan_gap` and NOT in `is_aggregate`: that predicate has two callers, and the verifier's `aggregate_needs_comparison` asks a different question — whether a verdict rests on a comparison never made — which a plural ask does not make safe. One caller's precondition, one caller's change.",
+  "triage": {
+    "class": "capability-gap",
+    "red_first": "RED before the narrowing as `status: failure:task`, `answer: null`, `actions: 1` — refused before the browser moved, with a reason instructing the planner to reduce four rows to one. It failed LOUD, which is why it is a false refusal rather than a wrong answer published as success, and why the block is P1 rather than critical.",
+    "note": "The sibling `plan-lint-refuses-a-declared-non-comparison` holds the direction that must NOT move: a SINGULAR which-question with `rank: false` is still refused. Verified together after the change — `Which product costs the most?` and `Which book has the highest rating?` still lint, `Which products…` and `Which books…` no longer do. The plural test is the resolver's `_PLURAL_ASK` noun heuristic (ends in `s`, not `ss`) and inherits its declared limitation, plus a stoplist the first attempt needed: allowing a word between `which` and the subject matched `What is the highest price?`, because `is` ends in `s` and is not `ss`, which would have disabled the lint on the very shape it exists for."
+  }
+}

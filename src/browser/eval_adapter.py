@@ -36,9 +36,11 @@ import asyncio
 import atexit
 import collections
 import json
+import os
 import re
 import socket
 import tempfile
+import struct
 import threading
 import time
 import urllib.error
@@ -225,6 +227,33 @@ def _check_inv2() -> dict:
                             verdict={"verdict": v, "reason": "planted"})
         if r["status"] == "success":
             bad.append(v)
+        # T-R69: and the ANSWER is gone, not just the status. specs/001 says "a
+        # run the verifier rejected carries `answer: null`", and that line was
+        # pinned by ONE fixture path (a grounded reject in the fast suite) —
+        # this pure-code probe passed with any answer on the demoted result, so
+        # the judge-reject and INCONCLUSIVE sources of the same demotion were
+        # unpinned. One line, which is what the block's acceptance asks for.
+        if r["answer"] is not None:
+            bad.append({"verdict": v, "kept_the_rejected_answer": r["answer"]})
+    # T-M32-15: the two shapes `and verdict` used to let through. A FALSY
+    # verdict skipped the demotion branch entirely, so an answer nothing
+    # certified was reported `success`; and `answer` was nulled only INSIDE that
+    # branch, so any `failure:*` assembled with an `answer=` carried it. Neither
+    # is reachable from `run_task` today — its one `done()` without `failure=`
+    # always passes a `verify()` result, which is never None and never {} — and
+    # that is the argument for grading them here rather than trusting it: INV-2
+    # is a property of this function, not of the discipline of its twenty call
+    # sites, and every silent success this repo has shipped was latent first.
+    for missing in (None, {}):
+        r = assemble_result(trace=_TRACE, answer="an answer", budgets=_BUDGETS,
+                            verdict=missing)
+        if r["status"] == "success" or r["answer"] is not None:
+            bad.append({"falsy_verdict": missing, "status": r["status"],
+                        "answer": r["answer"]})
+    carried = assemble_result(trace=_TRACE, answer="an answer", budgets=_BUDGETS,
+                              failure="task")
+    if carried["answer"] is not None:
+        bad.append({"failure_carried_an_answer": carried["answer"]})
     ok = assemble_result(trace=_TRACE, answer="an answer", budgets=_BUDGETS,
                          verdict={"verdict": "PASS", "reason": None})
     return {"passed": not bad and ok["status"] == "success", "leaked": bad}
@@ -693,6 +722,30 @@ _BAND_DERIVATION = re.compile(
 _ADR_CEILING = re.compile(r"local `(fast|invariant)`[^,]*?\*\*(\d+)s\*\*")
 
 
+def _band_section(adr: str, suite: str) -> str:
+    """The ADR-019 section that publishes `suite`'s band, or the whole file.
+
+    T-R60 (2): item 5 (derivation) used to search the entire document, so a
+    derivation written anywhere satisfied it — including §6's deliberate
+    counterexample, a paragraph whose whole purpose is to describe a state the
+    rule calls a residue. `fast`'s band is §2 and `invariant`'s is §3, which
+    are the two sections `published-band-matches-the-ledger` already reads the
+    bands out of, so the scoping needs no new convention.
+
+    Falls back to the whole document if the headings ever move, because a
+    scoping helper that silently matches NOTHING would turn
+    item 5 (derivation) into a guaranteed red and get itself deleted — the failure mode this repo has
+    already had once with a `tasks/reviews` path prefix (PR #20 R20).
+    """
+    starts = {"fast": "### 2.", "invariant": "### 3."}
+    ends = {"fast": "### 3.", "invariant": "### 4."}
+    i = adr.find(starts.get(suite, "\0"))
+    if i < 0:
+        return adr
+    j = adr.find(ends.get(suite, "\0"), i + 1)
+    return adr[i:j if j > 0 else len(adr)]
+
+
 def _band_rule(x: float) -> int:
     """ADR-013 Decision 3's rule: slowest observed +15%, rounded up to a five."""
     return ((int(x * _BAND_RATE) // _BAND_STEP) + 1) * _BAND_STEP
@@ -982,8 +1035,16 @@ def _check_published_band() -> dict:
     # what is graded is that the arrow is arithmetically the rule's own answer
     # and never above the committed ceiling.
     for suite, (_env, _c, _ts, said, _p, _t) in sorted(published.items()):
+        # T-R60 (2): from the SECTION that publishes this band, not the whole
+        # file. `findall(adr)` searched everything, so §6's counterexample
+        # `12.89 × 1.15 = 14.82 → **15**` — a paragraph that exists to call
+        # that state a residue — could satisfy this item for a band republished
+        # at 12.89 with no derivation in its own section at all. §5's CI
+        # sentences sit in the same pool and were kept out only by their
+        # multiplicands, which is luck, not a rule.
         stated = [(float(a), float(b), int(c))
-                  for a, b, c in _BAND_DERIVATION.findall(adr) if float(a) == said]
+                  for a, b, c in _BAND_DERIVATION.findall(_band_section(adr, suite))
+                  if float(a) == said]
         if not stated:
             wrong.append({"suite": suite, "no_derivation_of": said})
             continue
@@ -1003,7 +1064,19 @@ def _check_published_band() -> dict:
     # from the derivation on purpose: the rule applied to a fresh short sample
     # can come out below the committed ceiling and must not drag it down (§6),
     # but the number the ADR advertises can never be a number nothing enforces.
-    ruling = {m.group(1): int(m.group(2)) for m in _ADR_CEILING.finditer(adr)}
+    # T-R60 (1): a dict comprehension over `finditer` is LAST-WINS, so a second
+    # bolded ``local `fast` … **Ns**`` phrase anywhere in ADR-019 silently
+    # overrode the Ruling line this item grades and INDEX digests. Same
+    # shadowing class already guarded for band lines and README rows (PR #29
+    # R24, PR #35 R2) — and the same shape as `adr_publishes_two_bands`, which
+    # is why it gets the same answer: two is a refusal, not a preference.
+    ruling_all = {}
+    for m in _ADR_CEILING.finditer(adr):
+        ruling_all.setdefault(m.group(1), []).append(int(m.group(2)))
+    for suite, seen in sorted(ruling_all.items()):
+        if len(seen) > 1:
+            wrong.append({"suite": suite, "adr_publishes_two_ruling_ceilings": seen})
+    ruling = {k: v[0] for k, v in ruling_all.items()}
     for suite in sorted(WALL_BUDGET_S):
         if ruling.get(suite) != WALL_BUDGET_S[suite]:
             wrong.append({"suite": suite, "adr_ruling_ceiling": ruling.get(suite),
@@ -1088,7 +1161,22 @@ def _check_published_band() -> dict:
                       {"marker_counts": marker_counts, "outside_the_region": strays,
                        "markers_off_a_top_level_boundary": off_boundary,
                        "region_lines": region.count("\n")}})
-    for where, text in (("adr", adr), ("readme", readme), ("eval_adapter", region)):
+    # T-R63 / PR #36 R22: the reference sweep reads the WHOLE FILE, not the
+    # region. Reading `region` made every graded `§6 item N (slug)` reference
+    # depend on where the markers sit — and the 19 lines between the begin
+    # marker and the first pinned name are unpinned comment carrying two of
+    # them, so moving the begin marker down to `_BAND_LINE` left
+    # `marker_counts == [1, 1]`, `outside_the_region == []` and
+    # `markers_off_a_top_level_boundary == False` (green) while a reference
+    # corrupted inside those lines went from red to green.
+    #
+    # The markers exist to bound where band CODE may live, which is a different
+    # question from where a reference may be wrong. A `§6 item N` citation is
+    # wrong wherever it sits, so the sweep has no reason to be bounded at all —
+    # and un-bounding it means no marker move can ever narrow it. Strictly
+    # stronger, and it removes the coupling rather than patching one direction
+    # of it.
+    for where, text in (("adr", adr), ("readme", readme), ("eval_adapter", here)):
         for m in _SIX_REF.finditer(text):
             word, n, slug = m.group(1).lower(), m.group(2), m.group(3)
             # A plural range cannot carry one item's slug, so it
@@ -1491,12 +1579,125 @@ _CI_CEILING_LINE = re.compile(r"ceiling|budget|wall[- ]clock|\bstays\b", re.I)
 # What a ceiling looks like as a NUMBER: seconds-suffixed, or an operand of a
 # move. Never preceded by a word character — that is what keeps `M42`, `M31`,
 # `R16` and `ADR-019` out, and case counts and run ids are neither shape.
-_CI_SECONDS = re.compile(r"(?<![\w.\-§#])(\d{2,4})s\b")
+# T-M42-19: unit-form-agnostic. The rule matched `<n>s` only, so a stale CI
+# ceiling phrased "tolerates 90 seconds" or "for invariant is 20." was invisible
+# — verified by injection on the merged tree, one sentence per file: README's
+# "On CI the fast gate tolerates 90 seconds." and ADR-002's "The CI wall-clock
+# ceiling for invariant is 20." both passed GREEN while "CI budget for fast:
+# 90s." was correctly red. The allowlist inversion earned its keep (it found two
+# stale ceilings six rounds of shape patterns never looked for); it was the
+# DETECTION half that stayed shape-bound.
+#
+# Three forms, one alternation: bare-`s` suffix, the unit spelled out, and a
+# naked number. The naked form is the reason `_CI_CEILING_LINE` and `_CI_TOKEN`
+# exist — a number alone means nothing, and it is only a ceiling claim when the
+# line already says ceiling/budget/wall-clock AND `CI` sits inside the window.
+# Without those two gates this would flag every case count in the repo.
+# Two forms, and the second is deliberately narrow. `<n>s` and `<n> seconds`
+# are self-labelling. A NAKED number is not, and the first attempt at this
+# matched "its tree grew from 48 cases to 74" — which the case's own assert
+# caught, correctly. So the naked form requires a value-assigning word
+# immediately before it (`is`, `of`, `=`, `:`), which binds the number to the
+# ceiling the line is already talking about; `to`/`from` are excluded because
+# that is the shape of a RANGE or a count, not a declared value. `:` and `=`
+# were in that set for one iteration and came straight back out: they match
+# STRUCTURED text, and ADR-019 quotes grader output verbatim in its narrative
+# (`derives_ceiling: 15, ledger_slowest: 16.02`), so a colon form flags a
+# quoted diagnostic as a published ceiling. Prose copulas only — the block's
+# own three injections need no more than that, and the `<n>s` branch still
+# covers "CI budget for fast: 90s".
+_CI_SECONDS = re.compile(
+    r"(?<![\w.\-§#])(\d{2,4})(?:s\b|\s*(?:seconds?|secs?)\b)"
+    r"|(?:\bis\s+|\bof\s+)(?<![\w.\-§#])(\d{2,4})(?=\s*[.,;)]|\s*$)")
 _CI_MOVE = re.compile(r"(?<![\w.\-§#])(\d{2,4})\s*(?:->|→|vs)\s*(\d{2,4})\b")
 # The two explicit labels a figure may carry instead of being the live value:
 # `[historical]` (true then, kept as the record) and `[local]` (not CI's number
 # at all, caught only by sitting near the word CI).
 _CI_LABELLED = re.compile(r"\[(?:historical|local)\]")
+
+
+# T-R25/T-M32-16/T-R35: the local twin of the CI sweep above. Those three blocks
+# stayed open across ~15 PRs asking for "a guard that reads the ceiling out of
+# `WALL_BUDGET_S` instead of out of prose", and each time the answer was that no
+# cheap pattern separates a LIVE claim from the RECORD: ~77 lines of tracked
+# markdown pair a seconds literal with a ceiling word and nearly all of them are
+# history ("was moved to 70s", "reverts to 60"). Tense is not decidable by regex
+# and an enumeration of the live ones is what T-M32-16 was reopened for after
+# its own enumeration was falsified.
+#
+# So this grades two SHAPES, exhaustively within each, instead of guessing at
+# tense:
+#   1. a **bold** seconds literal on a local-ceiling line, and
+#   2. a heading that publishes one,
+# because both are how this repo writes a number it means NOW. Everything else
+# is prose, and the defence there is that the literal has been dropped from it
+# (ADR-002, ADR-013 Rulings) — stated as the residual, not as coverage.
+# A move operand (`80 -> 90`, `moves from 90s to 105s`) is a record of a
+# transition by construction and is exempt in both shapes; `[historical]`/
+# `[local]` and struck text exempt as they do in the CI sweep.
+#
+# Found on the tree it was written against: ADR-019 §2's own HEADING said the
+# local `fast` ceiling "is 90s" and §3's said 35s while `WALL_BUDGET_S` held
+# 125/40 — `published-band-matches-the-ledger` reads the band BULLET inside
+# those sections and never their titles — and ADR-029:45 said "**105s**, which
+# `WALL_BUDGET_S` holds". Two stale live publications, both in the file the
+# ceiling machinery calls its publisher of record.
+_LOCAL_TOKEN = re.compile(r"\blocal(?:ly)?\b|WALL_BUDGET_S", re.I)
+_LOCAL_MOVE = re.compile(
+    r"(?<![\w.])(\d{2,4})s?\s*(?:->|→|\bto\b|\bvs\b)\s*[*`]{0,2}(\d{2,4})s?\b")
+_BOLD_SECONDS = re.compile(r"\*\*[^*]*?(?<![\w.])(\d{2,4})\s*s?\b[^*]*?\*\*")
+
+
+# T-M32-5: README published ~28 wall clocks and `docs-numbers-are-derived`
+# recomputed three case counts and the fenced baseline block. Its acceptance
+# offered two exits -- recompute each figure from a committed report, or delete
+# it -- and BOTH are wrong for most of them: the M9/M12/M31/ADR-013-era bands
+# predate ADR-012's convention that a published figure cites a committed report,
+# so no report file will ever back them, and deleting the record of a ceiling
+# that was withdrawn twice would delete the reason the ceiling machinery exists.
+# The third exit is the one the repo already uses everywhere else: a figure names
+# where its record lives. Graded here so the choice cannot rot back.
+#
+# A `|`-table row is exempt: those are the band table and the headline block,
+# both RECOMPUTED (by `published-band-matches-the-ledger` and by the
+# `where_it_stands` conjunct above), which is stronger than a citation.
+_README_BAND = re.compile(r"(?<![\w.£$])(\d{2,3}\.\d{1,2})s\b")
+_README_PROV = re.compile(r"run \d{8,}|\b\d{11}\b|ADR-\d{3}|`[0-9a-f]{7}`"
+                          r"|evals/report/|§\d|PR #\d+|~~")
+_README_PROV_WINDOW = 5
+
+
+def _unsourced_wall_clocks(text: str):
+    """README wall clocks with no provenance token within five lines."""
+    lines = text.splitlines()
+    out = []
+    for i, line in enumerate(lines):
+        if not _README_BAND.search(line) or line.lstrip().startswith("|"):
+            continue
+        lo = max(0, i - _README_PROV_WINDOW)
+        if not _README_PROV.search(" ".join(lines[lo:i + _README_PROV_WINDOW])):
+            out.append((i + 1, _README_BAND.findall(line), line.strip()[:100]))
+    return out
+
+
+def _local_ceiling_drift(text: str, budgets: dict):
+    """Bold/heading local-ceiling literals that disagree with `budgets`."""
+    out = []
+    ok = set(budgets.values())
+    for i, line in enumerate(re.sub(r"~~.*?~~", "", text, flags=re.DOTALL).splitlines(), 1):
+        if not _CI_CEILING_LINE.search(line) or _CI_LABELLED.search(line):
+            continue
+        if not _LOCAL_TOKEN.search(line):
+            continue
+        moved = {g for m in _LOCAL_MOVE.finditer(line) for g in m.groups()}
+        bold = {m.group(1) for m in _BOLD_SECONDS.finditer(line)}
+        heading = line.lstrip().startswith("#")
+        for m in _CI_SECONDS.finditer(line):
+            num = m.group(1) or m.group(2)
+            if num in moved or int(num) in ok or not (heading or num in bold):
+                continue
+            out.append((i, int(num), "heading" if heading else "bold", line.strip()[:120]))
+    return out
 
 
 def _in_section_five(text: str, line: str) -> bool:
@@ -1606,10 +1807,24 @@ def _check_ci_numbers_are_derived() -> dict:
     # T-R51 residue this case exists to close (PR #41 R14). The workflow copy was
     # itself ungraded, so this closes a third-copy drift in the same stroke; what
     # it cannot do is tell either copy from the measurement, which stays T-R73.
-    wf_cells = {m[1]: [float(m[2]), float(m[3]), float(m[4]), float(m[5])]
-                for m in _re.finditer(
-                    r"^\s*#\s+(invariant|fast)\s+([\d.]+) / ([\d.]+) / ([\d.]+) / "
-                    r"([\d.]+)s\s*$", wf, _re.M)}
+    # T-R80: collect every match per suite, not a dict comprehension that keeps
+    # the LAST. A contradictory band inserted ABOVE the real line was invisible
+    # — the same line BELOW it reddened — which is T-R51's "Compounding" clause
+    # (one document publishing the CI band twice, incompatibly) reproduced in
+    # the workflow, the document PR #41 round 3 promoted to a graded source.
+    # README already refuses this via `publishes_more_than_one_ci_band`; this
+    # gives the third copy the same one-band rule instead of a note saying it
+    # has none.
+    wf_all = {}
+    for m in _re.finditer(
+            r"^\s*#\s+(invariant|fast)\s+([\d.]+) / ([\d.]+) / ([\d.]+) / "
+            r"([\d.]+)s\s*$", wf, _re.M):
+        wf_all.setdefault(m[1], []).append(
+            [float(m[2]), float(m[3]), float(m[4]), float(m[5])])
+    for suite, bands in sorted(wf_all.items()):
+        if len(bands) > 1:
+            wrong.append({"suite": suite, "workflow_publishes_more_than_one_band": bands})
+    wf_cells = {k: v[0] for k, v in wf_all.items()}
     for suite in sorted(by):
         if wf_cells.get(suite) != by[suite]:
             wrong.append({"suite": suite, "adr_five_table": by[suite],
@@ -1739,11 +1954,24 @@ def _check_ci_numbers_are_derived() -> dict:
     # The site sweep's own exercise, on the SAME compiled objects it runs — the
     # three shapes six rounds of patterns each missed one of, plus the two the
     # figure rule must NOT match (PR #57 R34).
-    assert _CI_SECONDS.findall("CI's ceiling is ... (90s since ADR-019 §5)") == ["90"]
+    # T-M42-19: `findall` now returns a tuple per match (two alternatives), so
+    # the asserts read the groups the way the sweep does. Six sentences, and the
+    # three injected ones are the block's own — each was a stale CI ceiling that
+    # passed GREEN on the merged tree before this.
+    def _ci_figs(t):
+        return [g for m in _CI_SECONDS.finditer(t) for g in m.groups() if g]
+
+    assert _ci_figs("CI's ceiling is ... (90s since ADR-019 §5)") == ["90"]
+    assert _ci_figs("On CI the fast gate tolerates 90 seconds.") == ["90"]
+    assert _ci_figs("The CI wall-clock ceiling for invariant is 20.") == ["20"]
+    assert _ci_figs("CI budget for fast: 90s.") == ["90"]
     assert _CI_MOVE.findall("CI `fast` 80 -> 90, CI `invariant` 20") == [("80", "90")]
     assert _CI_MOVE.findall("different `fast` ceilings (105 vs 90)") == [("105", "90")]
-    assert _CI_SECONDS.findall("its tree grew from 48 cases to 74") == []
-    assert _CI_SECONDS.findall("M42 ships and R16 found it") == []
+    # The two directions the naked form must NOT reach: a count in a range,
+    # and a bare identifier. The first attempt at the widening matched "74"
+    # here and this assert is what caught it.
+    assert _ci_figs("its tree grew from 48 cases to 74") == []
+    assert _ci_figs("M42 ships and R16 found it") == []
     assert _CI_LABELLED.search("CI's ceiling was 90s [historical]")
     for doc in docs:
         text = _re.sub(r"~~.*?~~", "", doc.read_text(encoding="utf-8"), flags=_re.DOTALL)
@@ -1761,7 +1989,9 @@ def _check_ci_numbers_are_derived() -> dict:
         for i, line in enumerate(text.splitlines(), 1):
             if not _CI_CEILING_LINE.search(line):
                 continue
-            figures = [(m.start(), m.end(), m.group(1)) for m in _CI_SECONDS.finditer(line)]
+            # Two alternatives, so take whichever group matched (T-M42-19).
+            figures = [(m.start(), m.end(), m.group(1) or m.group(2))
+                       for m in _CI_SECONDS.finditer(line)]
             for m in _CI_MOVE.finditer(line):
                 figures += [(m.start(), m.end(), g) for g in (m.group(1), m.group(2))]
             for s, e, num in figures:
@@ -2126,7 +2356,7 @@ def _run_judge_case(case: dict) -> dict:
     unknown = set(inp) - {"kind", "missing_key", "cache_hit_needs_no_key",
                           "budget_enforced", "fail_closed_on_exception", "injection",
                           "parse_responses", "injection_marker_forge",
-                          "retry_classification"}
+                          "retry_classification", "stub_vocabulary"}
     if unknown:
         return {"passed": False, "error": f"unknown judge probe(s): {sorted(unknown)}"}
 
@@ -2197,6 +2427,35 @@ def _run_judge_case(case: dict) -> dict:
                           "got": second})
 
     # --- fail closed on ANY exception, not just JudgeError ------------------
+    # --- T-M39-1: the STUB's own verdict vocabulary is closed ---------------
+    # `stub_judge` used to coerce any unrecognised string with `bool()`, and a
+    # non-empty string is True -- so a case that mistyped its token got a
+    # CERTIFYING judge and reported the failure it was written to catch as the
+    # code's fault rather than its own typo. PR #33 R1's defect (truthiness
+    # inverting fail-closed) one level up, in the stub the whole `fast` suite
+    # runs on. Both directions, because a vocabulary is only pinned by both:
+    # the four recognised forms must still behave, and anything else must raise.
+    if inp.get("stub_vocabulary"):
+        for good, want in ((True, True), (False, False), ((False, "why"), False)):
+            got = _await(stub_judge([good])("t", "a", "e"))
+            if got[0] is not want:
+                wrong.append({"stub_vocabulary": f"{good!r} certified {got[0]}, want {want}"})
+        for raising, exc in (("error", JudgeError), ("malformed", JudgeError)):
+            try:
+                _await(stub_judge([raising])("t", "a", "e"))
+                wrong.append({"stub_vocabulary": f"{raising!r} did not raise"})
+            except JudgeError:
+                pass
+        for typo in ("reject", "maformed", "fail", "PASS", ""):
+            try:
+                got = _await(stub_judge([typo])("t", "a", "e"))
+                wrong.append({"stub_vocabulary": f"{typo!r} was accepted, certify={got[0]}"})
+            except ValueError:
+                pass
+            except JudgeError:
+                wrong.append({"stub_vocabulary": f"{typo!r} raised JudgeError, want ValueError "
+                                                 "-- a typo is the CASE's fault, not the judge's"})
+
     if inp.get("fail_closed_on_exception"):
         async def boom(task, answer, evidence):
             raise ValueError("not a JudgeError at all")
@@ -2365,10 +2624,24 @@ def _run_judge_case(case: dict) -> dict:
                 # block entirely, which is the honest worst case for billing.
                 bodies = []
                 for a in sc["attempts"]:
-                    choice = {"message": a["message"]}
-                    if "finish_reason" in a:
-                        choice["finish_reason"] = a["finish_reason"]
-                    env = {"choices": [choice]}
+                    # T-M39-3: an attempt may supply the RAW body instead of a
+                    # message, which is the widening that block asks for — the
+                    # probe wrapped every scenario in a well-formed envelope, so
+                    # envelope-level failures could not be expressed at all and
+                    # a case for them was impossible to write before this line.
+                    if "raw" in a:
+                        bodies.append(a["raw"].encode())
+                        continue
+                    # `choices` may be overridden outright, so `[]` and `null`
+                    # — a well-formed envelope carrying no completion — are
+                    # expressible without a message at all.
+                    if "choices" in a:
+                        env = {"choices": a["choices"]}
+                    else:
+                        choice = {"message": a["message"]}
+                        if "finish_reason" in a:
+                            choice["finish_reason"] = a["finish_reason"]
+                        env = {"choices": [choice]}
                     usage = a.get("usage", {"total_tokens": 7, "cost": 0.0})
                     if usage is not None:
                         env["usage"] = usage
@@ -2483,6 +2756,8 @@ def _run_observe_case(case: dict) -> dict:
             # {role, name} dicts and has no handle to compare against — the
             # ceiling is that k elements could still be the wrong k, which no
             # observation this module produces can currently distinguish.
+            from .resolver import relocation_candidates
+
             advertised = collections.Counter(
                 (e["role"], e["name"]) for e in obs["elements"] if e["name"])
             # `"*"` means every role the observation carries, so the check keeps
@@ -2492,6 +2767,7 @@ def _run_observe_case(case: dict) -> dict:
             want_roles = case["expect"].get("resolve_advertised", [])
             skip_roles = case["expect"].get("resolve_advertised_except", [])
             unresolvable = []
+            needed_relocation = []
             for (role, nm), want_n in sorted(advertised.items()):
                 if role in skip_roles or not ("*" in want_roles or role in want_roles):
                     continue
@@ -2504,6 +2780,39 @@ def _run_observe_case(case: dict) -> dict:
                     loc, _tier, _fold, _scope = await resolve(page, target, many=True)
                     got_n = await loc.count()
                 except Exception as exc:
+                    # T-A39-3: reachable-by-relocation is reachable. `observe`
+                    # reads roles out of Chromium's accessibility snapshot and
+                    # `get_by_role` computes its own, and the two disagree:
+                    # measured here, six visible `<th>` are `columnheader` to
+                    # the snapshot and `cell` to `get_by_role` (0 columnheaders
+                    # against 2/18/54 table/row/cell), and `<summary>` is the
+                    # non-ARIA `DisclosureTriangle`. Both reach the element
+                    # through the relocation ladder the executor ALREADY runs on
+                    # a locate failure, so a target that recovers is not a dead
+                    # end and this case should not claim it is.
+                    #
+                    # Deliberately NOT fixed in the resolver, which was the first
+                    # attempt: a name-as-text fallback tier there resolved the
+                    # sec-10k targets and ALSO resolved `l4-shop-a11y-stripped`
+                    # and `l4-forms-a11y-stripped`, whose whole subject is that
+                    # the ladder has to run — the mutation suite's recovery
+                    # metric went green with no recovery performed. Narrowing the
+                    # tier to "no element of this role exists at all" did not
+                    # separate them either, because stripping a11y removes the
+                    # role from the page too. The ladder is the right layer; it
+                    # is the CASE that was asking a question the executor does
+                    # not ask.
+                    relocated = None
+                    for cand in relocation_candidates(target, obs):
+                        try:
+                            await resolve(page, cand, many=True)
+                            relocated = cand
+                            break
+                        except Exception:
+                            continue
+                    if relocated is not None:
+                        needed_relocation.append({"target": target, "via": relocated})
+                        continue
                     unresolvable.append({"target": target,
                                          "error": f"{type(exc).__name__}: {exc}"})
                     continue
@@ -2512,11 +2821,11 @@ def _run_observe_case(case: dict) -> dict:
                                          "resolved": got_n,
                                          "error": "the observation advertises this name for "
                                                   f"{want_n} element(s); resolve reaches {got_n}"})
-            return obs, unresolvable
+            return obs, unresolvable, needed_relocation
         finally:
             await ctx.close()
 
-    obs, unresolvable = _await(go())
+    obs, unresolvable, needed_relocation = _await(go())
     exp = case["expect"]
     missing = [
         want for want in exp.get("contains", [])
@@ -2549,6 +2858,9 @@ def _run_observe_case(case: dict) -> dict:
         "missing": missing,
         "advertised_unresolvable": unnameable,
         "advertised_name_did_not_resolve": unresolvable,
+        # Reported, never silent: a target that needed the ladder is a target a
+        # planner reaches one rung later, and the number is the cost.
+        "advertised_needed_relocation": needed_relocation,
         "starved_by_chrome": starved,
         "inside_the_cap_after_all": leaked,
         "text_head_missing": text_missing,
@@ -2721,7 +3033,22 @@ def _run_fixture_case(case: dict) -> dict:
         # exactly as it did for `l4-shop-element-reordered`'s pinned-wrong-
         # answer shape, and the runtime never has that ground truth to have
         # decided it WITH.
-        v = audit["verdict"] if audit["layer"] > 1 else result["verdict"]["verdict"]
+        # T-M32-11: `result["verdict"]` is None for any run that ends BEFORE
+        # grading — every refusal path and every `failure:*` exit — and
+        # `want_verdict` is truthy whenever `expect` omits `status`, sets
+        # `status: success`, or names a verdict, i.e. for most cases. The
+        # subscript raised `TypeError: 'NoneType' object is not subscriptable`
+        # and the case reported a TRACEBACK instead of the failure it had just
+        # produced, turning "the run failed loudly" into "the harness broke".
+        # Every committed case happens to pair such an `expect` with ground
+        # truth or a non-success status, so it only bit ad-hoc probes — which is
+        # exactly the tool someone reaches for when hunting a defect.
+        #
+        # `None` and not a crash: a run with no verdict genuinely has no verdict
+        # to compare, and the check must FAIL rather than explode, so the case
+        # reports the mismatch it exists to report.
+        runtime_verdict = (result.get("verdict") or {}).get("verdict")
+        v = audit["verdict"] if audit["layer"] > 1 else runtime_verdict
         checks["verdict"] = v == want_verdict
 
     trace = result["evidence"]["trace"]
@@ -2937,6 +3264,17 @@ def _run_fixture_case(case: dict) -> dict:
     if "evidence_contains" in exp:
         checks["evidence_contains"] = any(
             exp["evidence_contains"] in e.get("value", "")
+            for e in result["evidence"]["extractions"])
+    # T-M42-3: the WINDOW, not the value. `evidence_contains` grades the
+    # extraction's value alone and deliberately so; this grades the text
+    # captured AROUND it, which is the only place a mis-centred window shows.
+    # The two are different claims and the frame-offset defect is invisible to
+    # the first: the value is byte-identical whichever copy the window landed
+    # on, and a window around a superseded paragraph is evidence for a
+    # different statement than the one the run answered.
+    if "evidence_window_contains" in exp:
+        checks["evidence_window_contains"] = any(
+            exp["evidence_window_contains"] in e.get("page_text", "")
             for e in result["evidence"]["extractions"])
     # A "recovery" label claims a strategy CHANGED. An attempt identical to the
     # one it replaced is a retry, and specs/001 keeps retries out of the
@@ -3170,6 +3508,52 @@ def _run_declared_keys_case(case: dict) -> dict:
                    and "answer" not in (c.get("expect") or {}))
     if empty:
         wrong.append({"key": "answer_is_known_wrong", "marks_nothing_no_expect_answer": empty})
+
+    # T-M32-11: every `expect` shape that implies verdict PASS, against a run
+    # that ends BEFORE grading — so the fix cannot be closed by special-casing
+    # the empty one, which is what the block's acceptance asks for in as many
+    # words. `result["verdict"]` is None on every refusal path and every
+    # `failure:*` exit, and `_run_fixture_case` used to subscript it, reporting
+    # a TRACEBACK instead of the failure the run had just produced.
+    if case["input"].get("verdictless_run_expect_shapes"):
+        probe = {"id": "t-m32-11-probe", "task": "browser",
+                 "input": {"fixture": "hello.html", "task": "probe",
+                           "stub_plan": [{"action": "click",
+                                          "target": {"role": "button",
+                                                     "name": "no such control"},
+                                          "expected_state": {"text_visible": "nope"}}]}}
+        for shape in ({}, {"status": "success"}, {"verdict": "PASS"}):
+            try:
+                r = _run_fixture_case({**probe, "expect": dict(shape)})
+            except Exception as e:
+                wrong.append({"verdictless_run_raised": f"{type(e).__name__}: {e}",
+                              "expect_shape": shape})
+                continue
+            # It must REPORT, not pass: there is no verdict, so the check fails.
+            if r.get("passed") or r.get("checks", {}).get("verdict") is not False:
+                wrong.append({"verdictless_run_did_not_report": shape,
+                              "checks": r.get("checks")})
+
+    # T-R83: the OTHER registry in this file, graded here because it is the same
+    # property — a key that says which grader runs, and a duplicate that nothing
+    # notices. `KINDS` carried `"readyz-transitions"` twice for a milestone. Both
+    # entries named the same handler, so nothing misbehaved; the next duplicate
+    # is two entries pointing at DIFFERENT handlers, last-wins, with the losing
+    # case silently running the wrong grader and no error anywhere. A dict
+    # literal cannot be asked this at runtime -- by the time it exists the loser
+    # is gone -- so the source is parsed instead.
+    import ast
+    src = Path(__file__).read_text(encoding="utf-8")
+    for node in ast.walk(ast.parse(src)):
+        if not (isinstance(node, ast.Assign)
+                and any(getattr(t, "id", None) == "KINDS" for t in node.targets)
+                and isinstance(node.value, ast.Dict)):
+            continue
+        keys = [k.value for k in node.value.keys
+                if isinstance(k, ast.Constant) and isinstance(k.value, str)]
+        dupes = sorted({k for k in keys if keys.count(k) > 1})
+        if dupes:
+            wrong.append({"registry": "KINDS", "duplicate_keys": dupes})
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -3203,10 +3587,22 @@ def _run_adr_header_index_case(case: dict) -> dict:
 
     decisions_dir = Path(__file__).parents[2] / "specs" / "decisions"
     adr_files = sorted(decisions_dir.glob("ADR-*.md"))
-    missing_ruling, bad_length = [], []
+    missing_ruling, bad_length, title_number = [], [], []
     for p in adr_files:
         before_hr = p.read_text(encoding="utf-8").split("\n---\n", 1)[0]
         lines = before_hr.splitlines()
+        # T-M41-5 / T-M42-7 / M45-D2 — three blocks, one defect, and the reason
+        # it survived three audits is that nothing compared these two numbers.
+        # Everything else here keys on the FILENAME (which is right) or on the
+        # INDEX (which is right), so a body that announces a different number is
+        # unguarded: ADR-022's file opened `# ADR-020:` for a milestone and a
+        # half while ADR-020's own file opened the same way, and every reader
+        # who quoted the title propagated the wrong one. M41 nearly attributed a
+        # rule to ADR-022 that ADR-022 does not contain.
+        head = next((l for l in lines if l.startswith("# ")), "")
+        if (m := re.match(r"# ADR-(\d+)", head)) and (f := re.match(r"ADR-(\d+)", p.name)):
+            if m.group(1) != f.group(1):
+                title_number.append({"file": p.name, "title_says": f"ADR-{m.group(1)}"})
         starts = [i for i, l in enumerate(lines) if l.startswith("**Ruling**:")]
         if not starts:
             missing_ruling.append(p.name)
@@ -3223,8 +3619,47 @@ def _run_adr_header_index_case(case: dict) -> dict:
     index_path = decisions_dir / "INDEX.md"
     index_text = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
     index_nums = re.findall(r"^- ADR-(\d+)", index_text, re.MULTILINE)
-    missing_index = sorted(set(adr_nums) - set(index_nums))
+    # T-R36: per FILE, not per set. `set(adr_nums) - set(index_nums)` collapses
+    # two files sharing a number into one member, so if only one of them is
+    # indexed the missing entry never appears — which is how R26's dropped M34
+    # INDEX line survived a merge. Counting instead of subtracting makes the
+    # second file its own row. `duplicated_in_index` already caught the
+    # mirror-image case (a doubled INDEX line) and it is the asymmetry that hid
+    # this one: one side was counted and the other was not.
+    import collections as _c
+    file_counts, index_counts = _c.Counter(adr_nums), _c.Counter(index_nums)
+    missing_index = sorted(n for n in file_counts
+                           if index_counts[n] < file_counts[n]
+                           for _ in range(file_counts[n] - index_counts[n]))
     dup_index = sorted({n for n in index_nums if index_nums.count(n) > 1})
+    # T-ADR-NUM, three conjuncts. A number is allocated by "next free" when an
+    # ADR is WRITTEN, and concurrent branches all see the same next free number,
+    # so whichever merges last renumbers — this branch's wall-clock ADR was
+    # written as ADR-010 and shipped as ADR-013, three forced renames in one PR.
+    # It happened again on 2026-08-28: ADR-037 written here while 037 and 038
+    # were taken on main. Each rename rewrites one string across ~12 files, and
+    # once several renames have layered a sweep is no longer verifiable by grep
+    # alone, because every hit for the old number looks plausible — the text
+    # around it was written by an earlier sweep. A machine does not have to read
+    # each line.
+    #
+    # (1) TWO FILES, ONE NUMBER. The collision itself, which nothing named: a
+    # merge that brings in someone else's ADR-037 beside yours is clean at the
+    # git level and wrong at every other.
+    dup_files = sorted(n for n, c in file_counts.items() if c > 1)
+    # (2) A GAP. Numbers are a sequence, and a hole in it is either a lost file
+    # or a botched rename that left nothing behind. Graded from the lowest
+    # number present, so the check needs no notion of where the series began.
+    nums = sorted(int(n) for n in file_counts)
+    gaps = [f"ADR-{i:03d}" for i in range(nums[0], nums[-1] + 1)
+            if str(i).zfill(3) not in file_counts] if nums else []
+    # (3) AN INDEX ROW POINTING AT THE WRONG FILE. The INDEX names an ADR by
+    # number and then describes it; if the number and the description have
+    # drifted apart, the row is a citation to something that does not say what
+    # the row claims. Settled by the one part a machine can settle: the row's
+    # number must have a file, and that file's TITLE must carry the same number
+    # (the title/filename agreement above is what makes this transitive).
+    index_orphans = sorted(n for n in set(index_nums) if n not in file_counts)
 
     # Sections, per ADR: `### 4. ...` headings, the numbering a `§N` citation
     # points at. An ADR with none (ADR-017 is one) can be cited, never sectioned.
@@ -3273,7 +3708,10 @@ def _run_adr_header_index_case(case: dict) -> dict:
 
     wrong = {k: v for k, v in {
         "missing_ruling": missing_ruling, "ruling_too_long": bad_length,
+        "title_number_is_not_the_filename": title_number,
         "missing_from_index": missing_index, "duplicated_in_index": dup_index,
+        "two_files_share_one_number": dup_files, "gap_in_the_sequence": gaps,
+        "index_row_names_no_file": index_orphans,
         "cites_no_such_adr": dangling, "cites_no_such_section": bad_section,
     }.items() if v}
     return {"passed": not wrong, "wrong": wrong,
@@ -3390,12 +3828,44 @@ def _run_id_uniqueness_case(case: dict) -> dict:
     index_text = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
     index_nums = re.findall(r"^- ADR-(\d+)", index_text, re.M)
 
+    # T-M32-12: a task that MERGED and then left both trackers. `tasks/DONE.md`
+    # is the append-only one-line-per-merged-task index; T-R34 merged as PR #35,
+    # a later commit removed its Queue block, and no DONE line was ever written,
+    # so the only record it shipped was the pr-loop ledger and git history. M37
+    # was one step behind it in the same state, which is what made it a missing
+    # STEP rather than a one-off. The block's own preferred fix is that the
+    # pr-loop close step writes the line; this is the cheap guard it names as
+    # the fallback, and the two are not exclusive — a guard still catches the
+    # close step being skipped.
+    #
+    # The ledger is the evidence a task shipped, so: every id with a ledger row
+    # and no Queue heading must have a DONE line. An id still IN the Queue is
+    # mid-flight and not yet expected anywhere else.
+    ledger = root / "tasks" / "pr-loop-ledger.jsonl"
+    orphans = []
+    if ledger.exists():
+        for line in ledger.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            tid = json.loads(line).get("task")
+            # Only well-formed task IDs. The ledger also records phase labels
+            # that were never allocations — `M44-P1-remedy` is the remedy phase
+            # of a task, not a task — and demanding a tracker line for those
+            # would be demanding one for something that never had a block.
+            # Named ceiling: a merged task whose ledger row carries a malformed
+            # id is invisible here, which is the id-space problem one file over
+            # (T-ADR-NUM) rather than this one.
+            if (tid and re.fullmatch(_TASK_ID, tid)
+                    and tid not in todo_ids and tid not in done_ids):
+                orphans.append(tid)
+
     wrong = {k: v for k, v in {
         "duplicate_todo_ids": dups(todo_ids),
         "duplicate_done_ids": dups(done_ids),
         "in_todo_and_done": sorted(set(todo_ids) & set(done_ids)),
         "duplicate_adr_filenames": dups(adr_nums),
         "duplicate_index_rows": dups(index_nums),
+        "merged_but_in_neither_tracker": sorted(set(orphans)),
     }.items() if v}
     return {"passed": not wrong, "wrong": wrong,
             "got": {"todo_ids": len(todo_ids), "done_ids": len(done_ids),
@@ -3485,6 +3955,17 @@ def _run_readyz_case(case: dict) -> dict:
     if before.get("reason") is not None or after.get("reason") is not None or not during.get("reason"):
         wrong["reason_polarity"] = {"before": before.get("reason"), "during": during.get("reason"),
                                     "after": after.get("reason")}
+    # T-R84, the RUN half. Polarity above says a reason exists; it says nothing
+    # about what it says, and "only negatively asserted" was the finding. A real
+    # run holds the slot here, so the reason must NAME it — the id in the
+    # string, not merely the absence of a blocklisted token. The bare-string
+    # regression (`"a run is executing"`, no id) passes polarity and every
+    # negative form, and is exactly what sends an operator hunting a run id
+    # that was never printed. The browser-check half of the same rule is in the
+    # smoke probe, where `active_run_id` is null by construction.
+    if str(run_id) not in str(during.get("reason")):
+        wrong["readyz_reason_does_not_name_the_running_run"] = {
+            "reason": during.get("reason"), "active_run_id": run_id}
     # /readyz shares the agent's event loop. A prompt `busy` answer WHILE a run
     # holds the slot is positive evidence the loop is not blocked — the point of
     # the endpoint, and one of D18's open candidates. Loose bound: this is a
@@ -3581,8 +4062,69 @@ def _run_smoke_guard_case(case: dict) -> dict:
         held_by_generator = S.SEM.locked()
         _await(gen.aclose())
         leaked = S.SEM.locked()
+
+        # T-R82: the LAYER BELOW the generator contract, through a real socket.
+        # Everything above drives `smoke_events()` by hand and asserts that
+        # `GeneratorExit` returns the slot. What it cannot see is who throws
+        # that `GeneratorExit`: Starlette cancels its stream task when it sees
+        # `http.disconnect`, and if that ever stops happening — a Starlette
+        # change, a proxy that holds the socket open — the slot stays held until
+        # the navigation timeout or forever, with every assertion above still
+        # green. A leaked slot bricks the service: `/readyz` says busy and every
+        # run queues behind a browser that is gone.
+        #
+        # A raw socket rather than urllib, because the disconnect has to be
+        # ABRUPT — urlopen's close is polite about a stream it has been reading,
+        # and politeness is the one thing this is not testing. Bounded by the
+        # same `release` event the stub parks on, so there is no sleep to tune.
+        disconnect_s = exp.get("disconnect_releases_within_s")
+        if disconnect_s:
+            import socket as _socket
+            from urllib.parse import urlparse as _urlparse
+
+            u = _urlparse(base)
+            # Park the stub again: the earlier half of this case released it, so
+            # without this the launch stub returns instantly and the slot is
+            # already back before the socket has read a byte — which is how the
+            # first draft of this conjunct measured nothing while looking green
+            # in three of its four fields.
+            release.clear()
+            sock = _socket.create_connection((u.hostname, u.port), timeout=15)
+            try:
+                sock.sendall(b"GET /smoke/stream HTTP/1.1\r\n"
+                             b"Host: " + u.netloc.encode() + b"\r\n"
+                             b"Accept: text/event-stream\r\n\r\n")
+                buf = b""
+                deadline = time.monotonic() + 15
+                while b"launching" not in buf and time.monotonic() < deadline:
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    buf += chunk
+                got["socket_reached"] = "launching" if b"launching" in buf else buf[-120:].decode(
+                    "utf-8", "replace")
+                held_over_socket = S.SEM.locked()
+            finally:
+                # SO_LINGER 0: an RST rather than a FIN, which is what a closed
+                # laptop lid looks like to the server and is strictly harder to
+                # notice than a graceful close.
+                sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_LINGER,
+                                struct.pack("ii", 1, 0))
+                sock.close()
+            deadline = time.monotonic() + disconnect_s
+            while S.SEM.locked() and time.monotonic() < deadline:
+                time.sleep(0.02)
+            got["slot_back_after_s"] = round(disconnect_s - max(0.0, deadline - time.monotonic()), 2)
+            if not held_over_socket:
+                wrong["slot_not_held_over_a_real_http_stream"] = got.get("socket_reached")
+            if S.SEM.locked():
+                wrong["slot_never_came_back_after_a_real_disconnect"] = {
+                    "waited_s": disconnect_s,
+                    "note": "Starlette did not cancel the stream task, or the finally "
+                            "did not run; /readyz is busy behind a browser that is gone"}
     finally:
         _pa.async_playwright = prev
+        release.set()
 
     # A check that reaches Chromium at all is the thing being protected: a guard
     # that refuses every smoke stream passes every other assertion here.
@@ -3616,8 +4158,26 @@ def _run_smoke_guard_case(case: dict) -> dict:
     # The operator-facing half: `busy` with no run id is a browser check, and
     # "a run is executing (None)" would send someone hunting a run that never
     # existed.
-    if not during.get("reason") or "None" in str(during.get("reason")):
-        wrong["readyz_reason_names_a_run_that_does_not_exist"] = during.get("reason")
+    # T-R84: POSITIVELY, and split on which slot-holder it is. The old form
+    # asserted only "non-empty and does not contain 'None'", which a regression
+    # to a bare `"a run is executing"` — no id interpolated — passes in full
+    # while still sending an operator hunting a run that never existed, the
+    # exact defect server.py's own comment says this wording exists to fix.
+    # A negative assertion cannot pin wording; it can only pin one way of
+    # getting the wording wrong.
+    reason, run_id = during.get("reason"), during.get("active_run_id")
+    if run_id is None:
+        # The browser check holds the slot. The reason must say so and must not
+        # claim a run at all — the bare-string regression fails here, which is
+        # what the old form could not see.
+        if reason != "a browser check is running":
+            wrong["readyz_reason_is_not_the_browser_check_wording"] = reason
+    else:
+        # A real run holds it: the id must be IN the string, not merely absent
+        # from a blocklist.
+        if not reason or str(run_id) not in str(reason):
+            wrong["readyz_reason_does_not_name_the_running_run"] = {
+                "reason": reason, "active_run_id": run_id}
     if not after.get("ready"):
         wrong["slot_not_released_on_the_error_path"] = after
     if not held_by_generator:
@@ -3697,9 +4257,29 @@ def _run_matrix_case(case: dict) -> dict:
         for r in doc["rows"] for tc, v in r["cells"].items() if v not in legal
     ]
     dangling = sorted(set(CASE_CITATION.findall(doc["citation_text"])) - known)
+    # T-M32-7-D1: the CONTRACT's citations too. `specs/001-browser-contract.md`
+    # cites case ids exactly the way the matrix does and nothing checked them,
+    # which is how its laundering clause sat at a superseded wording — citing
+    # two cases where D25 and ADR-020 cite three — without anything going red.
+    # The contract is the document a reviewer reads to learn what the system
+    # guarantees, so a dangling citation there is worth more than in the matrix,
+    # not less.
+    #
+    # Same pattern, no new convention: measured on the tree before landing, all
+    # 42 backticked kebab-case tokens in that file are real case ids, so the
+    # matrix's regex needs no widening or narrowing to be correct here.
+    contract_dangling = []
+    for rel in case["expect"].get("also_cite_check", []):
+        f = Path(__file__).parents[2] / rel
+        if not f.is_file():
+            contract_dangling.append({"doc": rel, "missing_file": True})
+            continue
+        for cid in sorted(set(CASE_CITATION.findall(f.read_text(encoding="utf-8"))) - known):
+            contract_dangling.append({"doc": rel, "cites": cid})
     return {
-        "passed": not bad_status and not dangling,
-        "wrong": {"illegal_status": bad_status, "dangling_citations": dangling},
+        "passed": not bad_status and not dangling and not contract_dangling,
+        "wrong": {"illegal_status": bad_status, "dangling_citations": dangling,
+                  "dangling_in_other_documents": contract_dangling},
         "got": {"rows": len(doc["rows"]), "limitations": len(doc["limitations"]),
                 "citations": len(set(CASE_CITATION.findall(doc["citation_text"])))},
     }
@@ -3708,6 +4288,12 @@ def _run_matrix_case(case: dict) -> dict:
 REPORT_CITATION_SCOPE = ("docs", "specs", "tasks", "README.md", "src",
                           "evals/golden", "evals/adversarial", ".github", "prompts")
 REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
+# T-M32-10: how far from a citation a pass-rate claim still counts as being
+# ABOUT it, and the shape of such a claim. 400 characters is roughly a
+# paragraph — wide enough for "9/9 after this change (evals/report/…)" and its
+# inversions, narrow enough that a figure two paragraphs away is not roped in.
+_CLAIM_WINDOW = 400
+_PASS_RATE = re.compile(r"(?<![\d/])(\d{1,4})\s*/\s*(\d{1,4})(?![\d/])")
 # `tasks/reviews/` holds verbatim reviewer records, and one repro instruction
 # names a file it tells you to CREATE — R1 of PR #20 says to write a report
 # dated 29991231 into evals/report/ and then run the case. That is not a
@@ -3761,18 +4347,130 @@ def _run_report_citations_case(case: dict) -> dict:
     """
     root = Path(__file__).parents[2]
     cited: set[str] = set()
+    scanned: list = []
     for rel in REPORT_CITATION_SCOPE:
         p = root / rel
         for f in ([p] if p.is_file() else p.rglob("*") if p.is_dir() else []):
             if not f.is_file() or any(f.is_relative_to(root / d)
                                       for d in REPORT_CITATION_EXCLUDE):
                 continue
-            cited |= set(REPORT_CITATION.findall(f.read_text(encoding="utf-8", errors="ignore")))
+            body = f.read_text(encoding="utf-8", errors="ignore")
+            cited |= set(REPORT_CITATION.findall(body))
+            scanned.append((str(f.relative_to(root)), body))
     cited -= set(REPORT_CITATION_SKIP)
     missing = sorted(n for n in cited if not (root / "evals" / "report" / n).exists())
     wrong: dict = {}
     if missing:
         wrong["missing_reports"] = missing
+    # T-R19: the OTHER direction. This checked citation -> file and never file ->
+    # citation, so the merge at 94f1a42/7a2869a re-added 41-46 uncited routine
+    # gate dumps that ADR-012 had just pruned and no case saw it — 38 of them
+    # were deleted by hand, which is not a guard. Enumerate the directory and
+    # ask whether anything in scope cites each file.
+    #
+    # The exempt kinds are ADR-012's own ("non-prunable by policy regardless of
+    # citation"), not a convenience: a `live`/`soak`/`ablation`/`bench` report is
+    # a measurement nothing else can reproduce, so it stays whether or not a
+    # document happens to point at it. Routine `fast`/`invariant` dumps are the
+    # opposite — reproducible by running the suite — which is why citation is
+    # what earns them a place on disk.
+    # T-M32-10: a citation that RESOLVES is not a citation that SUPPORTS. ADR-020
+    # claimed "`live` suite 9/9 after this change" and cited a report whose score
+    # is 0.889 — 8/9, with `live-ol-edition-title` failing — and nothing could
+    # see it, because this case graded only that the file EXISTS. A green claim
+    # hung on a red artifact inside a review's own surface.
+    #
+    # The parse only has to be good enough to catch "9/9 … <red report>", which
+    # is what the block asks for: a `N/N` or `N/M` figure within `_CLAIM_WINDOW`
+    # characters of the citation, compared against the report's own results. It
+    # is NOT a general prose reader, and a claim phrased any other way is
+    # invisible — stated here rather than implied, because the neighbouring
+    # checks have been over-read before.
+    claim_wrong = []
+    for f, text in scanned:
+        # `tasks/reviews/` is verbatim reviewer record and is deliberately
+        # exempt from the CLAIM check while staying inside the citation check.
+        # The distinction is not convenience: `pr34-r4.json` is R17 REPORTING
+        # this exact defect — "ADR-020 cites a RED live report as the evidence
+        # for a 'live suite 9/9 after this change' claim" — so a reviewer
+        # quoting a false pair is the record of the finding, not a new instance
+        # of it. Editing that text to satisfy a regex would delete the evidence,
+        # which is the same ruling REPORT_CITATION_SKIP already makes one field
+        # over.
+        if f.startswith("tasks/reviews/"):
+            continue
+        for m in REPORT_CITATION.finditer(text):
+            rid = m.group(1)
+            path = root / "evals" / "report" / rid
+            if rid in REPORT_CITATION_SKIP or not path.is_file():
+                continue
+            lo = max(0, m.start() - _CLAIM_WINDOW)
+            near = text[lo:m.end() + _CLAIM_WINDOW]
+            # Distance from the citation matters. A paragraph legitimately
+            # carries the before and the after — "was 8/9, is 9/9 after this
+            # change (report)" — and a rule of "any figure in the window
+            # matches" is satisfied by the WRONG one of that pair, which is how
+            # the first version of this check passed ADR-020's own defect
+            # replayed. The NEAREST figure of the right denominator is the one
+            # the citation is offered as evidence for.
+            claims = sorted(
+                ((int(a.group(1)), int(a.group(2))),
+                 min(abs(lo + a.start() - m.start()), abs(lo + a.end() - m.end())))
+                for a in _PASS_RATE.finditer(near))
+            if not claims:
+                continue
+            rep = json.loads(path.read_text(encoding="utf-8"))
+            results = rep.get("results", [])
+            # Suite reports only. A soak report also has `results`, but its
+            # entries are sequences with no `passed` key at all, so counting
+            # them reads every soak row as a failure and turns a correct
+            # "10/10" into a false positive — measured, not imagined.
+            if not results or "passed" not in results[0]:
+                continue
+            passed, total = sum(1 for r in results if r.get("passed")), len(results)
+            # Only a claim whose DENOMINATOR is this report's size is about this
+            # report; "4 of 6 probe runs" beside a citation is not a suite score.
+            # And it is enough that ONE of them matches: a paragraph legitimately
+            # carries the before and the after ("was 8/9, is 9/9 after this
+            # change"), so requiring every figure to match would flag the very
+            # sentences that show their work. What the block is about is a claim
+            # with NO support — ADR-020's "9/9" beside a 0.889 report, where
+            # nothing in the window equalled what the artifact said.
+            same_size = sorted(((a, b), d) for (a, b), d in claims if b == total)
+            if not same_size:
+                continue
+            (a, b), _ = min(same_size, key=lambda x: x[1])
+            if a != passed:
+                claim_wrong.append({"doc": f, "cites": rid, "nearest_claim": f"{a}/{b}",
+                                    "report_is": f"{passed}/{total}"})
+    if claim_wrong:
+        wrong["claims_the_report_does_not_support"] = claim_wrong
+
+    exempt = case.get("expect", {}).get("uncited_kinds_allowed", [])
+    report_dir = root / "evals" / "report"
+    # TRACKED reports only. ADR-012 makes a report "of record" by something
+    # outside evals/report citing it, and this half keeps the committed
+    # directory pruned to exactly those. An UNTRACKED file is not in the record
+    # yet, and grading it makes this check poison the next run: a `--report` run
+    # that blocks its own commit leaves its artifact behind, so the retry goes
+    # red naming a file the retry did not write and no commit ever saw. Observed
+    # three times; the third cost a commit cycle to a run that measured 258/258.
+    # `case.get("id")` and `headline_may_fail` already excluded the CURRENT run's
+    # own report -- same defect, patched one file at a time.
+    import subprocess
+
+    ls = subprocess.run(["git", "-C", str(root), "ls-files", "evals/report"],
+                        capture_output=True, text=True, timeout=10)
+    # Fail CLOSED: if git cannot answer, grade everything, as before.
+    tracked = set(ls.stdout.split()) if ls.returncode == 0 else None
+    uncited = sorted(
+        f.name for f in report_dir.glob("*.json")
+        if f.name != "history.jsonl"
+        and not any(k in f.name for k in exempt)
+        and f.name not in cited
+        and (tracked is None or f"evals/report/{f.name}" in tracked))
+    if uncited:
+        wrong["uncited_reports"] = uncited
     want_skip = sorted(case.get("expect", {}).get("skip_exactly", []))
     got_skip = sorted(REPORT_CITATION_SKIP)
     if want_skip and got_skip != want_skip:
@@ -4925,6 +5623,7 @@ def _run_ui_form_case(case: dict) -> dict:
         page = await _ui_page(inp["viewport_width"], inp["scheme"])
         got = await page.evaluate("""async (inp) => {
           const calls = [];
+          const realFetch = window.fetch;
           window.fetch = (u, o) => {
             calls.push({url: String(u), body: o && o.body ? JSON.parse(o.body) : null});
             return Promise.reject(new Error("stubbed: no run"));
@@ -4955,6 +5654,17 @@ def _run_ui_form_case(case: dict) -> dict:
           out.card_list = [...document.querySelectorAll("#matrix tr:has(td)")].map(card => ({
             text: card.textContent, buttons: card.querySelectorAll("[data-example]").length,
             key: (card.querySelector("[data-example]") || {dataset: {}}).dataset.example}));
+          // T-R41: hand the page back as it was found. `_ui_page` CACHES the
+          // (390, dark) render, and `ui-rendered-narrow` reuses it — so this
+          // case's stubbed `window.fetch`, its visible `#err` and its filled
+          // `#task`/`#url` leaked into a different case's preconditions, and
+          // the two were order-coupled through `sorted(rglob)`. Nothing fails
+          // today; what is wrong is that whether it fails depends on filename
+          // order, which is not a property either case declares.
+          window.fetch = realFetch;
+          $("task").value = ""; $("url").value = "";
+          $("err").textContent = ""; $("err").hidden = true;
+          $("go").disabled = false;
           return out;
         }""", inp)
         return got
@@ -5431,9 +6141,27 @@ def _run_parse_plan_case(case: dict) -> dict:
         steps = parse_plan(case["input"]["content"])
     except PlanError as e:
         return {"passed": False, "error": str(e)[:200]}
+    checks = {"parsed": len(steps) == exp["steps"] and steps[0]["action"] == exp["first_action"]}
+    # T-M40-2-6: the same call, asked the opposite question. `parse_plan`'s only
+    # structural check was `isinstance(steps, list)`, so `[null]` and
+    # `["extract WebArea"]` parsed clean and the step loop raised a bare
+    # TypeError out of `run_task` -- no status, no failure class, none of the
+    # taxonomy. Graded beside the accept case rather than in a case of its own
+    # because a parser is only pinned by both directions: an accept-only case
+    # stays green under a parser that accepts everything.
+    rejected = []
+    for bad in case["input"].get("also_rejects", []):
+        try:
+            parse_plan(bad)
+        except PlanError:
+            continue
+        rejected.append(bad)
+    if "also_rejects" in case["input"]:
+        checks["rejects_non_steps"] = not rejected
     return {
-        "passed": len(steps) == exp["steps"] and steps[0]["action"] == exp["first_action"],
-        "got": {"steps": len(steps), "first_action": steps[0].get("action")},
+        "passed": all(checks.values()), "checks": checks,
+        "got": {"steps": len(steps), "first_action": steps[0].get("action"),
+                "accepted_but_should_not_have": rejected},
     }
 
 
@@ -5688,6 +6416,7 @@ def _run_doc_counts_case(case: dict) -> dict:
     read out of those report files, so the block can only be stale by citing a
     stale report, which the citation check makes visible.
     """
+    import re as _re
     from evals.run import ROOT as RUN_ROOT
     from evals.run import WALL_BUDGET_S, load_cases
 
@@ -5756,11 +6485,46 @@ def _run_doc_counts_case(case: dict) -> dict:
             if suite in case.get("suites", []) and n != counts[suite]:
                 wrong.append({"cites_a_report_of_a_different_tree": rid,
                               "report_cases": n, "suite_now": counts[suite]})
+        # T-R29: the block's CONTENT, not the presence of strings within it. The
+        # R4 repair made these numbers recompute from the reports they cite, and
+        # left the assertion as `expected in readme` — so a README that keeps
+        # the correct line and adds a contradicting one beside it is still
+        # green, which is the same class of drift R4 was filed for, one step
+        # removed. Each suite's line may appear exactly once in the block.
+        fence = _re.search(r"```\n(fast .*?)```", readme, _re.S)
+        block = fence.group(1) if fence else ""
         for suite, rep in reports.items():
             n = len(rep["results"])
             want = f"{suite}  {sum(1 for r in rep['results'] if r['passed'])}/{n}"
             if want not in readme:
                 wrong.append({"readme_does_not_say": want, "from": ws["reports"][suite]})
+            # One line per suite inside the fenced block, and it must be the
+            # right one. `\d+/\d+` rather than the expected literal, because
+            # the failure being caught is a COMPETING figure, which by
+            # definition is not the literal.
+            competing = _re.findall(rf"(?<![\w-]){_re.escape(suite)}\s+(\d+/\d+)", block)
+            if len(competing) > 1:
+                wrong.append({"readme_block_publishes_more_than_one_figure_for": suite,
+                              "found": competing})
+        # T-M39-15-D5: EVERY slot, not just the headline. The block's three
+        # slots are one claim about one tree, and the guard below was written
+        # for `headline` alone -- so `invariant` and `live` could cite a run
+        # that failed cases, state its redness accurately, and sail through
+        # indefinitely. "The suite is green" is not evidence that the published
+        # numbers are honest. Same fixed-point exemption, for the same reason:
+        # a report whose only red case is this check (or one declared in
+        # `headline_may_fail`) is a legitimate citation, and without that a
+        # guard built for the (a) case reddens a CORRECT citation on its first
+        # run -- the false-red class that teaches people to route around a gate.
+        self_ref = {case.get("id")} | set(
+            case.get("expect", {}).get("headline_may_fail", []))
+        for slot, rep in sorted(reports.items()):
+            if slot == ws["headline"]:
+                continue  # graded below, where its redness also voids the figures under it
+            if red := [r["id"] for r in rep["results"]
+                       if not r["passed"] and r["id"] not in self_ref]:
+                wrong.append({"cited_report_is_red": ws["reports"][slot],
+                              "slot": slot, "failed": red})
         head = reports.get(ws["headline"])
         # A baseline block is a claim that the tree is in this state. Citing a
         # run that FAILED cases and publishing its wall clock as the tree's is
@@ -5774,8 +6538,18 @@ def _run_doc_counts_case(case: dict) -> dict:
         # it failing, so no green report can ever be produced to cite (found by
         # merging origin/main into task/M32 — the numbers all had to move at
         # once). Any OTHER failing case still disqualifies the report.
+        # T-R19's own fixed-point problem, and the same argument one paragraph
+        # up rather than a new one. `report-citations-resolve` now reddens on any
+        # UNCITED report, and a `--report` run's own artifact is uncited until
+        # this block is re-pointed at it — so the run that produces the headline
+        # is red on the guard that produced it, and no green report can ever be
+        # made to cite. That is the identical no-fixed-point shape the exclusion
+        # above exists for, arriving through a second case, so it gets the
+        # identical treatment: declared in `expect`, not hard-coded, so adding a
+        # third is a visible edit to a case file rather than a quiet widening.
+        # Any OTHER failing case still disqualifies the report.
         if head and (failed := [r["id"] for r in head["results"]
-                                if not r["passed"] and r["id"] != case.get("id")]):
+                                if not r["passed"] and r["id"] not in self_ref]):
             wrong.append({"headline_report_is_red": ws["reports"][ws["headline"]],
                           "failed": failed})
             head = None  # the red baseline IS the finding; nothing under it is worth recomputing
@@ -5823,10 +6597,27 @@ def _run_doc_counts_case(case: dict) -> dict:
                 "with_browser": int(head["totals"]["cases_with_budgets"]),
                 "total": len(head["results"]),
                 "remaining": len(head["results"]) - int(head["totals"]["cases_with_budgets"])}
-        text = (RUN_ROOT / s1["doc"]).read_text(encoding="utf-8")
+        whole = (RUN_ROOT / s1["doc"]).read_text(encoding="utf-8")
+        # T-M32-4: SCOPED, the way `analysis_coverage` already slices §6. The
+        # unscoped read let a contradicting sentence anywhere in the document
+        # satisfy an `in text` assertion — verified by inserting "Actually only
+        # 170 browser actions run..." above the correct line and watching the
+        # case stay green.
+        start = whole.find(s1.get("section_start", "")) if s1.get("section_start") else 0
+        end = whole.find(s1["section_end"], start + 1) if s1.get("section_end") else len(whole)
+        text = whole[start if start >= 0 else 0: end if end > 0 else len(whole)]
         for q in s1["quotes"]:
             if (want := q.format(**vals)) not in text:
                 wrong.append({"analysis_section1_does_not_say": want})
+        # T-M32-4 / T-R29: presence is not enough. A line that PARSES as a
+        # competing figure for the same field, sitting beside the correct one,
+        # is the drift these checks exist to catch — and an `in text` assertion
+        # is blind to it by construction, because the correct string is still
+        # there. Each pattern must match exactly once in the section.
+        for pat in s1.get("at_most_one", []):
+            hits = _re.findall(pat, text)
+            if len(hits) > 1:
+                wrong.append({"analysis_section1_says_it_twice": pat, "hits": hits[:6]})
         # ...and the prose has to NAME the report those values came from. The
         # numbers were derived here from the headline report while the sentence
         # beside them credited a different file — "read out of the committed
@@ -5910,6 +6701,38 @@ def _run_doc_counts_case(case: dict) -> dict:
             got = bool(_ceiling_drift(row["line"], WALL_BUDGET_S))
             if got != row["flags"]:
                 wrong.append({"ceiling_row": row["line"],
+                              "should_flag": row["flags"], "got": got,
+                              "why": row.get("note")})
+
+        # The prose half (T-R25/T-M32-16/T-R35). Same two-directional row table,
+        # for the same reason: the dangerous failure is a sweep that goes quiet.
+        for path in sorted(p for p in RUN_ROOT.rglob("*.md")
+                           if not skip & set(p.relative_to(RUN_ROOT).parts)
+                           and p.relative_to(RUN_ROOT).parts[0] in ("specs", "docs")
+                           or p.name == "README.md"):
+            if skip & set(path.relative_to(RUN_ROOT).parts):
+                continue
+            for line_no, lit, shape, ctx in _local_ceiling_drift(
+                    path.read_text(encoding="utf-8"), WALL_BUDGET_S):
+                wrong.append({"publishes_a_local_ceiling_nothing_enforces": lit,
+                              "shape": shape, "committed": WALL_BUDGET_S,
+                              "doc": path.relative_to(RUN_ROOT).as_posix(),
+                              "line": line_no, "context": ctx})
+        if inp.get("readme_wall_clocks_cite_a_source"):
+            for line_no, figs, ctx in _unsourced_wall_clocks(
+                    (RUN_ROOT / "README.md").read_text(encoding="utf-8")):
+                wrong.append({"wall_clock_with_no_record_behind_it": figs,
+                              "doc": "README.md", "line": line_no, "context": ctx})
+        for row in inp.get("wall_clock_source_rows", []):
+            got = bool(_unsourced_wall_clocks(row["text"]))
+            if got != row["flags"]:
+                wrong.append({"wall_clock_row": row["text"][:80],
+                              "should_flag": row["flags"], "got": got,
+                              "why": row.get("note")})
+        for row in inp.get("local_ceiling_rows", []):
+            got = bool(_local_ceiling_drift(row["line"], WALL_BUDGET_S))
+            if got != row["flags"]:
+                wrong.append({"local_ceiling_row": row["line"],
                               "should_flag": row["flags"], "got": got,
                               "why": row.get("note")})
 
@@ -6139,6 +6962,22 @@ def _check_steps_adopt_only() -> dict:
                 "steps" in set(targets(n.target))):
             wrong.append({"line": line, "rebinds_steps_without_adopt":
                           ast.unparse(n)})
+        # T-M32-14: two more forms that BIND the name and were invisible here,
+        # because only assignment nodes were inspected. `for steps in ...` binds
+        # through `ast.For.target` and `with ... as steps` through
+        # `ast.withitem.optional_vars`; neither can be adopt-derived by
+        # construction, so both are unconditionally wrong rather than checked
+        # against `adopt_names`. Neither removes a lint that behaviour does not
+        # also catch — `observe-drilldown-replan-is-linted` goes red on the one
+        # that does — so this closes a DISCLOSURE gap, which is the same class
+        # the check itself was written to close.
+        elif isinstance(n, (ast.For, ast.AsyncFor)) and "steps" in set(targets(n.target)):
+            wrong.append({"line": line, "rebinds_steps_via_for_target":
+                          ast.unparse(n.target)})
+        elif isinstance(n, (ast.With, ast.AsyncWith)) and any(
+                it.optional_vars is not None and "steps" in set(targets(it.optional_vars))
+                for it in n.items):
+            wrong.append({"line": line, "rebinds_steps_via_with_as": ast.unparse(n.items[0])})
         elif isinstance(n, ast.Assign) and any(
                 isinstance(t, ast.Subscript) and isinstance(t.value, ast.Name)
                 and t.value.id == "steps" for t in n.targets):
@@ -6165,14 +7004,116 @@ def _check_examples_cover_matrix() -> dict:
     from .server import parse_matrix
 
     page = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
-    block = page.split("const EXAMPLES = {", 1)[1].split("\n};", 1)[0]
-    examples = set(re.findall(r'^\s*"([^"]+)":\s*\{', block, re.M))
+    examples = _js_object_keys(page, "EXAMPLES")
     rows = {r["domain"] for r in parse_matrix()["rows"] if not r["domain"].endswith(" fixture")}
-    return {"passed": examples == rows,
-            "wrong": {"rows_without_example": sorted(rows - examples),
-                      "examples_without_row": sorted(examples - rows)},
+    wrong = {"rows_without_example": sorted(rows - examples),
+             "examples_without_row": sorted(examples - rows)}
+    # T-R42: the parser used to require a key to START a line, so an entry
+    # written mid-line was dropped from the parsed set -- and a dropped key
+    # reads exactly like a doc row with no example. Every consequence happened
+    # to fail safely, which is precisely why nothing would have caught the
+    # parser changing that. Probe it here rather than in a second case: the
+    # claim is about THIS function's reader, and a source it never reads in
+    # production cannot drift away from the one it does.
+    probe = 'const EXAMPLES = {"a.example": {t: "x"}, "b.example": {t: "y"}};'
+    if _js_object_keys(probe, "EXAMPLES") != {"a.example", "b.example"}:
+        wrong["mid_line_key_not_counted"] = sorted(_js_object_keys(probe, "EXAMPLES"))
+    return {"passed": not any(wrong.values()),
+            "wrong": {k: v for k, v in wrong.items() if v},
             "got": {"examples": sorted(examples), "rows": sorted(rows)}}
 
+
+def _js_object_keys(src: str, name: str) -> set:
+    """Top-level string keys of the JS object literal `const <name> = {...}`.
+
+    Brace-matched rather than line-matched, so neither `const X={` nor an entry
+    written mid-line changes what is seen (T-R42). Depth-aware and
+    string-aware: a `{` or a quote inside a value is not a key boundary.
+    """
+    m = re.search(r"\bconst\s+" + re.escape(name) + r"\s*=\s*\{", src)
+    if not m:
+        return set()
+    i, depth, keys = m.end(), 1, set()
+    while i < len(src) and depth:
+        c = src[i]
+        # Comments before strings: this block carries prose with apostrophes
+        # in it ("A Student's Guide"), and reading one as a string opener
+        # swallowed the rest of the file -- the scan then ran to EOF with
+        # depth never returning to 0. URLs are safe because a `//` inside a
+        # string is consumed by the string branch below before it is seen here.
+        if src.startswith("//", i):
+            i = src.find("\n", i) + 1 or len(src)
+            continue
+        if src.startswith("/*", i):
+            i = src.find("*/", i) + 2
+            continue
+        if c in '"\'`':
+            j = i + 1
+            while j < len(src) and src[j] != c:
+                j += 2 if src[j] == "\\" else 1
+            if depth == 1 and re.match(r'\s*:\s*', src[j + 1:j + 8]):
+                keys.add(src[i + 1:j])
+            i = j + 1
+            continue
+        depth += (c == "{") - (c == "}")
+        i += 1
+    return keys
+
+
+
+def _check_judge_data_only_rule() -> dict:
+    """`SYSTEM` still tells the judge that EVIDENCE is data, never instruction.
+
+    T-M39-10. ADR-023 names three prompt-side defences as what bounds the
+    echo-only certify, and only two were graded: rebuilding `_prompt` with the
+    evidence block last reddens `judge-injection-cannot-flip-verdict`, and
+    replacing `_defang_fence` with the identity reddens
+    `judge-injection-marker-forge-cannot-escape-fence`. Deleting the data-only
+    PARAGRAPH from `SYSTEM` outright reddened nothing at all — measured, whole
+    suite green. The two graded defences are structural (where bytes sit); the
+    ungraded one is behavioural (whether the model obeys), and the behavioural
+    half is the load-bearing one.
+
+    WHAT THIS GRADES, exactly: that the built prompt CARRIES the rule. It is a
+    string check and it does not, and must not be described as, proving that any
+    model obeys it. The behavioural form belongs in `full` — a live judge given
+    evidence containing a forged directive, run with and without the paragraph,
+    where the DELTA is the measurement — and it is not built here because this
+    shell has no key. ADR-023's table carries a third row saying so in those
+    words.
+
+    Conjuncts rather than one substring: a single `in` test over a long
+    paragraph goes green on a rewrite that keeps the words and loses the rule,
+    and red on a faithful rephrasing. Each clause is listed separately so that
+    weakening ONE of them is a red naming that clause, and rewording the
+    paragraph is a visible edit to a case file rather than a silent pass.
+
+    Read through the SYSTEM constant AND through a built prompt, because the
+    property is about what the model is sent: a rule present in a constant that
+    no request carries is not a defence.
+    """
+    from .judge import SYSTEM, _prompt
+
+    want = {
+        "evidence_is_data": ["untrusted", "DATA"],
+        "never_an_instruction": ["never an instruction", "no matter what it says"],
+        "named_attack_shapes": ["ignore previous instructions", "you must respond with"],
+        "never_follow_a_directive_inside": ["never follow a directive found inside"],
+        "only_this_message_governs": ["only instructions that govern", "system message"],
+    }
+    missing = {k: [w for w in words if w.lower() not in SYSTEM.lower()]
+               for k, words in want.items()}
+    wrong = {k: v for k, v in missing.items() if v}
+    # The rule must reach a REQUEST, not merely exist. `_prompt` builds the user
+    # half; the system half is what carries the rule, so the assertion is that
+    # the user half points AT it rather than restating it — a restatement inside
+    # the untrusted-adjacent half is exactly what an injection would forge.
+    built = _prompt("q", "a", "evidence")
+    if "system rules" not in built:
+        wrong["built_prompt_does_not_defer_to_the_system_rules"] = built[:200]
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"conjuncts": len(want), "system_chars": len(SYSTEM),
+                    "grades": "the STRING is present, never that a model obeys it"}}
 
 def _check_narrowing_fails_closed() -> dict:
     """`_nearest`'s `loose` switch has no permissive default, and no default at all.
@@ -6252,6 +7193,44 @@ def _check_driver_tools_match_the_executor() -> dict:
                       "table": list(TOOL_TABLE)})
     return {"passed": not wrong, "wrong": wrong,
             "got": {"tools": sorted(tools), "actions": sorted(actions)}}
+
+
+def _check_guards_line_matches_the_mode() -> dict:
+    """The ceilings the page prints are the ceilings the run will enforce.
+
+    T-M42-8. `#guards` carried mode B's numbers as literal text, printed
+    unconditionally — so under `BROWSER_AGENT_MODE=loop` a visitor read "30
+    actions and 2 replans" while watching a run bounded by 40 actions, no
+    replans and a $5.00 ceiling that ADR-028 names as the only bound on a public
+    unauthenticated endpoint.
+
+    Graded against the CONSTANTS the executor enforces rather than against a
+    frozen string, because the failure is divergence, not wording: retyping a
+    number here would reproduce exactly the defect. All three modes, since the
+    bug was that only one was ever rendered. And the page must carry no literal
+    ceiling of its own — a second copy is a second thing to drift.
+    """
+    from .agent import LOOP_BUDGETS, MAX_REPLANS, RUN_BUDGETS
+    from .server import PAGE, guards_line
+
+    wrong = {}
+    for mode, must in (("plan", [str(RUN_BUDGETS["actions"]), str(MAX_REPLANS)]),
+                       ("loop", [str(LOOP_BUDGETS["actions"]),
+                                 f"{LOOP_BUDGETS['llm_usd']:.2f}"]),
+                       ("escalate", [str(RUN_BUDGETS["actions"]),
+                                     str(LOOP_BUDGETS["actions"]),
+                                     f"{LOOP_BUDGETS['llm_usd']:.2f}"])):
+        line = guards_line(mode)
+        if missing := [w for w in must if w not in line]:
+            wrong[mode] = {"line": line, "does_not_carry": missing}
+    # The loop line must not advertise replans it does not have, which is the
+    # half a "contains the right numbers" test would pass while still lying.
+    if "replan" in guards_line("loop") and "no replans" not in guards_line("loop"):
+        wrong["loop_advertises_replans"] = guards_line("loop")
+    if re.search(r"up to \d+ actions", PAGE):
+        wrong["page_carries_its_own_ceiling"] = "a literal ceiling in PAGE is a second copy"
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {m: guards_line(m) for m in ("plan", "loop", "escalate")}}
 
 
 def _check_ui_adrs_cover_every_decision() -> dict:
@@ -6765,7 +7744,6 @@ def _check_build_sha_is_derived(dockerfile: Path | None = None,
       (`COPY --from=<that stage> ... /app/BUILD_SHA`) and no `.git` anything.
     """
     import subprocess
-    import tempfile
 
     root = Path(__file__).parents[2]
     df = dockerfile if dockerfile is not None else root / "Dockerfile"
@@ -7112,6 +8090,7 @@ def _check_origin_storage_seed_is_scoped() -> dict:
 INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "adr029-scope-matches-the-suites": _check_adr029_scope_matches_the_suites,
               "ui-adrs-cover-every-decision": _check_ui_adrs_cover_every_decision,
+              "guards-line-matches-the-mode": _check_guards_line_matches_the_mode,
               "adr029-variance-cites-the-ledger": _check_adr029_variance_cites_the_ledger,
               "driver-tools-match-the-executor": _check_driver_tools_match_the_executor,
               "examples-cover-matrix": _check_examples_cover_matrix,
@@ -7132,13 +8111,14 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "planner-prompt": _check_planner_prompt,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
               "narrowing-fails-closed": _check_narrowing_fails_closed,
+              "judge-data-only-rule": _check_judge_data_only_rule,
               "ground-truth-endpoint-eval-only": _check_ground_truth_endpoint_eval_only,
               "version-never-guesses": _check_version_never_guesses,
               "build-sha-derived": _check_build_sha_is_derived,
               "origin-storage-seed-is-scoped": _check_origin_storage_seed_is_scoped}
 
 
-def _main_exit_code(wall_seconds: float) -> int:
+def _main_exit_code(wall_seconds: float, want_report: bool = False):
     """`evals.run.main()` over one stub case whose only property is its duration.
 
     Grades the CALL SITE, not the rule: `over_budget()` being correct buys
@@ -7156,6 +8136,7 @@ def _main_exit_code(wall_seconds: float) -> int:
     same as the sys.argv/module-function patch above."""
     import contextlib
     import io
+    import json as _json
     import sys
     import tempfile
     from pathlib import Path as _Path
@@ -7167,7 +8148,15 @@ def _main_exit_code(wall_seconds: float) -> int:
     report_dir, history = R.REPORT_DIR, R.HISTORY
     try:
         with tempfile.TemporaryDirectory() as tmp:
-            sys.argv = ["run", "--suite", "fast", "--no-report"]
+            # T-R21: `--no-report` is what made the over-budget WRITE POLICY
+            # ungradeable from here. `evals/run.py` puts `over_budget(...)` into
+            # `red`, and `red` is what decides a full per-case report gets
+            # written — so an over-budget run must leave an inspectable artifact
+            # behind, and deleting that clause reddened nothing. Every existing
+            # row keeps `--no-report` (they grade the EXIT CODE and must not
+            # write); `want_report` drops it and returns what appeared.
+            sys.argv = (["run", "--suite", "fast"] if want_report
+                        else ["run", "--suite", "fast", "--no-report"])
             R.load_cases = lambda suite: [stub]
             R.run_case = lambda c: {"passed": True, "seconds": wall_seconds,
                                     "id": c["id"], "kind": c["_kind"]}
@@ -7175,7 +8164,14 @@ def _main_exit_code(wall_seconds: float) -> int:
             R.HISTORY = _Path(tmp) / "history.jsonl"
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-                return R.main()
+                code = R.main()
+            if not want_report:
+                return code
+            hist = _Path(tmp) / "history.jsonl"
+            rows = [_json.loads(l) for l in hist.read_text().splitlines()
+                    if l.strip()] if hist.exists() else []
+            return (code, sorted(f.name for f in _Path(tmp).glob("*-fast.json")),
+                    rows[-1] if rows else {})
     finally:
         sys.argv, R.load_cases, R.run_case = argv, load, run
         R.REPORT_DIR, R.HISTORY = report_dir, history
@@ -7250,6 +8246,62 @@ def _run_wall_clock_case(case: dict) -> dict:
         applied = [dict(r, got=_main_exit_code(r["wall_seconds"]))
                    for r in case["input"]["applied_in_main"]]
         wrong += [r for r in applied if r["got"] != r["exit"]]
+        # T-R21: the WRITE POLICY, which no row could observe while every probe
+        # passed `--no-report`. `evals/run.py` puts `over_budget(...)` into
+        # `red`, and `red` is what decides a full per-case report is written —
+        # so an over-budget run must leave an inspectable artifact and an
+        # under-budget green one must not. Deleting that clause reddened
+        # nothing before this, which is the same shape as PR #20 R8: a rule
+        # nobody asks is a comment.
+        # T-R13: the module TAIL, which is the only thing CI and the pre-commit
+        # hook actually read. `_main_exit_code` grades what `main()` RETURNS;
+        # changing `sys.exit(main())` to a bare `main()` silently disables the
+        # wall-clock gate — and the invariant and regression gates with it —
+        # while every probe above stays green, because none of them goes
+        # through the tail. Graded structurally: the module must end in an
+        # `if __name__ == "__main__":` whose body passes `main()` to
+        # `sys.exit`, which is the one shape that turns a return value into a
+        # process exit code.
+        if case["expect"].get("module_tail_exits_with_main"):
+            import ast as _ast
+            tail_ok = False
+            tree = _ast.parse((Path(__file__).parents[2] / "evals" / "run.py")
+                              .read_text(encoding="utf-8"))
+            for node in tree.body:
+                if not (isinstance(node, _ast.If) and _ast.unparse(node.test)
+                        == "__name__ == '__main__'"):
+                    continue
+                for stmt in node.body:
+                    call = getattr(stmt, "value", None)
+                    if (isinstance(call, _ast.Call)
+                            and _ast.unparse(call.func) == "sys.exit"
+                            and any(isinstance(a, _ast.Call)
+                                    and _ast.unparse(a.func) == "main"
+                                    for a in call.args)):
+                        tail_ok = True
+            if not tail_ok:
+                wrong.append({"module_tail": "evals/run.py does not end in "
+                                             "`sys.exit(main())` under a __main__ guard, so "
+                                             "main()'s return value never becomes an exit "
+                                             "code and every gate it carries is inert"})
+
+        for row in case["input"].get("report_written_when_red", []):
+            code, files, ledger_row = _main_exit_code(row["wall_seconds"], want_report=True)
+            got = {"exit": code, "wrote_a_report": bool(files)}
+            # T-M39-2's second symptom, graded behaviourally rather than by
+            # grepping the source: judge spend was invisible outside this
+            # runner's stdout, so a committed ledger row could not answer "what
+            # did this run cost". The row must now carry the KEY — its value is
+            # 0.0 on a stubbed run and that is fine; what was wrong was the key
+            # not existing at all.
+            if case["expect"].get("ledger_row_carries_judge_usd") and \
+                    "judge_usd" not in ledger_row:
+                wrong.append({"ledger_row_has_no_judge_usd": sorted(ledger_row)})
+            if got != {"exit": row["exit"], "wrote_a_report": row["wrote_a_report"]}:
+                wrong.append({"report_write_policy": row.get("note"),
+                              "want": {"exit": row["exit"],
+                                       "wrote_a_report": row["wrote_a_report"]},
+                              "got": got})
     finally:
         for n, v in prev.items():
             os.environ.pop(n, None)
@@ -7259,6 +8311,22 @@ def _run_wall_clock_case(case: dict) -> dict:
     # workflow is the only place it takes effect, so the value it declares is
     # part of the ruling (the R8 lesson — a mechanism nothing consults).
     wf = (Path(__file__).parents[2] / ".github" / "workflows" / "eval.yml").read_text()
+    # T-R74: that CI's rows are TAGGED `ci` is what keeps a CI row out of a
+    # `local` band, and it was asserted rather than demonstrated. `env_tag()`'s
+    # operative mechanism on CI is the `CI` fallback, which no test here can
+    # reach; what this file CAN pin is that the workflow declares an
+    # environment and that it is not `local`. If the tag silently came out
+    # `local` on CI, T-R44's defect would return with every check green.
+    # Named ceiling: this grades the DECLARATION, not that Actions sets `CI`
+    # and not that the tag survives into a committed row — that half needs a CI
+    # artifact and stays T-R73's.
+    if exp.get("workflow_declares_a_non_local_env"):
+        declared_env = re.search(r"EVAL_ENV:\s*\"?([\w-]+)\"?", wf)
+        value = declared_env.group(1) if declared_env else None
+        if value is None or value == "local":
+            wrong.append({"workflow_env": value,
+                          "note": "the workflow must declare an environment that is not "
+                                  "`local`, else a CI row lands in the local band"})
     for suite, key in (("fast", "ci_wall_seconds"), ("invariant", "ci_invariant_wall_seconds")):
         if key not in exp:
             continue
@@ -7310,6 +8378,171 @@ def _run_browser_liveness_case(case: dict) -> dict:
                     "reason_after": after.get("reason")}}
 
 
+def _run_pre_commit_hook_case(case: dict) -> dict:
+    """T-R91: the hook must tell "the suite regressed" from "the suite could not
+    run", and must NOT name `--update-baseline` in the second case.
+
+    Exercised by RUNNING the hook with `EVAL_HOOK_PY` pointed at an executable
+    that fails every invocation, rather than by grepping it. A grep would pass
+    on a hook whose branch is unreachable, which is the shape this repo keeps
+    finding: a check that cannot fail the way its claim says it can.
+
+    The hook exits before the gate runs, so this costs one `sh` and no suite."""
+    import subprocess
+    import tempfile
+
+    root = Path(__file__).parents[2]
+    hook = root / ".githooks" / "pre-commit"
+    if not hook.exists():
+        return {"passed": False, "wrong": {"no_hook": str(hook)}}
+    # NEVER exec a hook that does not honour the seam, and this is not caution
+    # for its own sake: a hook that ignores `EVAL_HOOK_PY` falls through to
+    # `evals.run --suite fast`, that suite contains THIS case, and this case
+    # runs the hook. Watching the case red against the un-seamed hook did
+    # exactly that -- 408 `evals.run` processes before it was killed. The seam
+    # is part of what is graded, so its absence is a legitimate red, and a red
+    # that costs one `grep` is strictly better than one that costs the machine.
+    text = hook.read_text()
+    if "EVAL_HOOK_PY" not in text:
+        return {"passed": False,
+                "checks": {"seam_present": False},
+                "wrong": {"hook_ignores_the_seam": "EVAL_HOOK_PY",
+                          "note": "not executed -- an un-seamed hook runs the "
+                                  "fast suite, which runs this case"}}
+    with tempfile.TemporaryDirectory() as d:
+        broken = Path(d) / "broken-python"
+        broken.write_text("#!/bin/sh\nexit 1\n")
+        broken.chmod(0o755)
+        env = {**os.environ, "EVAL_HOOK_PY": str(broken)}
+        out = subprocess.run(
+            ["sh", str(hook)], cwd=root, capture_output=True, text=True,
+            timeout=30, env=env)
+        # T-R27's half, exercised rather than described: run a COPY from
+        # somewhere else, the way `core.hooksPath`'s absolute path makes every
+        # worktree commit run the main checkout's copy. The tree's own hook
+        # must take over, and say so.
+        elsewhere = Path(d) / "hook-from-another-checkout"
+        elsewhere.write_text(text)
+        elsewhere.chmod(0o755)
+        relayed = subprocess.run(
+            ["sh", str(elsewhere)], cwd=root, capture_output=True, text=True,
+            timeout=30, env=env)
+        # T-M39-15-D4: the OTHER gate script. Both carried the identical
+        # `PY=python3; [ -x .venv/bin/python ] && ...` line, which is how both
+        # degraded to a depsless interpreter at once; they now source one
+        # resolver, and grading only the pre-commit half would leave the copy
+        # that talks to the agent ungraded. Same seam, so the same reasoning
+        # about recursion applies -- the resolver fails before either script
+        # reaches `evals.run`, and this file refuses to exec a script that does
+        # not honour it.
+        post = root / ".claude" / "hooks" / "post-edit-invariant.sh"
+        post_text = post.read_text() if post.exists() else ""
+        if "EVAL_HOOK_PY" in post_text or "lib-interpreter" in post_text:
+            edited = subprocess.run(
+                ["bash", str(post)], cwd=root, capture_output=True, text=True,
+                timeout=30, env={**env, "CLAUDE_PROJECT_DIR": str(root)},
+                input='{"tool_input": {"file_path": "/x/src/browser/agent.py"}}')
+        else:
+            edited = None
+    exp = case["expect"]
+    text = out.stdout + out.stderr
+    checks = {
+        "seam_present": True,
+        "blocks": out.returncode != 0,
+        "says_environment": all(w in text for w in exp["must_say"]),
+        # The whole point of the block. A hook that suggests the one remedy
+        # CLAUDE.md rule 1 forbids, on a failure that is not a regression, has
+        # talked its author into the thing it exists to prevent.
+        "never_suggests_baseline": not any(w in text for w in exp["must_not_say"]),
+        "hands_off_to_this_tree": exp["handoff_says"] in (relayed.stdout + relayed.stderr),
+    }
+    if exp.get("post_edit_hook_too"):
+        et = "" if edited is None else edited.stdout + edited.stderr
+        checks["post_edit_seam_present"] = edited is not None
+        # Exit 2 is what reaches the agent; 0 would mean the edit was silently
+        # blessed by a suite that never ran.
+        checks["post_edit_blocks"] = edited is not None and edited.returncode == 2
+        checks["post_edit_says_environment"] = any(
+            w in et for w in ("could NOT run", "ENVIRONMENT problem"))
+        checks["post_edit_never_suggests_baseline"] = not any(
+            w in et for w in exp["must_not_say"])
+        got_post = {"exit": None if edited is None else edited.returncode,
+                    "output": et[:400]}
+    else:
+        got_post = None
+    return {"passed": all(checks.values()), "checks": checks,
+            "got": {"exit": out.returncode, "output": text[:600],
+                    "post_edit": got_post}}
+
+
+
+def _run_snapshot_freshness_case(case: dict) -> dict:
+    """Does the committed capture still describe the page it was captured from?
+
+    T-M41-3. `src/browser/fixtures/sec10k-inspector.html` is a rendered capture
+    of a deployed third-party page, and five `fast` cases grade page SHAPE
+    against it. When that deployment moves, those cases keep passing against a
+    page that no longer exists and the `live` ones start failing for a reason
+    nobody attributes correctly — D28's build-expiry finding arriving from the
+    target's side.
+
+    The snapshot's sha is read out of the ARTIFACT (its own footer, which the
+    captured page filled from the same `/api/meta` field), not out of a
+    provenance sentence. That distinction is the milestone's own lesson: the
+    sha was recorded in five case files and a support-matrix row, all of them
+    said the wrong one, and it took a cold review of the committed file to
+    notice. A document that describes an artifact can be wrong about it; the
+    artifact cannot.
+
+    `live`-tagged, never `fast`: one GET, no browser, no LLM, $0 — and a stale
+    snapshot is a DECLARATION problem, not a gate regression, so it must not be
+    able to block a commit. Re-capturing is deliberately out of scope: a capture
+    is evidence about a build, and re-taking it is a decision (ADR-022's shape).
+    """
+    import re as _re
+    import urllib.request
+
+    inp = case["input"]
+    # Composed from the case's own `domain` tag and a bare PATH, never stored as
+    # a URL. `sec10k-ground-truth-endpoint-eval-only` refuses any `<host>/api/`
+    # string inside a case's `input`, because `input` is what a RUN is given and
+    # an executor handed a fetchable API URL can answer without reading the
+    # page. This case builds no run at all, but the rule is worth obeying at
+    # face value rather than exempting a kind — an exemption is a door, and a
+    # bare path is not a thing anything can fetch.
+    meta_url = f"https://{case['domain']}{inp['meta_path']}"
+    snap = Path(__file__).with_name("fixtures") / inp["fixture"]
+    if not snap.exists():
+        return {"passed": False, "wrong": {"no_snapshot": str(snap)}}
+    m = _re.search(inp.get("sha_pattern", r"build ([0-9a-f]{8,40})"),
+                   snap.read_text(encoding="utf-8"))
+    if not m:
+        return {"passed": False,
+                "wrong": {"snapshot_records_no_build_sha": inp["fixture"],
+                          "note": "the capture cannot say which build it is of, "
+                                  "so nothing can say whether it is stale"}}
+    captured = m.group(1)
+    try:
+        with urllib.request.urlopen(meta_url, timeout=20) as r:
+            deployed = json.loads(r.read().decode("utf-8")).get(inp.get("sha_field", "git_sha"))
+    except Exception as exc:
+        # Loud, and NOT a pass. An unreachable target is exactly the state in
+        # which a stale snapshot goes unnoticed (CLAUDE.md rule 4).
+        return {"passed": False,
+                "wrong": {"meta_unreachable": meta_url,
+                          "error": f"{type(exc).__name__}: {exc}"}}
+    fresh = bool(deployed) and deployed.startswith(captured[:12]) or captured.startswith(
+        (deployed or "")[:12])
+    return {"passed": fresh,
+            "wrong": {} if fresh else {
+                "snapshot_is_of_a_build_that_is_no_longer_deployed": True,
+                "captured_at": captured, "deployed_now": deployed,
+                "graded_offline_against_this_snapshot": inp.get("cases_that_depend_on_it", []),
+                "note": "the offline cases still pass; what they pass against is a page "
+                        "that is not being served any more. Re-capturing is a decision, "
+                        "not a repair — see tasks/TODO.md T-M41-3."},
+            "got": {"captured_at": captured, "deployed_now": deployed}}
+
 def _run_history_ledger_isolated_case(case: dict) -> dict:
     """The wall-clock probe must never write to the real history ledger.
 
@@ -7356,6 +8589,8 @@ KINDS = {
     "gateway-error": _run_gateway_error_case,
     "gateway-model": _run_gateway_model_case,
     "history-ledger-isolated": _run_history_ledger_isolated_case,
+    "pre-commit-hook": _run_pre_commit_hook_case,
+    "snapshot-freshness": _run_snapshot_freshness_case,
     "invariant": _run_invariant_case,
     "judge": _run_judge_case,
     "matrix": _run_matrix_case,
@@ -7365,7 +8600,6 @@ KINDS = {
     "observe": _run_observe_case,
     "parse-plan": _run_parse_plan_case,
     "planner-prompt": _run_planner_prompt_case,
-    "readyz-transitions": _run_readyz_case,
     "relocate": _run_relocate_case,
     "schema": _run_schema_case,
     "screening": _run_screening_case,

@@ -182,6 +182,14 @@ def parse_plan(content: str) -> list:
     try:
         steps = json.loads(text)
         assert isinstance(steps, list)
+        # T-M40-2-6: the list was the only thing checked, so `[None]` and
+        # `["extract WebArea"]` were plans as far as every layer below is
+        # concerned -- and the step loop then read `step["action"]` off a string
+        # and raised a bare TypeError out of `run_task`, with no status and no
+        # failure class. "Is this object a step" belongs HERE, one layer above
+        # the lint, whose own question is "is this plan answerable".
+        assert all(isinstance(x, dict) and isinstance(x.get("action"), str)
+                   for x in steps), "a step must be an object with a string action"
         return steps
     except Exception as e:
         raise PlanError(f"planner returned non-plan output: {e}: {content[:200]}")

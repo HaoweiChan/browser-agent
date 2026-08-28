@@ -167,6 +167,113 @@ evidence that the loop cadence helped. Also owed here: an escalate case with
 `judge_calls: 2` path specs/001 now documents; nothing in the suite reaches it
 today, and it is the path ADR-037's own cost argument makes most likely.
 
+### T-A39-3 — ADR-039 traded a paint race for a cap, and on the sec-10k inspector the status line is what fell off            [status: done]
+Origin: ADR-039's own live verification, 2026-08-28. Measured, not predicted.
+Priority: P1
+Spec: before ADR-039, the pre-plan observation of
+`https://whaleforce-sec10k.zeabur.app/?fixture=aapl-2025&run=1` held **26 elements**
+because the committed-fixture `<select>` had not been painted at `load`, and
+`status — 'doc_status'` was comfortably inside `observe.MAX_ELEMS = 60`. After the
+settle waits for that paint the select contributes **49 `option` elements** and the
+observation fills at element 60 on `button 'Extract the uploaded filing'`, several
+elements before the status line. The trade is real and it is the better direction —
+a drill-down (`observe`, M32) can reach capped content, and nothing can reach content
+that does not exist yet — but it is a trade, and the two live cases
+`live-sec10k-authored-wait-reaches-the-doc-status` / `-item-count` now assert
+`lacks: ["status — 'doc_status'"]` where they used to assert `has`, which is this
+block's evidence sitting in the eval set rather than in prose.
+NOT a reachability defect: the executor resolves the element fine (both live cases
+still pass on `status`), because `resolve` is not capped. It is a PLANNER-visibility
+defect, and the distinction is the whole of what makes it fixable by a drill-down.
+Repro: `observe()` on that URL, before and after the `navigate` settle; count `option`.
+Acceptance: decided by measurement, not by preference, and the two candidate levers
+are already in the tree and already argued against each other —
+`sec10k-item-text-region-is-past-the-observation-cap` records that raising `MAX_ELEMS`
+is the fix this repo has refused twice (it moves the cliff to the next larger page and
+spends planner tokens on a dropdown nobody asked about), and `observe.py`'s own comment
+says the same. The untried lever is a per-ROLE sub-budget of the kind `MAX_CHROME`
+already applies to navigation: 49 sibling `option`s under one `combobox` are one
+control, not 49 elements a planner needs enumerated. An offline case on
+`sec10k-inspector.html` pinning that the status line survives the budget while the
+select is still advertised, watched red first, is what closes this. Not closed by
+T-A39-1 or T-A39-2 — those are ADR-039's declared ceilings; this is its measured cost.
+
+Closed by the lever this block's own acceptance called untried, and it bought
+more than it was asked for. options CHARGED TO THEIR CONTROL rather than to the page —
+they keep their place in `elements` in document order and `MAX_ELEMS` counts
+everything else, with `MAX_OPTIONS = 60` per combobox/listbox/menu subtree as a
+runaway bound — the shape `MAX_CHROME` has had per landmark
+since M32 — with the whole page budget restored on a drill-down, exactly as
+chrome gets. Raising `MAX_ELEMS` is refused for the third time on `observe.py`'s
+own reason. ADR-039 §6.
+The first attempt was the other trade — options capped at 8 and still charged to
+the page — and it FAILED `live-sec10k-fetch-painted-select-is-plannable`:
+`intc-2002` is the 20th of 42 options on the live inspector, so truncating made
+the user's own reported task unplannable in order to buy back a status line. A
+budget must not hide the thing the task is about. That failure is why the live
+suite was run before the commit rather than after.
+Measured after the correction: offline 102 elements of which 42 are options; live
+109 of which 49; `status — 'doc_status'`,
+`Item 4 extracted text` and the combobox all present together, and `--suite live`
+at 12/12 for $0.00 — including the three sec-10k cases on the user's own site.
+The extracted-text region is the part the acceptance did not anticipate: M41 had
+DECLARED it unreachable-by-observation and `sec10k-item-text-region-is-past-the-
+observation-cap` existed to record that. It is now inside the cap, so the case is
+inverted rather than deleted — same id, because two committed reports and five
+documents cite it and an id that lies about its conclusion is cheaper than
+citations that resolve to nothing (T-R40 is what the other choice costs).
+Second declared limitation falsified this month.
+One thing it surfaced, answered elsewhere: with 41 slots freed the observation
+began advertising elements `resolve` cannot reach directly — Chromium's snapshot
+calls six visible `<th>` `columnheader` and `<summary>` `DisclosureTriangle`,
+while `get_by_role` answers 0 for `columnheader` and knows no such role as the
+latter. Two role oracles, one page. Both ARE reached by the relocation ladder the
+executor already runs, so the executor was never wrong and the observe case was
+asserting a property it does not need; it now reports
+`advertised_needed_relocation` instead of failing. A resolver-side fallback tier
+was tried FIRST and is rejected on measurement: it turned `l4-shop-a11y-stripped`,
+`l4-forms-a11y-stripped`, `l4-recover-name-to-text` and `l4-shop-duplicate-labels`
+green with no recovery performed — the mutation suite's own subject resolved away
+— and narrowing it to "no element of this role exists anywhere" did not separate
+them, because stripping a11y removes the role from the page too.
+
+### T-A39-1 — the in-flight wait cannot see a fetch issued after `load`            [status: todo]
+Origin: ADR-039 §2, 2026-08-28, declared by the ruling rather than found after it.
+Priority: P2
+Spec: `navigate`'s settle asks one question — were any requests in flight when `load`
+fired? — and a page whose script schedules its `fetch` from a `setTimeout` (or an
+`IntersectionObserver`, or a `requestIdleCallback`) after `load` answers "no" truthfully
+and is read early exactly as it was before ADR-039. The fix for THAT shape is a
+quiescence window, which is the mechanism ADR-039 rejected on measured cost, so this is
+a deliberate ceiling and not an oversight. No fixture in this repo has the shape:
+`late-options.html` issues its fetch from an inline script during parse, which is
+precisely why it is in flight at `load` and why the accepted mechanism catches it.
+Acceptance: a fixture whose control is painted from a post-`load` timer, and an
+adversarial case over it watched RED first per CLAUDE.md rule 2 — the case must be red
+against ADR-039's mechanism, which is the whole point of writing it. Only then is the
+quiescence-window question re-opened, and only with the fast-suite wall clock measured
+before and after, because that is the number that decided ADR-039 §1.
+
+### T-A39-2 — a live case is green for a reason its provenance does not give            [status: todo]
+Origin: ADR-039 §2, 2026-08-28.
+Priority: P2
+Spec: `live-sec10k-authored-wait-reaches-the-doc-status` asserts
+`planner_saw.lacks: ["18 extracted"]` and its provenance explains the absence as claim
+(1): "the deep link removes the click, not the race" — the observation is taken before
+the page's own extraction round trip lands. After ADR-039 that explanation is false and
+the assertion still holds. Measured 2026-08-28 against the deployed inspector: the
+observation now CONTAINS the per-item sidebar buttons (`button — '1 Business EXTRACTED
+CONF 0.95 HEADING_STRICT 16,053 CH'`), which only exist after the round trip lands, so
+the race the provenance describes is over by observation time. `18 extracted` is absent
+because `observe.TEXT_HEAD` caps the rendered page text at 300 characters, hundreds of
+characters before the status line — a claim about a text cap wearing a provenance about
+a network race. This is the shape `evals/labels`-adjacent review keeps finding and
+CLAUDE.md rule 2's cousin: a green whose stated claim it can no longer falsify.
+Acceptance: either (a) the case is re-pointed at something the S1 fix genuinely leaves
+absent and its provenance rewritten to say what it now grades, or (b) the `lacks` clause
+is dropped and the S1 claim moves to a case that can falsify it — decided by running the
+case with `TEXT_HEAD` raised, which is the one-line probe that separates the two
+explanations. Not closed by editing the provenance alone: the prose was never the defect.
 ### M43-D1 — `trace_values` does not discriminate on its own            [status: todo]
 Origin: M43 implementation, the red-first reconstruction (docs/evals/m43-red-first-ledger.md).
 Spec: `loop-click-at-resolves-and-records-coordinates` asserts four conjuncts, and
@@ -837,7 +944,7 @@ Constraints, recorded so the next reader does not rediscover them:
    the fix is a cross-repo change — the same constraint D2 records.
 Not implemented here; this block is the record.
 
-### T-M39-15-D4 — a missing interpreter silently degrades the gate into a non-measurement            [status: todo]
+### T-M39-15-D4 — a missing interpreter silently degrades the gate into a non-measurement            [status: done]
 Origin: T-M39-15, PR #69 round 1 — root cause behind D3's population.
 Priority: P1
 Spec: **a depsless interpreter does not produce a worse measurement, it
@@ -883,7 +990,27 @@ Not implemented here, deliberately: the fix is two lines and they sit in the
 hook that gates every commit in this repo, so it is its own change with its own
 verification, not a rider on a PR about id uniqueness.
 
-### T-M39-15-D5 — the count-reading guards grade the COUNT, never the SCORE, so published prose can cite a red run forever            [status: todo]
+Closed. Both gate scripts now source one resolver, `.githooks/lib-interpreter.sh`:
+`.venv` here, else the MAIN worktree's (via `--git-common-dir`, whose parent is
+the main working tree), then a preflight `import fastapi, playwright, uvicorn`
+that must succeed BEFORE either script runs anything. On failure each fails in
+its own idiom — the pre-commit hook blocks the commit, the PostToolUse hook
+exits 2 so the message reaches the agent — and neither mentions `--update-baseline`.
+One file rather than two copies, because the identical line in two places is the
+mechanism this block describes: they degraded together.
+Graded by `pre-commit-reports-a-broken-interpreter-as-such`, extended to run the
+PostToolUse hook too, watched red by restoring the old line
+(`post_edit_seam_present: false, post_edit_blocks: false`).
+Demonstrated the same day, on this branch, in the direction the block predicted:
+committing here ran MAIN's copy of the hook (`core.hooksPath` is absolute), which
+predates this fix, fell to a system `python3`, and printed
+"REGRESSION: 0.221 < baseline 1.000" with `--update-baseline` as the remedy — on
+a tree measuring 258/258. T-R27's handoff cannot protect the branch that writes
+it, which is the one structural residual: this fix only starts working once it is
+on `main`. Until then the operator remedy is the one the message names, and it is
+what unblocked this commit — a `.venv` symlink to the main checkout's.
+
+### T-M39-15-D5 — the count-reading guards grade the COUNT, never the SCORE, so published prose can cite a red run forever            [status: done]
 Origin: T-M39-15, PR #69 — found while repairing R1 and re-pointing the
 baseline at 86.
 Priority: P1
@@ -958,6 +1085,25 @@ one exception, is closed. The machinery verifies consistency well and verifies
 truth poorly — consistency is cheap to automate, truth needs a reader. That is
 an argument for keeping the review rounds, not for distrusting the gate.
 Not implemented here; this block is the record.
+
+Closed, with one half of the block's framing corrected rather than implemented.
+The genuine gap was README's baseline block: the redness guard covered the
+HEADLINE slot only, so `invariant` and `live` could cite a red run, state its
+counts accurately, and never be caught. It now covers every slot, carrying the
+fixed-point exemption D5 insisted on (this case's own id plus `headline_may_fail`)
+— watched both directions: the `invariant` slot pointed at a report red on
+`published-band-matches-the-ledger` goes red; pointed at one whose ONLY red case
+is this check, it does not.
+The other half — ADR-019's band rows — is not an oversight but a decided
+question, and the decision is already argued in `_band_wrong`: a band cites a
+WALL CLOCK, a wall clock from a red run is still a real wall clock, taking the
+maximum is the conservative direction, and requiring green deadlocks because this
+check sits in both suites, so the first run after a republish could never be
+green while the band it needs is the one that run produces. What IS required
+there is that the citation restate the row's own `passed/total` (item 2's result
+half, T-R55/T-R56), so a red row is cited AS red. D5 read "counts, never scores"
+across both slots; for the band rows the score is published, and green is refused
+on record.
 
 ### T-M39-15-D6 — the fence fix closed the instance and not the class            [status: todo]
 Origin: T-M39-15, PR #69 R19 (round 3, circuit breaker).
@@ -1080,7 +1226,21 @@ Acceptance: the `button` exclusion gone from that case with a red-first case for
 whichever rule is chosen, or a `docs/support-matrix.md` limitation naming the
 shape — D32 declares it as of PR #60, so the minimum here is the case.
 
-### T-M42-20-D5 — `select_option` matches the wanted string against value OR label            [status: todo]
+### T-M42-20-D5 — `select_option` matches the wanted string against value OR label            [status: done]
+CLOSED 2026-08-28, both shapes, on the acceptance as written ("a run can no longer
+report `success` with `postcondition_ok: True` for a selection nobody asked for").
+(i) The matcher searched the `(value, label)` PAIR and took the first hit, so one
+string could name two different options by two different fields. Now: exact matches
+on either field are collected, TWO of them is a loud refusal rather than a pick, and
+only a single loose match is taken — the same fail-closed ruling `resolve` applies to
+an ambiguous target. Case `select-option-value-collides-with-a-label` on the new
+`select-collide.html`, watched red as `success` with the answer naming the WRONG
+filing. (ii) A step omitting `value` became `want = ""`, and `"" in o` is true for
+every option, so it selected the placeholder and recorded it verified. Now a
+`task`-class refusal, the class and the reasoning `press` already used. Case
+`select-option-without-a-value-is-refused`, watched red at `no_failed_postcondition:
+true` — the no-op recorded as VERIFIED, with the run only going red because INV-0
+caught the empty answer one layer later.
 Origin: PR #60 R2 (MEDIUM, routed to debt). PRE-EXISTING — shipped with M42's
 `select_option`, not introduced by T-M42-20.
 Evidence, verbatim: `agent.py` `match = next((o for o in opts if want in o), None)`
@@ -1103,7 +1263,23 @@ shape `press` already uses. Or a declared limitation naming both shapes.
 Acceptance: a run can no longer report `success` with `postcondition_ok: True`
 for a selection nobody asked for.
 
-### T-M42-20-D6 — `role_visible` postconditions still match on a SUBSTRING            [status: todo]
+### T-M42-20-D6 — `role_visible` postconditions still match on a SUBSTRING            [status: done]
+CLOSED 2026-08-28 on the acceptance's first branch — the matcher IS shared, not
+documented as different. `check_state`'s `role_visible` now builds
+`get_by_role(role, name=_whole_string(name))`, the same anchored case-insensitive
+whole-string matcher the resolver uses, and `_whole_string` rather than
+`exact=True` for the reason the resolver gives (exact is case-SENSITIVE, a promise
+about the page's stylesheet nothing here can keep).
+The block declined to fix it in place because "tightening a postcondition changes
+which authored `expected_state` values hold across the existing suite, which is a
+change with its own blast radius". That was the right caution and it was measured
+rather than assumed: the blast radius is ZERO — 256/256 fast, 104/104 invariant,
+no authored `expected_state` changed truth value. Case
+`role-visible-refuses-a-superstring-heading` on the block's own evidence
+(`<h1>Shopping Cart is empty</h1>` vs an asserted `heading "Cart"`), watched red
+as `status: success` with `trace_postconditions [true, true, null]` — a click
+certified by a heading that says the cart is EMPTY, the opposite of the asserted
+state, and the run then answering from it.
 Origin: PR #60 R7 (LOW, routed to debt). Pre-existing and untouched, but now
 inconsistent with the invariant T-M42-20 establishes one file over.
 Evidence, verbatim: `agent.py` builds `get_by_role(role, name=<str>)` with
@@ -1669,7 +1845,11 @@ L5 measures 9 and the table publishes 8. Same defect, same section's blast
 radius, and M45's own case is one of the three the sentence is short by — so it
 is repaired by the same recount rather than left to drift a fourth time.
 
-### M45-D2 — the ADR-022 file's H1 says ADR-020            [status: todo]
+### M45-D2 — the ADR-022 file's H1 says ADR-020            [status: done]
+CLOSED 2026-08-28 with T-M41-5 and T-M42-7 — one defect, three blocks. See T-M41-5.
+This block's own observation was the sharpest of the three: the comparison that would
+have caught it is a file's H1 number against its own filename, and that is exactly the
+conjunct that was added.
 Origin: M45, 2026-08-26, while reading ADR-022 for the live-declaration rule
 that leg 3 required. One-line fix, deliberately not taken in M45's PR under the
 debt rule.
@@ -1688,7 +1868,44 @@ Acceptance: the H1 is corrected to `# ADR-022:`, and `adr-header-and-index`
 grows a clause asserting every `specs/decisions/ADR-0NN-*.md` file's H1 number
 equals the NN in its filename — watched red on the current tree first, since
 the tree is red for it today.
-### T-M42-19 — the CI-ceiling site sweep still fails OPEN on a figure without an `s`            [status: todo]
+### T-M42-19-D1 — the CI-ceiling sweep's LINE gate is a four-word vocabulary            [status: todo]
+Origin: T-M42-19's close, 2026-08-28 — one of that block's own three injections
+turned out to be evidence for this mechanism instead of the figure rule.
+Priority: P2
+Spec: the sweep only inspects a line if `_CI_CEILING_LINE`
+(`ceiling|budget|wall[- ]clock|\bstays\b`) matches it. "On CI the fast gate
+tolerates 90 seconds." is a stale CI ceiling by any reading, and it passes green
+with a correct figure rule and a correct CI token, because "tolerates" is not one
+of the four words. Verified directly: `_CI_SECONDS` finds `90`, `_CI_TOKEN` finds
+`CI`, `_CI_CEILING_LINE` does not match.
+This is the same shape-vs-allowlist tension PR #57 spent six rounds on, one layer
+in: the SITE list was inverted to an allowlist and earned its keep, and the LINE
+gate is still a shape. Adding "tolerates" is whack-a-mole and is explicitly not
+the fix being asked for.
+Acceptance: either the line gate is inverted the way the site list was — every
+line in an allowlisted document is inspected, with the CI token and the figure
+rule doing the discriminating — measured for false positives on the current tree
+before it lands; or the four-word vocabulary is declared as the sweep's stated
+ceiling in the case's triage, so the next reader does not assume a stale ceiling
+in an allowlisted file is caught however it is phrased. NOT closable by adding
+words to the list.
+
+### T-M42-19 — the CI-ceiling site sweep still fails OPEN on a figure without an `s`            [status: done]
+CLOSED 2026-08-28 on the acceptance as written ("the figure rule matches a CI
+ceiling regardless of unit form"). `_CI_SECONDS` takes three forms now; the naked
+one needs a prose copula before it and punctuation after, narrowed twice — once by
+this case's own assert (the first attempt matched "grew from 48 cases to 74") and
+once by the tree (the second allowed `:`/`=` and flagged ADR-019's verbatim
+quotation of grader output as a published ceiling).
+**One of this block's three injections was misattributed, and the correction
+belongs here.** "On CI the fast gate tolerates 90 seconds." still passes green,
+and NOT because of the figure rule: measured, `_CI_SECONDS` finds `90` in it and
+`_CI_TOKEN` finds `CI`; `_CI_CEILING_LINE` is what rejects it, because
+"tolerates" is not in `ceiling|budget|wall[- ]clock|stays`. So that sentence was
+evidence for a different hole than the one it was filed under. Split out as
+T-M42-19-D1 rather than folded in silently — the block's diagnosis was half
+right, and a fix that claimed all three would be the eighth crop of the class it
+warns about.
 Origin: PR #57, orchestrator verification after round 7 (the round the human's
 stopping rule made the last one). Logged, not fixed, under that rule.
 Priority: P1
@@ -2045,7 +2262,7 @@ Acceptance, verbatim: "The 'greened by' column names a commit that exists (or
 says 'folded into 1ac8a19 under CLAUDE.md rule 7'), so every row is checkable
 from `git log` without trusting the prose."
 
-### T-M42-5 — `not_a_dump`'s denominator and `evidence_window`'s offset now disagree about what "the page" is            [status: todo]
+### T-M42-5 — `not_a_dump`'s denominator and `evidence_window`'s offset now disagree about what "the page" is            [status: done]
 Origin: M42 cold review, finding 4 (same finding, different consequence),
 2026-08-26. Related to but distinct from T-M42-3, which is about the offset
 alone.
@@ -2067,6 +2284,18 @@ per-frame offsets — one change, two debts closed), or ADR-008 is amended with 
 re-derived ratio over a labelled set that includes framed pages. Red-first case:
 a framed fixture where a main-document dump passes today.
 
+Closed by the narrow branch its acceptance preferred: `body_len` is now the length
+of the DOCUMENT the value was read from, taken from the scope `resolve` already
+returns and `agent` already records for the postcondition (`acted_scope`). A
+frameless page is byte-identical. Re-deriving `DUMP_RATIO` is refused for the
+reason the block gives — it needs framed pages in `evals/labels/` and the
+confusion matrix re-run, and guessing a ratio is what ADR-008 exists to prevent.
+Red-first, `framed-page-does-not-inflate-the-dump-denominator`: on a fixture whose
+extracted summary is 230 chars, its own document 253 and the page-with-frame 1954,
+the ratio is 0.909 against the document and 0.118 against the concatenation. Before
+the fix the run came back status success, verdict PASS — the dump ACCEPTED as the
+answer. After: failure:semantic, verdict FAIL, answer null.
+
 ### T-M42-6 — the no-progress harness cannot see a run that repeats one call on one page            [status: todo]
 Origin: M42 cold review, finding 7, 2026-08-26. The `ponytail:` comment in
 `agent.drive_loop` names this ceiling; this block is the tracked version of it.
@@ -2086,7 +2315,8 @@ until the run ends, watched red (it currently ends `budget exhausted: actions
 40/40`, naming a resource rather than a cause), then a (state, call-intent)
 repeat counter sharing `LOOP_REVISIT_CAP`'s threshold.
 
-### T-M42-7 — `ADR-022`'s file is titled `ADR-020`            [status: todo]
+### T-M42-7 — `ADR-022`'s file is titled `ADR-020`            [status: done]
+CLOSED 2026-08-28 with T-M41-5 and M45-D2 — one defect, three blocks. See T-M41-5.
 Origin: M42 spec-drift audit, finding 13, 2026-08-26. Pre-existing, unrelated to
 M42; logged rather than fixed under the debt rule.
 Priority: P2
@@ -2100,7 +2330,7 @@ Acceptance: the H1 corrected, and `adr-header-and-index` extended to require the
 H1's number to match the filename's — watched red against the current file,
 which is what makes the fix stick.
 
-### T-M42-8 — the reviewer UI cannot select loop mode and describes mode B's guards to every visitor            [status: todo]
+### T-M42-8 — the reviewer UI cannot select loop mode and describes mode B's guards to every visitor            [status: done]
 Depends: M44
 Origin: M42 spec-drift audit, finding 14, 2026-08-26.
 Priority: P1
@@ -2120,6 +2350,25 @@ runs populate it). A mode SELECTOR is a product decision that belongs with M44's
 Acceptance: the guards line reads from the mode the run actually used (the
 result now carries `mode`), and either a mode control in the UI or an explicit
 note that mode is deployment-level — decided with M44's evidence.
+
+Closed on the acceptance's own terms, taking its second alternative for the half
+that belongs to M44.
+The guards line now reads from the mode the deployment will actually run,
+composed from the constants the executor enforces (`RUN_BUDGETS`, `MAX_REPLANS`,
+`LOOP_BUDGETS`) and never retyped — retyping would reproduce the defect. Under
+`BROWSER_AGENT_MODE=loop` a visitor read "30 actions and 2 replans" while watching
+a run bounded by 40 actions, no replans and a $5.00 ceiling that ADR-028 names as
+the ONLY bound on a public unauthenticated endpoint, which makes it the wrong
+sentence to have wrong.
+No mode SELECTOR, deliberately: whether loop mode earns default-ness is M44's
+evidence to give, and a selector shipped ahead of it is a product decision made by
+a UI edit. The acceptance's alternative is taken instead and the page states it —
+mode is deployment-level and named on the page as not selectable there.
+`guards-line-states-the-running-modes-ceilings` grades all three modes, since the
+bug was that only one was ever rendered, and refuses a literal ceiling inside
+`PAGE` because a second copy is a second thing to drift. Three reds measured:
+printing the plan line for every mode, a loop line advertising replans it does not
+have, and a literal ceiling put back into `PAGE`.
 
 ### T-M42-1 — mode B's planner prompt still advertises six actions while the executor implements eleven            [status: todo]
 Origin: M42 implementation, 2026-08-26. Found while widening the vocabulary;
@@ -2173,7 +2422,7 @@ finds an envelope mismatch, an adversarial case pinning that shape through
 `parse_tool_call` at $0. Blocked on a key, not on design; M42's live smoke is
 the natural place it gets exercised for the first time.
 
-### T-M42-3 — `evidence_window`'s DOM offset hint is computed per frame but consumed against the concatenated page text            [status: todo]
+### T-M42-3 — `evidence_window`'s DOM offset hint is computed per frame but consumed against the concatenated page text            [status: done]
 Origin: M42 implementation, 2026-08-26. A known, bounded imprecision introduced
 by `observe.page_text`, not a defect anything has produced.
 Priority: P2
@@ -2196,6 +2445,30 @@ lengths, and `execute` adding the frame's base), or a declared support-matrix
 row saying evidence-window selection is main-frame-accurate only — whichever
 way, with a fixture carrying the duplicated value across a frame boundary and
 the case watched red first.
+Closed with T-M42-5, as its acceptance predicted (one change, two debts) — though
+they turned out to be two changes in one place rather than one. `page_text` now
+optionally reports where each document STARTS in the string it returns, and
+`execute` adds the acted scope's base to `TEXT_OFFSET_JS`'s hint. Zero for the main
+frame and for every frameless page.
+The premise was verified rather than assumed: raw hint 92, frame base 4220, and
+`_closest_occurrence` lands on 107 (the superseded main-document copy) without the
+base and 4329 (the frame's real figure) with it.
+Two things the block did not know, both found by making the red-first fail to go
+red TWICE:
+  * the fixture must be LONGER than `agent.PAGE_TEXT_KEEP`. Below it,
+    `evidence_window` returns the whole page, so both copies are in evidence
+    whichever offset it centred on and the case is green for an unrelated reason.
+  * an `anchor` MASKS the defect entirely. A distant anchor forces a second window,
+    and an anchor inside the frame covers the frame's copy however the first window
+    landed.
+So the real blast radius is narrower than the block states: the mis-centring is
+observable only on an UNANCHORED extraction from a frame, on a page past the window
+budget, where the value occurs in more than one document. It is still worth the
+fix, because within that shape the run PASSES while its evidence points at a
+superseded paragraph — and graded on the window (`evidence_window_contains`, a new
+declared opt-in key) rather than on the value, since the value is byte-identical
+whichever copy the window landed on. That is exactly why it degraded silently.
+
 ### T-M41-1 — the coverage tables in `docs/analysis.md` §6 drift because nothing grades their cells            [status: todo]
 Origin: M41, 2026-08-26. Found while republishing §6 for M41's eight new
 inspector cases (seven of them domain-tagged, which is the count §6's domain
@@ -2247,7 +2520,7 @@ until that is decided, and whatever is decided lands with its own red-first
 case.
 Out of scope: widening `extract`'s target vocabulary, which is M42's.
 
-### T-M41-3 — nothing detects that the committed inspector snapshot has stopped matching the deployed page            [status: todo]
+### T-M41-3 — nothing detects that the committed inspector snapshot has stopped matching the deployed page            [status: done]
 Origin: M41, 2026-08-26. `src/browser/fixtures/sec10k-inspector.html` is a
 rendered capture of `whaleforce-sec10k.zeabur.app` at the build the page
 reported as `6b37ffa99d05`, and five `fast` cases grade the page shape against
@@ -2270,6 +2543,29 @@ against a wrong sha.
 Out of scope: re-capturing the snapshot automatically. A capture is evidence
 about a build and re-taking it is a decision, the same way declaring a live
 row is (ADR-022).
+
+Closed by `live-sec10k-snapshot-still-describes-the-deployment`, built exactly to
+the spec: one GET of `/api/meta`, no browser, no LLM, $0, `live`-tagged so a stale
+snapshot cannot block a commit. Re-capture stays out of scope for the block's own
+reason.
+One thing done differently, and it is this milestone's own lesson applied: the
+snapshot's sha is read out of the ARTIFACT — the footer the captured page filled
+from that same `/api/meta` field — not out of a provenance sentence. The sha was
+recorded in five case files and a support-matrix row and every one of them said
+the wrong one until a cold review of the committed file caught it. A document that
+describes an artifact can be wrong about it; the artifact cannot.
+IT FIRED ON THE TREE THAT ADDED IT. Snapshot `6b37ffa99d05`, `/api/meta` answering
+`33a7580964e7` on 2026-08-28 — the third build of this target inside three
+milestones (6b37ffa99d05 -> 0b87705fd0aa -> 33a7580964e7), with both intervening
+moves caught only because a person decided to look. So the case ships RED, and the
+red IS the alarm. Verified in the other direction too, against a doctored snapshot
+whose footer carries the deployed sha: green. That is what makes the red a
+statement about the comparison rather than about the plumbing.
+An unreachable endpoint is also red, never a pass: an unreachable target is
+precisely the state in which a stale snapshot goes unnoticed (rule 4).
+What it does NOT claim: that the five offline cases are wrong. They pass; what
+they pass against is a page that is not being served. Whether to re-capture is the
+human's call — the point is that nobody has to notice by hand any more.
 
 ### T-M41-4 — the observe harness compares NAMES as a set, so it cannot see the ambiguity S3 was            [status: todo]
 Origin: M41 cold review, 2026-08-26. `_run_observe_case`
@@ -2299,7 +2595,11 @@ Out of scope: changing what the M41 cases claim — their triage notes already
 state these two ceilings; this block is the harness change that would let them
 claim more.
 
-### T-M41-5 — ADR-022's file names one number and its title another            [status: todo]
+### T-M41-5 — ADR-022's file names one number and its title another            [status: done]
+CLOSED 2026-08-28. H1 corrected to `# ADR-022:`, and the one-line conjunct this block
+asked for is in `adr-header-and-index` as `title_number_is_not_the_filename` — watched
+red against the live defect rather than a planted digit. Closes T-M42-7 and M45-D2 in
+the same edit; all three describe this one file.
 Origin: M41 spec-drift audit, 2026-08-26; pre-existing, found while auditing this
 milestone rather than caused by it. `specs/decisions/ADR-022-m40-declaring-a-
 domain-from-live-runs.md` opens `# ADR-020:`. `adr-header-and-index` reads the
@@ -2483,6 +2783,17 @@ same request produces different resolver/extraction outcomes) is attempted. Not 
 T-M40-5-1 or T-M40-5-2 individually — check both before assuming this is already covered.
 
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
+Update (2026-08-28, ADR-039 §4): a general mechanism now exists — `EVAL_PROBE=1`
+routes a run's history line to `evals/report/history-probe.jsonl` (gitignored)
+instead of the committed ledger. It was built because this block's shape happened
+again, verbatim: ADR-039's drafting put three rows in the ledger measuring code the
+tree does not contain (144.87s on `networkidle`, 100.61s and 100.86s on a discarded
+count-every-request variant), any one of which would have set the band, since the
+band is a MAXIMUM. Those rows were dropped before the ledger was committed and
+ADR-019 §2 records it. This block is NOT closed by that: the variable has to be set
+by the operator, so a probe run without it still reaches the ledger, and nothing
+grades that an ablation probe used it. That residual is the whole of what is left
+here — the acceptance below is unchanged.
 Origin: PR #42, R2/R3's acceptance and the coordinator's round-1 disposition.
 Re-checked against `origin/main` after T-R44 merged (2026-08-24): **both halves
 are still open**, and what T-R44 closed is the neighbouring coupling, not this.
@@ -2523,7 +2834,7 @@ refuse a row whose `sha` is not an ancestor of HEAD — a different hole (a row
 from a branch that never merged) in the same class, and the one that makes a
 band a claim about a tree that exists.
 
-### T-M38-1 — D29's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: todo]
+### T-M38-1 — D29's second half (a confidently-wrong identity anchor) is declared and not demonstrated            [status: done]
 Origin: M38, ADR-026's accepted risk.
 Priority: P1
 Spec: rung 1 reuses the step's identity `anchor` as a proximity anchor whenever
@@ -2544,6 +2855,29 @@ article's). Pin it the way `l4-shop-element-reordered` pins its wrong answer:
 `expect.answer` = what the build really returns, plus
 `answer_is_known_wrong: true` (and its entry in `opt-in-expect-keys-declared`),
 so the report cannot be read as "verified correct".
+
+Closed as a DEMONSTRATION, which is what the block asked for — not a fix.
+`anchor-proximity-answers-the-wrong-byline` on a new fixture,
+`forum-anchor-misleads.html`: `forum-thread.html`'s shape with the geometry
+inverted by an ordinary "related threads" strip between an article's title and
+its body. Both bylines carry `aria-label="user profile"`, so the target is
+ambiguous; the identity anchor is the article title; and the nearest matching
+link to that title is the RELATED thread's byline.
+Measured: status success, answer `corvin`, verdict PASS, tier `structural`.
+Grounded, anchored, and wrong — every layer agrees, because every layer is
+answering a question this shape answers correctly. What diverges on this page is
+"which candidate is nearest the anchor" from "which candidate is the task's".
+The inverse is what makes it a claim about PROXIMITY rather than about ordering:
+the same plan on `forum-thread.html`, which has no strip, answers `arden`.
+Pinned the way `l4-shop-element-reordered` pins its wrong answer —
+`expect.answer` = what the build really returns plus `answer_is_known_wrong`,
+declared in `opt-in-expect-keys-declared` — so no report of this can read as
+"verified correct", and if a future rung ever gets it right the case goes RED and
+that red is the good news.
+The fix, deliberately not attempted here: a rung that can tell "nearest the
+anchor" from "belongs to the anchor" needs CONTAINMENT (is the candidate inside
+the same article as the anchor?) rather than distance. That is a change to
+ADR-026's ladder and its own decision.
 
 ### T-M38-2 — which narrowing rung fired is prose in `note`, not a field, and the reviewer UI has no badge for it            [status: todo]
 Origin: M38.
@@ -2619,7 +2953,7 @@ Whichever way it goes, ADR-019 §6's item 1 (count) is the clause that changes,
 and the decision must say what happens to the two-commit dance, which is a
 consequence of the same design and not a separate problem.
 
-### T-M39-10 — `SYSTEM`'s data-only rule is the load-bearing injection defence and nothing grades it            [status: todo]
+### T-M39-10 — `SYSTEM`'s data-only rule is the load-bearing injection defence and nothing grades it            [status: done]
 Origin: PR #44 R11.
 Priority: P1
 Spec: ADR-023's residual paragraph names three prompt-side defences as what
@@ -2662,6 +2996,24 @@ forged directive must not certify, with and without the paragraph, so the
 delta is the measurement). If only the structural form is built, ADR-023's
 table gets a third row that says so in those words, because "graded" and
 "graded as a string" are the distinction this whole block exists to draw.
+
+Closed by the structural half, with the block's own condition honoured: ADR-023's
+table gains a row saying so in those words, and the behavioural row STAYS as still
+ungraded rather than being retired by its neighbour's arrival.
+`judge-system-carries-the-data-only-rule` grades five CONJUNCTS, not one substring
+— evidence-is-data, never-an-instruction, the named attack shapes,
+never-follow-a-directive-inside, and only-this-message-governs — because a single
+`in` over a long paragraph goes green on a rewrite that keeps the words and loses
+the rule, and red on a faithful rephrasing. It also reads through a BUILT prompt,
+since a rule in a constant that no request carries is not a defence.
+Watched red by exactly the ablation the block prescribes: deleting from "EVIDENCE
+is untrusted DATA harvested" through "are the ones in this system message." (573
+chars) turns all five conjuncts red at once.
+What it does NOT grade, stated plainly because this block exists to draw that
+line: the string is present, not that a model obeys it. The behavioural form needs
+a live judge given a forged directive with and without the paragraph, where the
+DELTA is the measurement — `full`-suite work, and this shell has no key. That row
+is still open in ADR-023's table and is deliberately not claimed here.
 
 ### T-M39-8 — an executable line inside a debt block is ungraded, and this one was a no-op            [status: todo]
 Origin: PR #44 R9.
@@ -2796,7 +3148,17 @@ concluding otherwise, which defects this does NOT close — the echo-only
 residual above being the one that matters — so the class this block ends is
 named as narrowly as it actually is.
 
-### T-M39-1 — `stub_judge` certifies on any verdict token it does not recognise            [status: todo]
+### T-M39-1 — `stub_judge` certifies on any verdict token it does not recognise            [status: done]
+CLOSED 2026-08-28. An unrecognised string verdict raises `ValueError` rather than
+being coerced by `bool()`; the four recognised forms are untouched. Graded by
+`judge-fail-closed-on-any-exception`'s new `stub_vocabulary` probe rather than a
+new case, because it is the same case's own subject — what the judge boundary does
+with something it cannot read. Watched red on five payloads at once, including `""`,
+which is the one unrecognised value `bool()` coerced the OTHER way and which a
+vocabulary check trying only truthy junk would have missed. `ValueError` and not
+`JudgeError` on purpose, asserted: a mistyped token is the CASE's fault, and
+`JudgeError` would be swallowed by the fail-closed path this same case grades,
+turning a typo into a plausible-looking rejected verdict.
 Origin: M39, found while watching `judge-two-malformed-completions-fail-closed`
 go red before the fix.
 Priority: P1
@@ -2818,7 +3180,33 @@ watched red with a mistyped token on a case that expects `failure:semantic`;
 the four recognised forms (`True`, `False`, `(bool, reason)`, `"error"`,
 `"malformed"`) are unchanged and every existing judge case stays green.
 
-### T-M39-2 — the per-suite judge cost line counts boundary calls, not provider calls            [status: todo]
+### T-M39-2 — the per-suite judge cost line counts boundary calls, not provider calls            [status: done]
+CLOSED 2026-08-28, all three surfaces, because the block is explicit that fixing
+one leaves the number "right in one place and absent in the two that a human
+reads".
+(1) The printed line NAMES what it counts — `N boundary calls` — which is the
+acceptance's "or names which one it counts" branch. No key travels through
+`budgets_spent`, so `contract-trace-schema`'s clause does not apply and the
+RunResult shape is untouched (CLAUDE.md rule 7: growing it is a deliberate edit,
+not a side effect).
+(2) The committed ledger gains `judge_usd`. `cost_usd` deliberately keeps meaning
+PLANNER spend — all ~2500 existing rows mean that, and redefining a field in
+place makes old and new rows silently incomparable, which is the drift this
+ledger exists to make impossible. Absent on older rows, which is the honest
+shape: `None` means "not recorded", not "zero". Graded BEHAVIOURALLY, not by
+grepping the source — the probe reads the row `main()` actually wrote into its
+temp ledger — and watched red by deleting the key.
+(3) The gateway's per-run cost string shows the TOTAL with the split beside it
+(`$X (plan $Y + judge $Z)`), because a per-run cost line that omits the judge is
+not a cost line: the judge is the last rung of the verification ladder and it
+bills.
+NOT closed: the printed count is still a lower bound on provider requests, and
+naming it does not make it one. Request volume is what a rate limit is
+denominated in, so the residual is that a suite where every run retried prints
+`M boundary calls` while having made up to `2M` requests — now stated by the
+line itself instead of being invisible. Carrying `judge_attempts` through
+`budgets_spent` is the fix, and it is a RunResult shape change with its own
+decision.
 Origin: M39 (ADR-023), consequence of the retry, noted in-PR and deliberately
 left out of scope.
 Priority: P1
@@ -2849,7 +3237,18 @@ gateway's per-run cost string, so `judge_usd` never reaches either the ledger
 or the operator. Fixing the printed count without those two leaves the number
 right in one place and absent in the two that a human reads.
 
-### T-M39-3 — an unreadable ENVELOPE is not retried, though an unreadable BODY is            [status: todo]
+### T-M39-3 — an unreadable ENVELOPE is not retried, though an unreadable BODY is            [status: done]
+CLOSED 2026-08-28. Decision: RETRY, recorded as an ADR-023 amendment, on the
+boundary `planner.py` already draws and this function inverted — an unreadable
+ENVELOPE is the provider's fault, unreadable CONTENT is the model's. Scoped to a
+body-parse failure and an empty/absent `choices`, NOT to `except Exception`: a
+timeout or a reset is also the provider's fault and retrying those is the retry
+storm this block was left open for. `JUDGE_ATTEMPTS` bounds it either way.
+The probe had to be widened first, exactly as this block predicted — it wrapped
+every scenario in a well-formed envelope, so an envelope-level failure could not
+be EXPRESSED and no case for one could be written. An attempt may now supply a
+`raw` body or override `choices`. Three scenarios (HTML error page, `choices: []`,
+`choices: null`), all watched red as fail-closed on attempt 1.
 Origin: M39 cold review, finding 2. Named in ADR-023's Consequences as a
 deliberate scope line, not a disagreement.
 Priority: P1
@@ -2877,7 +3276,22 @@ Acceptance: a decision (retry, or refuse and say why) recorded as an ADR
 amendment, with the probe widened to express an envelope-level failure and the
 chosen behaviour watched red first.
 
-### T-M39-4 — truncation without `finish_reason` is indistinguishable from an empty body            [status: todo]
+### T-M39-4 — truncation without `finish_reason` is indistinguishable from an empty body            [status: done]
+CLOSED 2026-08-28 on the acceptance's FIRST option — the signal-free truncation
+test — recorded as an ADR-023 amendment. A completion that OPENS a JSON object
+and never closes it is truncated, not empty, and fails closed instead of being
+resampled. Two scenarios watched red, and the second is the one that matters: a
+truncated REJECT carrying no `finish_reason` was re-rolled into the CERTIFY the
+second attempt returned, which is this block's wrong-answer direction
+demonstrated rather than argued. An existing scenario was also reclassified —
+`{"certi`, filed as "garbled body", is a strict prefix of a JSON object and is
+exactly this shape mislabelled.
+Deliberately narrow, with the narrowness graded: prose that merely mentions `{`
+stays retryable, so the rule cannot swallow the shape ADR-023 exists for.
+NOT closed: `max_tokens` is still unset on the judge payload, so the ceiling is
+the provider's default rather than one this deployment chose. That half of the
+acceptance is a prompt/model change and stays out of scope, as ADR-023's
+amendment says.
 Origin: M39 cold review, finding 1 — the residue of the fix, declared in
 ADR-023's Consequences.
 Priority: P1
@@ -2898,7 +3312,7 @@ strict PREFIX of valid JSON is treated as truncated rather than empty), or an
 explicit `max_tokens` on the judge call plus a support-matrix row declaring the
 residue; watched red on a truncated-reject scenario carrying no
 `finish_reason`.
-### T-M32-16 — a live ceiling published in any shape other than a gate command is still ungraded            [status: todo]
+### T-M32-16 — a live ceiling published in any shape other than a gate command is still ungraded            [status: done]
 Origin: T-M32-9; enumeration corrected at PR #40 R3.
 Priority: P1
 Spec: the sweep T-M32-9 added (`docs-numbers-are-derived`,
@@ -2934,7 +3348,45 @@ obvious candidate), or the honest finding that dropping the literal everywhere
 is the whole defence — argued, not defaulted to. Do not replace the falsified
 enumeration with another one; grade it or drop the literals.
 
+Closed together with T-R25 and T-M32-16 — they are one defect, and each round had
+answered the other two by pointing at them. `docs-numbers-are-derived` gained
+`_local_ceiling_drift`, the local twin of the CI sweep, reading `WALL_BUDGET_S`
+instead of prose. It grades two SHAPES exhaustively rather than guessing tense:
+a **bold** seconds literal on a local-ceiling line, and a heading that publishes
+one. Move operands (`80 -> 90`, `moves from 90s to 105s`), `[historical]`/`[local]`
+and struck text are exempt. That choice is T-M32-16's first acceptance branch,
+taken deliberately: ~77 tracked lines pair a seconds literal with a ceiling word,
+nearly all are the record, and an enumeration of the live ones is what T-M32-16
+was REOPENED for after its own was falsified.
+Watched red against the tree as it stood — seven hits, two of them genuinely
+stale live publications inside the ceiling machinery's own publisher of record:
+ADR-019 §2's HEADING read "The local `fast` ceiling is 90s" against a committed
+125, and ADR-029:45 read "**105s**, which `WALL_BUDGET_S` holds" after three
+raises. `published-band-matches-the-ledger` reads the band BULLET inside those
+sections and has never read their titles. The other five were true records
+wearing the live shape and now carry `[historical]`.
+Residual, declared rather than covered: unbolded body prose is still ungraded.
+Tense is not decidable by regex; the defence there is that the literals have been
+dropped from the prose that mattered (ADR-002's and ADR-013's Rulings), which is
+an argument and not coverage. It is written into the case's row table, in the
+direction that fails loudly if someone later mistakes it for coverage.
+
 ### T-M32-17 — T-R35 is closed on all four acceptance clauses; delete the block            [status: todo]
+**Clause (1) was FALSE when re-checked, 2026-08-28, and T-R35 is therefore NOT
+deleted.** This block's own instruction — "Do not delete it before confirming (1)
+… If any clause above is wrong, the correction belongs here, in the block that
+made the claim" — is the reason to read this rather than trust it. Clause (1)
+asserts "every ceiling statement in specs/ names the enforced pair", satisfied as
+of PR #40 by dropping the literals from ADR-002's Status line and ADR-013's
+Ruling. But ADR-002 **Decision 4** was never touched and was still publishing
+"**60s locally**, 80s on CI" as the rule, four ceiling moves later — the same
+document, a different line, and the one a reader looking up the threshold would
+actually land on. Struck in place 2026-08-28, deferring to ADR-019 §2/§3/§5 the
+way this ADR's Ruling already did.
+So the audit this block calls done is not done: fixing (1) is not the same as
+re-verifying (2)-(4), and a block whose first clause was wrong is not evidence
+for its other three. What is now true is recorded; the delete waits on a clean
+re-audit of the remaining clauses, which is a smaller job than it was.
 Origin: T-M32-9; clause (1) corrected at PR #40 R4.
 Priority: P2
 Spec: not an audit — the audit is done, and this is the evidence. T-R35 ("three
@@ -3005,7 +3457,33 @@ it does not claim CI will now be green — the demonstration above is a construc
 laptop, and that CI tags its rows `ci` at all is still asserted rather than graded (T-R74). The
 second branch of the acceptance is therefore still available and may still be the better one.
 
-### T-R91 — the pre-commit hook reports a missing interpreter as an eval regression, and points at `--update-baseline`            [status: todo]
+### T-R92 — `report-citations-resolve` graded untracked reports, so a blocked commit poisoned its own retry            [status: done]
+Origin: this session, found while committing T-R13/40/41/42
+Priority: P1
+Spec: the file->citation half (T-R19) globbed `evals/report/*.json` and required every hit to be
+cited. A red `--report` run leaves its artifact in the working tree; the next run then reddens on
+`uncited_reports`, naming a file that run did not write. The failure is self-inflicted and
+outlives the thing that caused it, so the retry of a green tree fails for a reason the retry
+cannot see. Two earlier patches — `case.get("id")` and `expect.headline_may_fail` — each excluded
+ONE such file, which is the same defect handled one filename at a time.
+Closed. Restricted to `git ls-files evals/report`. That is not a loosening: ADR-012 defines a
+report of record as one CITED from outside `evals/report/`, and an uncommitted file cannot be
+cited by a commit. Fails closed if git cannot answer. Watched red against a tracked uncited
+report, which is the 405-file shape the check was built for:
+uncited_reports ["20260828-999999-fast.json"].
+
+### T-R91 — the pre-commit hook reports a missing interpreter as an eval regression, and points at `--update-baseline`            [status: done]
+CLOSED 2026-08-28 (ADR-039's commit, which is what hit it again). Both halves
+fixed: the interpreter search now also looks in the MAIN worktree
+(`git rev-parse --git-common-dir`'s parent), and a preflight import check runs
+BEFORE the gate so "could not run" can never be reported as "regressed" — the
+environment message never mentions the baseline. Graded by
+`pre-commit-reports-a-broken-interpreter-as-such`, which RUNS the hook through
+an `EVAL_HOOK_PY` seam rather than grepping it. Read that case's triage before
+touching it: watching it red against the un-seamed hook fork-bombed the machine
+(408 `evals.run` processes) because the un-seamed hook runs the fast suite that
+contains the case, and both the case and the hook now carry a guard against
+exactly that.
 Origin: PR #49, hit while committing the T-M40-1 DONE.md line
 Priority: P1
 Spec: `.githooks/pre-commit` picks `PY=python3` unless `.venv/bin/python` exists in the
@@ -3115,7 +3593,17 @@ unresolvable container is a loud `failure:locate` instead of a relocation, and w
 relocation rung on a read-only verb may wear the `recovery` label at all.
 Acceptance: a case pinning whichever answer is taken, watched red first.
 
-### T-M40-2-6 — a plan step that is not a dict kills `run_task` with an uncaught TypeError            [status: todo]
+### T-M40-2-6 — a plan step that is not a dict kills `run_task` with an uncaught TypeError            [status: done]
+CLOSED 2026-08-28. Guarded in BOTH places, and neither is redundant: `parse_plan`
+now asserts every member is an object with a string `action` (the live-planner
+path, graded by `planner-fenced-json`'s new `also_rejects` payloads, including a
+good step followed by a bad one — `steps[0]` being fine is how this survives a
+spot check), and `run_task`'s step loop refuses a non-step as `failure:task`,
+because `stub_planner` is injected at exactly the boundary `parse_plan` guards so
+every offline plan reaches the loop without passing through it. The block's own
+repro is the new case `malformed-step-is-a-classified-failure`, watched red as an
+uncaught `TypeError: string indices must be integers` propagating out of
+`run_case` — no verdict for the harness to compare, which is the defect.
 Priority: P1
 Origin: PR #46 R6, 2026-08-24. `parse_plan` (src/browser/planner.py) validates that the top
 level is a list and nothing below it, so `[None]` or `["extract WebArea"]` is a plan as far as
@@ -3221,7 +3709,13 @@ Acceptance: either the parse is scoped to the comment region preceding the
 `EVAL_WALL_BUDGET_S_*` env block, watched red by relocating the copy, or §5 says "a comment in
 `.github/workflows/eval.yml`" rather than "comment block".
 
-### T-R80 — the third copy has no one-band rule, so a contradictory band above the real one is invisible            [status: todo]
+### T-R80 — the third copy has no one-band rule, so a contradictory band above the real one is invisible            [status: done]
+CLOSED 2026-08-28 on the acceptance's stronger branch — duplicate suite lines in the
+workflow redden, matching README's one-band rule, rather than the triage note naming
+the gap. `wf_cells` was a dict comprehension keeping the LAST match, so a contradictory
+band ABOVE the real line was invisible while the same line BELOW it reddened. Now every
+match per suite is collected and more than one is its own row. Watched red with the
+block's own repro inserted above: `workflow_publishes_more_than_one_band`.
 Origin: PR #41 R19
 Priority: P1
 Spec: `src/browser/eval_adapter.py`:1114-1117 builds `wf_cells` as a dict comprehension, which
@@ -3313,7 +3807,26 @@ environment dimension and its timestamp, and bolting an unrelated ruling onto it
 the scope creep the debt rule exists to prevent. The other session declined it for
 `task/T-M32-9` on the symmetric ground that #40 allocated no ADR by design.
 
-### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: todo]
+### T-M32-10 — `report-citations-resolve` checks that a citation resolves, never that the number beside it is the report's            [status: done]
+CLOSED 2026-08-28. The nearest `N/M` figure of the report's own size, within 400
+characters of the citation, must equal what the report holds. Watched red against
+the ADR-020 sentence as it stood — `{nearest_claim: "9/9", report_is: "8/9"}`,
+which is this block's own evidence reproduced.
+NEAREST took two tries and the first one is worth recording: "some figure in the
+window matches" passed the replayed defect, because ADR-020's paragraph now
+explains its own history and carries BOTH 8/9 and 9/9 — so the wrong one
+satisfied the check. A paragraph legitimately shows its work; the figure a
+citation is offered as evidence FOR is the one beside it.
+Two exemptions, both found by measurement rather than reasoned in advance: soak
+reports have `results` entries with no `passed` key, so counting them turned a
+correct "10/10" into a false positive; and `tasks/reviews/` is exempt from the
+claim check while staying inside the citation check, because `pr34-r4.json` is
+finding R17 REPORTING this exact defect — a reviewer quoting a false pair is the
+record of the finding, and editing it to satisfy a regex would delete the
+evidence.
+Declared ceiling: the parse is a figure near a citation, not a prose reader. A
+claim phrased any other way is invisible, which is what the block asked for
+("good enough to catch 9/9 ... <red report>") and no more.
 Origin: PR #34 R17.
 Priority: P1
 Spec: ADR-020 claimed "`live` suite 9/9 after this change" and cited a report
@@ -3330,7 +3843,19 @@ whose score supports it — the parse only has to be good enough to catch
 "9/9 ... <red report>", not to understand arbitrary prose — watched red against
 the ADR-020 sentence as it stood before this fix.
 
-### T-M32-11 — any `expect` that implies verdict PASS crashes the adapter on a run that fails before grading            [status: todo]
+### T-M32-11 — any `expect` that implies verdict PASS crashes the adapter on a run that fails before grading            [status: done]
+CLOSED 2026-08-28. `_run_fixture_case` reads `(result.get("verdict") or {}).get(
+"verdict")`, so a run with no verdict reports the mismatch rather than exploding.
+None, not a crash: a run that ended before grading genuinely has no verdict to
+compare, and the check must FAIL so the case reports what it exists to report.
+All three shapes the acceptance names — `{}`, `{"status": "success"}`,
+`{"verdict": "PASS"}` — are probed in `opt-in-expect-keys-declared`, and all three
+were watched red with the same `TypeError: 'NoneType' object is not subscriptable`,
+which is what makes the fix un-closable by special-casing the empty one.
+Found LIVE rather than from this block: widening `_AGGREGATE` while working
+T-CHEAPEST-WORDING flipped `verifier-precision-recall` onto a verdictless path and
+the adapter crashed exactly as described here. A latent block and an experiment
+met in the middle.
 Origin: PR #34, found while reproducing R16 with the reviewer's own probe;
 trigger restated per PR #34 R26 — the first version of this block said "an
 empty `expect`", which is narrower than the real condition and would have
@@ -3361,7 +3886,15 @@ shape that implies verdict PASS — empty, `{"status": "success"}`, and
 `{"verdict": "PASS"}` alike — with the fix watched red on a non-empty `expect`
 first, so it cannot be closed by special-casing the empty one.
 
-### T-M32-15 — `assemble_result` trusts its caller for the verdict, and would emit an uncertified success if one ever forgot            [status: todo]
+### T-M32-15 — `assemble_result` trusts its caller for the verdict, and would emit an uncertified success if one ever forgot            [status: done]
+CLOSED 2026-08-28. `and verdict` no longer short-circuits: a falsy verdict demotes to
+`failure:semantic` with the reason `no verdict: nothing certified this answer`, and
+`answer` is nulled for EVERY non-success status rather than only inside the demotion
+branch. Both shapes graded by `inv2-verifier-outranks-executor`, watched red as three
+rows at once. The block's own enumeration that this is unreachable from `run_task`
+today still holds and is the reason it was worth closing rather than the reason not
+to: INV-2 is a property of this function, not of the discipline of its twenty call
+sites, and every silent success this repo has shipped was latent first.
 Origin: PR #34 round 7, the M28 merge hunt. Latent, not reachable today.
 Priority: P1
 Spec: `src/browser/agent.py:assemble_result` enforces INV-2 as
@@ -3404,7 +3937,23 @@ it red first with a case that calls `assemble_result` with an answer and no
 verdict and asserts the status is not `success` — the existing `inv2` case
 cannot see this branch.
 
-### T-M32-14 — `plan-adoption-is-the-only-steps-rebind` has three binding forms it cannot see, and does not say so            [status: todo]
+### T-M32-14 — `plan-adoption-is-the-only-steps-rebind` has three binding forms it cannot see, and does not say so            [status: done]
+CLOSED 2026-08-28 on the two forms a shape check can answer, with the third
+DECLARED in the case's own triage rather than left to be assumed away — which is
+what this block asked for, since its subject is the disclosure gap and not the
+severity.
+`for steps in ...` (`ast.For.target`) and `with ... as steps`
+(`ast.withitem.optional_vars`) now redden; neither can be adopt-derived by
+construction, so both are unconditional. Watched red with each planted
+separately.
+The third — a callable literally named `adopt` shadowing the real nested one —
+stays open and is stated in `triage.note`: `adopt_derived()` matches by NAME and
+does not resolve which `adopt` is in scope. Closing it means writing a name
+resolver over the module, which is a different tool from a shape check, and the
+layered guarantee covers it meanwhile (`observe-drilldown-replan-is-linted` goes
+red at runtime on the only version of that mutation which actually removes a
+lint). The block's own point is that an undeclared exclusion is the defect; it is
+declared now.
 Origin: PR #34 R30. Routed to debt by the reviewer, not repaired here.
 Priority: P2
 Spec: `_check_steps_adopt_only` enumerates `ast.Assign`, `ast.AugAssign`,
@@ -3442,7 +3991,20 @@ scope means a symbol table, which is a real static analyser and far past what
 this case is for); declare it and lean on the runtime case. Watch any code fix
 red against the repro above first.
 
-### T-M32-12 — T-R34 left the Queue when it merged but never got its DONE.md line            [status: todo]
+### T-M32-12 — T-R34 left the Queue when it merged but never got its DONE.md line            [status: done]
+CLOSED 2026-08-28 with the acceptance's BETTER fix rather than its cheap one, and
+then both. The symptom was already gone — T-R34 and M37 have DONE.md lines now —
+so what was left was the recurrence, which is what the block actually cared about
+("this is the second instance in two milestones"). `task-and-adr-ids-are-unique`
+now reddens on any id with a `pr-loop-ledger.jsonl` row, no Queue heading and no
+DONE.md line. Watched red by deleting T-R34's own DONE line: exactly
+`{"merged_but_in_neither_tracker": ["T-R34"]}`.
+Two ledger rows had no tracker line at all and got one: `M44-P1-remedy` (PR #67)
+and `PR21`. Named ceiling, because the guard would otherwise look stronger than it
+is: it only considers well-formed task ids, so a phase label like
+`M44-P1-remedy` — a remedy phase, never an allocation — is skipped, and a merged
+task whose ledger row carries a malformed id stays invisible. That is the id-space
+problem T-ADR-NUM owns, one file over.
 Origin: PR #34, found during the fourth `origin/main` merge of round 5 while
 reading the auto-merged `tasks/TODO.md`.
 Priority: P2
@@ -3471,7 +4033,21 @@ the better fix, since this is the second instance in two milestones. Cheap
 guard if one is wanted: every task id that has a `pr-loop-ledger.jsonl` row and
 no `### <id>` heading in TODO.md must have a DONE.md line.
 
-### T-M32-8 — ADR-002's Ruling and the CI band publish ceilings nothing derives from the ledger            [status: todo]
+### T-M32-8 — ADR-002's Ruling and the CI band publish ceilings nothing derives from the ledger            [status: done]
+CLOSED 2026-08-28. (a) is done in two parts, one of them earlier tonight: the
+Ruling and Status line already defer to ADR-019 §2/§3/§5 (PR #40), ADR-002
+**Decision 4** was found still publishing "60s locally, 80s on CI" as the rule
+and is struck (recorded under T-M32-17, where the false clause lived), and the
+`Amended by` list — which stopped at ADR-019 and so implied the ceilings had not
+moved since — now names ADR-021, ADR-029, ADR-035, ADR-037 and ADR-039. It
+carries NO numbers, deliberately: it says which decisions moved the ceilings, and
+this ADR publishing its own copy of the values is what the block was filed for.
+(b) is not this block's to close and now says so: the ADR-019 §5 CI band and the
+README paragraph beside it are graded against the WORKFLOW cell-by-cell by
+`ci-numbers-are-derived` (PR #41 R14 onwards), which is what closes the
+"nothing grades them" half. What remains — that no CI wall clock reaches the
+committed LEDGER, so the four figures are checkable only by a reader — is
+T-R73's, stated there, and needs a CI artifact rather than a grader change.
 Origin: PR #34 R18, extended by PR #34 R21. Routed to debt in round 4 and
 recorded in `tasks/reviews/pr34-r4-resolution.json`, but no block was ever
 written into this file — found while repairing R21 in round 5, which is itself
@@ -3551,7 +4127,14 @@ Repro: edit any file under `src/` from a worktree whose parent checkout has no
 Acceptance: the hook resolves the tree from the edited file's path (or from
 `git rev-parse --show-toplevel` on it) rather than from `$CLAUDE_PROJECT_DIR`.
 
-### T-M32-4 — the `analysis_section1` grader asserts presence, not absence of contradiction            [status: todo]
+### T-M32-4 — the `analysis_section1` grader asserts presence, not absence of contradiction            [status: done]
+CLOSED 2026-08-28 with T-R29, in the one place that block asked for ("fix it once, for
+every half, there"). §1 is now section-scoped and uniqueness-checked. The block's own
+repro — inserting a contradicting browser-actions sentence above the correct one — was
+used as the red-first and reddens on two patterns at once. Note the first attempt at
+the fix did NOT catch it: the patterns were written from the correct line's full
+wording (`\d+ browser actions in a \`fast\` run`) and a competing sentence phrases it
+differently, so they had to be broadened to the figure itself.
 Origin: PR #34 R10
 Priority: P1
 Spec: `docs-numbers-are-derived`'s new `analysis_section1` block reads the whole
@@ -3570,7 +4153,7 @@ Acceptance: the §1 block scans only §1, and/or asserts no other
 `\d+ browser actions` / `\*\*\d+ of the \d+\*\* cases` string appears in the
 section; the contradicting-line probe above reddens.
 
-### T-M32-5 — README publishes 28 wall clocks no committed report backs            [status: todo]
+### T-M32-5 — README publishes 28 wall clocks no committed report backs            [status: done]
 Origin: PR #34 R12
 Priority: P1
 Spec: `README.md:68`, `:71-73`, `:78`, `:85`, `:90`, `:96` and `:99` publish
@@ -3585,7 +4168,35 @@ try to resolve any of them to a report in `evals/report/`.
 Acceptance: each remaining README wall clock names the report it came from and
 is recomputed by `docs-numbers-are-derived`, or is deleted.
 
-### T-M32-6 — the recovery-label clause credits the drill-down path with a label it never sets            [status: todo]
+Closed, and NOT by either exit the acceptance named. "Recompute each figure from
+a committed report, or delete it" is wrong for most of the 28: the M9, M12, M31
+and ADR-013-era bands PREDATE ADR-012's convention that a published figure cites
+a committed report, so no report file will ever back them, and deleting them
+would delete the record of a local ceiling that was withdrawn twice — which is
+the reason the ceiling machinery exists at all. The third exit is the one this
+repo already uses everywhere else: a figure names where its record lives.
+Swept with `_unsourced_wall_clocks` (a wall clock with no run id, ADR number,
+report path, PR or section reference within five lines), watched red at four
+sites — ADR-013 Decision 4's withdrawn band and Decision 5's post-commit band,
+M31's 60.24s, M12's 68.1s breakdown, M9's 63.3s — each of which now names the
+ADR that holds it. Table rows are exempt because they are RECOMPUTED
+(`published-band-matches-the-ledger`, `where_it_stands`), which is a stronger
+claim than a citation. Graded from now on, so the choice cannot rot back into
+the drift class R4 and R5 were about.
+
+### T-M32-6 — the recovery-label clause credits the drill-down path with a label it never sets            [status: done]
+CLOSED 2026-08-28. `specs/001` now separates the two statements it ran together:
+the label DEFERS past an `observe` and lands on the next non-`observe` attempt
+(graded by `recovery-label-lands-on-the-extract`), and separately
+`recovery-replan-postcondition` is the shape where the new plan's only step is a
+bare `extract` — with no `observe` in its stub plans at all, so nothing is
+deferred past anything there. It pins where the label lands, not that an
+observation was skipped to get there. The clause also now says that the label is
+assigned in exactly one place (family 2's act→replan branch) and that the
+drill-down branch sets only the note, so no drill-down has ever produced a
+`"recovery"` label. The block is right that the code is correct and graded and
+only the prose was wrong; ADR-020 §2's copy is named as carrying the same
+conflation.
 Origin: PR #34 R14
 Priority: P2
 Spec: `specs/001-browser-contract.md:130-135` says the `recovery` label and the
@@ -3606,7 +4217,48 @@ Acceptance: the clause separates the two statements — the label defers past an
 and in `recovery-label-lands-on-the-extract` is the `extract` the drill-down's
 replan returned while a family-2 recovery is in flight.
 
-### T-M32-7 — the contract's laundering clause omits the `page_changed: null` half            [status: todo]
+### T-M32-7-D1 — nothing grades the CONTRACT's case citations            [status: done]
+CLOSED 2026-08-28, one commit after being filed — which is the point of having
+filed it rather than leaving it inside T-M32-7's close.
+`support-matrix-cites-real-cases` now resolves the case ids in
+`specs/001-browser-contract.md` as well, with the document list declared in
+`expect` so adding a third is a visible edit to a case file. Watched red on this
+block's own acceptance: one contract citation pointed at a case that does not
+exist — `{"doc": "specs/001-browser-contract.md", "cites":
+"observe-cannot-launder-noop-actions"}`.
+Same regex, no new convention, and that was measured rather than assumed before
+landing: all 42 backticked kebab-case tokens in the contract resolve to real
+cases today, so the matrix's pattern needed neither widening nor narrowing and
+the check starts green for the right reason.
+Origin: T-M32-7's close, 2026-08-28 — that block's own explanation of how it
+drifted, left behind when its first half was fixed.
+Priority: P2
+Spec: `support-matrix-cites-real-cases` grades that every case id
+`docs/support-matrix.md` cites resolves to a real case file. `specs/001-browser-
+contract.md` cites case ids the same way, throughout, and nothing checks them —
+which is exactly why its laundering clause could sit at a superseded wording,
+citing two cases where D25 and ADR-020 cite three, without anything going red.
+The contract is the document a reviewer reads to learn what the system
+guarantees, so a dangling or missing citation there is worth more than in the
+matrix, not less.
+Acceptance: `support-matrix-cites-real-cases` (or a sibling) resolves the case
+ids in `specs/001-browser-contract.md` too, watched red by pointing one at a
+case that does not exist. NOT closable by adding the citations by hand — the
+block it came from was fixed by hand, and this exists because hand-fixing is
+what leaves the next drift invisible.
+
+### T-M32-7 — the contract's laundering clause omits the `page_changed: null` half            [status: done]
+CLOSED 2026-08-28 on the first half of the acceptance: `specs/001` states the
+null half and cites the third case, word for word with D25 and ADR-020 on the
+predicate — an attempt that RAN and moved nothing, and one that never got far
+enough to be compared, with the reason (`page_changed` is null for every act
+failure raised inside `execute`, because the before/after comparison is on the
+line after it returns).
+The second half — "ideally a grader covers the contract's case citations the way
+`support-matrix-cites-real-cases` covers the matrix's" — is NOT done, and the
+block's own diagnosis of why this drifted is that grader's absence. Filed as
+T-M32-7-D1 rather than left inside a closed block, because a closed block is
+where a residual goes to be forgotten.
 Origin: PR #34 R15
 Priority: P2
 Spec: `docs/support-matrix.md` D25 and `specs/decisions/ADR-020` were both
@@ -3691,7 +4343,18 @@ Acceptance: either a workflow step that publishes CI's history row as an artifac
 can read (or commits it), plus `Band source — ci ...` sentences in §5 that item 9 grades, or
 a recorded decision that CI's numbers stay reader-verified and §5/§7 say so permanently.
 
-### T-R74 — nothing grades that CI actually tags its rows `ci`            [status: todo]
+### T-R74 — nothing grades that CI actually tags its rows `ci`            [status: done]
+CLOSED 2026-08-28 on the acceptance's first branch. `fast-wall-clock-budget`
+already parses the workflow for its two ceiling declarations, so it now also pins
+that the workflow declares an environment and that it is not `local`. Watched red
+by removing the `EVAL_ENV` line: `{"workflow_env": null}`.
+Ceiling named rather than implied, because this is a claim about a DECLARATION:
+it does not demonstrate that Actions sets `CI` (the fallback `env_tag()` actually
+relies on), and it does not demonstrate that either declaration survives into a
+committed row. That second half needs a CI artifact whose `env` something reads
+back, and stays T-R73's. What this closes is the silent direction — if the tag
+came out `local` on CI, T-R44's defect would return with every check green, and
+now the louder of the two declarations cannot vanish unnoticed.
 Origin: T-R44
 Priority: P1
 Spec: `evals/run.py` `env_tag()` returns `EVAL_ENV` if set, else `ci` when the runner sets
@@ -3708,7 +4371,17 @@ declarations) also pins that the workflow declares an environment that is not `l
 CI artifact carries the row and something reads its `env`. Watched red with the declaration
 removed.
 
-### T-R75 — README's `main runs fast in 89.62s` is the same unlabelled CI figure T-R51 struck its neighbours for            [status: todo]
+### T-R75 — README's `main runs fast in 89.62s` is the same unlabelled CI figure T-R51 struck its neighbours for            [status: done]
+CLOSED 2026-08-28 on the acceptance's SECOND branch — cut to the claim that
+survives — because the first is unavailable: the figure carries no run id
+anywhere in the tree and no artifact reproduces it, which is the defect, not a
+lookup problem. Struck in place with the reason, and the sentence around it
+already made the surviving claim ("CI had been ~50% over the same ceiling with
+nothing checking") without the number.
+Worth keeping in the record: it survived T-R44's sweep only because it is
+narrative about a ceiling that no longer exists rather than a band anything
+derives from — "outside the acceptance" is not the same as "true", and the
+figure was as unevidenced as the four T-R44 struck two sections above it.
 Origin: T-R44
 Priority: P1
 Spec: the M12 paragraph in README still publishes a bare CI measurement — "`main` runs
@@ -3773,7 +4446,7 @@ tolerates one red row and then requires green (the same as-of trick would work),
 `_band_wrong`'s comment and ADR-019 §6 state that a band's source run may be red and say
 what that costs. Watched red with the two rows above.
 
-### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: todo]
+### T-R35 — three specs files still publish the withdrawn 75s/15s ceilings as current            [status: done]
 Origin: PR #29 R25
 Priority: P1
 Spec: `specs/decisions/INDEX.md:11` (rewritten by 3699b87) reads "fast 75s local / 90s CI"
@@ -3789,7 +4462,37 @@ matches its Ruling; ADR-002's parenthetical stops asserting a live 15s invariant
 T-R25's Update states what is actually fixed. Ideally one graded row that compares INDEX/ADR
 ceiling numbers against `WALL_BUDGET_S`, watched red against the current text.
 
-### T-R36 — `adr-header-and-index` cannot see an ADR file missing from INDEX when another shares its number            [status: todo]
+Closed together with T-R25 and T-M32-16 — they are one defect, and each round had
+answered the other two by pointing at them. `docs-numbers-are-derived` gained
+`_local_ceiling_drift`, the local twin of the CI sweep, reading `WALL_BUDGET_S`
+instead of prose. It grades two SHAPES exhaustively rather than guessing tense:
+a **bold** seconds literal on a local-ceiling line, and a heading that publishes
+one. Move operands (`80 -> 90`, `moves from 90s to 105s`), `[historical]`/`[local]`
+and struck text are exempt. That choice is T-M32-16's first acceptance branch,
+taken deliberately: ~77 tracked lines pair a seconds literal with a ceiling word,
+nearly all are the record, and an enumeration of the live ones is what T-M32-16
+was REOPENED for after its own was falsified.
+Watched red against the tree as it stood — seven hits, two of them genuinely
+stale live publications inside the ceiling machinery's own publisher of record:
+ADR-019 §2's HEADING read "The local `fast` ceiling is 90s" against a committed
+125, and ADR-029:45 read "**105s**, which `WALL_BUDGET_S` holds" after three
+raises. `published-band-matches-the-ledger` reads the band BULLET inside those
+sections and has never read their titles. The other five were true records
+wearing the live shape and now carry `[historical]`.
+Residual, declared rather than covered: unbolded body prose is still ungraded.
+Tense is not decidable by regex; the defence there is that the literals have been
+dropped from the prose that mattered (ADR-002's and ADR-013's Rulings), which is
+an argument and not coverage. It is written into the case's row table, in the
+direction that fails loudly if someone later mistakes it for coverage.
+
+### T-R36 — `adr-header-and-index` cannot see an ADR file missing from INDEX when another shares its number            [status: done]
+CLOSED 2026-08-28. `sorted(set(adr_nums) - set(index_nums))` collapsed two files
+sharing a number into one member, so if only one was indexed the missing entry never
+appeared — which is how R26's dropped M34 INDEX line survived a merge. Counted rather
+than subtracted, so the second file is its own row. Watched red by copying an ADR to a
+second file with the same number: `{"missing_from_index": ["039"]}`, where the old
+form was green. The asymmetry is what hid it — `duplicated_in_index` already counted
+the INDEX side while the file side was a set.
 Origin: PR #29 R26
 Priority: P1
 Spec: The duplicate this block was opened for is resolved: main's M34 INDEX line
@@ -3807,7 +4510,24 @@ fails on a duplicated ADR number on disk), watched red against a tree with two
 same-numbered ADR files and one INDEX line. This is the general form
 T-ADR-NUM already tracks — fold it in if that block is promoted first.
 
-### T-R37 — a plural aggregate request is now refused as if it asked for one item            [status: todo]
+### T-R37 — a plural aggregate request is now refused as if it asked for one item            [status: done]
+CLOSED 2026-08-28 on the acceptance's FIRST branch — the precondition is
+narrowed, not the ceiling declared. A which-question whose immediate subject is
+plural asks for several items, so `is_aggregate` no longer matches it. New case
+`plan-lint-allows-a-plural-which-question` on `shop.html` with the block's own
+input, watched red as `failure:task` / `answer null` / `actions 1`.
+Two corrections I had to make, both caught by running it rather than reasoning:
+(1) I first narrowed the LINT alone, reasoning that `is_aggregate`'s other caller
+asks a different question. It does — but the plural run then died one layer
+later in the verifier's `aggregate_needs_comparison` with the same refusal. Two
+callers of one predicate may differ about what to DO; they cannot differ about
+what the task ASKS FOR. Narrowed in the predicate.
+(2) The first regex allowed a word between `which` and the subject and matched
+"What is the highest price?" — `is` ends in `s` and is not `ss` — which would
+have disabled the check on the very shape it exists for. Immediate subject only,
+with a stoplist.
+The `plan-lint-refuses-a-declared-non-comparison` direction is unmoved and was
+verified alongside: singular which-questions still lint.
 Origin: PR #29 R27
 Priority: P1
 Spec: `src/browser/agent.py:200-221` refuses whenever `is_aggregate(task)` and the single
@@ -3827,7 +4547,18 @@ as which-one (no new wording regex needed — the existing match already exposes
 ADR-018's "entitled to contradict" paragraph states this ceiling with this exact input as its
 evidence, and a case pins the behaviour so it is a decision rather than a side effect.
 
-### T-R38 — `extract_all` rows after the first lose M34's DOM-offset anchoring            [status: todo]
+### T-R38 — `extract_all` rows after the first lose M34's DOM-offset anchoring            [status: done]
+CLOSED 2026-08-28 on the acceptance's stronger branch — the hint is taken per row via
+`loc.nth(i)` — AND D24 is amended, because the sentence it carried was wrong rather
+than merely incomplete. Case
+`extract-all-anchors-every-row-to-its-own-element` runs an `extract_all` across two
+pages where one enumerated row's string also sits in a banner that repeats verbatim
+on the first page, watched red against the row-0 anchoring as `not_page_furniture:
+false` on row 2 alone. The failure direction here is the less alarming one (a correct
+answer rejected); it is symmetric, and neither direction was reachable by any existing
+case, since every M34 case uses `extract`. Cost named rather than hidden: one
+`evaluate` per row instead of one per step, and if that ever shows in the wall clock
+the answer is T-EXTRACT-ALL-VOLUME's cap, not this hint.
 Origin: PR #29 R28
 Priority: P1
 Spec: `src/browser/agent.py:675-676` — `off = (real_offset if v == vals[0] else
@@ -3871,6 +4602,28 @@ in front of a real planner and it is `full`-tagged and unrun, so there is no
 measurement of how often a real model gets `rank` right.
 
 ### T-CHEAPEST-WORDING — the plan lint does not fire on price-worded rankings, so nothing sends such a plan back            [status: todo]
+Update (2026-08-28): the widening was IMPLEMENTED and MEASURED, then reverted, and
+the block stays open with the cost now quantified instead of argued. Adding
+`cheapest|most expensive|priciest|dearest` to `_AGGREGATE`'s second half does what
+this block wants — `is_aggregate("Which product is the cheapest, and what is its
+price?")` becomes True — and the `which|what|who` frame requirement does protect
+the fifteen shop-fixture cases exactly as hoped: "Sort the catalogue by price, low
+to high, and name the cheapest product" stays False, because it has no frame.
+So the fear M31 declined on is NOT what stops it. What stops it is measured:
+exactly FOUR committed cases change classification, and three of them break —
+`extract-all-undeclared-intent-fails-loud` (now refused by the lint before it can
+demonstrate what it grades), `verifier-catches-listing-dump`, and
+`verifier-precision-recall`, which is a labelled-ACCURACY measurement whose
+numbers would move. Changing what an accuracy case measures is a decision with its
+own ADR, not a debt cleanup, which is why this is reverted rather than landed.
+Also note the second half of the block's own evidence is NOT fixed by this
+widening: `live-books-cheapest-travel`'s "In the Travel category, find the
+cheapest book and tell me its exact price" has no `which|what|who` frame either,
+so it stays False. Any real fix has to reach frameless phrasings, and that is a
+bigger predicate than a vocabulary addition — which is the honest restatement of
+what this block is asking for.
+The one thing that came out of it and stayed: the experiment crashed the adapter
+and that closed T-M32-11.
 Origin: PR #29 R4, restated at PR #29 R9 and R12
 Priority: P1
 Spec (claim): the plan lint (`agent.plan_gap`) is gated on `verifier.is_aggregate`.
@@ -3957,11 +4710,25 @@ already is (`ValueError` -> `failure:semantic`), watched red first. Deliberately
 NOT done in M31: no enumeration in this repo produces one — every `extract_all`
 in the eval set reads one column of one page — and the ponytail comment on
 `rank` names the ceiling and this upgrade path.
-### T-R42 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: todo]
+### T-R42 — `examples-cover-matrix` parses EXAMPLES keys by line start, not by parsing the object            [status: done]
 Origin: PR #32 R7 (LOW)
 Priority: P2
 Spec: `_check_examples_cover_matrix` finds keys with `^\s*"([^"]+)":\s*\{` over the `const EXAMPLES = {` block, so an entry written mid-line is silently dropped from the parsed set. Every consequence reproduced fails in the safe direction today (added/renamed doc row → red; `const EXAMPLES={` reformat → IndexError → passed=False; a mid-line real-site key → red as rows_without_example), so this is robustness, not a gap.
 Acceptance: the check parses the object (whole-block regex or a JSON export of EXAMPLES) so formatting cannot change what it sees; a case pins that a mid-line key is counted.
+
+Closed. `_js_object_keys(src, name)` brace-matches the literal instead of matching
+keys by line start, so neither `const EXAMPLES={` nor a mid-line entry changes what
+is seen. The mid-line claim is pinned INSIDE the check, on a synthetic one-line
+source, rather than in a second case: the claim is about this function's reader,
+and a source it never reads in production is a source that can drift away from the
+one it does. Watched red with the old regex swapped back in:
+`mid_line_key_not_counted: ["a.example"]`.
+What the acceptance did not anticipate: the first brace-matched draft was WORSE
+than the line regex — 5 keys instead of 9. The block carries prose comments, one
+of which contains `Student's`, and reading that apostrophe as a string opener
+swallowed the rest of the file; the scan ran to EOF with depth never returning to
+0. So the scanner skips `//` and `/* */` first. This is the second time a
+robustness fix in this file was itself the defect on its first draft.
 
 ### T-R39 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
 Origin: PR #32 R2 (LOW)
@@ -3969,19 +4736,38 @@ Priority: P2
 Spec: the page's no-URL guard derives a start URL from any `label.tld` token in the task text. Measured false positives: "What version of node.js is listed?" → `https://node.js`, "Open README.md and read the title" → `https://README.md`, "Find setup.exe download link" → `https://setup.exe`, "email john@example.com about it" → `https://example.com`. The lifted URL is written to `#url` and POSTed in the same click, so the run is spent (ends `failure:nav`, $0, but a slot and a red result the visitor did not intend).
 Acceptance: common file extensions and e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the `ui-no-url-guard-and-example-chips` case gains one such input asserting no POST and the guidance shown.
 
-### T-R40 — two case provenances cite dangling pre-rebase shas            [status: todo]
+### T-R40 — two case provenances cite dangling pre-rebase shas            [status: done]
 Origin: PR #32 R5 (LOW)
 Priority: P2
 Spec: `evals/adversarial/ui-no-url-guard.json` says "watched red against the pre-M35 page (main 2a11142)" and `ui-execution-progress.json` cites `e07ac07`; neither commit is on any branch after the rebase onto `2e94bed`, so the red-first evidence becomes unreachable after gc and "2a11142" is not main.
 Acceptance: provenance cites reachable shas (`b7daac4` as the pre-M35 page; the watched-red amendment against the branch's own prior commit or a described patch); `report-citations-resolve`-style check if one exists for shas.
 
-### T-R41 — the shared `_ui_page` render leaks the form case's state into `ui-rendered-narrow`            [status: todo]
+Closed, but NOT the way the acceptance proposed. It named `b7daac4` as the
+reachable pre-M35 sha to re-point at; `git branch -a --contains` returns nothing
+for `b7daac4` either, exactly as for `2a11142` and `e07ac07`. Re-pointing would
+have relocated the problem to a sha with the same lifetime. Both provenances now
+DESCRIBE the red-first state ("the console before the no-URL guard existed", "the
+state while the page still carried both forbidden strings") and carry a note
+recording all three shas as unreachable so nobody re-tries the acceptance's fix.
+No sha check was added: the general form is a repo-wide gc-liveness rule that would
+red the whole ledger, and the lesson is cheaper stated than enforced — red-first
+evidence is the OBSERVATION, and a sha is only ever a pointer to it.
+
+### T-R41 — the shared `_ui_page` render leaks the form case's state into `ui-rendered-narrow`            [status: done]
 Origin: PR #32 R6 (LOW)
 Priority: P2
 Spec: `_run_ui_form_case` stubs `window.fetch` and never restores it, and leaves `#err` visible and `#task`/`#url` filled on the cached (390, dark) page that `ui-rendered-narrow` then reuses; the two cases are order-coupled through `sorted(rglob)`. Passes today; no failure reproduced.
 Acceptance: the form case restores `window.fetch` and resets `#err`/`#task`/`#url` at the end (or the rendered case asserts its own preconditions) so the two cases are order-independent in either order.
 
-### T-M35-WALL — the fast suite sits within 0.3s of its 60s wall-clock ceiling            [status: todo]
+Closed. `_run_ui_form_case` restores `window.fetch` from a saved reference and
+clears `#task`/`#url`/`#err`/`#go` before returning, so the cached (390, dark)
+render is handed back as it was found. Nothing failed before and nothing fails
+now — what was wrong is that WHETHER it failed depended on `sorted(rglob)`
+filename order, which is not a property either case declares. No red-first was
+watched because the coupling is order, not state: reproducing it means renaming a
+case file, and a case that pins filename order pins the wrong thing.
+
+### T-M35-WALL — the fast suite sits within 0.3s of its 60s wall-clock ceiling            [status: done]
 Origin: M35 implementer
 Priority: P1
 Spec: `--suite fast` measured 59.01 / 59.06 s before M35 and 59.38 / 59.71 s
@@ -4003,6 +4789,23 @@ Repro: `.venv/bin/python -m evals.run --suite fast` twice and read `wall_s` in
 Acceptance: a decision recorded in an ADR — either the suite sheds wall clock
 (shared contexts, fewer duplicate fixture loads, or the parallel runner M14) or
 the ceiling moves with a reason — and the suite runs with >= 5 s of headroom.
+
+Closed on the acceptance's own terms, by its second branch. "The ceiling moves
+with a reason" happened five times since this was filed, each move derived by
+ADR-013's rule from the committed ledger at the new case count rather than
+chosen: ADR-021 (80 -> 90), ADR-029 (90 -> 105), ADR-035 (105 -> 110), ADR-037
+(110 -> 115), ADR-039 §5 (115 -> 125, and that one states plainly that it is NOT
+under ADR-021's case-count licence — two cases cost ~0.2s and the rest is §1's
+settle, with two waste-removal attempts recorded before the raise).
+"The suite runs with >= 5s of headroom" is measured, not asserted: the six most
+recent local `fast` rows at 258 cases are 104.12 / 104.62 / 104.41 / 104.49 /
+104.01 / 104.53s against a ceiling of 125 — 20.38s of headroom at the slowest,
+against the 0.3s that opened this block.
+What the block got right and is worth keeping: the structural observation that
+~45s of this suite is product timeouts exercised on purpose, so growth is not
+waste. ADR-021 turned that into the standing rule (per-case cost is answered by
+removing waste, case COUNT licenses a raise), and ADR-039 §5 is the first move
+that had to argue against it rather than cite it.
 
 ### T-R32 — D-number citations in code and docs are not machine-checked            [status: todo]
 Origin: PR #25 R5
@@ -4087,7 +4890,7 @@ Priority: P2
 Spec: replay committed live-page snapshots so live-site drift is detected
 without network. Acceptance: a drifted snapshot turns a case red offline.
 
-### T-ADR-NUM — ADR numbers are allocated by "next free", and this branch has been renumbered three times            [status: todo]
+### T-ADR-NUM — ADR numbers are allocated by "next free", and this branch has been renumbered three times            [status: done]
 Origin: PR #20 (no finding id — discovered by doing it, three times)
 Priority: P1
 Spec: an ADR takes the next free number when it is *written*, and concurrent
@@ -4123,7 +4926,27 @@ so the debt block was renumbered to M27 on merge. "Next free" fails for every
 id sequence in this repo, not just `specs/decisions/`; whatever rule lands here
 should cover `tasks/TODO.md` ids too.
 
-### T-R13 — the module tail that turns `main()`'s return into an exit code is ungraded            [status: todo]
+Closed with both halves, which the acceptance required together rather than
+either alone.
+The RULE is in `specs/decisions/INDEX.md`'s header: claim the number when the PR
+OPENS, by adding the INDEX row in the same push — the row is the reservation.
+Reserving early does not PREVENT a collision (two branches can open the same
+day), which is why it is paired with a guard instead of trusted.
+The GUARD is three new conjuncts on `adr-header-and-index`: two FILES sharing one
+number, a gap in the sequence, and an INDEX row naming no file. Each watched red
+separately — the first against a duplicated ADR-039, which is the collision that
+actually happened on this branch on 2026-08-28; the other two together by
+renaming the M43 vision ADR two numbers past the end of the series, which is the
+shape a botched rename leaves behind.
+No new case: the conjuncts extend the existing one, so the suite count is
+unchanged and no band republish was needed.
+A small demonstration of the same family arrived immediately: the first draft of
+the case's own note SPELLED the two hypothetical numbers in canonical form, and
+this check resolves every `ADR-0NN` citation, so it reddened with two dangling
+references. The numbers are described in prose now. A guard that catches its own
+documentation is working.
+
+### T-R13 — the module tail that turns `main()`'s return into an exit code is ungraded            [status: done]
 Origin: PR #20 R13 (LOW, routed debt by the reviewer, which approved alongside it)
 Not specific to M12's ceiling: the same tail gates the pre-existing invariant and
 regression rules identically, and nothing in PR #20's diff made it worse. The
@@ -4149,6 +4972,17 @@ over-budget tree -> 0, and
 -> True. Acceptance: the case drives the process — one
 `subprocess.run([sys.executable, '-m', 'evals.run', ...])` over-budget probe
 reading `returncode` — rather than calling `main()` in-process.
+
+Closed. `_run_wall_clock_case` gained a module-tail AST check under
+`expect.module_tail_exits_with_main`: `evals/run.py` must end in an
+`if __name__ == "__main__":` guard whose body passes `main()` to `sys.exit`.
+Watched red by replacing `sys.exit(main())` with a bare `main()`:
+"evals/run.py does not end in `sys.exit(main())` under a __main__ guard, so
+main()'s return value never becomes an exit code and every gate it carries is
+inert". Graded by AST rather than by running the module, because the failure is
+that the return value is DISCARDED — a run that exits 0 for the right reason and
+a run that exits 0 because nothing read the code are the same observation from
+outside.
 
 ### T-R12 — `--update-baseline` records a baseline over the wall-clock ceiling, silently            [status: todo]
 Origin: PR #20 R12 (LOW, routed debt — what should happen there is a repo-owner call)
@@ -4182,7 +5016,21 @@ raise on the shared path. Acceptance: `ctx` created inside the exit stack
 (`stack.push_async_callback(ctx.close)`) or inside the `try`, so both paths
 close it on any failure, with a case that leaks before the fix.
 
-### T-R19 — `report-citations-resolve` only checks citation->file, never file->citation            [status: todo]
+### T-R19 — `report-citations-resolve` only checks citation->file, never file->citation            [status: done]
+CLOSED 2026-08-28. The case now enumerates `evals/report/*.json` and fails on any
+file nothing in `REPORT_CITATION_SCOPE` cites, with ADR-012's policy-exempt kinds
+(`-live`, `-soak`, `-ablation`, `-bench`, `-probe`, `-smoke`) declared in `expect`
+rather than hard-coded, so widening them is a visible edit to a case file. It did
+not need a planted red: it went red on the tree, naming **405** uncited routine
+dumps totalling 41.3MB — the accumulation ADR-012 pruned once (159 reports, 4.8MB)
+and that came straight back because only one direction was ever enforced.
+The prune itself is ADR-012 Decision 4 and is a SEPARATE commit. Decision 3's
+losslessness rule was honoured rather than assumed: 387 of the 405 already had a
+`history.jsonl` row, the other 18 did not, and pruning those would have been lossy —
+so they were backfilled from their own report contents first, every field read out of
+the file and marked `backfilled`, and the prune was gated on an assertion that every
+candidate is summarised in the ledger. Recovery, per Decision 4's own convention:
+`git show 0a5710d:evals/report/<name>`.
 Origin: PR #20 R19 (MEDIUM, routed repair; the reverse-direction guard itself is
 logged here as debt rather than built, since it is more than a "prune to fix" fix)
 Priority: P1
@@ -4199,7 +5047,18 @@ Consequences: "non-prunable by policy regardless of citation"), and fails if any
 remaining file is cited by nothing in `REPORT_CITATION_SCOPE`. Watch it fail
 first by re-adding one of the 38 pruned files uncited.
 
-### T-R21 — the over-budget-counts-as-red report-write clause is ungraded            [status: todo]
+### T-R21 — the over-budget-counts-as-red report-write clause is ungraded            [status: done]
+CLOSED 2026-08-28 on the acceptance's first branch — a row driving `main()`
+WITHOUT `--no-report` on an over-budget stub, asserting a report file appeared —
+rather than the "recorded as debt" fallback. `_main_exit_code` grew a
+`want_report` mode; every existing row keeps `--no-report` because they grade the
+EXIT CODE and must not write. Two rows, both directions: a green in-budget run
+writes nothing, an over-budget run exits 1 AND leaves a report. Watched red by
+deleting the `or over_budget(...)` clause from `red` — the block's own repro,
+which reddened nothing before this.
+Why the direction matters: the evidence for a wall-clock failure IS the timing,
+so a run that dies on it with no artifact is the one failure shape that cannot be
+read afterwards.
 Priority: P2
 Origin: PR #20 R21 (LOW, routed debt — reviewer's own routing)
 Claim: the `or over_budget(args.suite, totals["wall_seconds"])` clause added to
@@ -4216,7 +5075,7 @@ Acceptance: one row driving main() without --no-report on an over-budget stub
 and asserting a report file appeared — or recorded as debt with the ADR saying
 it is unpinned.
 
-### T-R23 — the ADR-013 renumber sweep's commit-message tally is off by one            [status: todo]
+### T-R23 — the ADR-013 renumber sweep's commit-message tally is off by one            [status: done]
 Priority: P2
 Origin: PR #20 R23 (LOW, routed debt — classification (the thing that matters)
 is correct and was verified by hand, only the published tally is wrong)
@@ -4230,6 +5089,25 @@ docs/, README.md or .github/.
 Repro: `grep -rn 'ADR-012' --exclude-dir=.git --exclude-dir=report .` -> 3 lines.
 Acceptance: the PR body / ledger tally reads 3, or drops the count in favour of
 the classification.
+
+Closed as a correction on the record, which is the acceptance's second branch —
+"drops the count in favour of the classification". The tally lives in a merged
+commit message and cannot be edited; what can be fixed is that nothing carried
+the correction forward. So, stated here where a reader of the tracker will find
+it: **the ADR-013 renumber sweep touched THREE `ADR-012` hits, not four** — the
+header, `INDEX.md:21` and `evals/run.py:216` — and all three were main's
+report-policy ADR, correctly classified.
+That three is the block's own hand classification of the tree AT PR #20 and is
+relayed, not re-measured: the block's repro grep returns 47 hits on today's tree,
+because eleven milestones of ordinary citation have happened since. Anyone
+re-running it will not see 3, and a correction that reads as a live measurement
+would be its own version of this defect. The sweep itself was right; only the
+published count was wrong, which is the distinction the block was careful to draw
+when it was filed.
+Worth keeping beside T-ADR-NUM, which closed in the same commit: a hand-counted
+tally attached to a rename sweep is exactly the artefact that stops being
+checkable once several renames layer, and the guard added there is what makes the
+next sweep verifiable without one.
 
 ### M13 — Adaptive locator learning            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)
@@ -4386,7 +5264,7 @@ it — that case grades `run_task(browser=None)`, the production launch branch, 
 `ui-rendered-narrow` never routes through `run_task`. Do not widen that case:
 what is missing is a check on the eval harness's own renderers, not on the agent.
 
-### T-R25 — INDEX.md's ADR-002 line published withdrawn ceilings (both halves)            [status: todo]
+### T-R25 — INDEX.md's ADR-002 line published withdrawn ceilings (both halves)            [status: done]
 Status-note: fixed at PR #29 R22, kept for the mechanism.
 Origin: PR #23 R8 (LOW, routed debt by the reviewer); local half fixed and CI
 half found at PR #29 R22
@@ -4416,6 +5294,29 @@ INDEX.md:22 and `WALL_BUDGET_S`. Held out of PR #23 deliberately: the one-word
 edit is not the point, a guard that reads the ceiling out of `WALL_BUDGET_S`
 instead of out of prose is.
 
+Closed together with T-R25 and T-M32-16 — they are one defect, and each round had
+answered the other two by pointing at them. `docs-numbers-are-derived` gained
+`_local_ceiling_drift`, the local twin of the CI sweep, reading `WALL_BUDGET_S`
+instead of prose. It grades two SHAPES exhaustively rather than guessing tense:
+a **bold** seconds literal on a local-ceiling line, and a heading that publishes
+one. Move operands (`80 -> 90`, `moves from 90s to 105s`), `[historical]`/`[local]`
+and struck text are exempt. That choice is T-M32-16's first acceptance branch,
+taken deliberately: ~77 tracked lines pair a seconds literal with a ceiling word,
+nearly all are the record, and an enumeration of the live ones is what T-M32-16
+was REOPENED for after its own was falsified.
+Watched red against the tree as it stood — seven hits, two of them genuinely
+stale live publications inside the ceiling machinery's own publisher of record:
+ADR-019 §2's HEADING read "The local `fast` ceiling is 90s" against a committed
+125, and ADR-029:45 read "**105s**, which `WALL_BUDGET_S` holds" after three
+raises. `published-band-matches-the-ledger` reads the band BULLET inside those
+sections and has never read their titles. The other five were true records
+wearing the live shape and now carry `[historical]`.
+Residual, declared rather than covered: unbolded body prose is still ungraded.
+Tense is not decidable by regex; the defence there is that the literals have been
+dropped from the prose that mattered (ADR-002's and ADR-013's Rulings), which is
+an argument and not coverage. It is written into the case's row table, in the
+direction that fails loudly if someone later mistakes it for coverage.
+
 ### T-R26 — two review artifacts route to task ids that no longer resolve            [status: todo]
 Origin: PR #23 R9 (LOW, routed debt by the reviewer)
 Priority: P2
@@ -4434,7 +5335,19 @@ Acceptance: pr21-r1-resolution.json's debt id reads M27 (or carries a
 is corrected. Same root cause as T-ADR-NUM's fourth instance — fix them together
 or the next renumber re-opens this.
 
-### T-R27 — in a git worktree the pre-commit gate runs the MAIN checkout's hook script            [status: todo]
+### T-R27 — in a git worktree the pre-commit gate runs the MAIN checkout's hook script            [status: done]
+CLOSED 2026-08-28, alongside T-R91 and for the same reason: it blocked this
+milestone's commit. With T-R91's fix committed to the worktree's `.githooks/`,
+`git commit` still ran the OLD script and still reported the phantom regression,
+because `core.hooksPath` is absolute — the branch that fixes the gate does not
+get the gate it fixed, exactly as this block predicted. Acceptance's first
+option taken: the hook hands off to `$PWD/.githooks/pre-commit` when it is not
+already that file, one hop, bounded by `EVAL_HOOK_REEXEC`. Graded behaviourally
+by `pre-commit-reports-a-broken-interpreter-as-such`, which runs a COPY of the
+hook from a temp directory — the shape `core.hooksPath` actually produces — and
+asserts the tree's own copy takes over. Note the ordering this does NOT fix: it
+takes effect for worktrees only once a checkout carrying it is on `main`, since
+until then the main copy is what runs and it has no hand-off.
 Origin: PR #23 R4 repair (discovered mid-task, no finding id)
 Priority: P1
 Spec (claim): `core.hooksPath` is repo-level and absolute
@@ -4477,7 +5390,15 @@ only when the case is already erroring, which is why it did not block PR #23.
 Acceptance: `go()` wraps its context in try/finally, and a case asserts the
 shared browser holds no contexts after a deliberately-erroring render.
 
-### T-R29 — `docs-numbers-are-derived` asserts substring presence, so a contradicting line beside a correct one stays green            [status: todo]
+### T-R29 — `docs-numbers-are-derived` asserts substring presence, so a contradicting line beside a correct one stays green            [status: done]
+CLOSED 2026-08-28, together with T-M32-4 — one defect at two sites, which is what
+that block already said. README's fenced "Where it stands" block is now parsed and
+each suite may carry exactly ONE `\d+/\d+` figure inside it; §1 of `docs/analysis.md`
+is sliced to §1 (the way `analysis_coverage` already slices §6) and each figure's
+PATTERN may match at most once. Patterns, not the expected literals — a competing
+figure is by definition not the literal, which is why an `in text` assertion is blind
+to it by construction. Watched red both ways: a duplicated `fast 999/999` line inside
+the README block, and T-M32-4's own repro sentence inserted above the correct one in §1.
 Origin: PR #23 round-5 verification (out-of-scope note, no finding id)
 Priority: P1
 Spec: the R4 repair made README's "Where it stands" block recompute from the
@@ -4573,6 +5494,29 @@ Acceptance: drop the figure ("the whole adapter") rather than round it, since an
 here goes stale by construction.
 
 ### T-R63 — the band region's guard pins a named set, not everything band-shaped            [status: todo]
+Update (2026-08-28): the R22 RESIDUE — the second acceptance sentence, "the guard
+pins the region's lower edge to something the header comment cannot be moved out
+of" — is CLOSED, by a stronger mechanism than the one it names. Rather than
+pinning the lower edge, the §6-reference sweep no longer reads `region` at all:
+it reads the whole file. The markers exist to bound where band CODE may live,
+which is a different question from where a citation may be wrong, and a
+`§6 item N` reference is wrong wherever it sits — so the sweep had no reason to
+be bounded, and un-bounding it means no marker move can ever narrow it. Verified
+in BOTH directions with this block's own mutation (begin marker moved to
+`_BAND_LINE`, `item 8 (references)` corrupted to `item 8 (wrong-slug)`): GREEN
+before, RED after.
+The PRIMARY acceptance is NOT closed and is not close to closed, which is worth
+saying rather than leaving the update to imply otherwise. "The region's contents
+are pinned positively" or "the pattern is derived from the module namespace"
+both need a definition of what counts as band code, and this block does not have
+one: it names `_ADR019`, `_README`, `_INDEX`, `_DECIMAL_TOKEN`,
+`_README_BAND_ROW` and `_ADR_CEILING` as DELIBERATELY outside, so the rule cannot
+be "everything this check references" and cannot be "everything band-shaped"
+either. Reading `_check_published_band.__code__.co_names` was tried on paper and
+fails on exactly those six. What remains is a naming decision recorded in
+ADR-019 §6, not a grader change — and until it exists, the residual is that band
+code added later under a name `_BAND_DEF` does not match escapes the region
+check silently.
 Origin: T-R56 round 4 (PR #36 R19/R20)
 Priority: P1
 Spec: `published-band-matches-the-ledger` requires every name matching `_band…`,
@@ -4598,7 +5542,21 @@ what it contains rather than by markers — e.g. the check reads its own `__code
 the pattern is derived from the module namespace rather than written out. Watched red by
 moving an unpinned constant that carries a §6 reference out of the region.
 
-### T-R60 — two band parses are still last-wins, and derivations are matched document-wide            [status: todo]
+### T-R60 — two band parses are still last-wins, and derivations are matched document-wide            [status: done]
+CLOSED 2026-08-28, both halves, on the acceptance as written and with this
+block's own two mutations as the red-first.
+(1) The Ruling parse refuses a suite that matches twice, the same shape as
+`adr_publishes_two_bands`. Red on a planted second `**999s**` phrase:
+`{adr_publishes_two_ruling_ceilings: [120, 999]}`.
+(2) item 5 (derivation) reads derivations only from the section that publishes
+the band — §2 for `fast`, §3 for `invariant`, the same two sections the bands
+themselves come from, so no new convention. Verified in BOTH directions, which is
+what makes the red mean anything: `fast`'s derivation moved out of §2 to the end
+of the file is RED under the scoping and was GREEN under the old whole-file
+search. The helper falls back to the whole document if the headings move, because
+a scoping helper that silently matches nothing would make item 5 (derivation) a
+guaranteed red and get itself deleted — the `tasks/reviews` path-prefix failure
+(PR #20 R20) is the precedent.
 Origin: T-R56 cold review (secondary findings)
 Priority: P1
 Spec: two holes the T-R56 sweep found and left, both in `_check_published_band`, both the
@@ -4614,13 +5572,31 @@ Acceptance: the Ruling parse refuses a suite that matches twice (same shape as
 the band. Watched red with a second ceiling phrase, and with a 12.89 band whose only
 derivation is §6's counterexample.
 
-### T-R68 — the `grounded` reason says a value is absent from the page when it only fell outside the evidence window            [status: todo]
+### T-R68 — the `grounded` reason says a value is absent from the page when it only fell outside the evidence window            [status: done]
+CLOSED 2026-08-28. `grounded` now separates the two facts and
+`extract-container-dump-is-not-the-answer` pins the wording so it cannot quietly
+revert. The verdict was always right — an answer that cannot be shown in its own
+evidence is not verifiable — and the stated REASON was the defect: a false reason
+inside a fail-closed path is how a reader learns to distrust the ones that are
+true.
+Two details worth the record. HALF the window, not all of it: `evidence_window`
+centres on the value's own offset, so the room either side is half the budget,
+and a full-width test left the message unchanged on the very extraction it was
+lying about (1271 chars in a 2000-char window — under the width, over the half).
+And the window is read off the RECORD (`len(page_text)`) rather than imported
+from `agent.PAGE_TEXT_KEEP`, because `agent` imports the verifier and naming the
+constant there would be a cycle.
 Origin: PR #38 R1 (LOW)
 Priority: P2
 Spec: The human-readable `reason` for the canonical M28 shape is still factually false: it says the value is 'absent from the page they were read from' when the value is on the page and only fell out of the 2000-char evidence window (value > PAGE_TEXT_KEEP/2). Evidence: src/browser/verifier.py:472-475 (`grounded` message, edited by this diff but wording kept); evals/report/20260823-200546-fast.json row extract-container-dump-is-not-the-answer got.reason = "verifier FAIL: extracted values absent from the page they were read from: ['Port Meridian…(1271 chars)']" while evidence_contains '1,482,317' is true.
 Acceptance: Pre-existing, out of M28's acceptance; the grounded message distinguishes 'longer than the evidence window' from 'absent'.
 
-### T-R69 — the contract's 'verifier-rejected run carries answer: null' is pinned by one fixture path only; `_check_inv2` does not assert it            [status: todo]
+### T-R69 — the contract's 'verifier-rejected run carries answer: null' is pinned by one fixture path only; `_check_inv2` does not assert it            [status: done]
+CLOSED 2026-08-28 on the acceptance's first branch, and it is one line:
+`_check_inv2` now asserts `r["answer"] is None` for FAIL and INCONCLUSIVE, so the
+contract's "a run the verifier rejected carries `answer: null`" is pinned by the
+pure-code probe rather than by a single grounded-reject fixture path — which
+left the judge-reject and INCONCLUSIVE sources of the same demotion unpinned.
 Origin: PR #38 R2 (LOW)
 Priority: P2
 Spec: specs/001's new contract line ('a run the verifier rejected carries answer: null') is pinned only by one fixture path (grounded reject) in the fast suite; the pure-code INV-2 probe in the invariant suite still passes with any answer on the demoted result, so judge-reject / INCONCLUSIVE sources are unpinned. Evidence: src/browser/eval_adapter.py:217-227 `_check_inv2` asserts only `r['status'] != 'success'`; specs/001-browser-contract.md:49-52.
@@ -4677,7 +5653,7 @@ gap predates it). The L3 cell is prose naming cases, which is why nobody regener
 Acceptance: the TC/level counts join `analysis_coverage`'s graded set (derived from the
 tags, same as the split), or the table is cut down to the graded rows and says so.
 
-### T-R82 — the client-disconnect release is graded in-process, never through a real disconnect            [status: todo]
+### T-R82 — the client-disconnect release is graded in-process, never through a real disconnect            [status: done]
 Origin: T-M40-1
 Priority: P1
 Spec: `smoke_events` now holds `SEM` for the length of a browser check and releases it
@@ -4695,7 +5671,30 @@ back within a bound, watched red against a `finally` that is removed — cheaply
 stay in the offline gate, which is the part that needs thought, since the honest version
 of this test waits for a real cancellation.
 
-### T-R83 — `KINDS` registers `readyz-transitions` twice            [status: todo]
+Closed inside `smoke-stream-takes-the-run-slot` rather than as a new case, because
+it is the second half of one contract. A raw socket disconnects mid-stream —
+`SO_LINGER 0`, so the server sees an RST rather than a FIN, which is what a closed
+laptop lid looks like and is strictly harder to notice than a graceful close — and
+the slot must come back inside a declared bound.
+The "cheap enough to stay in the offline gate" part the acceptance flagged as
+needing thought: it costs 0.1s, because the launch stub this case already installs
+parks the generator exactly where a real check spends its seconds, so the held
+window is event-driven and there is no timing margin to derive.
+Watched red by removing `smoke_events`'s `finally`:
+`slot_never_came_back_after_a_real_disconnect`.
+Recorded because it is the more useful half: the FIRST draft measured nothing
+while looking green in three of its four fields. The earlier half of the same case
+had already set the release event, so the stub returned instantly and the slot was
+back before the socket had read a byte. `release.clear()` is what makes the window
+real — a check that cannot fail the way its claim says it can is this repo's
+recurring shape.
+
+### T-R83 — `KINDS` registers `readyz-transitions` twice            [status: done]
+CLOSED 2026-08-28. Duplicate removed, and the shape refused: `opt-in-expect-keys-declared`
+now parses this module with `ast` and reddens on any duplicate literal key in `KINDS`.
+Graded there rather than in a new case because it is the same property that case already
+grades — a registry key deciding which grader runs. Watched red by re-introducing the
+duplicate.
 Origin: T-M40-1, found while registering a new kind
 Priority: P2
 Spec: `src/browser/eval_adapter.py`'s `KINDS` dict has `"readyz-transitions": _run_readyz_case`
@@ -4707,7 +5706,15 @@ Repro: `grep -c '"readyz-transitions"' src/browser/eval_adapter.py` -> 2.
 Acceptance: the duplicate is gone and a check refuses the shape — a one-line invariant
 over the literal keys is enough, and it should be watched red against the current tree.
 
-### T-R84 — `/readyz`'s `reason` is only negatively asserted            [status: todo]
+### T-R84 — `/readyz`'s `reason` is only negatively asserted            [status: done]
+CLOSED 2026-08-28, on the acceptance as written: the assertion requires the
+browser-check wording when `active_run_id` is null and the run wording when it is
+not, both watched red against this block's own repro mutant. It needed TWO probes,
+which is itself the finding — the browser-check path is only reachable through
+`smoke-stream-takes-the-run-slot` and the run path only through
+`readyz-tracks-the-run-slot`, so a single-probe fix would have left half the rule
+ungraded and looking done. Confirmed by running the mutant against both before and
+after: before, `readyz-tracks-the-run-slot` stayed GREEN on it.
 Origin: PR #45 R3
 Priority: P1
 Spec (reviewer's finding, verbatim from `tasks/reviews/pr45-r1.json`):

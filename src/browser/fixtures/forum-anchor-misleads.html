@@ -1,0 +1,40 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nimbus Forum — thread 4482</title>
+
+<!-- T-M38-1 / support-matrix D29, second half. ADR-026 rung 1 reuses the step's
+     identity `anchor` as a PROXIMITY anchor whenever the anchor identifies
+     exactly one place on the page. That is right whenever the anchor sits
+     nearest the candidate the task is about, and `forum-thread.html` is a page
+     where it does. This page is the same shape with the geometry inverted, and
+     nothing about it is exotic: a "related threads" strip between a title and
+     its body is an ordinary forum layout.
+
+     The task asks who posted the Aurora Desk Lamp teardown. Its identity anchor
+     is that title. Both bylines carry aria-label="user profile", so the target
+     is ambiguous and rung 1 narrows by distance — and the NEAREST "user
+     profile" link to the title is the related thread's byline, not the
+     article's own, because the strip sits between the two.
+
+     The run therefore answers `success`, grounded, anchored, and WRONG. That is
+     the whole point of the fixture: D29 declares this outcome and, until this
+     case, nothing showed it. -->
+
+<h1>Nimbus Forum</h1>
+
+<article>
+  <h2>Aurora Desk Lamp teardown</h2>
+
+  <aside class="related">
+    <h3>Related thread</h3>
+    <p class="subline">92 points by <a href="#u-corvin" aria-label="user profile">corvin</a> on Oct 4, 2006</p>
+    <p>Aurora Desk Lamp driver board — measured ripple at 12V</p>
+  </aside>
+
+  <p class="body">Took the whole thing apart over the weekend. The driver board
+  is potted, which makes the teardown less interesting than it looked, but the
+  hinge assembly is genuinely well made and the whole lamp comes apart with one
+  driver bit.</p>
+
+  <p class="subline">128 points by <a href="#u-arden" aria-label="user profile">arden</a> on Oct 9, 2006</p>
+</article>

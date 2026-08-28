@@ -49,6 +49,25 @@ DRILL_TEXT_HEAD = 1_500
 # and spends planner tokens on navigation nobody asked about.
 CHROME_ROLES = {"banner", "navigation", "complementary", "contentinfo", "search"}
 MAX_CHROME = 20
+# T-A39-3: an observation is charged PER CONTROL, not per element. 49 sibling
+# `option`s under one `combobox` are ONE control, and before this they each took
+# a slot out of MAX_ELEMS -- so once ADR-039's settle let the sec-10k
+# inspector's committed-fixture select actually PAINT, the page-level
+# observation filled several elements before `status — 'doc_status'`, which a
+# planner could see the day before.
+#
+# Options therefore sit in `elements` in document order like everything else,
+# but are charged to their own per-control budget rather than to the page's.
+# Raising MAX_ELEMS is the fix this repo has refused three times: it moves the
+# cliff to the next larger page.
+#
+# MAX_OPTIONS is a runaway bound, NOT a summary. The first version of this made
+# it 8 and still charged options to the page, and that broke the one case here
+# that matters most: `intc-2002` is the 20th of 42 options on the live
+# inspector, so truncating to 8 made the user's own task unplannable in order to
+# buy back a status line. A budget must not hide the thing the task is about.
+OPTION_PARENT_ROLES = {"combobox", "listbox", "menu"}
+MAX_OPTIONS = 60
 
 # ARIA forbids an author-supplied accessible name on these roles, so Playwright
 # computes "" for them however loudly the DOM shouts aria-label. Chromium's
@@ -116,7 +135,7 @@ PAGE_TEXT_JS = """() => {
 _ARIA_LINE = re.compile(r'^\s*-\s+([A-Za-z][\w-]*)(?:\s+"((?:[^"\\]|\\.)*)")?')
 
 
-async def page_text(page, frames: bool = True) -> str:
+async def page_text(page, frames: bool = True, bases: dict | None = None) -> str:
     """Everything on the page a reader can read, main frame first.
 
     The ONE place the system asks what the page says: the evidence window an
@@ -169,10 +188,25 @@ async def page_text(page, frames: bool = True) -> str:
     sources = getattr(page, "frames", None) or [page]
     for frame in (sources if frames else sources[:1]):
         try:
-            parts.append(await frame.evaluate(PAGE_TEXT_JS))
+            parts.append((frame, await frame.evaluate(PAGE_TEXT_JS)))
         except Exception:
             continue
-    return "\n".join(p for p in parts if p)
+    kept = [(f, t) for f, t in parts if t]
+    if bases is None:
+        return "\n".join(t for _, t in kept)
+    # T-M42-3: where each document STARTS in the string above. `TEXT_OFFSET_JS`
+    # walks up to its own frame's `<body>`, so for an element inside an iframe
+    # its hint is short by everything concatenated before that frame, and
+    # `_closest_occurrence` then picks among duplicate occurrences using an
+    # offset that means something else. Returned rather than recomputed by a
+    # second pass, because the pass is the expensive part and the caller
+    # already needs the text.
+    at, out = 0, {}
+    for f, t in kept:
+        out[f] = at
+        at += len(t) + 1  # the "\n" the join inserts
+    bases.update(out)
+    return "\n".join(t for _, t in kept)
 
 
 async def _frame_elements(frame, budget: int) -> list[dict]:
@@ -248,10 +282,19 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
     # is unchanged: nobody asked for that navigation, and
     # observe-content-survives-chrome still holds it at 20.
     max_chrome = MAX_CHROME if root is None else MAX_ELEMS
+    # Drilling INTO the select is the planner asking for its options by name,
+    # so it gets the page budget — the same exemption, and the same sentence,
+    # as the chrome one above.
+    max_options = MAX_OPTIONS if root is None else MAX_ELEMS
 
-    def walk(node, in_chrome=False):
-        nonlocal chrome
-        if not node or len(elems) >= MAX_ELEMS:
+    # Elements CHARGED to the page budget. Options sit in `elems` in document
+    # order like everything else but are charged to their own control instead,
+    # so `len(elems)` and the budget are no longer the same number.
+    charged = 0
+
+    def walk(node, in_chrome=False, opts=None):
+        nonlocal chrome, charged
+        if not node or charged >= MAX_ELEMS:
             return
         role = node.get("role", "")
         name = (node.get("name") or "").strip()
@@ -261,10 +304,23 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
             # dropped, so relocation candidate order is unchanged.
             if in_chrome and chrome >= max_chrome:
                 return  # this whole subtree is more navigation; skip it
+            if role == "option" and opts is not None:
+                if opts[0] >= max_options:
+                    return  # this control has already shown what it is
+                opts[0] += 1
+                elems.append({"role": role, "name": name})
+                return  # charged to the control above, not to the page
             elems.append({"role": role, "name": "" if role in NAME_PROHIBITED else name})
+            charged += 1
             chrome += in_chrome
+        # A one-cell list, not a counter per level: the options are SIBLINGS, so
+        # the budget has to be shared across them and reset for the next
+        # control — a per-page counter would let one long select silence the
+        # second one on the same page.
+        if role in OPTION_PARENT_ROLES:
+            opts = [0]
         for child in node.get("children") or []:
-            walk(child, in_chrome)
+            walk(child, in_chrome, opts)
 
     walk(snap)
     # Frame-piercing (M42): a page-level observation continues into every child
@@ -274,9 +330,11 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
     # subtree by construction and is not widened here.
     if root is None:
         for frame in page.frames[1:]:
-            if len(elems) >= MAX_ELEMS:
+            if charged >= MAX_ELEMS:
                 break
-            elems += await _frame_elements(frame, MAX_ELEMS - len(elems))
+            got = await _frame_elements(frame, MAX_ELEMS - charged)
+            elems += got
+            charged += len(got)
     return {
         "url": page.url,
         "title": await page.title(),

@@ -1,0 +1,27 @@
+{
+  "id": "malformed-step-is-a-classified-failure",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "fixture": "hello.html",
+    "task": "What does the page say?",
+    "stub_plan": [
+      "extract WebArea"
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "reason_contains": "is not a step",
+    "actions": 1
+  },
+  "provenance": "T-M40-2-6, P1, open since PR #46 R6. `parse_plan` validated that the top level is a list and nothing below it, so `[None]` and `[\"extract WebArea\"]` were plans as far as the executor was concerned; `plan_gap` no longer raises on those (both clauses guarded, `plan-gap-truth-table` rows), and the step loop then read `step[\"action\"]` off a string. The TypeError propagated out of `run_task` — no status, no failure class, none of the taxonomy — and only `server.py:_execute`'s catch-all turned it into `failure:env` for a deployed run, while an eval-adapter caller got the raw exception. Not a regression: `main` at d06a569 reaches the same line the same way. The fix is in TWO places and neither is redundant: `parse_plan` covers the live planner (graded by `planner-fenced-json`'s `also_rejects`), and the executor covers every offline case, because `stub_planner` is injected at exactly the boundary `parse_plan` guards — a malformed plan reaches the step loop without ever passing through it. This case is the repro the block names, verbatim, and it takes the executor path. `expect.actions: 1` pins that the run spent the pre-plan navigation and nothing else: a plan the executor cannot honour is refused before it acts, which is what `failure:task` means in specs/000.",
+  "triage": {
+    "class": "silent-failure",
+    "red_first": "RED before the guard, and not as a failed assertion — the adapter propagated `TypeError: string indices must be integers, not 'str'` out of `run_case`, which is the defect itself: the harness had no verdict to compare because the run never produced one.",
+    "note": "Tagged `invariant` because it is inv1's own property (one failure class, always) rather than a claim about any one run — an uncaught exception is the one shape that has NO class. `hello.html` on purpose: the smallest fixture in the tree, so nothing about the page can be the reason this passes or fails."
+  }
+}

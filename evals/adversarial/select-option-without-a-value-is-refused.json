@@ -1,0 +1,33 @@
+{
+  "id": "select-option-without-a-value-is-refused",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "fixture": "select-collide.html",
+    "task": "Filter the picker.",
+    "stub_plan": [
+      {
+        "action": "select_option",
+        "target": {
+          "role": "combobox",
+          "name": "Filing year"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "reason_contains": "select_option needs a `value`",
+    "actions": 2
+  },
+  "provenance": "T-M42-20-D5 (P1), shape (ii). `want = step.get(\"value\") or \"\"` turned a step that omits `value` into the empty string, and `\"\" in o` is True for every option \u2014 so it matched the FIRST one, selected it, read it back and recorded `postcondition_ok: true` for a filter that was never applied. `press` already refuses its own missing-value shape and `select_option` did not, and `plan_gap` type-checks neither; the asymmetry is the defect. `failure:task` is the class specs/000 gives a plan the executor cannot honour, which is what a selection with nothing to select is, and it is the same class `press` uses for the same reason. `expect.actions: 1` pins that the run spent the pre-plan navigation and nothing else \u2014 the refusal is before the action, not after it.",
+  "triage": {
+    "class": "silent-failure",
+    "red_first": "RED as `failure:extract` / `empty answer or empty trace` \u2014 and the status is the uninteresting half. What matters is the audit beside it: `no_failed_postcondition: true`, i.e. the `select_option` step selected the `('', 'Choose a filing\u2026')` placeholder and recorded that no-op as VERIFIED. The run only ended red because INV-0 caught an empty answer one layer later; nothing anywhere noticed that the selection was never asked for. Had the plan carried an extract after it, the run would have reported `success` on a filter that was never applied \u2014 which is the shape `loop-lab.html`'s own `<option value=''>` placeholder makes live in this tree.",
+    "note": "Tagged `invariant` as well as `fast`: 'an action that did nothing may not record postcondition_ok' is INV-1's territory rather than a claim about one page. The sibling `select-option-value-collides-with-a-label` covers this block's other half and is `fast`-only, because it depends on a specific option-list shape rather than on the executor's contract. Both were needed: the block names two shapes and each reaches a different line."
+  }
+}

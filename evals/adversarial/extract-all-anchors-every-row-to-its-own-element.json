@@ -1,0 +1,48 @@
+{
+  "id": "extract-all-anchors-every-row-to-its-own-element",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L2",
+  "tc": "TC4",
+  "trap": "row 2 of an enumeration also appears in a banner that repeats on another page this run visited — the row must be judged on the evidence where it was READ, not on the first textual occurrence of its string",
+  "input": {
+    "fixture": "rows-decoy-home.html",
+    "task": "List every per-unit price.",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Open the per-unit price list"
+        },
+        "expected_state": {
+          "url_contains": "rows-decoy-list"
+        }
+      },
+      {
+        "action": "extract_all",
+        "target": {
+          "role": "listitem"
+        },
+        "rank": false
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "verdict": "PASS",
+    "answer": [
+      "18.50 EUR",
+      "41.20 EUR",
+      "67.05 EUR"
+    ]
+  },
+  "provenance": "T-R38 (P1), open since PR #29 R28. `agent.py` computed `off = (real_offset if v == vals[0] else _closest_occurrence(body, v, -1))`, so rows 2..n of an `extract_all` got hint -1 — plain first-occurrence, the pre-M34 behaviour PR #30 R2-1 had already fixed for `extract` — while `docs/support-matrix.md` D24 said the context is \"anchored to the actual DOM occurrence it was read from\" and listed three uncaught shapes, this fourth not among them. It mattered because `verify()` judges an enumeration ROW BY ROW: `not_page_furniture` compares each row's local neighbourhood against the other pages the run visited, so a row anchored to the wrong occurrence is judged on somebody else's evidence. `loc.first` was the right call only because Playwright's strict mode refuses `evaluate` on a multi-match locator; `loc.nth(i)` satisfies that the same way while asking about the row actually in hand. Every M34 case uses `extract`, so the merged `extract_all` × `other_page_text` path was graded nowhere — which is why a source comment naming the residual was the only record of it.",
+  "triage": {
+    "class": "silent-failure",
+    "red_first": "RED against the row-0 anchoring, and precisely as predicted: `failure:semantic`, `not_page_furniture: false`, `verifier FAIL: value's surrounding text also appears verbatim on a different page this run visited ... ['41.20 EUR']`. Only row 2 — rows 1 and 3 pass, because only row 2's string also occurs in the banner. A correct enumeration rejected on the evidence of a sentence it was not read from.",
+    "note": "The direction of the failure is worth stating because it is the less alarming one: the defect made the verifier too STRICT here, rejecting a correct answer. It is symmetric, though — a row whose real neighbourhood IS chrome while its first occurrence is not would be waved through — and neither direction was reachable by any existing case, since every M34 case uses `extract`. The fixture pair is built for this and nothing else: `rows-decoy-home.html` and `rows-decoy-list.html` carry a byte-identical banner (that is what makes it furniture rather than a fact) quoting a figure that is ALSO a real row, and the prices are their own `<ul>` so each enumerated value is exactly the string the banner contains. Cost of the fix, named: one `evaluate` per row where the old code cost one per step. `extract_all` has no cap on matches (T-EXTRACT-ALL-VOLUME), so if that ever shows in the wall clock the answer is that cap, not this hint."
+  }
+}

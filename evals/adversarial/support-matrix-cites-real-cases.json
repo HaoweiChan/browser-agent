@@ -1,17 +1,28 @@
 {
   "id": "support-matrix-cites-real-cases",
   "task": "browser",
-  "suites": ["fast", "invariant"],
+  "suites": [
+    "fast",
+    "invariant"
+  ],
   "input": {
     "kind": "matrix"
   },
   "expect": {
-    "statuses": ["supported", "unreliable", "unsupported", "—"],
-    "note": "every grid cell is one of the declared statuses; every backticked bare hyphenated token outside code fences must be a real case id in evals/"
+    "statuses": [
+      "supported",
+      "unreliable",
+      "unsupported",
+      "\u2014"
+    ],
+    "note": "every grid cell is one of the declared statuses; every backticked bare hyphenated token outside code fences must be a real case id in evals/",
+    "also_cite_check": [
+      "specs/001-browser-contract.md"
+    ]
   },
-  "provenance": "docs/support-matrix.md is the graded honesty artifact — README and the frontend both render it, and its unsupported/unreliable rows are required to cite a concrete failing case. Nothing made those citations true: a case id that is renamed, or one invented while writing prose, reads exactly like evidence to a reader. Watched red twice: first on the missing parser, then on the threat itself — renaming `trap-near-miss-entity` to `trap-nearmiss-entity` in the doc produced `dangling_citations: ['trap-nearmiss-entity']` while every other check stayed green. What it does NOT catch, stated so the coverage is not overread: a citation that resolves but is stale in its claim. The M4 edit of this doc had exactly that — an `unsupported until the M3 relocation loop` row whose cited case had already flipped to success — and this case was green throughout. That row was corrected by hand; no code detected it.",
+  "provenance": "docs/support-matrix.md is the graded honesty artifact \u2014 README and the frontend both render it, and its unsupported/unreliable rows are required to cite a concrete failing case. Nothing made those citations true: a case id that is renamed, or one invented while writing prose, reads exactly like evidence to a reader. Watched red twice: first on the missing parser, then on the threat itself \u2014 renaming `trap-near-miss-entity` to `trap-nearmiss-entity` in the doc produced `dangling_citations: ['trap-nearmiss-entity']` while every other check stayed green. What it does NOT catch, stated so the coverage is not overread: a citation that resolves but is stale in its claim. The M4 edit of this doc had exactly that \u2014 an `unsupported until the M3 relocation loop` row whose cited case had already flipped to success \u2014 and this case was green throughout. That row was corrected by hand; no code detected it. T-M32-7-D1 closed here 2026-08-28, one commit after it was filed. `specs/001-browser-contract.md` cites case ids exactly the way the matrix does and nothing checked them \u2014 which is how its laundering clause could sit at a superseded wording, citing two cases where `docs/support-matrix.md` D25 and ADR-020 cite three, with every suite green. That absence is T-M32-7's own explanation of how it drifted, so hand-fixing the clause without this would have left the next drift equally invisible. Same regex, no new convention: measured before landing, all 42 backticked kebab-case tokens in that file resolve to real cases, so the matrix's pattern needed neither widening nor narrowing. The document list is declared in `expect` so adding a third is a visible edit to a case file.",
   "triage": {
     "class": "contract-drift",
-    "note": "tagged invariant for the same reason as contract-trace-schema: the matrix is prose, prose does not fail a build, and this is its executable half. It checks that citations RESOLVE, not that the declared status is correct — declaring is a human judgment act (docs/evals/evaluation-methodology.md) and a pass rate must never threshold itself into 'supported'."
+    "note": "tagged invariant for the same reason as contract-trace-schema: the matrix is prose, prose does not fail a build, and this is its executable half. It checks that citations RESOLVE, not that the declared status is correct \u2014 declaring is a human judgment act (docs/evals/evaluation-methodology.md) and a pass rate must never threshold itself into 'supported'."
   }
 }

@@ -1,0 +1,13 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Vantage Filing Viewer</title>
+<!-- T-M42-5. The MAIN document is small and one region is nearly all of it, so
+     an extraction of that region IS a dump of its own document. The iframe
+     below is large, and since M42 made `page_text` frame-piercing the page's
+     concatenated text is the denominator `not_a_dump` divides by — which is
+     how a dump of the main document passes the 0.35 ratio ADR-008 calibrated
+     on main-frame innerText. Nothing here is site knowledge: it is the general
+     shape of any page with a substantial iframe. -->
+<h1>Vantage Filing Viewer</h1>
+<p id="summary" role="status" aria-label="Filing summary">Vantage Industries filed its annual report on 12 March 2025 covering fiscal year 2024, reporting consolidated revenue growth of eleven percent against the prior year and a return to positive operating cash flow in the second half.</p>
+<iframe src="/fixtures/frames-inflated-inner.html" title="Source pane" width="600" height="240"></iframe>

@@ -193,6 +193,9 @@ CITE_CHARS = 80
 # ponytail: a regex over English, same ceiling as SCOPE_BLOCK (agent.py) —
 # it can be walked around by rephrasing, same as `log ?into` was. Widen when
 # a probe finds the next phrasing, the way l5-refuse-login-contracted did.
+_PLURAL_SUBJECT = re.compile(
+    r"\b(?:which|what)\s+(?!is\b|was\b|has\b|does\b)(\w{3,}[^\Ws]s)\b", re.I)
+
 _AGGREGATE = re.compile(
     r"\b(which|what|who)\b.{0,80}\b(most|least|fewest|highest|lowest|greatest)\b",
     re.IGNORECASE,
@@ -303,7 +306,29 @@ def is_aggregate(task: str) -> bool:
     runs, so the guard's declared false-refusal cost (D22) is paid on far fewer
     runs than it was.
     """
-    return bool(_AGGREGATE.search(task or ""))
+    # T-R37: a which-question whose SUBJECT is plural asks for SEVERAL items,
+    # not for which one of a set ranks highest — "Which products have the lowest
+    # prices?" against "Which product is the cheapest?". `_AGGREGATE` matched
+    # both, so the plan lint refused a `rank: false` that was the only honest
+    # declaration such a task can carry: measured end to end on `shop.html`,
+    # `failure:task` / `answer null` / `actions 1`, with a reason telling the
+    # planner to reduce four rows to one. At `117301e` the same input returned
+    # the four-row list as success, so it was a regression, and ADR-018's
+    # "`_AGGREGATE` is narrow and high-precision, so code is entitled to
+    # contradict a `rank: false`" is falsified by that one input.
+    #
+    # Narrowed HERE rather than in the lint alone, and the first attempt did it
+    # the other way: `plan_gap` stopped refusing and the VERIFIER's
+    # `aggregate_needs_comparison` — this predicate's other caller — rejected
+    # the same run one layer later. Two callers of one predicate must agree
+    # about what the task ASKS FOR; they may differ about what to do next.
+    #
+    # The IMMEDIATE word after which/what, with a stoplist. Allowing a word in
+    # between matched "What is the highest price?" — `is` ends in `s` and is not
+    # `ss` — which would have disabled the check on the very shape it exists
+    # for. Same `s`-not-`ss` heuristic as the resolver's `_PLURAL_ASK`, and the
+    # same declared limitation.
+    return bool(_AGGREGATE.search(task or "")) and not _PLURAL_SUBJECT.search(task or "")
 
 
 def _cite(values: list) -> list[str]:
@@ -504,10 +529,36 @@ def verify(*, trace, extractions, answer, expect=None, state=None, task=None) ->
     )
 
     ungrounded = [e["value"] for e in extractions or [] if e["value"] not in e.get("page_text", "")]
+    # T-R68: WHY it is ungrounded, because the two reasons are different facts
+    # and the message asserted the wrong one. `page_text` is the bounded
+    # evidence window, not the page — so a value LONGER than the window cannot
+    # fit inside it however present it is on the page, and the canonical M28
+    # shape (a container dump of 1271 chars) was reported as "absent from the
+    # page they were read from" while the page plainly contained it. The verdict
+    # is right either way: an answer that cannot be shown in its own evidence is
+    # not verifiable. The stated reason was simply false, and a false reason in
+    # a fail-closed path is how a reader learns to distrust the ones that are
+    # true.
+    # The window is read off the RECORD, not imported: `agent.PAGE_TEXT_KEEP` is
+    # the constant that sizes it, and `agent` already imports this module, so
+    # naming it here would be a cycle. `len(page_text)` is the window that
+    # extraction actually got, which is the honest comparison anyway — it is
+    # what "nothing can show this grounded" is true against.
+    too_long = [e["value"] for e in extractions or []
+                if e["value"] not in e.get("page_text", "")
+                and len(e["value"]) > len(e.get("page_text", "")) // 2]
+    absent = [v for v in ungrounded if v not in too_long]
+    reason = "; ".join(
+        part for part in (
+            (f"extracted values absent from the page they were read from: {_cite(absent)}"
+             if absent else ""),
+            ("extracted value(s) too long for the evidence window to centre on them, so "
+             f"nothing can show them grounded: {_cite(too_long)}" if too_long else ""),
+        ) if part)
     check(
         "grounded",
         not ungrounded,
-        f"extracted values absent from the page they were read from: {_cite(ungrounded)}",
+        reason,
     )
 
     # A value that reproduces most of its own evidence window is a dump, not an

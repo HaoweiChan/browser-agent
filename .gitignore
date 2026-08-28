@@ -14,3 +14,6 @@ graphify-out/*
 !graphify-out/graph.json
 !graphify-out/cost.json
 !graphify-out/manifest.json
+
+# ADR-037 §4: EVAL_PROBE=1 runs write here instead of the committed ledger.
+evals/report/history-probe.jsonl

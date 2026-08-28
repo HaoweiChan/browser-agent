@@ -666,8 +666,7 @@ PAGE = r"""<!doctype html>
         title="Launches Chromium against example.com — proves the browser works, spends no tokens">Browser check</button>
     </div>
   </div>
-  <p class="note" id="guards">Public http/https pages only · up to 30 actions and 2 replans per run ·
-    one run at a time · a run costs about $0.001 in model tokens.</p>
+  <p class="note" id="guards">Public http/https pages only · one run at a time.</p>
   <pre id="err" hidden></pre>
 </div>
 
@@ -873,6 +872,7 @@ const ADRS = [
   ["033", "the deployment says which commit it is running, or says plainly that it does not know \u2014 the build sha is written into the image at build time and read from there, never guessed from a local checkout and never reachable by a runtime setting, because a confidently wrong build id is worse than none"],
   ["034", "the build works out its own commit sha instead of being handed one — the deployed /version answered “unavailable” because the platform never filled the build argument, so a build stage now reads the context’s HEAD and a derivation that fails writes nothing at all, which the route publishes as “unavailable” rather than guessing"],
   ["035", "the per-step mode now looks at the page: every turn carries the screenshot the trace already keeps as evidence, and a click by pixel coordinates is allowed only when those pixels came from a screenshot the model was actually shown"],
+  ["039", "the observation waits for what the page is still FETCHING — after `load`, navigate waits (bounded, same budget a postcondition gets) for the fetch/xhr requests that were in flight, so a <select> painted from an endpoint is visible to the planner; and a refused identity anchor now replans instead of ending the run"],
   ["036", "a postcondition is checked in the document its action touched — the trace records which document resolved (resolved.scope), so a decoy iframe can no longer satisfy a click's expected_state; waits and navigations stay page-wide by nature"],
   ["037", "a third way to run a task: try the cheap fixed-plan mode first and fall back to the per-step mode only if it fails, in one run that shows both attempts — and the only thing the fallback is told about the first attempt is which step died, doing what, and how, so nothing a website wrote can be passed along as an instruction"],
   ["038", "a page-held credential is seeded per origin by the browser (storage_state), never injected into pages — an init script would carry the secret into every site a run visits, including a hostile one; host, key and secret are all configuration, never code"],
@@ -1101,7 +1101,15 @@ function renderResult(r) {
   $("status").textContent = r.status;
   const b = r.budgets_spent;
   $("budgets").textContent = b
-    ? `${b.actions} actions · ${b.llm_tokens} tok · $${(b.llm_usd || 0).toFixed(4)} · ${b.replans} replans · ${b.ms}ms`
+    // T-M39-2: the operator's cost string showed PLANNER spend only, so a run
+    // whose judge cost money reported less than it spent. The judge is the last
+    // rung of the verification ladder and it bills; a per-run cost line that
+    // omits it is not a cost line. Total first (what was actually spent), with
+    // the split after it, because the split is what makes the total checkable.
+    ? `${b.actions} actions · ${b.llm_tokens + (b.judge_tokens || 0)} tok · ` +
+      `$${((b.llm_usd || 0) + (b.judge_usd || 0)).toFixed(4)}` +
+      (b.judge_usd ? ` (plan $${(b.llm_usd || 0).toFixed(4)} + judge $${b.judge_usd.toFixed(4)})` : "") +
+      ` · ${b.replans} replans · ${b.ms}ms`
     : "";
   // Re-render from the final trace: it is authoritative where the live stream is
   // provisional — a supersede lands after its attempt was already sent.
@@ -1320,9 +1328,43 @@ fetch("/support-matrix").then(r => r.json()).then(m => {
 """
 
 
+def guards_line(mode: str) -> str:
+    """The ceilings a visitor is actually watching, for the mode that will run.
+
+    T-M42-8. The line was hardcoded with mode B's numbers and printed
+    unconditionally, so under `BROWSER_AGENT_MODE=loop` every visitor read the
+    wrong ceilings for the run in front of them — 30 actions and 2 replans
+    against an actual 40 actions, no replans, and a USD ceiling that ADR-028
+    names as the ONLY bound on a public unauthenticated endpoint. That makes it
+    the wrong sentence to have wrong.
+    Read from the same constants the executor enforces, never retyped: a number
+    in this page that a run does not use is the defect, not a formatting choice.
+    """
+    from .agent import LOOP_BUDGETS, MAX_REPLANS, RUN_BUDGETS
+
+    if mode == "plan":
+        return (f"up to {RUN_BUDGETS['actions']} actions and {MAX_REPLANS} replans per run · "
+                f"a run costs about $0.001 in model tokens")
+    loop = (f"up to {LOOP_BUDGETS['actions']} actions, no replans, and a "
+            f"${LOOP_BUDGETS['llm_usd']:.2f} ceiling on model spend per run")
+    if mode == "escalate":
+        return (f"plan first ({RUN_BUDGETS['actions']} actions, {MAX_REPLANS} replans), "
+                f"then on a failure that changed nothing, {loop}")
+    return loop
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    return PAGE
+    mode = default_mode()
+    # Mode is DEPLOYMENT-LEVEL and the page says so rather than offering a
+    # control: whether loop mode earns default-ness is M44's evidence to give,
+    # and a selector shipped ahead of it would be a product decision made by a
+    # UI edit. What a visitor is owed meanwhile is the truth about the run they
+    # are watching.
+    return PAGE.replace(
+        "Public http/https pages only · one run at a time.",
+        f"Public http/https pages only · {guards_line(mode)} · one run at a time · "
+        f"mode <code>{mode}</code>, set for this deployment and not selectable here.")
 
 
 @app.get("/readyz")

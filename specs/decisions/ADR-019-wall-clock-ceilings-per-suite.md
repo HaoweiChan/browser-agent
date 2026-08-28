@@ -3,7 +3,7 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → 110 → **115s** [local] (ADR-021, then ADR-029, then ADR-035, then ADR-037), local `invariant` 20 → **35s** [local] (T-M42-4, republished in §3 at each rebase), and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 — from one run's attempts until §9 (2026-08-28) made the input a cross-commit sample of runs — and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → 110 → 115 → 120 → **125s** [local] (ADR-021, then ADR-029, then ADR-035, then ADR-037), local `invariant` 20 → 35 → **40s** [local] (T-M42-4, republished in §3 at each rebase), and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 — from one run's attempts until §9 (2026-08-28) made the input a cross-commit sample of runs — and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `band-is-graded-against-the-citable-maximum` (§8's ruling, and the deadlock it removes), `evals/run.py` `over_budget()`
 
@@ -44,7 +44,7 @@ They are regression guards for three silent-success defects (PR #29 R1, R2, R3)
 and the local pre-commit hook runs `fast` alone. A guard the hook does not run
 is worth less than the 4.9s it costs.
 
-### 2. The local `fast` ceiling is 90s, computed from the ledger
+### 2. The local `fast` ceiling, computed from the ledger
 
 Every LOCAL band here — this section's and §3's — is computed from
 `evals/report/history.jsonl`, the ledger committed in this repo, and
@@ -81,15 +81,51 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 249 cases, ts `20260828-104510`, **97.98s**, 246/249
-  (`evals/report/20260828-104510-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 263 cases, ts `20260828-161325`, **104.80s**, 260/263
+  (no per-case report — a GREEN run writes only the history line, which is
+  ADR-012's own policy, so this band cites a ledger row rather than a file; `dirty: true`, for the reason the
   next paragraph gives, and red — the three failures are the three derived-number
   checks themselves, `docs-numbers-are-derived`, `published-band-matches-the-ledger`
   and `adr029-scope-matches-the-suites`, all mid-refresh at the moment
   this row was recorded. That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
-  the addition forces. Here the addition is M46's eight for plan-then-loop
+  the addition forces.
+
+  **ADR-039's move, 115 → 120, is not the case-count growth every previous move
+  on this line was, and is stated that way rather than dressed as one.** Four
+  cases entered `fast` (`planner-sees-a-fetch-painted-select`,
+  `replan-after-a-refused-anchor`, `malformed-step-is-a-classified-failure`,
+  `pre-commit-reports-a-broken-interpreter-as-such`); the rest of 97.98 → 101.24
+  is per-case cost from ADR-039 §1's post-`load` settle. ADR-021 answers per-case
+  growth with waste removal rather than a raise, so waste removal was done FIRST
+  and both attempts are on the record: counting every in-flight request cost 7.3s
+  and most of it was Chromium's own `/favicon.ico` 404 on every navigation, so the
+  settle was narrowed to `fetch`/`xhr` and 4.8s came back; the poll tick was then
+  dropped 20ms → 5ms on the theory that rounding dominated, which measured 0.25s
+  and falsified it. What is left is the page genuinely being waited on — a planner
+  that can see a control painted from an endpoint — and the trade is written down.
+
+  **A process note this branch paid for and §6's one-directional rule now
+  prevents.** Before the rebase onto the tree carrying that rule, this ceiling was
+  published SEVEN times in one working session — 115, 110, 115, 110, 115, 110,
+  115 — because each band was taken from two to five samples and falsified by the
+  next run, twice including a run taken specifically to CONFIRM a five-sample
+  band. Across ~15 runs the pre-merge suite's wall clock was a distribution
+  roughly 2s wide, not a number. §6's "derived BELOW the committed ceiling is
+  held, derived ABOVE it is an ADR" makes six of those seven republications
+  unnecessary, which is the argument for the rule stated from the other side.
+
+  **Three ledger rows from ADR-039's drafting are NOT in `history.jsonl`** —
+  144.87s at 239 cases (`networkidle`), 100.61s and 100.86s at 240
+  (count-every-request) — because each measured a mechanism the tree does not
+  contain, and a band is a maximum, so one such row raises the derived ceiling
+  permanently on evidence about code nobody can run. They were dropped before the
+  ledger was committed rather than edited out of a committed one, and
+  `EVAL_PROBE=1` now routes an exploratory run's row to `history-probe.jsonl`
+  instead (T-M38-5, ADR-039 §4).
+
+  Here the earlier addition is M46's eight for plan-then-loop
   escalation (ADR-037), which is case-COUNT growth and not per-case cost, so it
   is the condition ADR-021 named for a raise rather than for removing waste —
   and this republication is one where the rule's answer had already moved to
@@ -196,8 +232,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 249 cases, 246/249) and
-(restated — `invariant`: 101 cases, 98/101) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 263 cases, 260/263) and
+(restated — `invariant`: 107 cases, 104/107) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -319,9 +355,10 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 97.98 × 1.15 = 112.68 → **115**, which is exactly the
-committed 110. The ceiling was moved 90 → 105 by ADR-029 and 105 → 110 by
-ADR-035 Decision 7, each derived
+five — gives 104.80 × 1.15 = 120.52 → **125**, which is exactly the
+committed 125. The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
+ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
+each derived
 from the band source cited above — a committed row at the shipped case count
 whose derived ceiling is the one the ledger's slowest citable row derives, which is item 3
 (same-ceiling) and not an identity: publishing BELOW that maximum is green and
@@ -343,13 +380,17 @@ a real loosening, and it is the point: a ceiling whose job is to catch drift
 cannot also be the thing that fails on drift-free commits — this one refused a
 commit that changed nothing but JSON.
 
-### 3. `invariant` gets a ceiling: 20s → 35s
+### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 101 cases, ts `20260828-104314`, **29.29s**, 98/101
-  (`evals/report/20260828-104314-invariant.json`; `dirty: false` — the count moved
-  when PR #68 and PR #79 merged rather than because this branch added a case, so
-  the merge commit was already made when this row was measured and item 2
-  (cited-run)'s dirty allowance is not needed here at all. Red, and the three
+- Band source — local `invariant` at 107 cases, ts `20260828-161359`, **33.40s**, 104/107
+  (`evals/report/20260828-161359-invariant.json`; `dirty: true` — unlike the row
+  this supersedes, the count moved because THIS branch added two cases
+  (`pre-commit-reports-a-broken-interpreter-as-such`,
+  `malformed-step-is-a-classified-failure`), so item 2 (cited-run)'s dirty
+  allowance applies again: no clean row at 103 was available when this band was
+  published. The ceiling moves 35 → 40 with it, and the same ADR-021 disclosure
+  §2's bullet carries applies here — two of the cases are count growth and the
+  rest is ADR-039 §1's settle. Red, and the three
   failures are the three derived-number checks this republication is the subject
   of, the same shape §2's row has. Whether it is the MAXIMUM at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger
@@ -504,7 +545,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 29.29 × 1.15 = 33.68 → **35**, which is exactly the committed
+The same rule gives 33.40 × 1.15 = 38.41 → **40**, which is exactly the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

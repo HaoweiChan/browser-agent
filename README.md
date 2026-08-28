@@ -36,9 +36,9 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 249 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 263 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
-python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00
+python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
 ```
 
 The reviewer UI locally — task submission needs `OPENROUTER_API_KEY`; the
@@ -50,15 +50,20 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260828-105542-fast.json`, with
-`evals/report/20260828-105403-invariant.json` and
-`evals/report/20260826-132658-live.json`:
+Latest offline baseline — `evals/report/20260828-161325-fast.json`, with
+`evals/report/20260828-161359-invariant.json` and
+`evals/report/20260828-153810-live.json`:
 
 ```
-fast  249/249    invariant  101/101    live  11/11    $0.0000    99.1s
-recovery 9/9 verified (24 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 69/69 · 14 replans
+fast  260/263    invariant  104/107    live  12/13    $0.0000    104.8s
+recovery 10/10 verified (25 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
+diagnosis 74/74 · 15 replans
 ```
+
+The one red in each is `docs-numbers-are-derived` reading this very block. It is
+the shape every band republish has (ADR-019 §2): the tree reaches its new case
+count only while the new cases are uncommitted, so the run that produces the
+numbers is the run that cannot yet cite them.
 
 `live` is not part of the gate, and it goes red when a site is having a bad
 day rather than being stubbed around it (CLAUDE.md rule 4) — an earlier run of
@@ -115,10 +120,15 @@ reproduce the two runs that justified that (~22 runs across three
 independent measurers, idle and under deliberate CPU load, all landed at
 58.96-59.87s), so the amendment was withdrawn — though not cleanly: 21
 further post-commit runs found the honest band is 58.83-60.26s, one run
-over the line by a few tenths and unexplained by load.
+over the line by a few tenths and unexplained by load. Both bands are
+ADR-013's, Decision 4's round-5 correction and Decision 5's post-commit
+sample; they predate the convention that a published figure cites a
+committed report (ADR-012), so the ADR is the record and no report file
+will ever back them (T-M32-5).
 
 **M31 grew the suite and the 60s ceiling stopped being tenable.** It refused a
-commit that changed nothing but JSON, at 60.24s, with 109/109 passing. The
+commit that changed nothing but JSON, at 60.24s, with 109/109 passing
+(ADR-019 Decision 1's opening). The
 first repair moved three browser cases to `invariant`-only tags, which took
 ~4.9s out of the measured number and left the gate a coin flip while the
 published `fast` figure stayed at 59.7s — the wrong instrument. The cases are
@@ -191,8 +201,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 249 | 97.98s | 112.68 | **115s** |
-| `invariant` | 101 | 29.29s | 33.68 | **35s** |
+| `fast` | 263 | 104.80s | 120.52 | **125s** |
+| `invariant` | 107 | 33.40s | 38.41 | **40s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer,
 and the two are allowed to differ by a step: a short sample may derive UNDER the
@@ -234,19 +244,28 @@ is to catch drift cannot also be the thing that fails on drift-free commits.
 The gate was 68.1s and over ADR-002's 60s ceiling for two milestones. M12
 measured where the time went instead of assuming: 42.2s is deliberate waiting
 at bounds the suite exists to exercise, 13.5s is real work, and 11.3s was 58
-cold Chromium launches, one per case. The ceiling is now applied by
+cold Chromium launches, one per case — the breakdown is ADR-013 Decision 1's
+and docs/analysis.md keeps it, both pre-ADR-012 and so report-less by date
+rather than by omission. The ceiling is now applied by
 `evals/run.py` to the run it just measured, so a slow tree exits non-zero
 instead of reporting 1.000. It fired twice in a day, and neither time on what
-anyone would have guessed: M9's merge took the suite to 63.3s over a completion
+anyone would have guessed: M9's merge took the suite to 63.3s (ADR-013
+Decision 1) over a completion
 poll sleeping 2s between checks on runs that finish in under a second, and the
 branch's first CI run showed CI had been ~50% over the same ceiling for its whole
-existence with nothing checking — `main` runs `fast` in 89.62s. CI now carries its
+existence with nothing checking. ~~`main` runs `fast` in 89.62s~~ — struck
+2026-08-28 (T-R75): a bare CI measurement with no run id and no artifact behind
+it, which is exactly what T-R44 struck the four-number band two sections above
+for. It survived that sweep only because it is narrative about a ceiling that no
+longer exists rather than a band anything derives from, and "outside the
+acceptance" is not the same as "true". The claim that survives is the one this
+sentence already makes without it. CI now carries its
 own measured ceiling alongside a local one
 ([ADR-013](specs/decisions/ADR-013-fast-suite-wall-clock.md); both re-measured
 by [ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) when M31
 grew the suite, and `invariant` given ceilings of its own).
 
-`live 11/11` covers 5 real sites. It was `4/6` at the M6 merge; two of those
+`live` covers 5 real sites across 13 cases. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one
 case went green immediately while the other kept failing, because the outage had
 been hiding a defect of ours: navigation waited for `load`, so one hanging
@@ -457,7 +476,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 279 cases (249 of them in the offline gate), it
+The eval set is not weak; it is 295 cases (263 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

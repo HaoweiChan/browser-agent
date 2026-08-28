@@ -1,0 +1,19 @@
+{
+  "id": "guards-line-states-the-running-modes-ceilings",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "kind": "invariant",
+    "check": "guards-line-matches-the-mode"
+  },
+  "expect": {},
+  "provenance": "T-M42-8 (M42 spec-drift audit, finding 14). The reviewer page's `#guards` line carried mode B's numbers as literal text and printed them unconditionally \u2014 \"up to 30 actions and 2 replans per run\" \u2014 so under `BROWSER_AGENT_MODE=loop` every visitor read the wrong ceilings for the run in front of them: 40 actions, no replans, and a $5.00 ceiling that ADR-028 names as the ONLY bound on a public unauthenticated endpoint. That makes it the wrong sentence to have wrong. The line is now composed per mode from the constants the executor enforces (`RUN_BUDGETS`, `MAX_REPLANS`, `LOOP_BUDGETS`) and never retyped, because retyping would reproduce the defect. All three modes are graded, since the bug was that only one was ever rendered, and `PAGE` must carry no literal ceiling of its own \u2014 a second copy is a second thing to drift. The loop line is additionally checked not to advertise replans it does not have, which is the half a 'contains the right numbers' test would pass while still lying. The block's other half \u2014 a mode SELECTOR \u2014 is deliberately NOT built: whether loop mode earns default-ness is M44's evidence to give, and a selector shipped ahead of that is a product decision made by a UI edit. The acceptance's alternative is taken instead and the page says so: mode is deployment-level and is named on the page as not selectable there.",
+  "triage": {
+    "class": "ui-lies-about-the-run",
+    "red_first": "Watched red three ways against the composer: printing the plan line for every mode reddens `loop` and `escalate` on the missing 40 and 5.00; dropping 'no replans' from the loop line reddens `loop_advertises_replans`; and putting a literal 'up to N actions' back into PAGE reddens `page_carries_its_own_ceiling`.",
+    "note": "Reads the constants, not a frozen string: the failure is divergence, not wording."
+  }
+}

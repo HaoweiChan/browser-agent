@@ -2,6 +2,18 @@
 # Eval gate: no commit may regress the fast suite below the recorded baseline.
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
+# T-R27: `core.hooksPath` is repo-level and ABSOLUTE, so a commit made in a
+# `git worktree` runs the MAIN checkout's copy of this script against the
+# worktree's tree -- the right tree graded by the wrong enforcement, and a
+# branch that fixes its own gate does not get the gate it fixed. Hand off to
+# the copy that belongs to the tree being committed. `EVAL_HOOK_REEXEC` bounds
+# it to one hop, so two checkouts that disagree cannot ping-pong.
+SELF=$PWD/.githooks/pre-commit
+if [ -z "$EVAL_HOOK_REEXEC" ] && [ -x "$SELF" ] && [ "$SELF" != "$0" ]; then
+  echo "pre-commit: handing off to this tree's hook ($SELF)"
+  EVAL_HOOK_REEXEC=1 exec "$SELF" "$@"
+fi
+
 # Secret guard: no API key material ever enters history (repo goes public at submission).
 # ponytail: one pattern per provider we actually use; extend when a new provider is added.
 if git diff --cached | grep -qE 'sk-or-v1-[A-Za-z0-9]{8,}'; then
@@ -10,7 +22,25 @@ if git diff --cached | grep -qE 'sk-or-v1-[A-Za-z0-9]{8,}'; then
   exit 1
 fi
 [ -f evals/run.py ] || exit 0  # project removed the eval harness — no gate
-PY=python3; [ -x .venv/bin/python ] && PY=.venv/bin/python  # task deps live in .venv
+# Interpreter resolution and the "this is the environment, not a regression"
+# message are shared with `.claude/hooks/post-edit-invariant.sh` — they were
+# the same line copied twice, which is how both degraded to a depsless
+# `python3` at once (T-M39-15-D4). One file, sourced by both.
+. "$PWD/.githooks/lib-interpreter.sh"
+if ! eval_hook_interpreter; then
+  echo "COMMIT BLOCKED: the gate could not run."
+  echo "Run the gate yourself and commit with --no-verify explaining that in"
+  echo "the message (CLAUDE.md rule 5), or fix the interpreter above."
+  exit 1
+fi
+# The seam ends here, ALWAYS. `EVAL_HOOK_PY` is set only by the case that
+# grades the branch above, and that case reaches this file from inside a `fast`
+# run -- so a hook that fell through to the gate would start a suite that starts
+# this hook that starts a suite. Not hypothetical: it happened, 408 `evals.run`
+# processes deep, while watching that case red against the un-seamed hook. The
+# case now refuses to exec a hook without this seam; this line is the other half
+# of the same guarantee.
+[ -n "$EVAL_HOOK_PY" ] && { echo "EVAL_HOOK_PY set: probe only, gate not run."; exit 0; }
 # No --no-report: a green run writes only the history line (evals/run.py's
 # default policy); a red run (which blocks the commit below) also gets the
 # full per-case report so the failure is inspectable. The history line lands

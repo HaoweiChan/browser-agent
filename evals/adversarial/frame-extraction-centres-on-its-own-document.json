@@ -1,0 +1,33 @@
+{
+  "id": "frame-extraction-centres-on-its-own-document",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "task": "What is the current period net position?",
+    "fixture": "frames-duplicate-value.html",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Net position"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "verdict": "PASS",
+    "evidence_window_contains": "carried into the consolidated statement"
+  },
+  "provenance": "T-M42-3 (M42 implementation, 2026-08-26). `agent.TEXT_OFFSET_JS` walks up from the extracted element to its OWN frame's body, so its offset is relative to that document; since M42 `page_text` concatenates the main frame's text with each child frame's, so for an element inside an iframe the hint is short by everything before that frame. `_closest_occurrence` uses the hint to choose among duplicate occurrences, so the evidence window centres on the wrong copy. The block recorded that no fixture had this shape; this is that fixture. Measured here: the string occurs at offset 107 (main document, a superseded prior-year comparative) and 1395 (the frame, the real figure), with the frame's base at 1286. Extracting from the frame yields a raw hint of ~109, which lands on the DECOY. Fixed the way the acceptance's first branch asked: `page_text` optionally returns where each document starts, and `execute` adds the acted scope's base to the hint. Zero for the main frame and for every frameless page, so nothing that worked changes. Graded on the EVIDENCE rather than on the answer, because the answer is the same string either way \u2014 which is precisely why this degraded silently: the value is identical, only the window around it is wrong, and a window around the superseded copy is evidence for a different claim. Two things the block did not know, both found by making the case fail on purpose. (1) The fixture has to be LONGER than `agent.PAGE_TEXT_KEEP`: at 1.5k chars `evidence_window` returns the whole page, so both copies are in evidence whichever offset it centred on and the case is green for a reason that has nothing to do with the fix. The fixture is 4403 chars, with the copies at 107 and 4329 and the frame's base at 4220. (2) An `anchor` MASKS the defect: a distant anchor forces `evidence_window` to add a second window, and an anchor inside the frame covers the frame's copy regardless of where the first window landed. The plan therefore carries no anchor, and that narrows T-M42-3's real blast radius \u2014 the mis-centring is only observable on an UNANCHORED extraction from a frame, on a page past the window budget, where the value occurs in more than one document. Measured, not reasoned: with the base the hint is 92 + 4220 and lands on 4329; without it the hint is 92 and lands on 107, the superseded copy.",
+  "triage": {
+    "class": "silent-evidence-drift",
+    "red_first": "Watched red with the base removed again: evidence_window_contains false \u2014 the window centred on the main document's superseded prior-year copy while the answer was the current-period figure. The FIRST two attempts at this red-first passed with the fix reverted, and both were the case being wrong rather than the fix being unnecessary: a 1.5k-char page (window = whole page) and then an anchored plan (anchor adds a second window over the frame). Recorded because a red-first that cannot go red is the failure mode this repo has hit repeatedly.",
+    "note": "The cost was always bounded \u2014 a value occurring once is unaffected, and a value absent from the window fails `grounded` either way \u2014 but 'bounded' meant the run still passes while its evidence points at the wrong paragraph. That is the shape this repo treats as worse than a loud failure."
+  }
+}

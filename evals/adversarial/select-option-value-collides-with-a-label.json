@@ -1,0 +1,41 @@
+{
+  "id": "select-option-value-collides-with-a-label",
+  "task": "browser",
+  "suites": [
+    "fast"
+  ],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "fixture": "select-collide.html",
+    "task": "Select the 2024 filing in the picker and report what is selected.",
+    "stub_plan": [
+      {
+        "action": "select_option",
+        "target": {
+          "role": "combobox",
+          "name": "Filing year"
+        },
+        "value": "2024"
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "status",
+          "name": "Selection"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "reason_contains": "matches 2 options",
+    "actions": 2
+  },
+  "provenance": "T-M42-20-D5 (P1), shape (i). PRE-EXISTING \u2014 it shipped with M42's `select_option`, not with T-M42-20. `agent.py` matched with `next((o for o in opts if want in o), None)`, and `o` is the `(value, label)` PAIR from `OPTIONS_JS`, so a wanted string matched EITHER field and the first hit won. The readback could not catch it because it compares to `match[0]`, which is self-consistent by construction: the step selected an option, read back exactly what it had selected, and recorded `postcondition_ok: true` for a filing nobody asked for. On this fixture `want='2024'` matched `('2024', 'FY 2023')` by its VALUE before reaching `('2025', 'FY 2024')`, which is the one a person asking for \"the 2024 filing\" means. The fixture is not contrived: a filing list keyed by FISCAL year whose labels name the CALENDAR year is how most regulators publish them, which is why option 2's value equals option 3's label. Now: exact matches on either field are collected first, TWO of them is a refusal rather than a pick, and only a single loose match is taken. Refusing is the same fail-closed ruling `resolve` applies to an ambiguous target \u2014 picking one silently is the whole of this defect.",
+  "triage": {
+    "class": "silent-failure",
+    "red_first": "RED as `status: success` with `answer: 'Selected filing: FY 2023 (value 2024)'` and `trace_postconditions [true, true, null]` \u2014 the page's own `change` handler naming the wrong filing in the answer the run reported as correct. That is the shape: not an error, a confident wrong selection with a verified postcondition.",
+    "note": "The expectation is a LOUD refusal, not the right pick. Two options genuinely answer to `'2024'` here \u2014 one by value, one by label \u2014 and there is no basis in the step for choosing between them; a step that wants the FY2024 filing can say `'2025'` or `'FY 2024'`, both of which resolve to exactly one option. Guessing correctly-looking is what made this defect invisible for a milestone."
+  }
+}

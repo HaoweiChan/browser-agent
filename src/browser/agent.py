@@ -22,6 +22,7 @@ Two recovery ladders, both chosen from the observed failure distribution
 Every other class stays a loud classified stop. Output: specs/001-browser-contract.md.
 """
 
+import asyncio
 import contextlib
 import json
 import os
@@ -32,8 +33,8 @@ from pathlib import Path
 from .judge import JUDGE_ATTEMPTS, RUN_JUDGE_BUDGET
 from .observe import page_text
 from .planner import PlanError
-from .resolver import (DOC_ROOT_ROLES, TARGET_KEYS, ResolveError,
-                        relocation_candidates, resolve)
+from .resolver import (DOC_ROOT_ROLES, ResolveError, TARGET_KEYS,
+                       relocation_candidates, resolve, _whole_string)
 from .verifier import STATE_CHANGING, is_aggregate, rank, verify
 
 # The executor's whole vocabulary (ADR-027 Decision 2 widens it; ADR-028 records
@@ -648,7 +649,22 @@ async def check_state(page, expected: dict | None, scope=None) -> bool | None:
             # document-scoped means asking exactly one (ADR-036).
             for s in ([page, *(getattr(page, "frames", None) or [page])[1:]]
                       if doc is None else [doc]):
-                loc = (s.get_by_role(want["role"], name=want["name"])
+                # T-M42-20-D6: WHOLE-STRING, the same matcher the resolver
+                # uses. This built `get_by_role(role, name=<str>)` with neither
+                # `exact` nor `_whole_string`, i.e. a case-insensitive
+                # SUBSTRING — so on `<h1>Shopping Cart is empty</h1>` a
+                # postcondition asserting `heading "Cart"` held. The whole
+                # argument whole-string matching rests on one file over
+                # ("substring matching resolved absent targets to superstring
+                # siblings and extracted the wrong element as a success")
+                # applies verbatim here, and harder: a postcondition is what
+                # `verify` treats as proof the action landed, so a superstring
+                # match is a no-op certified as a state change.
+                #
+                # `_whole_string`, not `exact=True`: exact is case-SENSITIVE,
+                # which is a promise about the page's stylesheet nothing here
+                # can keep — the same reason the resolver rejected it.
+                loc = (s.get_by_role(want["role"], name=_whole_string(want["name"]))
                        if want.get("name") else s.get_by_role(want["role"]))
                 if await loc.count() >= 1 and await loc.first.is_visible():
                     return True
@@ -709,6 +725,52 @@ async def navigate(page, url: str) -> None:
     Worst case is 22s, not the 20s the goto argument suggests: the document has
     its own 20s, then the settle adds up to 2s on top.
     """
+    # Attached BEFORE `goto`, because the requests that matter here are the ones
+    # a page issues while it parses -- a `fetch` in an inline script is in
+    # flight before `load` fires, which is the only reason this can be tested
+    # at `load` time at all. Removed in the `finally` below: `navigate` is
+    # called once per hop on a page that survives the whole run, and listeners
+    # left behind would accumulate one set per navigation.
+    inflight = set()
+
+    # Plain functions, not `inflight.add` / `inflight.discard`: Playwright
+    # stamps an attribute on every handler it wraps, and a builtin method
+    # cannot carry one (`AttributeError: 'builtin_function_or_method'`).
+    def started(request):
+        # `fetch`/`xhr` only, and the narrowing is what makes the wait cheap
+        # enough to keep. Counting EVERY request bought a 7.3s fast-suite
+        # regression (93.5 -> 100.9) for nothing: `load` already waited on
+        # images, styles and subframes, and what was left over it was mostly
+        # Chromium's own `/favicon.ico` -- a 404 round trip, on every
+        # navigation, that no observation has ever read. The question this
+        # settle asks is "is the page still fetching DATA it will paint with",
+        # and these two resource types are that question.
+        if request.resource_type in ("fetch", "xhr"):
+            inflight.add(request)
+
+    def finished(request):
+        inflight.discard(request)
+
+    page.on("request", started)
+    page.on("requestfinished", finished)
+    page.on("requestfailed", finished)
+    try:
+        await _navigate(page, url, inflight)
+    finally:
+        # `suppress`, because this runs on the failure path too: a page that
+        # crashed or was closed inside `_navigate` is exactly when teardown can
+        # raise, and a teardown error here would replace the real navigation
+        # failure with a misleading one -- the misattribution family this
+        # function exists to close.
+        for event, fn in (("request", started), ("requestfinished", finished),
+                          ("requestfailed", finished)):
+            with contextlib.suppress(Exception):
+                page.remove_listener(event, fn)
+
+
+async def _navigate(page, url: str, inflight: set) -> None:
+    """`navigate`'s body, split out only so the listener teardown above is a
+    `finally` rather than a repeated line on every return path."""
     from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
     await page.goto(url, timeout=20_000, wait_until="domcontentloaded")
@@ -716,6 +778,42 @@ async def navigate(page, url: str) -> None:
         await page.wait_for_load_state("load", timeout=SETTLE_BUDGET_MS)
     except PlaywrightTimeoutError:
         pass  # the page never went quiet; read it anyway, that is the point
+    # S1 (the 2026-08-24 postmortem's fetch-then-render shape): `load` fires
+    # when the DOCUMENT is complete, and a page that paints from `fetch` is not
+    # done at that point. The observation on the very next line is what the
+    # planner plans against, so a control that is empty at `load` -- a
+    # `<select>` filled from an endpoint, a status region still reading
+    # "Extracting..." -- is a control the planner cannot see, and it plans
+    # around a page that no longer exists by the time the plan executes. It was
+    # declared unfixed by `live-sec10k-authored-wait-reaches-the-doc-status`
+    # (claim 1) and then killed a real run: a task naming a filing the picker
+    # DID offer was planned as an EDGAR-URL fetch, because the 42 options had
+    # not been painted when the planner looked.
+    #
+    # `networkidle` is the obvious mechanism and it is the wrong one, twice
+    # measured: it waits 500ms past the last request on EVERY navigation, cost
+    # +34s on the fast suite when ADR-002 rejected it, and +51.4s (93.5 -> 144.9,
+    # over a 110s ceiling) when this fix was first written that way -- even
+    # gated on the page carrying a `<script>` at all. It buys a guarantee by
+    # charging every page for the sins of the few.
+    #
+    # What is actually being asked is narrower: is the page still WAITING on
+    # something? `_inflight` answers exactly that and nothing else, so a static
+    # document -- every script-free fixture, and every script-bearing one whose
+    # script has already finished -- pays one set-emptiness test and moves on.
+    # Ceiling, named rather than hidden: a page that issues its fetch from a
+    # `setTimeout` AFTER `load` has an empty in-flight set at this instant and
+    # is read early exactly as before. The fix is deliberately not a quiescence
+    # window; upgrade to one only if a case ever demonstrates that shape.
+    # 5ms rather than 20ms, and the reason is NOT the one this comment first
+    # gave. The guess was that the tick dominated -- 20ms x ~100 navigations of
+    # pure rounding -- and it was measured and falsified: the fast suite moved
+    # 96.02s -> 95.77s, 0.25s. What the suite pays is the fetches themselves,
+    # which is the wait doing its job. 5ms is kept because it is free and
+    # slightly tighter; nobody should read a saving into it.
+    deadline = time.monotonic() + SETTLE_BUDGET_MS / 1000
+    while inflight and time.monotonic() < deadline:
+        await asyncio.sleep(0.005)
     # Anything else — a crash or a close inside that window — propagates and is
     # classified. Swallowing it here would discard the real cause and let it
     # resurface as a `locate` failure on the next line, which is the
@@ -949,9 +1047,25 @@ def assemble_result(trace, answer, budgets, failure=None, reason=None, final_url
     # extract-container-dump-is-not-the-answer). What was read stays in
     # `evidence.extractions`, in full, where the verifier read it from; the
     # user-facing field says what the verdict says: nothing here answers.
-    if status == "success" and verdict and verdict.get("verdict") != "PASS":
+    # T-M32-15: `and verdict` short-circuits, so a FALSY verdict (`None`, `{}`)
+    # skipped this branch entirely and a caller passing an answer with no
+    # verdict got `status: success` carrying something nothing certified — the
+    # silent-success shape this repo has hit seven times. Not reachable from
+    # `run_task` today (its one `done()` without `failure=` always passes a
+    # `verify()` result, which is never None and never {}), and that is exactly
+    # why it is worth closing: INV-2 is a property of this function, not of the
+    # discipline of its twenty call sites, and "latent" is what every one of
+    # those seven was before it was not.
+    if status == "success" and (not verdict or verdict.get("verdict") != "PASS"):
         status = "failure:semantic"
-        reason = reason or f"verifier {verdict['verdict']}: {verdict.get('reason')}"
+        reason = reason or (f"verifier {verdict['verdict']}: {verdict.get('reason')}"
+                            if verdict else "no verdict: nothing certified this answer")
+        answer = None
+    # The symmetric half of the same finding: `answer` was nulled only INSIDE
+    # the demotion branch, so any `failure:*` assembled with an `answer=` would
+    # carry it. No call site does that today; the rule belongs here rather than
+    # in twenty places that must each remember it.
+    if status != "success":
         answer = None
     return {
         "status": status,
@@ -1601,7 +1715,18 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # on the failure path — 20s per absent option in a suite
                     # budgeted at 90s — and would tell the model nothing about
                     # what it could have picked instead.
-                    want = step.get("value") or ""
+                    # T-M42-20-D5: a `select_option` with no `value` used to
+                    # become `want = ""`, and `"" in anything` is True — so it
+                    # matched the FIRST option, selected it, read it back
+                    # successfully and recorded `postcondition_ok: True` for a
+                    # filter nobody asked for. `press` already refuses its
+                    # missing-value shape and this did not; `plan_gap` type-checks
+                    # neither. A step the executor cannot honour is `task`, which
+                    # is the same ruling and the same class `press` uses.
+                    want = step.get("value")
+                    if not isinstance(want, str) or not want:
+                        raise StepError("task", "select_option needs a `value` naming the option "
+                                                f"to choose; got {step.get('value')!r}")
                     opts = await loc.evaluate(OPTIONS_JS)
                     if opts is None:
                         # The wrong element, not a broken action — the same
@@ -1638,7 +1763,34 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         except Exception:
                             pass  # let the empty-offer message below say it
                         opts = await loc.evaluate(OPTIONS_JS)
-                    match = next((o for o in opts if want in o), None)
+                    # T-M42-20-D5, the other half: `want in o` searched the
+                    # (value, label) PAIR, so a wanted string matched either
+                    # field and the first hit won. On
+                    # `<option value='2024'>FY 2023</option>` beside
+                    # `<option value='2025'>FY 2024</option>`, `want='2024'`
+                    # matched the FY 2023 row by its value, selected it, read it
+                    # back against its own match and reported success — the page
+                    # firing `change` for a filing nobody asked for. The readback
+                    # could not catch it because it compares to `match[0]`, which
+                    # is self-consistent by construction.
+                    #
+                    # Exact before substring, and value before label, because
+                    # "which option did the user mean" has a right answer when
+                    # one field matches exactly and a guess when several match
+                    # loosely. A guess that cannot be told from a hit is what
+                    # this defect was.
+                    exact = [o for o in opts if want in (o[0], o[1])]
+                    if len(exact) > 1:
+                        # Two options genuinely answer to this string. Refusing
+                        # is the same fail-closed ruling the resolver applies to
+                        # an ambiguous target: picking one silently is how the
+                        # wrong filing got selected in the first place.
+                        raise StepError("act", f"{want!r} matches {len(exact)} options "
+                                               f"({[(v, l) for v, l in exact]}); name one exactly")
+                    match = exact[0] if exact else None
+                    if match is None:
+                        loose = [o for o in opts if want in o[0] or want in o[1]]
+                        match = loose[0] if len(loose) == 1 else None
                     if match is None:
                         raise StepError("act", f"no option matches {want!r}; this control offers "
                                                f"{[label for _v, label in opts]}")
@@ -1690,8 +1842,64 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     vals = [v for v in vals if v]
                     if not vals:
                         raise StepError("extract", "extraction returned empty text")
-                    body = await page_text(page)
+                    bases: dict = {}
+                    body = await page_text(page, bases=bases)
+                    # T-M42-3: the offset hint `TEXT_OFFSET_JS` returns is
+                    # relative to the element's OWN frame's body, while `body`
+                    # above is every frame concatenated — so for an element
+                    # inside an iframe the hint is short by everything before
+                    # that frame, and `_closest_occurrence` chooses among
+                    # duplicate occurrences on an offset that means something
+                    # else. `bases` is where each document starts in `body`;
+                    # adding the acted scope's base makes the two agree. Zero
+                    # for the main frame and for every frameless page, so
+                    # nothing that worked changes.
+                    frame_base = bases.get(acted_scope[0], 0)
+                    # T-M42-5: the DOCUMENT the value was read from, which is
+                    # not the same string as `body` once frames are in play.
+                    # `body` is every frame concatenated (M42 made `page_text`
+                    # frame-piercing), while `not_a_dump`'s 0.35 ratio was
+                    # calibrated by ADR-008 on main-frame `innerText` over a
+                    # 25-record confusion matrix. A page with a substantial
+                    # iframe therefore inflates the DENOMINATOR, and a value
+                    # that is a dump of its own document passes. No committed
+                    # case moved when M42 changed this, because no fixture in
+                    # the calibration set has a frame — the ratio was measured
+                    # on pages that no longer exist in the shape it was measured
+                    # on.
+                    #
+                    # This is the narrower of the two answers T-M42-5 offered,
+                    # and it is chosen over re-deriving DUMP_RATIO because
+                    # guessing a new ratio is exactly what ADR-008 exists to
+                    # prevent: re-deriving needs framed pages in `evals/labels/`
+                    # and a re-run confusion matrix, which is a measurement task,
+                    # not an edit. `acted_scope[0]` is the scope `resolve`
+                    # returned, already recorded for the postcondition; falling
+                    # back to `body` keeps every frameless page byte-identical.
+                    scope_now = acted_scope[0]
+                    try:
+                        doc_len = len(await page_text(scope_now, frames=False)
+                                      if scope_now is page or scope_now is None
+                                      else await page_text(scope_now))
+                    except Exception:
+                        doc_len = len(body)
                     anchor = step.get("anchor")
+                    # Identity anchor (verifier L1): the entity the task names
+                    # must be present where the answer was read.
+                    #
+                    # Checked BEFORE the appends below, not after them. It used
+                    # to fire once `answers` and `extractions` already held the
+                    # rejected read, which was harmless only because a semantic
+                    # failure ended the run on the spot. It no longer does (the
+                    # ladder in family 3 replans on it), and a rejected value
+                    # left in `answers` would be carried into the replan's
+                    # answer -- turning a scalar into a list, or answering with
+                    # the very read the anchor just refused.
+                    if anchor and anchor not in body:
+                        raise StepError(
+                            "semantic",
+                            f"identity anchor {anchor!r} absent from the page "
+                            "the answer was read from")
                     # M34 R2-1: which occurrence of `val` is this, when it is not
                     # unique on the page (a decoy blurb beside the real answer,
                     # case verifier-context-anchors-real-occurrence)? A DOM-derived
@@ -1708,7 +1916,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # vals[0] either way; every later value falls back to its own
                     # first occurrence, below.
                     real_offset = _closest_occurrence(
-                        body, vals[0], await loc.first.evaluate(TEXT_OFFSET_JS))
+                        body, vals[0],
+                        await loc.first.evaluate(TEXT_OFFSET_JS) + frame_base)
                     # body_len is the real page the value was read from -- verify()'s
                     # not_a_dump denominator prefers this over len(page_text), because
                     # page_text is evidence_window()'s output: capped at PAGE_TEXT_KEEP
@@ -1730,26 +1939,50 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # `extract` contributes exactly one value, so the loop is the
                     # same code for both verbs.
                     other_page_text = " ".join(t for u, t in page_bodies.items() if u != page.url)
-                    for v in vals:
+                    for i, v in enumerate(vals):
                         # M34 R2-1: which occurrence of `v` is this, when it is
                         # not unique on the page? The DOM hint picks the real one
-                        # rather than always taking the first. For `extract_all`
-                        # the hint is the step's locator, which spans every match,
-                        # so each value falls back to its own first occurrence —
-                        # the pre-M34 behaviour, per value.
-                        off = (real_offset if v == vals[0]
-                               else _closest_occurrence(body, v, -1))
+                        # rather than always taking the first.
+                        #
+                        # T-R38: per ROW. This used to be `real_offset if v ==
+                        # vals[0] else _closest_occurrence(body, v, -1)`, so rows
+                        # 2..n of an `extract_all` got hint -1 — plain
+                        # first-occurrence, the pre-M34 behaviour — while
+                        # `docs/support-matrix.md` D24 said the context is
+                        # "anchored to the actual DOM occurrence it was read
+                        # from". `verify()` judges an enumeration row by row, so
+                        # a row anchored to the wrong occurrence is judged on
+                        # somebody else's evidence: `not_page_furniture` compares
+                        # that row's window against the other pages this run
+                        # loaded, and a window centred on the wrong copy of the
+                        # string can clear a check the right copy would fail, or
+                        # fail one it would clear.
+                        #
+                        # `loc.nth(i)`, not `loc.first`: `.first` was correct only
+                        # because Playwright's strict mode refuses `evaluate` on a
+                        # multi-match locator, and `.nth(i)` satisfies that the
+                        # same way while asking about the row actually in hand.
+                        # It costs one `evaluate` per row where the old code cost
+                        # one per step; `extract_all` has no cap on matches
+                        # (T-EXTRACT-ALL-VOLUME), so if that ever shows up in the
+                        # wall clock the answer is that cap, not this hint.
+                        try:
+                            hint = await loc.nth(i).evaluate(TEXT_OFFSET_JS)
+                        except Exception:
+                            # Evidence capture, not an assumption: a row whose
+                            # element went away between the read and here degrades
+                            # to its own first occurrence rather than killing a
+                            # run that already has its answer.
+                            hint = -1
+                        off = _closest_occurrence(
+                            body, v, hint if hint < 0 else hint + frame_base)
                         extractions.append(
                             {"value": v,
                              "page_text": evidence_window(body, v, anchor, offset=off),
-                             "body_len": len(body), "other_page_text": other_page_text,
+                             "body_len": doc_len, "other_page_text": other_page_text,
                              "value_offset": (off - _window_lo(body, off)) if off >= 0 else None})
                     page_bodies[page.url] = body
                     answers.append(vals if action == "extract_all" else vals[0])
-                    # Identity anchor (verifier L1): the entity the task names
-                    # must be present where the answer was read.
-                    if anchor and anchor not in body:
-                        raise StepError("semantic", f"identity anchor {anchor!r} absent from the page the answer was read from")
 
             async def attempt(step, note=None, recovery=None):
                 """One execution of one step: appends its trace record, returns
@@ -2270,6 +2503,15 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # it recovered nothing, and `recovery_rungs` publishes the count
                 # (PR #34 R2; `specs/001-browser-contract.md`, ADR-020 §2 both
                 # already said so). It waits for the first acting attempt.
+                # The other half of T-M40-2-6's guard, and it is not redundant:
+                # `parse_plan` covers the LIVE planner, and every offline case
+                # injects `stub_planner` at that same boundary, so a malformed
+                # plan reaches this loop without ever passing through it. A step
+                # that is not a step is a plan the executor cannot honour, which
+                # specs/000 already classifies as `task`.
+                if not isinstance(step, dict) or not isinstance(step.get("action"), str):
+                    return done(failure="task", reason=(
+                        f"plan step {si + 1} is not a step: {step!r}"))
                 read_only = step["action"] == "observe"
                 rec, cls = await attempt(step, note=pending,
                                          recovery=("recovery" if pending_recovery
@@ -2382,7 +2624,17 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             continue
 
                 # --- Family 2: act -> postcondition invalidated -> replan -----
-                if cls == "act":
+                # `semantic` joins this family rather than getting one of its
+                # own, because the recovery is identical: replan from the page
+                # as it actually is. The only `semantic` failure the executor
+                # raises is the identity anchor -- "the answer I just read was
+                # not on a page about the thing you asked about" -- which is
+                # the single most informative signal a run produces and was,
+                # until now, the one the ladder threw away. It fell straight to
+                # `return done(failure=cls)`, so a live run answered a task
+                # about Intel from a page that never said Intel, spent 0 of its
+                # 2 replans, and stopped (`replan-after-a-refused-anchor`).
+                if cls in ("act", "semantic"):
                     if budgets["replans"] >= MAX_REPLANS:
                         rec["note"] += f"; replan budget exhausted ({MAX_REPLANS})"
                     elif (fresh := await look()) is not None:
@@ -2425,7 +2677,16 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # that just failed is a retry, and specs/001 keeps
                             # retries out of the recovery metric by construction.
                             rec["note"] += "; replan re-issued the step that just failed"
-                        elif drops_action and changed_nothing(rec):
+                        # `not reads_without_acting([step])` scopes the
+                        # laundering guard to what it is actually about: a
+                        # failed step that was SUPPOSED to change the page. An
+                        # extraction never was, so "the replan only reads" is
+                        # not evidence of laundering there -- it is the correct
+                        # recovery, and without this clause every semantic
+                        # replan would be refused by a guard written about
+                        # clicks (`replan-after-a-refused-anchor` red).
+                        elif (drops_action and changed_nothing(rec)
+                              and not reads_without_acting([step])):
                             rec["note"] += ("; replan would skip a failed action that changed "
                                             "nothing on the page")
                         # The lint runs at EVERY point the executor adopts a plan,
