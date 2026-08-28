@@ -6,6 +6,21 @@ incident narrative behind it. Every ADR carries a matching `**Ruling**` /
 full file when you need the "why" or the evidence, read this index when you
 just need "what is now true".
 
+**Allocating a number (T-ADR-NUM, 2026-08-28).** Claim the number when the PR
+OPENS, not when the ADR is written, and claim it by adding the INDEX row in the
+same push — the row is the reservation. "Next free at writing time" is what
+produced three forced renames inside one PR (this repo's wall-clock ADR was
+written as ADR-010 and shipped as ADR-013) and one more on 2026-08-28, because
+concurrent branches all see the same next free number and whichever merges last
+renumbers. A rename rewrites one string across ~12 files, and once several have
+layered a sweep stops being verifiable by grep: every hit for the old number
+looks plausible, since the text around it was written by an earlier sweep.
+Reserving early does not prevent a collision — two branches can still open on
+the same day — so it is paired with a guard rather than trusted:
+`adr-header-and-index` refuses two files sharing a number, a gap in the
+sequence, and an INDEX row naming no file. Each was watched red, the first
+against the collision that actually happened here.
+
 - ADR-000 — specs/ holds only invariants, output contracts and ADRs; enforcement lives in hooks, never in prose — enforced by `.githooks/pre-commit`, `.claude/hooks/post-edit-invariant.sh` · amended by ADR-001
 - ADR-001 — a bounded docs/ planning layer and a milestone-level tasks/TODO.md are allowed; specs/'s three-kind charter is unchanged — enforced by advisory (cold-reviewer subagent, CLAUDE.md rule 3)
 - ADR-002 — sets the pre-commit gate: fast ≥ baseline, invariant = 100%, trap-catch ≥ 90%, fast cost = $0.00, and each suite's wall clock ≤ its own environment's measured ceiling (the four numbers are ADR-019 §2/§3/§5 and the one override variable per suite is its §4 — that ADR amends this one; the local pair is graded against `evals/run.py` and README by `published-band-matches-the-ledger`, CI's against the workflow by `fast-wall-clock-budget`) — enforced by `.eval-baseline.json` + `.githooks/pre-commit`, wall clock by `evals/run.py` and graded by `fast-wall-clock-budget` and `published-band-matches-the-ledger` · amended by ADR-009, ADR-013, ADR-019

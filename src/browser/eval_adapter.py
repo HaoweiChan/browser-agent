@@ -3631,6 +3631,34 @@ def _run_adr_header_index_case(case: dict) -> dict:
                            if index_counts[n] < file_counts[n]
                            for _ in range(file_counts[n] - index_counts[n]))
     dup_index = sorted({n for n in index_nums if index_nums.count(n) > 1})
+    # T-ADR-NUM, three conjuncts. A number is allocated by "next free" when an
+    # ADR is WRITTEN, and concurrent branches all see the same next free number,
+    # so whichever merges last renumbers — this branch's wall-clock ADR was
+    # written as ADR-010 and shipped as ADR-013, three forced renames in one PR.
+    # It happened again on 2026-08-28: ADR-037 written here while 037 and 038
+    # were taken on main. Each rename rewrites one string across ~12 files, and
+    # once several renames have layered a sweep is no longer verifiable by grep
+    # alone, because every hit for the old number looks plausible — the text
+    # around it was written by an earlier sweep. A machine does not have to read
+    # each line.
+    #
+    # (1) TWO FILES, ONE NUMBER. The collision itself, which nothing named: a
+    # merge that brings in someone else's ADR-037 beside yours is clean at the
+    # git level and wrong at every other.
+    dup_files = sorted(n for n, c in file_counts.items() if c > 1)
+    # (2) A GAP. Numbers are a sequence, and a hole in it is either a lost file
+    # or a botched rename that left nothing behind. Graded from the lowest
+    # number present, so the check needs no notion of where the series began.
+    nums = sorted(int(n) for n in file_counts)
+    gaps = [f"ADR-{i:03d}" for i in range(nums[0], nums[-1] + 1)
+            if str(i).zfill(3) not in file_counts] if nums else []
+    # (3) AN INDEX ROW POINTING AT THE WRONG FILE. The INDEX names an ADR by
+    # number and then describes it; if the number and the description have
+    # drifted apart, the row is a citation to something that does not say what
+    # the row claims. Settled by the one part a machine can settle: the row's
+    # number must have a file, and that file's TITLE must carry the same number
+    # (the title/filename agreement above is what makes this transitive).
+    index_orphans = sorted(n for n in set(index_nums) if n not in file_counts)
 
     # Sections, per ADR: `### 4. ...` headings, the numbering a `§N` citation
     # points at. An ADR with none (ADR-017 is one) can be cited, never sectioned.
@@ -3681,6 +3709,8 @@ def _run_adr_header_index_case(case: dict) -> dict:
         "missing_ruling": missing_ruling, "ruling_too_long": bad_length,
         "title_number_is_not_the_filename": title_number,
         "missing_from_index": missing_index, "duplicated_in_index": dup_index,
+        "two_files_share_one_number": dup_files, "gap_in_the_sequence": gaps,
+        "index_row_names_no_file": index_orphans,
         "cites_no_such_adr": dangling, "cites_no_such_section": bad_section,
     }.items() if v}
     return {"passed": not wrong, "wrong": wrong,

@@ -5083,7 +5083,7 @@ Priority: P2
 Spec: replay committed live-page snapshots so live-site drift is detected
 without network. Acceptance: a drifted snapshot turns a case red offline.
 
-### T-ADR-NUM — ADR numbers are allocated by "next free", and this branch has been renumbered three times            [status: todo]
+### T-ADR-NUM — ADR numbers are allocated by "next free", and this branch has been renumbered three times            [status: done]
 Origin: PR #20 (no finding id — discovered by doing it, three times)
 Priority: P1
 Spec: an ADR takes the next free number when it is *written*, and concurrent
@@ -5118,6 +5118,26 @@ as M18 while PR #23's branch, PR title and review artifacts were already M18,
 so the debt block was renumbered to M27 on merge. "Next free" fails for every
 id sequence in this repo, not just `specs/decisions/`; whatever rule lands here
 should cover `tasks/TODO.md` ids too.
+
+Closed with both halves, which the acceptance required together rather than
+either alone.
+The RULE is in `specs/decisions/INDEX.md`'s header: claim the number when the PR
+OPENS, by adding the INDEX row in the same push — the row is the reservation.
+Reserving early does not PREVENT a collision (two branches can open the same
+day), which is why it is paired with a guard instead of trusted.
+The GUARD is three new conjuncts on `adr-header-and-index`: two FILES sharing one
+number, a gap in the sequence, and an INDEX row naming no file. Each watched red
+separately — the first against a duplicated ADR-039, which is the collision that
+actually happened on this branch on 2026-08-28; the other two together by
+renaming the M43 vision ADR two numbers past the end of the series, which is the
+shape a botched rename leaves behind.
+No new case: the conjuncts extend the existing one, so the suite count is
+unchanged and no band republish was needed.
+A small demonstration of the same family arrived immediately: the first draft of
+the case's own note SPELLED the two hypothetical numbers in canonical form, and
+this check resolves every `ADR-0NN` citation, so it reddened with two dangling
+references. The numbers are described in prose now. A guard that catches its own
+documentation is working.
 
 ### T-R13 — the module tail that turns `main()`'s return into an exit code is ungraded            [status: done]
 Origin: PR #20 R13 (LOW, routed debt by the reviewer, which approved alongside it)
@@ -5248,7 +5268,7 @@ Acceptance: one row driving main() without --no-report on an over-budget stub
 and asserting a report file appeared — or recorded as debt with the ADR saying
 it is unpinned.
 
-### T-R23 — the ADR-013 renumber sweep's commit-message tally is off by one            [status: todo]
+### T-R23 — the ADR-013 renumber sweep's commit-message tally is off by one            [status: done]
 Priority: P2
 Origin: PR #20 R23 (LOW, routed debt — classification (the thing that matters)
 is correct and was verified by hand, only the published tally is wrong)
@@ -5262,6 +5282,25 @@ docs/, README.md or .github/.
 Repro: `grep -rn 'ADR-012' --exclude-dir=.git --exclude-dir=report .` -> 3 lines.
 Acceptance: the PR body / ledger tally reads 3, or drops the count in favour of
 the classification.
+
+Closed as a correction on the record, which is the acceptance's second branch —
+"drops the count in favour of the classification". The tally lives in a merged
+commit message and cannot be edited; what can be fixed is that nothing carried
+the correction forward. So, stated here where a reader of the tracker will find
+it: **the ADR-013 renumber sweep touched THREE `ADR-012` hits, not four** — the
+header, `INDEX.md:21` and `evals/run.py:216` — and all three were main's
+report-policy ADR, correctly classified.
+That three is the block's own hand classification of the tree AT PR #20 and is
+relayed, not re-measured: the block's repro grep returns 47 hits on today's tree,
+because eleven milestones of ordinary citation have happened since. Anyone
+re-running it will not see 3, and a correction that reads as a live measurement
+would be its own version of this defect. The sweep itself was right; only the
+published count was wrong, which is the distinction the block was careful to draw
+when it was filed.
+Worth keeping beside T-ADR-NUM, which closed in the same commit: a hand-counted
+tally attached to a rename sweep is exactly the artefact that stops being
+checkable once several renames layer, and the guard added there is what makes the
+next sweep verifiable without one.
 
 ### M13 — Adaptive locator learning            [status: todo]
 Origin: backlog (pre-pr-loop, never promoted)
