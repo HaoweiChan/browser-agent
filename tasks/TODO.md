@@ -3195,7 +3195,33 @@ watched red with a mistyped token on a case that expects `failure:semantic`;
 the four recognised forms (`True`, `False`, `(bool, reason)`, `"error"`,
 `"malformed"`) are unchanged and every existing judge case stays green.
 
-### T-M39-2 — the per-suite judge cost line counts boundary calls, not provider calls            [status: todo]
+### T-M39-2 — the per-suite judge cost line counts boundary calls, not provider calls            [status: done]
+CLOSED 2026-08-28, all three surfaces, because the block is explicit that fixing
+one leaves the number "right in one place and absent in the two that a human
+reads".
+(1) The printed line NAMES what it counts — `N boundary calls` — which is the
+acceptance's "or names which one it counts" branch. No key travels through
+`budgets_spent`, so `contract-trace-schema`'s clause does not apply and the
+RunResult shape is untouched (CLAUDE.md rule 7: growing it is a deliberate edit,
+not a side effect).
+(2) The committed ledger gains `judge_usd`. `cost_usd` deliberately keeps meaning
+PLANNER spend — all ~2500 existing rows mean that, and redefining a field in
+place makes old and new rows silently incomparable, which is the drift this
+ledger exists to make impossible. Absent on older rows, which is the honest
+shape: `None` means "not recorded", not "zero". Graded BEHAVIOURALLY, not by
+grepping the source — the probe reads the row `main()` actually wrote into its
+temp ledger — and watched red by deleting the key.
+(3) The gateway's per-run cost string shows the TOTAL with the split beside it
+(`$X (plan $Y + judge $Z)`), because a per-run cost line that omits the judge is
+not a cost line: the judge is the last rung of the verification ladder and it
+bills.
+NOT closed: the printed count is still a lower bound on provider requests, and
+naming it does not make it one. Request volume is what a rate limit is
+denominated in, so the residual is that a suite where every run retried prints
+`M boundary calls` while having made up to `2M` requests — now stated by the
+line itself instead of being invisible. Carrying `judge_attempts` through
+`budgets_spent` is the fix, and it is a RunResult shape change with its own
+decision.
 Origin: M39 (ADR-023), consequence of the retry, noted in-PR and deliberately
 left out of scope.
 Priority: P1

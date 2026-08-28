@@ -334,7 +334,7 @@ def main():
           f"{int(totals.get('actions', 0))} actions · wall {totals['wall_seconds']}s · "
           f"p50 {totals['latency_p50']}s p95 {totals['latency_p95']}s · "
           f"judge ${totals.get('judge_usd', 0):.4f} · {int(totals.get('judge_tokens', 0))} tok · "
-          f"{int(totals.get('judge_calls', 0))} calls")
+          f"{int(totals.get('judge_calls', 0))} boundary calls")
     if metrics:
         # Ratios are printed as x/y, never as a bare rate: the denominator is
         # the number of cases that could have exercised the mechanism, and it is
@@ -387,6 +387,14 @@ def main():
         "env": env_tag(),
         "passed": passed, "total": len(results), "score": round(score, 6),
         "wall_s": totals.get("wall_seconds", 0.0), "cost_usd": totals.get("llm_usd"),
+        # T-M39-2's second symptom: judge spend was invisible outside this
+        # runner's own stdout. `cost_usd` is planner spend and stays that, on
+        # purpose — every committed row means that today, and redefining a
+        # field in place makes old rows and new rows silently incomparable,
+        # which is the drift this ledger exists to make impossible. So the
+        # judge gets its own key. Absent on the ~2500 rows written before this,
+        # which is the honest shape: `None` means "not recorded", not "zero".
+        "judge_usd": totals.get("judge_usd"),
         "report": report_name,
     }
     # Repo-specific extras (this fork's recovery/mutation/cost/p50-p95 metrics)

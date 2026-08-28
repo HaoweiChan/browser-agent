@@ -7566,6 +7566,7 @@ def _main_exit_code(wall_seconds: float, want_report: bool = False):
     same as the sys.argv/module-function patch above."""
     import contextlib
     import io
+    import json as _json
     import sys
     import tempfile
     from pathlib import Path as _Path
@@ -7596,7 +7597,11 @@ def _main_exit_code(wall_seconds: float, want_report: bool = False):
                 code = R.main()
             if not want_report:
                 return code
-            return code, sorted(f.name for f in _Path(tmp).glob("*-fast.json"))
+            hist = _Path(tmp) / "history.jsonl"
+            rows = [_json.loads(l) for l in hist.read_text().splitlines()
+                    if l.strip()] if hist.exists() else []
+            return (code, sorted(f.name for f in _Path(tmp).glob("*-fast.json")),
+                    rows[-1] if rows else {})
     finally:
         sys.argv, R.load_cases, R.run_case = argv, load, run
         R.REPORT_DIR, R.HISTORY = report_dir, history
@@ -7679,8 +7684,17 @@ def _run_wall_clock_case(case: dict) -> dict:
         # nothing before this, which is the same shape as PR #20 R8: a rule
         # nobody asks is a comment.
         for row in case["input"].get("report_written_when_red", []):
-            code, files = _main_exit_code(row["wall_seconds"], want_report=True)
+            code, files, ledger_row = _main_exit_code(row["wall_seconds"], want_report=True)
             got = {"exit": code, "wrote_a_report": bool(files)}
+            # T-M39-2's second symptom, graded behaviourally rather than by
+            # grepping the source: judge spend was invisible outside this
+            # runner's stdout, so a committed ledger row could not answer "what
+            # did this run cost". The row must now carry the KEY — its value is
+            # 0.0 on a stubbed run and that is fine; what was wrong was the key
+            # not existing at all.
+            if case["expect"].get("ledger_row_carries_judge_usd") and \
+                    "judge_usd" not in ledger_row:
+                wrong.append({"ledger_row_has_no_judge_usd": sorted(ledger_row)})
             if got != {"exit": row["exit"], "wrote_a_report": row["wrote_a_report"]}:
                 wrong.append({"report_write_policy": row.get("note"),
                               "want": {"exit": row["exit"],

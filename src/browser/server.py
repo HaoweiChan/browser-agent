@@ -1102,7 +1102,15 @@ function renderResult(r) {
   $("status").textContent = r.status;
   const b = r.budgets_spent;
   $("budgets").textContent = b
-    ? `${b.actions} actions · ${b.llm_tokens} tok · $${(b.llm_usd || 0).toFixed(4)} · ${b.replans} replans · ${b.ms}ms`
+    // T-M39-2: the operator's cost string showed PLANNER spend only, so a run
+    // whose judge cost money reported less than it spent. The judge is the last
+    // rung of the verification ladder and it bills; a per-run cost line that
+    // omits it is not a cost line. Total first (what was actually spent), with
+    // the split after it, because the split is what makes the total checkable.
+    ? `${b.actions} actions · ${b.llm_tokens + (b.judge_tokens || 0)} tok · ` +
+      `$${((b.llm_usd || 0) + (b.judge_usd || 0)).toFixed(4)}` +
+      (b.judge_usd ? ` (plan $${(b.llm_usd || 0).toFixed(4)} + judge $${b.judge_usd.toFixed(4)})` : "") +
+      ` · ${b.replans} replans · ${b.ms}ms`
     : "";
   // Re-render from the final trace: it is authoritative where the live stream is
   // provisional — a supersede lands after its attempt was already sent.
