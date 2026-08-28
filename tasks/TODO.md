@@ -4176,7 +4176,18 @@ Acceptance: either a workflow step that publishes CI's history row as an artifac
 can read (or commits it), plus `Band source — ci ...` sentences in §5 that item 9 grades, or
 a recorded decision that CI's numbers stay reader-verified and §5/§7 say so permanently.
 
-### T-R74 — nothing grades that CI actually tags its rows `ci`            [status: todo]
+### T-R74 — nothing grades that CI actually tags its rows `ci`            [status: done]
+CLOSED 2026-08-28 on the acceptance's first branch. `fast-wall-clock-budget`
+already parses the workflow for its two ceiling declarations, so it now also pins
+that the workflow declares an environment and that it is not `local`. Watched red
+by removing the `EVAL_ENV` line: `{"workflow_env": null}`.
+Ceiling named rather than implied, because this is a claim about a DECLARATION:
+it does not demonstrate that Actions sets `CI` (the fallback `env_tag()` actually
+relies on), and it does not demonstrate that either declaration survives into a
+committed row. That second half needs a CI artifact whose `env` something reads
+back, and stays T-R73's. What this closes is the silent direction — if the tag
+came out `local` on CI, T-R44's defect would return with every check green, and
+now the louder of the two declarations cannot vanish unnoticed.
 Origin: T-R44
 Priority: P1
 Spec: `evals/run.py` `env_tag()` returns `EVAL_ENV` if set, else `ci` when the runner sets
@@ -4738,7 +4749,18 @@ Consequences: "non-prunable by policy regardless of citation"), and fails if any
 remaining file is cited by nothing in `REPORT_CITATION_SCOPE`. Watch it fail
 first by re-adding one of the 38 pruned files uncited.
 
-### T-R21 — the over-budget-counts-as-red report-write clause is ungraded            [status: todo]
+### T-R21 — the over-budget-counts-as-red report-write clause is ungraded            [status: done]
+CLOSED 2026-08-28 on the acceptance's first branch — a row driving `main()`
+WITHOUT `--no-report` on an over-budget stub, asserting a report file appeared —
+rather than the "recorded as debt" fallback. `_main_exit_code` grew a
+`want_report` mode; every existing row keeps `--no-report` because they grade the
+EXIT CODE and must not write. Two rows, both directions: a green in-budget run
+writes nothing, an over-budget run exits 1 AND leaves a report. Watched red by
+deleting the `or over_budget(...)` clause from `red` — the block's own repro,
+which reddened nothing before this.
+Why the direction matters: the evidence for a wall-clock failure IS the timing,
+so a run that dies on it with no artifact is the one failure shape that cannot be
+read afterwards.
 Priority: P2
 Origin: PR #20 R21 (LOW, routed debt — reviewer's own routing)
 Claim: the `or over_budget(args.suite, totals["wall_seconds"])` clause added to

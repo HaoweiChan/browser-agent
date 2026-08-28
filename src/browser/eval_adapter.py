@@ -7548,7 +7548,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "origin-storage-seed-is-scoped": _check_origin_storage_seed_is_scoped}
 
 
-def _main_exit_code(wall_seconds: float) -> int:
+def _main_exit_code(wall_seconds: float, want_report: bool = False):
     """`evals.run.main()` over one stub case whose only property is its duration.
 
     Grades the CALL SITE, not the rule: `over_budget()` being correct buys
@@ -7577,7 +7577,15 @@ def _main_exit_code(wall_seconds: float) -> int:
     report_dir, history = R.REPORT_DIR, R.HISTORY
     try:
         with tempfile.TemporaryDirectory() as tmp:
-            sys.argv = ["run", "--suite", "fast", "--no-report"]
+            # T-R21: `--no-report` is what made the over-budget WRITE POLICY
+            # ungradeable from here. `evals/run.py` puts `over_budget(...)` into
+            # `red`, and `red` is what decides a full per-case report gets
+            # written — so an over-budget run must leave an inspectable artifact
+            # behind, and deleting that clause reddened nothing. Every existing
+            # row keeps `--no-report` (they grade the EXIT CODE and must not
+            # write); `want_report` drops it and returns what appeared.
+            sys.argv = (["run", "--suite", "fast"] if want_report
+                        else ["run", "--suite", "fast", "--no-report"])
             R.load_cases = lambda suite: [stub]
             R.run_case = lambda c: {"passed": True, "seconds": wall_seconds,
                                     "id": c["id"], "kind": c["_kind"]}
@@ -7585,7 +7593,10 @@ def _main_exit_code(wall_seconds: float) -> int:
             R.HISTORY = _Path(tmp) / "history.jsonl"
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-                return R.main()
+                code = R.main()
+            if not want_report:
+                return code
+            return code, sorted(f.name for f in _Path(tmp).glob("*-fast.json"))
     finally:
         sys.argv, R.load_cases, R.run_case = argv, load, run
         R.REPORT_DIR, R.HISTORY = report_dir, history
@@ -7660,6 +7671,21 @@ def _run_wall_clock_case(case: dict) -> dict:
         applied = [dict(r, got=_main_exit_code(r["wall_seconds"]))
                    for r in case["input"]["applied_in_main"]]
         wrong += [r for r in applied if r["got"] != r["exit"]]
+        # T-R21: the WRITE POLICY, which no row could observe while every probe
+        # passed `--no-report`. `evals/run.py` puts `over_budget(...)` into
+        # `red`, and `red` is what decides a full per-case report is written —
+        # so an over-budget run must leave an inspectable artifact and an
+        # under-budget green one must not. Deleting that clause reddened
+        # nothing before this, which is the same shape as PR #20 R8: a rule
+        # nobody asks is a comment.
+        for row in case["input"].get("report_written_when_red", []):
+            code, files = _main_exit_code(row["wall_seconds"], want_report=True)
+            got = {"exit": code, "wrote_a_report": bool(files)}
+            if got != {"exit": row["exit"], "wrote_a_report": row["wrote_a_report"]}:
+                wrong.append({"report_write_policy": row.get("note"),
+                              "want": {"exit": row["exit"],
+                                       "wrote_a_report": row["wrote_a_report"]},
+                              "got": got})
     finally:
         for n, v in prev.items():
             os.environ.pop(n, None)
@@ -7669,6 +7695,22 @@ def _run_wall_clock_case(case: dict) -> dict:
     # workflow is the only place it takes effect, so the value it declares is
     # part of the ruling (the R8 lesson — a mechanism nothing consults).
     wf = (Path(__file__).parents[2] / ".github" / "workflows" / "eval.yml").read_text()
+    # T-R74: that CI's rows are TAGGED `ci` is what keeps a CI row out of a
+    # `local` band, and it was asserted rather than demonstrated. `env_tag()`'s
+    # operative mechanism on CI is the `CI` fallback, which no test here can
+    # reach; what this file CAN pin is that the workflow declares an
+    # environment and that it is not `local`. If the tag silently came out
+    # `local` on CI, T-R44's defect would return with every check green.
+    # Named ceiling: this grades the DECLARATION, not that Actions sets `CI`
+    # and not that the tag survives into a committed row — that half needs a CI
+    # artifact and stays T-R73's.
+    if exp.get("workflow_declares_a_non_local_env"):
+        declared_env = re.search(r"EVAL_ENV:\s*\"?([\w-]+)\"?", wf)
+        value = declared_env.group(1) if declared_env else None
+        if value is None or value == "local":
+            wrong.append({"workflow_env": value,
+                          "note": "the workflow must declare an environment that is not "
+                                  "`local`, else a CI row lands in the local band"})
     for suite, key in (("fast", "ci_wall_seconds"), ("invariant", "ci_invariant_wall_seconds")):
         if key not in exp:
             continue
