@@ -49,6 +49,20 @@ DRILL_TEXT_HEAD = 1_500
 # and spends planner tokens on navigation nobody asked about.
 CHROME_ROLES = {"banner", "navigation", "complementary", "contentinfo", "search"}
 MAX_CHROME = 20
+# T-A39-3: the same idea one role down. 49 sibling `option`s under one
+# `combobox` are ONE control, not 49 elements a planner needs enumerated, and
+# they crowd out whatever follows them in document order. Measured on the
+# sec-10k inspector: once ADR-039's settle let the committed-fixture select
+# paint, the page-level observation filled at element 60 several elements
+# BEFORE `status — 'doc_status'`, which the planner had been able to see the
+# day before. Raising MAX_ELEMS is the fix this repo has refused twice — it
+# moves the cliff to the next larger page — so the budget goes per-control
+# instead, PER combobox rather than per page, the way MAX_CHROME is per
+# landmark. A drill-down onto the select gets the whole page budget, exactly
+# as chrome does, so the options a planner actually needs stay one `observe`
+# away rather than gone.
+OPTION_PARENT_ROLES = {"combobox", "listbox", "menu"}
+MAX_OPTIONS = 8
 
 # ARIA forbids an author-supplied accessible name on these roles, so Playwright
 # computes "" for them however loudly the DOM shouts aria-label. Chromium's
@@ -248,8 +262,12 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
     # is unchanged: nobody asked for that navigation, and
     # observe-content-survives-chrome still holds it at 20.
     max_chrome = MAX_CHROME if root is None else MAX_ELEMS
+    # Drilling INTO the select is the planner asking for its options by name,
+    # so it gets the page budget — the same exemption, and the same sentence,
+    # as the chrome one above.
+    max_options = MAX_OPTIONS if root is None else MAX_ELEMS
 
-    def walk(node, in_chrome=False):
+    def walk(node, in_chrome=False, opts=None):
         nonlocal chrome
         if not node or len(elems) >= MAX_ELEMS:
             return
@@ -261,10 +279,20 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
             # dropped, so relocation candidate order is unchanged.
             if in_chrome and chrome >= max_chrome:
                 return  # this whole subtree is more navigation; skip it
+            if role == "option" and opts is not None:
+                if opts[0] >= max_options:
+                    return  # this control has already shown what it is
+                opts[0] += 1
             elems.append({"role": role, "name": "" if role in NAME_PROHIBITED else name})
             chrome += in_chrome
+        # A one-cell list, not a counter per level: the options are SIBLINGS, so
+        # the budget has to be shared across them and reset for the next
+        # control — a per-page counter would let one long select silence the
+        # second one on the same page.
+        if role in OPTION_PARENT_ROLES:
+            opts = [0]
         for child in node.get("children") or []:
-            walk(child, in_chrome)
+            walk(child, in_chrome, opts)
 
     walk(snap)
     # Frame-piercing (M42): a page-level observation continues into every child

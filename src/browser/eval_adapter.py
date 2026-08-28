@@ -2755,6 +2755,8 @@ def _run_observe_case(case: dict) -> dict:
             # {role, name} dicts and has no handle to compare against — the
             # ceiling is that k elements could still be the wrong k, which no
             # observation this module produces can currently distinguish.
+            from .resolver import relocation_candidates
+
             advertised = collections.Counter(
                 (e["role"], e["name"]) for e in obs["elements"] if e["name"])
             # `"*"` means every role the observation carries, so the check keeps
@@ -2764,6 +2766,7 @@ def _run_observe_case(case: dict) -> dict:
             want_roles = case["expect"].get("resolve_advertised", [])
             skip_roles = case["expect"].get("resolve_advertised_except", [])
             unresolvable = []
+            needed_relocation = []
             for (role, nm), want_n in sorted(advertised.items()):
                 if role in skip_roles or not ("*" in want_roles or role in want_roles):
                     continue
@@ -2776,6 +2779,39 @@ def _run_observe_case(case: dict) -> dict:
                     loc, _tier, _fold, _scope = await resolve(page, target, many=True)
                     got_n = await loc.count()
                 except Exception as exc:
+                    # T-A39-3: reachable-by-relocation is reachable. `observe`
+                    # reads roles out of Chromium's accessibility snapshot and
+                    # `get_by_role` computes its own, and the two disagree:
+                    # measured here, six visible `<th>` are `columnheader` to
+                    # the snapshot and `cell` to `get_by_role` (0 columnheaders
+                    # against 2/18/54 table/row/cell), and `<summary>` is the
+                    # non-ARIA `DisclosureTriangle`. Both reach the element
+                    # through the relocation ladder the executor ALREADY runs on
+                    # a locate failure, so a target that recovers is not a dead
+                    # end and this case should not claim it is.
+                    #
+                    # Deliberately NOT fixed in the resolver, which was the first
+                    # attempt: a name-as-text fallback tier there resolved the
+                    # sec-10k targets and ALSO resolved `l4-shop-a11y-stripped`
+                    # and `l4-forms-a11y-stripped`, whose whole subject is that
+                    # the ladder has to run — the mutation suite's recovery
+                    # metric went green with no recovery performed. Narrowing the
+                    # tier to "no element of this role exists at all" did not
+                    # separate them either, because stripping a11y removes the
+                    # role from the page too. The ladder is the right layer; it
+                    # is the CASE that was asking a question the executor does
+                    # not ask.
+                    relocated = None
+                    for cand in relocation_candidates(target, obs):
+                        try:
+                            await resolve(page, cand, many=True)
+                            relocated = cand
+                            break
+                        except Exception:
+                            continue
+                    if relocated is not None:
+                        needed_relocation.append({"target": target, "via": relocated})
+                        continue
                     unresolvable.append({"target": target,
                                          "error": f"{type(exc).__name__}: {exc}"})
                     continue
@@ -2784,11 +2820,11 @@ def _run_observe_case(case: dict) -> dict:
                                          "resolved": got_n,
                                          "error": "the observation advertises this name for "
                                                   f"{want_n} element(s); resolve reaches {got_n}"})
-            return obs, unresolvable
+            return obs, unresolvable, needed_relocation
         finally:
             await ctx.close()
 
-    obs, unresolvable = _await(go())
+    obs, unresolvable, needed_relocation = _await(go())
     exp = case["expect"]
     missing = [
         want for want in exp.get("contains", [])
@@ -2821,6 +2857,9 @@ def _run_observe_case(case: dict) -> dict:
         "missing": missing,
         "advertised_unresolvable": unnameable,
         "advertised_name_did_not_resolve": unresolvable,
+        # Reported, never silent: a target that needed the ladder is a target a
+        # planner reaches one rung later, and the number is the cost.
+        "advertised_needed_relocation": needed_relocation,
         "starved_by_chrome": starved,
         "inside_the_cap_after_all": leaked,
         "text_head_missing": text_missing,

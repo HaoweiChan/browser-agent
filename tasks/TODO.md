@@ -234,7 +234,7 @@ ledger row even under `--no-report`, so a verification run taken after a band is
 published can silently make that band no longer cite the maximum — the rows this
 branch commits are the ones its bands were derived from, and post-publication
 verification runs are restored rather than committed.
-### T-A39-3 — ADR-039 traded a paint race for a cap, and on the sec-10k inspector the status line is what fell off            [status: todo]
+### T-A39-3 — ADR-039 traded a paint race for a cap, and on the sec-10k inspector the status line is what fell off            [status: done]
 Origin: ADR-039's own live verification, 2026-08-28. Measured, not predicted.
 Priority: P1
 Spec: before ADR-039, the pre-plan observation of
@@ -264,6 +264,37 @@ control, not 49 elements a planner needs enumerated. An offline case on
 `sec10k-inspector.html` pinning that the status line survives the budget while the
 select is still advertised, watched red first, is what closes this. Not closed by
 T-A39-1 or T-A39-2 — those are ADR-039's declared ceilings; this is its measured cost.
+
+Closed by the lever this block's own acceptance called untried, and it bought
+more than it was asked for. `observe.MAX_OPTIONS = 8`, applied PER
+combobox/listbox/menu subtree — the shape `MAX_CHROME` has had per landmark
+since M32 — with the whole page budget restored on a drill-down, exactly as
+chrome gets. Raising `MAX_ELEMS` is refused for the third time on `observe.py`'s
+own reason. ADR-039 §6.
+Measured after: 60 elements, 8 options listed, and `status — 'doc_status'`,
+`Item 4 extracted text` and `combobox 'SELECT A COMMITTED FIXTURE'` all present
+together — the third being the half a blunt cap would have got wrong, since a
+budget that hides the control itself trades one invisibility for another.
+The extracted-text region is the part the acceptance did not anticipate: M41 had
+DECLARED it unreachable-by-observation and `sec10k-item-text-region-is-past-the-
+observation-cap` existed to record that. It is now inside the cap, so the case is
+inverted rather than deleted — same id, because two committed reports and five
+documents cite it and an id that lies about its conclusion is cheaper than
+citations that resolve to nothing (T-R40 is what the other choice costs).
+Second declared limitation falsified this month.
+One thing it surfaced, answered elsewhere: with 41 slots freed the observation
+began advertising elements `resolve` cannot reach directly — Chromium's snapshot
+calls six visible `<th>` `columnheader` and `<summary>` `DisclosureTriangle`,
+while `get_by_role` answers 0 for `columnheader` and knows no such role as the
+latter. Two role oracles, one page. Both ARE reached by the relocation ladder the
+executor already runs, so the executor was never wrong and the observe case was
+asserting a property it does not need; it now reports
+`advertised_needed_relocation` instead of failing. A resolver-side fallback tier
+was tried FIRST and is rejected on measurement: it turned `l4-shop-a11y-stripped`,
+`l4-forms-a11y-stripped`, `l4-recover-name-to-text` and `l4-shop-duplicate-labels`
+green with no recovery performed — the mutation suite's own subject resolved away
+— and narrowing it to "no element of this role exists anywhere" did not separate
+them, because stripping a11y removes the role from the page too.
 
 ### T-A39-1 — the in-flight wait cannot see a fetch issued after `load`            [status: todo]
 Origin: ADR-039 §2, 2026-08-28, declared by the ruling rather than found after it.

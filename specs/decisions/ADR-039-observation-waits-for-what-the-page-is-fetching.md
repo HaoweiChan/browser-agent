@@ -144,3 +144,51 @@ attempts are on the record in ADR-019 §2: narrowing the in-flight set to
 returned 0.25s and falsified the theory that rounding dominated. What remains is
 the page being waited on. The raise buys a capability and the trade is written
 down rather than absorbed.
+
+### 6. Observation budgets the options of a control, not the elements of a page (2026-08-28)
+
+§1's settle bought correctness and charged for it in a currency this ADR did
+not price: once the sec-10k inspector's committed-fixture `<select>` actually
+PAINTS, its 49 `option`s enter the accessibility tree, and the page-level
+observation fills at `observe.MAX_ELEMS` several elements before
+`status — 'doc_status'`. The status line had been visible to a planner the day
+before. T-A39-3 recorded that as the measured cost of §1, and it is the shape
+this repo keeps meeting: 49 siblings under one `combobox` are ONE control, not
+49 things a planner needs enumerated.
+
+`observe.MAX_OPTIONS = 8`, applied PER combobox/listbox/menu subtree — the
+shape `MAX_CHROME` has had per landmark since M32. A drill-down onto the
+control gets the whole page budget, the same exemption chrome has, so the
+options a planner actually needs are one `observe` away rather than gone.
+
+Raising `MAX_ELEMS` is refused here for the third time, on the reason
+`observe.py`'s own comment gives: it moves the cliff to the next larger page
+and spends planner tokens on a dropdown nobody asked about.
+
+What this bought is larger than what it restored. The named extracted-text
+region that `sec10k-item-text-region-is-past-the-observation-cap` had DECLARED
+unreachable-by-observation since M41 is now inside the cap, so that case is
+inverted: it asserted the region was past the cap and now asserts the status
+line, the region and the combobox are present together. A declared limitation
+removed rather than documented further — the second this month, and the reason
+the standing preference is a guard in the grader over a sentence in a note.
+
+The change surfaced a second thing, which is recorded here because it was found
+by this work and answered somewhere else. With 41 element slots freed, the
+observation began advertising elements that `resolve` cannot reach directly:
+Chromium's accessibility snapshot calls six visible `<th>` `columnheader` and
+`<summary>` `DisclosureTriangle`, while `get_by_role` answers 0 for
+`columnheader` (against 2/18/54 for table/row/cell) and knows no such role as
+`DisclosureTriangle`. Two role oracles, one page. Both targets ARE reached, by
+the relocation ladder the executor already runs on a locate failure, so the
+executor was never wrong; the observe case was asserting a property the
+executor does not need. It now reports `advertised_needed_relocation` instead
+of failing, so the cost is visible rather than silent.
+
+A resolver-side fix was tried first and is rejected on measurement, not taste:
+a name-as-text fallback tier resolved the sec-10k targets and ALSO resolved
+`l4-shop-a11y-stripped`, `l4-forms-a11y-stripped`, `l4-recover-name-to-text`
+and `l4-shop-duplicate-labels` — the mutation suite's recovery metric went
+green with no recovery performed. Narrowing the tier to "no element of this
+role exists anywhere" did not separate the two either, because stripping a11y
+removes the role from the page as well. The ladder is the right layer.
