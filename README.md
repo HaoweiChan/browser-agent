@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 238 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 239 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00
 ```
@@ -187,15 +187,15 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 238 | 93.44s | 107.46 | **110s** |
-| `invariant` | 93 | 26.28s | 30.22 | **35s** |
+| `fast` | 239 | 93.67s | 107.72 | **110s** |
+| `invariant` | 94 | 25.81s | 29.68 | **35s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer,
-and the two can differ by a step: `fast`'s 107.46 rounds up to the 110 beside
-it, but `invariant`'s 29.89 gives **30** under ADR-013's rule, one step below
+and the two can differ by a step: `fast`'s 107.72 rounds up to the 110 beside
+it, but `invariant`'s 29.68 gives **30** under ADR-013's rule, one step below
 the committed 35. That is deliberate — a short sample may derive under the
 committed ceiling and must never drag it down (ADR-019 §6). A reader re-doing
-the arithmetic should expect 29.89 → 30 → *held at 35*, not 29.89 → 35.
+the arithmetic should expect 29.68 → 30 → *held at 35*, not 29.68 → 35.
 
 **CI has its own two, measured on CI** rather than projected from these — the
 four slowest observed runs per suite, sampled across commits (ADR-019 §5, §9;
@@ -446,7 +446,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 268 cases (238 of them in the offline gate), it
+The eval set is not weak; it is 269 cases (239 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
