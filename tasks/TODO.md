@@ -268,10 +268,25 @@ Repro: read the three clauses R13 names in the round-3 artifact against the
 238-count rows in `evals/report/history.jsonl`; nothing in either suite reddens.
 Acceptance: a grep for wall-clock figures (`\d+\.\d+s`, and bare seconds in
 band prose) across ADR-019, ADR-035, README.md and docs/analysis.md, with EVERY
-hit either (a) brought under a grader that reads the ledger, or (b) explicitly
+hit dispositioned — **(a) brought under a grader that reads the ledger, which is
+the PREFERRED disposition and the one to attempt first**, or (b) explicitly
 declared narrative — a figure whose job is to describe history rather than to
-state the tree's current band. Either disposition is fine; an ungraded figure
-that reads as current is not.
+state the tree's current band — **as the FALLBACK, for hits where grading is
+genuinely impossible rather than merely inconvenient.** An ungraded figure that
+reads as current is the defect either way.
+The ordering is not a preference, and PR #72 is why it changed: a disclosure
+paragraph on that branch reflowed so that `85.` began a line, markdown read it
+as list item 85, and `published-band-matches-the-ledger` reddened on ADR-019
+§6's numbering rule. **Declared prose still drifts; it just drifts silently** —
+that drift had no author, no diff a reviewer would question, and no plausible
+path to being caught by reading, because the defect was a line wrap. It was
+caught by the gate. So (b) buys less than it appears to: declaring a figure
+narrative fixes how it READS today and does nothing about what edits it
+tomorrow, while (a) is the only disposition that survives a reflow, a rebase or
+a copy-paste. Prefer grading wherever the figure can be read back against
+`evals/report/history.jsonl` at all; reserve (b) for prose whose figure has no
+ledger row to be graded against.
+
 ### T-M42-4-D1 — nothing tells a PLANNER which document a predicate is checked in            [status: todo]
 Origin: PR #66 R4 (LOW, routed debt).
 Priority: P2
