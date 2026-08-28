@@ -45,7 +45,7 @@ REPORT_DIR = ROOT / "evals" / "report"
 HISTORY = REPORT_DIR / "history.jsonl"
 # Where an `EVAL_PROBE=1` run's row goes instead. A sibling of the real ledger
 # so a probe is still recorded and still readable, and `.gitignore`d so it never
-# becomes a second source of truth (ADR-037 §4).
+# becomes a second source of truth (ADR-039 §4).
 PROBE_HISTORY = REPORT_DIR / "history-probe.jsonl"
 PROBE_ENV = "EVAL_PROBE"
 
@@ -102,7 +102,7 @@ def run_case(case):
 # the condition ADR-021 named as the one a raise answers — the per-case cost did
 # not move. The row is named because a reader re-deriving from a comment that
 # still said 93.26s would be re-deriving from a SUPERSEDED row and getting the
-# `fast` 110 -> 115 at ADR-037, published SEVEN times before it settled, which
+# `fast` 110 -> 115 at ADR-039, published SEVEN times before it settled, which
 # is the only part of this worth a reader's attention. Full record in ADR-019
 # section 2. Every band taken from two to five samples was falsified by the next
 # run, in both directions -- including a run taken specifically to CONFIRM a
@@ -388,12 +388,12 @@ def main():
         history_line["recovery"] = f"{int(metrics['recovery_verified'])}/{int(metrics['recovery_expected'])}"
     if metrics.get("mutation_cases"):
         history_line["mutation"] = f"{int(metrics['mutation_passed'])}/{int(metrics['mutation_cases'])}"
-    # T-M38-5 / ADR-037 §4: an EXPLORATORY run must not reach the ledger the
+    # T-M38-5 / ADR-039 §4: an EXPLORATORY run must not reach the ledger the
     # band is derived from. The band is `max(wall_s)` over every row at the
     # current case count, so one measurement of a mechanism that was tried and
     # rejected raises the derived ceiling permanently, and the only remedies
     # left are re-typing a ceiling nothing measured or editing the committed
-    # ledger by hand. Both of those happened before this line existed: ADR-037's
+    # ledger by hand. Both of those happened before this line existed: ADR-039's
     # own first draft measured `networkidle` at 144.87s and a discarded
     # count-every-request variant at 100.86s, and both rows sat in the ledger
     # claiming to describe the tree that shipped.

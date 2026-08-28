@@ -235,29 +235,29 @@ published can silently make that band no longer cite the maximum — the rows th
 branch commits are the ones its bands were derived from, and post-publication
 verification runs are restored rather than committed.
 ### T-A37-1 — the in-flight wait cannot see a fetch issued after `load`            [status: todo]
-Origin: ADR-037 §2, 2026-08-28, declared by the ruling rather than found after it.
+Origin: ADR-039 §2, 2026-08-28, declared by the ruling rather than found after it.
 Priority: P2
 Spec: `navigate`'s settle asks one question — were any requests in flight when `load`
 fired? — and a page whose script schedules its `fetch` from a `setTimeout` (or an
 `IntersectionObserver`, or a `requestIdleCallback`) after `load` answers "no" truthfully
-and is read early exactly as it was before ADR-037. The fix for THAT shape is a
-quiescence window, which is the mechanism ADR-037 rejected on measured cost, so this is
+and is read early exactly as it was before ADR-039. The fix for THAT shape is a
+quiescence window, which is the mechanism ADR-039 rejected on measured cost, so this is
 a deliberate ceiling and not an oversight. No fixture in this repo has the shape:
 `late-options.html` issues its fetch from an inline script during parse, which is
 precisely why it is in flight at `load` and why the accepted mechanism catches it.
 Acceptance: a fixture whose control is painted from a post-`load` timer, and an
 adversarial case over it watched RED first per CLAUDE.md rule 2 — the case must be red
-against ADR-037's mechanism, which is the whole point of writing it. Only then is the
+against ADR-039's mechanism, which is the whole point of writing it. Only then is the
 quiescence-window question re-opened, and only with the fast-suite wall clock measured
-before and after, because that is the number that decided ADR-037 §1.
+before and after, because that is the number that decided ADR-039 §1.
 
 ### T-A37-2 — a live case is green for a reason its provenance does not give            [status: todo]
-Origin: ADR-037 §2, 2026-08-28.
+Origin: ADR-039 §2, 2026-08-28.
 Priority: P2
 Spec: `live-sec10k-authored-wait-reaches-the-doc-status` asserts
 `planner_saw.lacks: ["18 extracted"]` and its provenance explains the absence as claim
 (1): "the deep link removes the click, not the race" — the observation is taken before
-the page's own extraction round trip lands. After ADR-037 that explanation is false and
+the page's own extraction round trip lands. After ADR-039 that explanation is false and
 the assertion still holds. Measured 2026-08-28 against the deployed inspector: the
 observation now CONTAINS the per-item sidebar buttons (`button — '1 Business EXTRACTED
 CONF 0.95 HEADING_STRICT 16,053 CH'`), which only exist after the round trip lands, so
@@ -2741,10 +2741,10 @@ same request produces different resolver/extraction outcomes) is attempted. Not 
 T-M40-5-1 or T-M40-5-2 individually — check both before assuming this is already covered.
 
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
-Update (2026-08-28, ADR-037 §4): a general mechanism now exists — `EVAL_PROBE=1`
+Update (2026-08-28, ADR-039 §4): a general mechanism now exists — `EVAL_PROBE=1`
 routes a run's history line to `evals/report/history-probe.jsonl` (gitignored)
 instead of the committed ledger. It was built because this block's shape happened
-again, verbatim: ADR-037's drafting put three rows in the ledger measuring code the
+again, verbatim: ADR-039's drafting put three rows in the ledger measuring code the
 tree does not contain (144.87s on `networkidle`, 100.61s and 100.86s on a discarded
 count-every-request variant), any one of which would have set the band, since the
 band is a MAXIMUM. Those rows were dropped before the ledger was committed and
@@ -3275,7 +3275,7 @@ laptop, and that CI tags its rows `ci` at all is still asserted rather than grad
 second branch of the acceptance is therefore still available and may still be the better one.
 
 ### T-R91 — the pre-commit hook reports a missing interpreter as an eval regression, and points at `--update-baseline`            [status: done]
-CLOSED 2026-08-28 (ADR-037's commit, which is what hit it again). Both halves
+CLOSED 2026-08-28 (ADR-039's commit, which is what hit it again). Both halves
 fixed: the interpreter search now also looks in the MAIN worktree
 (`git rev-parse --git-common-dir`'s parent), and a preflight import check runs
 BEFORE the gate so "could not run" can never be reported as "regressed" — the

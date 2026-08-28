@@ -1,4 +1,4 @@
-# ADR-037: the observation waits for what the page is still fetching, and a refused anchor is a replan
+# ADR-039: the observation waits for what the page is still fetching, and a refused anchor is a replan
 
 Date: 2026-08-28
 Status: accepted
