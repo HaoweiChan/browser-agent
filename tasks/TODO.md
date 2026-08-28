@@ -12,48 +12,6 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M46 — plan-then-loop escalation: mode B is the fast path, loop mode is the fallback, one RunResult carries both            [status: todo]
-Depends: T-M42-20
-Origin: owner, 2026-08-26 — after PR #59's smoke measured both modes dying on
-the same task, the owner asked whether plan mode and loop mode should be
-integrated, naming LangGraph as a candidate. Ruling: integrate as an escalation
-POLICY in this codebase, no orchestration framework — a framework adds no
-observation, no action and no verification, would re-wire the offline stub
-boundary the 220-case suite depends on, and the capability gaps the interviewers
-named (vision, frame reach, resolver fixes, model) are all things an
-orchestrator cannot provide. The implementation ADR comes with the milestone,
-per the per-feature loop.
-Spec: a third execution policy, `escalate` (its own `POST /tasks` flag; neither
-existing mode's behaviour changes): run mode B once; if it ends in ANY failure
-class, re-run the same task in loop mode, seeding the loop's opening note with
-mode B's terminal evidence — which step died, on which target, with which
-failure class. Trace facts only, never site knowledge (rule 6 untouched). One
-RunResult: both legs' traces concatenated under the existing supersede semantics
-(the B leg is superseded, never hidden — ADR-004/ADR-005), budgets and cost
-summed and reported per-leg plus total, verifier and judge run once on the final
-leg's answer, unchanged.
-The cost argument is PR #59's own six runs, quoted at the range they actually
-recorded: the B attempt cost **$0.0015-$0.0043** across 3-4 actions, against
-loop's **$0.4830-$0.9166** across 17-31. So B-first prices the fallback at well
-under 1% overhead on tasks the loop would have needed anyway, and saves two
-orders of magnitude on tasks B can already do. (Those figures are this task's
-justification, not a published ceiling — the run ids behind them are in
-T-M42-20, which is the one place they are recorded.)
-Acceptance: stub-driven cases watched red first — (a) B succeeds -> the loop
-never starts, one leg in the trace; (b) B fails -> escalation fires, the loop leg
-carries the seeded note, the RunResult totals both legs; (c) budget exhaustion
-mid-escalation stays INV-3 loud; (d) the seeded note cannot smuggle an
-instruction — the same injection-boundary shape the planner note path already
-has. M44 gains `escalate` as a third arm in its A-vs-B table, same probe set,
-same 3-rep protocol.
-Why the dependency is hard, not bookkeeping: on today's build BOTH legs die on
-the same resolver bug (T-M42-20's `text-transform` name mismatch), so escalation
-would only pay twice for one failure. Measuring the policy before that fix lands
-would measure the bug, not the policy.
-Out of scope: LangGraph or any orchestration dependency (the ruling above); mode
-auto-selection beyond "B first, loop on failure" — a task-difficulty classifier
-is speculative until M44's table shows which tasks actually need the loop.
-
 ### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
 Depends: M42
 Origin: ADR-027. Depends: M42 (M43 for the vision rows, marked as such).
@@ -209,31 +167,6 @@ evidence that the loop cadence helped. Also owed here: an escalate case with
 `judge_calls: 2` path specs/001 now documents; nothing in the suite reaches it
 today, and it is the path ADR-037's own cost argument makes most likely.
 
-### T-M46-2 — the local `fast` band crossed into 115            [status: done]
-Origin: M46 implementation (ADR-019 §2's republished bullet).
-Filed when the 244-case band sat hundredths of a second inside the 95.65s
-boundary, saying the next case or a marginally slower run would make ADR-013's
-rule answer 115. Both happened at once: #69's two cases took the suite to 246
-and this branch's own gate run measured 96.16s, so the rule answered 115 and
-ADR-037 Decision 9 commits it — derived from the ledger at the new count, not
-adjusted and not ported. Closed by that decision. What it leaves behind is the
-observation, not a number: this suite has crossed a ceiling step on three of the
-last four milestones, and ADR-021's split says the answer to per-case COST growth
-is removing waste rather than another raise. Nobody has swept it for waste since
-M32 (T-M32-3), and each of these raises has been case-COUNT growth, which is the
-condition that licenses one.
-Where the band sits as this ships, stated plainly because the next line to add a
-`fast` case will meet it: the 115 band covers anything up to 99.99s and the
-ledger's maximum at 248 cases is 99.17s — **0.82s of headroom**, thinner than the
-margin that produced this block in the first place. Two caveats travel with it.
-Neither band cites a CLEAN row, because there is none at either count (a tree
-reaches a new count only while its cases are uncommitted), so both rely on item 2
-(cited-run)'s dirty allowance as ADR-019 §6 stands today; if PR #68's citable-row
-rule lands, both bands need re-deriving against it. And a gate run appends a
-ledger row even under `--no-report`, so a verification run taken after a band is
-published can silently make that band no longer cite the maximum — the rows this
-branch commits are the ones its bands were derived from, and post-publication
-verification runs are restored rather than committed.
 ### T-A39-3 — ADR-039 traded a paint race for a cap, and on the sec-10k inspector the status line is what fell off            [status: done]
 Origin: ADR-039's own live verification, 2026-08-28. Measured, not predicted.
 Priority: P1
@@ -341,7 +274,6 @@ absent and its provenance rewritten to say what it now grades, or (b) the `lacks
 is dropped and the S1 claim moves to a case that can falsify it — decided by running the
 case with `TEXT_HEAD` raised, which is the one-line probe that separates the two
 explanations. Not closed by editing the provenance alone: the prose was never the defect.
-
 ### M43-D1 — `trace_values` does not discriminate on its own            [status: todo]
 Origin: M43 implementation, the red-first reconstruction (docs/evals/m43-red-first-ledger.md).
 Spec: `loop-click-at-resolves-and-records-coordinates` asserts four conjuncts, and
@@ -1634,65 +1566,6 @@ paying for the discovery again — `.claude/skills/eval-protocol/` is the place.
 The rule-set change the original spec contemplated is NOT wanted: §6 item 2 is
 right and the block was reading it as a bug.
 
-### T-M39-15 — nothing grades task-id or ADR-number uniqueness, so both collide silently            [status: done]
-CLOSED 2026-08-28. `task-and-adr-ids-are-unique` (`invariant`, pure code — MAIN's implementation,
-kind `id-uniqueness`; this branch wrote a second one independently and dropped it on
-rebase, which is this block's own defect arriving one layer up)
-reddens on a duplicate task id across `tasks/TODO.md` + `tasks/DONE.md` and on a
-duplicate ADR number across `specs/decisions/` filenames and `INDEX.md` rows.
-Watched red on a LIVE duplicate rather than a planted one — `M40` had two DONE.md
-lines, one a stale earlier wording, which is instance (b) of this block's own
-evidence list still sitting in the tree — and the stale line is deleted here. Out-of-scope items stay out of scope: no id is renamed, and no allocation
-protocol is decided. Named ceiling: it reddens at the MERGE, which is the first
-moment the tree can be asked; a collision living in two unmerged branches is still
-invisible, and that is where every recorded instance was born.
-Origin: PR #44 pass-5 merge, found by the pr-loop verification agent while
-computing over the merged trees (credited at the request of the session that
-hit the second instance).
-Priority: P1
-Spec: two id collisions happened in this repo on 2026-08-24, both merging
-clean and green because nothing in the eval set reads the id space.
-(1) `T-M39-1` was defined differently on `task/M39` (`stub_judge` certifies on
-any unrecognised verdict token) and on `main` (arrived via PR #51: the judge's
-unreadable-completion retry may not reach a MISSING body); `tasks/TODO.md`
-auto-merged and carried both under one id until a human-directed renumber to
-`T-M39-12`. (2) `ADR-023` was allocated independently by PR #42 and PR #44
-before #42 vacated it to `ADR-026`; the collision was caught by hand, and only
-because one orchestrator happened to grep for it before pushing.
-This is the same class as T-M40-1's nine renumbered debt ids: the failure mode
-is not a merge conflict but the absence of one.
-Repro: define `### T-X-1` on two branches with different bodies, or add
-`specs/decisions/ADR-0NN-*.md` on two branches with the same NN; merge. Git
-reports nothing and both suites stay green.
-Acceptance: an `invariant`-tagged case that reddens on a duplicate task id in
-`tasks/TODO.md` + `tasks/DONE.md`, and on a duplicate ADR number across
-`specs/decisions/` filenames and `INDEX.md` rows. Watched red first by
-introducing one of each. Pure-code probe, no browser, no LLM — it belongs in
-`invariant` because it is a property of the tree, not of a run.
-Out of scope: renaming any existing id; deciding an allocation protocol.
-Update (2026-08-26, the merge of PR #54 into `main` after PR #58/#57/#56):
-**this block collided with another `T-M39-13` while being merged, and was
-renumbered to T-M39-15 to land.** `main` had acquired a different T-M39-13 — "a
-slower dirty re-run at an unchanged count can make the published band
-unrepublishable", filed 2026-08-25 from an ADR-027 planning worktree — so the
-id named two unrelated findings at once. That is instance three of this block's
-own defect, produced by the act of filing it.
-Three more instances arrived in the same backlog, and they are the evidence the
-acceptance below should be graded against: (a) `ADR-028` was allocated
-independently by PR #57 (loop mode) and PR #56 (the zh probe); both PRs were
-green and `MERGEABLE`, the two ADR files never touched, and the collision
-surfaced only in `INDEX.md`, where `adr-header-and-index` gates it — PR #56's
-own in-ADR collision check had run `gh pr list --state open` at a moment before
-#57 existed, so the method was sound and the timing beat it. (b) `tasks/DONE.md`
-acquired SIX duplicate ids (M39, M40, T-M32-9, T-M40-4, T-R44, T-R61) because
-three branches did the same housekeeping; git auto-merged every one of them
-without a conflict. (c) `tasks/TODO.md` produced a duplicated `### M42` header.
-The asymmetry that makes this worth fixing: the ADR half IS gated (INDEX.md,
-at 100%), and the TASK-ID half is gated by nothing — `tasks/DONE.md` and
-`tasks/TODO.md` are read by the citation check only for ADR references, never
-for id uniqueness. Verified on the merged tree: appending a duplicate
-`- M39 — ...` line to DONE.md leaves `invariant` and `fast` fully green.
-
 ### M45-D9 — M45 ran four narrowings and published three            [status: todo]
 Origin: PR #56 R9, 2026-08-26. Routed to debt as LOW because the undercount
 WEAKENS the published universal claim rather than inflating it — but two case
@@ -2389,39 +2262,6 @@ Acceptance, verbatim: "The 'greened by' column names a commit that exists (or
 says 'folded into 1ac8a19 under CLAUDE.md rule 7'), so every row is checkable
 from `git log` without trusting the prose."
 
-### T-M42-4 — a postcondition can be satisfied by a document the action never touched            [status: pr]
-Origin: M42 cold review, finding 4 (HIGH), 2026-08-26. Accepted deliberately as
-the cost of leg (a); logged rather than fixed because the fix is a scoping
-decision, not a repair.
-Priority: P1
-Spec: `check_state`'s `text_visible` now reads `observe.page_text`, and its
-`role_visible` iterates `[page, *frames[1:]]`. Both are what make an iframe'd
-page verifiable at all — and both mean a click's `expected_state` can be earned
-by an element in a completely unrelated document: a consent iframe, a chat
-widget, a `display:none` tracking iframe (still in `page.frames`, still
-evaluable). The step then records `postcondition_ok: true` for an action that
-did nothing, which is the one thing a postcondition exists to make impossible.
-~~Nothing offline can see it: every fixture with a frame in this repo has exactly
-one, and it is the frame the task is about.~~ **False when written, struck
-2026-08-28 (T-M42-11, PR #57 R10).** The committed `frames-host.html` shows it
-with a two-line stub plan, and that repro IS this task's red-first case:
-`postcondition-decoy-iframe-cannot-satisfy-text-visible`, watched red as
-`status success` / `answer "4.82"` — a no-op `press "Shift"` verified by the
-iframe and the run reported successful on the strength of it. Third time in this
-repo a declared limitation was falsified by a fixture already in the tree; the
-pattern is what T-M42-11 asks to be carried forward, not the row.
-Why not fixed here: the honest fix is to scope a postcondition to the document
-its action touched, which needs the executor to record which scope `resolve`
-returned from — a trace field, and ADR-028 §7 rules that the trace gains no
-fields in this milestone. It is also not obviously right: `wait_for` on a page
-that paints into an iframe legitimately wants the frame, and a `url_contains`
-predicate is page-level by nature. That is a decision with two defensible
-answers, which makes it an ADR rather than a patch.
-Acceptance: a ruling on whether a postcondition is document-scoped, and if so
-a `resolved.scope` (or equivalent) on the trace step plus the ADR-028 §7
-amendment that allows it — with a fixture carrying a decoy iframe whose text
-satisfies a predicate the main document does not, watched red first.
-
 ### T-M42-5 — `not_a_dump`'s denominator and `evidence_window`'s offset now disagree about what "the page" is            [status: done]
 Origin: M42 cold review, finding 4 (same finding, different consequence),
 2026-08-26. Related to but distinct from T-M42-3, which is about the offset
@@ -2846,58 +2686,6 @@ citation conjunct below"), matching what ADR-030 and support-matrix D30 now do;
 `invariant` and `fast` stay green. Worth deciding once for the repo rather than
 per site: an ordinal into a list nothing derives is a re-typed number, and this
 is the fourth one this PR found.
-
-### T-M39-13 — a slower dirty re-run at an unchanged count can make the published band unrepublishable            [status: pr]
-Status 2026-08-28: ruled on in ADR-019 §8 — item 3 (same-ceiling) and item 4
-(committed-ceiling) grade a band against the slowest CITABLE row, which is item
-2 (cited-run)'s own dirty test applied to every row, so the citable maximum is
-itself citable and a publishable citation always exists. Acceptance option (b),
-refined to cover BOTH consumers of `slowest` after the 2026-08-27 discards
-showed the same deadlock arriving through item 4 (committed-ceiling). Pinned by
-`band-is-graded-against-the-citable-maximum`, watched red on the Repro below
-first. Answer to the block's open question, recorded in §8: every run still
-appends (ADR-012 unchanged) and only citable rows govern a band, so `T-M38-5`'s
-by-hand restore stays ledger hygiene rather than band arithmetic — its
-`--no-history` opt-out remains that task's scope.
-Origin: the ADR-027 planning commit, 2026-08-25, on a worktree of this branch.
-Observed live, then backed out rather than committed.
-Priority: P1
-Spec: T-M39-11 records the cost of republishing a band when the CASE COUNT
-moves. This is a different, sharper shape at an UNCHANGED count, and it ends in
-a deadlock rather than a cost. Session verification runs of an uncommitted
-docs-only change (5 fast runs at 181 cases, all `dirty`) included one at
-74.11s — across the 85→90 ceiling-step boundary (73.91s) that every other row
-at that count sits below. Had that row been committed,
-`published-band-matches-the-ledger` would be permanently red on this tree: item
-3 (same-ceiling) compares the published number's derived ceiling against the
-GLOBAL ledger maximum's (85 ≠ 90); item 2 (cited-run) forbids citing the 74.11
-row (dirty, and a clean row — `20260824-052903`, 73.18s — predates it, judged
-as-of the cited ts, so the refusal never expires); and the only clean row
-derives 85. No publishable citation exists until machine variance happens to
-deliver a POST-COMMIT clean run inside the (73.91, 78.26] window. The as-of
-rule exists to stop later CLEAN rows retroactively reddening a band; a later
-dirty row retroactively reddens it through item 3 instead — the same treadmill
-arriving through the other item.
-What was done instead, and why it is worth a rule: the five session rows were
-NOT committed — `evals/report/history.jsonl` restored to HEAD before the
-commit, the one red report file (written by the blocked gate run) removed with
-it. This is the T-M38-5 practice (probe rows are kept out of the committed
-ledger by hand while the `--no-history` opt-out remains unbuilt) applied to
-verification runs of an uncommitted tree; declared here and in the commit
-message rather than done silently. The unresolved question this leaves: which
-runs are LEDGER runs? Today "whatever the session chose to stage" is the
-answer, and it is not a rule.
-Repro: append a fast row at the current count with `wall_s` just past the
-current band's ceiling-step boundary and `dirty: true`, dated after any clean
-row at that count; run `published-band-matches-the-ledger` and observe there is
-no edit to ADR-019 §2 that turns it green.
-Acceptance: a ruling, recorded as an ADR-019 amendment (it can ride T-M39-11's
-or T-M38-5's decision), on either (a) which rows enter the committed ledger —
-e.g. only gate/CI runs, with the T-M38-5 opt-out built so everything else
-cannot append — or (b) item 3 comparing against the clean maximum (or the
-maximum as-of the cited row) so a dirty outlier cannot make the band
-unrepublishable; whichever way, a case pins the deadlock shape red first,
-using the Repro above.
 
 ### T-M39-12 — the judge's unreadable-completion retry may not reach a MISSING body, only a malformed one            [status: todo]
 Depends: M39
