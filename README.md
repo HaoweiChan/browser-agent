@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 239 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 249 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 11 cases, 5 real sites, still $0.00
 ```
@@ -50,14 +50,14 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260828-103032-fast.json`, with
-`evals/report/20260828-102859-invariant.json` and
+Latest offline baseline — `evals/report/20260828-105542-fast.json`, with
+`evals/report/20260828-105403-invariant.json` and
 `evals/report/20260826-132658-live.json`:
 
 ```
-fast  239/239    invariant  94/94    live  11/11    $0.0000    92.9s
-recovery 9/9 verified (20 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 65/65 · 14 replans
+fast  249/249    invariant  101/101    live  11/11    $0.0000    99.1s
+recovery 9/9 verified (24 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
+diagnosis 69/69 · 14 replans
 ```
 
 `live` is not part of the gate, and it goes red when a site is having a bad
@@ -89,10 +89,14 @@ which is why the wall-clock ceiling is per-environment rather than one number
 pretending to be portable. The slowest is eval-gate run 33119009870; the ids and
 case counts of all four are in ADR-019 §5, hand-read off their logs. Since §9
 (2026-08-28) the sample is measured RUNS across commits rather than repeated
-attempts of one run: the run that set `invariant`'s ceiling, 33113860608, exited
-at the `invariant` step with `26.97s` against `86/86` passing, so it produced no
+attempts of one run: the run that set `invariant`'s ceiling, 33165425989, exited
+at the `invariant` step with `37.44s` against `101/101` passing, so it produced no
 `fast` figure at all — and a table that pairs the two suites per row can only
-hold that observation by dropping it. They supersede an earlier CI band published
+hold that observation by dropping it. That run is ONE row although it was
+re-run three times (37.44 / 37.42 / 35.26s): §9 samples runs, not attempts, so
+the three collapse to their slowest — which is also the conservative direction
+for a ceiling, and the reason the third attempt was taken at all, since it
+raised the maximum the first two had suggested. They supersede an earlier CI band published
 here — 59.77 / 60.84 / 64.61 / 64.67s — which was measured on a 95-case tree and
 so cannot describe this one. That band is NOT unevidenced, and an earlier
 revision of this paragraph struck it on that ground: ADR-013 names its run
@@ -187,20 +191,27 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 239 | 93.67s | 107.72 | **110s** |
-| `invariant` | 94 | 25.81s | 29.68 | **35s** |
+| `fast` | 249 | 97.98s | 112.68 | **115s** |
+| `invariant` | 101 | 29.29s | 33.68 | **35s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer,
-and the two can differ by a step: `fast`'s 107.72 rounds up to the 110 beside
-it, but `invariant`'s 29.68 gives **30** under ADR-013's rule, one step below
-the committed 35. That is deliberate — a short sample may derive under the
-committed ceiling and must never drag it down (ADR-019 §6). A reader re-doing
-the arithmetic should expect 29.68 → 30 → *held at 35*, not 29.68 → 35.
+and the two are allowed to differ by a step: a short sample may derive UNDER the
+committed ceiling, and must never drag it down (ADR-019 §6). At the counts in
+this table both rows' arithmetic happens to land exactly on the committed
+ceiling, so there is no divergence on display — a reader re-doing the sums
+should get the fourth column from the third and the fifth from the fourth, and
+should not read that agreement as a rule. The rule is one-directional: derived
+BELOW the committed ceiling is held, derived ABOVE it is an ADR.
+(This paragraph used to illustrate the divergence with `invariant`'s
+`29.89 → 30 → held at 35` and a `fast` product of `107.46`. Both numbers left
+the table two ceiling moves ago and the example they carried had stopped being
+true of any row in it — the table was republished and the prose under it was
+not, which is the drift this section warns about two paragraphs up. PR #78 R9.)
 
 **CI has its own two, measured on CI** rather than projected from these — the
 four slowest observed runs per suite, sampled across commits (ADR-019 §5, §9;
-eval-gate runs 33113860608 and 33119009870 set the two ceilings) gave `invariant` 22.71-26.97s and
-`fast` 113.51-117.84s, so **35s** and **140s** by the same rule. Both are the
+eval-gate runs 33165425989 and 33119009870 set the two ceilings) gave `invariant` 22.81-37.44s and
+`fast` 113.51-117.84s, so **45s** and **140s** by the same rule. Both are the
 sample's range, not the population's: inside the ~4.5-hour window ADR-019 §5
 declares by its endpoints, the fastest `invariant` run was 19.28s and the slowest
 at the same action and judge-call counts was 22.81s — 17 runs — so runner noise
@@ -446,7 +457,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 269 cases (239 of them in the offline gate), it
+The eval set is not weak; it is 279 cases (249 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

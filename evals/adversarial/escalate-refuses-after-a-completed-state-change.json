@@ -1,0 +1,76 @@
+{
+  "id": "escalate-refuses-after-a-completed-state-change",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "mode": "escalate",
+    "fixture": "shop.html",
+    "task": "Open the Aurora Desk Lamp page and read its SKU.",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "url_contains": "shop-lamp-std"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "There Is No Such Heading"
+        }
+      }
+    ],
+    "stub_calls": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "url_contains": "shop-lamp-std"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Aurora Desk Lamp"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:locate",
+    "reason_contains": "escalation refused: step 2 (click) was attempted",
+    "legs": [
+      {
+        "mode": "plan",
+        "status": "failure:locate"
+      }
+    ],
+    "answer_null": true,
+    "trace_postconditions": [
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "provenance": "M46/ADR-037 Decision 2a, the STOP-SHIP repair of PR #78 R1. Escalation re-runs the task from the start URL, so a plan leg that COMPLETED a state-changing action before dying would have that action performed twice. The first version of this milestone declared the hazard in prose and bounded it with `screen()` \u2014 and that bound was FALSE: `screen()` is a keyword regex over task text whose declared false negatives are exactly imperatives (support-matrix D31), so `Place my order and tell me the total`, `Transfer 100 dollars to Bob and report the balance` and `Book the 10am slot and tell me the confirmation number` all pass it. The residual was not a duplicated form submission, it was a second real payment. The guard is structural instead: a plan-leg step whose action is in `verifier.STATE_CHANGING` and whose `postcondition_ok` is TRUE is evidence that something completed, and the policy then refuses to escalate and returns the plan leg's own failure. Here the click succeeds (its `expected_state` holds, so `postcondition_ok` is true), the plan then dies `locate` on a heading no page has, and the scripted loop leg WOULD have answered \u2014 which is what makes this case discriminate rather than describe: with the guard removed the run reports `success` with the answer `Aurora Desk Lamp` and TWO legs, having clicked twice. `reason_contains` pins that the refusal says why in the same closed vocabulary the seeded note uses (a step index and a verb, never a target value), because a run that silently returned the plan leg's failure with one leg is indistinguishable from one whose loop leg never started. No new status class: nothing new failed, and the plan leg's own `failure:locate` is the honest answer.",
+  "triage": {
+    "class": "unsafe-side-effect",
+    "note": "the cost is real and is accepted: escalation now fires only for plan legs that changed nothing, which is exactly the class where re-running is free. A task that reaches its answer through a successful click gets one attempt, not two."
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "id": "escalate-refuses-after-a-failed-postcondition",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "mode": "escalate",
+    "fixture": "shop.html",
+    "task": "Open the Aurora Desk Lamp page and read its SKU.",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "text_visible": "Order Confirmed"
+        }
+      }
+    ],
+    "stub_calls": [
+      {
+        "action": "click",
+        "target": {
+          "role": "link",
+          "name": "Aurora Desk Lamp"
+        },
+        "expected_state": {
+          "url_contains": "shop-lamp-std"
+        }
+      },
+      {
+        "action": "extract",
+        "target": {
+          "role": "heading",
+          "name": "Aurora Desk Lamp"
+        }
+      },
+      {
+        "action": "final_answer"
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:act",
+    "reason_contains": "escalation refused: step 2 (click) was attempted",
+    "trace_actions": [
+      "navigate",
+      "click"
+    ],
+    "trace_postconditions": [
+      true,
+      false
+    ],
+    "legs": [
+      {
+        "mode": "plan",
+        "status": "failure:act"
+      }
+    ],
+    "answer_null": true
+  },
+  "provenance": "M46/ADR-037 Decision 2a, branch `postcondition_ok is False` — PR #78 R8's scenario (B), and the branch that makes the guard's shape a correction rather than a widening. The click NAVIGATES; the authored predicate (`text_visible: \"Order Confirmed\"`) does not hold on the page it lands on, so the step is `postcondition_ok: false` and the run dies `failure:act`. A verification outcome is not an execution fact: `false` says the predicate did not hold, and says NOTHING about whether the action took effect. On a real site this is an order that was placed and a confirmation page that said something else — the run most likely to escalate and least able to afford it. The shipped guard read `postcondition_ok is True` and therefore did not fire here: watched red against it with `checks {status: false, reason_contains: false, trace_actions: false, legs: false, answer_null: false}`, `got {status: \"success\", answer: \"Aurora Desk Lamp\"}` and the merged trace clicking the same link at step 2 and again at step 4. `trace_postconditions` pins the `false` cell so the branch cannot be confused with the null one next door.",
+  "triage": {
+    "class": "unsafe-side-effect",
+    "note": "ADR-037 §2a's retracted sentence said `False` means the consequence did not arrive. It does not; this case is the counterexample, and the retraction is in the ADR's own ruling voice."
+  }
+}

@@ -23,22 +23,25 @@ jobs:
       # ADR-019 §9 (2026-08-28) the sample is the four slowest observed RUNS per
       # suite, across commits, rather than four attempts of one run — slowest
       # first, ids and case counts in §5's table:
-      #   invariant  26.97 / 25.61 / 22.81 / 22.71s
+      #   invariant  37.44 / 26.97 / 25.61 / 22.81s
       #   fast       117.84 / 117.14 / 116.01 / 113.51s
       # ADR-013 Decision 3's rule is the slowest observed run +15%, rounded up
-      # to a multiple of five: 26.97 x 1.15 = 31.02 -> 35, and
+      # to a multiple of five: 37.44 x 1.15 = 43.06 -> 45, and
       # 117.84 x 1.15 = 135.52 -> 140. Every one of those runs was
-      # correctness-green on the suite it is quoted for — 26.97s was 86/86 with
+      # correctness-green on the suite it is quoted for — 37.44s was 101/101 with
       # OVER BUDGET printed above it, which is what moved these numbers: the
-      # breach was in the budget, never in the results. `fast` moves with it
-      # although it has never been over budget, because deriving one suite from
-      # this table while leaving the other on an older one publishes two
-      # measurements as if they were one (PR #57 R7). ADR-019 §5 is the graded
+      # breach was in the budget, never in the results. `fast` does NOT move with
+      # `invariant` here, and the asymmetry is the §9 shape rather than an
+      # oversight: run 33165425989 breached at the `invariant` step and so never
+      # reached `fast`, leaving the four `fast` cells the same measurement they
+      # already were. PR #57 R7's rule — do not derive one suite from a new table
+      # while the other sits on an older one — is about two DIFFERENT tables, and
+      # there is one table here. ADR-019 §5 is the graded
       # source for all eight cells above; `ci-numbers-are-derived` compares them
       # cell-by-cell against it, and `fast-wall-clock-budget` grades both values
       # declared below.
       EVAL_WALL_BUDGET_S_FAST: "140"
-      EVAL_WALL_BUDGET_S_INVARIANT: "35"
+      EVAL_WALL_BUDGET_S_INVARIANT: "45"
       # Which environment measured a history row (ADR-019 §7). The `invariant`
       # step below appends its row to this job's copy of the ledger before the
       # `fast` step grades ADR-019 §3's band against it. Untagged, that row is

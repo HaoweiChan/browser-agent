@@ -1,0 +1,18 @@
+{
+  "id": "escalate-keeps-both-legs-observations",
+  "task": "browser",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "escalate-keeps-both-observations"
+  },
+  "provenance": "M46/ADR-037 Decision 4, and PR #78 R5: the repair that named an escalation's second `observation.json` from its step offset was pinned by nothing. `observation.json` records what a leg's planner was SHOWN, both legs write one, and before the repair the loop leg's overwrote the plan leg's — the same `step_N.png` collision one artifact over, inside the change whose own ADR claimed to have closed that class. Every other escalate case runs in a throwaway directory and grades only the returned result, so no case could see it. This one drives a real two-leg run into a directory it keeps and asserts one `observation*.json` per planning leg, plus that the step screenshots in that directory are distinct and cover both legs. Watched red against the pre-repair naming: `{'one_observation_per_planning_leg': ['observation.json'], 'legs': 2}` — one file where two legs planned. Asserted as a COUNT against the leg count rather than as filename literals, so the case survives a naming change and still fails the day one leg clobbers the other.",
+  "triage": {
+    "class": "evidence-integrity",
+    "note": "the trace-side half of the same claim (contiguous indices, distinct screenshot filenames) is in `contract-trace-schema-escalate`; this is the on-disk half, and it needs a run directory that outlives the run, which is why it is a pure-code check and not an `expect` key."
+  }
+}
