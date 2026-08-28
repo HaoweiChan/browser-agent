@@ -505,26 +505,6 @@ Acceptance: the sleep is gone, a build mismatch fails the job with both shas in
 the log, and `unavailable` fails it separately with a message naming the Zeabur
 build-argument question — watched red by pointing the check at a sha that is not
 deployed.
-### T-M39-15-D1 — three committed ledger rows at 230 `fast` cases pre-poison the next `fast` case's band            [status: todo]
-Origin: T-M39-15, while tagging its case. `evals/report/history.jsonl` carries
-three local `fast` rows at total 230 from the mid-PR tree `050d654`
-(ts `20260827-022652`/`022831`/`023132`, slowest **91.76s**) — a tree that was
-never merged at that count; main ships 229. The band machinery pools ledger
-rows by (suite, environment, case count) only, so the moment any branch adds a
-230th `fast` case, `published-band-matches-the-ledger` items 3 and 4 derive its
-ceiling from 91.76s, which under ADR-013's rule is 110 — above the committed
-105 — and the gate demands a ceiling amendment that branch never measured.
-T-M39-15 dodged it by tagging its 0.0s probe `invariant`-only (disclosed in
-ADR-019 §3's bullet), which is a dodge, not a fix: the next contributor with a
-genuinely `fast`-shaped case inherits the trap.
-Priority: P2
-Spec: decide what a ledger row from an abandoned case count means — prune the
-three rows under ADR-012's authority with the reason recorded, or amend the
-band rule to scope rows by more than count, or accept and pre-write the 110
-amendment. A decision, so an ADR either way.
-Acceptance: a 230th `fast`-tagged case can pass the gate without inheriting a
-ceiling move its change did not measure — or an ADR says why it must.
-
 ### T-M39-15-D2 — the way this repo actually collides is two clean branches, and no in-tree case can see that            [status: todo]
 Origin: T-M39-15, cross-branch near-miss 2026-08-28 (decision number 034
 double-claimed, arbitrated to 034/035).
@@ -650,9 +630,13 @@ and the merged tree rather than relayed:
    lost their gate evidence in one move, each still displaying a green check
    from its PREVIOUS head. **A stale green is worse than no check**: it reads as
    verified.
-**D1 and D3 are one file's opposite failure modes** — D1 is rows at an
-abandoned case count poisoning a future band; this is a row recording a run
-that never happened — so meet the class once, here.
+**This block now owns the whole class, both directions.** Rows at an abandoned
+case count outliving the tree that made them, and rows recording a run that
+never happened, are one file's two failure modes. The first was `T-M39-15-D1`,
+closed unbuilt on 2026-08-28 when ADR-035 Decision 7 moved the committed local
+`fast` ceiling to 110 and removed the forced amendment its specific instance
+turned on (see `tasks/DONE.md`); the general shape it described was never
+fixed and is inherited here.
 **Prune nothing, including that row: a decision, not an oversight.** Measured
 against `origin/main`: 2161 rows, of which 44 carry `cost_usd: null` and 43 of
 those also `wall_s < 3` (the single exception is `20260822-174202`, 5.22s).
@@ -790,10 +774,11 @@ Watched red by pointing a "latest baseline"-style citation at a red report.
 Take D2–D5 as a SET rather than picking them off individually — they share one
 root: cross-branch invisibility (D2), CI that does not run while showing a
 stale green (D3), a fallback that manufactures false evidence (D4), and guards
-that check counts instead of scores (D5). D1 is the odd one out; it came from
-the implementation, where these four came from the machinery that grades the
-implementation. This repo verifies trees well and verifies everything around
-trees poorly.
+that check counts instead of scores (D5). All four come from the machinery that
+grades the implementation rather than from the implementation itself — D1, the
+one exception, is closed. The machinery verifies consistency well and verifies
+truth poorly — consistency is cheap to automate, truth needs a reader. That is
+an argument for keeping the review rounds, not for distrusting the gate.
 Not implemented here; this block is the record.
 
 ### T-M42-20-D1 — the observe→resolve round trip is pinned on one page and one role            [status: todo]
