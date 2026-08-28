@@ -4448,7 +4448,24 @@ fails on a duplicated ADR number on disk), watched red against a tree with two
 same-numbered ADR files and one INDEX line. This is the general form
 T-ADR-NUM already tracks — fold it in if that block is promoted first.
 
-### T-R37 — a plural aggregate request is now refused as if it asked for one item            [status: todo]
+### T-R37 — a plural aggregate request is now refused as if it asked for one item            [status: done]
+CLOSED 2026-08-28 on the acceptance's FIRST branch — the precondition is
+narrowed, not the ceiling declared. A which-question whose immediate subject is
+plural asks for several items, so `is_aggregate` no longer matches it. New case
+`plan-lint-allows-a-plural-which-question` on `shop.html` with the block's own
+input, watched red as `failure:task` / `answer null` / `actions 1`.
+Two corrections I had to make, both caught by running it rather than reasoning:
+(1) I first narrowed the LINT alone, reasoning that `is_aggregate`'s other caller
+asks a different question. It does — but the plural run then died one layer
+later in the verifier's `aggregate_needs_comparison` with the same refusal. Two
+callers of one predicate may differ about what to DO; they cannot differ about
+what the task ASKS FOR. Narrowed in the predicate.
+(2) The first regex allowed a word between `which` and the subject and matched
+"What is the highest price?" — `is` ends in `s` and is not `ss` — which would
+have disabled the check on the very shape it exists for. Immediate subject only,
+with a stoplist.
+The `plan-lint-refuses-a-declared-non-comparison` direction is unmoved and was
+verified alongside: singular which-questions still lint.
 Origin: PR #29 R27
 Priority: P1
 Spec: `src/browser/agent.py:200-221` refuses whenever `is_aggregate(task)` and the single
@@ -5389,7 +5406,12 @@ Priority: P2
 Spec: The human-readable `reason` for the canonical M28 shape is still factually false: it says the value is 'absent from the page they were read from' when the value is on the page and only fell out of the 2000-char evidence window (value > PAGE_TEXT_KEEP/2). Evidence: src/browser/verifier.py:472-475 (`grounded` message, edited by this diff but wording kept); evals/report/20260823-200546-fast.json row extract-container-dump-is-not-the-answer got.reason = "verifier FAIL: extracted values absent from the page they were read from: ['Port Meridian…(1271 chars)']" while evidence_contains '1,482,317' is true.
 Acceptance: Pre-existing, out of M28's acceptance; the grounded message distinguishes 'longer than the evidence window' from 'absent'.
 
-### T-R69 — the contract's 'verifier-rejected run carries answer: null' is pinned by one fixture path only; `_check_inv2` does not assert it            [status: todo]
+### T-R69 — the contract's 'verifier-rejected run carries answer: null' is pinned by one fixture path only; `_check_inv2` does not assert it            [status: done]
+CLOSED 2026-08-28 on the acceptance's first branch, and it is one line:
+`_check_inv2` now asserts `r["answer"] is None` for FAIL and INCONCLUSIVE, so the
+contract's "a run the verifier rejected carries `answer: null`" is pinned by the
+pure-code probe rather than by a single grounded-reject fixture path — which
+left the judge-reject and INCONCLUSIVE sources of the same demotion unpinned.
 Origin: PR #38 R2 (LOW)
 Priority: P2
 Spec: specs/001's new contract line ('a run the verifier rejected carries answer: null') is pinned only by one fixture path (grounded reject) in the fast suite; the pure-code INV-2 probe in the invariant suite still passes with any answer on the demoted result, so judge-reject / INCONCLUSIVE sources are unpinned. Evidence: src/browser/eval_adapter.py:217-227 `_check_inv2` asserts only `r['status'] != 'success'`; specs/001-browser-contract.md:49-52.

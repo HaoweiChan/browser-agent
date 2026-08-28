@@ -193,6 +193,9 @@ CITE_CHARS = 80
 # ponytail: a regex over English, same ceiling as SCOPE_BLOCK (agent.py) —
 # it can be walked around by rephrasing, same as `log ?into` was. Widen when
 # a probe finds the next phrasing, the way l5-refuse-login-contracted did.
+_PLURAL_SUBJECT = re.compile(
+    r"\b(?:which|what)\s+(?!is\b|was\b|has\b|does\b)(\w{3,}[^\Ws]s)\b", re.I)
+
 _AGGREGATE = re.compile(
     r"\b(which|what|who)\b.{0,80}\b(most|least|fewest|highest|lowest|greatest)\b",
     re.IGNORECASE,
@@ -303,7 +306,29 @@ def is_aggregate(task: str) -> bool:
     runs, so the guard's declared false-refusal cost (D22) is paid on far fewer
     runs than it was.
     """
-    return bool(_AGGREGATE.search(task or ""))
+    # T-R37: a which-question whose SUBJECT is plural asks for SEVERAL items,
+    # not for which one of a set ranks highest — "Which products have the lowest
+    # prices?" against "Which product is the cheapest?". `_AGGREGATE` matched
+    # both, so the plan lint refused a `rank: false` that was the only honest
+    # declaration such a task can carry: measured end to end on `shop.html`,
+    # `failure:task` / `answer null` / `actions 1`, with a reason telling the
+    # planner to reduce four rows to one. At `117301e` the same input returned
+    # the four-row list as success, so it was a regression, and ADR-018's
+    # "`_AGGREGATE` is narrow and high-precision, so code is entitled to
+    # contradict a `rank: false`" is falsified by that one input.
+    #
+    # Narrowed HERE rather than in the lint alone, and the first attempt did it
+    # the other way: `plan_gap` stopped refusing and the VERIFIER's
+    # `aggregate_needs_comparison` — this predicate's other caller — rejected
+    # the same run one layer later. Two callers of one predicate must agree
+    # about what the task ASKS FOR; they may differ about what to do next.
+    #
+    # The IMMEDIATE word after which/what, with a stoplist. Allowing a word in
+    # between matched "What is the highest price?" — `is` ends in `s` and is not
+    # `ss` — which would have disabled the check on the very shape it exists
+    # for. Same `s`-not-`ss` heuristic as the resolver's `_PLURAL_ASK`, and the
+    # same declared limitation.
+    return bool(_AGGREGATE.search(task or "")) and not _PLURAL_SUBJECT.search(task or "")
 
 
 def _cite(values: list) -> list[str]:

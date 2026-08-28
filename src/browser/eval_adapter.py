@@ -226,6 +226,14 @@ def _check_inv2() -> dict:
                             verdict={"verdict": v, "reason": "planted"})
         if r["status"] == "success":
             bad.append(v)
+        # T-R69: and the ANSWER is gone, not just the status. specs/001 says "a
+        # run the verifier rejected carries `answer: null`", and that line was
+        # pinned by ONE fixture path (a grounded reject in the fast suite) —
+        # this pure-code probe passed with any answer on the demoted result, so
+        # the judge-reject and INCONCLUSIVE sources of the same demotion were
+        # unpinned. One line, which is what the block's acceptance asks for.
+        if r["answer"] is not None:
+            bad.append({"verdict": v, "kept_the_rejected_answer": r["answer"]})
     # T-M32-15: the two shapes `and verdict` used to let through. A FALSY
     # verdict skipped the demotion branch entirely, so an answer nothing
     # certified was reported `success`; and `answer` was nulled only INSIDE that
