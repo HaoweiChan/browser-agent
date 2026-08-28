@@ -149,7 +149,17 @@ def run_case(case):
 # tick 20ms -> 5ms was tried next and returned 0.25s, falsifying the theory that
 # rounding dominated. What is left is the page genuinely being waited on.
 # ADR-019 §2/§3 are the bands of record; this comment cites them and never leads.
-WALL_BUDGET_S = {"fast": 120, "invariant": 40}
+# `fast` 120 -> 125 at ADR-039's debt-clearing batch. Eleven runs at 257 cases
+# span 103.10-105.44s and the maximum derives 125. Mixed growth and it is split
+# rather than blurred: 17 cases entered the suite since the 240-case band (~0.2s
+# each, ~3.4s), and the rest is per-case cost from ADR-039 §1's settle plus
+# T-R38's per-row DOM hint, which costs one `evaluate` per enumerated row where
+# the old code cost one per step. ADR-021's waste-removal step was taken first
+# and is on the record in ADR-019 §2 (the favicon narrowing returned 4.8s of a
+# 7.3s regression). The remaining per-case cost buys two things a case pins:
+# a planner that can see a fetch-painted control, and an enumeration judged on
+# the evidence each row was actually read from.
+WALL_BUDGET_S = {"fast": 125, "invariant": 40}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its

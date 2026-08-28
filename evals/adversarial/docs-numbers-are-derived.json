@@ -64,12 +64,12 @@
         "note": "'ceiling' anchors it as surely as '<='"
       },
       {
-        "line": "python3 -m evals.run --suite fast   # wall clock <= 120s",
+        "line": "python3 -m evals.run --suite fast   # wall clock <= 125s",
         "flags": false,
         "note": "the committed ceiling, stated"
       },
       {
-        "line": "python3 -m evals.run --suite fast   # wall clock <= 120 seconds",
+        "line": "python3 -m evals.run --suite fast   # wall clock <= 125 seconds",
         "flags": false,
         "note": "spelled out; the unit alternation is not decoration"
       },

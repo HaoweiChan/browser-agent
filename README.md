@@ -196,7 +196,7 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 257 | 103.58s | 119.12 | **120s** |
+| `fast` | 257 | 105.44s | 121.26 | **125s** |
 | `invariant` | 105 | 33.40s | 38.41 | **40s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer,
@@ -245,7 +245,13 @@ instead of reporting 1.000. It fired twice in a day, and neither time on what
 anyone would have guessed: M9's merge took the suite to 63.3s over a completion
 poll sleeping 2s between checks on runs that finish in under a second, and the
 branch's first CI run showed CI had been ~50% over the same ceiling for its whole
-existence with nothing checking — `main` runs `fast` in 89.62s. CI now carries its
+existence with nothing checking. ~~`main` runs `fast` in 89.62s~~ — struck
+2026-08-28 (T-R75): a bare CI measurement with no run id and no artifact behind
+it, which is exactly what T-R44 struck the four-number band two sections above
+for. It survived that sweep only because it is narrative about a ceiling that no
+longer exists rather than a band anything derives from, and "outside the
+acceptance" is not the same as "true". The claim that survives is the one this
+sentence already makes without it. CI now carries its
 own measured ceiling alongside a local one
 ([ADR-013](specs/decisions/ADR-013-fast-suite-wall-clock.md); both re-measured
 by [ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) when M31

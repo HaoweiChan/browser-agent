@@ -3975,7 +3975,21 @@ the better fix, since this is the second instance in two milestones. Cheap
 guard if one is wanted: every task id that has a `pr-loop-ledger.jsonl` row and
 no `### <id>` heading in TODO.md must have a DONE.md line.
 
-### T-M32-8 — ADR-002's Ruling and the CI band publish ceilings nothing derives from the ledger            [status: todo]
+### T-M32-8 — ADR-002's Ruling and the CI band publish ceilings nothing derives from the ledger            [status: done]
+CLOSED 2026-08-28. (a) is done in two parts, one of them earlier tonight: the
+Ruling and Status line already defer to ADR-019 §2/§3/§5 (PR #40), ADR-002
+**Decision 4** was found still publishing "60s locally, 80s on CI" as the rule
+and is struck (recorded under T-M32-17, where the false clause lived), and the
+`Amended by` list — which stopped at ADR-019 and so implied the ceilings had not
+moved since — now names ADR-021, ADR-029, ADR-035, ADR-037 and ADR-039. It
+carries NO numbers, deliberately: it says which decisions moved the ceilings, and
+this ADR publishing its own copy of the values is what the block was filed for.
+(b) is not this block's to close and now says so: the ADR-019 §5 CI band and the
+README paragraph beside it are graded against the WORKFLOW cell-by-cell by
+`ci-numbers-are-derived` (PR #41 R14 onwards), which is what closes the
+"nothing grades them" half. What remains — that no CI wall clock reaches the
+committed LEDGER, so the four figures are checkable only by a reader — is
+T-R73's, stated there, and needs a CI artifact rather than a grader change.
 Origin: PR #34 R18, extended by PR #34 R21. Routed to debt in round 4 and
 recorded in `tasks/reviews/pr34-r4-resolution.json`, but no block was ever
 written into this file — found while repairing R21 in round 5, which is itself
@@ -4230,7 +4244,17 @@ declarations) also pins that the workflow declares an environment that is not `l
 CI artifact carries the row and something reads its `env`. Watched red with the declaration
 removed.
 
-### T-R75 — README's `main runs fast in 89.62s` is the same unlabelled CI figure T-R51 struck its neighbours for            [status: todo]
+### T-R75 — README's `main runs fast in 89.62s` is the same unlabelled CI figure T-R51 struck its neighbours for            [status: done]
+CLOSED 2026-08-28 on the acceptance's SECOND branch — cut to the claim that
+survives — because the first is unavailable: the figure carries no run id
+anywhere in the tree and no artifact reproduces it, which is the defect, not a
+lookup problem. Struck in place with the reason, and the sentence around it
+already made the surviving claim ("CI had been ~50% over the same ceiling with
+nothing checking") without the number.
+Worth keeping in the record: it survived T-R44's sweep only because it is
+narrative about a ceiling that no longer exists rather than a band anything
+derives from — "outside the acceptance" is not the same as "true", and the
+figure was as unevidenced as the four T-R44 struck two sections above it.
 Origin: T-R44
 Priority: P1
 Spec: the M12 paragraph in README still publishes a bare CI measurement — "`main` runs
