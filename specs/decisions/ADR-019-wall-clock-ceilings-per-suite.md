@@ -387,15 +387,15 @@ commit that changed nothing but JSON.
   and the first draft read it as a reason. Worse, the number it published was
   the SMALLEST of the rows at this count while larger ones were already on
   record, in the section whose own rule refuses exactly that. It is NOT
-  necessarily the maximum at this count either, and that is said here rather
-  than left for a reader to find: the eight rows this republish walked through
-  sit beside it in the ledger, and the largest of them measured the tree as it
-  stood BEFORE PR #67's repairs — which is why this row was re-measured rather
-  than picked from that set, the repairs having changed what the case does. A
+  necessarily the maximum at this count either, and PR #67's draft was re-measured
+  rather than picked from the rows already beside it because its repairs had
+  changed what the case does. How many rows that republish walked through is not
+  written here: this sentence used to carry a count, and a count of a file that
+  grows on every gate run is the scalar §2 and §3 both refuse. A
   re-measurement to describe a changed tree is not the same act as a
   re-measurement to find a prettier number, and the distinction is the whole
   reason this sentence exists. What item 3 (same-ceiling) requires, and
-  all it requires, is that both derive the same **35**. Which rows sit at this
+  all it requires, is that both derive the same **30**. Which rows sit at this
   count and which is slowest is deliberately not retyped here, the same rule §2
   states, because it is a scalar every gate run can move and an ungraded copy of
   it would be stale within the hour; `published-band-matches-the-ledger` prints
@@ -417,15 +417,16 @@ commit that changed nothing but JSON.
   by item 11 (cited-file), which exists because this very sentence named the
   PREVIOUS round's run, at a different case count and a different wall clock,
   while the ts beside it was current, and nothing was red (PR #60 R17).
-  **This band rose to 17.22s and came back down**, and both halves are stated
-  rather than smoothed — the endpoint is the number this bullet publishes above,
-  not a third figure restated here, because a trajectory written out is a copy of
-  a scalar that moves every republish and the last one aged into a superseded case
-  count within a round (PR #60 R21). The 2s never-fills case plus three more took
-  a 14s suite to 17.22s — within 0.17s of the 17.39s where the rule stops giving
-  20 — and round 3 bought it back by giving the select step its own 1s budget
-  instead of borrowing `SETTLE_BUDGET_MS`. What is worth watching here is
-  headroom, not the ceiling.
+  **The rise-and-fall trajectory this bullet used to narrate belonged to the
+  20-ceiling regime and is not restated**, which is the rule PR #60 R21 set
+  after the last one aged into a superseded case count within a round: a
+  trajectory written out is a copy of scalars that every republish moves, and
+  under a committed 35 the old figures describe a boundary that no longer
+  applies. The lesson that outlived them is the one worth carrying — the suite
+  got slower because cases that burn a settle budget in full are the cases that
+  measure the thing, and the answer taken then was to buy the time back inside
+  the runner rather than to raise. What is worth watching here is headroom, not
+  the ceiling.
   As in §2,
   nothing about how many rows sit at this count, or which of them is slowest, is
   written here. M40's SSRF case `view-proxy-refuses-private-and-redirects` is
@@ -1299,36 +1300,54 @@ never reached the accounting path at all, which paired with an implausible
 holds 44 null-cost rows in all, so the two conditions are worth requiring
 together rather than either alone.
 
-**Residuals, declared rather than discovered.** The slack §6 bounds is now a
-bound against the CITABLE maximum only: measured against the raw maximum over
-every row, a published band can understate by any amount, because a row no band
-may cite is compared against nothing. That is the ruling, not a leak in it — the
-alternative is the deadlock — but it is the sentence a reader of §6's "What it
-lets through" needs, and §6 carries it there too. The citable set is selected by
-suite, count and environment and never by `sha`, so where several branches sit at
-one count with different case sets — `task/M44-P1-derived` (PR #67),
-`task/T-M39-15` and this one were all at `invariant` 84 on 2026-08-28 — a clean
-row committed by another line, stamped at or before ours, can make our own row
-non-citable and put a tree that is not ours in the citable maximum. That is both
-a concurrent hazard and an archived one: serialised merges move the count apart
-again, but `history.jsonl` keeps those 84-row entries for good, so anything that
-ever returns a suite to a count it has been at before — a case deletion, a suite
-split, a tag move — meets them again. `T-M38-5`'s ancestor-of-HEAD half is the
-fix for both, and stays its scope; this ruling
-neither creates nor closes it. **No run can cite itself, which is why a republish takes two runs.**
-`evals/run.py` appends the history row AFTER every case has been graded, so the
-band check never sees the row its own run is about to write. At a new case count
-that means the first run has nothing to cite and reports
-`ledger_slowest_at_actual: null` — the conditional form of the existence claim
-above already covers it, but a reader meeting that `null` will not connect the
-two, and it is the mechanical reason §3's bullet is written from one run and
-measured by the next. A dirty outlier at a FRESH count,
-before any clean row lands, is citable and can still ratchet a band — identical
-to the behaviour before this section, and unavoidable for the same reason the
-clean-only maximum is refused. And none of this is the guard that actually stops
-a slow tree: `over_budget()` in `evals/run.py` fails any run whose wall clock
-exceeds the committed ceiling, on the run being measured, independent of every
-piece of band bookkeeping above.
+**Residuals, declared rather than discovered — and each one says what could
+falsify it.** PR #66 set that standard on its own ruling and it is applied here:
+a claim names the check that would go red if it were false, or it is marked
+UNGRADED, because a residual nothing can refute is indistinguishable from a
+reassurance.
+
+- **The slack §6 bounds is a bound against the CITABLE maximum only.** Measured
+  against the raw maximum over every row a published band can understate by any
+  amount, because a row no band may cite is compared against nothing. That is
+  the ruling and not a leak in it — the alternative is the deadlock — and §6
+  carries the same sentence where its "What it lets through" reader will meet
+  it. *Falsifiable*: revert the citable filter in `_band_wrong` and
+  `band-is-graded-against-the-citable-maximum` goes red on the deadlock probe
+  and on the item 4 (committed-ceiling) ratchet probe; that mutation was run,
+  and the case's `watched_red` carries its payload.
+- **The citable set is selected by suite, count and environment and never by
+  `sha`.** Where several branches sit at one count with different case sets —
+  `task/M44-P1-derived` (PR #67), `task/T-M39-15` and this one were all at
+  `invariant` 84 on 2026-08-28 — a clean row committed by another line, stamped
+  at or before ours, can make our own row non-citable and put a tree that is not
+  ours in the citable maximum. Concurrent AND archived: serialised merges move
+  the count apart again, but `history.jsonl` keeps those entries for good, so
+  anything that ever returns a suite to a count it has been at before — a case
+  deletion, a suite split, a tag move — meets them again. *UNGRADED*: nothing
+  reads `sha` when selecting rows, so no check can fail on it. `T-M38-5`'s
+  ancestor-of-HEAD half is the fix and stays its scope; this ruling neither
+  creates nor closes it.
+- **No run can cite itself, which is why a republish takes two runs.**
+  `evals/run.py` appends the history row AFTER every case has been graded, so
+  the band check never sees the row its own run is about to write; at a new
+  count the first run has nothing to cite and reports
+  `ledger_slowest_at_actual: null`. The conditional form of the existence claim
+  above already covers it, but a reader meeting that `null` will not connect the
+  two. *UNGRADED*: `history-dirty-precedes-the-report` pins the OTHER ordering
+  in `main()` — `git_dirty()` before the report is written — and nothing pins
+  append-after-grading, so moving the append earlier would leave every suite
+  green.
+- **A dirty outlier at a FRESH count, before any clean row lands, is citable and
+  can still ratchet a band.** Identical to the behaviour before this section and
+  unavoidable for the same reason the clean-only maximum is refused.
+  *Falsifiable*: narrow the citable test to clean-only and the same case goes
+  red on both fresh-count probes — also run, also in `watched_red`.
+- **None of this is the guard that actually stops a slow tree.**
+  `over_budget()` in `evals/run.py` fails any run whose wall clock exceeds the
+  committed ceiling, on the run being measured, independent of every piece of
+  band bookkeeping above. *Falsifiable*: `fast-wall-clock-budget` grades both
+  the ruling and the call site, and deleting the block in `main()` that calls it
+  is what PR #20 R8 caught.
 
 **Pinned by** `band-is-graded-against-the-citable-maximum`, watched red first on
 `T-M39-13`'s own Repro: with the origin's ledger it enumerates every row as the
