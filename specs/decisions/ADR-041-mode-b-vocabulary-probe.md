@@ -70,3 +70,34 @@ before and after. Result: **7/12 correct, 5/12 loud failure, 0/12 wrong-success,
 record, action sequence and cost is in
 `evals/report/20260830-014602-probe.json`. The post-change round remains
 pending, and its no-regression threshold is therefore frozen at **7 correct**.
+
+The post-change round then completed against deployed
+`main@bfb2f395cfdf80c08636fb83ae5a5aee5aab6127`, with `/version` exact and
+unchanged before and after: **5/12 correct, 7/12 loud failure, 0/12
+wrong-success, 0/12 refusal**; $0.0068912 planner + $0.000487517 judge. Per
+task: x-rates 3/3, multpl 0/3, quotes-author 1/3, openlibrary 1/3. The safety
+gate passes, but both the 7-correct no-regression gate and the historical
+6-correct floor fail. T-M42-1 therefore remains open. Raw evidence is
+`evals/report/20260829-182851-probe.json`.
+
+This result does not show the new vocabulary causing the loss: zero of the 12
+traces used `select_option`, `scroll`, `press`, `wait_for`, or `go_back`.
+Instead, adjacent repetitions on the same build disagreed on quotes-author and
+Open Library, reproducing T-M40-5-3. The mode-B request inherited OpenRouter's
+sampling default because it supplied no `temperature`; that omission is now
+an executable adversarial case, `planner-request-disables-sampling`, watched
+red before the request explicitly set `temperature: 0`. OpenRouter documents
+the field as the [chat-completions sampling control with range
+0–2](https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request). This is a
+mitigation, not a claim that a remote provider is mathematically deterministic.
+
+## Pre-registered remediation probe
+
+After the temperature change merges and `/version` reports that exact merge
+SHA, run the same frozen table once more: three serialized repetitions per row,
+explicit `mode: "plan"`, default model, no retries, no discarded runs. Preserve
+the four disjoint outcome classes and all cost fields. The verdicts remain
+unchanged: zero wrong-success and at least **7 correct**; the failed 5/12 round
+does not lower either threshold. Also report whether identical repetitions now
+emit identical action sequences and whether any of the five added verbs occurs.
+One fixed campaign only — no rerun-until-green.

@@ -283,6 +283,7 @@ def live_planner(model: str = DEFAULT_MODEL):
         user = build_user(task, url, observation, note)
         payload = {
             "model": model,
+            "temperature": 0,
             "messages": [
                 {"role": "system", "content": SYSTEM},
                 {"role": "user", "content": user},
