@@ -1331,7 +1331,7 @@ across the existing suite, which is a change with its own blast radius and
 belongs in its own commit.
 Acceptance: the matcher is shared, or the difference is documented at both ends.
 
-### T-M42-20-D7 — a custom ARIA combobox is a `locate` failure it did not earn            [status: todo]
+### T-M42-20-D7 — a custom ARIA combobox is a `locate` failure it did not earn            [status: done]
 Origin: PR #60 R8 (LOW, routed to debt). Pre-existing and untouched.
 Evidence, verbatim: `<div role=combobox aria-label='Filing' tabindex=0>Choose</div>`
 resolves at tier `role`, `loc.evaluate(OPTIONS_JS)` returns None because a `<div>`
@@ -1346,6 +1346,14 @@ Spec: the class becomes `act` (the control cannot do what was asked) or `task`
 or the shape is declared in `docs/support-matrix.md` as a known misdiagnosis.
 Acceptance: a resolved-but-unsupported control is not reported as a location
 failure, or the matrix says it is and why.
+
+CLOSED 2026-08-29 on the first branch. Case
+`select-option-custom-combobox-replans-without-relocation` watches the resolved
+ARIA combobox fail as `locate`, spend a relocation, and stop with 0 replans;
+`select_option` now classifies the unsupported control as `act`, so the existing
+family-2 replan changes strategy to semantic clicks and succeeds. The exact
+trace pins one failed selection, no relocation, one replan, and `act` on the
+failed step. No custom-widget selector or site recipe was added.
 
 ### T-M42-20-D8 — T-M42-20-D3 understates the ledger it derives from            [status: todo]
 Origin: PR #60 R9 (LOW, routed to debt — logged, deliberately not fixed in place).

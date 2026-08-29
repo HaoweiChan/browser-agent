@@ -1,0 +1,52 @@
+{
+  "id": "select-option-custom-combobox-replans-without-relocation",
+  "task": "browser",
+  "suites": ["invariant"],
+  "level": "L4",
+  "tc": "TC4",
+  "input": {
+    "task": "Choose the FY 2024 filing and report the selected filing status.",
+    "fixture": "custom-combobox.html",
+    "stub_plans": [
+      [
+        {
+          "action": "select_option",
+          "target": {"role": "combobox", "name": "Filing"},
+          "value": "FY 2024"
+        }
+      ],
+      [
+        {
+          "action": "click",
+          "target": {"role": "combobox", "name": "Filing"},
+          "expected_state": {"role_visible": {"role": "option", "name": "FY 2024"}}
+        },
+        {
+          "action": "click",
+          "target": {"role": "option", "name": "FY 2024"},
+          "expected_state": {"text_visible": "FY 2024 selected"}
+        },
+        {
+          "action": "extract",
+          "target": {"role": "status", "name": "Selected filing"}
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "FY 2024 selected",
+    "recovery": true,
+    "replans": 1,
+    "trace_actions": ["navigate", "select_option", "click", "click", "extract"],
+    "trace_failure_classes": [null, "act", null, null, null],
+    "recovery_labelled_actions": ["click"],
+    "planner_note_contains": "resolved element has no options to select"
+  },
+  "triage": {
+    "class": "invariant-gap",
+    "note": "The failure taxonomy says locate means the semantic target could not be resolved. A custom ARIA combobox resolves uniquely, but select_option cannot operate it; no case prevented that unsupported action from being misreported as locate and sent through relocation.",
+    "watched_red": "failure:locate, answer null, replans 0, actions 3. The trace ran select_option twice: the role-tier target resolved, then the locate ladder retargeted it as {'text': 'Filing'} and failed again. Every expected recovery/classification check was red except the bare presence of a recovery-labelled relocation attempt."
+  },
+  "provenance": "T-M42-20-D7. The first plan deliberately applies the native-select action to a resolved ARIA combobox. Correct classification is act, which invokes the existing replan family; the second plan changes strategy to ordinary semantic clicks and succeeds. Exact trace actions pin that no relocation attempt runs, and trace_failure_classes pins the diagnosis rather than inferring it from the terminal outcome."
+}
