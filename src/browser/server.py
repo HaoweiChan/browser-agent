@@ -900,10 +900,16 @@ const EXPLAIN = {
 // not spend a run on it: lift a site name out of the task if there is one, else
 // ask. The API keeps accepting url=null because gateway eval cases pin it.
 function siteInTask(task) {
-  const m = task.match(/https?:\/\/\S+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?/i);
+  const explicit = task.match(/https?:\/\/\S+/i);
+  if (explicit) return explicit[0].replace(/[.,;:)]+$/, "");
+  const m = task.match(/\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?/i);
   if (!m) return null;
+  if (m.index > 0 && task[m.index - 1] === "@") return null;
   const u = m[0].replace(/[.,;:)]+$/, "");
-  return /^https?:/i.test(u) ? u : "https://" + u;
+  const suffix = u.split("/", 1)[0].split(".").pop().toLowerCase();
+  if (["js", "ts", "jsx", "tsx", "md", "txt", "pdf", "csv", "json", "xml",
+       "yaml", "yml", "exe", "dmg", "pkg", "zip", "tar", "gz"].includes(suffix)) return null;
+  return "https://" + u;
 }
 function useExample(key) {
   const e = EXAMPLES[key];
