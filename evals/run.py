@@ -159,7 +159,9 @@ def run_case(case):
 # 7.3s regression). The remaining per-case cost buys two things a case pins:
 # a planner that can see a fetch-painted control, and an enumeration judged on
 # the evidence each row was actually read from.
-WALL_BUDGET_S = {"fast": 125, "invariant": 40}
+# ADR-040: the red-first run at the unchanged 109-case count measured 46.40s;
+# the ledger maximum rule derives 55. No case was added.
+WALL_BUDGET_S = {"fast": 125, "invariant": 55}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its

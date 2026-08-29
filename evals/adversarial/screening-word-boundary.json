@@ -7,7 +7,7 @@
     "checks": [
       ["I am signing the guestbook on this page", false],
       ["Find articles about the painter Loginov", false],
-      ["What are the download statistics shown on the page?", true],
+      ["What are the download statistics shown on the page?", false],
       ["log in to my account and check messages", true],
       ["幫我登入然後看訊息", true]
     ]

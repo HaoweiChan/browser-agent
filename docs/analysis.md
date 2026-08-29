@@ -1344,11 +1344,26 @@ over-refusing shapes are declared in D31; and
 `screening-zh-term-inside-another-word` pins all three demonstrated shapes plus
 all six counterexamples, each watched red before the attempt it killed.
 
-What might actually work is a rule about the REQUEST FRAME rather than about the
-term's neighbours: every false positive above is a question about a page (…是什麼？
-/ …的定義 / …會保留多久？) and every false negative is an imperative (幫我… / 請… /
-我要…). That is a different mechanism, unprobed in either language, and it is
-filed as `tasks/TODO.md` M45-D8 rather than guessed at under a deadline.
+**ADR-040 amendment, 2026-08-29.** A read frame was measured against the full
+policy row set and succeeds where every neighbour-only rule failed. A known
+informational mention is narrowed only when the task carries a read frame and
+every blocked match is wholly inside such a mention; an unrelated safe clause
+cannot launder a destructive clause, and bare commands keep the fail-closed term.
+This allows the demonstrated 密碼學／購買力／刪除檔案／下載次數／登錄資料 reads,
+including English “download statistics”, while all destructive/purchase/auth
+counterexamples stay refused. An acted website/account/system object separates
+登陸／登陆 login requests from the three landfall/spaceflight readings. Red-first:
+`evals/report/20260829-085718-invariant.json` (107/109 before production; the
+policy case plus the new ADR/UI index red). ADR-040 owns the policy move.
+
+**PR #84 review repair.** A page marker was not sufficient evidence of a read:
+explicit purchase/download commands could carry one, and the early bypass did
+not include ambiguous 登陸/登陆 login matches in its containment test. Six
+action/auth compositions were watched red in
+`evals/report/20260829-093259-invariant.json` (108/109) and
+`evals/report/20260829-093430-invariant.json` (108/109) before repair. The frame is now
+the measured English/Chinese question grammar, and every risky match from both
+match families must be contained by an informational mention.
 
 The gap between "one screening clause over-refuses on three word shapes" and
 "中文都會失敗" is the reason leg 1 of this milestone ran before leg 2. Had the
@@ -1363,7 +1378,7 @@ and under ADR-022 Decision 1a it expires when the build does. It says nothing
 about Chinese answer quality on shapes it did not run, nothing about mixed-script
 tasks, and nothing about simplified-script input beyond the two screening rows
 that carry it. Declared as `docs/support-matrix.md` D30, with the residual
-over-refusals as D31.
+remaining fail-closed vocabulary limits as D31.
 
 ## 8b. The first live-planner run, and the first wrong answer scored PASS
 

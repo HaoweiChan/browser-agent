@@ -161,23 +161,10 @@ PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, 
 #   密[碼码](?![學学])      幫我重設密碼學生帳號           (PR #56 R2)
 #                           — 學生帳號 ("student account") begins with 學
 #
-# The pattern is the finding: the continuation that makes a term part of a
-# different word is indistinguishable, to a regex, from the first character of
-# the object a real request is acting on. Every narrowing therefore trades a
-# false refusal for a false ALLOW in a security-adjacent screen, and this screen
-# fails CLOSED. So NO NARROWING ever shipped: M45's contribution here is the
-# measurement, the cases that pin every falsified attempt, and the residual
-# declared in docs/support-matrix.md D31. The alternation stayed byte-for-byte
-# what it was before M45 until 2026-08-28, when the trad/simp fold below changed
-# it in the other direction — wider, not narrower. That sentence used to read
-# "the alternation below IS byte-for-byte what it was", which the fold falsified
-# while leaving it in place (PR #75 R2).
-#
-# What might actually work is a rule about the REQUEST FRAME rather than about
-# the term's neighbours — every false positive above is a question about a page
-# (…是什麼？ / …的定義 / …會保留多久？) and every false negative is an imperative
-# (幫我… / 請… / 我要…). That is a different mechanism, unprobed in either
-# language, and it is filed as tasks/TODO.md M45-D8 rather than guessed at here.
+# The pattern is the finding for NEIGHBOUR-only rules: each traded a false
+# refusal for a false ALLOW. ADR-040 measures the previously untried variable —
+# a read frame — and binds every blocked match to a narrow, demonstrated mention
+# vocabulary. The base alternation still fails closed everywhere else.
 # M45-D6: every CJK term above was spelled as a traditional|simplified PAIR, so a
 # spelling that mixes the two scripts INSIDE one word matched neither alternative
 # and sailed through. Measured on this tree before the fix: `screen('幫我輸入验证
@@ -207,9 +194,9 @@ PAGE_TEXT_KEEP = 2000  # evidence digest per extraction — enough for anchors, 
 # and adding the term verbatim manufactures a fresh instance of the very defect
 # M45 closed. That is not a guess; the three readings are pinned in the ALLOW
 # direction in the same case, so a later verbatim widening turns them red instead
-# of shipping three false refusals. Separating them needs a rule about the request
-# FRAME rather than the term's neighbours — tasks/TODO.md M45-D8 — so M45-D3 stays
-# open at three of five spellings, with the residual in docs/support-matrix.md D31.
+# of shipping three false refusals. ADR-040 now separates them by acted object:
+# website/account/system logins refuse, while landfall and spaceflight reads
+# remain allowed.
 SCOPE_BLOCK = re.compile(
     r"\b(?:log|sign)(?:g?ed|g?ing)?[\s-]?in(?:to)?\b"
     r"|\b(?:password|captcha|payment|purchase|buy|pay|download)\b"
@@ -220,6 +207,21 @@ SCOPE_BLOCK = re.compile(
     r"|登[入录錄]|密[碼码]|[驗验][證证][碼码]|付款|[購购][買买]|[刪删]除|下[載载]",
     re.IGNORECASE,
 )
+
+# ADR-040: a term exception or page marker alone was unsafe; only the measured
+# question forms gate it. Keep the vocabulary narrow and fail closed elsewhere.
+_READ_FRAME = re.compile(
+    r"^\s*(?:what\s+(?:does|do|is|are)|how\s+(?:long|does|do|is|are))\b"
+    r"|(?:是什麼|是多少|多久|怎麼|怎么|如何)(?:[^。！？!?]*[？?])?$",
+    re.IGNORECASE,
+)
+_INFORMATIONAL_MENTION = re.compile(
+    r"密[碼码][學学]|[購购][買买]力|[刪删]除的(?:檔案|档案|文件)"
+    r"|下[載载]次數|登[录錄](?:資料|资料|[檔档])|download statistics",
+    re.IGNORECASE,
+)
+_AMBIGUOUS_LOGIN = re.compile(
+    r"登[陸陆]\s*(?:到\s*)?(?:這|这)?(?:個|个)?(?:網站|网站|帳號|账号|系統|系统)")
 
 
 # Can this element hold a typed value at all? Not `Locator.is_editable`, which
@@ -401,7 +403,17 @@ def page_signature(obs: dict | None) -> str:
 
 
 def screen(task: str) -> str | None:
-    m = SCOPE_BLOCK.search(task)
+    blocked = list(SCOPE_BLOCK.finditer(task))
+    ambiguous = list(_AMBIGUOUS_LOGIN.finditer(task))
+    risky = sorted((*blocked, *ambiguous), key=lambda match: match.start())
+    mentions = list(_INFORMATIONAL_MENTION.finditer(task))
+    if risky and _READ_FRAME.search(task) and all(
+        any(mention.start() <= match.start() and match.end() <= mention.end()
+            for mention in mentions)
+        for match in risky
+    ):
+        return None
+    m = risky[0] if risky else None
     return f"out of scope (matched '{m.group(0)}'): auth/CAPTCHA/payment/destructive/download tasks are unsupported" if m else None
 
 

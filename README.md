@@ -208,16 +208,15 @@ enumerating them here is the snapshot that drifted:
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
 | `fast` | 268 | 108.41s | 124.67 | **125s** |
-| `invariant` | 111 | 33.95s | 39.04 | **40s** |
+| `invariant` | 111 | 33.95s | 39.04 | **55s** |
 
-The last column is the **committed** ceiling, not the arithmetic's own answer,
-and the two are allowed to differ by a step: a short sample may derive UNDER the
-committed ceiling, and must never drag it down (ADR-019 §6). At the counts in
-this table both rows' arithmetic happens to land exactly on the committed
-ceiling, so there is no divergence on display — a reader re-doing the sums
-should get the fourth column from the third and the fifth from the fourth, and
-should not read that agreement as a rule. The rule is one-directional: derived
-BELOW the committed ceiling is held, derived ABOVE it is an ADR.
+The last column is the **committed** ceiling, not the arithmetic's own answer.
+A short sample may derive UNDER the committed ceiling and must never drag it
+down (ADR-019 §6). `invariant` shows that divergence: ADR-040 raised the ceiling
+to 55s from its valid 46.40s red-first run at 109 cases; the later 111-case band
+derives 40s, but does not erase the slower measurement or ratchet the gate down.
+The rule is one-directional: derived BELOW the committed ceiling is held;
+derived ABOVE it requires an ADR.
 (This paragraph used to illustrate the divergence with `invariant`'s
 `29.89 → 30 → held at 35` and a `fast` product of `107.46`. Both numbers left
 the table two ceiling moves ago and the example they carried had stopped being
