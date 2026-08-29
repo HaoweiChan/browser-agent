@@ -1017,6 +1017,7 @@ function stepEl(s, idx) {
   if (s.retry_or_recovery === "recovery") b += badge("RECOVERY — new strategy", "acc");
   if (s.retry_or_recovery === "retry") b += badge("retry", "warn");
   if (s.resolved && s.resolved.tier) b += badge("tier:" + s.resolved.tier);
+  if (s.resolved && s.resolved.narrowed) b += badge("narrowed:" + s.resolved.narrowed);
   b += postBadge(s.postcondition_ok);
   if (s.failure_class) b += badge("failure:" + s.failure_class, "bad");
   if (s.superseded_by) b += badge("superseded by #" + s.superseded_by);
@@ -1091,9 +1092,11 @@ function renderConsole(steps, result) {
   const short = x => String(x ?? "").replace(/\s+/g, " ").slice(0, 120);
   const target = s => short(s.target ? JSON.stringify(s.target) : s.value);
   const lines = steps.flatMap(s => {
+    const resolution = s.resolved && s.resolved.tier
+      ? ` · via ${short(s.resolved.tier)}` + (s.resolved && s.resolved.narrowed ? `/${short(s.resolved.narrowed)}` : "") : "";
     const outcome = s.failure_class ? `failure=${short(s.failure_class)}`
       : `changed=${s.page_changed === true ? "yes" : "no"} · postcondition=${s.postcondition_ok === true ? "ok" : s.postcondition_ok === false ? "failed" : "—"}`;
-    const out = [`[DECIDE ] #${short(s.i)} ${short(s.action)} ${target(s)}`,
+    const out = [`[DECIDE ] #${short(s.i)} ${short(s.action)} ${target(s)}${resolution}`,
                  `[RESULT ] ${outcome} · ${short(s.ms)}ms`];
     if (s.retry_or_recovery === "recovery")
       out.push("[RECOVER] strategy changed");

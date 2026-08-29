@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M47 — two-day agentic hardening: stop exact repeats and show the decision trail            [status: pr]
+### M47 — two-day agentic hardening: stop exact repeats and show the decision trail            [status: done]
 Depends: M42
 Priority: P0
 Spec: implement the 12-hour vertical slice in
@@ -2950,7 +2950,7 @@ anchor" from "belongs to the anchor" needs CONTAINMENT (is the candidate inside
 the same article as the anchor?) rather than distance. That is a change to
 ADR-026's ladder and its own decision.
 
-### T-M38-2 — which narrowing rung fired is prose in `note`, not a field, and the reviewer UI has no badge for it            [status: todo]
+### T-M38-2 — which narrowing rung fired is prose in `note`, not a field, and the reviewer UI has no badge for it            [status: done]
 Origin: M38.
 Priority: P2
 Spec: `agent.py` appends `narrowed: <rung>` to the trace step's `note`, and
@@ -2966,6 +2966,12 @@ debt, not a correctness one. Same family as T-M32-1 (no UI phase for `observe`).
 Acceptance: `resolved.narrowed` carried through the contract, the schema case
 and the UI badge in one change; the note string stays or goes with the badge,
 not before it.
+
+Closed by carrying the existing resolver result into `resolved.narrowed` while
+retaining the note for compatibility. The detailed trace badge and M47 terminal
+console now show both the resolver tier and narrowing rung without parsing prose;
+`resolver-narrows-by-anchor-proximity` pins the structured field and the console
+projection case pins both consumers.
 
 ### T-M39-11 — a published band makes every open PR re-derive its numbers whenever any PR changes the case count            [status: todo]
 Origin: observed twice in one delivery while merging `origin/main` into

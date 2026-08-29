@@ -73,6 +73,12 @@
         "page_changed",
         "screenshot",
         "ms"
+      ],
+      "resolved": [
+        "tier",
+        "description",
+        "scope",
+        "narrowed"
       ]
     }
   },
