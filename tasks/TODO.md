@@ -4857,11 +4857,17 @@ swallowed the rest of the file; the scan ran to EOF with depth never returning t
 0. So the scanner skips `//` and `/* */` first. This is the second time a
 robustness fix in this file was itself the defect on its first draft.
 
-### T-R39 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: todo]
+### T-R39 — `siteInTask()` lifts file extensions and e-mail domains into a start URL and submits in the same click            [status: done]
 Origin: PR #32 R2 (LOW)
 Priority: P2
 Spec: the page's no-URL guard derives a start URL from any `label.tld` token in the task text. Measured false positives: "What version of node.js is listed?" → `https://node.js`, "Open README.md and read the title" → `https://README.md`, "Find setup.exe download link" → `https://setup.exe`, "email john@example.com about it" → `https://example.com`. The lifted URL is written to `#url` and POSTed in the same click, so the run is spent (ends `failure:nav`, $0, but a slot and a red result the visitor did not intend).
 Acceptance: common file extensions and e-mail local parts are not lifted (or the lifted URL requires a second confirming click); the `ui-no-url-guard-and-example-chips` case gains one such input asserting no POST and the guidance shown.
+
+Closed 2026-08-30. Explicit `http(s)` URLs keep their existing precedence. For
+bare candidates, `siteInTask()` now refuses an e-mail-domain match and a small
+closed set of common file suffixes before it fills the URL field. The existing
+rendered UI case carries all four measured false positives; watched red at
+270/271 with each task filling a URL and POSTing, then green after the guard.
 
 ### T-R40 — two case provenances cite dangling pre-rebase shas            [status: done]
 Origin: PR #32 R5 (LOW)

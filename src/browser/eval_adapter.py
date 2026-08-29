@@ -5692,6 +5692,16 @@ def _run_ui_form_case(case: dict) -> dict:
           $("go").click(); await tick();
           out.no_url = {err_hidden: $("err").hidden, err_text: $("err").textContent,
                         go_disabled: $("go").disabled, url: $("url").value, calls: calls.slice()};
+          out.not_sites = [];
+          for (const task of inp.not_site_tasks || []) {
+            calls.length = 0;
+            $("task").value = task; $("url").value = "";
+            $("go").click(); await tick();
+            out.not_sites.push({task, err_hidden: $("err").hidden,
+                                err_text: $("err").textContent,
+                                go_disabled: $("go").disabled,
+                                url: $("url").value, calls: calls.slice()});
+          }
           calls.length = 0;
           $("task").value = inp.site_task; $("url").value = "";
           $("go").click(); await tick();
@@ -5730,6 +5740,10 @@ def _run_ui_form_case(case: dict) -> dict:
     if nu["calls"] or nu["err_hidden"] or nu["go_disabled"] or nu["url"] \
             or expect["guidance_contains"] not in nu["err_text"]:
         wrong["no_url"] = nu
+    for row in got["not_sites"]:
+        if row["calls"] or row["err_hidden"] or row["go_disabled"] or row["url"] \
+                or expect["guidance_contains"] not in row["err_text"]:
+            wrong.setdefault("not_sites", []).append(row)
     site = got["site"]
     posted = [c["body"] for c in site["calls"] if c["url"] == "/tasks"]
     if site["url"] != expect["site_url"] or site["go_disabled"] \
