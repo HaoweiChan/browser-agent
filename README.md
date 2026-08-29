@@ -139,22 +139,13 @@ first version of this paragraph published the first two of those runs as
 "59.56 / 59.60s" and was falsified inside the same review round by a run at
 60.64s; this is a sample, not a bound, and the honest statement is that this
 suite straddles its ceiling rather than clears it. The same suite on CI
-(ubuntu-latest) measured **113.51 / 116.01 / 117.14 / 117.84s** — the four
-slowest of the 17 `fast` figures in the window ADR-019 §5 names by its endpoints
-(19 runs, two of which breached on `invariant` and so never reached the `fast`
-step), on a runner that is not this laptop,
-which is why the wall-clock ceiling is per-environment rather than one number
-pretending to be portable. The slowest is eval-gate run 33119009870; the ids and
-case counts of all four are in ADR-019 §5, hand-read off their logs. Since §9
-(2026-08-28) the sample is measured RUNS across commits rather than repeated
-attempts of one run: the run that set `invariant`'s ceiling, 33165425989, exited
-at the `invariant` step with `37.44s` against `101/101` passing, so it produced no
-`fast` figure at all — and a table that pairs the two suites per row can only
-hold that observation by dropping it. That run is ONE row although it was
-re-run three times (37.44 / 37.42 / 35.26s): §9 samples runs, not attempts, so
-the three collapse to their slowest — which is also the conservative direction
-for a ceiling, and the reason the third attempt was taken at all, since it
-raised the maximum the first two had suggested. They supersede an earlier CI band published
+(ubuntu-latest) measured **137.06 / 137.07 / 137.51 / 138.35s** — the four
+slowest `fast` figures in the 20-run window ADR-019 §5 names by its endpoints.
+The slowest is eval-gate run 33258498343; the ids and case counts are in §5.
+Since §9 (2026-08-28) the sample is measured runs across commits rather than
+repeated attempts of one run. The current `invariant` maximum is run
+33267084252 at 45.71s with 113/113 passing; its earlier 45.08s attempt collapses
+into the same workflow-run row. These supersede an earlier CI band published
 here — 59.77 / 60.84 / 64.61 / 64.67s — which was measured on a 95-case tree and
 so cannot describe this one. That band is NOT unevidenced, and an earlier
 revision of this paragraph struck it on that ground: ADR-013 names its run
@@ -271,17 +262,9 @@ not, which is the drift this section warns about two paragraphs up. PR #78 R9.)
 
 **CI has its own two, measured on CI** rather than projected from these — the
 four slowest observed runs per suite, sampled across commits (ADR-019 §5, §9;
-eval-gate runs 33165425989 and 33119009870 set the two ceilings) gave `invariant` 22.81-37.44s and
-`fast` 113.51-117.84s, so **45s** and **140s** by the same rule. Both are the
-sample's range, not the population's: inside the ~4.5-hour window ADR-019 §5
-declares by its endpoints, the fastest `invariant` run was 19.28s and the slowest
-at the same action and judge-call counts was 22.81s — 17 runs — so runner noise
-alone is worth several cases. Those are the WINDOW's extremes and not the day's:
-earlier runs on 2026-08-27 sit outside it, at smaller case counts, and nothing
-here claims to bound them. Neither ceiling moved because
-one branch grew — drop the breaching run and `main`'s own CI numbers still derive
-higher ceilings than were committed, for both suites, which is the finding
-ADR-019 §9 records. `fast` moves
+eval-gate runs 33267084252 and 33258498343 set the two ceilings) gave `invariant` 44.84-45.71s and
+`fast` 137.06-138.35s, so **55s** and **160s** by the same rule.
+Both are the sample's range, not the population's. `fast` moves
 although its CI runs have never been over budget, because deriving one suite
 from this table while leaving the other on an older one publishes two
 measurements as if they were one (ADR-019 §5). One variable per suite
