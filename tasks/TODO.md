@@ -1734,6 +1734,13 @@ added four composition variants and watched the policy row red again in
 `20260829-091252` (108/109) before the match-level repair. The English
 download-statistics row moved with the same ADR.
 
+PR #84 R1/R2 then found that a page marker could launder an action request and
+that ambiguous 登陸/登陆 matches were absent from the containment set. Six polite,
+bare and clause-order variants were watched red in `20260829-093259` and
+`20260829-093430` (each 108/109). The repair restricts the bypass to measured
+question grammar and binds both risk-match families. Final repair gate:
+invariant 109/109, fast 268/268; baseline unchanged.
+
 ### M45-D4 — 刪除's positive-adjacency form was never built or priced            [status: todo]
 Origin: M45 spec-drift audit, 2026-08-26, finding 5. M45's own spec asked for
 this and M45 shipped something else; the departure is recorded but the

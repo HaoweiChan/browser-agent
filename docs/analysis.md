@@ -1356,6 +1356,15 @@ counterexamples stay refused. An acted website/account/system object separates
 `evals/report/20260829-085718-invariant.json` (107/109 before production; the
 policy case plus the new ADR/UI index red). ADR-040 owns the policy move.
 
+**PR #84 review repair.** A page marker was not sufficient evidence of a read:
+explicit purchase/download commands could carry one, and the early bypass did
+not include ambiguous 登陸/登陆 login matches in its containment test. Six
+action/auth compositions were watched red in
+`evals/report/20260829-093259-invariant.json` (108/109) and
+`evals/report/20260829-093430-invariant.json` (108/109) before repair. The frame is now
+the measured English/Chinese question grammar, and every risky match from both
+match families must be contained by an informational mention.
+
 The gap between "one screening clause over-refuses on three word shapes" and
 "中文都會失敗" is the reason leg 1 of this milestone ran before leg 2. Had the
 regex been repaired on the strength of the feedback alone, the repair would have

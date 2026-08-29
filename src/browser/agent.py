@@ -208,11 +208,11 @@ SCOPE_BLOCK = re.compile(
     re.IGNORECASE,
 )
 
-# ADR-040: a term exception alone was unsafe; a read frame gates it. Keep the
-# vocabulary to demonstrated rows and fail closed everywhere else.
+# ADR-040: a term exception or page marker alone was unsafe; only the measured
+# question forms gate it. Keep the vocabulary narrow and fail closed elsewhere.
 _READ_FRAME = re.compile(
-    r"\b(?:what|how)\b.*\b(?:page|shown|statistics)\b"
-    r"|(?:這|这)(?:個)?頁面|(?:這|这)頁|是什麼[？?]?$",
+    r"^\s*(?:what\s+(?:does|do|is|are)|how\s+(?:long|does|do|is|are))\b"
+    r"|(?:是什麼|是多少|多久|怎麼|怎么|如何)(?:[^。！？!?]*[？?])?$",
     re.IGNORECASE,
 )
 _INFORMATIONAL_MENTION = re.compile(
@@ -404,14 +404,16 @@ def page_signature(obs: dict | None) -> str:
 
 def screen(task: str) -> str | None:
     blocked = list(SCOPE_BLOCK.finditer(task))
+    ambiguous = list(_AMBIGUOUS_LOGIN.finditer(task))
+    risky = sorted((*blocked, *ambiguous), key=lambda match: match.start())
     mentions = list(_INFORMATIONAL_MENTION.finditer(task))
-    if blocked and _READ_FRAME.search(task) and all(
+    if risky and _READ_FRAME.search(task) and all(
         any(mention.start() <= match.start() and match.end() <= mention.end()
             for mention in mentions)
-        for match in blocked
+        for match in risky
     ):
         return None
-    m = blocked[0] if blocked else _AMBIGUOUS_LOGIN.search(task)
+    m = risky[0] if risky else None
     return f"out of scope (matched '{m.group(0)}'): auth/CAPTCHA/payment/destructive/download tasks are unsupported" if m else None
 
 

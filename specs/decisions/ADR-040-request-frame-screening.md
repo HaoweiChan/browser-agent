@@ -15,15 +15,17 @@ bounded, independently graded exceptions:
 
 1. A task that uses a known informational mention (`密碼學`, `購買力`,
    `刪除的檔案`, `下載次數`, `登錄資料`/`登錄檔`, or `download statistics`)
-   is allowed only when the whole task also has a read frame and **every**
-   `SCOPE_BLOCK` match is wholly inside one of those mentions. An unrelated
-   safe clause therefore cannot launder a destructive/auth/payment clause.
+   is allowed only when the whole task also has a measured question form and
+   **every** risky match — both `SCOPE_BLOCK` and ambiguous-login matches — is
+   wholly inside one of those mentions. A page marker or unrelated safe clause
+   therefore cannot launder a destructive/auth/payment clause.
 2. `登陸`/`登陆` remains allowed in ordinary landfall and spaceflight reads,
    but is refused when followed by a website, account, or system object.
 
-The term and read frame must agree at match level. A question mark alone is not
-a read frame, and a neighbour exception alone cannot bypass the screen. Bare
-imperatives such as `刪除所有郵件` therefore retain the fail-closed behaviour.
+The term and question frame must agree at match level. A question mark or page
+marker alone is not a read frame, and a neighbour exception alone cannot bypass
+the screen. Bare imperatives such as `刪除所有郵件` therefore retain the
+fail-closed behaviour.
 
 ## Why
 
@@ -60,6 +62,14 @@ because this paragraph did not yet cite them. The first repair used bare
 filenames, which the citation contract deliberately does not recognize, so
 `evals/report/20260829-092418-fast.json` records the same sole failure. These
 full paths are the repair; the baseline did not move.
+
+PR #84's independent review then found two more fail-open compositions. The
+first reviewer rows were watched red in
+`evals/report/20260829-093259-invariant.json` (108/109); two bare-action
+generalisations were added and the expanded row set was watched red again in
+`evals/report/20260829-093430-invariant.json` (108/109). The repair narrows the
+read frame to measured question grammar and includes ambiguous-login matches in
+the same per-match containment test.
 
 ## Limits
 
