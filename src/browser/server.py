@@ -534,6 +534,7 @@ PAGE = r"""<!doctype html>
   .step.failed { border-left-color:var(--bad) }
   .step.recovered { border-left-color:var(--accent) }
   .step.superseded { border-style:dashed; background:color-mix(in srgb,var(--dim) 5%,var(--panel)) }
+  .console { max-height:18rem; overflow:auto; white-space:pre-wrap; color:var(--fg); background:var(--bg); border:1px solid var(--line); padding:.8rem; }
   .hd { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap }
   .hd > code { min-width:0; overflow-wrap:anywhere }
   .i { color:var(--amber-ink); font-weight:700 }
@@ -683,6 +684,7 @@ PAGE = r"""<!doctype html>
   </ol>
   <div class="live-grid">
     <div class="live-main">
+      <pre id="console" class="console" aria-live="polite"></pre>
       <div id="steps"></div>
       <div id="result"></div>
     </div>
@@ -1077,9 +1079,32 @@ function showPage(idx) {
 function renderSteps(steps) {
   LIVE = steps;
   $("steps").innerHTML = steps.map(stepEl).join("");
+  renderConsole(steps);
   let latest = -1;
   steps.forEach((s, i) => { if (s.screenshot) latest = i; });
   showPage(pinned !== null && pinned < steps.length ? pinned : latest);
+}
+
+// A compact public projection of the trace, deliberately not a model transcript.
+function renderConsole(steps, result) {
+  const short = x => String(x ?? "").replace(/\s+/g, " ").slice(0, 120);
+  const target = s => short(s.target ? JSON.stringify(s.target) : s.value);
+  const lines = steps.flatMap(s => {
+    const outcome = s.failure_class ? `failure=${short(s.failure_class)}`
+      : `changed=${s.page_changed === true ? "yes" : "no"} · postcondition=${s.postcondition_ok === true ? "ok" : s.postcondition_ok === false ? "failed" : "—"}`;
+    const out = [`[DECIDE ] #${short(s.i)} ${short(s.action)} ${target(s)}`,
+                 `[RESULT ] ${outcome} · ${short(s.ms)}ms`];
+    if (s.retry_or_recovery === "recovery")
+      out.push("[RECOVER] strategy changed");
+    if ((s.note || "").toLowerCase().includes("exact repeat"))
+      out.push("[RECOVER] exact repeat · choose a different action or target");
+    return out;
+  });
+  if (result) {
+    const b = result.budgets_spent || {};
+    lines.push(`[DONE   ] ${short(result.status)} · ${short(b.actions)} actions · $${Number((b.llm_usd || 0) + (b.judge_usd || 0)).toFixed(4)}`);
+  }
+  $("console").textContent = lines.join("\n");
 }
 
 // What was actually read off the page, with the text it was read from — the
@@ -1114,6 +1139,7 @@ function renderResult(r) {
   // Re-render from the final trace: it is authoritative where the live stream is
   // provisional — a supersede lands after its attempt was already sent.
   if (r.evidence && r.evidence.trace) renderSteps(r.evidence.trace);
+  if (r.evidence && r.evidence.trace) renderConsole(r.evidence.trace, r);
   renderScraped(r);
   const fin = r.evidence && r.evidence.final_url;
   if (fin) { $("pvlink").href = fin; $("pvlink").hidden = false; showLive(fin); }

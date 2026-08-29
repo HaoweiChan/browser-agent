@@ -2218,6 +2218,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # message to the driver uses; there is no second channel.
                 observation, note, last_state = await see(obs), opening_note, None
                 seen: dict = {}
+                exact_key, exact_repeats = None, 0
+                last_failure_class = None
                 while True:
                     if stop := budget_stop(budgets, loop_budgets or LOOP_BUDGETS):
                         return done(failure="env", reason=stop, final_url=page.url)
@@ -2303,7 +2305,39 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         return done(failure="env", final_url=page.url, reason=(
                             f"driver returned something that is not a tool call: {call!r}"))
 
-                    rec, cls = await attempt(call)
+                    # A visit counter cannot see one unchanged page plus one
+                    # unchanged choice. Keep this at the driver boundary: it is
+                    # site-agnostic and stops before a third execution spends a
+                    # general action slot. Canonical JSON makes target-key order
+                    # irrelevant while a changed action, target or page resets.
+                    key = json.dumps({"state": state, "action": call.get("action"),
+                                      "target": call.get("target"), "value": call.get("value"),
+                                      "expected_state": call.get("expected_state"),
+                                      "failure_class": last_failure_class},
+                                     sort_keys=True, ensure_ascii=True, default=str)
+                    exact_repeats = exact_repeats + 1 if key == exact_key else 1
+                    exact_key = key
+                    if exact_repeats > 2:
+                        return done(failure="env", final_url=page.url, reason=(
+                            f"exact repeat refused before execution (3/2): {key[:240]}"))
+                    repeat_note = None
+                    if exact_repeats == 2:
+                        repeat_note = "exact repeat 2/2; choose a different action or target"
+                        note = ("EXACT REPEAT: this unchanged page received the same choice twice. "
+                                "Choose a different action or target; the next identical choice is refused.")
+
+                    rec, cls = await attempt(call, note=repeat_note)
+                    last_failure_class = cls
+                    # The first decision cannot know the outcome that classifies
+                    # it. Rebind its just-executed signature once that closed
+                    # vocabulary fact exists, so the next identical failed call
+                    # is its second choice rather than a fresh streak.
+                    if cls:
+                        exact_key = json.dumps({"state": state, "action": call.get("action"),
+                                                "target": call.get("target"), "value": call.get("value"),
+                                                "expected_state": call.get("expected_state"),
+                                                "failure_class": cls},
+                                               sort_keys=True, ensure_ascii=True, default=str)
                     if cls:
                         # Including the re-homed refusals, which arrive here as
                         # `task` failures raised by `execute` before anything
@@ -2339,7 +2373,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         # review 5).
                         moved = {True: "The page changed.", False: "The page did not change.",
                                  None: "Whether the page changed was never checked."}
-                        note = (f"Your last call FAILED: {rec['note']}. "
+                        note = ((note + " ") if repeat_note else "") + (f"Your last call FAILED: {rec['note']}. "
                                 f"{moved[rec['page_changed']]} Do not repeat it unchanged.")
                         observation = await see(await look() or observation)
                         continue

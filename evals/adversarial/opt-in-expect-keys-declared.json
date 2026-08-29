@@ -26,7 +26,10 @@
         "s2-bare-value-mode-b-root-reach-is-pinned",
         "malformed-step-is-a-classified-failure",
         "select-option-value-collides-with-a-label",
-        "select-option-without-a-value-is-refused"
+        "select-option-without-a-value-is-refused",
+        "loop-identical-choice-cannot-spend-the-action-budget",
+        "loop-strategy-change-clears-the-exact-repeat-streak",
+        "loop-wait-gets-one-bounded-second-chance"
       ],
       "planner_note_contains": [
         "probe3-quotes-most-quoted-author",
@@ -44,7 +47,8 @@
         "resolver-narrows-identical-matches",
         "resolver-narrows-singular-noun-ending-in-s",
         "resolver-near-normalises-typography",
-        "loop-click-at-from-a-drill-observation-is-refused"
+        "loop-click-at-from-a-drill-observation-is-refused",
+        "loop-identical-choice-cannot-spend-the-action-budget"
       ],
       "answer_null": [
         "escalate-refuses-after-a-completed-state-change",

@@ -1,0 +1,17 @@
+{
+  "pr": 83,
+  "round": 1,
+  "task": "M47",
+  "date": "2026-08-29",
+  "result": "APPROVED",
+  "gate": "invariant 109/109 = 1.000 (34.44s / ceiling 40) · fast 268/268 = 1.000 (105.98s / ceiling 125) · real worktree pre-commit 268/268 (105.49s) · $0.0000 · baseline met",
+  "analysis": {
+    "mode": "full",
+    "risk": "high",
+    "risk_reason": "large-change-surface from four committed eval reports",
+    "context_files": 21,
+    "preflight": "pass; zero questions"
+  },
+  "findings": [],
+  "reviewer_checked": "M47 acceptance, repository invariants, gate evidence, changed behavior and missing eval coverage within the analyzer allowlist."
+}

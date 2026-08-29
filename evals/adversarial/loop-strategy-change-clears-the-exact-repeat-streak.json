@@ -1,0 +1,16 @@
+{
+  "id": "loop-strategy-change-clears-the-exact-repeat-streak",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {"mode": "loop", "fixture": "hello.html", "task": "Wait for the heading.", "stub_calls": [
+    {"action": "wait_for", "expected_state": {"text_visible": "Hello Fixture"}},
+    {"action": "wait_for", "expected_state": {"text_visible": "Hello Fixture"}},
+    {"action": "wait_for", "expected_state": {"role_visible": {"role": "heading", "name": "Hello Fixture"}}},
+    {"action": "wait_for", "expected_state": {"text_visible": "Hello Fixture"}},
+    {"action": "wait_for", "expected_state": {"text_visible": "Hello Fixture"}},
+    {"action": "wait_for", "expected_state": {"text_visible": "Hello Fixture"}}
+  ]},
+  "expect": {"status": "failure:env", "reason_contains": "exact repeat", "actions": 6, "trace_actions": ["navigate", "wait_for", "wait_for", "wait_for", "wait_for", "wait_for"]},
+  "provenance": "M47 red-first: a different action on the same page is a strategy change and starts a fresh exact-repeat allowance.",
+  "triage": {"class": "invariant-gap", "note": "A global seen-set would reject a legitimate return to a choice after a changed strategy; this guard must count a streak."}
+}

@@ -5980,6 +5980,14 @@ def _run_ui_progress_case(case: dict) -> dict:
     forbidden = [s for s in inp.get("forbid", []) if s in script]
     if forbidden:
         wrong["forbidden"] = forbidden
+    if inp.get("console_forbid") or inp.get("console_fragments"):
+        console = script.split("function renderConsole", 1)[-1].split("function renderScraped", 1)[0]
+        missing_console = [s for s in inp.get("console_fragments", []) if s not in console]
+        if missing_console:
+            wrong["console_fragments"] = missing_console
+        leaked = [s for s in inp.get("console_forbid", []) if s in console]
+        if leaked:
+            wrong["console_forbid"] = leaked
 
     # The UI is allowed to interpret the trace, never manufacture a phase. The
     # three branches are intentionally small: pre-plan navigation, extraction
@@ -8414,6 +8422,10 @@ def _run_pre_commit_hook_case(case: dict) -> dict:
         broken.write_text("#!/bin/sh\nexit 1\n")
         broken.chmod(0o755)
         env = {**os.environ, "EVAL_HOOK_PY": str(broken)}
+        # The case simulates the standalone main-checkout hook. Its parent may
+        # itself be running under a worktree handoff, but inheriting that marker
+        # skips the very handoff this copy is meant to exercise.
+        env.pop("EVAL_HOOK_REEXEC", None)
         out = subprocess.run(
             ["sh", str(hook)], cwd=root, capture_output=True, text=True,
             timeout=30, env=env)

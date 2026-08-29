@@ -1,0 +1,9 @@
+{
+  "id": "reviewer-console-does-not-render-private-reasoning",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {"kind": "ui-progress", "fragments": ["function renderConsole(steps, result)", "$(\"console\").textContent"], "script_fragments": [], "step_phases": {"navigate": "browser", "extract": "verification", "extract_all": "verification"}, "forbid": [], "console_forbid": ["model prompt", "raw page dump", "page_text"]},
+  "expect": {},
+  "provenance": "M47 red-first allowlist boundary: the decision console renders only action, target, outcome, code-authored recovery and terminal budget summaries; prompts, page dumps and private reasoning are absent.",
+  "triage": {"class": "invariant-gap", "note": "A trace console is safe only when its projection stays separate from model input and page evidence."}
+}

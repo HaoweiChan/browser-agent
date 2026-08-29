@@ -1,0 +1,13 @@
+{
+  "id": "loop-identical-choice-cannot-spend-the-action-budget",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "input": {"mode": "loop", "fixture": "hello.html", "task": "Read the missing heading.", "stub_calls": [
+    {"action": "extract", "target": {"role": "heading", "name": "Missing heading"}},
+    {"action": "extract", "target": {"role": "heading", "name": "Missing heading"}},
+    {"action": "extract", "target": {"role": "heading", "name": "Missing heading"}}
+  ]},
+  "expect": {"status": "failure:env", "reason_contains": "exact repeat", "driver_note_contains": "EXACT REPEAT", "trace_note_contains": "exact repeat", "trace_actions": ["navigate", "extract", "extract"], "actions": 3},
+  "provenance": "M47 red-first minimal repro for T-M42-6: three identical recoverable locate failures on an unchanged fixture previously reached driver exhaustion (and an unbounded driver would reach the action ceiling). The first retry must execute, receive a strategy-change diagnosis, and the next selection must be refused before execution even though the first decision began before its failure class was known.",
+  "triage": {"class": "invariant-gap", "note": "The arrival-only no-progress counter cannot observe repeated choices on one page; the loop boundary needs an exact decision guard."}
+}

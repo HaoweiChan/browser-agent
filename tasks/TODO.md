@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M47 — two-day agentic hardening: stop exact repeats and show the decision trail            [status: todo]
+### M47 — two-day agentic hardening: stop exact repeats and show the decision trail            [status: pr]
 Depends: M42
 Priority: P0
 Spec: implement the 12-hour vertical slice in
@@ -2319,7 +2319,7 @@ the ratio is 0.909 against the document and 0.118 against the concatenation. Bef
 the fix the run came back status success, verdict PASS — the dump ACCEPTED as the
 answer. After: failure:semantic, verdict FAIL, answer null.
 
-### T-M42-6 — the no-progress harness cannot see a run that repeats one call on one page            [status: todo]
+### T-M42-6 — the no-progress harness cannot see a run that repeats one call on one page            [status: done]
 Origin: M42 cold review, finding 7, 2026-08-26. The `ponytail:` comment in
 `agent.drive_loop` names this ceiling; this block is the tracked version of it.
 Priority: P2
