@@ -3579,7 +3579,7 @@ problem and does NOT mention `--update-baseline`. Cheapest form: check the chose
 import the harness first and fail with that message instead. Watched red from a worktree
 with no `.venv`.
 
-### T-M40-2-1 — `observe` still hands the planner the document root as element #1 of every page            [status: todo]
+### T-M40-2-1 — `observe` still hands the planner the document root as element #1 of every page            [status: done]
 Depends: T-M40-5
 Origin: T-M40-2 implementation, 2026-08-24. Verified in code, not inferred: `observe.walk`
 starts at `page.accessibility.snapshot(...)`'s root, whose role is `WebArea` and whose name is
@@ -3600,6 +3600,10 @@ Acceptance: after T-M40-5 has measured the lint alone on a deployed build, decid
 drop the root from the observation, with the decision recorded and an offline case pinning
 whichever behaviour is chosen (the render no longer carrying the root, or a stated reason it
 still does).
+Closed 2026-08-29: T-M40-5 measured the lint alone first. Page-level `observe` now walks the
+root's children, while scoped drill-down keeps its selected subtree. `observe-hello-elements`
+forbids `WebArea`/`RootWebArea`, and `observe-uppercase-label-name-resolves` removes the final
+round-trip exception.
 
 ### T-M40-2-2 — the planner system prompt says nothing about container targets            [status: todo]
 Depends: T-M40-5
@@ -3628,7 +3632,7 @@ reach them.
 Acceptance: either the tables are derived from the case files' own tags by that check, or the
 prose is corrected and the residue declared.
 
-### T-M40-2-4 — the refused plan's REPLAN can name the same node one tier down, and answer with the page title            [status: todo]
+### T-M40-2-4 — the refused plan's REPLAN can name the same node one tier down, and answer with the page title            [status: done]
 Depends: T-M40-5
 Origin: T-M40-2 cold review, 2026-08-24, finding 1. Repro, constructible as a fast case:
 `hello.html` (its `<title>` and `<h1>` are the same string), task "What does the second heading
@@ -3650,6 +3654,12 @@ string the planner is copying) and giving the lint the observation it is linting
 is a signature change across three adoption points.
 Acceptance: the repro above committed as an adversarial case, watched red, and closed by
 whichever lever T-M40-5's probe justifies.
+Closed 2026-08-29: `replan-cannot-retarget-a-refused-document-root` watched red as the exact
+`success` / `Hello Fixture` false answer. Page observation no longer advertises the root, and
+the pre-execution repair guard refuses a bare text/name copy of the rejected root name unless
+the replan supplies an addressable role or disambiguating `near`, `index`, or step anchor.
+`tc1-hello-heading` remains green, so legitimate extraction of the same visible string is not
+globally forbidden. Live confirmation remains `110e9e8f` and `48b60ee3` from T-M40-5.
 
 ### T-M40-2-5 — an `observe` onto the document root fails to locate, and its recovery rung is labelled but answers nothing            [status: todo]
 Origin: T-M40-2 cold review, 2026-08-24, finding 3. `observe {role: WebArea, name: <title>}` is

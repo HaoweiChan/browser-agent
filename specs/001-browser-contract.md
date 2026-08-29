@@ -480,14 +480,18 @@ appears, in order — no post-hoc reconstruction).
     every task shape rather than only the aggregate one: an `extract`/
     `extract_all` naming the accessibility document root (`WebArea` or
     `RootWebArea`) is refused, because that node's text is the
-    whole page and its accessible name is the page title — the string `observe`
-    puts first in every observation. It is checked above the `is_aggregate`
+    whole page and its accessible name is the page title. Page-level `observe`
+    omits that unaddressable root, but the lint remains because a model may
+    invent it. An immediate replan that merely copies the refused root name to
+    a bare `text`/`name` target is refused too; a role, `near`, `index`, or step
+    anchor is evidence of a different target. It is checked above the `is_aggregate`
     early return, since the tasks that produce it are ordinary single-answer
     ones, and it is not a rule about containers in general: `observe` on the
     same target is M32's drill-down and is untouched (untouched is not
     functional — T-M40-2-5), ARIA `document` is not the root and is not refused,
     and any other container stays with `verify`'s calibrated `not_a_dump`
-    (`plan-lint-refuses-a-document-root-extract`, `plan-gap-truth-table`,
+    (`observe-hello-elements`, `plan-lint-refuses-a-document-root-extract`,
+    `replan-cannot-retarget-a-refused-document-root`, `plan-gap-truth-table`,
     `specs/decisions/ADR-024-document-root-is-not-an-answer.md`).
   - **`index` and `near` are refused on this step**, because both select one of
     the matches the step exists to enumerate; honouring either would enumerate

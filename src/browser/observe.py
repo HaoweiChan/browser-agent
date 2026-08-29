@@ -23,6 +23,8 @@ on `fixtures/frames-host.html` before the change (ADR-028):
 
 import re
 
+from .resolver import DOC_ROOT_ROLES
+
 SKIP_ROLES = {"generic", "none", "InlineTextBox", "LineBreak", "StaticText", "text",
               "paragraph", "LabelText", "ListMarker"}
 MAX_ELEMS = 60
@@ -322,7 +324,17 @@ async def observe(page, root=None, text_head: int = TEXT_HEAD) -> dict:
         for child in node.get("children") or []:
             walk(child, in_chrome, opts)
 
-    walk(snap)
+    # Chromium wraps a page-level snapshot in WebArea/RootWebArea. That node is
+    # not an ARIA role Playwright can resolve, so advertising it gives the
+    # planner an answer-shaped page title it cannot legitimately target. Keep
+    # scoped observations intact: when the caller deliberately drills into a
+    # resolved element, that selected subtree is part of the observation.
+    if (root is None and str((snap or {}).get("role") or "").strip().lower()
+            in DOC_ROOT_ROLES):
+        for child in snap.get("children") or []:
+            walk(child)
+    else:
+        walk(snap)
     # Frame-piercing (M42): a page-level observation continues into every child
     # frame, with whatever is left of the SAME element budget -- an iframe does
     # not buy the page a second one, which is the D7 lesson applied to reach

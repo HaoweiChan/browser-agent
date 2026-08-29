@@ -3,9 +3,9 @@
 Date: 2026-08-24
 Status: accepted
 
-**Ruling**: a plan whose `extract`/`extract_all` names the accessibility document root (`WebArea` or `RootWebArea`, stripped and case-folded — NOT ARIA `document`, see §1) is refused by the plan lint for every task shape — above `plan_gap`'s `is_aggregate` early return, because the shape it catches is an ordinary single-answer question. Before execution that costs one replan from the existing budget; at a mid-run adoption point it ends the run, because the drill-down or act replan that produced the plan WAS the replan (see Consequences, and one enforcing case each). Only the extraction verbs: `observe` on a container is M32's feature, not this defect. Only the ROOT: every other container — a landmark, or an author's `role="document"` — stays with `verify`'s calibrated `not_a_dump` ratio (ADR-008), which judges it with the page in hand. `relocation_candidates` will not PROPOSE a root either: one set, defined once, in `resolver.py`.
-**Because**: `observe` walks Chromium's snapshot from its root, and that root is in neither `SKIP_ROLES` nor `NAME_PROHIBITED` — so element #1 of every observation the planner sees is `WebArea — <the page title>`, the most answer-shaped string in the list attached to the one node whose text is the entire document. The M40 re-probe measured four of five live tasks planning exactly that; the resolver finds no match, and the single relocation rung left (role+name is the tier that just failed) is `{text: <the page title>}`, which either finds nothing or finds the title and answers with it.
-**Enforced by**: `plan-lint-refuses-a-document-root-extract` (pre-execution), `plan-lint-refuses-a-document-root-extract-midrun` (the `adopt()` branch), `plan-gap-truth-table`, `relocation-distinct-tier` (row 5)
+**Ruling**: a plan whose `extract`/`extract_all` names the accessibility document root (`WebArea` or `RootWebArea`, stripped and case-folded — NOT ARIA `document`, see §1) is refused by the plan lint for every task shape — above `plan_gap`'s `is_aggregate` early return, because the shape it catches is an ordinary single-answer question. Before execution that costs one replan from the existing budget; at a mid-run adoption point it ends the run, because the drill-down or act replan that produced the plan WAS the replan (see Consequences, and one enforcing case each). A pre-execution replan may not merely copy that rejected root's name into a bare `text`/`name` target; it must name an addressable role or add disambiguating evidence. Page-level observation omits the unaddressable root, while a scoped observation keeps the caller's selected subtree. Only the extraction verbs: `observe` on a container is M32's feature, not this defect. Only the ROOT: every other container — a landmark, or an author's `role="document"` — stays with `verify`'s calibrated `not_a_dump` ratio (ADR-008), which judges it with the page in hand. `relocation_candidates` will not PROPOSE a root either: one set, defined once, in `resolver.py`.
+**Because**: Chromium's snapshot root is `WebArea — <the page title>`, the most answer-shaped string in the tree attached to the one node whose text is the entire document, but Playwright cannot resolve that role. The M40 re-probe measured four of five live tasks planning exactly it. Omitting it removes the bait; retaining the lint covers a model that invents it; and the direct-retarget guard closes the measured wrong-success in which the replan changes only to `{text: <the page title>}` and lands on an unrelated heading.
+**Enforced by**: `observe-hello-elements`, `observe-uppercase-label-name-resolves`, `plan-lint-refuses-a-document-root-extract` (pre-execution), `replan-cannot-retarget-a-refused-document-root`, `plan-lint-refuses-a-document-root-extract-midrun` (the `adopt()` branch), `plan-gap-truth-table`, `relocation-distinct-tier` (row 5)
 
 ---
 
@@ -28,7 +28,7 @@ they share is a container target the resolver cannot use.
 
 ## The mechanism, read off this repo rather than off the traces
 
-Verified end to end on `hello.html` before anything was changed:
+Verified end to end on `hello.html` before the original refusal and observation cleanup:
 
 1. `observe.walk` starts at `page.accessibility.snapshot(...)`'s root node. Its
    role is `WebArea` and its name is the page `<title>`; neither `SKIP_ROLES`
@@ -91,20 +91,20 @@ Guarding the rung instead would be strictly worse: it would let the extraction
 run, spend the action, and then refuse the recovery — the exact "pay for the
 verdict in actions" cost ADR-018 moved one layer earlier.
 
-What this does NOT close, stated rather than implied: the planner's REPLAN may
-answer the gap note with `{text: "<the page title>"}` — the same wrong node, one
-tier down and one replan later, on a page where the title is also a heading. The
-lint cannot see that: `plan_gap(task, steps)` has no page and no title, and the
-only rule that would catch it — refuse an extraction whose target string equals
-the page title — is refuted by a case already in this repo, `tc1-hello-heading`,
-whose correct answer IS that string. Logged as T-M40-2-4 with the cold review's
-repro, and it is why T-M40-2-1 (stop advertising the root in the observation) is
-the lever that would actually close the family.
+The first refusal did not close the planner's REPLAN: it could answer the gap
+note with `{text: "<the page title>"}` — the same wrong node one tier down — and
+land on a heading that happened to repeat the title. A global rule rejecting
+the page title would also reject `tc1-hello-heading`, whose correct answer is
+that string. The adopted rule is narrower: only the immediate pre-execution
+replan is compared with the root target just rejected, and only a bare
+`text`/`name` copy without a role, `near`, `index`, or step anchor is refused.
+`replan-cannot-retarget-a-refused-document-root` watched this exact wrong-success
+red before the guard.
 
 The rung is guarded in the other direction, though: `relocation_candidates`
 searches the fresh observation for an element whose name matches the failed
-target's string, and the root is element #1 of every observation named by the
-title — so a failed `{text: <title>}` used to relocate INTO `{role: WebArea,
+target's string, and before the observation cleanup the root was element #1,
+named by the title — so a failed `{text: <title>}` used to relocate INTO `{role: WebArea,
 name: <title>}`, spending one of two rungs on a target no tier can resolve
 (`relocation-distinct-tier` row 5, watched red). It no longer proposes one.
 
@@ -144,13 +144,12 @@ subject, not this one's.
   nothing left to re-plan with. That second case exists because this paragraph
   once claimed the mid-run rule while no case reached `adopt()` with a root
   target at all (PR #46 R1).
-- The observation itself is unchanged: the planner is still *shown*
-  `WebArea — <the page title>` as element #1 of every page. Removing it from
-  `observe` is the other half of the root cause and is deliberately not done
-  here — it is a behaviour change on every run whose effect can only be measured
-  by a live probe, and doing it in the same PR would make the T-M40-5 re-probe
-  unable to attribute a recovery to either lever. Logged as debt (T-M40-2-1),
-  with the planner-prompt line (T-M40-2-2) beside it for the same reason.
+- After T-M40-5 measured the lint alone, page-level observation now starts at
+  the root's children. `observe-hello-elements` forbids both root spellings and
+  `observe-uppercase-label-name-resolves` no longer needs a WebArea exception:
+  every advertised role enters the observation-to-resolver round trip. Scoped
+  observation remains unchanged, so a deliberate drill-down still reports its
+  selected subtree.
 - No live claim is made here. This ADR ships an offline refusal and its
   watched-red cases; the D28 rows stay as PR #43 declared them until T-M40-5
   re-probes a deployed build.

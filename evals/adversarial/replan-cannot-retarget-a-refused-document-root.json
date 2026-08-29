@@ -1,0 +1,27 @@
+{
+  "id": "replan-cannot-retarget-a-refused-document-root",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L3",
+  "tc": "TC1",
+  "input": {
+    "task": "What does the second heading on this page say?",
+    "fixture": "hello.html",
+    "stub_plans": [
+      [{"action": "extract", "target": {"role": "WebArea", "name": "Hello Fixture"}}],
+      [{"action": "extract", "target": {"text": "Hello Fixture"}}]
+    ]
+  },
+  "expect": {
+    "status": "failure:task",
+    "answer_null": true,
+    "actions": 1,
+    "replans": 0,
+    "reason_contains": "retarget"
+  },
+  "provenance": "T-M40-2-4's exact cold-review repro, after T-M40-5 confirmed the same family live on x-rates.com (runs 110e9e8f and 48b60ee3). Plan 1 is correctly refused because WebArea is the document root. The replan changes only the locator tier, copies the root's page-title name into a loose text target, resolves it onto the h1 and reports `success` / `Hello Fixture` with every verifier check green, although the task asks for a nonexistent second heading. The strategy did not change; only the spelling of the same forbidden target did.",
+  "triage": {
+    "class": "wrong-success",
+    "note": "The fix must be site-agnostic: stop advertising the unaddressable root and refuse a pre-execution replan that retargets its same name without an addressable role. A model may still invent WebArea, so observation cleanup alone is not a guard."
+  }
+}
