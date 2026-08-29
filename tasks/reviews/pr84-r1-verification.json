@@ -1,0 +1,22 @@
+{
+  "pr": 84,
+  "round": 1,
+  "mode": "verify",
+  "date": "2026-08-29",
+  "result": "APPROVED",
+  "verifications": [
+    {
+      "id": "R1",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "src/browser/agent.py now limits bypasses to measured question grammar. Both original repros plus bare-action variants are pinned red-first and now return unsupported while existing informational reads remain allowed; invariant and fast gates are green."
+    },
+    {
+      "id": "R2",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "src/browser/agent.py now combines SCOPE_BLOCK and ambiguous-login matches into one ordered risky set before containment. Both auth-clause orders are pinned red-first and now return unsupported while landfall/spaceflight reads remain allowed; full gates are green."
+    }
+  ],
+  "new_findings": []
+}
