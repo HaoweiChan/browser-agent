@@ -3,7 +3,7 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → 110 → 115 → 120 → **125s** [local] (ADR-021, then ADR-029, then ADR-035, then ADR-037), local `invariant` 20 → 35 → 40 → **55s** [local] (T-M42-4, ADR-039, then ADR-040; republished in §3), and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 — from one run's attempts until §9 (2026-08-28) made the input a cross-commit sample of runs — and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → 110 → 115 → 120 → 125 → **130s** [local] (ADR-021, then ADR-029, then ADR-035, ADR-037, and T-M42-14), local `invariant` 20 → 35 → 40 → 55 → **70s** [local] (T-M42-4, ADR-039, ADR-040, then T-M42-14; republished in §3), and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 — from one run's attempts until §9 (2026-08-28) made the input a cross-commit sample of runs — and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `band-is-graded-against-the-citable-maximum` (§8's ruling, and the deadlock it removes), `evals/run.py` `over_budget()`
 
@@ -83,8 +83,9 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 269 cases, ts `20260829-145305`, **107.63s**, 264/269
-  (`evals/report/20260829-145305-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 270 cases, ts `20260829-155307`, **108.97s**, 269/270
+  (`dirty: true`; no report file because this was an explicit `--no-report` gate,
+  for the reason the
   next paragraph gives, and red — the three failures are the three derived-number
   checks themselves, `docs-numbers-are-derived`, `published-band-matches-the-ledger`
   and `adr029-scope-matches-the-suites`, all mid-refresh at the moment
@@ -233,8 +234,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 269 cases, 264/269) and
-(restated — `invariant`: 112 cases, 112/112) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 270 cases, 269/270) and
+(restated — `invariant`: 113 cases, 108/113) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -356,8 +357,8 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 107.63 × 1.15 = 123.77 → **125**, which is exactly the
-committed 125. The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
+five — gives 108.97 × 1.15 = 125.32 → **130**, which is exactly the
+committed 130. The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
 ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
 each derived
 from the band source cited above — a committed row at the shipped case count
@@ -383,18 +384,15 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 112 cases, ts `20260829-141005`, **46.32s**, 112/112
-  (`dirty: true`; no report file — this was a green default run, and ADR-012
-  writes the per-case dump only for red or explicit `--report`. Re-running to
-  manufacture a file measured a different 34.03s row, so no neighbouring file
-  is substituted for this evidence.) The 46.32s run is the timing flake that
-  triggered this republish: `ablation-env-failure-is-a-result` took 14.32s
-  instead of its usual ~2s. The ledger rejects no outlier, deliberately. The
-  ceiling derives 55 because 46.32 × 1.15 = 53.27 → **55**, equal to the
-  already committed **55** ceiling. Whether 46.32s is the MAXIMUM at this count is
+- Band source — local `invariant` at 113 cases, ts `20260829-153514`, **59.24s**, 108/113
+  (`evals/report/20260829-153514-invariant.json`; `dirty: true`; the five reds
+  are the derived count, band and index checks being refreshed by this change.)
+  The timing outlier is `ablation-env-failure-is-a-result` at 24.76s instead of
+  its usual ~2s. The ledger rejects no outlier, deliberately. The ceiling
+  derives 70 because 59.24 × 1.15 = 68.13 → **70**. Whether 59.24s is the MAXIMUM at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger
   had already overtaken, and the rule needs only that the published number and
-  the ledger's maximum derive the same **55**; `published-band-matches-the-ledger`
+  the ledger's maximum derive the same **70**; `published-band-matches-the-ledger`
   prints `ledger_slowest`.
   **This band is an outlier and says so.** It sits seconds above its neighbours
   because one environment probe stalled; the ceiling it derives lands a step
@@ -415,9 +413,9 @@ commit that changed nothing but JSON.
   `invariant`-only for the same reason PR #60's five and M44-P1's one were,
   which is that the `fast` band cannot pay for them (T-M42-20-D3/D9). This suite
   is where the `fast` band's overflow keeps landing, which is a
-  fact about the ceiling and not about these cases. **This republish moves no
-  ceiling**: 55 is what `origin/main` commits and what `evals/run.py` commits
-  here, and the rule applied to this band also derives 55. A quieter later
+  fact about the ceiling and not about these cases. **This republish moves the
+  local invariant ceiling from 55 to 70**: the rule applied to the 59.24s band
+  derives 70, and `evals/run.py` commits it. A quieter later
   sample may derive below the committed ceiling and must never drag it down. The wall clocks behind them are the
   bullet's own, above, and at the superseded count a scalar deliberately not
   retyped, for the reason the rest of this bullet gives: PR #66 R16 found this

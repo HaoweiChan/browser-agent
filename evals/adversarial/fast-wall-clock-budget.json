@@ -19,12 +19,12 @@
       },
       {
         "suite": "fast",
-        "wall_seconds": 125.0,
+        "wall_seconds": 130.0,
         "over": false
       },
       {
         "suite": "fast",
-        "wall_seconds": 125.01,
+        "wall_seconds": 130.01,
         "over": true
       },
       {
@@ -52,12 +52,12 @@
       },
       {
         "suite": "invariant",
-        "wall_seconds": 55.0,
+        "wall_seconds": 70.0,
         "over": false
       },
       {
         "suite": "invariant",
-        "wall_seconds": 55.01,
+        "wall_seconds": 70.01,
         "over": true
       },
       {
@@ -84,7 +84,7 @@
     "env_override": [
       {
         "value": null,
-        "budget": 125,
+        "budget": 130,
         "note": "unset \u2014 the committed local ruling (ADR-019, re-measured at PR #29 R21)"
       },
       {
@@ -99,27 +99,27 @@
       },
       {
         "value": "",
-        "budget": 125,
+        "budget": 130,
         "note": "set but empty \u2014 a shell expanding an unset var"
       },
       {
         "value": "banana",
-        "budget": 125,
+        "budget": 130,
         "note": "garbage"
       },
       {
         "value": "60s",
-        "budget": 125,
+        "budget": 130,
         "note": "a unit suffix, which float() will not take"
       },
       {
         "value": "0",
-        "budget": 125,
+        "budget": 130,
         "note": "zero is not 'no ceiling', it is a typo"
       },
       {
         "value": "-5",
-        "budget": 125,
+        "budget": 130,
         "note": "negative is not 'no ceiling' either"
       }
     ],
@@ -129,7 +129,7 @@
         "exit": 0
       },
       {
-        "wall_seconds": 125.01,
+        "wall_seconds": 130.01,
         "exit": 1
       }
     ],
@@ -137,7 +137,7 @@
       {
         "value": "200",
         "via": "fast",
-        "budget": 55,
+        "budget": 70,
         "note": "raising the FAST ceiling must not move invariant's: one variable per suite (ADR-019, PR #29 R15)"
       },
       {
@@ -148,7 +148,7 @@
       },
       {
         "value": null,
-        "budget": 55,
+        "budget": 70,
         "note": "unset \u2014 the committed invariant ruling"
       }
     ],
@@ -168,14 +168,14 @@
     ]
   },
   "expect": {
-    "max_wall_seconds": 125,
+    "max_wall_seconds": 130,
     "suites_with_a_ceiling": [
       "fast",
       "invariant"
     ],
     "ci_wall_seconds": 140,
-    "note": "six things: `over_budget` says 125.00s is inside the fast ceiling and 125.01s is not, and the same at 55.00/55.01 for invariant; WALL_BUDGET_S holds exactly {fast, invariant}, checked as a set; EVAL_WALL_BUDGET_S moves the FAST ceiling for a positive number, falls back to the committed ceiling for everything else, and never touches invariant's; `evals.run.main()` returns 1 on an over-budget total and 0 otherwise; and .github/workflows/eval.yml declares the CI ceiling this case pins; the over-budget report-WRITE policy is driven through main() without --no-report; and the workflow declares an environment that is not `local`; and a history row carries `judge_usd`, so judge spend is answerable from the committed ledger and not only from this runner's stdout; and evals/run.py ends in `sys.exit(main())` under a __main__ guard, which is the line that turns main()'s return value into an exit code",
-    "invariant_wall_seconds": 55,
+    "note": "six things: `over_budget` says 130.00s is inside the fast ceiling and 130.01s is not, and the same at 70.00/70.01 for invariant; WALL_BUDGET_S holds exactly {fast, invariant}, checked as a set; EVAL_WALL_BUDGET_S moves the FAST ceiling for a positive number, falls back to the committed ceiling for everything else, and never touches invariant's; `evals.run.main()` returns 1 on an over-budget total and 0 otherwise; and .github/workflows/eval.yml declares the CI ceiling this case pins; the over-budget report-WRITE policy is driven through main() without --no-report; and the workflow declares an environment that is not `local`; and a history row carries `judge_usd`, so judge spend is answerable from the committed ledger and not only from this runner's stdout; and evals/run.py ends in `sys.exit(main())` under a __main__ guard, which is the line that turns main()'s return value into an exit code",
+    "invariant_wall_seconds": 70,
     "ci_invariant_wall_seconds": 45,
     "workflow_declares_a_non_local_env": true,
     "ledger_row_carries_judge_usd": true,

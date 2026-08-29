@@ -1,0 +1,35 @@
+{
+  "id": "successor-document-cannot-verify-a-noop",
+  "task": "browser",
+  "suites": ["fast", "invariant"],
+  "level": "L3",
+  "tc": "TC2",
+  "input": {
+    "task": "Refresh the filing widget and read the document identifier.",
+    "fixture": "frames-renav-decoy.html",
+    "stub_plan": [
+      {
+        "action": "click",
+        "target": {"role": "button", "name": "Refresh"},
+        "expected_state": {"text_visible": "Filing loaded"}
+      },
+      {
+        "action": "extract",
+        "target": {"role": "status", "name": "Document identifier"}
+      }
+    ]
+  },
+  "expect": {
+    "status": "failure:semantic",
+    "answer_null": true,
+    "reason_contains": "carried no checkable postcondition",
+    "trace_note_contains": "resolved frame document was replaced",
+    "trace_postconditions": [true, null, null],
+    "resolved_scopes": [null, "about:srcdoc", "/fixtures/frames-renav-decoy.html"]
+  },
+  "provenance": "T-M42-14's committed running demonstration, promoted to the missing executable invariant. The Refresh click is a literal no-op. A host timer scheduled before the action replaces the widget iframe's document in place after 1.5s; the Playwright Frame remains live and its URL remains about:srcdoc. Before the fix, check_state reads the successor document, sees Filing loaded, records postcondition_ok true, then the main-document extraction returns NIMBUS-10K-2025 and the run reports success with every verifier check green. The action earned credit from a document it never touched.",
+  "triage": {
+    "class": "wrong-success",
+    "note": "The guard must identify the resolved document instance, not only its still-live Frame or same URL. A successor document is unverifiable; it must not satisfy the action's postcondition or unlock a read-only repair."
+  }
+}
