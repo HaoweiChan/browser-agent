@@ -1610,7 +1610,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # `check_state` via `acted_scope`, never via the trace.
                     acted_scope[0] = scope
                     rec["resolved"] = {"tier": tier, "description": str(step.get("target")),
-                                       "scope": scope.url}
+                                       "scope": scope.url, "narrowed": narrowed}
                 # WHICH narrowing rung settled an ambiguity the plan left open
                 # (M38). It goes in the trace because a run that answered from
                 # one of several matches has to say so — but NOT as

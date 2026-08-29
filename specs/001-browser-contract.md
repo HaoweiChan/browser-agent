@@ -136,7 +136,7 @@ appears, in order — no post-hoc reconstruction).
   "value": "string | null",
   "anchor": "string | null",
   "rank": "true | false | null",
-  "resolved": {"tier": "role|text|attrs|structural", "description": "...", "scope": "url"} ,
+  "resolved": {"tier": "role|text|attrs|structural", "description": "...", "scope": "url", "narrowed": "rung|null"} ,
   "expected_state": {"url_contains": "..."} ,
   "postcondition_ok": true,
   "failure_class": null,
@@ -215,8 +215,8 @@ appears, in order — no post-hoc reconstruction).
   recorded as `structural` however its candidates were gathered, because
   proximity is what identified the element — and so is one narrowed by its
   identity anchor, which is proximity by another name (M38, `ADR-026`; which
-  rung fired is named in the step's `note`). The self-maintenance metric reads
-  this field.
+  rung fired is structured in `resolved.narrowed` and mirrored in the step's
+  `note`). The self-maintenance metric reads this field.
   `role`, `text` and `structural` are reachable; `attrs` is named
   here because the taxonomy defines the full ladder, and no run has ever
   emitted it. `structural` became reachable at M6 with `near` (below) and is
@@ -230,6 +230,10 @@ appears, in order — no post-hoc reconstruction).
   "a frame the step touched vs a frame that moved on its own" comparison is
   specified to consume. Written by the one resolver both modes share; a step
   that resolves nothing keeps `resolved: null`.
+
+  `resolved.narrowed` names the site-agnostic ambiguity rung that selected one
+  candidate, or is null when no narrowing was needed. It is structured so the
+  reviewer UI and reports do not have to parse the human-readable `note`.
 - **Modes** (ADR-027, ADR-028). `run_task` takes `mode`, selected per task by
   `POST /tasks`'s `mode` field and defaulting to `BROWSER_AGENT_MODE`, itself
   defaulting to `plan`.

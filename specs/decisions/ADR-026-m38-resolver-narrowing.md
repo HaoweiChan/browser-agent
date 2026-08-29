@@ -144,7 +144,8 @@ the guard is narrower than the spec, for the same reason as the first.
 document order, tag names and rendered text. HN and quotes.toscrape.com appear
 in this file and in fixture comments, and nowhere in `src/browser/`.
 
-**The trace says which rung fired**, as `note: "narrowed: <rung>"`, and
+**The trace says which rung fired**, as both structured `resolved.narrowed`
+and the backward-compatible `note: "narrowed: <rung>"`, and
 `resolved.tier` is `structural` for rung 1 for the reason `near` is
 (specs/001: proximity is what identified the element). It is deliberately NOT
 labelled `retry_or_recovery: "recovery"`. The contract reserves that label for

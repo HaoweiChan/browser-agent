@@ -1,6 +1,6 @@
 # M47 — two-day agentic hardening
 
-Status: active planning. Implementation has a **12 engineering-hour ceiling**
+Status: completed by PR #83; structured resolver detail followed in T-M38-2. Implementation had a **12 engineering-hour ceiling**
 (less than two working days). This is a reliability slice, not a claim that M44's
 three-mode live campaign or a general Browser Agent is complete.
 

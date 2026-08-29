@@ -84,6 +84,9 @@
       "trace_values": [
         "loop-click-at-resolves-and-records-coordinates"
       ],
+      "resolved_narrowed": [
+        "resolver-narrows-by-anchor-proximity"
+      ],
       "legs": [
         "escalate-budget-exhaustion-stays-loud",
         "escalate-fires-on-a-failed-plan-leg",

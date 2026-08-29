@@ -2,8 +2,8 @@
   "id": "reviewer-console-is-a-trace-projection",
   "task": "browser",
   "suites": ["invariant", "fast"],
-  "input": {"kind": "ui-progress", "fragments": ["id=\"console\"", "aria-live=\"polite\"", "function renderConsole(steps, result)", "renderConsole(steps);", "renderConsole(r.evidence.trace, r);", "[DECIDE ]", "[RESULT ]", "[RECOVER]", "[DONE   ]"], "console_fragments": ["s.retry_or_recovery === \"recovery\"", "b.llm_usd || 0) + (b.judge_usd || 0)"], "script_fragments": [], "step_phases": {"navigate": "browser", "extract": "verification", "extract_all": "verification"}, "forbid": []},
+  "input": {"kind": "ui-progress", "fragments": ["id=\"console\"", "aria-live=\"polite\"", "function renderConsole(steps, result)", "renderConsole(steps);", "renderConsole(r.evidence.trace, r);", "[DECIDE ]", "[RESULT ]", "[RECOVER]", "[DONE   ]"], "console_fragments": ["s.retry_or_recovery === \"recovery\"", "s.resolved && s.resolved.tier", "s.resolved && s.resolved.narrowed", "b.llm_usd || 0) + (b.judge_usd || 0)"], "script_fragments": [], "step_phases": {"navigate": "browser", "extract": "verification", "extract_all": "verification"}, "forbid": []},
   "expect": {},
-  "provenance": "M47 red-first source contract: the console is a projection of existing provisional step events and the final authoritative trace, with no prompt or page-text field.",
+  "provenance": "M47 red-first source contract: the console is a projection of existing provisional step events and the final authoritative trace, with no prompt or page-text field. T-M38-2 extension watched red at `evals/report/20260829-143435-invariant.json` (111/112): the only red was this case because the console omitted both `resolved.tier` and `resolved.narrowed`.",
   "triage": {"class": "invariant-gap", "note": "The reviewer had detailed trace cards but no compact, trace-derived decision trail."}
 }

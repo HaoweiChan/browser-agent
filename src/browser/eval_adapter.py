@@ -2215,6 +2215,8 @@ def _run_schema_case(case: dict) -> dict:
         # Every step, not just the last: the pre-plan navigate record is built
         # separately from the step-loop record and drifts on its own.
         "trace_step": sorted({k for s in result["evidence"]["trace"] for k in s}),
+        "resolved": sorted({k for s in result["evidence"]["trace"]
+                            for k in (s.get("resolved") or {})}),
         # Same treatment for every leg record of an escalate run.
         "legs_entry": sorted({k for leg in result.get("legs") or [] for k in leg}),
     }
@@ -3221,6 +3223,10 @@ def _run_fixture_case(case: dict) -> dict:
         checks["resolved_scopes"] = len(got_scopes) == len(exp["resolved_scopes"]) and all(
             (w is None and g is None) or (w is not None and g is not None and w in g)
             for w, g in zip(exp["resolved_scopes"], got_scopes))
+    if "resolved_narrowed" in exp:
+        checks["resolved_narrowed"] = [
+            (s.get("resolved") or {}).get("narrowed") for s in trace
+        ] == exp["resolved_narrowed"]
     # A substring of the terminal `reason`. Used where the STATUS is not the
     # claim: three different guards can end a run `failure:env`, and a
     # no-progress stop that reported a step cap would be exactly the symptom-
