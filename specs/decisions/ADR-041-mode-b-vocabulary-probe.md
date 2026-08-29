@@ -101,3 +101,21 @@ unchanged: zero wrong-success and at least **7 correct**; the failed 5/12 round
 does not lower either threshold. Also report whether identical repetitions now
 emit identical action sequences and whether any of the five added verbs occurs.
 One fixed campaign only — no rerun-until-green.
+
+The remediation campaign completed once against deployed
+`main@6d9b94ad7ec3f6b52375e3fd23fd807419705065`, with `/version` exact before
+and after. Result: **5/12 correct, 7/12 loud failure, 0 wrong-success, 0
+refusal**; $0.00756849 planner + $0.001058614 judge. Per task: x-rates 3/3,
+multpl 0/3, quotes-author 2/3, openlibrary 0/3. Safety passes; no-regression
+and the historical floor fail again. Raw evidence is
+`evals/report/20260829-190500-probe.json`.
+
+Temperature zero did not establish repeatability. x-rates produced both
+`navigate, extract` and `navigate, extract, extract`; multpl produced three
+different action sequences and three different loud failure classes. Quotes
+used the same action names in all reps but still split one loud failure and two
+correct answers. Zero traces used a newly advertised verb. The mitigation is
+therefore insufficient, T-M42-1 and T-M40-5-3 stay open, and ADR-041 authorises
+no further paid campaign. Any next mechanism (for example a provider-supported
+seed or a content-keyed plan cache) requires a new pre-registration rather than
+reusing this failed protocol until it passes.
