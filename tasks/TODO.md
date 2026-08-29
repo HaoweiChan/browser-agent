@@ -1716,7 +1716,7 @@ site (doc + surrounding literal) rather than taking the heading from its own
 config, so R11's four-pointer retarget goes red. All three watched red first, on
 those exact three mutations. Gate green.
 
-### M45-D8 — the request-frame rule is the untried path, and nothing measured it            [status: pr]
+### M45-D8 — the request-frame rule is the untried path, and nothing measured it            [status: done]
 Origin: PR #56 R8, 2026-08-26. M45 published a universal claim — that no regex
 separates a CJK term inside another word from the same term heading a real
 request's object — and conceded one exception by pointing at a debt block that
@@ -1830,7 +1830,7 @@ shipped, and handed whoever ran it either a phantom regression or a reason to
 ship one of the narrowings M45 withdrew on purpose.
 Cost ceiling: 15 runs, roughly $0.006 at the rate M45 measured.
 
-### M45-D3 — the auth block covers two of the five Chinese spellings of "log in"            [status: pr]
+### M45-D3 — the auth block covers two of the five Chinese spellings of "log in"            [status: done]
 Origin: M45 cold review, 2026-08-26. Pre-existing (it predates M45 and M45 does
 not change it), out of M45's spec, and therefore not fixed in that PR.
 Priority: P1
@@ -1876,7 +1876,7 @@ than asserting it, and a later session that reaches for the one-line widening
 turns five rows red before it can ship. The remaining two spellings are blocked
 on M45-D8's mechanism, and this entry stays open until that lands.
 
-CLOSED BY ADR-040, pending merge: both 登陸/登陆 auth asks now refuse when the
+CLOSED BY ADR-040 / merged PR #84: both 登陸/登陆 auth asks now refuse when the
 verb acts on a measured website/account/system object; the three
 landfall/spaceflight reads remain allowed even with polite question wording.
 The base alternation is deliberately unchanged.
@@ -3685,7 +3685,7 @@ the replan supplies an addressable role or disambiguating `near`, `index`, or st
 `tc1-hello-heading` remains green, so legitimate extraction of the same visible string is not
 globally forbidden. Live confirmation remains `110e9e8f` and `48b60ee3` from T-M40-5.
 
-### T-M40-2-5 — an `observe` onto the document root fails to locate, and its recovery rung is labelled but answers nothing            [status: todo]
+### T-M40-2-5 — an `observe` onto the document root fails to locate, and its recovery rung is labelled but answers nothing            [status: done]
 Origin: T-M40-2 cold review, 2026-08-24, finding 3. `observe {role: WebArea, name: <title>}` is
 deliberately NOT refused (ADR-024 §3 — refusing it would be a rule about M32's drill-down), but
 it does not work either: `resolve` gives 0 matches for the root, `classify` makes it a `locate`
@@ -3703,6 +3703,15 @@ Spec: two decisions, both ADR-020's subject rather than ADR-024's — whether an
 unresolvable container is a loud `failure:locate` instead of a relocation, and whether a
 relocation rung on a read-only verb may wear the `recovery` label at all.
 Acceptance: a case pinning whichever answer is taken, watched red first.
+
+Closed 2026-08-30. Mode B's locate ladder no longer relocates an `observe`:
+progressive disclosure is about the exact container the plan named, and a
+different target is a new planning decision rather than recovery. The document
+root therefore ends `failure:locate`, spends no replan, and carries no recovery
+label. `observe-document-root-does-not-relocate` was watched red on
+`origin/main@454df99` as `success / Hello Fixture`, with trace
+`navigate, observe, observe, extract`, one replan, and the relocated observe
+counted as a recovery rung.
 
 ### T-M40-2-6 — a plan step that is not a dict kills `run_task` with an uncaught TypeError            [status: done]
 CLOSED 2026-08-28. Guarded in BOTH places, and neither is redundant: `parse_plan`
