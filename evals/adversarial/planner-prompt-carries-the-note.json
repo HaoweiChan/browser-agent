@@ -11,6 +11,7 @@
   "triage": {
     "class": "coverage-gap",
     "watched_red": "with `build_user`'s note branch restored to the pre-R5 prefix (`user += f'\\n\\nA previous attempt failed: {note}\\nPlan only the steps still needed from the page above.'`), the check reports wrong: [{note_not_verbatim: 'act'}, {planner_added_framing: 'act'}, {planner_added_framing: 'act'}, {note_not_verbatim: 'lint'}, {planner_added_framing: 'lint'}, {planner_added_framing: 'lint'}] — the lint rows are the defect R5 was raised for, the act rows are the same string arriving twice.",
-    "note": "tagged invariant AND fast: it is pure code, costs nothing measurable, and is the only thing in the repo that reads the prompt a paid run would send. It grades the assembly, not the wording — no case can say whether a given sentence makes a real model plan better, and the `full` suite is where that would be measured."
+    "note": "tagged invariant AND fast: it is pure code, costs nothing measurable, and is the only thing in the repo that reads the prompt a paid run would send. It grades the assembly, not the wording — no case can say whether a given sentence makes a real model plan better, and the `full` suite is where that would be measured.",
+    "t_m42_1_watched_red": "Before planner.SYSTEM changed, advertised actions were click/extract/extract_all/fill/navigate/observe; the check named exactly five missing mode B executor verbs: go_back, press, scroll, select_option and wait_for."
   }
 }

@@ -62,4 +62,11 @@ adds are `select_option`, `scroll`, `press`, `wait_for`, and `go_back`.
 
 ## Outcome
 
-Pending. No probe run had executed when this ADR was pushed.
+Pre-change baseline completed after this ADR was pushed, against deployed
+`main@c0bd27619a75ae2953ba7f45a329574470f3697a` with `/version` unchanged
+before and after. Result: **7/12 correct, 5/12 loud failure, 0/12 wrong-success,
+0/12 refusal**; $0.0104268 planner + $0.00126284 judge. Per task: x-rates
+3/3, multpl 0/3, quotes-author 2/3, openlibrary 2/3. Every run id, terminal
+record, action sequence and cost is in
+`evals/report/20260830-014602-probe.json`. The post-change round remains
+pending, and its no-regression threshold is therefore frozen at **7 correct**.

@@ -540,7 +540,10 @@ def _check_planner_prompt() -> dict:
     framing of its own — in particular not the act ladder's sentence, which is
     false in all three of its clauses on the lint's replan.
     """
-    from .planner import build_user
+    import re
+
+    from .agent import ACTIONS
+    from .planner import SYSTEM, build_user
 
     ACT = ("A previous attempt failed: step 2 (click) failed: boom\n"
            "Plan only the steps still needed from the page above.")
@@ -562,6 +565,18 @@ def _check_planner_prompt() -> dict:
         if user.count("Plan only the steps still needed") != note.count(
                 "Plan only the steps still needed"):
             wrong.append({"planner_added_framing": name, "user": user[-200:]})
+    match = re.search(r'\{"action": "([a-z_|]+)"', SYSTEM)
+    advertised = set(match.group(1).split("|")) if match else set()
+    # `final_answer` belongs to loop cadence, and ADR-035's `click_at` requires
+    # a viewport screenshot mode B never receives. Every other executor verb is
+    # a plan-mode verb and must be in the live prompt, not merely in hand-written
+    # fixture plans (T-M42-1 / ADR-041).
+    expected = set(ACTIONS) - {"final_answer", "click_at"}
+    if advertised != expected:
+        wrong.append({"advertised_actions": sorted(advertised),
+                      "executor_actions_for_mode_b": sorted(expected),
+                      "missing": sorted(expected - advertised),
+                      "extra": sorted(advertised - expected)})
     return {"passed": not wrong, "wrong": wrong}
 
 
