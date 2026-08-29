@@ -2768,6 +2768,7 @@ def _run_observe_case(case: dict) -> dict:
             skip_roles = case["expect"].get("resolve_advertised_except", [])
             unresolvable = []
             needed_relocation = []
+            resolved_relaxations = []
             for (role, nm), want_n in sorted(advertised.items()):
                 if role in skip_roles or not ("*" in want_roles or role in want_roles):
                     continue
@@ -2777,7 +2778,7 @@ def _run_observe_case(case: dict) -> dict:
                     # either, so `may_narrow` is False — a narrowing is a
                     # RECOVERY, and an invariant that only holds after one is
                     # not the invariant this case claims.
-                    loc, _tier, _fold, _scope = await resolve(page, target, many=True)
+                    loc, _tier, fold, _scope = await resolve(page, target, many=True)
                     got_n = await loc.count()
                 except Exception as exc:
                     # T-A39-3: reachable-by-relocation is reachable. `observe`
@@ -2816,16 +2817,18 @@ def _run_observe_case(case: dict) -> dict:
                     unresolvable.append({"target": target,
                                          "error": f"{type(exc).__name__}: {exc}"})
                     continue
+                if fold:
+                    resolved_relaxations.append({"target": target, "note": fold})
                 if got_n != want_n:
                     unresolvable.append({"target": target, "advertised": want_n,
                                          "resolved": got_n,
                                          "error": "the observation advertises this name for "
                                                   f"{want_n} element(s); resolve reaches {got_n}"})
-            return obs, unresolvable, needed_relocation
+            return obs, unresolvable, needed_relocation, resolved_relaxations
         finally:
             await ctx.close()
 
-    obs, unresolvable, needed_relocation = _await(go())
+    obs, unresolvable, needed_relocation, resolved_relaxations = _await(go())
     exp = case["expect"]
     missing = [
         want for want in exp.get("contains", [])
@@ -2852,15 +2855,30 @@ def _run_observe_case(case: dict) -> dict:
     # widens it (DRILL_TEXT_HEAD), and on a page whose content carries no
     # addressable role that head is the ONLY thing the planner gets.
     text_missing = [t for t in exp.get("text_head_contains", []) if t not in obs["text_head"]]
+    forbidden_relocation = [
+        item for item in needed_relocation
+        if item["target"]["role"] in exp.get("resolve_advertised_without_relocation", [])
+    ]
+    missing_resolution_notes = [
+        {"role": role, "contains": texts}
+        for role, texts in exp.get("resolve_note_contains", {}).items()
+        if not any(item["target"]["role"] == role
+                   and all(text in item["note"] for text in texts)
+                   for item in resolved_relaxations)
+    ]
     return {
         "passed": not missing and not unnameable and not starved and not leaked
-                  and not text_missing and not unresolvable,
+                  and not text_missing and not unresolvable and not forbidden_relocation
+                  and not missing_resolution_notes,
         "missing": missing,
         "advertised_unresolvable": unnameable,
         "advertised_name_did_not_resolve": unresolvable,
         # Reported, never silent: a target that needed the ladder is a target a
         # planner reaches one rung later, and the number is the cost.
         "advertised_needed_relocation": needed_relocation,
+        "advertised_relocation_forbidden": forbidden_relocation,
+        "advertised_resolution_relaxations": resolved_relaxations,
+        "advertised_resolution_notes_missing": missing_resolution_notes,
         "starved_by_chrome": starved,
         "inside_the_cap_after_all": leaked,
         "text_head_missing": text_missing,

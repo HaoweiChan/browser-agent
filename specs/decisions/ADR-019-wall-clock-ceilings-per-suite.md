@@ -234,7 +234,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 268 cases, 263/268) and
-(restated — `invariant`: 112 cases, 108/112) — are graded against the bullets they
+(restated — `invariant`: 112 cases, 112/112) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -383,31 +383,25 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 112 cases, ts `20260829-134401`, **36.91s**, 108/112
-  (`evals/report/20260829-134401-invariant.json`; `dirty: true` — T-M42-20-D7
-  added the invariant-tagged custom-combobox case, so item 2 (cited-run)'s dirty
-  allowance applies again: no clean row at 112 was available when this band was
-  published. The four reds are the count, citation, opt-in declaration and band
-  refresh this report exists to trigger; the new behavior is green. The ceiling
-  derives 45 because 36.91 × 1.15 = 42.45 → **45**, while the committed
-  ceiling remains **55** under §6's no-ratchet-down rule: ADR-040's valid
-  46.40s red-first run at 109 cases derived 55, and a later quieter sample at a
-  new count does not erase it. Green after the count and citation refresh.
-  Whether 36.91s is the MAXIMUM at this count is
+- Band source — local `invariant` at 112 cases, ts `20260829-141005`, **46.32s**, 112/112
+  (`dirty: true`; no report file — this was a green default run, and ADR-012
+  writes the per-case dump only for red or explicit `--report`. Re-running to
+  manufacture a file measured a different 34.03s row, so no neighbouring file
+  is substituted for this evidence.) The 46.32s run is the timing flake that
+  triggered this republish: `ablation-env-failure-is-a-result` took 14.32s
+  instead of its usual ~2s. The ledger rejects no outlier, deliberately. The
+  ceiling derives 55 because 46.32 × 1.15 = 53.27 → **55**, equal to the
+  already committed **55** ceiling. Whether 46.32s is the MAXIMUM at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger
   had already overtaken, and the rule needs only that the published number and
-  the ledger's maximum derive the same **45**; `published-band-matches-the-ledger`
+  the ledger's maximum derive the same **55**; `published-band-matches-the-ledger`
   prints `ledger_slowest`.
-  The 108/112 result is deliberate red-first evidence: the count, cited report
-  and band agree on the tree this row measures before the derived prose catches up.
-  **The previous band at 90 was an outlier and said so; this one is not**, and
-  the difference is worth one line because it changes what a reader should
-  watch. That row sat seconds above its neighbours, taken on a contended
-  laptop, and the ceiling it derived landed a step high — the safe direction,
+  **This band is an outlier and says so.** It sits seconds above its neighbours
+  because one environment probe stalled; the ceiling it derives lands a step
+  high — the safe direction,
   since §6's no-ratchet-down reasoning is that a short sample bounds a ceiling
-  too TIGHT rather than too loose. The rows at 92 sit inside a second of each
-  other, so the band and the quiet rows have converged and there is no gap left
-  to watch. The rows themselves are deliberately NOT enumerated here — PR #66
+  too TIGHT rather than too loose. The rows themselves are deliberately NOT
+  enumerated here — PR #66
   R18 found this sentence listing four of them as though they were all of them,
   which is the subset-presented-as-the-set defect this section records against
   PR #29 R21, one paragraph after refusing it. `published-band-matches-the-ledger`
@@ -422,10 +416,9 @@ commit that changed nothing but JSON.
   which is that the `fast` band cannot pay for them (T-M42-20-D3/D9). This suite
   is where the `fast` band's overflow keeps landing, which is a
   fact about the ceiling and not about these cases. **This republish moves no
-  ceiling**: 35 is what `origin/main` commits and what `evals/run.py` commits
-  here, and the rule applied to this band derives 30 — one step BELOW the
-  committed ceiling, which is the residue §6 declares and not a defect: a
-  sample may derive under the committed ceiling and must never drag it down. The wall clocks behind them are the
+  ceiling**: 55 is what `origin/main` commits and what `evals/run.py` commits
+  here, and the rule applied to this band also derives 55. A quieter later
+  sample may derive below the committed ceiling and must never drag it down. The wall clocks behind them are the
   bullet's own, above, and at the superseded count a scalar deliberately not
   retyped, for the reason the rest of this bullet gives: PR #66 R16 found this
   sentence deriving 30 from a `25.32s at 90` that no row of the committed ledger
