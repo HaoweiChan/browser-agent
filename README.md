@@ -65,14 +65,20 @@ invariant count and band.
 
 This refresh supersedes the prior baselines
 `evals/report/20260828-161325-fast.json`,
-`evals/report/20260828-161359-invariant.json`, plus the intermediate
-`evals/report/20260829-032810-invariant.json`,
-`evals/report/20260829-130008-invariant.json` and
-`evals/report/20260829-134759-invariant.json`; they remain as historical
-evidence rather than inputs to the current figures.
+`evals/report/20260828-161359-invariant.json`, plus the intermediate invariant
+reports `evals/report/20260829-032810-invariant.json` (106/109),
+`evals/report/20260829-130008-invariant.json` (111/111),
+`evals/report/20260829-134401-invariant.json` (108/112) and
+`evals/report/20260829-134759-invariant.json` (109/112); they remain as
+historical evidence rather than inputs to the current figures.
 The immediately preceding fast report,
 `evals/report/20260829-033600-fast.json`, was 265/268; its three reds were the
 derived count, band and ADR scope refreshes that the green baseline above closes.
+The T-M42-20-D4 band refresh produced
+`evals/report/20260829-141357-invariant.json` at 111/112 and
+`evals/report/20260829-141158-fast.json` at 267/268; each has only
+`published-band-matches-the-ledger` red after a 46.32s green invariant row moved
+the citable maximum into the already committed 55s band.
 
 `live` is not part of the gate, and it goes red when a site is having a bad
 day rather than being stubbed around it (CLAUDE.md rule 4) — an earlier run of
@@ -211,13 +217,12 @@ enumerating them here is the snapshot that drifted:
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
 | `fast` | 268 | 108.41s | 124.67 | **125s** |
-| `invariant` | 112 | 36.91s | 42.45 | **55s** |
+| `invariant` | 112 | 46.32s | 53.27 | **55s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer.
 A short sample may derive UNDER the committed ceiling and must never drag it
-down (ADR-019 §6). `invariant` shows that divergence: ADR-040 raised the ceiling
-to 55s from its valid 46.40s red-first run at 109 cases; the later 112-case band
-derives 45s, but does not erase the slower measurement or ratchet the gate down.
+down (ADR-019 §6). `invariant` currently converges instead: its 112-case band
+derives 55s, the ceiling ADR-040 already committed from a 109-case run.
 The rule is one-directional: derived BELOW the committed ceiling is held;
 derived ABOVE it requires an ADR.
 (This paragraph used to illustrate the divergence with `invariant`'s

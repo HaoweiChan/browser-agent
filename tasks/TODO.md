@@ -1227,7 +1227,7 @@ that says which. `T-M42-19` (the CI half of the sweep) is adjacent and separate.
 Acceptance: either a `fast` band whose maximum sits at least one full step under
 its ceiling, or an ADR that rules the current margin acceptable and says why.
 
-### T-M42-20-D4 — `observe` and `resolve` disagree about a control's ROLE, and nothing grades that            [status: todo]
+### T-M42-20-D4 — `observe` and `resolve` disagree about a control's ROLE, and nothing grades that            [status: done]
 Origin: PR #60 R3, found while widening `resolve_advertised` past `combobox`.
 T-M42-20 closed the NAME half of the observe->resolve round trip. The role half
 is open and our own inspector carries an instance: `<input type="file" id="up">`
@@ -1257,6 +1257,16 @@ data point; find the others before choosing.
 Acceptance: the `button` exclusion gone from that case with a red-first case for
 whichever rule is chosen, or a `docs/support-matrix.md` limitation naming the
 shape — D32 declares it as of PR #60, so the minimum here is the case.
+
+CLOSED 2026-08-29. The existing inspector round-trip case no longer excludes
+`button` and watched the file-input target red as a forbidden relocation. The
+resolver now tries Playwright's `textbox` role only after the advertised
+`button` role misses and only where the candidate is also `input[type=file]`;
+button/textbox are not generally interchangeable. The target resolves directly
+at tier `role`, and its trace note discloses both `role-equivalent:file-input`
+and the independently required `name-case-folded` relaxation. The same sweep
+still reports `DisclosureTriangle` and `columnheader` as relocation costs; they
+remain reachable, and are not folded into this control-specific rule.
 
 ### T-M42-20-D5 — `select_option` matches the wanted string against value OR label            [status: done]
 CLOSED 2026-08-28, both shapes, on the acceptance as written ("a run can no longer

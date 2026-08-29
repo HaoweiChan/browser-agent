@@ -429,11 +429,24 @@ async def resolve(page, target: dict, many: bool = False,
     # resolves byte-for-byte as it did before T-M42-20. Only a page that spells
     # the name no other way reaches the fold, and when it does the step's trace
     # note says `narrowed: name-case-folded`.
-    def scope_tiers(scope):
+    async def scope_tiers(scope):
         out = []
         if role and name:
-            out.append(("role", scope.get_by_role(role, name=name, exact=True),
-                        scope.get_by_role(role, name=_whole_string(name)), scope))
+            exact_role = scope.get_by_role(role, name=name, exact=True)
+            folded_role = scope.get_by_role(role, name=_whole_string(name))
+            out.append(("role", exact_role, folded_role, scope))
+            # Chromium advertises <input type=file> as a button, while this
+            # Playwright version locates the same control as a textbox. Keep
+            # the widening to that native control shape: button<->textbox as a
+            # general equivalence could silently land on an unrelated field.
+            if (role.strip().lower() == "button"
+                    and await exact_role.count() == 0
+                    and await folded_role.count() == 0):
+                files = scope.locator('input[type="file"]')
+                out.append(("role",
+                            scope.get_by_role("textbox", name=name, exact=True).and_(files),
+                            scope.get_by_role("textbox", name=_whole_string(name)).and_(files),
+                            scope, "role-equivalent:file-input"))
         elif role:
             out.append(("role", scope.get_by_role(role), None, scope))
         if text:
@@ -452,7 +465,7 @@ async def resolve(page, target: dict, many: bool = False,
     # as for uniqueness.
     hits = []
     for scope in scopes:
-        got = await _resolve_in(scope, scope_tiers(scope), target, many=many, index=index,
+        got = await _resolve_in(scope, await scope_tiers(scope), target, many=many, index=index,
                                 near=near, anchor=anchor, may_narrow=may_narrow)
         if got is None:
             continue
@@ -488,14 +501,14 @@ async def _resolve_in(page, tiers, target, *, many, index, near, anchor, may_nar
     API, and every call in this function is one of the two.
     """
     ambiguous = None
-    for tier, loc, folded, scope in tiers:
+    for tier, loc, folded, scope, *relaxations in tiers:
         # THE SET IS CHOSEN HERE, ONCE, and everything below reads it (ADR-032).
         # One extra `count()` on the exact pass, which every path except `near`
         # was already paying; `near` now pays it too, and that is the price of
         # proximity and indexing agreeing about what they are selecting from.
-        fold = None
+        fold = relaxations[0] if relaxations else None
         if folded is not None and await loc.count() == 0:
-            loc, fold = folded, FOLD_NOTE
+            loc, fold = folded, _note(fold, FOLD_NOTE)
         if near is not None:
             # Proximity is a relation between elements, not a property of one,
             # so the winning tier is `structural` however the candidates were
