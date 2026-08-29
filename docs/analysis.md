@@ -1218,6 +1218,18 @@ This is mechanism evidence only: the tasks remain open until ADR-042's single
 deployed 12-run campaign meets the unchanged 7-correct and zero-wrong-success
 gates.
 
+That campaign completed once on deployed `23839a05`: **4/12 correct, 8 loud
+failures, 0 wrong-success, 0 refusal**, for $0.00567515 planner + $0.00079175
+judge. Six of seven qualifying post-first runs showed the intended zero-cost
+cache hit. The exception was multpl rep 3, which paid for and received a
+malformed completion on an otherwise-identical initial request. x-rates was
+stable-correct 3/3, while quotes-author and Open Library were stable loud
+failures 3/3: caching a parsed plan made their failure repeatable rather than
+making the plan good. multpl still varied (one correct, two loud failures).
+The safety gate passes, the correctness and cache-mechanism gates fail, and
+both T-M42-1 and T-M40-5-3 remain open. Full receipt:
+`evals/report/20260829-195310-probe.json`; ADR-042 authorises no rerun.
+
 
 ## 8a-5. Pre-registered Chinese-language probe (M45) — the headline did not reproduce, one third of it did
 

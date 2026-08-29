@@ -11,3 +11,11 @@ path with a temporary directory. No key, network call, paid token, retry or
 site-specific recipe was used. The case is classified `flake` because the
 deployed ADR-041 campaign showed divergent completions for otherwise identical
 requests; it does not simulate a resolver or extraction failure.
+
+The separately pre-registered live campaign then ran once on deployed
+`23839a05` and is preserved in `evals/report/20260829-195310-probe.json`: 4/12
+correct, 8 loud failures, 0 wrong-success. Six of seven qualifying post-first
+runs hit at zero planner cost; one exact multpl repetition missed, and caching
+made two bad first plans repeat consistently. The mechanism and correctness
+gates therefore fail; the offline row above remains a mechanism invariant, not
+a claim of live task quality.
