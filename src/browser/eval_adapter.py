@@ -3071,6 +3071,9 @@ def _run_fixture_case(case: dict) -> dict:
     # reworded message into a false red.
     if "trace_actions" in exp:
         checks["trace_actions"] = [s["action"] for s in trace] == exp["trace_actions"]
+    if "trace_failure_classes" in exp:
+        checks["trace_failure_classes"] = [
+            s.get("failure_class") for s in trace] == exp["trace_failure_classes"]
     # One entry per planner call, in order: {"has": [...], "lacks": [...]} of
     # strings that must / must not appear in the observation THAT call was given,
     # rendered exactly as the live planner renders it into its prompt. The call

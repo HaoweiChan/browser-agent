@@ -1741,11 +1741,11 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                                                 f"to choose; got {step.get('value')!r}")
                     opts = await loc.evaluate(OPTIONS_JS)
                     if opts is None:
-                        # The wrong element, not a broken action — the same
-                        # ruling `fill` gets when it lands on something that
-                        # cannot hold a value (`relocate-fill-non-editable`).
-                        raise StepError("locate", "resolved element has no options to select: "
-                                                  f"{step.get('target')}")
+                        # The target resolved; this action cannot operate the
+                        # control. Replan to another verb instead of relocating
+                        # an element we already found (T-M42-20-D7).
+                        raise StepError("act", "resolved element has no options to select: "
+                                               f"{step.get('target')}")
                     if not opts:
                         # NO options is not the same as no MATCHING option. A
                         # `<select>` painted from a `fetch()` is in the DOM,

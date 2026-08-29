@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Filing archive</title>
+<h1>Filing archive</h1>
+<div role="combobox" aria-label="Filing" aria-expanded="false"
+     aria-controls="filing-options" tabindex="0">Choose a filing…</div>
+<div id="filing-options" role="listbox" aria-label="Filing options" hidden>
+  <div role="option" tabindex="0">FY 2023</div>
+  <div role="option" tabindex="0">FY 2024</div>
+</div>
+<p role="status" aria-label="Selected filing">No filing selected</p>
+<script>
+const combo = document.querySelector('[role=combobox]');
+const list = document.querySelector('[role=listbox]');
+const status = document.querySelector('[role=status]');
+combo.addEventListener('click', () => {
+  list.hidden = false;
+  combo.setAttribute('aria-expanded', 'true');
+});
+list.addEventListener('click', event => {
+  const option = event.target.closest('[role=option]');
+  if (!option) return;
+  combo.textContent = option.textContent;
+  combo.setAttribute('aria-expanded', 'false');
+  list.hidden = true;
+  status.textContent = `${option.textContent} selected`;
+});
+</script>
