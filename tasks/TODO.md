@@ -2655,7 +2655,7 @@ What it does NOT claim: that the five offline cases are wrong. They pass; what
 they pass against is a page that is not being served. Whether to re-capture is the
 human's call — the point is that nobody has to notice by hand any more.
 
-### T-M41-4 — the observe harness compares NAMES as a set, so it cannot see the ambiguity S3 was            [status: todo]
+### T-M41-4 — the observe harness compares NAMES as a set, so it cannot see the ambiguity S3 was            [status: done]
 Origin: M41 cold review, 2026-08-26. `_run_observe_case`
 (`src/browser/eval_adapter.py`) builds `names` and `roles` as SETS of the
 observation's elements and grades `must_include_names` / `must_exclude_names` by
@@ -2682,6 +2682,13 @@ snapshot for the first, reword the region label for the second.
 Out of scope: changing what the M41 cases claim — their triage notes already
 state these two ceilings; this block is the harness change that would let them
 claim more.
+
+Closed 2026-08-30. `_run_observe_case` now grades `name_counts` with a
+`Counter`, and `must_exclude_names_present_on_page` resolves every excluded name
+against the uncapped page before accepting its absence from the observation.
+The SEC button case requires each action name exactly once; the deep-spec cap
+case requires `SN-88231` to remain on the page. Both mutations named above were
+run and failed on their intended fields before the fixtures were restored.
 
 ### T-M41-5 — ADR-022's file names one number and its title another            [status: done]
 CLOSED 2026-08-28. H1 corrected to `# ADR-022:`, and the one-line conjunct this block

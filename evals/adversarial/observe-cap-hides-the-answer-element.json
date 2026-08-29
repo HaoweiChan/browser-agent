@@ -19,11 +19,15 @@
     "must_exclude_names": [
       "SN-88231"
     ],
+    "must_exclude_names_present_on_page": [
+      "SN-88231"
+    ],
     "note": "the drill target is inside MAX_ELEMS and the answer element is not"
   },
   "provenance": "the defect M32 fixes, measured rather than asserted, and the guard that keeps the fix honest afterwards. `observe()` walks the a11y tree in document order and stops at MAX_ELEMS=60; on `deep-spec.html` element 51 is `region — 'Product Information'` and element 60 is the third `row` of the table inside it, so the planner is shown the container that holds the answer and two of its eight rows. The answer cell is element 77 of 77. Unlike `observe-content-survives-chrome`, no chrome sub-budget can rescue it: the 49 elements ahead of the region are a header, a ten-item sidebar (chrome, already capped by MAX_CHROME) and a thirteen-item related-titles list, which is content. This case was green from the moment the fixture existed — it characterises the cap, it does not watch a fix — and its job is the opposite direction: it turns red the day someone 'fixes' the drill-down case by raising MAX_ELEMS, which observe.py's own comment already rejects (it moves the cliff to the next larger page and spends planner tokens on elements nobody asked about).",
   "triage": {
     "class": "capability-gap",
+    "red_first": "T-M41-4 renamed the full-page value from `SN-88231` to `SN-RENAMED` while leaving the exclusion expectation unchanged. Exact set exclusion stayed green, but `must_exclude_names_present_on_page` reported `excluded_name_missing_on_page: [\"SN-88231\"]` and failed, proving the cap assertion is not vacuous.",
     "note": "tagged `invariant` for the same reason as `observe-content-survives-chrome`: the budget that starves the planner is a property of the observation, not of any one run, and it must hold at 100% rather than against a baseline. It asserts BOTH sides — the drill target must be reachable and the answer must not be — because a case that only checked the second half would stay green if the region fell off the end too, which is the shape where the drill-down has nothing to aim at. The reachable half uses `contains` (role AND name on the same element), not the independent `must_include_names`/`must_include_roles` sets: `Product Information` is also this page's h2, so a bare-name check would have been satisfied by the heading whether or not the region survived the cap (M32 cold review)."
   }
 }
