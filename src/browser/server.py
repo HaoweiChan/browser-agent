@@ -564,7 +564,7 @@ PAGE = r"""<!doctype html>
        border:1px solid currentColor; padding:.17rem .45rem }
   .big.success { color:var(--ok) } .big.failure { color:var(--bad) }
   .big.unsupported { color:var(--warn) } .big.running { color:var(--accent) }
-  .progress { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.4rem;
+  .progress { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.4rem;
        list-style:none; margin:0 0 .9rem; padding:0 }
   .progress li { min-width:0; border:1px solid var(--line); border-left:3px solid var(--line);
        padding:.42rem .5rem; color:var(--dim); font-size:11px; line-height:1.25;
@@ -678,6 +678,7 @@ PAGE = r"""<!doctype html>
   <ol class="progress" id="progress" aria-label="Run progress" aria-live="polite">
     <li data-phase="planning" data-state="upcoming">Planning</li>
     <li data-phase="browser" data-state="upcoming">Open page</li>
+    <li data-phase="reading" data-state="upcoming">Read page</li>
     <li data-phase="action" data-state="upcoming">Run actions</li>
     <li data-phase="verification" data-state="upcoming">Verify answer</li>
     <li data-phase="complete" data-state="upcoming">Complete</li>
@@ -732,7 +733,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let es = null, runId = null;
-const PHASES = ["planning", "browser", "action", "verification", "complete"];
+const PHASES = ["planning", "browser", "reading", "action", "verification", "complete"];
 const SUPPORT_LABELS = {
   TC1: "Read a page", TC2: "Search and read", TC3: "Navigate and read",
   TC4: "Compare or sort", TC5: "Submit a form"
@@ -969,6 +970,7 @@ function resetProgress() {
 }
 function phaseFor(s) {
   if (s.action === "navigate") return "browser";
+  if (s.action === "observe") return "reading";
   if (s.action === "extract") return "verification";
   if (s.action === "extract_all") return "verification";
   return "action";

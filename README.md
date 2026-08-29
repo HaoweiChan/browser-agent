@@ -67,6 +67,7 @@ its three failures are the derived publication checks updated by this change.
 
 This refresh supersedes the prior baselines
 `evals/report/20260829-153751-fast.json`,
+`evals/report/20260829-163247-fast.json`,
 `evals/report/20260829-033022-fast.json`,
 `evals/report/20260829-135152-fast.json`,
 `evals/report/20260828-161325-fast.json`,
@@ -101,6 +102,13 @@ Python run without the repository dependencies) and
 `evals/report/20260829-164057-invariant.json` (57/113 when the restricted sandbox
 blocked local fixture servers); both are retained as environment-failure
 evidence rather than used as baselines.
+T-M32-1's UI-phase refresh adds
+`evals/report/20260829-165831-invariant.json` (112/113, with only the stale
+shared phase mapping in `reviewer-console-is-a-trace-projection` red) and
+`evals/report/20260829-170153-fast.json` (270/271, with only the second console
+contract's copy of that mapping red) and
+`evals/report/20260829-170430-fast.json` (270/271, with only the resulting band
+publication refresh red).
 The immediately preceding fast report,
 `evals/report/20260829-033600-fast.json`, was 265/268; its three reds were the
 derived count, band and ADR scope refreshes that the green baseline above closes.
@@ -246,7 +254,7 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 271 | 107.79s | 123.96 | **130s** |
+| `fast` | 271 | 109.43s | 125.84 | **130s** |
 | `invariant` | 113 | 59.24s | 68.13 | **70s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer.
