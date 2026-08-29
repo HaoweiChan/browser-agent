@@ -880,6 +880,7 @@ const ADRS = [
   ["036", "a postcondition is checked in the document its action touched — the trace records which document resolved (resolved.scope), so a decoy iframe can no longer satisfy a click's expected_state; waits and navigations stay page-wide by nature"],
   ["037", "a third way to run a task: try the cheap fixed-plan mode first and fall back to the per-step mode only if it fails, in one run that shows both attempts — and the only thing the fallback is told about the first attempt is which step died, doing what, and how, so nothing a website wrote can be passed along as an instruction"],
   ["038", "a page-held credential is seeded per origin by the browser (storage_state), never injected into pages — an init script would carry the secret into every site a run visits, including a hostile one; host, key and secret are all configuration, never code"],
+  ["041", "mode B's missing planner verbs are measured on the same twelve live tasks before and after the prompt changes, with zero wrong-success and no loss of correct answers required"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

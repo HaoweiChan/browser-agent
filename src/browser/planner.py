@@ -107,7 +107,7 @@ DEFAULT_LOOP_MODEL = LOOP_MODELS[0]
 ALLOWED_MODELS = list(dict.fromkeys([DEFAULT_MODEL, *ABLATION_MODELS, *LOOP_MODELS]))
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
-Each step: {"action": "navigate|click|fill|extract|extract_all|observe",
+Each step: {"action": "navigate|click|fill|extract|extract_all|observe|select_option|scroll|press|wait_for|go_back",
  "target": {"role": str|null, "name": str|null, "text": str|null, "near": str|null, "index": int|null} | null,
  "value": str|null,
  "anchor": str|null,
@@ -148,6 +148,13 @@ of rather than two you are hoping for. `fill` verifies itself by readback and
 needs no expected_state. If a click's consequence genuinely cannot be known
 from the observation, prefer a different plan over a guess — never invent
 expected text.
+`select_option` chooses the option named by `value` and verifies the selection by
+readback. `scroll` either targets an element to bring it into view or uses
+`value` as a pixel distance; it verifies that the element is visible or the
+page moved. `press` sends the key in `value` to its target, or to the page when
+target is null, and MUST carry `expected_state`. `wait_for` MUST carry an
+`expected_state`: that predicate is the wait, so never emit a predicate-free
+sleep. `go_back` returns one history entry and MUST carry `expected_state`.
 When a page observation is provided: the browser is ALREADY on that page — do
 not re-navigate unless the task needs a different page, and target ONLY roles/
 names present in the observation. Output the raw JSON array only — no markdown fences, no commentary."""

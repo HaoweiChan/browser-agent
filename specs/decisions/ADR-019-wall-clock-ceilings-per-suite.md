@@ -9,7 +9,7 @@ Status: accepted
 
 **Amended by ADR-040**: local `invariant` 40 -> 55 [local], from the 46.40s red-first run at the unchanged 109-case count; CI untouched.
 
-**Amended by**: ADR-037 (Decision 9's local `fast` ceiling 110 -> 115 [local] — the same instrument and the same reason as ADR-035's, case-COUNT growth: M46 put eight cases in `fast` and the ledger's slowest run at the new count of 246 derives 115. `invariant` is untouched at 35, which 97 cases still derive; CI's two are untouched and stay in §5) · §9 of this file (2026-08-28: both CI ceilings re-derived from a cross-commit sample of runs, superseding the single-run derivation ADR-029 recorded) · ADR-035 (Decision 7's local `fast` ceiling 105 -> 110 [local] — the same instrument ADR-029 and ADR-021 used and for the same reason, case-COUNT growth: M43 put nine cases in `fast` and the ledger's slowest run at the new count derives 110. `invariant` is untouched; CI's two are untouched and stay in §5) · ADR-029 (Decision 2's local `fast` ceiling 90 -> 105 [local], and §5's two CI ceilings re-derived from run `32937020758` — the values themselves live in §5 and in the workflow, graded against each other, on the number `published-band-matches-the-ledger` derived after M42 grew the suite (the count is `git diff main --stat` away and is published nowhere, because three documents published three different values for it — PR #57 R16); ~~CI's stays 90 because nothing in that change measured CI~~ — struck 2026-08-26 (PR #57 R24), and it contradicted the opening of its own sentence for a round: §5's CI ceilings were re-derived from run `32937020758` and the workflow declares them. No CI ceiling is written on this line; §5 publishes them) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
+**Amended by**: §5 of this file (2026-08-30: both CI ceilings re-derived from the declared 20-run window ending at run `33267084252`) · ADR-037 (Decision 9's local `fast` ceiling 110 -> 115 [local] — the same instrument and the same reason as ADR-035's, case-COUNT growth: M46 put eight cases in `fast` and the ledger's slowest run at the new count of 246 derives 115. `invariant` is untouched at 35, which 97 cases still derive; CI's two are untouched and stay in §5) · §9 of this file (2026-08-28: both CI ceilings re-derived from a cross-commit sample of runs, superseding the single-run derivation ADR-029 recorded) · ADR-035 (Decision 7's local `fast` ceiling 105 -> 110 [local] — the same instrument ADR-029 and ADR-021 used and for the same reason, case-COUNT growth: M43 put nine cases in `fast` and the ledger's slowest run at the new count derives 110. `invariant` is untouched; CI's two are untouched and stay in §5) · ADR-029 (Decision 2's local `fast` ceiling 90 -> 105 [local], and §5's two CI ceilings re-derived from run `32937020758` — the values themselves live in §5 and in the workflow, graded against each other, on the number `published-band-matches-the-ledger` derived after M42 grew the suite (the count is `git diff main --stat` away and is published nowhere, because three documents published three different values for it — PR #57 R16); ~~CI's stays 90 because nothing in that change measured CI~~ — struck 2026-08-26 (PR #57 R24), and it contradicted the opening of its own sentence for a round: §5's CI ceilings were re-derived from run `32937020758` and the workflow declares them. No CI ceiling is written on this line; §5 publishes them) · ADR-021 (Decision 2's local `fast` ceiling 80 -> 90, on the number `published-band-matches-the-ledger` derived after the M32 merge grew the suite; the other three ceilings unchanged)
 
 
 **Amends**: ADR-013 Decision 4 (local `fast` ceiling 60 → 80) and ADR-002 Decision 4 (a second suite now has a ceiling)
@@ -603,57 +603,36 @@ its `invariant` ceiling — the relief-valve property §3 is about — and each 
 can be measured where it is enforced, which is what ADR-013 Decision 3 already
 ruled `fast` needed. `fast-wall-clock-budget` pins both directions.
 
-### 5. CI's two numbers, measured on CI: 140 and 35
+### 5. CI's two numbers, measured on CI: 160 and 55
 
 Not projected from local runs, which is the mistake §3 made. **Hand-read off the
 workflow logs, not from the ledger** (§7). Since §9 (2026-08-28) a row is one
 measured RUN of `.github/workflows/eval.yml`, and the two suites are sampled
 independently — the run that sets `invariant`'s ceiling breached on `invariant`
 and so never reached the `fast` step at all, which is the shape §9 exists for.
-The sample is **the four slowest observed runs per suite**, and the population it
-is drawn from is stated by its endpoints so a reader can rebuild it: **every
-eval-gate run from `33098541355` (2026-08-27T17:28:00Z) through `33120495080`
-(21:57:55Z) — 19 consecutive runs, ending with the last one that existed before
-this branch did.** It is NOT every run that existed before this branch: eval-gate
-has run on this repo since long before 17:28Z, and the first version of this
-sentence claimed the larger thing and was wrong by dozens of runs.
-
-**The start boundary is arbitrary, and saying so is the only honest account of
-it.** It is `main`'s 17:28:00Z push — a declared endpoint, not a principled one.
-Two attempts to give it a principle were both wrong. It does not mark where "the
-tree stopped resembling the one the ceiling covers", and it is not simply "at
-smaller case counts": that is true of `invariant` and **false of `fast`**, which
-ran 229 cases in every run that day, including runs from 02:40Z onward whose
-`invariant` was 82. Five runs in the 78 minutes before the boundary
-(`task/M44-P1`, 16:09:55Z to 17:22:12Z) sat at exactly 83 `invariant` / 229
-`fast` — the same counts as the smallest rows published above.
-
-**And the boundary is nearly consequential, which is a better reason to declare
-it arbitrary than to dress it up.** The slowest of those five, run 33091786995,
-measured `fast` 115.02s — above the fourth `fast` row this table publishes,
-though below its maximum, so the ceiling is 140 either way — and `invariant`
-22.69s, which misses the fourth `invariant` row by **0.02s**. That column clears
-the boundary by two hundredths of a second. A window that changes what a table
-publishes while changing no ceiling is exactly the kind of edge a reader should
-be told about rather than left to find.
-Only the maximum can move a ceiling, so the four that could is a rule rather than
-a selection. Two of the 19 breached and so produced no `fast` figure, leaving 17
-in that column. `gh run view <id> --log` reprints each line below.
+The sample is **the four slowest observed runs per suite** from every eval-gate
+run between declared endpoints `33255314466` (2026-08-29T13:33:22Z) and
+`33267084252` (2026-08-29T18:00:16Z): 20 consecutive workflow runs. The start
+boundary is arbitrary and the endpoint declaration is the reproducibility
+contract. A rerun remains one workflow run and contributes its slowest attempt;
+run `33267084252` therefore contributes 45.71s, not a second row for its 45.08s
+attempt. Two runs breached on `invariant` and never produced a `fast` figure.
+`gh run view <id> --log` reprints each line below.
 
 | run | branch | suite | cases | wall |
 |---|---|---|---|---|
-| 33165425989 | task/M46 | invariant | 101 | 37.44s |
-| 33113860608 | task/T-M42-4 | invariant | 86 | 26.97s |
-| 33120495080 | task/T-M42-4 | invariant | 88 | 25.61s |
-| 33113986233 | task/M43 | invariant | 83 | 22.81s |
-| 33119009870 | task/M43 | fast | 238 | 117.84s |
-| 33113986233 | task/M43 | fast | 236 | 117.14s |
-| 33119673100 | task/M43 | fast | 238 | 116.01s |
-| 33114650675 | task/T-M39-15 | fast | 229 | 113.51s |
+| 33267084252 | task/next-hardening-5 | invariant | 113 | 45.71s |
+| 33264063193 | main | invariant | 113 | 45.51s |
+| 33262824894 | main | invariant | 113 | 44.86s |
+| 33264954451 | task/next-hardening-3 | invariant | 113 | 44.84s |
+| 33258498343 | main | fast | 268 | 138.35s |
+| 33262824894 | main | fast | 270 | 137.51s |
+| 33265873161 | main | fast | 271 | 137.07s |
+| 33256277519 | task/T-M42-20-D7 | fast | 268 | 137.06s |
 
 Each cell is one `[eval] cost … wall Ns` line of that run's log, and every one
-of these runs was correctness-green on the suite it is quoted for — `26.97s` was
-`86/86 = 1.000` with `OVER BUDGET` printed above it. That is the whole reason
+of these runs was correctness-green on the suite it is quoted for — `45.71s` was
+`113/113 = 1.000` with `OVER BUDGET` printed above it. That is the whole reason
 this section keeps moving: the breach is in the budget, never in the results.
 **Eighteen of this table's forty cells are graded** — the eight wall clocks, the
 eight `suite` cells, and the two run ids on the rows carrying each suite's
@@ -691,14 +670,14 @@ what a reader checks (`gh run view … --log`), and T-R73 carries the ledger rou
 that would make it a mechanism. Second: CI figures published anywhere other than
 this section, README and the workflow comment — ADR-013's copy of the superseded
 95-case band is not read here, and is owned by `task/T-M32-9`. Third: **this
-sample spans commits, and therefore spans trees.** Rows sit at 83 to 88
-`invariant` cases and 229 to 238 `fast` cases, which is not one tree measured
+sample spans commits, and therefore spans trees.** Rows sit at 113
+`invariant` cases and 268 to 271 `fast` cases, which is not one tree measured
 four ways. §9 argues that is the correct input for a ceiling — the ceiling has
 to hold over the commits that will run under it — and it is the deliberate
 reversal of the rule the previous version of this section stated, that a table
 must not publish two trees at once.
 
-Same rule: 26.97 × 1.15 = 31.02 → **35**; 117.84 × 1.15 = 135.52 → **140**.
+Same rule: 45.71 × 1.15 = 52.57 → **55**; 138.35 × 1.15 = 159.10 → **160**.
 
 Both ceilings move together, which is the rule this section has kept through
 three re-derivations: `fast` has never breached and does not now, but a ceiling
@@ -1445,7 +1424,8 @@ later-clean-slower-run cost that must survive, and the fresh-count degeneration
 in both directions.
 ### 9. (2026-08-28) A CI ceiling is derived from runs, not from one run's attempts
 
-**Ruling**: CI's ceilings become `invariant` **45s** and `fast` **140s**, and the
+**Ruling [historical, superseded by §5 on 2026-08-30]**: CI's ceilings became
+`invariant` **45s** and `fast` **140s**, and the
 input to ADR-013's rule changes with them: §5's sample is now the four slowest
 observed RUNS per suite, sampled across commits, in place of four attempts of one
 run. The rule itself is untouched — slowest observed +15%, rounded up to a
