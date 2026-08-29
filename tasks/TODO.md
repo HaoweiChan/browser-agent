@@ -2503,6 +2503,12 @@ Remediation outcome, 2026-08-30: the one ADR-041 campaign on deployed
 the task open. ADR-041 is exhausted; any seed/cache follow-up needs a new
 pre-registration and cannot relabel another sample as this campaign.
 
+Update 2026-08-30 (ADR-042): the follow-up is now pre-registered and its
+content-keyed plan cache is pinned red-first by
+`planner-cache-is-content-keyed`. Keep this task open until ADR-042's one fixed
+deployment campaign restores the frozen 7/12 correctness threshold with zero
+wrong-success; the offline cache case alone does not prove live task quality.
+
 ### T-M42-2 — `live_driver` is unexercised: no case, offline or live, has ever called it            [status: todo]
 Origin: M42 implementation, 2026-08-26.
 Priority: P2
@@ -2908,6 +2914,13 @@ x-rates still emitted two action sequences, multpl emitted three, and quotes
 split outcomes despite identical action names. The task remains todo. Do not
 close it on the offline request-payload case alone and do not rerun ADR-041;
 the next mitigation must first define a new fixed campaign and cost boundary.
+
+Update 2026-08-30 (ADR-042): the next mitigation is a persistent content-keyed
+cache at the shared `live_planner` boundary. Its red-first case proves exact
+parsed inputs replay across planner closures at zero extra planner cost, while
+changed recovery context and malformed responses miss. Keep this task open
+until the one fixed deployed campaign proves repeatability; no retry or voting
+policy was added.
 
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
 Update (2026-08-28, ADR-039 §4): a general mechanism now exists — `EVAL_PROBE=1`
