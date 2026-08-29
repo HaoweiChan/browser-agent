@@ -81,9 +81,8 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 263 cases, ts `20260828-161325`, **104.80s**, 260/263
-  (no per-case report — a GREEN run writes only the history line, which is
-  ADR-012's own policy, so this band cites a ledger row rather than a file; `dirty: true`, for the reason the
+- Band source — local `fast` at 268 cases, ts `20260829-033022`, **108.41s**, 263/268
+  (`evals/report/20260829-033022-fast.json`; `dirty: true`, for the reason the
   next paragraph gives, and red — the three failures are the three derived-number
   checks themselves, `docs-numbers-are-derived`, `published-band-matches-the-ledger`
   and `adr029-scope-matches-the-suites`, all mid-refresh at the moment
@@ -232,8 +231,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 263 cases, 260/263) and
-(restated — `invariant`: 107 cases, 104/107) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 268 cases, 263/268) and
+(restated — `invariant`: 109 cases, 106/109) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -355,7 +354,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 104.80 × 1.15 = 120.52 → **125**, which is exactly the
+five — gives 108.41 × 1.15 = 124.67 → **125**, which is exactly the
 committed 125. The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
 ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
 each derived
@@ -382,22 +381,19 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 107 cases, ts `20260828-161359`, **33.40s**, 104/107
-  (`evals/report/20260828-161359-invariant.json`; `dirty: true` — unlike the row
-  this supersedes, the count moved because THIS branch added two cases
-  (`pre-commit-reports-a-broken-interpreter-as-such`,
-  `malformed-step-is-a-classified-failure`), so item 2 (cited-run)'s dirty
-  allowance applies again: no clean row at 103 was available when this band was
-  published. The ceiling moves 35 → 40 with it, and the same ADR-021 disclosure
-  §2's bullet carries applies here — two of the cases are count growth and the
-  rest is ADR-039 §1's settle. Red, and the three
+- Band source — local `invariant` at 109 cases, ts `20260829-032810`, **34.20s**, 106/109
+  (`evals/report/20260829-032810-invariant.json`; `dirty: true` — unlike the row
+  this supersedes, M47 added the invariant-tagged exact-repeat and console
+  projection cases, so item 2 (cited-run)'s dirty allowance applies again: no
+  clean row at 109 was available when this band was published. The ceiling
+  remains 40 because 34.20 × 1.15 derives the same band. Red, and the three
   failures are the three derived-number checks this republication is the subject
   of, the same shape §2's row has. Whether it is the MAXIMUM at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger
   had already overtaken, and the rule needs only that the published number and
-  the ledger's maximum derive the same **35**; `published-band-matches-the-ledger`
+  the ledger's maximum derive the same **40**; `published-band-matches-the-ledger`
   prints `ledger_slowest`.
-  RED, 89/92 — the three cases red in this row are
+  RED, 106/109 — the three cases red in this row are
   `adr029-scope-matches-the-suites`, `docs-numbers-are-derived` and
   `published-band-matches-the-ledger`, all three mid-refresh when it was
   recorded and all three cleared by this republish. Naming all three rather than
@@ -545,7 +541,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 33.40 × 1.15 = 38.41 → **40**, which is exactly the committed
+The same rule gives 34.20 × 1.15 = 39.33 → **40**, which is exactly the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

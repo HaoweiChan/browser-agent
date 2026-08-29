@@ -1,0 +1,13 @@
+{
+  "id": "loop-wait-gets-one-bounded-second-chance",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {"mode": "loop", "fixture": "hello.html", "task": "Wait for the heading.", "stub_calls": [
+    {"action": "wait_for", "expected_state": {"text_visible": "Hello Fixture"}},
+    {"action": "wait_for", "expected_state": {"text_visible": "Hello Fixture"}},
+    {"action": "wait_for", "expected_state": {"text_visible": "Hello Fixture"}}
+  ]},
+  "expect": {"status": "failure:env", "reason_contains": "exact repeat", "actions": 3, "trace_actions": ["navigate", "wait_for", "wait_for"]},
+  "provenance": "M47 red-first: wait_for is deliberately not exempt. This pins exactly one retry and a refusal before the third identical wait executes.",
+  "triage": {"class": "invariant-gap", "note": "An asynchronous wait needs one bounded retry, not a loophole."}
+}
