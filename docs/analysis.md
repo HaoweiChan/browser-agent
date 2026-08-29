@@ -1201,7 +1201,14 @@ planner request had left sampling at the provider default. A red-first offline
 case now drives that real request boundary twice and pins the mitigation,
 `temperature: 0`, without adding a retry, vote, cache, dependency or paid call.
 ADR-041 freezes one remediation campaign after deployment at the original
-7-correct threshold; until it lands, T-M42-1 and T-M40-5-3 remain open.
+7-correct threshold. That campaign ran once on deployed `6d9b94ad` and again
+measured **5/12 correct, 7 loud failures, 0 wrong-success and 0 refusal**. The
+temperature-zero mitigation did not make repetitions identical: x-rates used
+two action sequences, multpl used three, and quotes split outcomes despite the
+same action names. Zero newly advertised verbs appeared. The raw receipt is
+`evals/report/20260829-190500-probe.json`; no run was retried or discarded.
+T-M42-1 and T-M40-5-3 therefore remain open, and another paid campaign needs a
+new pre-registration rather than another sample under ADR-041.
 
 
 ## 8a-5. Pre-registered Chinese-language probe (M45) — the headline did not reproduce, one third of it did

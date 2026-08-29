@@ -2497,6 +2497,12 @@ watched red against the omitted request parameter; mode B now explicitly sends
 the deployed fix. Keep this task open until that campaign reaches the original
 7-correct threshold; do not replace the failed receipt by resampling it.
 
+Remediation outcome, 2026-08-30: the one ADR-041 campaign on deployed
+`6d9b94ad` also measured 5/12, with 0 wrong-success and no new verb observed.
+`temperature: 0` therefore does not satisfy this acceptance criterion. Keep
+the task open. ADR-041 is exhausted; any seed/cache follow-up needs a new
+pre-registration and cannot relabel another sample as this campaign.
+
 ### T-M42-2 — `live_driver` is unexercised: no case, offline or live, has ever called it            [status: todo]
 Origin: M42 implementation, 2026-08-26.
 Priority: P2
@@ -2896,6 +2902,12 @@ watched red before `temperature: 0` mitigated the uncontrolled provider
 default. Keep this block open until ADR-041's one fixed post-deploy campaign
 shows whether the mitigation holds on the remote provider; temperature zero is
 not documented here as a guarantee of exact remote determinism.
+
+Remediation outcome, 2026-08-30: that remote campaign disproved sufficiency.
+x-rates still emitted two action sequences, multpl emitted three, and quotes
+split outcomes despite identical action names. The task remains todo. Do not
+close it on the offline request-payload case alone and do not rerun ADR-041;
+the next mitigation must first define a new fixed campaign and cost boundary.
 
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
 Update (2026-08-28, ADR-039 §4): a general mechanism now exists — `EVAL_PROBE=1`
