@@ -4,7 +4,7 @@ Date: 2026-08-23
 Status: accepted
 Amends: ADR-014 (reviewer UI information architecture)
 
-**Ruling**: a real-site row in `docs/support-matrix.md` may be declared from repeated end-to-end runs against the deployment with the real planner and NO committed report and NO eval case, provided the row carries every run id, its repeat count and a declared limitation naming what failed — and provided it is marked as the exception it is, in the section header and in the citation rule it bends. Separately, the reviewer UI's trace region becomes two columns: the trace, and beside it the browser's own view of the page for the step being shown plus, after the run, every extraction with the page text it was read from. The running phase spins in CSS, and every ending — including a dropped stream whose run record cannot be fetched — must leave the surface terminal and usable.
+**Ruling**: a real-site row in `docs/support-matrix.md` may be declared from repeated end-to-end runs against the deployment with the real planner and NO committed report and NO eval case, provided the row carries every run id, its repeat count and a declared limitation naming what failed — and provided it is marked as the exception it is, in the section header and in the citation rule it bends. Separately, the reviewer UI's trace region becomes two columns: the trace, and beside it the browser's own view of the page for the step being shown plus, after the run, every extraction with the page text it was read from. Its progress strip is trace-derived and distinguishes read-only `observe` work from state-changing actions. The running phase spins in CSS, and every ending — including a dropped stream whose run record cannot be fetched — must leave the surface terminal and usable.
 **Because**: "support the sites an investment firm actually uses" is a claim about capability, and the only two ways to back one are to guess (write cases against sites nobody has run) or to measure. We measured — 43 runs, 22 domains, 19 of which never answered once — and that produced a row shape this repo had no rule for: a domain we know a great deal about, from evidence no suite can replay. Declaring it `—` would be less accurate than what we know, and refusing to declare something measured seven times is not caution. The UI half rides along because it is the same request and the same property: a panel that animates "in progress" is honest only if every ending stops it.
 **Enforced by**: `ui-terminal-state-on-every-ending`, `ui-execution-progress-is-trace-derived`, `ui-tinboker-style`, `ui-examples-cover-matrix`, `ui-rendered-narrow`
 
@@ -64,6 +64,12 @@ run was wrong but cannot invent anything a reviewer could not find in the run
 record. The running phase spins in CSS for the same reason the progress case
 forbids timers in the script: a phase that advances on a clock is a progress bar
 that lies about the trace.
+
+The same trace must also describe what kind of work is happening. `observe`
+reads a named subtree and changes no page state, so it advances a distinct
+**Read page** phase rather than the **Run actions** phase. The source-level
+mapping and the rendered six-stage state machine are both pinned: this is a
+projection of the existing action name, not a new event or inferred rationale.
 
 The panel also made a latent class of defect visible enough to fix. A UI that
 animates "in progress" must reach a terminal state on *every* ending, including

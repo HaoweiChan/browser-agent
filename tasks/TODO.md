@@ -4218,7 +4218,7 @@ its share of the ceiling — recorded wherever the open wall-clock decision land
 (PR #29 R21). Do NOT fix it by shortening SETTLE_TRIES: that is a production
 budget with `nav-load-event-never-fires` behind it.
 
-### T-M32-1 — the reviewer UI has no phase for an `observe` step            [status: todo]
+### T-M32-1 — the reviewer UI has no phase for an `observe` step            [status: done]
 Origin: M32 (ADR-020), found while adding the drill-down.
 Priority: P2
 Spec: `phaseFor(s)` in `src/browser/server.py` maps `navigate` -> "browser" and
@@ -4230,6 +4230,13 @@ Repro: run a task whose plan starts with an `observe` step and watch the SSE
 progress bar — the "action" phase lights up before anything is done.
 Acceptance: `observe` maps to a reading phase, and `ui-execution-progress`
 covers the mapping.
+
+Closed 2026-08-30. The trace-derived strip now has a distinct **Read page**
+phase and maps `observe` to it; no event schema or second source of decisions
+was added. `ui-execution-progress-is-trace-derived` was watched red on the
+missing phase/mapping and independently on the stale five-column grid.
+`ui-rendered-narrow` was watched red in both colour schemes on the complete old
+five-stage state machine, then pins the six stages and their accessible labels.
 
 ### T-M32-2 — the post-edit invariant hook runs in the wrong worktree            [status: todo]
 Origin: M32, found while implementing.

@@ -83,11 +83,10 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 271 cases, ts `20260829-163247`, **107.79s**, 267/271
-  (`dirty: true`; report `evals/report/20260829-163247-fast.json`, and red — the
-  four failures are the derived-number checks themselves,
-  `adr029-scope-matches-the-suites`, `docs-numbers-are-derived`,
-  `opt-in-expect-keys-declared`, and `published-band-matches-the-ledger`, all mid-refresh at the moment
+- Band source — local `fast` at 271 cases, ts `20260829-170153`, **109.43s**, 270/271
+  (`dirty: true`; report `evals/report/20260829-170153-fast.json`, and red — the
+  sole failure is `reviewer-console-does-not-render-private-reasoning`, whose
+  copy of the complete UI phase mapping was mid-refresh at the moment
   this row was recorded. That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
@@ -233,7 +232,7 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 271 cases, 267/271) and
+The cited rows' own results — (restated — `fast`: 271 cases, 270/271) and
 (restated — `invariant`: 113 cases, 108/113) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
@@ -356,8 +355,8 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 107.79 × 1.15 = 123.96 → **125**. The committed 130 is retained
-by §6's one-directional rule after T-M42-14 moved it there. The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
+five — gives 109.43 × 1.15 = 125.84 → **130**, matching the committed ceiling.
+The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
 ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
 each derived
 from the band source cited above — a committed row at the shipped case count

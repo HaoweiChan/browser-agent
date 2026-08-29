@@ -5613,6 +5613,9 @@ def _run_ui_rendered_case(case: dict) -> dict:
               setPhase(phaseFor({action: "navigate"}));
               progress.browser = progressStates();
               progress.browser_labels = progressLabels();
+              setPhase(phaseFor({action: "observe"}));
+              progress.reading = progressStates();
+              progress.reading_labels = progressLabels();
               setPhase(phaseFor({action: "click"}));
               progress.action = progressStates();
               progress.action_labels = progressLabels();
