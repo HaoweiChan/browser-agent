@@ -2853,6 +2853,7 @@ def _run_observe_case(case: dict) -> dict:
     # would have worked anyway, and it reddens if MAX_ELEMS is ever raised to
     # "fix" the defect instead of disclosing the subtree (ADR-020).
     leaked = [n for n in exp.get("must_exclude_names", []) if n in names]
+    leaked_roles = [r for r in exp.get("must_exclude_roles", []) if r in roles]
     # The other half of what an observation discloses: its text head. A drill
     # widens it (DRILL_TEXT_HEAD), and on a page whose content carries no
     # addressable role that head is the ONLY thing the planner gets.
@@ -2869,7 +2870,7 @@ def _run_observe_case(case: dict) -> dict:
                    for item in resolved_relaxations)
     ]
     return {
-        "passed": not missing and not unnameable and not starved and not leaked
+        "passed": not missing and not unnameable and not starved and not leaked and not leaked_roles
                   and not text_missing and not unresolvable and not forbidden_relocation
                   and not missing_resolution_notes,
         "missing": missing,
@@ -2883,6 +2884,7 @@ def _run_observe_case(case: dict) -> dict:
         "advertised_resolution_notes_missing": missing_resolution_notes,
         "starved_by_chrome": starved,
         "inside_the_cap_after_all": leaked,
+        "roles_that_should_not_be_advertised": leaked_roles,
         "text_head_missing": text_missing,
         "n_elements": len(obs["elements"]),
     }

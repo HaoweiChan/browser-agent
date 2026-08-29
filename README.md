@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 268 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 269 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
 ```
@@ -50,20 +50,24 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260829-135152-fast.json`, with
+Latest offline baseline — `evals/report/20260829-150231-fast.json`, with
 `evals/report/20260829-134919-invariant.json` and
 `evals/report/20260828-153810-live.json`:
 
 ```
-fast  268/268    invariant  112/112    live  12/13    $0.0000    105.2s
+fast  266/269    invariant  112/112    live  12/13    $0.0000    106.4s
 recovery 10/10 verified (25 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 77/77 · 15 replans
+diagnosis 78/78 · 15 replans
 ```
 
-The fast and invariant refreshes are green after publishing the new 112-case
-invariant count and band.
+The fast report's three reds are the fixed-point publication checks this block
+updates (`docs-numbers-are-derived`, `published-band-matches-the-ledger`, and
+`report-citations-resolve`); the subsequent no-report gate is the green check.
+The invariant refresh is green at 112 cases.
 
 This refresh supersedes the prior baselines
+`evals/report/20260829-033022-fast.json`,
+`evals/report/20260829-135152-fast.json`,
 `evals/report/20260828-161325-fast.json`,
 `evals/report/20260828-161359-invariant.json`, plus the intermediate invariant
 reports `evals/report/20260829-032810-invariant.json` (106/109),
@@ -71,6 +75,10 @@ reports `evals/report/20260829-032810-invariant.json` (106/109),
 `evals/report/20260829-134401-invariant.json` (108/112) and
 `evals/report/20260829-134759-invariant.json` (109/112); they remain as
 historical evidence rather than inputs to the current figures.
+This refresh's own fixed-point reports are
+`evals/report/20260829-145857-invariant.json` (109/112 before the derived-count
+refresh) and `evals/report/20260829-150946-fast.json` (268/269 after that report
+first entered the staged citation scan); both are retained as red evidence.
 The immediately preceding fast report,
 `evals/report/20260829-033600-fast.json`, was 265/268; its three reds were the
 derived count, band and ADR scope refreshes that the green baseline above closes.
@@ -216,7 +224,7 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 268 | 108.41s | 124.67 | **125s** |
+| `fast` | 269 | 107.63s | 123.77 | **125s** |
 | `invariant` | 112 | 46.32s | 53.27 | **55s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer.
@@ -489,7 +497,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 303 cases (268 of them in the offline gate), it
+The eval set is not weak; it is 304 cases (269 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

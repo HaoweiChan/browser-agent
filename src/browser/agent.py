@@ -431,11 +431,10 @@ def screen(task: str) -> str | None:
 # "the ENTIRE page". That is a false statement about the page, generated from
 # the plan alone, which is exactly what a plan-time rule may not do.
 #
-# `observe` walks that snapshot from its root and the root is in neither
-# SKIP_ROLES nor NAME_PROHIBITED, so element #1 of every observation the planner
-# is shown is `WebArea — <the page title>`: the most answer-shaped string in the
-# list, attached to the one node whose text is the whole document. T-M40-2
-# measured four of five live tasks planning exactly that.
+# Chromium exposes that root as `WebArea — <the page title>`. Page-level
+# `observe` now omits it because no resolver tier can address it, but the lint
+# remains necessary: a model can invent a WebArea target without seeing one.
+# T-M40-2 measured four of five live tasks planning exactly that.
 #
 # Refused only for the extraction verbs. M32's drill-down targets a container ON
 # PURPOSE — `observe {role: WebArea}` is a plan about what to look at next, not
@@ -482,11 +481,38 @@ def root_target_gap(step) -> str | None:
     if role.strip().lower() not in DOC_ROOT_ROLES:
         return None
     return (f"{step['action']!r} targets {role!r}, the accessibility root of the document — the "
-            "node `observe` lists first on every page, whose accessible name is the page title "
-            "and whose text is the ENTIRE page. It cannot be the answer to anything, and it "
+            "node Chromium names with the page title and whose text is the ENTIRE page. "
+            "Page observations omit it because it cannot be resolved. It cannot be the answer, and it "
             "carries no other string to retarget by, so the page title is all a relocation could "
             "ask for next. Name the element that holds the value; if you can see a container but "
             "not its contents, `observe` that container first")
+
+
+def root_retarget_gap(rejected_steps: list, new_steps: list) -> str | None:
+    """Refuse a replan that only respells a rejected root as loose text."""
+    names = {
+        str(target.get("name") or "").strip().casefold()
+        for step in rejected_steps or []
+        if isinstance(step, dict)
+        and str(step.get("action") or "").startswith("extract")
+        and isinstance((target := step.get("target")), dict)
+        and str(target.get("role") or "").strip().lower() in DOC_ROOT_ROLES
+        and str(target.get("name") or "").strip()
+    }
+    for step in new_steps or []:
+        if not isinstance(step, dict) or not str(step.get("action") or "").startswith("extract"):
+            continue
+        target = step.get("target")
+        if not isinstance(target, dict) or str(target.get("role") or "").strip() \
+                or str(target.get("near") or "").strip() \
+                or target.get("index") is not None or step.get("anchor"):
+            continue
+        if any(str(target.get(key) or "").strip().casefold() in names
+               for key in ("text", "name")):
+            return ("the replan only retargets the refused document root's page-title name "
+                    "as loose text; name an addressable element or add evidence that "
+                    "disambiguates a different target")
+    return None
 
 
 def plan_gap(task: str, steps: list) -> str | None:
@@ -2524,6 +2550,9 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     return done(failure="env", reason=f"replanner failed: {e}")
                 budgets["llm_tokens"] += usage["llm_tokens"]
                 budgets["llm_usd"] += usage["llm_usd"]
+                if retarget_gap := root_retarget_gap(steps, new_steps):
+                    return done(failure="task",
+                                reason=f"plan rejected before execution: {gap}; {retarget_gap}")
                 adopted, _ = adopt(0, new_steps)
                 if not new_steps or new_steps == steps or adopted is None:
                     return done(failure="task",

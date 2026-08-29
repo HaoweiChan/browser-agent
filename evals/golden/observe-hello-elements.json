@@ -4,6 +4,7 @@
   "suites": ["fast"],
   "input": { "kind": "observe", "fixture": "hello.html" },
   "expect": {
+    "must_exclude_roles": ["WebArea", "RootWebArea"],
     "contains": [
       { "role": "heading", "name": "Hello Fixture" },
       { "role": "button", "name": "Reveal" },

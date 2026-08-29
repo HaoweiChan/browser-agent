@@ -83,8 +83,8 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 268 cases, ts `20260829-033022`, **108.41s**, 263/268
-  (`evals/report/20260829-033022-fast.json`; `dirty: true`, for the reason the
+- Band source — local `fast` at 269 cases, ts `20260829-145305`, **107.63s**, 264/269
+  (`evals/report/20260829-145305-fast.json`; `dirty: true`, for the reason the
   next paragraph gives, and red — the three failures are the three derived-number
   checks themselves, `docs-numbers-are-derived`, `published-band-matches-the-ledger`
   and `adr029-scope-matches-the-suites`, all mid-refresh at the moment
@@ -233,7 +233,7 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 268 cases, 263/268) and
+The cited rows' own results — (restated — `fast`: 269 cases, 264/269) and
 (restated — `invariant`: 112 cases, 112/112) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
@@ -356,7 +356,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 108.41 × 1.15 = 124.67 → **125**, which is exactly the
+five — gives 107.63 × 1.15 = 123.77 → **125**, which is exactly the
 committed 125. The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
 ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
 each derived

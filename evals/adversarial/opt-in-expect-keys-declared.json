@@ -27,6 +27,7 @@
         "malformed-step-is-a-classified-failure",
         "select-option-value-collides-with-a-label",
         "select-option-without-a-value-is-refused",
+        "replan-cannot-retarget-a-refused-document-root",
         "loop-identical-choice-cannot-spend-the-action-budget",
         "loop-strategy-change-clears-the-exact-repeat-streak",
         "loop-wait-gets-one-bounded-second-chance"
@@ -60,7 +61,8 @@
         "loop-abandoned-failure-is-not-a-success",
         "loop-refused-anchor-is-not-an-answer",
         "plan-lint-refuses-a-document-root-extract",
-        "plan-lint-refuses-a-document-root-extract-midrun"
+        "plan-lint-refuses-a-document-root-extract-midrun",
+        "replan-cannot-retarget-a-refused-document-root"
       ],
       "reason_max_chars": [
         "extract-container-dump-is-not-the-answer"
