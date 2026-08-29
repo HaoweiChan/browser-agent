@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 272 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 273 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
 ```
@@ -50,22 +50,26 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260829-184652-fast.json`, with
-`evals/report/20260829-184451-invariant.json` and
+Latest offline baseline — `evals/report/20260829-192958-fast.json`, with
+`evals/report/20260829-193439-invariant.json` and
 `evals/report/20260828-153810-live.json`:
 
 ```
-fast  270/272    invariant  112/114    live  12/13    $0.0000    108.7s
+fast  270/273    invariant  114/115    live  12/13    $0.0000    106.9s
 recovery 10/10 verified (25 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 80/80 · 15 replans
 ```
 
 The fast report's two reds are the fixed-point headline and band checks this
 block updates; the subsequent no-report gate is the green check. The cited
-invariant refresh is the fixed-point count/band refresh at 114 cases; its two
-failures are the same derived publication checks updated by this change.
+invariant refresh is the fixed-point count/band refresh at 115 cases; its one
+failure is the headline check repointed by this change itself.
 
 This refresh supersedes the prior baselines
+`evals/report/20260829-192706-invariant.json`,
+`evals/report/20260829-193325-invariant.json`,
+`evals/report/20260829-184451-invariant.json`,
+`evals/report/20260829-184652-fast.json`,
 `evals/report/20260829-153514-invariant.json`,
 `evals/report/20260829-154131-invariant.json`,
 `evals/report/20260829-163747-fast.json`,
@@ -248,8 +252,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 272 | 108.70s | 125.00 | **130s** |
-| `invariant` | 114 | 35.21s | 40.49 | **70s** |
+| `fast` | 273 | 106.89s | 122.92 | **130s** |
+| `invariant` | 115 | 36.21s | 41.64 | **70s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer.
 A short sample may derive UNDER the committed ceiling and must never drag it
@@ -513,7 +517,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 307 cases (272 of them in the offline gate), it
+The eval set is not weak; it is 308 cases (273 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

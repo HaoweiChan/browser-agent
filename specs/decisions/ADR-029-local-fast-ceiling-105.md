@@ -138,7 +138,7 @@ paragraph: a disclosure that quietly drops its own previous claim is not a
 disclosure.
 
 **Where that leaves the evidence**: correctness is green in both environments —
-locally `invariant` 114/114 and `fast` 272/272, and on CI green across four
+locally `invariant` 115/115 and `fast` 273/273, and on CI green across four
 attempts of the tree that run measured, whose own totals are struck above and
 published live only in ADR-019 §5 — and the wall-clock gate is now derived, not
 breached, in both.

@@ -1,19 +1,26 @@
 """Planner: NL task -> typed steps (docs/architecture/task1-overview.md, D9).
 
-A planner is `async (task, url) -> (steps, usage)` where usage is
-{"llm_tokens": int, "llm_usd": float}. The eval fast suite injects
+A planner is `async (task, url) -> (steps, usage)`; usage always carries
+`llm_tokens`/`llm_usd`, and a successful live call also carries `cached`. The eval fast suite injects
 `stub_planner` at this boundary — zero LLM calls (cost-discipline rule 4);
 the live OpenRouter planner is exercised by the CLI, the gateway, and the
 `full` suite.
 """
 
 import asyncio
+import hashlib
 import json
 import os
 import urllib.request
+from pathlib import Path
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openai/gpt-5.6-luna"
+
+# Bump when the prompt, request parameters or cached response shape changes.
+# The complete payload is also hashed; the version makes an intentional cache
+# break explicit instead of relying on a textual prompt diff to do it by luck.
+PLAN_CACHE_VERSION = "plan-v1"
 
 # --- M9 cost/model ablation (specs/decisions/ADR-010-m9-model-ablation.md) ----
 #
@@ -274,6 +281,34 @@ def _openrouter(key: str, payload: dict) -> dict:
         return json.load(resp)
 
 
+def _plan_cache_path() -> Path:
+    return Path(__file__).resolve().parent.parent.parent / "runs" / "planner_cache.json"
+
+
+def _plan_cache_key(payload: dict) -> str:
+    blob = json.dumps([PLAN_CACHE_VERSION, payload], sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode()).hexdigest()
+
+
+def _plan_cache_load() -> dict:
+    path = _plan_cache_path()
+    if not path.exists():
+        return {}
+    try:
+        cache = json.loads(path.read_text())
+        return cache if isinstance(cache, dict) else {}
+    except Exception:
+        return {}  # a corrupt cache costs one paid call, never a run failure
+
+
+def _plan_cache_save(cache: dict) -> None:
+    # ponytail: the gateway serializes runs; add a file lock if multi-process
+    # writers become a supported deployment shape.
+    path = _plan_cache_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(cache))
+
+
 def live_planner(model: str = DEFAULT_MODEL):
     key = os.environ.get("OPENROUTER_API_KEY")
     if not key:
@@ -290,6 +325,14 @@ def live_planner(model: str = DEFAULT_MODEL):
             ],
             "usage": {"include": True},
         }
+        cache_key = _plan_cache_key(payload)
+        cache = _plan_cache_load()
+        try:
+            steps = parse_plan(json.dumps(cache[cache_key]["steps"]))
+        except (KeyError, TypeError, PlanError):
+            pass
+        else:
+            return steps, {"llm_tokens": 0, "llm_usd": 0.0, "cached": True}
         data = await asyncio.to_thread(_openrouter, key, payload)
         # Usage first: this completion is billed whatever it contains, and
         # building it after `parse_plan` meant a prose answer threw its own cost
@@ -335,6 +378,9 @@ def live_planner(model: str = DEFAULT_MODEL):
         except PlanError as e:
             e.usage = usage
             raise
+        cache[cache_key] = {"steps": steps}
+        _plan_cache_save(cache)
+        usage["cached"] = False
         return steps, usage
 
     return plan

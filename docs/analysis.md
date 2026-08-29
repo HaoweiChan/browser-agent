@@ -57,10 +57,10 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-307 distinct cases (28 golden + 279 adversarial).
-500 browser actions in a `fast` run; **179 of the 272** `fast` cases drive a real Chromium end to end — counted here as
+308 distinct cases (28 golden + 280 adversarial).
+500 browser actions in a `fast` run; **179 of the 273** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260829-184652-fast.json` rather than tallied by hand (the
+`evals/report/20260829-192958-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number; PR #57 R4 caught the next
 variant of the same defect — the two figures WERE recomputed, from the headline
@@ -69,7 +69,7 @@ and 109 browser cases, so the paragraph was arithmetically true and evidentially
 false. `docs-numbers-are-derived` now checks the citation as well as the
 arithmetic). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 93 are those refusals plus pure-code probes of a single
+remaining 94 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
@@ -1209,6 +1209,14 @@ same action names. Zero newly advertised verbs appeared. The raw receipt is
 `evals/report/20260829-190500-probe.json`; no run was retried or discarded.
 T-M42-1 and T-M40-5-3 therefore remain open, and another paid campaign needs a
 new pre-registration rather than another sample under ADR-041.
+
+ADR-042 supplies that new pre-registration and replaces the provider-level
+determinism assumption with a content-keyed plan cache. The offline red-first
+case proves exact successful requests replay at zero planner cost across fresh
+planner closures, while a changed replan note and malformed completions miss.
+This is mechanism evidence only: the tasks remain open until ADR-042's single
+deployed 12-run campaign meets the unchanged 7-correct and zero-wrong-success
+gates.
 
 
 ## 8a-5. Pre-registered Chinese-language probe (M45) — the headline did not reproduce, one third of it did

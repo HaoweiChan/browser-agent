@@ -83,9 +83,9 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 272 cases, ts `20260829-184652`, **108.70s**, 270/272
-  (`dirty: true`; report `evals/report/20260829-184652-fast.json`, and red — the
-  two failures are the derived headline and band checks being refreshed by this
+- Band source — local `fast` at 273 cases, ts `20260829-192958`, **106.89s**, 270/273
+  (`dirty: true`; report `evals/report/20260829-192958-fast.json`, and red — the
+  three failures are the derived headline and band checks being refreshed by this
   change. That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
@@ -231,8 +231,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 272 cases, 270/272) and
-(restated — `invariant`: 114 cases, 112/114) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 273 cases, 270/273) and
+(restated — `invariant`: 115 cases, 111/115) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -354,7 +354,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 108.70 × 1.15 = 125.00 → **130**, matching the committed ceiling.
+five — gives 106.89 × 1.15 = 122.92 → **125**, below the committed ceiling.
 The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
 ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
 each derived
@@ -381,12 +381,12 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 114 cases, ts `20260829-184451`, **35.21s**, 112/114
-  (`evals/report/20260829-184451-invariant.json`; `dirty: true`; the two reds
-  are the derived headline and band checks being refreshed by this change.)
-  This short sample derives 45 because 35.21 × 1.15 = 40.49 → **45**, below the
+- Band source — local `invariant` at 115 cases, ts `20260829-192706`, **36.21s**, 111/115
+  (`evals/report/20260829-192706-invariant.json`; `dirty: true`; the four reds
+  are the derived publication checks plus a usage-shape regression repaired before the final gate.)
+  This short sample derives 45 because 36.21 × 1.15 = 41.64 → **45**, below the
   committed 70s ceiling. Section 6's no-ratchet-down rule keeps 70: a quieter
-  fresh-count sample cannot erase the earlier measured outlier. Whether 35.21s is the MAXIMUM at this count is
+  fresh-count sample cannot erase the earlier measured outlier. Whether 36.21s is the MAXIMUM at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger
   had already overtaken, and the rule needs only that the published number and
   the ledger's maximum derive the same **70**; `published-band-matches-the-ledger`

@@ -581,13 +581,13 @@ def _check_planner_prompt() -> dict:
 
 
 def _check_planner_request_disables_sampling() -> dict:
-    """Identical mode-B requests must opt out of provider-default sampling.
+    """Every mode-B provider request must opt out of default sampling.
 
     T-M40-5-3 and ADR-041 observed the same task, URL and deployed build land
-    in different outcome classes across adjacent repetitions. Exercise the
-    real request builder with only its transport helper replaced: the fake
-    provider varies its completion when sampling is left implicit and returns
-    the same completion when the request explicitly sets temperature zero.
+    in different outcome classes across adjacent repetitions. The cache case
+    now owns exact-repeat determinism; this case forces two distinct content
+    keys through the real request builder with only transport replaced, and
+    requires both emitted payloads to set temperature zero.
     """
     from . import planner as P
 
@@ -605,19 +605,24 @@ def _check_planner_request_disables_sampling() -> dict:
                 "usage": {"total_tokens": 0, "cost": 0}}
 
     previous_openrouter = P._openrouter
+    previous_cache_path = P._plan_cache_path
     previous_key = os.environ.get("OPENROUTER_API_KEY")
-    P._openrouter = fake_openrouter
-    os.environ["OPENROUTER_API_KEY"] = "eval-probe-not-a-key"
-    try:
-        planner = P.live_planner("openai/gpt-5.6-luna")
-        first, _ = asyncio.run(planner("find the heading", "https://example.com"))
-        second, _ = asyncio.run(planner("find the heading", "https://example.com"))
-    finally:
-        P._openrouter = previous_openrouter
-        if previous_key is None:
-            os.environ.pop("OPENROUTER_API_KEY", None)
-        else:
-            os.environ["OPENROUTER_API_KEY"] = previous_key
+    with tempfile.TemporaryDirectory() as tmp:
+        P._openrouter = fake_openrouter
+        P._plan_cache_path = lambda: Path(tmp) / "planner_cache.json"
+        os.environ["OPENROUTER_API_KEY"] = "eval-probe-not-a-key"
+        try:
+            planner = P.live_planner("openai/gpt-5.6-luna")
+            first, _ = asyncio.run(planner("find the heading", "https://example.com"))
+            second, _ = asyncio.run(planner(
+                "find the heading", "https://example.com", note="distinct content key"))
+        finally:
+            P._openrouter = previous_openrouter
+            P._plan_cache_path = previous_cache_path
+            if previous_key is None:
+                os.environ.pop("OPENROUTER_API_KEY", None)
+            else:
+                os.environ["OPENROUTER_API_KEY"] = previous_key
 
     temperatures = [payload.get("temperature") for payload in captured]
     wrong = {}
@@ -627,6 +632,105 @@ def _check_planner_request_disables_sampling() -> dict:
         wrong["plans_disagreed"] = [first, second]
     return {"passed": not wrong, "wrong": wrong,
             "got": {"requests": len(captured), "temperatures": temperatures}}
+
+
+def _check_planner_cache_is_content_keyed() -> dict:
+    """Exact parsed requests replay; changed inputs and malformed plans do not."""
+    from . import planner as P
+
+    needed = ("_plan_cache_path", "_plan_cache_key")
+    missing = [name for name in needed if not hasattr(P, name)]
+    if missing:
+        return {"passed": False, "wrong": {"missing_cache_boundary": missing}}
+
+    calls = []
+
+    def fake_openrouter(_key, payload):
+        calls.append(payload)
+        user = payload["messages"][-1]["content"]
+        if "malformed cache probe" in user:
+            content = "this is not a plan"
+        else:
+            content = json.dumps([{"action": "extract", "target": {
+                "role": "heading", "name": f"provider-call-{len(calls)}"}}])
+        return {"choices": [{"message": {"content": content},
+                              "finish_reason": "stop"}],
+                "usage": {"total_tokens": 11, "cost": 0.001}}
+
+    previous_openrouter = P._openrouter
+    previous_cache_path = P._plan_cache_path
+    previous_key = os.environ.get("OPENROUTER_API_KEY")
+    wrong = {}
+    with tempfile.TemporaryDirectory() as tmp:
+        P._openrouter = fake_openrouter
+        P._plan_cache_path = lambda: Path(tmp) / "planner_cache.json"
+        os.environ["OPENROUTER_API_KEY"] = "eval-probe-not-a-key"
+        try:
+            planner = P.live_planner("openai/gpt-5.6-luna")
+            first, first_usage = asyncio.run(
+                planner("find the heading", "https://example.com"))
+            second, second_usage = asyncio.run(
+                planner("find the heading", "https://example.com"))
+            # A new closure proves the cache is not accidentally closure-local.
+            third, third_usage = asyncio.run(P.live_planner(
+                "openai/gpt-5.6-luna")("find the heading", "https://example.com"))
+            changed, changed_usage = asyncio.run(
+                planner("find the heading", "https://example.com", note="try another target"))
+            malformed_calls_before = len(calls)
+            for _ in range(2):
+                try:
+                    asyncio.run(planner("malformed cache probe", "https://example.com"))
+                except P.PlanError:
+                    pass
+                else:
+                    wrong["malformed_did_not_raise"] = True
+            malformed_calls = len(calls) - malformed_calls_before
+        finally:
+            P._openrouter = previous_openrouter
+            P._plan_cache_path = previous_cache_path
+            if previous_key is None:
+                os.environ.pop("OPENROUTER_API_KEY", None)
+            else:
+                os.environ["OPENROUTER_API_KEY"] = previous_key
+
+    if first != second or first != third:
+        wrong["exact_request_changed"] = [first, second, third]
+    if len(calls) != 4:
+        wrong["provider_calls"] = len(calls)
+    if first_usage.get("cached") is not False or first_usage["llm_tokens"] != 11:
+        wrong["miss_usage"] = first_usage
+    for name, usage in (("same_closure", second_usage), ("new_closure", third_usage)):
+        if usage.get("cached") is not True or usage["llm_tokens"] != 0 or usage["llm_usd"] != 0:
+            wrong[f"{name}_hit_usage"] = usage
+    if changed == first or changed_usage.get("cached") is not False:
+        wrong["changed_note_did_not_miss"] = [changed, changed_usage]
+    if malformed_calls != 2:
+        wrong["malformed_was_cached"] = malformed_calls
+    base = calls[0]
+    variants = []
+    for path, value in ((["model"], "another/model"),
+                        (["temperature"], 1),
+                        (["messages", 0, "content"], "changed system"),
+                        (["messages", 1, "content"], "changed user")):
+        variant = json.loads(json.dumps(base))
+        node = variant
+        for part in path[:-1]:
+            node = node[part]
+        node[path[-1]] = value
+        variants.append(variant)
+    base_key = P._plan_cache_key(base)
+    if len({base_key, *(P._plan_cache_key(v) for v in variants)}) != 5:
+        wrong["payload_dimensions_collide"] = True
+    previous_version = P.PLAN_CACHE_VERSION
+    try:
+        P.PLAN_CACHE_VERSION += "-changed"
+        changed_version_key = P._plan_cache_key(base)
+    finally:
+        P.PLAN_CACHE_VERSION = previous_version
+    if changed_version_key == base_key:
+        wrong["cache_version_did_not_invalidate"] = True
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"provider_calls": len(calls), "malformed_calls": malformed_calls}}
 
 
 # ==== ADR-019 §6 band section: begin ====
@@ -8251,6 +8355,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
               "planner-request-disables-sampling": _check_planner_request_disables_sampling,
+              "planner-cache-is-content-keyed": _check_planner_cache_is_content_keyed,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
               "narrowing-fails-closed": _check_narrowing_fails_closed,
               "judge-data-only-rule": _check_judge_data_only_rule,
