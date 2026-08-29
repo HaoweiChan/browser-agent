@@ -1,0 +1,40 @@
+{
+  "id": "observe-document-root-does-not-relocate",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L3",
+  "tc": "TC1",
+  "input": {
+    "task": "What does the main heading on the page say?",
+    "fixture": "hello.html",
+    "stub_plans": [
+      [
+        {
+          "action": "observe",
+          "target": {"role": "WebArea", "name": "Hello Fixture"}
+        }
+      ],
+      [
+        {
+          "action": "extract",
+          "target": {"role": "heading", "name": "Hello Fixture"}
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "status": "failure:locate",
+    "answer_null": true,
+    "recovery": false,
+    "recovery_labelled_actions": [],
+    "replans": 0,
+    "trace_actions": ["navigate", "observe"],
+    "trace_failure_classes": [null, "locate"]
+  },
+  "provenance": "T-M40-2-5. Chromium's accessibility document root is named by the page title but cannot be addressed by Playwright's role locator. `observe` is progressive disclosure of the exact container the plan chose, not an answer-producing action and not a relocation recovery. Before this case's fix, the generic locate ladder retargeted the failed root as loose text, resolved the same string on the page heading, labelled the second `observe` as recovery, handed that 13-character subtree to a replan, and then answered successfully. That is a different target and a false recovery count. The intended boundary is loud: an unresolvable `observe` remains `failure:locate`; a planner or loop driver may then choose a different target explicitly.",
+  "triage": {
+    "class": "locate",
+    "red_first": "Watched red on origin/main at merge 454df99: the run returned success / Hello Fixture instead of failure:locate; trace actions were [navigate, observe, observe, extract], the relocated observe wore retry_or_recovery=recovery, and one replan was spent.",
+    "note": "The second stub plan makes the pre-fix false recovery complete successfully, so this case cannot pass merely because the root target fails eventually. It must stop before relocation and before any replan."
+  }
+}

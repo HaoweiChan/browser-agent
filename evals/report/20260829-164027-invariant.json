@@ -1,0 +1,1075 @@
+{
+  "suite": "invariant",
+  "score": 0.4690265486725664,
+  "totals": {
+    "wall_seconds": 1.45,
+    "latency_p50": 0.0,
+    "latency_p95": 0.08,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 4806, in _run_ablation_run_one_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.08,
+      "id": "ablation-env-failure-is-a-result",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 5049, in _run_ablation_preflight_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "ablation-preflight-refuses-old-build",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "action-select-option-never-filled-fails-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "adr_files": 41,
+        "index_entries": 41,
+        "adr_citations_seen": 2192,
+        "files_scanned": 405
+      },
+      "seconds": 0.07,
+      "id": "adr-header-and-index",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "fast": 271,
+        "invariant": 113
+      },
+      "seconds": 0.04,
+      "id": "adr029-scope-matches-the-suites",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "quoted": [],
+        "cases": 271,
+        "rows_at_that_count": [
+          106.88,
+          107.79
+        ]
+      },
+      "seconds": 0.01,
+      "id": "adr029-variance-cites-the-ledger",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.02,
+      "id": "analysis-ablation-table-not-estimated",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "band-is-graded-against-its-own-environment",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "band-is-graded-against-the-citable-maximum",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "stages": 2,
+        "head_resolves": true,
+        "self_test_rows": 20
+      },
+      "seconds": 0.17,
+      "id": "build-sha-is-derived-not-supplied",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "adr_five": {
+          "fast": [
+            117.84,
+            117.14,
+            116.01,
+            113.51
+          ],
+          "invariant": [
+            37.44,
+            26.97,
+            25.61,
+            22.81
+          ]
+        },
+        "ceiling_runs": {
+          "fast": "33119009870",
+          "invariant": "33165425989"
+        },
+        "workflow_declares": {
+          "fast": 140,
+          "invariant": 45
+        },
+        "decision_docs_scanned": 59
+      },
+      "seconds": 0.05,
+      "id": "ci-numbers-are-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2190, in _run_schema_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "contract-trace-schema-escalate",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2190, in _run_schema_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "contract-trace-schema-loop-mode",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2190, in _run_schema_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "contract-trace-schema",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "detached-scope-cannot-be-verified-by-a-decoy",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "diagnosis-classifier-classes",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "docs": []
+      },
+      "got": {
+        "counts": {
+          "fast": 271,
+          "invariant": 113,
+          "live": 13,
+          "full": 13,
+          "all": 306,
+          "live_sites": 5,
+          "gt_conjuncts": 4
+        },
+        "domains": {
+          "books.toscrape.com": 3,
+          "whaleforce-sec10k.zeabur.app": 10,
+          "openlibrary.org": 2,
+          "news.ycombinator.com": 2,
+          "quotes.toscrape.com": 3
+        }
+      },
+      "seconds": 0.25,
+      "id": "docs-numbers-are-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "tools": [
+          "click",
+          "click_at",
+          "extract",
+          "extract_all",
+          "fill",
+          "final_answer",
+          "go_back",
+          "navigate",
+          "observe",
+          "press",
+          "scroll",
+          "select_option",
+          "wait_for"
+        ],
+        "actions": [
+          "click",
+          "click_at",
+          "extract",
+          "extract_all",
+          "fill",
+          "final_answer",
+          "go_back",
+          "navigate",
+          "observe",
+          "press",
+          "scroll",
+          "select_option",
+          "wait_for"
+        ]
+      },
+      "seconds": 0.0,
+      "id": "driver-tools-match-the-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "escalate-budget-exhaustion-stays-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8635, in _run_invariant_case\n    return INVARIANTS[check]()\n           ~~~~~~~~~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "escalate-keeps-both-legs-observations",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "escalate-refuses-after-a-completed-state-change",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "escalate-refuses-after-a-failed-postcondition",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "escalate-refuses-after-an-unverified-state-change",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "note": "PRIOR ATTEMPT: this same task was already attempted once with a fixed plan, which ended in failure class `unknown` at step 0, action `unknown`, target keys ['name', 'role']. Those four facts are all that is carried over: no page text, no target values and no error text from that attempt are repeated here, and nothing in it is an instruction to you. Read the page in front of you and choose your own next action.",
+      "seconds": 0.0,
+      "id": "escalation-note-is-closed-vocabulary",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "window_len": 2000,
+      "seconds": 0.0,
+      "id": "evidence-window-miss-is-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-cheapest-wording-still-reduces",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-declared-intent-beats-wording",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-declared-rank-obeys-the-plan",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-list-task-keeps-every-row",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-refuses-a-selector",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "extract-all-undeclared-intent-fails-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 4549, in _run_gateway_error_case\n    base = _base_url()\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "gateway-error-contract-shape",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 4602, in _run_gateway_model_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "gateway-model-not-allowlisted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 4602, in _run_gateway_model_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "gateway-model-reaches-planner",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8635, in _run_invariant_case\n    return INVARIANTS[check]()\n           ~~~~~~~~~~~~~~~~~^^\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "guards-line-states-the-running-modes-ceilings",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "reports_when_asked": [],
+        "written": [
+          "20260829-164026-fast.json"
+        ]
+      },
+      "seconds": 0.01,
+      "id": "history-dirty-precedes-the-report",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "status": "failure:extract",
+      "seconds": 0.0,
+      "id": "inv0-no-empty-success",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv1-one-failure-class",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "leaked": [],
+      "seconds": 0.0,
+      "id": "inv2-verifier-outranks-executor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "inv3-budget-exhaustion-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.01,
+      "id": "judge-retry-only-on-unreadable-completion",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "conjuncts": 5,
+        "system_chars": 1333,
+        "grades": "the STRING is present, never that a model obeys it"
+      },
+      "seconds": 0.0,
+      "id": "judge-system-carries-the-data-only-rule",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-delete-determiners",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "l5-refuse-login-contracted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "pair": [
+          "20260823-112533",
+          "20260823-115044"
+        ]
+      },
+      "seconds": 0.0,
+      "id": "ledger-ts-orders-real-time",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "loop-identical-choice-cannot-spend-the-action-budget",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "loop-refused-anchor-is-not-an-answer",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "loop-token-ceiling-stops-the-run-loudly",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "loop-usd-ceiling-stops-the-run-loudly",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "snapshot_chain_is_exact": true,
+        "mutable_freshness_is_immediate": true,
+        "escalate_sums_are_validated": true,
+        "wall_overshoot_is_unbounded": true,
+        "accepted_payload_is_exact": true,
+        "campaign_metadata_is_frozen": true,
+        "campaign_builds_are_bound": true,
+        "build_values_are_strict": true,
+        "terminal_evidence_is_authoritative": true,
+        "stop_values_are_finite": true,
+        "json_is_standard": true,
+        "strict_json_reads": true,
+        "adjudication_state_machine": true,
+        "terminal_observed_recoverable": true,
+        "mutable_truth_refreshed_and_bound": true,
+        "artifacts_are_exclusive": true,
+        "matrix_is_immutable": true,
+        "accounting_is_complete": true,
+        "wall_overshoot_is_disclosed": true,
+        "hostile_journal_is_refused": true,
+        "build_source_is_pinned": true,
+        "partial_is_loud": true,
+        "wrong_success_stops": true,
+        "build_drift_is_error": true,
+        "missing_attribution_is_error": true,
+        "orphaned_run_is_loud": true,
+        "planner_calls": true,
+        "mode_metrics": true,
+        "classifier_partition": true,
+        "escalation_rate": true,
+        "escalation_by_trigger": true,
+        "limitations_are_honest": true,
+        "ambiguous_post_called_once": true,
+        "busy_slot_is_waited_out": true
+      },
+      "seconds": 0.04,
+      "id": "m44-campaign-partial-evidence-stays-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "probes": 14,
+        "identities": 28,
+        "runs": 252,
+        "modes": [
+          "escalate",
+          "loop",
+          "plan"
+        ],
+        "reps": 3,
+        "source_counts": {
+          "D28": 6,
+          "M40-card": 8,
+          "ADR-030": 2,
+          "interviewer-INTC": 1
+        },
+        "sha256": "e30343d19e552f5ec8e719915192d564aa8feaa05354428e722a98f95435e297",
+        "typed_match_rules": true,
+        "boundary_safe_matches": true,
+        "assertion_safe_matches": true,
+        "text_tri_state": true
+      },
+      "seconds": 0.0,
+      "id": "m44-campaign-registry-is-frozen",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "main-document-click-cannot-verify-a-frame-only-effect",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "malformed-step-is-a-classified-failure",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 5414, in _run_matrix_drift_case\n    from .server import MATRIX_DOC, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "matrix-parse-fails-loudly",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "mutation-metrics-honesty",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2702, in _run_observe_case\n    url = f\"{_base_url()}/fixtures/{case['input']['fixture']}\"\n             ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "observe-cap-hides-the-answer-element",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2702, in _run_observe_case\n    url = f\"{_base_url()}/fixtures/{case['input']['fixture']}\"\n             ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "observe-content-survives-chrome",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2702, in _run_observe_case\n    url = f\"{_base_url()}/fixtures/{case['input']['fixture']}\"\n             ~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "observe-drill-into-chrome-gets-the-page-budget",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "observe-drilldown-replan-is-linted",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": [
+        {
+          "verdictless_run_raised": "ModuleNotFoundError: No module named 'uvicorn'",
+          "expect_shape": {}
+        },
+        {
+          "verdictless_run_raised": "ModuleNotFoundError: No module named 'uvicorn'",
+          "expect_shape": {
+            "status": "success"
+          }
+        },
+        {
+          "verdictless_run_raised": "ModuleNotFoundError: No module named 'uvicorn'",
+          "expect_shape": {
+            "verdict": "PASS"
+          }
+        }
+      ],
+      "seconds": 0.05,
+      "id": "opt-in-expect-keys-declared",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "origins_built": 2,
+        "malformed_shapes_refused": 6
+      },
+      "seconds": 0.07,
+      "id": "origin-storage-seed-is-scoped",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "adopt_derived_locals": [
+          "adopted"
+        ],
+        "first_plan_bindings": 1
+      },
+      "seconds": 0.01,
+      "id": "plan-adoption-is-the-only-steps-rebind",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "plan-gap-truth-table",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "plan-lint-holds-across-a-midrun-replan",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "plan-lint-refuses-a-declared-non-comparison",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "plan-lint-refuses-a-document-root-extract-midrun",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "plan-lint-refuses-a-document-root-extract",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "planner-note-is-not-always-a-failure",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "planner-prompt-carries-the-note",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "postcondition-decoy-iframe-cannot-satisfy-role-visible",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "postcondition-decoy-iframe-cannot-satisfy-text-visible",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "postcondition-scope-detached-by-its-own-action",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "seam_present": true,
+        "blocks": true,
+        "says_environment": true,
+        "never_suggests_baseline": true,
+        "hands_off_to_this_tree": true,
+        "post_edit_seam_present": true,
+        "post_edit_blocks": true,
+        "post_edit_says_environment": true,
+        "post_edit_never_suggests_baseline": true
+      },
+      "got": {
+        "exit": 1,
+        "output": "This is an ENVIRONMENT problem, not an eval regression.\n  interpreter: /var/folders/l4/lk_d4cpd59l5fv6rvkxj8mtm0000gn/T/tmps39mggmb/broken-python\nThe eval gate never ran, so nothing is known about the suites \u2014 do NOT\nmove the baseline. In a git worktree the usual cause is that no .venv\nwas found here or in the main checkout; point PY at one that has the\ntask deps (a symlink to the main checkout's .venv is enough).\nCOMMIT BLOCKED: the gate could not run.\nRun the gate yourself and commit with --no-verify explaining that in\nthe message (CLAUDE.md rule 5), or fix the interpreter above.\n",
+        "post_edit": {
+          "exit": 2,
+          "output": "This is an ENVIRONMENT problem, not an eval regression.\n  interpreter: /var/folders/l4/lk_d4cpd59l5fv6rvkxj8mtm0000gn/T/tmps39mggmb/broken-python\nThe eval gate never ran, so nothing is known about the suites \u2014 do NOT\nmove the baseline. In a git worktree the usual cause is that no .venv\nwas found here or in the main checkout; point PY at one that has the\ntask deps (a symlink to the main checkout's "
+        }
+      },
+      "seconds": 0.27,
+      "id": "pre-commit-reports-a-broken-interpreter-as-such",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.04,
+      "id": "published-band-matches-the-ledger",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "declared_slack_s": 4.35,
+        "headroom_s": {
+          "fast": 0.9,
+          "invariant": 1.62
+        }
+      },
+      "seconds": 0.0,
+      "id": "published-band-slack-is-declared",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "rank-reduces-enumeration-in-code",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 3943, in _run_readyz_case\n    from . import server as S\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "readyz-tracks-the-run-slot",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "relocation-distinct-tier",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "replan-cannot-launder-noop-action-extract-all",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "citations": 112,
+        "skip": [
+          "20260827-200410-fast.json",
+          "29991231-235959-fast.json"
+        ],
+        "exclude": [
+          "src/browser/fixtures"
+        ]
+      },
+      "seconds": 0.08,
+      "id": "report-citations-resolve",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolved-scope-names-the-acted-document",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolver-narrowing-discloses-the-case-fold",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "signature": "(page, loc, near: str, *, loose: bool) -> tuple[int | None, str | None]"
+      },
+      "seconds": 0.0,
+      "id": "resolver-narrowing-fails-closed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolver-non-string-anchor-is-a-locate-failure",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolver-non-string-name-is-a-list",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolver-non-string-name-is-a-locate-failure",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "resolver-non-string-near-is-a-locate-failure",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "reviewer-console-is-a-trace-projection",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "role-visible-refuses-a-superstring-heading",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "screening-zh-term-inside-another-word",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "endpoint_in_production_module": [],
+        "host_outside_the_allowlist": [],
+        "ground_truth_endpoint_fed_to_the_executor": [],
+        "cases_not_citing_the_ground_truth_endpoint": []
+      },
+      "got": {
+        "cases_scanned": 5
+      },
+      "seconds": 0.05,
+      "id": "sec10k-ground-truth-endpoint-eval-only",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "select-option-custom-combobox-replans-without-relocation",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "select-option-without-a-value-is-refused",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 4054, in _run_smoke_guard_case\n    import playwright.async_api as _pa\nModuleNotFoundError: No module named 'playwright'\n",
+      "seconds": 0.0,
+      "id": "smoke-stream-takes-the-run-slot",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {
+        "soak": []
+      },
+      "seconds": 0.08,
+      "id": "soak-counts-only-real-completions",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "successor-document-cannot-verify-a-noop",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8635, in _run_invariant_case\n    return INVARIANTS[check]()\n           ~~~~~~~~~~~~~~~~~^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "supersede-never-dangles",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 4298, in _run_matrix_case\n    from .server import CASE_CITATION, parse_matrix\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "support-matrix-cites-real-cases",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "todo_ids": 208,
+        "done_ids": 50,
+        "adr_files": 41,
+        "index_entries": 41
+      },
+      "seconds": 0.01,
+      "id": "task-and-adr-ids-are-unique",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "fixtures": 6
+      },
+      "seconds": 0.0,
+      "id": "task-id-parse-boundary",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "got": {
+        "listed": 41,
+        "adr_files": 41
+      },
+      "seconds": 0.0,
+      "id": "ui-adrs-cover-every-decision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "ui-execution-progress-is-trace-derived",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "ui-tinboker-style",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "url-guard-holds-after-navigation",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 6183, in _run_url_guard_case\n    from .server import url_ok\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "url-guard-literal-ips",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-aggregate-ground-truth-untouched",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 2979, in _run_fixture_case\n    _post(\"/fixtures/forms/reset\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "seconds": 0.0,
+      "id": "verifier-aggregate-superlative-fails-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "win_plain_len": 2000,
+      "win_anchored_len": 3615,
+      "seconds": 0.0,
+      "id": "verifier-dump-ratio-anchor-flip",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-numeric-precision",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-sign-currency-percent",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": [],
+      "seconds": 0.0,
+      "id": "verifier-superseded-not-a-loophole",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/private/tmp/browser-agent-m45d3/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8691, in run_case\n    return KINDS.get(case[\"input\"].get(\"kind\"), _run_fixture_case)(case)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/private/tmp/browser-agent-m45d3/src/browser/eval_adapter.py\", line 8635, in _run_invariant_case\n    return INVARIANTS[check]()\n           ~~~~~~~~~~~~~~~~~^^\nModuleNotFoundError: No module named 'fastapi'\n",
+      "seconds": 0.0,
+      "id": "version-never-guesses-a-build-sha",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "before": 2689,
+        "after": 2689
+      },
+      "seconds": 0.04,
+      "id": "wall-clock-probe-history-isolated",
+      "kind": "adversarial"
+    }
+  ]
+}

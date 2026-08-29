@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 270 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 271 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
 ```
@@ -50,23 +50,23 @@ python3 -m uvicorn src.browser.server:app --port 8099
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260829-153751-fast.json`, with
+Latest offline baseline — `evals/report/20260829-163747-fast.json`, with
 `evals/report/20260829-154131-invariant.json` and
 `evals/report/20260828-153810-live.json`:
 
 ```
-fast  267/270    invariant  110/113    live  12/13    $0.0000    107.2s
+fast  270/271    invariant  110/113    live  12/13    $0.0000    106.9s
 recovery 10/10 verified (25 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
-diagnosis 79/79 · 15 replans
+diagnosis 80/80 · 15 replans
 ```
 
-The fast report's three reds are the fixed-point publication checks this block
-updates (`docs-numbers-are-derived`, `published-band-matches-the-ledger`, and
-`report-citations-resolve`); the subsequent no-report gate is the green check.
+The fast report's sole red is the fixed-point headline check this block updates
+(`docs-numbers-are-derived`); the subsequent no-report gate is the green check.
 The cited invariant refresh is the fixed-point count/band refresh at 113 cases;
 its three failures are the derived publication checks updated by this change.
 
 This refresh supersedes the prior baselines
+`evals/report/20260829-153751-fast.json`,
 `evals/report/20260829-033022-fast.json`,
 `evals/report/20260829-135152-fast.json`,
 `evals/report/20260828-161325-fast.json`,
@@ -89,6 +89,18 @@ case before its derived value was refreshed),
 `evals/report/20260829-154339-invariant.json` (111/113 during the citation
 fixed point), and `evals/report/20260829-155828-fast.json` (269/270, with only
 the newly generated report citation red); all are retained as red evidence.
+T-M40-2-5's 271-case fixed point adds
+`evals/report/20260829-163038-invariant.json` (109/113 before the derived-count,
+band and opt-in registry refresh) and
+`evals/report/20260829-163528-invariant.json` (111/113 after that refresh, with
+only the headline and reverse-report citation checks red), plus
+`evals/report/20260829-163910-invariant.json` (112/113 after the headline refresh,
+with only the derived-number check still red), and
+`evals/report/20260829-164027-invariant.json` (53/113 from an accidental system
+Python run without the repository dependencies) and
+`evals/report/20260829-164057-invariant.json` (57/113 when the restricted sandbox
+blocked local fixture servers); both are retained as environment-failure
+evidence rather than used as baselines.
 The immediately preceding fast report,
 `evals/report/20260829-033600-fast.json`, was 265/268; its three reds were the
 derived count, band and ADR scope refreshes that the green baseline above closes.
@@ -234,7 +246,7 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 270 | 108.97s | 125.32 | **130s** |
+| `fast` | 271 | 107.79s | 123.96 | **130s** |
 | `invariant` | 113 | 59.24s | 68.13 | **70s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer.
@@ -507,7 +519,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 305 cases (270 of them in the offline gate), it
+The eval set is not weak; it is 306 cases (271 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

@@ -2636,7 +2636,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # Stale locator -> fresh a11y snapshot -> same intent at a
                 # different tier -> act -> verify. Rungs come from the snapshot,
                 # never from stored site knowledge (CLAUDE.md rule 6).
-                if cls == "locate" and (fresh := await look()) is not None:
+                # `observe` is progressive disclosure of the exact container
+                # the plan named. Retargeting it drills into a different node,
+                # produces no answer, and falsely counts as a recovery rung
+                # (T-M40-2-5). Let the locate failure stay loud; only an
+                # answer/action attempt may take the relocation ladder.
+                if cls == "locate" and step["action"] != "observe" \
+                        and (fresh := await look()) is not None:
                     for cand in relocation_candidates(step.get("target") or {}, fresh)[:MAX_FIXES]:
                         rec["superseded_by"] = step_offset + len(trace) + 1
                         alt = {**step, "target": cand}

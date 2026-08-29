@@ -61,6 +61,7 @@
         "framed-page-does-not-inflate-the-dump-denominator",
         "loop-abandoned-failure-is-not-a-success",
         "loop-refused-anchor-is-not-an-answer",
+        "observe-document-root-does-not-relocate",
         "plan-lint-refuses-a-document-root-extract",
         "plan-lint-refuses-a-document-root-extract-midrun",
         "replan-cannot-retarget-a-refused-document-root",
