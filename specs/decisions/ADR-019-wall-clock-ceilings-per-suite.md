@@ -232,7 +232,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 268 cases, 263/268) and
-(restated — `invariant`: 109 cases, 106/109) — are graded against the bullets they
+(restated — `invariant`: 111 cases, 111/111) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -381,23 +381,19 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 109 cases, ts `20260829-032810`, **34.20s**, 106/109
-  (`evals/report/20260829-032810-invariant.json`; `dirty: true` — unlike the row
+- Band source — local `invariant` at 111 cases, ts `20260829-130008`, **33.95s**, 111/111
+  (`evals/report/20260829-130008-invariant.json`; `dirty: true` — unlike the row
   this supersedes, M47 added the invariant-tagged exact-repeat and console
   projection cases, so item 2 (cited-run)'s dirty allowance applies again: no
-  clean row at 109 was available when this band was published. The ceiling
-  remains 40 because 34.20 × 1.15 derives the same band. Red, and the three
-  failures are the three derived-number checks this republication is the subject
-  of, the same shape §2's row has. Whether it is the MAXIMUM at this count is
+  clean row at 111 was available when this band was published. The ceiling
+  remains 40 because 33.95 × 1.15 derives the same band. Green after the count
+  and citation refresh. Whether it is the MAXIMUM at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger
   had already overtaken, and the rule needs only that the published number and
   the ledger's maximum derive the same **40**; `published-band-matches-the-ledger`
   prints `ledger_slowest`.
-  RED, 106/109 — the three cases red in this row are
-  `adr029-scope-matches-the-suites`, `docs-numbers-are-derived` and
-  `published-band-matches-the-ledger`, all three mid-refresh when it was
-  recorded and all three cleared by this republish. Naming all three rather than
-  a subset is PR #69 R1.
+  GREEN, 111/111 — the count, cited report and band agree on the tree this row
+  measures.
   **The previous band at 90 was an outlier and said so; this one is not**, and
   the difference is worth one line because it changes what a reader should
   watch. That row sat seconds above its neighbours, taken on a contended
@@ -541,7 +537,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 34.20 × 1.15 = 39.33 → **40**, which is exactly the committed
+The same rule gives 33.95 × 1.15 = 39.04 → **40**, which is exactly the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

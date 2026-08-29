@@ -1,0 +1,17 @@
+{
+  "id": "m44-campaign-registry-is-frozen",
+  "task": "browser",
+  "suites": ["invariant"],
+  "input": {
+    "kind": "m44-campaign",
+    "check": "registry"
+  },
+  "expect": {
+    "note": "14 exact probe identities become 28 language tasks and 252 sequential runs"
+  },
+  "provenance": "M44 SPEC, frozen before any paid campaign run. ADR-025 contributes six D28 tasks; the eight non-SEC EXAMPLES are the M40 card set because ADR-031 explicitly calls its two finance rows 'two of the eight M40 cards', despite server.py's narrower historical comment that only four cards originated in M40. OpenLibrary, Companies Market Cap, and Bank of Canada overlap exactly, so those two sets union to 11 rather than 14. ADR-030 adds two SEC deep-link questions and the interviewer flow adds one root-page intc-2002 interaction, for 14 identities. M44 requires Chinese beside English; ADR-031 froze only three applicable translations, so the registry freezes the remaining literal translations here before results exist. Identity is exactly (task text, start URL, language); only exact identities deduplicate. Three explicit modes times three reps gives 14 x 2 x 3 x 3 = 252. PR #84's unmerged request-frame screening changes none of these texts because none contains its blocked auth/payment/purchase/delete/download vocabulary. Numeric, integer, and status probes use frozen typed boundary-safe rules. Text probes deliberately have no heuristic field or language parser: only a normalized whole answer in the ground-truth accepted_exact set is automatically correct; every other successful text answer pauses as needs_adjudication. Tagged invariant because changing a task, matcher, silently dropping a mode, or collapsing different text on one site would change the experiment rather than merely lower its score.",
+  "triage": {
+    "class": "contract-drift",
+    "note": "Pure registry arithmetic; zero network, browser, or model calls. Watched red before evals.m44_campaign existed."
+  }
+}
