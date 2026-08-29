@@ -176,16 +176,16 @@ async def page_text(page, frames: bool = True, bases: dict | None = None) -> str
         though it had worked.
 
     Both costs are declared, which is the part that was missing: the false
-    positive was documented and the false negative was not. The second hazard
-    has never been reproduced in this repo and the first was, so the evidence
-    picks the direction (T-M42-14 carries the repro that would reopen it —
-    a fixture with a frame that mutates on its own).
+    positive was documented and the false negative was not. T-M42-14 now
+    reproduces the second hazard too. `page_changed` remains frames-aware, but
+    a one-use marker binds an iframe action's postcondition to the exact
+    document it resolved in; a page-owned successor document therefore cannot
+    turn this broad change signal into a verified action or a delivered answer.
 
-    ponytail: NOT deletable, and no longer deletable-if-T-M42-14-closes-the-
-    other-way either. Whichever way T-M42-14 rules on the EVIDENCE pipeline,
-    ADR-036 keeps a main-document-only read in `check_state`, so removing the
-    argument removes a postcondition's scope. T-M42-14 may take the hazards
-    above; it may not take the parameter."""
+    ponytail: NOT deletable. ADR-036 keeps a main-document-only read in
+    `check_state`, so removing the argument removes a postcondition's scope.
+    T-M42-14 closes the demonstrated causal wrong-success at verification; it
+    deliberately does not narrow this evidence read."""
     parts = []
     sources = getattr(page, "frames", None) or [page]
     for frame in (sources if frames else sources[:1]):

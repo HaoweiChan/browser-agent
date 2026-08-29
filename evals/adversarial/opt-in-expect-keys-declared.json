@@ -50,7 +50,8 @@
         "resolver-narrows-singular-noun-ending-in-s",
         "resolver-near-normalises-typography",
         "loop-click-at-from-a-drill-observation-is-refused",
-        "loop-identical-choice-cannot-spend-the-action-budget"
+        "loop-identical-choice-cannot-spend-the-action-budget",
+        "successor-document-cannot-verify-a-noop"
       ],
       "answer_null": [
         "escalate-refuses-after-a-completed-state-change",
@@ -62,7 +63,8 @@
         "loop-refused-anchor-is-not-an-answer",
         "plan-lint-refuses-a-document-root-extract",
         "plan-lint-refuses-a-document-root-extract-midrun",
-        "replan-cannot-retarget-a-refused-document-root"
+        "replan-cannot-retarget-a-refused-document-root",
+        "successor-document-cannot-verify-a-noop"
       ],
       "reason_max_chars": [
         "extract-container-dump-is-not-the-answer"

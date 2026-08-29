@@ -217,9 +217,10 @@ existing `resolved` object, whose top-level TraceStep key is unchanged, so both
 schema cases assert exactly what they did), and two accepted debts named it as
 their prerequisite — T-M42-4's postcondition scoping (a click's
 `expected_state` could be satisfied by a document the action never touched;
-`check_state` now checks in the recorded scope) and T-M42-14's
-"a frame the step touched" vs "a frame that moved on its own". The rule for
-any FURTHER field is unchanged and stays this section.
+`check_state` now checks in the recorded scope) and T-M42-14's starting
+evidence. T-M42-14 later found that a URL cannot distinguish same-URL successor
+documents and added an internal one-use marker, not another trace field. The
+rule for any FURTHER field is unchanged and stays this section.
 
 The RESULT does gain one field, and it is not a trace field: `mode`, beside
 `model`, because a run record has to be self-attributing. Without it a loop run
@@ -344,12 +345,11 @@ call is routine.**
    The accepted cost is a page whose frame mutates on its own — a ticking
    third-party iframe, a rotating ad, a chat bubble — reading as a change
    nobody caused, which unlatches the guard in the other direction. That hazard
-   is real and has never been reproduced here, while the false negative was
-   reproduced on a six-line fixture; this repo widens on what a probe found,
-   not on what someone imagined (D21). **T-M42-14** carries the repro that
-   would reopen it. Both costs are now declared, which is the part that was
-   missing the first time: the false positive was documented and the false
-   negative was not.
+   was reproduced by **T-M42-14**. The raw signal remains frames-aware because
+   narrowing it reopens the measured false negative. Instead, a one-use
+   document marker prevents the independently mutated successor document from
+   satisfying the action's postcondition; the verifier then refuses the answer.
+   Both costs are declared and both directions now have committed controls.
 
 None of the five is exotic. Each is the ordinary case: a model-authored anchor
 that misses the page, a tool argument omitted once and corrected, a click with

@@ -604,7 +604,18 @@ def plan_gap(task: str, steps: list) -> str | None:
             "is done in code, so extract the values to compare, not the answer")
 
 
-async def check_state(page, expected: dict | None, scope=None) -> bool | None:
+async def _same_document(scope, marker: str | None) -> bool:
+    """Whether a live Frame still hosts the document marked before the action."""
+    if not marker:
+        return True
+    try:
+        return bool(await scope.evaluate("key => globalThis[key] === true", marker))
+    except Exception:
+        return False
+
+
+async def check_state(page, expected: dict | None, scope=None,
+                      document_marker: str | None = None) -> bool | None:
     """True / False / None, where None means "not verified here".
 
     Two ways to reach None and they mean the same thing downstream — nothing
@@ -709,7 +720,13 @@ async def check_state(page, expected: dict | None, scope=None) -> bool | None:
             return False
         raise StepError("task", f"unknown expected_state key {key!r}")
 
+    document_keys = any(k != "url_contains" for k in expected)
     for _ in range(SETTLE_TRIES):
+        # A Frame object and its URL survive an in-place navigation. The marker
+        # does not: it belongs to the document resolve actually returned. A
+        # successor document therefore cannot certify the preceding action.
+        if document_keys and not await _same_document(scope, document_marker):
+            return None
         try:
             if all([await holds(k, v) for k, v in expected.items()]):
                 return True
@@ -1378,6 +1395,12 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
     # (ADR-036). A one-slot holder like `drilled`'s list, not a trace field:
     # the trace carries the scope's URL (`resolved.scope`), never the object.
     acted_scope: list = [None]
+    # A one-use property name planted in an iframe's current global before the
+    # action. Unlike Frame identity or about:srcdoc, it disappears when that
+    # same frame navigates in place (T-M42-14). Main-document navigations keep
+    # their existing URL/postcondition semantics; this closes the demonstrated
+    # iframe successor-document hole without widening the blast radius.
+    acted_document: list[str | None] = [None]
 
     answers: list = []
 
@@ -1628,13 +1651,21 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         anchor=step.get("anchor"), task=task, action=action)
                     # WHICH document the target resolved in (ADR-036, amending
                     # ADR-028 §7): the postcondition below is checked in this
-                    # scope, and T-M42-14's "frame the step touched vs frame
-                    # that moved on its own" comparison consumes the same
-                    # record. A URL rather than a frame index, because frames
-                    # attach and detach and the URL is the only identity a
-                    # trace reader can resolve later; the scope OBJECT goes to
-                    # `check_state` via `acted_scope`, never via the trace.
+                    # scope. A URL rather than a frame index keeps the public
+                    # trace readable; the live scope object and its one-use
+                    # document marker stay internal because equal URLs (such
+                    # as about:srcdoc) do not identify a document (T-M42-14).
                     acted_scope[0] = scope
+                    if (scope is not page and step.get("expected_state")
+                            and any(k != "url_contains" for k in step["expected_state"])):
+                        acted_document[0] = f"__browser_agent_document_{time.monotonic_ns()}"
+                        try:
+                            await scope.evaluate(
+                                "key => { globalThis[key] = true; }", acted_document[0])
+                        except Exception:
+                            # Verification will read the missing marker as
+                            # unverifiable; failing open here recreates the bug.
+                            pass
                     rec["resolved"] = {"tier": tier, "description": str(step.get("target")),
                                        "scope": scope.url, "narrowed": narrowed}
                 # WHICH narrowing rung settled an ambiguity the plan left open
@@ -2088,6 +2119,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # would hand this step's postcondition a document its action
                 # never touched — the exact defect ADR-036 exists to close.
                 acted_scope[0] = None
+                acted_document[0] = None
                 try:
                     await execute(step, rec)
                     if url_guard and not url_guard(page.url):
@@ -2119,14 +2151,12 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         #
                         # Symmetric and frames-aware is the only setting under
                         # which both cases are green, and they are the same page
-                        # shape with and without a real effect. The hazard the
-                        # previous comment cited — a third-party iframe with a
-                        # ticking clock flipping this true on every step — is
-                        # real but has never been demonstrated here, while the
-                        # false negative was; this repo widens on what a probe
-                        # found, not on what someone imagined. Declared as the
-                        # accepted cost in `observe.page_text` and tracked as
-                        # T-M42-14 with the repro that would close it.
+                        # shape with and without a real effect. A page-owned
+                        # iframe mutation can still flip this raw signal true.
+                        # T-M42-14 demonstrates that shape and prevents it from
+                        # certifying an action: a successor document makes the
+                        # scoped postcondition null, so verification refuses the
+                        # answer. Keep this frames-aware for the positive control.
                         after = await page_text(page)
                         rec["page_changed"] = after != before
                         page_bodies[page.url] = after
@@ -2139,7 +2169,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     checked = await check_state(
                         page, step.get("expected_state"),
                         scope=None if step["action"] in PAGE_WIDE_STATE
-                        else (acted_scope[0] or page))
+                        else (acted_scope[0] or page),
+                        document_marker=acted_document[0])
+                    if (checked is None and acted_document[0]
+                            and not await _same_document(acted_scope[0], acted_document[0])):
+                        rec["note"] = "; ".join(filter(None, [
+                            rec["note"],
+                            "postcondition unverifiable: resolved frame document was replaced"
+                        ]))
                     if checked is not None or rec["postcondition_ok"] is None:
                         rec["postcondition_ok"] = checked
                     if rec["postcondition_ok"] is False:

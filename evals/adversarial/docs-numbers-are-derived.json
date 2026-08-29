@@ -16,8 +16,8 @@
     "where_it_stands": {
       "headline": "fast",
       "reports": {
-        "fast": "20260829-150231-fast.json",
-        "invariant": "20260829-134919-invariant.json",
+        "fast": "20260829-153751-fast.json",
+        "invariant": "20260829-154131-invariant.json",
         "live": "20260828-153810-live.json"
       }
     },
@@ -64,12 +64,12 @@
         "note": "'ceiling' anchors it as surely as '<='"
       },
       {
-        "line": "python3 -m evals.run --suite fast   # wall clock <= 125s",
+        "line": "python3 -m evals.run --suite fast   # wall clock <= 130s",
         "flags": false,
         "note": "the committed ceiling, stated"
       },
       {
-        "line": "python3 -m evals.run --suite fast   # wall clock <= 125 seconds",
+        "line": "python3 -m evals.run --suite fast   # wall clock <= 130 seconds",
         "flags": false,
         "note": "spelled out; the unit alternation is not decoration"
       },

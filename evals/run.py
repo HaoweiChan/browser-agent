@@ -161,7 +161,9 @@ def run_case(case):
 # the evidence each row was actually read from.
 # ADR-040: the red-first run at the unchanged 109-case count measured 46.40s;
 # the ledger maximum rule derives 55. No case was added.
-WALL_BUDGET_S = {"fast": 125, "invariant": 55}
+# T-M42-14: the 113-case red-first refresh measured 59.24s after its environment
+# probe stalled at 24.76s; the no-outlier-rejection rule derives 70.
+WALL_BUDGET_S = {"fast": 130, "invariant": 70}
 # The same ruling on slower hardware. CI measured 89.62s on main and 64.61s here
 # against a 60s ceiling nothing had ever checked there; one number cannot be both
 # tight locally and true on a runner ~1.6x slower, so the environment sets its

@@ -3,8 +3,9 @@
 Date: 2026-08-28
 Status: accepted
 
-**Ruling**: `check_state`'s scoped predicates — `text_visible` and `role_visible` — are evaluated in exactly ONE **frame**: the one `resolve` returned the step's target from, which the executor now records on the trace step as `resolved.scope` (that frame's document URL, beside `tier`). **A frame, not a document, and the gap is real rather than pedantic** (PR #66 R11): the scope is a live Playwright `Frame`, so if the page re-navigates that same frame IN PLACE between the action and the check — same `<iframe>` element, new document — the predicates are read in the SUCCESSOR document, which the action never touched, and a no-op can earn its postcondition exactly as §1 says it must not. `Frame.is_detached()` is False throughout, so §4's guard does not see it. That hole is open and declared in §4; closing it needs a document identity the trace does not carry, which is T-M42-14's. What this ruling does close is the unrelated-document case — a consent iframe, a chat widget, a `display:none` tracking frame — which is the one that was reachable on a committed fixture. A step whose action resolved no target (a targetless `press`, a target-less `scroll`) is scoped to the main document, which is where an un-focused key or wheel lands. Three postcondition sites stay page-wide by nature and are the ruling's declared carve-outs: `url_contains` (a page-level fact — there is one address bar), and the whole `expected_state` of `navigate`/`go_back` (the action loaded every document on the page, frames included) and of `wait_for` (an authored wait for wherever the page paints, and a page that paints into an iframe legitimately wants the frame — the task block's own carve-out). ADR-028 §7 is amended in place, dated, to admit `resolved.scope`.
+**Ruling**: `check_state`'s scoped predicates — `text_visible` and `role_visible` — are evaluated in exactly ONE **document**: the one `resolve` returned the step's target from. The trace records its frame URL as `resolved.scope`; for iframe actions the executor also plants a one-use marker in that document before acting. A same-frame navigation destroys the marker even when the `Frame` object remains attached and its URL remains `about:srcdoc`, so the successor returns a null, unverifiable postcondition rather than certifying the earlier action (T-M42-14 amendment, 2026-08-29). A step whose action resolved no target is scoped to the main document. Three postcondition sites stay page-wide by nature: `url_contains`, and the whole `expected_state` of `navigate`/`go_back` and `wait_for`. ADR-028 §7 is amended in place to admit `resolved.scope`; the exact marker remains internal because it is ephemeral verification state, not durable evidence.
 **Because**: `text_visible` reading `observe.page_text(page)` (every frame, every open shadow root) and `role_visible` iterating `[page, *frames[1:]]` are what made an iframe'd page verifiable at all (ADR-028 item 4) — and both meant a click's `expected_state` could be earned by an element in a completely unrelated document: a consent iframe, a chat widget, a `display:none` tracking iframe (still in `page.frames`, still evaluable). The step then recorded `postcondition_ok: true` for an action that did nothing, which is the one thing a postcondition exists to make impossible — measured, not imagined: the T-M42-11 repro on the committed `frames-host.html` ran `press "Shift"` (touches only the main document) asserting a string that exists only inside the iframe, and got `postcondition_ok: true`, `status success`, answer delivered on the strength of a no-op's "verified" state change.
+**T-M42-14 enforcement**: `successor-document-cannot-verify-a-noop` was watched red as `status success` with `trace_postconditions [true, true, null]` and an answer delivered from the replacement document. It now records the click postcondition as null, notes that the resolved frame document was replaced, and ends `failure:semantic` with no answer. The detached-frame, legitimate iframe-effect, main-document and page-wide-wait cases remain controls.
 **Enforced by**: `postcondition-decoy-iframe-cannot-satisfy-text-visible` and `postcondition-decoy-iframe-cannot-satisfy-role-visible` (one per predicate, because the two keys are separate code paths and a half-fix would leave one standing — both watched red as `status success`, `trace_postconditions [true, true, null]`), `resolved-scope-names-the-acted-document` (the positive twin: a frame-scoped click verifies in its OWN document, and the trace field is asserted per step), `main-document-click-cannot-verify-a-frame-only-effect` (the ruling's PRICE, on `frames-swap.html`: the main-document click's postcondition goes false while `page_changed` is true, and the `wait_for` carve-out is the recovery — red on the pre-ADR-036 mechanism, which reports plain success) , `postcondition-scope-detached-by-its-own-action` (§4: the acted frame removed by its own click, watched red at `failure:act`, and re-expected in round 2 — the shape now ends `failure:semantic` because a detached scope is UNVERIFIABLE) and `detached-scope-cannot-be-verified-by-a-decoy` (§4's own hazard, the round-1 fallback's falsification: a no-op click in a widget the PAGE re-mounts on a timer, watched red as `status success`, `trace_postconditions [true, true, null]`, answer delivered) — with `shadow-dom-value-is-reachable-and-grounded`, `replan-after-an-iframe-only-change-is-not-laundering` and the `live-sec10k-authored-wait-*` pair pinning that the main document's shadow roots, the frame-effect replan path and page-wide `navigate` waits are all untouched.
 
 ---
@@ -36,7 +37,7 @@ two-line stub plan. That repro is this ADR's red-first case, verbatim.
 
 | site | scope | why |
 |---|---|---|
-| `text_visible` / `role_visible` on a step whose target resolved | the FRAME `resolve` returned from | the action touched that frame and no other; its consequence must be read where it happened. Frame, not document: if the page re-navigates that frame in place, this reads the successor document and the hazard below reopens (PR #66 R11, §4) |
+| `text_visible` / `role_visible` on a step whose target resolved | the DOCUMENT `resolve` returned from | the frame scopes the read; for an iframe action a one-use marker proves the same document is still loaded, otherwise the postcondition is null (T-M42-14, §4) |
 | `text_visible` / `role_visible` on a step with no resolved target | the main document | an un-focused key press or window scroll lands on the top-level document; nothing named a frame |
 | any predicate on `wait_for` | the whole page, every frame | a wait performs nothing, so there is no acted document — it is an authored assertion about where the page will paint, and frames are a place pages paint (the carve-out T-M42-4 itself names) |
 | any predicate on `navigate` / `go_back` | the whole page, every frame | the action loaded every document on the page, frames included; `live-sec10k-authored-wait-reaches-the-doc-status` authors exactly this shape |
@@ -55,24 +56,19 @@ direction and stays rejected there.
 executor records its URL as `resolved.scope`, beside `tier`. Two consumers:
 
 * `check_state`, this ADR's mechanism — the scoped predicates are evaluated in
-  that FRAME (`page_text(scope, frames=False)`; a `get_by_role` probe on that
-  scope alone), which enforces frame liveness and, in the same breath, leaves a
-  same-frame re-navigation open: the scope is a live `Frame`, so a document
-  swapped into it in place between the action and the check is read as though
-  the action had touched it, and `is_detached()` never fires. §4's "What this
-  guard does NOT close" block is where that limit is declared and T-M42-14 owns
-  it (PR #66 R11/R17 — this bullet said "that document" for a round after the
-  Ruling had been corrected to say frame).
-* T-M42-14's acceptance, by name: distinguishing "a frame the step touched"
-  from "a frame that moved on its own" needs the executor to record which
-  document `resolve` returned from. This field is that record; T-M42-14 stays
-  open and now has its prerequisite.
+  that frame (`page_text(scope, frames=False)`; a `get_by_role` probe on that
+  scope alone). For an iframe action with a document-scoped expectation, the
+  executor also plants a unique global marker before acting and requires it on
+  every settle pass. This supplies exact document identity where Frame identity
+  and URL cannot (T-M42-14).
+* `resolved.scope` remains reader-facing provenance, not exact identity. The
+  one-use marker is intentionally internal; replacement is disclosed in the
+  trace note.
 
 A URL, not a frame index: frames attach and detach, and the URL is the only
-identity the trace can carry that a reader (or T-M42-14's comparison) can
-resolve later. Two same-URL frames are indistinguishable in the trace — the
-declared ceiling, acceptable because nothing here selects a frame *by* the
-recorded scope; the scope object itself is what `check_state` receives.
+identity the trace can carry that a reader can resolve later. Two same-URL
+documents are indistinguishable in the trace, so exact identity is enforced by
+the internal marker; nothing selects a frame *by* the recorded scope.
 
 ### 3. ADR-028 §7 amendment
 
@@ -130,26 +126,22 @@ verbatim, through the door §4 opened (`detached-scope-cannot-be-verified-by-a-d
 watched red as `status success`, `trace_postconditions [true, true, null]`,
 answer delivered).
 
-**What this guard does NOT close, declared rather than left to be found**
-(PR #66 R11, 2026-08-28). `is_detached()` tests whether the Frame OBJECT is
-still attached, not whether it still holds the document the step acted in. Both
-residuals below are open, neither is fixed here, and both are T-M42-14's:
+**Successor-document amendment (T-M42-14, 2026-08-29).** `is_detached()` tests
+the Frame object, not its document. `successor-document-cannot-verify-a-noop`
+demonstrated the gap on `frames-renav-decoy.html`: a page-owned timer replaced
+the iframe document after a literal no-op click, the successor supplied
+`Filing loaded`, and the run returned `NIMBUS-10K-2025` as success. The executor
+now plants a one-use marker before an iframe action and checks it before every
+document predicate. Replacement returns null and adds `postcondition
+unverifiable: resolved frame document was replaced` to the trace. The verifier
+then fails a state-changing step loudly and INV-2 removes the answer.
 
-* **A frame re-navigated IN PLACE.** Change `frames-decoy-detach.html`'s one
-  timer line from emptying the widget's container to swapping the inner
-  iframe's `srcdoc`, and everything else about the counter-example holds — a
-  page-owned timer scheduled at LOAD, a `Refresh` button bound to an empty
-  handler, a literal no-op click. `is_detached()` stays False, `check_state`
-  reads the successor document as though it were the acted one, and the no-op
-  records `postcondition_ok: true`. Measured on this tree, and measured again
-  with the decoy iframe deleted, so the value comes from the successor document
-  inside the acted frame rather than from a neighbour. The fixture is
-  `src/browser/fixtures/frames-renav-decoy.html` and nothing grades it yet: it
-  is committed as T-M42-14's starting evidence, not as a case, because pinning
-  today's answer would pin a wrong-success as desired. Telling "the document I
-  acted in" from "its successor" needs an identity `resolved.scope` cannot
-  supply — both are `about:srcdoc` — which is precisely the successor-document
-  identity T-M42-14 already owns.
+The safety rule has a declared price: a legitimate iframe action that itself
+navigates the same frame cannot verify that action using successor-document
+text. It must author the page-wide `wait_for` carve-out after the action. Main
+document navigation semantics are unchanged.
+
+One residual remains unrelated to document identity:
 * **A null is loud only on a state-changing verb** (PR #66 R14).
   `verifier.STATE_CHANGING` is `{click, press, go_back}`, so those three fail
   the run `failure:semantic` on a null. `fill`, `select_option` and `scroll`
@@ -162,20 +154,15 @@ residuals below are open, neither is fixed here, and both are T-M42-14's:
   introduced, but §4 asserted "loud" without the qualifier for one round and
   the qualifier is the honest half.
 
-Attributing a detach to the action would separate the two shapes, and nothing
-here can: that needs the successor-document identity §2 records only half of,
-which is T-M42-14's question. Between guessing right and saying so, this ADR
-says so. The price is real and is paid where §1's price already is: a
-legitimate re-mount no longer verifies itself with a document-scoped predicate,
-and the honest plan for that shape authors the page-wide `wait_for` carve-out —
-the same recovery `main-document-click-cannot-verify-a-frame-only-effect`
-measures. `postcondition-scope-detached-by-its-own-action` is re-expected to
-that outcome rather than deleted: it is the one case that measures the price,
-and it now measures it in 0.22s instead of the 2.55s settle burn R3 found.
+The same conservative price applies to detach and replacement: a legitimate
+re-mount cannot verify itself with a document-scoped predicate, and the honest
+plan authors the page-wide `wait_for` carve-out. The
+`postcondition-scope-detached-by-its-own-action` and successor-document cases
+measure each branch instead of guessing which actor caused the lifecycle event.
 
-One guard in `check_state`, not one per predicate: both keys and both modes
-route through it, and a guard on the path a report names leaves its sibling
-broken.
+One marker guard in `check_state`, not one per predicate: both keys and both
+modes route through it, and a guard on only the path a report names would leave
+its sibling broken.
 
 ## Alternatives rejected
 
@@ -222,9 +209,8 @@ broken.
   `postcondition_ok: true`. The sentence that stood here — "a no-op detaches
   nothing" — was wrong about who does the detaching (PR #66 R6,
   `detached-scope-cannot-be-verified-by-a-decoy`, the fixture committed). The
-  residue is T-M42-14's, unchanged and now load-bearing for a second ruling:
-  telling "the document that replaced the acted one" from "some other frame"
-  needs a successor-document identity the trace does not carry.
+  T-M42-14 closes the same-frame replacement branch with a one-use marker;
+  detached frames remain null because there is no document left to identify.
 * A targetless `press` is now verifiable only against the main document. A
   plan that presses a key INTO a frame's control resolves a target in that
   frame and is scoped there — unchanged.

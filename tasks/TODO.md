@@ -2055,7 +2055,7 @@ which suite it claims. If that sweep proves sufficient in practice, the honest
 resolution may be deleting the two older anchors rather than repairing them;
 that is a decision, not a patch, and it wants one more milestone of evidence.
 
-### T-M42-14 — `page_changed` is frames-aware, and the false positive that buys is undemonstrated but real            [status: todo]
+### T-M42-14 — bind iframe postconditions to the resolved document            [status: done]
 Depends: T-M42-4
 Origin: PR #57 R13, 2026-08-26. The accepted cost of the chosen direction, logged
 because R13's own ruling is that a trade-off may not be declared in one direction
@@ -2070,7 +2070,7 @@ did not). The cost is a page carrying a frame that mutates on its OWN — a tick
 clock, a rotating ad, a chat bubble — where `page_changed` reads true for a step
 that did nothing, unlatching the anti-laundering guard and letting a replan drop
 a failed action and read the page as though it had worked.
-Why it is not fixed: the hazard has never been reproduced in this repo, and the
+Historical reason it was left open: the hazard had not been reproduced, and the
 false negative it would trade back for was reproduced on a six-line fixture. This
 repo's rule is to widen on what a probe found rather than on what someone
 imagined (D21), and both halves are now declared — in `observe.page_text`'s
@@ -2114,8 +2114,8 @@ hazard reached through the gap between "frame" and "document".
 Fixture, committed and runnable: `src/browser/fixtures/frames-renav-decoy.html`
 — a decoy iframe, a widget iframe whose `Refresh` button is bound to an empty
 handler, and a page-owned `setTimeout` scheduled at LOAD that swaps the widget
-iframe's `srcdoc`. It is deliberately NOT a case: pinning today's answer would
-pin a wrong-success as desired.
+iframe's `srcdoc`. It was deliberately not a case until the red-first run below;
+the new case pins the repaired outcome rather than the wrong success.
 Repro, verbatim: resolve the in-frame control, click it, then read the
 postcondition in the scope `resolve` returned —
 `loc, _tier, _narrowed, scope = await resolve(page, {"role": "button", "name":
@@ -2128,6 +2128,23 @@ Why it is here and not in T-M42-4: telling "the document I acted in" from "its
 successor" needs an identity `resolved.scope` cannot supply — both are
 `about:srcdoc` — and that identity is exactly what this row's `page_changed`
 comparison needs. One mechanism closes both; neither closes alone.
+
+Closed 2026-08-29. `successor-document-cannot-verify-a-noop` was added to both
+offline gates and watched red: the no-op click received `postcondition_ok:
+true`, the successor document's `NIMBUS-10K-2025` was delivered, and every L1
+check passed. The executor now plants a unique marker in an iframe's current
+document before a document-scoped action and requires it on every settle pass.
+An in-place navigation destroys that marker, records the postcondition as null,
+adds a replacement note to the trace, and the verifier returns
+`failure:semantic` with no answer. The existing detached-frame, legitimate
+iframe-effect, main-document and page-wide-wait controls remain green.
+
+`page_changed` deliberately remains frames-aware: narrowing it would re-open
+the measured legitimate iframe-effect failure. It may still be true because of
+an autonomous frame mutation, but that broad signal can no longer turn the
+demonstrated successor-document no-op into verified success. The declared
+price is conservative: a legitimate action that navigates its own iframe must
+use the existing page-wide `wait_for` carve-out to assert successor text.
 
 ### T-M42-15 — ADR-028 still credits the mechanism R6 falsified, and no ADR records `no_abandoned_failure`            [status: todo]
 Origin: PR #57 R17 (LOW).

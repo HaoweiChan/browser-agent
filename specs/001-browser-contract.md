@@ -192,10 +192,11 @@ appears, in order — no post-hoc reconstruction).
   hold. `text_visible` and `role_visible` are checked **in the frame the
   action touched** (ADR-036): the one `resolve` returned the target from
   (`resolved.scope`), or the main document for a step that resolved no target —
-  so a decoy iframe cannot earn a click's postcondition. A FRAME, not a
-  document: if the page re-navigates that same frame in place, the predicates
-  are read in the successor document and that guarantee does not hold
-  (ADR-036 §4's declared limit, T-M42-14). `url_contains` is
+  so a decoy iframe cannot earn a click's postcondition. For an iframe target,
+  the executor also marks the resolved document before acting. If that frame
+  navigates in place, the marker disappears and the scoped postcondition is
+  **null**; its successor cannot verify the earlier action (ADR-036 §4,
+  T-M42-14). `url_contains` is
   page-level by nature, and the whole `expected_state` of `navigate`,
   `go_back` and `wait_for` stays page-wide, every frame: those actions have no
   single acted document, and a wait for a page that paints into an iframe
@@ -226,9 +227,10 @@ appears, in order — no post-hoc reconstruction).
   break (ADR-003).
   `resolved.scope` (ADR-036, amending ADR-028 §7) is the URL of the document
   the winning locator lives in — the main document's URL, or a frame's. It is
-  what scopes the step's own postcondition, and it is the record T-M42-14's
-  "a frame the step touched vs a frame that moved on its own" comparison is
-  specified to consume. Written by the one resolver both modes share; a step
+  what scopes the step's own postcondition. Exact document identity is an
+  internal, one-use marker rather than this URL because two documents may both
+  be `about:srcdoc`; the trace note reports when replacement made verification
+  impossible (T-M42-14). Written by the one resolver both modes share; a step
   that resolves nothing keeps `resolved: null`.
 
   `resolved.narrowed` names the site-agnostic ambiguity rung that selected one
