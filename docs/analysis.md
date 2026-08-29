@@ -57,10 +57,10 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-306 distinct cases (28 golden + 278 adversarial).
-500 browser actions in a `fast` run; **179 of the 271** `fast` cases drive a real Chromium end to end — counted here as
+307 distinct cases (28 golden + 279 adversarial).
+500 browser actions in a `fast` run; **179 of the 272** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260829-163747-fast.json` rather than tallied by hand (the
+`evals/report/20260829-184652-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number; PR #57 R4 caught the next
 variant of the same defect — the two figures WERE recomputed, from the headline
@@ -69,7 +69,7 @@ and 109 browser cases, so the paragraph was arithmetically true and evidentially
 false. `docs-numbers-are-derived` now checks the citation as well as the
 arithmetic). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 92 are those refusals plus pure-code probes of a single
+remaining 93 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
@@ -1183,6 +1183,25 @@ empty text` at step 2 (`eaa16859`, `12fb368f`, `53722c1a` — round 2;
 matching round 1's shape) — no variation at all across six total reps
 spanning two builds, on a page this repo has never recorded a successful
 extraction from.
+
+### Mode-B vocabulary follow-up (ADR-041)
+
+The pre-registered baseline on `c0bd276` was 7/12 correct. After mode B's
+prompt gained the five executor verbs, the fixed campaign on deployed
+`bfb2f395` measured **5/12 correct, 7/12 loud failure, 0 wrong-success and 0
+refusal**. It therefore passed the hard safety rule and failed both the 7/12
+no-regression rule and ADR-025's historical 6/12 floor. Every run and cost is
+preserved in `evals/report/20260829-182851-probe.json`; the failed result is not
+replaced by another sample.
+
+Zero of the twelve traces used any newly advertised verb. The actionable
+signal was instead another within-build split: quotes-author was 1/3 and Open
+Library was 1/3, with different outcomes on identical repetitions. The live
+planner request had left sampling at the provider default. A red-first offline
+case now drives that real request boundary twice and pins the mitigation,
+`temperature: 0`, without adding a retry, vote, cache, dependency or paid call.
+ADR-041 freezes one remediation campaign after deployment at the original
+7-correct threshold; until it lands, T-M42-1 and T-M40-5-3 remain open.
 
 
 ## 8a-5. Pre-registered Chinese-language probe (M45) — the headline did not reproduce, one third of it did

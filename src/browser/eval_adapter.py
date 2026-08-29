@@ -580,6 +580,55 @@ def _check_planner_prompt() -> dict:
     return {"passed": not wrong, "wrong": wrong}
 
 
+def _check_planner_request_disables_sampling() -> dict:
+    """Identical mode-B requests must opt out of provider-default sampling.
+
+    T-M40-5-3 and ADR-041 observed the same task, URL and deployed build land
+    in different outcome classes across adjacent repetitions. Exercise the
+    real request builder with only its transport helper replaced: the fake
+    provider varies its completion when sampling is left implicit and returns
+    the same completion when the request explicitly sets temperature zero.
+    """
+    from . import planner as P
+
+    captured = []
+    sampled = [
+        [{"action": "observe", "target": {"role": "main"}}],
+        [{"action": "extract", "target": {"role": "heading"}}],
+    ]
+
+    def fake_openrouter(_key, payload):
+        captured.append(payload)
+        plan = sampled[0] if payload.get("temperature") == 0 else sampled[len(captured) - 1]
+        return {"choices": [{"message": {"content": json.dumps(plan)},
+                             "finish_reason": "stop"}],
+                "usage": {"total_tokens": 0, "cost": 0}}
+
+    previous_openrouter = P._openrouter
+    previous_key = os.environ.get("OPENROUTER_API_KEY")
+    P._openrouter = fake_openrouter
+    os.environ["OPENROUTER_API_KEY"] = "eval-probe-not-a-key"
+    try:
+        planner = P.live_planner("openai/gpt-5.6-luna")
+        first, _ = asyncio.run(planner("find the heading", "https://example.com"))
+        second, _ = asyncio.run(planner("find the heading", "https://example.com"))
+    finally:
+        P._openrouter = previous_openrouter
+        if previous_key is None:
+            os.environ.pop("OPENROUTER_API_KEY", None)
+        else:
+            os.environ["OPENROUTER_API_KEY"] = previous_key
+
+    temperatures = [payload.get("temperature") for payload in captured]
+    wrong = {}
+    if temperatures != [0, 0]:
+        wrong["temperatures"] = temperatures
+    if first != second:
+        wrong["plans_disagreed"] = [first, second]
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"requests": len(captured), "temperatures": temperatures}}
+
+
 # ==== ADR-019 §6 band section: begin ====
 # Everything between these two markers is the band subsystem, and
 # §6 item 8 (references) reads THIS REGION of this file — not the whole 3,900-line
@@ -8201,6 +8250,7 @@ INVARIANTS = {"inv0": _check_inv0, "inv1": _check_inv1, "inv2": _check_inv2,
               "ci-numbers-derived": _check_ci_numbers_are_derived,
               "history-dirty-before-report": _check_history_dirty_before_report,
               "planner-prompt": _check_planner_prompt,
+              "planner-request-disables-sampling": _check_planner_request_disables_sampling,
               "dump-ratio-anchor-flip": _check_dump_ratio_anchor_flip,
               "narrowing-fails-closed": _check_narrowing_fails_closed,
               "judge-data-only-rule": _check_judge_data_only_rule,

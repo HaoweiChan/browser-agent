@@ -2486,6 +2486,17 @@ protocol showing the regressed set did not move, because that is the only thing
 that can tell "the planner can now wait" from "the planner now waits instead of
 planning".
 
+Update 2026-08-30: the vocabulary build's fixed post-change campaign failed the
+declared no-regression gate: 5/12 correct versus the frozen 7/12 baseline
+(safety still passed at 0 wrong-success). None of its 12 traces used a newly
+advertised verb, while quotes-author and Open Library disagreed across their own
+identical repetitions. This is the existing T-M40-5-3 flake, not evidence that
+one of the five verbs caused the loss. `planner-request-disables-sampling` was
+watched red against the omitted request parameter; mode B now explicitly sends
+`temperature: 0`. ADR-041 pre-registers one no-retry remediation campaign on
+the deployed fix. Keep this task open until that campaign reaches the original
+7-correct threshold; do not replace the failed receipt by resampling it.
+
 ### T-M42-2 — `live_driver` is unexercised: no case, offline or live, has ever called it            [status: todo]
 Origin: M42 implementation, 2026-08-26.
 Priority: P2
@@ -2876,6 +2887,15 @@ across repeated runs against unchanged fixture state), watched red first per CLA
 before any fix or mitigation (e.g. a majority-vote-of-N-reps policy, or root-causing WHY the
 same request produces different resolver/extraction outcomes) is attempted. Not closed by
 T-M40-5-1 or T-M40-5-2 individually — check both before assuming this is already covered.
+
+Update 2026-08-30: ADR-041 reproduced the same flake on build `bfb2f395`: the
+quotes task split 1 correct / 2 label failures and Open Library split 1 correct
+/ 2 empty extracts. `planner-request-disables-sampling` now fixture-simulates
+that disagreement through the real live-planner request boundary and was
+watched red before `temperature: 0` mitigated the uncontrolled provider
+default. Keep this block open until ADR-041's one fixed post-deploy campaign
+shows whether the mitigation holds on the remote provider; temperature zero is
+not documented here as a guarantee of exact remote determinism.
 
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
 Update (2026-08-28, ADR-039 §4): a general mechanism now exists — `EVAL_PROBE=1`

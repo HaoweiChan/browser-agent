@@ -1,0 +1,19 @@
+{
+  "id": "planner-request-disables-sampling",
+  "task": "browser",
+  "suites": ["invariant", "fast"],
+  "level": "L1",
+  "input": {
+    "kind": "invariant",
+    "check": "planner-request-disables-sampling"
+  },
+  "expect": {
+    "note": "two identical live_planner calls explicitly send temperature 0 and therefore do not inherit the provider's sampling default"
+  },
+  "provenance": "T-M40-5-3, reproduced again by ADR-041's post-change campaign on deployed build bfb2f395cfdf80c08636fb83ae5a5aee5aab6127: identical quotes reps produced one correct extraction and two adjacent-label failures; identical Open Library reps produced one correct extraction and two empty extracts. None of the twelve traces used a newly advertised action, so the 7/12 baseline to 5/12 result cannot evidence vocabulary behaviour and the within-build disagreement is classified as a flake. This case calls the real live_planner twice and replaces only its transport helper with a provider double that varies when sampling is implicit and holds still when temperature is zero. It neither retries nor selects a favourable completion.",
+  "triage": {
+    "class": "flake",
+    "note": "same build, task, URL and mode disagreed across adjacent fixed repetitions; mitigate the uncontrolled request parameter rather than rerunning the paid campaign until green",
+    "watched_red": "Before live_planner set temperature, both captured payloads carried no temperature and the simulated provider returned different plans for the two byte-identical requests: observe main, then extract heading. The case reported temperatures [null, null] and plans_disagreed."
+  }
+}
