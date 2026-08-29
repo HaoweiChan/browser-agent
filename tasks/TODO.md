@@ -80,6 +80,13 @@ invariant cases pin the registry and crash/recovery boundary. This does not
 close M44: no live run, matrix row, cost table or default-mode ADR is claimed
 until the separately authorized paid campaign executes.
 
+ZERO-SPEND PREFLIGHT 2026-08-30 (ADR-044): the deployed browser and inspector
+were healthy and build-bound, but the campaign exposed aggregate token and
+planner-call totals without stopping on either. Execution and recovery now
+require explicit USD, token, and planner-call stops, freeze the exact values in
+the journal, and refuse the next POST when any completed total reaches its
+line. This still does not close M44 or authorize the paid campaign.
+
 ### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
 Depends: M44
 Update 2026-08-25 (ADR-027): absorbed, not deleted. The interviewer mandate

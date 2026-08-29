@@ -17,7 +17,7 @@
       "headline": "fast",
       "reports": {
       "fast": "20260829-202042-fast.json",
-        "invariant": "20260829-193439-invariant.json",
+        "invariant": "20260829-205053-invariant.json",
         "live": "20260828-153810-live.json"
       }
     },
@@ -320,7 +320,8 @@
       "adr029-scope-matches-the-suites",
       "live-sec10k-snapshot-still-describes-the-deployment",
       "published-band-matches-the-ledger",
-      "report-citations-resolve"
+      "report-citations-resolve",
+      "ui-adrs-cover-every-decision"
     ]
   },
   "m40_note": "M40 repointed the `fast` report: adding `ui-terminal-state-on-every-ending` moved the suite to 138 cases, and this check exists to refuse a Where-it-stands block recomputed out of a smaller tree. Worth recording because resizing a suite has a fixed point here: the first run of the resized suite cannot cite a green report of that suite, because none exists yet \u2014 the run that would produce one is red on this check. The branch went through that state (report 20260823-220001-fast.json, 137/138, cited while red) and out of it with `--suite fast --report` once the count claims agreed; the block now reproduces a green 138-case run exactly.",

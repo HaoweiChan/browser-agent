@@ -18,10 +18,11 @@ explicit mode, and a POST with an ambiguous outcome is journaled and never
 retried. One frozen build event binds every run, and any invalid recovered
 journal stops before build discovery or HTTP. Text paraphrases pause for a
 human or one independently allowlisted, non-self model to adjudicate.
-``--max-usd`` is a stop line over COMPLETED reported runs, not an
-absolute cap: one delivered run may still be active, a loop can cross its cap
-on the billed call that trips it, and judge attempts have no token/USD cap.
-Those limitations are copied into every report.
+Execution requires explicit USD, token, and planner-call stop lines. They apply
+to COMPLETED reported runs, not as absolute caps: one delivered run may still
+be active, a loop can cross its cap on the billed call that trips it, and judge
+attempts have no per-run token/USD cap. Those limitations are copied into every
+report.
 """
 
 from __future__ import annotations
@@ -45,7 +46,9 @@ SEC_BASE = "https://whaleforce-sec10k.zeabur.app"
 MODES = ("plan", "loop", "escalate")
 REPS = 3
 DEFAULT_MAX_RUNS = 252
-DEFAULT_MAX_USD = 160.0
+DEFAULT_MAX_USD = 5.0
+DEFAULT_MAX_TOKENS = 10_000_000
+DEFAULT_MAX_PLANNER_CALLS = 2_520
 DEFAULT_MAX_WALL_SECONDS = 108_000
 DEFAULT_RUN_TIMEOUT = 420
 MUTABLE_TRUTH_MAX_AGE_SECONDS = 900
@@ -133,6 +136,9 @@ LIMITATIONS = {
         "the production loop USD budget is checked after the billed call that crosses it"),
     "judge_usd_is_unbounded": (
         "judge attempts are count-bounded but have no production token or USD cap"),
+    "aggregate_stops_are_post_run": (
+        "USD, token and planner-call stops are checked between completed runs; one delivered "
+        "run can cross any of them before its result can be read"),
     "client_timeout_does_not_cancel": (
         "a client poll timeout stops new submissions but does not cancel a delivered run"),
     "client_wall_stop_can_overshoot": (
@@ -299,6 +305,18 @@ def _positive_int(value: str) -> int:
     if not _positive_finite(parsed):
         raise argparse.ArgumentTypeError("must be finite and greater than zero")
     return parsed
+
+
+def _positive_count(value) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _completed_stop_reasons(report: dict, *, max_usd: float, max_tokens: int,
+                            max_planner_calls: int) -> list[str]:
+    totals = report.get("totals") or {}
+    limits = (("usd", max_usd), ("tokens", max_tokens),
+              ("planner_calls", max_planner_calls))
+    return [key for key, limit in limits if totals.get(key, 0) >= limit]
 
 
 def _truth_snapshot(path: Path, mutable_probe: dict | None = None,
@@ -605,7 +623,10 @@ def _journal_errors(events: list[dict]) -> list[dict]:
     if (start.get("registry_sha256") != FROZEN_REGISTRY_SHA256 or
             start.get("max_runs") != DEFAULT_MAX_RUNS or not started_at_valid or
             not all(_positive_finite(start.get(key)) for key in (
-                "max_usd_completed_stop", "max_wall_seconds_client", "run_timeout_client")) or
+                "max_usd_completed_stop", "max_wall_seconds_client",
+                "run_timeout_client")) or
+            not all(_positive_count(start.get(key)) for key in (
+                "max_tokens_completed_stop", "max_planner_calls_completed_stop")) or
             start.get("limitations") != LIMITATIONS or
             start.get("adjudicator_models") != list(ADJUDICATOR_MODELS)):
         errors.append({"error": "campaign_start metadata does not match frozen campaign"})
@@ -1020,10 +1041,12 @@ def _apply_adjudication(events: list[dict], path: Path | None, journal: Path) ->
 
 
 def execute(base: str, truth_path: Path, journal: Path, *, recover: bool,
-            max_usd: float, max_wall_seconds: int, run_timeout: int,
+            max_usd: float, max_tokens: int, max_planner_calls: int,
+            max_wall_seconds: int, run_timeout: int,
             adjudication_path: Path | None = None) -> dict:
-    if not all(map(_positive_finite, (max_usd, max_wall_seconds, run_timeout))):
-        raise ValueError("USD and time stop lines must be finite and positive")
+    if (not all(map(_positive_finite, (max_usd, max_wall_seconds, run_timeout))) or
+            not all(map(_positive_count, (max_tokens, max_planner_calls)))):
+        raise ValueError("USD, token, call, and time stop lines must be finite and positive")
     if recover:
         events = _load_events(journal)
         errors = _journal_errors(events)
@@ -1031,6 +1054,8 @@ def execute(base: str, truth_path: Path, journal: Path, *, recover: bool,
             raise ValueError(f"hostile or corrupt journal: {errors}")
         start = events[0]
         if (start.get("max_usd_completed_stop") != max_usd or
+                start.get("max_tokens_completed_stop") != max_tokens or
+                start.get("max_planner_calls_completed_stop") != max_planner_calls or
                 start.get("max_wall_seconds_client") != max_wall_seconds or
                 start.get("run_timeout_client") != run_timeout):
             raise ValueError("recovery limits must match campaign_start")
@@ -1043,6 +1068,8 @@ def execute(base: str, truth_path: Path, journal: Path, *, recover: bool,
         start = {"event": "campaign_start", "started_at": started_at,
                  "registry_sha256": registry_sha256(), "max_runs": DEFAULT_MAX_RUNS,
                  "max_usd_completed_stop": max_usd,
+                 "max_tokens_completed_stop": max_tokens,
+                 "max_planner_calls_completed_stop": max_planner_calls,
                  "max_wall_seconds_client": max_wall_seconds,
                  "run_timeout_client": run_timeout,
                  "truth_snapshot": snapshot_id,
@@ -1080,10 +1107,19 @@ def execute(base: str, truth_path: Path, journal: Path, *, recover: bool,
         return report
     for spec in _remaining_specs(events):
         probe = next(p for p in PROBES if p["id"] == spec["probe_id"])
-        spent, elapsed = summarize(events, validate_matrix=False)["totals"]["usd"], _elapsed(events)
-        if spent >= max_usd or elapsed >= max_wall_seconds:
+        current, elapsed = summarize(events, validate_matrix=False), _elapsed(events)
+        stop_reasons = _completed_stop_reasons(
+            current, max_usd=max_usd, max_tokens=max_tokens,
+            max_planner_calls=max_planner_calls)
+        if stop_reasons or elapsed >= max_wall_seconds:
+            totals = current["totals"]
             _append(journal, {"event": "abort", "reason": "completed stop line reached",
-                              "completed_usd": spent, "campaign_elapsed_seconds": elapsed})
+                              "stop_reasons": stop_reasons + (
+                                  ["client_seconds"] if elapsed >= max_wall_seconds else []),
+                              "completed_usd": totals["usd"],
+                              "completed_tokens": totals["tokens"],
+                              "completed_planner_calls": totals["planner_calls"],
+                              "campaign_elapsed_seconds": elapsed})
             break
         try:
             _matching_builds(base, spec, campaign_builds)
@@ -1199,7 +1235,7 @@ def self_check(check: str) -> dict:
                 "text_tri_state": True}
         wrong = {k: {"want": want[k], "got": got[k]} for k in want if got[k] != want[k]}
         return {"passed": not wrong, "wrong": wrong, "got": got}
-    if check != "safety":
+    if check not in {"safety", "aggregate-budgets"}:
         return {"passed": False, "wrong": {"unknown_check": check}}
 
     def budgets(actions=2, replans=0):
@@ -1225,6 +1261,8 @@ def self_check(check: str) -> dict:
     start = {"event": "campaign_start", "started_at": "2026-08-29T00:00:00+00:00",
              "registry_sha256": registry_sha256(), "max_runs": DEFAULT_MAX_RUNS,
              "max_usd_completed_stop": DEFAULT_MAX_USD,
+             "max_tokens_completed_stop": DEFAULT_MAX_TOKENS,
+             "max_planner_calls_completed_stop": DEFAULT_MAX_PLANNER_CALLS,
              "max_wall_seconds_client": DEFAULT_MAX_WALL_SECONDS,
              "run_timeout_client": DEFAULT_RUN_TIMEOUT,
              "truth_snapshot": snapshot, "limitations": LIMITATIONS,
@@ -1272,6 +1310,58 @@ def self_check(check: str) -> dict:
         events.extend((run_snapshot, accepted, observed, terminal))
     events.append({"event": "active_unknown", "run_id": "known", "reason": "client timeout"})
     report = summarize(events, validate_matrix=False)
+    if check == "aggregate-budgets":
+        terminal_i = next(i for i, event in enumerate(events)
+                          if event.get("event") == "terminal")
+        bounded_events = _strict_loads(json.dumps(events[:terminal_i + 1], allow_nan=False))
+        bounded_events[0]["max_usd_completed_stop"] = 1.0
+        bounded_events[0]["max_tokens_completed_stop"] = 12
+        bounded_events[0]["max_planner_calls_completed_stop"] = 2
+        bounded_report = summarize(bounded_events, validate_matrix=False)
+        exact = _completed_stop_reasons(
+            bounded_report, max_usd=1.0, max_tokens=12, max_planner_calls=2)
+        below = _completed_stop_reasons(
+            bounded_report, max_usd=1.0, max_tokens=13, max_planner_calls=3)
+        missing = _strict_loads(json.dumps(bounded_events, allow_nan=False))
+        missing[0].pop("max_tokens_completed_stop")
+        noninteger = _strict_loads(json.dumps(bounded_events, allow_nan=False))
+        noninteger[0]["max_planner_calls_completed_stop"] = 2.5
+        mismatch_stopped = no_io = False
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "bounded.jsonl"
+            for i, event in enumerate(bounded_events):
+                (_create_journal if i == 0 else _append)(path, event)
+            attempts = []
+            old = globals()["_builds"], globals()["_wait_ready"], globals()["_json"]
+            globals()["_builds"] = lambda *a, **k: attempts.append("build")
+            globals()["_wait_ready"] = lambda *a, **k: attempts.append("ready")
+            globals()["_json"] = lambda *a, **k: attempts.append("http")
+            try:
+                execute("https://invalid", Path(td) / "unused.json", path,
+                        recover=True, max_usd=1.0, max_tokens=12,
+                        max_planner_calls=2, max_wall_seconds=DEFAULT_MAX_WALL_SECONDS,
+                        run_timeout=DEFAULT_RUN_TIMEOUT)
+                stopped = _load_events(path)
+                abort = next(e for e in stopped if e.get("event") == "abort")
+                no_io = (not attempts and abort.get("stop_reasons") ==
+                         ["tokens", "planner_calls"])
+            finally:
+                globals()["_builds"], globals()["_wait_ready"], globals()["_json"] = old
+            try:
+                execute("https://invalid", Path(td) / "unused.json", path,
+                        recover=True, max_usd=1.0, max_tokens=13,
+                        max_planner_calls=2, max_wall_seconds=DEFAULT_MAX_WALL_SECONDS,
+                        run_timeout=DEFAULT_RUN_TIMEOUT)
+            except ValueError:
+                mismatch_stopped = True
+        got = {"metadata_is_required": bool(_journal_errors(missing)),
+               "counts_are_positive_integers": bool(_journal_errors(noninteger)),
+               "exact_boundary_stops": exact == ["tokens", "planner_calls"],
+               "below_boundary_continues": below == [],
+               "execute_stops_before_io": no_io,
+               "recovery_limits_match": mismatch_stopped}
+        wrong = {key: value for key, value in got.items() if not value}
+        return {"passed": not wrong, "wrong": wrong, "got": got}
     drift_events = _strict_loads(json.dumps(events, allow_nan=False))
     next(e for e in reversed(drift_events) if e.get("event") == "terminal")["builds_after"] = {
         "browser": "def", "browser_source": "image"}
@@ -1629,6 +1719,8 @@ def self_check(check: str) -> dict:
         try:
             execute("https://invalid", Path(td) / "must-not-read.json", hostile_journal,
                     recover=True, max_usd=DEFAULT_MAX_USD,
+                    max_tokens=DEFAULT_MAX_TOKENS,
+                    max_planner_calls=DEFAULT_MAX_PLANNER_CALLS,
                     max_wall_seconds=DEFAULT_MAX_WALL_SECONDS,
                     run_timeout=DEFAULT_RUN_TIMEOUT)
             invalid_recovery_stopped = False
@@ -1659,6 +1751,8 @@ def self_check(check: str) -> dict:
             try:
                 execute("https://invalid", execution_truth, Path(td) / f"{len(version_values)}.jsonl",
                         recover=False, max_usd=DEFAULT_MAX_USD,
+                        max_tokens=DEFAULT_MAX_TOKENS,
+                        max_planner_calls=DEFAULT_MAX_PLANNER_CALLS,
                         max_wall_seconds=DEFAULT_MAX_WALL_SECONDS,
                         run_timeout=DEFAULT_RUN_TIMEOUT)
             finally:
@@ -1749,7 +1843,8 @@ def self_check(check: str) -> dict:
             "failure:locate": {"runs": 1, "escalated": 1, "rate": 1.0}},
         "limitations_are_honest": set(LIMITATIONS) == {
             "usd_stop_is_not_absolute", "loop_cap_is_post_call",
-            "judge_usd_is_unbounded", "client_timeout_does_not_cancel",
+            "judge_usd_is_unbounded", "aggregate_stops_are_post_run",
+            "client_timeout_does_not_cancel",
             "client_wall_stop_can_overshoot", "sec_sha_is_self_reported"},
     }
     attempts = []
@@ -1778,7 +1873,9 @@ def main() -> int:
     ap.add_argument("--report", type=Path)
     ap.add_argument("--adjudication", type=Path)
     ap.add_argument("--summarize", type=Path)
-    ap.add_argument("--max-usd", type=_positive_float, default=DEFAULT_MAX_USD)
+    ap.add_argument("--max-usd", type=_positive_float)
+    ap.add_argument("--max-tokens", type=_positive_int)
+    ap.add_argument("--max-planner-calls", type=_positive_int)
     ap.add_argument("--max-wall-seconds", type=_positive_int, default=DEFAULT_MAX_WALL_SECONDS)
     ap.add_argument("--run-timeout", type=_positive_int, default=DEFAULT_RUN_TIMEOUT)
     args = ap.parse_args()
@@ -1793,8 +1890,11 @@ def main() -> int:
     if not args.execute and not args.recover:
         print(json.dumps({"registry_sha256": registry_sha256(), "probes": registry_payload(),
                           "modes": MODES, "reps": REPS, "runs": len(campaign_rows()),
-                          "defaults": {"max_runs": DEFAULT_MAX_RUNS,
-                                       "max_usd_completed_stop": args.max_usd,
+                          "suggested_stops": {"max_runs": DEFAULT_MAX_RUNS,
+                                       "max_usd_completed_stop": DEFAULT_MAX_USD,
+                                       "max_tokens_completed_stop": DEFAULT_MAX_TOKENS,
+                                       "max_planner_calls_completed_stop":
+                                           DEFAULT_MAX_PLANNER_CALLS,
                                        "max_wall_seconds_client": args.max_wall_seconds,
                                        "run_timeout_client": args.run_timeout,
                                        "adjudicator_models": ADJUDICATOR_MODELS},
@@ -1803,6 +1903,8 @@ def main() -> int:
         return 0
     if not args.ground_truth or not args.journal:
         ap.error("execution requires --ground-truth and --journal")
+    if None in (args.max_usd, args.max_tokens, args.max_planner_calls):
+        ap.error("execution requires explicit --max-usd, --max-tokens, and --max-planner-calls")
     if args.journal.suffix != ".jsonl":
         ap.error("journal must use the .jsonl suffix")
     if args.recover != args.journal.exists():
@@ -1816,6 +1918,8 @@ def main() -> int:
         ap.error("--report must be a new .json path distinct from the .jsonl journal")
     report = execute(args.base.rstrip("/"), args.ground_truth, args.journal,
                      recover=args.recover, max_usd=args.max_usd,
+                     max_tokens=args.max_tokens,
+                     max_planner_calls=args.max_planner_calls,
                      max_wall_seconds=args.max_wall_seconds, run_timeout=args.run_timeout,
                      adjudication_path=args.adjudication)
     _write_report(report_path, args.journal, report)

@@ -1,0 +1,17 @@
+{
+  "id": "m44-campaign-enforces-aggregate-budget-stops",
+  "task": "browser",
+  "suites": ["invariant"],
+  "input": {
+    "kind": "m44-campaign",
+    "check": "aggregate-budgets"
+  },
+  "expect": {
+    "note": "the paid campaign freezes and enforces aggregate USD, token, planner-call, and wall-clock stop lines before another POST"
+  },
+  "provenance": "M44 zero-spend preflight on 2026-08-30 found that the 252-run campaign froze only a completed-USD stop and client wall clock. Its report already totals tokens and planner calls, but execute() never consulted either total before submitting the next paid run. A pathological provider response could therefore consume the full per-run token allowance repeatedly until the USD stop happened to catch it, while a pricing/accounting defect could leave planner calls unbounded at the campaign layer. This invariant is synthetic and makes no network, browser, or model call. It requires finite positive token and planner-call stops in campaign_start, exact recovery matching, and a pre-submit stop when any aggregate reaches its limit; one delivered run may still cross a limit, which remains a declared limitation rather than an absolute-cap claim.",
+  "triage": {
+    "class": "invariant-gap",
+    "note": "The campaign exposed aggregate token and planner-call totals but no invariant or execution branch bounded them. Watched red as unknown_check before implementation."
+  }
+}

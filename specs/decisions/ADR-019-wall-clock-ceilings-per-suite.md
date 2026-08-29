@@ -235,7 +235,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 274 cases, 270/274) and
-(restated — `invariant`: 115 cases, 111/115) — are graded against the bullets they
+(restated — `invariant`: 116 cases, 112/116) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -384,10 +384,10 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 115 cases, ts `20260829-192706`, **36.21s**, 111/115
-  (`evals/report/20260829-192706-invariant.json`; `dirty: true`; the four reds
-  are the derived publication checks plus a usage-shape regression repaired before the final gate.)
-  This short sample derives 45 because 36.21 × 1.15 = 41.64 → **45**, below the
+- Band source — local `invariant` at 116 cases, ts `20260829-204709`, **36.48s**, 112/116
+  (`evals/report/20260829-204709-invariant.json`; `dirty: true`; the four reds
+  are the derived headline, ADR scope, UI ADR list and band checks refreshed before the final gate.)
+  This short sample derives 45 because 36.48 × 1.15 = 41.95 → **45**, below the
   committed 70s ceiling. Section 6's no-ratchet-down rule keeps 70: a quieter
   fresh-count sample cannot erase the earlier measured outlier. Whether 36.21s is the MAXIMUM at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger

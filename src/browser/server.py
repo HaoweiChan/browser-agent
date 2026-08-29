@@ -883,6 +883,7 @@ const ADRS = [
   ["041", "mode B's missing planner verbs are measured on the same twelve live tasks before and after the prompt changes, with zero wrong-success and no loss of correct answers required"],
   ["042", "identical parsed mode-B requests reuse a content-keyed plan at zero extra planner cost; changed prompts or parameters and malformed answers always miss"],
   ["043", "an extraction reads rendered text first, then the browser-computed accessible name of that same element when its text is empty"],
+  ["044", "a paid campaign must state aggregate USD, token and planner-call stop lines explicitly; recovery cannot change them, and reaching one refuses the next submission"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;
