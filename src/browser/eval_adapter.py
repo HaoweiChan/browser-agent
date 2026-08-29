@@ -8583,6 +8583,11 @@ def _run_invariant_case(case: dict) -> dict:
     return INVARIANTS[check]()
 
 
+def _run_m44_campaign_case(case: dict) -> dict:
+    from evals.m44_campaign import self_check
+    return self_check(case["input"]["check"])
+
+
 # `input.kind` -> runner. An unknown kind is a fixture E2E case, which is the
 # default shape; every other kind names the narrower thing it grades.
 KINDS = {
@@ -8606,6 +8611,7 @@ KINDS = {
     "invariant": _run_invariant_case,
     "judge": _run_judge_case,
     "matrix": _run_matrix_case,
+    "m44-campaign": _run_m44_campaign_case,
     "matrix-drift": _run_matrix_drift_case,
     "report-citations": _run_report_citations_case,
     "mutation": _run_mutation_case,
