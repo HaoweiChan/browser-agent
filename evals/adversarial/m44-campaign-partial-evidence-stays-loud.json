@@ -1,0 +1,17 @@
+{
+  "id": "m44-campaign-partial-evidence-stays-loud",
+  "task": "browser",
+  "suites": ["invariant"],
+  "input": {
+    "kind": "m44-campaign",
+    "check": "safety"
+  },
+  "expect": {
+    "note": "a journaled campaign cannot hide a delivered POST, wrong success, build drift, missing attribution, or cap stop"
+  },
+  "provenance": "M44 acceptance plus ADR-030's aborted harness finding. The earlier harness wrote only at the end, lost roughly three already-paid run ids, and then graded a selected six; this campaign must append and fsync the POST outcome immediately and must never retry an ambiguous possibly-delivered POST. Pre-spend review R1-R7 adds the exact hostile shapes this same evidence-safety property must reject: a terminal GET followed by a failed build read; a missing or inconsistent campaign/run truth-snapshot chain; stale mutable truth immediately before a POST; an accepted payload with model, extra, missing, or mismatched task/url/mode keys; an existing or wrongly suffixed artifact; max-runs truncation presented as completion; missing accounting keys, escalate totals unequal to their legs, and pre-plan failures miscounted as model calls; and wall-stop overshoot without elapsed evidence. N2 freezes every campaign_start control; N2-A rejects NaN, Infinity, nonpositive, and mismatched stop values before build or HTTP reads. A single strict decoder rejects non-standard constants and duplicate raw keys in HTTP, truth, journal, and adjacent JSON reads, while every writer uses standards-only serialization. Exact NaN truth/journal probes leave their source unchanged, create no campaign artifact, and reach no build/HTTP operation. Recovery may poll unresolved accepted ids but must never POST while one exists; duplicate accepted ids, browser build source other than image, and inspector self-report limitations stay loud. One strict campaign_builds event precedes and binds every accepted, observed, and terminal row, including the inspector SHA, and the current build is re-read immediately before every POST. Terminal classification and accounting are authoritative journal checks, so any validation error aborts recovery before build or HTTP. A successful text response outside accepted_exact is durably journaled as needs_adjudication and blocks the next POST. Recovery accepts only a distinct strict adjudication artifact bound to the run, frozen registry, and truth snapshot; model identities are canonicalized and must be on the campaign's frozen independent adjudicator allowlist and differ from the terminal model. Forged, stale, invalid, duplicate, conflicting, or self-model decisions remain pending and loud rather than affecting an outcome bucket. Correct adjudication resumes without resubmission, while wrong_success stops the campaign. Synthetic reports exercise every acceptance-critical direction without network or spend. The $160 value is deliberately not an absolute cap: it is a stop line over completed records; one delivered run can remain in flight, loop budgets are checked after a billed call, judge attempts have no token/USD budget, and client/network/filesystem scheduling overshoot is unbounded. The report has to publish those limitations rather than manufacture a maximum.",
+  "triage": {
+    "class": "evidence-loss",
+    "note": "Pure synthetic journal/report checks; zero network, browser, or model calls. Watched red before evals.m44_campaign existed."
+  }
+}

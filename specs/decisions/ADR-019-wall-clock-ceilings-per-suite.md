@@ -234,7 +234,7 @@ be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
 The cited rows' own results — (restated — `fast`: 268 cases, 263/268) and
-(restated — `invariant`: 109 cases, 107/109) — are graded against the bullets they
+(restated — `invariant`: 111 cases, 111/111) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -383,16 +383,22 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 109 cases, ts `20260829-085718`, **46.40s**, 107/109
-  (`evals/report/20260829-085718-invariant.json`; `dirty: true`, the valid
-  ADR-040 red-first run). The two failures are exactly the policy case written
-  before production and the ADR-to-UI index written before its public summary:
-  `screening-zh-term-inside-another-word` and
-  `ui-adrs-cover-every-decision`. The case count is unchanged from M47, but the
-  ledger maximum rule still applies: 46.40 × 1.15 = 53.36 → **55**. The next
-  implementation run measured 34.91s; §6 deliberately does
-  not discard the slower real run because a quieter sample is not evidence the
-  cost cannot recur.
+- Band source — local `invariant` at 111 cases, ts `20260829-130008`, **33.95s**, 111/111
+  (`evals/report/20260829-130008-invariant.json`; `dirty: true` — unlike the row
+  this supersedes, M47 added the invariant-tagged exact-repeat and console
+  projection cases, so item 2 (cited-run)'s dirty allowance applies again: no
+  clean row at 111 was available when this band was published. The ceiling
+  derives 40 because 33.95 × 1.15 lands in that band, while the committed
+  ceiling remains **55** under §6's no-ratchet-down rule: ADR-040's valid
+  46.40s red-first run at 109 cases derived 55, and a later quieter sample at a
+  new count does not erase it. Green after the count and citation refresh.
+  Whether 33.95s is the MAXIMUM at this count is
+  deliberately not asserted — PR #78 R4 found that adjective on a row the ledger
+  had already overtaken, and the rule needs only that the published number and
+  the ledger's maximum derive the same **40**; `published-band-matches-the-ledger`
+  prints `ledger_slowest`.
+  GREEN, 111/111 — the count, cited report and band agree on the tree this row
+  measures.
   **The previous band at 90 was an outlier and said so; this one is not**, and
   the difference is worth one line because it changes what a reader should
   watch. That row sat seconds above its neighbours, taken on a contended
@@ -485,6 +491,16 @@ commit that changed nothing but JSON.
   `T-M32-13`, which the note originally cited beside it, is closed here; whether
   its closure changes M40's tagging is T-M40-3's question, not this section's.)
 
+Merging ADR-040 with the later 111-case tree watched the stale README row red
+in `evals/report/20260829-131927-invariant.json` (110/111, only
+`published-band-matches-the-ledger`). The next two pre-commit attempts are
+`evals/report/20260829-132644-fast.json` (267/268, only
+`report-citations-resolve`, before the first report was cited) and
+`evals/report/20260829-132943-fast.json` (267/268, only
+`published-band-matches-the-ledger`, because those evidence citations were
+mistakenly placed inside the band bullet). All three failures are retained as
+the evidence chain rather than deleted.
+
 **No graded form of "the published row is the maximum" is currently known.**
 `T-R85` records the class, why the strict form is refused, and the candidate that
 was proposed and then killed on its own arithmetic — it was green on the defect it
@@ -536,7 +552,7 @@ grader prints it, with the case count, whenever a band needs republishing.
 Nothing here went red on either scalar: both derived 20, which is precisely why
 this had to be caught by reading rather than by the gate.
 
-The same rule gives 34.20 × 1.15 = 39.33 → **40**, which is exactly the committed
+The same rule gives 33.95 × 1.15 = 39.04 → **40**, which is exactly the committed
 ceiling. Two decimals on the product because one is not enough to re-derive it:
 "15.8" and "15.0" round up to a multiple of five differently depending on how a
 reader reads them (PR #35 R13).

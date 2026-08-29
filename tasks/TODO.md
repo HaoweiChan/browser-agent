@@ -71,6 +71,15 @@ not a row footnote; an ADR recording the live default. The default-mode
 decision now chooses between THREE modes, and `escalate`'s row is the one the
 cost argument in ADR-037 has to survive.
 
+PRE-SPEND HARNESS 2026-08-29: `evals/m44_campaign.py` freezes the deduplicated
+14-probe / 28 bilingual-task / three-mode / three-repetition matrix (252 runs),
+journals every accepted run id before polling, binds browser and inspector
+builds plus fresh ground truth, and stops on incomplete evidence, spend/time
+limits, wrong-success, or text answers awaiting independent adjudication. Two
+invariant cases pin the registry and crash/recovery boundary. This does not
+close M44: no live run, matrix row, cost table or default-mode ADR is claimed
+until the separately authorized paid campaign executes.
+
 ### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
 Depends: M44
 Update 2026-08-25 (ADR-027): absorbed, not deleted. The interviewer mandate

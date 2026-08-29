@@ -51,25 +51,24 @@ python3 -m uvicorn src.browser.server:app --port 8099
 ## Where it stands
 
 Latest offline baseline — `evals/report/20260829-033600-fast.json`, with
-`evals/report/20260829-032810-invariant.json` and
+`evals/report/20260829-130008-invariant.json` and
 `evals/report/20260828-153810-live.json`:
 
 ```
-fast  265/268    invariant  106/109    live  12/13    $0.0000    106.7s
+fast  265/268    invariant  111/111    live  12/13    $0.0000    106.7s
 recovery 10/10 verified (25 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 77/77 · 15 replans
 ```
 
-The three red in each are `docs-numbers-are-derived`,
+The three fast reds are `docs-numbers-are-derived`,
 `published-band-matches-the-ledger` and `adr029-scope-matches-the-suites`, each
-reading the count and evidence refresh carried by this branch. It is
-the shape every band republish has (ADR-019 §2): the tree reaches its new case
-count only while the new cases are uncommitted, so the run that produces the
-numbers is the run that cannot yet cite them.
+reading the count and evidence refresh carried by that report's branch. The
+invariant refresh is green after publishing the new 111-case count and band.
 
 This refresh supersedes the prior baselines
 `evals/report/20260828-161325-fast.json` and
-`evals/report/20260828-161359-invariant.json`; they remain as historical
+`evals/report/20260828-161359-invariant.json`, plus the intermediate
+`evals/report/20260829-032810-invariant.json`; they remain as historical
 evidence rather than inputs to the current figures.
 
 `live` is not part of the gate, and it goes red when a site is having a bad
@@ -209,16 +208,15 @@ enumerating them here is the snapshot that drifted:
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
 | `fast` | 268 | 108.41s | 124.67 | **125s** |
-| `invariant` | 109 | 46.40s | 53.36 | **55s** |
+| `invariant` | 111 | 33.95s | 39.04 | **55s** |
 
-The last column is the **committed** ceiling, not the arithmetic's own answer,
-and the two are allowed to differ by a step: a short sample may derive UNDER the
-committed ceiling, and must never drag it down (ADR-019 §6). At the counts in
-this table both rows' arithmetic happens to land exactly on the committed
-ceiling, so there is no divergence on display — a reader re-doing the sums
-should get the fourth column from the third and the fifth from the fourth, and
-should not read that agreement as a rule. The rule is one-directional: derived
-BELOW the committed ceiling is held, derived ABOVE it is an ADR.
+The last column is the **committed** ceiling, not the arithmetic's own answer.
+A short sample may derive UNDER the committed ceiling and must never drag it
+down (ADR-019 §6). `invariant` shows that divergence: ADR-040 raised the ceiling
+to 55s from its valid 46.40s red-first run at 109 cases; the later 111-case band
+derives 40s, but does not erase the slower measurement or ratchet the gate down.
+The rule is one-directional: derived BELOW the committed ceiling is held;
+derived ABOVE it requires an ADR.
 (This paragraph used to illustrate the divergence with `invariant`'s
 `29.89 → 30 → held at 35` and a `fast` product of `107.46`. Both numbers left
 the table two ceiling moves ago and the example they carried had stopped being
@@ -483,7 +481,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 300 cases (268 of them in the offline gate), it
+The eval set is not weak; it is 302 cases (268 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
