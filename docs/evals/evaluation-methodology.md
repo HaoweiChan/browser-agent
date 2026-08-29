@@ -30,6 +30,14 @@ B-strong grows to 35–45 across 4+ domains including the hostile one [SHOULD].
 The analysis report shows the actual case-count matrix **with empty cells
 visible** — honesty about gaps is itself graded material.
 
+Observation cases grade element identity, not only vocabulary presence.
+`expect.name_counts` asserts the exact multiplicity of each accessible name, so
+two controls with the same name cannot collapse into one set member and pass as
+unambiguous. An exclusion that represents an observation-budget boundary also
+uses `must_exclude_names_present_on_page`: the name must be absent from the
+bounded observation while remaining resolvable on the full page. A page rename
+therefore fails the case instead of turning it vacuously green.
+
 ## Difficulty levels
 
 | Level | Definition | Tag |

@@ -2826,11 +2826,25 @@ def _run_observe_case(case: dict) -> dict:
                                          "resolved": got_n,
                                          "error": "the observation advertises this name for "
                                                   f"{want_n} element(s); resolve reaches {got_n}"})
-            return obs, unresolvable, needed_relocation, resolved_relaxations
+            # A name absent from the bounded observation proves a cap only when
+            # the same name still exists on the full page. Otherwise a fixture
+            # rename turns an exclusion into a vacuous pass (T-M41-4).
+            excluded_missing_on_page = []
+            for name in case["expect"].get("must_exclude_names_present_on_page", []):
+                try:
+                    loc, _tier, _narrowed, _scope = await resolve(
+                        page, {"text": name}, many=True)
+                    if await loc.count() == 0:
+                        excluded_missing_on_page.append(name)
+                except Exception:
+                    excluded_missing_on_page.append(name)
+            return (obs, unresolvable, needed_relocation, resolved_relaxations,
+                    excluded_missing_on_page)
         finally:
             await ctx.close()
 
-    obs, unresolvable, needed_relocation, resolved_relaxations = _await(go())
+    (obs, unresolvable, needed_relocation, resolved_relaxations,
+     excluded_missing_on_page) = _await(go())
     exp = case["expect"]
     missing = [
         want for want in exp.get("contains", [])
@@ -2843,7 +2857,8 @@ def _run_observe_case(case: dict) -> dict:
     unnameable = [e for e in obs["elements"] if e["role"] in exp.get("unnameable_roles", []) and e["name"]]
     # The observation budget must not be spent entirely on chrome: content the
     # task is about has to survive the cap (observe-content-survives-chrome).
-    names, roles = {e["name"] for e in obs["elements"]}, {e["role"] for e in obs["elements"]}
+    name_counts = collections.Counter(e["name"] for e in obs["elements"])
+    names, roles = set(name_counts), {e["role"] for e in obs["elements"]}
     starved = ([n for n in exp.get("must_include_names", []) if n not in names]
                + [r for r in exp.get("must_include_roles", []) if r not in roles])
     # The other direction, and the reason M32 exists: a name the page-level
@@ -2853,6 +2868,11 @@ def _run_observe_case(case: dict) -> dict:
     # would have worked anyway, and it reddens if MAX_ELEMS is ever raised to
     # "fix" the defect instead of disclosing the subtree (ADR-020).
     leaked = [n for n in exp.get("must_exclude_names", []) if n in names]
+    wrong_name_counts = {
+        name: {"expected": want, "observed": name_counts[name]}
+        for name, want in exp.get("name_counts", {}).items()
+        if name_counts[name] != want
+    }
     leaked_roles = [r for r in exp.get("must_exclude_roles", []) if r in roles]
     # The other half of what an observation discloses: its text head. A drill
     # widens it (DRILL_TEXT_HEAD), and on a page whose content carries no
@@ -2871,6 +2891,7 @@ def _run_observe_case(case: dict) -> dict:
     ]
     return {
         "passed": not missing and not unnameable and not starved and not leaked and not leaked_roles
+                  and not wrong_name_counts and not excluded_missing_on_page
                   and not text_missing and not unresolvable and not forbidden_relocation
                   and not missing_resolution_notes,
         "missing": missing,
@@ -2884,6 +2905,8 @@ def _run_observe_case(case: dict) -> dict:
         "advertised_resolution_notes_missing": missing_resolution_notes,
         "starved_by_chrome": starved,
         "inside_the_cap_after_all": leaked,
+        "wrong_name_counts": wrong_name_counts,
+        "excluded_name_missing_on_page": excluded_missing_on_page,
         "roles_that_should_not_be_advertised": leaked_roles,
         "text_head_missing": text_missing,
         "n_elements": len(obs["elements"]),
