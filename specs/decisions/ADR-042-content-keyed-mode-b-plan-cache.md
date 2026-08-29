@@ -52,3 +52,27 @@ This closes T-M40-5-3 only if the fixed campaign meets its repeatability and
 outcome gates. T-M42-1 closes only if the same campaign restores its 7-correct
 no-regression threshold. The cache cannot repair resolver, extraction or page
 observation defects exposed by a stable plan; those remain separate tasks.
+
+## Outcome
+
+The one campaign completed against deployed
+`main@23839a058d9ca36c1186243108fe0d13514dab46`, with `/version` exact before
+and after: **4/12 correct, 8 loud failures, 0 wrong-success, 0 refusal**. Safety
+passes; the 7-correct no-regression gate fails. Raw evidence is
+`evals/report/20260829-195310-probe.json`; no run was retried or discarded.
+
+The cache mechanism worked, but not universally across the observed service
+lifecycle. Six of seven post-first repetitions with no replan spent zero
+planner tokens and dollars: both later x-rates, quotes-author and Open Library
+runs. The seventh, multpl rep 3, made a fresh paid call and returned malformed
+JSON despite an otherwise-identical initial request; its exact cache miss is
+observable, but this campaign cannot distinguish process replacement, local
+cache loss or another deployment-level cause. The mechanism gate therefore
+fails rather than assuming durability the evidence did not prove.
+
+Plan determinism also did not imply task quality. x-rates became 3/3 correct;
+quotes-author became the same wrong-label loud failure 3/3; Open Library became
+the same empty-extract loud failure 3/3. multpl alone still disagreed across
+repetitions: one correct and two loud failures, with different action sequences.
+T-M40-5-3 and T-M42-1 remain open. This ADR authorises no second campaign and
+does not pre-authorise another sampling/cache guess.

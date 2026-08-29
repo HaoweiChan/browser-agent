@@ -2509,6 +2509,12 @@ content-keyed plan cache is pinned red-first by
 deployment campaign restores the frozen 7/12 correctness threshold with zero
 wrong-success; the offline cache case alone does not prove live task quality.
 
+ADR-042 outcome: the deployed campaign produced 4/12 correct, 8 loud failures,
+0 wrong-success and 0 refusal. The cache made three tasks internally stable but
+stabilised two of them on repeatable bad plans; multpl still split one correct
+and two loud failures. Keep T-M42-1 open. The single authorised campaign is
+exhausted; receipt `evals/report/20260829-195310-probe.json`.
+
 ### T-M42-2 — `live_driver` is unexercised: no case, offline or live, has ever called it            [status: todo]
 Origin: M42 implementation, 2026-08-26.
 Priority: P2
@@ -2921,6 +2927,13 @@ parsed inputs replay across planner closures at zero extra planner cost, while
 changed recovery context and malformed responses miss. Keep this task open
 until the one fixed deployed campaign proves repeatability; no retry or voting
 policy was added.
+
+ADR-042 outcome: six of seven qualifying post-first runs hit at zero planner
+cost, but multpl rep 3 paid for a fresh malformed completion on its identical
+initial request. More importantly, multpl still split outcome classes and
+action sequences. Keep T-M40-5-3 open; local-file cache durability and
+verified-quality admission are now the two evidenced boundaries, not reasons
+to rerun this campaign.
 
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
 Update (2026-08-28, ADR-039 §4): a general mechanism now exists — `EVAL_PROBE=1`

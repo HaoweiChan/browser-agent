@@ -1,0 +1,823 @@
+{
+  "suite": "t-m40-5-3-content-keyed-plan-cache-probe",
+  "phase": "adr-042",
+  "base": "https://whaleforce-browser-agent.zeabur.app",
+  "expected_sha": "23839a058d9ca36c1186243108fe0d13514dab46",
+  "generated": "2026-08-29T19:53:24.695263+00:00",
+  "version_before": {
+    "sha": "23839a058d9ca36c1186243108fe0d13514dab46",
+    "source": "image"
+  },
+  "protocol": {
+    "mode": "plan",
+    "model_override": null,
+    "repetitions": 3,
+    "max_usd_completed_stop": 0.05,
+    "run_timeout_s": 180,
+    "no_resubmissions": true,
+    "no_discarded_runs": true
+  },
+  "results": [
+    {
+      "task_id": "x-rates",
+      "rep": 1,
+      "task": "What is the current exchange rate from EUR to USD?",
+      "url": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "d2615340",
+      "status": "success",
+      "answer": "1.158329 USD",
+      "reason": null,
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_attempts": 1,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "trace_actions": [
+        "navigate",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 1836,
+        "llm_usd": 0.00075715,
+        "replans": 0,
+        "ms": 15138,
+        "judge_calls": 1,
+        "judge_tokens": 1327,
+        "judge_usd": 6.885e-05
+      },
+      "client_seconds": 15.41,
+      "ground_truth": {
+        "answer": "1.158329 USD",
+        "source": "live HTML ccOutputRslt"
+      },
+      "outcome": "correct"
+    },
+    {
+      "task_id": "x-rates",
+      "rep": 2,
+      "task": "What is the current exchange rate from EUR to USD?",
+      "url": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "8c9fb0d5",
+      "status": "success",
+      "answer": "1.158329 USD",
+      "reason": null,
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_attempts": 1,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "trace_actions": [
+        "navigate",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 6939,
+        "judge_calls": 1,
+        "judge_tokens": 1235,
+        "judge_usd": 0.00018914
+      },
+      "client_seconds": 7.57,
+      "ground_truth": {
+        "answer": "1.158329 USD",
+        "source": "live HTML ccOutputRslt"
+      },
+      "outcome": "correct"
+    },
+    {
+      "task_id": "x-rates",
+      "rep": 3,
+      "task": "What is the current exchange rate from EUR to USD?",
+      "url": "https://www.x-rates.com/calculator/?from=EUR&to=USD&amount=1",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "fec30ada",
+      "status": "success",
+      "answer": "1.158329 USD",
+      "reason": null,
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_attempts": 1,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "trace_actions": [
+        "navigate",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 15791,
+        "judge_calls": 1,
+        "judge_tokens": 1329,
+        "judge_usd": 5.975e-05
+      },
+      "client_seconds": 16.41,
+      "ground_truth": {
+        "answer": "1.158329 USD",
+        "source": "live HTML ccOutputRslt"
+      },
+      "outcome": "correct"
+    },
+    {
+      "task_id": "multpl",
+      "rep": 1,
+      "task": "What is the current S&P 500 P/E ratio?",
+      "url": "https://www.multpl.com/s-p-500-pe-ratio",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "cc80adf3",
+      "status": "success",
+      "answer": "† 29.72",
+      "reason": null,
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": {
+        "verdict": "PASS",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_attempts": 1,
+          "judge_responsive": true
+        },
+        "reason": null
+      },
+      "trace_actions": [
+        "navigate",
+        "click",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 3,
+        "llm_tokens": 3685,
+        "llm_usd": 0.00137505,
+        "replans": 1,
+        "ms": 19680,
+        "judge_calls": 1,
+        "judge_tokens": 2242,
+        "judge_usd": 0.00036916
+      },
+      "client_seconds": 20.24,
+      "ground_truth": {
+        "answer": "29.72",
+        "source": "live HTML meta description"
+      },
+      "outcome": "correct"
+    },
+    {
+      "task_id": "multpl",
+      "rep": 2,
+      "task": "What is the current S&P 500 P/E ratio?",
+      "url": "https://www.multpl.com/s-p-500-pe-ratio",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "032d9e47",
+      "status": "failure:extract",
+      "answer": null,
+      "reason": "empty answer or empty trace",
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": false,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true
+        },
+        "reason": "answer is empty"
+      },
+      "trace_actions": [
+        "navigate",
+        "click",
+        "click"
+      ],
+      "budgets_spent": {
+        "actions": 3,
+        "llm_tokens": 3955,
+        "llm_usd": 0.0017038,
+        "replans": 1,
+        "ms": 15746,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "client_seconds": 16.05,
+      "ground_truth": {
+        "answer": "29.72",
+        "source": "live HTML meta description"
+      },
+      "outcome": "loud_failure"
+    },
+    {
+      "task_id": "multpl",
+      "rep": 3,
+      "task": "What is the current S&P 500 P/E ratio?",
+      "url": "https://www.multpl.com/s-p-500-pe-ratio",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "60d38c1b",
+      "status": "failure:env",
+      "answer": null,
+      "reason": "planner rejected: planner returned non-plan output: Extra data: line 1 column 340 (char 339): [{\"action\":\"click\",\"target\":{\"role\":\"link\",\"name\":\"Table\",\"text\":null,\"near\":null,\"index\":null},\"value\":null,\"anchor\":null,\"rank\":null,\"expected_state\":{\"url_contains\":\"#table\"}},{\"action\":\"observe\",\"",
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": null,
+      "trace_actions": [
+        "navigate"
+      ],
+      "budgets_spent": {
+        "actions": 1,
+        "llm_tokens": 1935,
+        "llm_usd": 0.0008161,
+        "replans": 0,
+        "ms": 8029,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "client_seconds": 8.33,
+      "ground_truth": {
+        "answer": "29.72",
+        "source": "live HTML meta description"
+      },
+      "outcome": "loud_failure"
+    },
+    {
+      "task_id": "quotes-author",
+      "rep": 1,
+      "task": "When was this author born?",
+      "url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "2007dfa0",
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "verifier FAIL: judge rejected: The answer only repeats the label 'Born:' and does not provide the actual birth date.",
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_attempts": 1,
+          "judge_responsive": false
+        },
+        "reason": "judge rejected: The answer only repeats the label 'Born:' and does not provide the actual birth date."
+      },
+      "trace_actions": [
+        "navigate",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 1313,
+        "llm_usd": 0.00044685,
+        "replans": 0,
+        "ms": 6508,
+        "judge_calls": 1,
+        "judge_tokens": 990,
+        "judge_usd": 0.00010485
+      },
+      "client_seconds": 7.12,
+      "ground_truth": {
+        "answer": "Born: March 14, 1879 in Ulm, Germany",
+        "source": "live author page"
+      },
+      "outcome": "loud_failure"
+    },
+    {
+      "task_id": "quotes-author",
+      "rep": 2,
+      "task": "When was this author born?",
+      "url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "093dff3a",
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "verifier FAIL: judge rejected: The answer only repeats the label 'Born:' and does not provide the actual birth date.",
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_attempts": 1,
+          "judge_responsive": false
+        },
+        "reason": "judge rejected: The answer only repeats the label 'Born:' and does not provide the actual birth date."
+      },
+      "trace_actions": [
+        "navigate",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2146,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "client_seconds": 2.4,
+      "ground_truth": {
+        "answer": "Born: March 14, 1879 in Ulm, Germany",
+        "source": "live author page"
+      },
+      "outcome": "loud_failure"
+    },
+    {
+      "task_id": "quotes-author",
+      "rep": 3,
+      "task": "When was this author born?",
+      "url": "https://quotes.toscrape.com/author/Albert-Einstein/",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "93878ac0",
+      "status": "failure:semantic",
+      "answer": null,
+      "reason": "verifier FAIL: judge rejected: The answer only repeats the label 'Born:' and does not provide the actual birth date.",
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": {
+        "verdict": "FAIL",
+        "layer": 1,
+        "ground_truth": false,
+        "checks": {
+          "trace_nonempty": true,
+          "supersedes_resolve": true,
+          "no_failed_postcondition": true,
+          "answer_nonempty": true,
+          "no_abandoned_failure": true,
+          "actions_verified": true,
+          "grounded": true,
+          "not_a_dump": true,
+          "not_page_furniture": true,
+          "identity_anchors": true,
+          "aggregate_needs_comparison": true,
+          "judge_attempts": 1,
+          "judge_responsive": false
+        },
+        "reason": "judge rejected: The answer only repeats the label 'Born:' and does not provide the actual birth date."
+      },
+      "trace_actions": [
+        "navigate",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 2195,
+        "judge_calls": 1,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "client_seconds": 2.55,
+      "ground_truth": {
+        "answer": "Born: March 14, 1879 in Ulm, Germany",
+        "source": "live author page"
+      },
+      "outcome": "loud_failure"
+    },
+    {
+      "task_id": "openlibrary",
+      "rep": 1,
+      "task": "Who is the author of this book?",
+      "url": "https://openlibrary.org/books/OL7025919M",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "4947a902",
+      "status": "failure:extract",
+      "answer": null,
+      "reason": "step 2 (extract): StepError: extraction returned empty text",
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": null,
+      "trace_actions": [
+        "navigate",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 1724,
+        "llm_usd": 0.0005762,
+        "replans": 0,
+        "ms": 6086,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "client_seconds": 6.4,
+      "ground_truth": {
+        "answer": "Smith, Arthur Cosslett",
+        "source": "live book page"
+      },
+      "outcome": "loud_failure"
+    },
+    {
+      "task_id": "openlibrary",
+      "rep": 2,
+      "task": "Who is the author of this book?",
+      "url": "https://openlibrary.org/books/OL7025919M",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "e1dece67",
+      "status": "failure:extract",
+      "answer": null,
+      "reason": "step 2 (extract): StepError: extraction returned empty text",
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": null,
+      "trace_actions": [
+        "navigate",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 3683,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "client_seconds": 4.17,
+      "ground_truth": {
+        "answer": "Smith, Arthur Cosslett",
+        "source": "live book page"
+      },
+      "outcome": "loud_failure"
+    },
+    {
+      "task_id": "openlibrary",
+      "rep": 3,
+      "task": "Who is the author of this book?",
+      "url": "https://openlibrary.org/books/OL7025919M",
+      "ready_before": {
+        "ready": true,
+        "busy": false,
+        "active_run_id": null,
+        "running": 0,
+        "reason": null
+      },
+      "run_id": "095e81c2",
+      "status": "failure:extract",
+      "answer": null,
+      "reason": "step 2 (extract): StepError: extraction returned empty text",
+      "mode": "plan",
+      "model": "openai/gpt-5.6-luna",
+      "verdict": null,
+      "trace_actions": [
+        "navigate",
+        "extract"
+      ],
+      "budgets_spent": {
+        "actions": 2,
+        "llm_tokens": 0,
+        "llm_usd": 0.0,
+        "replans": 0,
+        "ms": 4467,
+        "judge_calls": 0,
+        "judge_tokens": 0,
+        "judge_usd": 0.0
+      },
+      "client_seconds": 5.2,
+      "ground_truth": {
+        "answer": "Smith, Arthur Cosslett",
+        "source": "live book page"
+      },
+      "outcome": "loud_failure"
+    }
+  ],
+  "version_after": {
+    "sha": "23839a058d9ca36c1186243108fe0d13514dab46",
+    "source": "image"
+  },
+  "complete": true,
+  "ground_truth_reverified": {
+    "x-rates": {
+      "answer": "1.158329 USD",
+      "source": "live HTML ccOutputRslt"
+    },
+    "multpl": {
+      "answer": "29.72",
+      "source": "live HTML meta description"
+    },
+    "quotes-author": {
+      "answer": "Born: March 14, 1879 in Ulm, Germany",
+      "source": "live author page"
+    },
+    "openlibrary": {
+      "answer": "Smith, Arthur Cosslett",
+      "source": "live book page"
+    }
+  },
+  "counts": {
+    "correct": 4,
+    "loud_failure": 8,
+    "wrong_success": 0,
+    "refusal": 0,
+    "partial": 0
+  },
+  "per_task": {
+    "x-rates": {
+      "correct": 3,
+      "loud_failure": 0,
+      "wrong_success": 0,
+      "refusal": 0,
+      "partial": 0
+    },
+    "multpl": {
+      "correct": 1,
+      "loud_failure": 2,
+      "wrong_success": 0,
+      "refusal": 0,
+      "partial": 0
+    },
+    "quotes-author": {
+      "correct": 0,
+      "loud_failure": 3,
+      "wrong_success": 0,
+      "refusal": 0,
+      "partial": 0
+    },
+    "openlibrary": {
+      "correct": 0,
+      "loud_failure": 3,
+      "wrong_success": 0,
+      "refusal": 0,
+      "partial": 0
+    }
+  },
+  "total_cost": {
+    "llm_usd": 0.00567515,
+    "judge_usd": 0.00079175,
+    "llm_tokens": 14448,
+    "judge_tokens": 7123,
+    "actions": 25,
+    "ms": 106408
+  },
+  "acceptance": {
+    "safety_zero_wrong_success": "pass",
+    "no_regression_at_least_7_correct": "fail",
+    "identical_action_sequences_by_task": {
+      "x-rates": true,
+      "multpl": false,
+      "quotes-author": true,
+      "openlibrary": true
+    },
+    "planner_cost_by_repetition": {
+      "x-rates": [
+        {
+          "rep": 1,
+          "tokens": 1836,
+          "usd": 0.00075715,
+          "replans": 0
+        },
+        {
+          "rep": 2,
+          "tokens": 0,
+          "usd": 0.0,
+          "replans": 0
+        },
+        {
+          "rep": 3,
+          "tokens": 0,
+          "usd": 0.0,
+          "replans": 0
+        }
+      ],
+      "multpl": [
+        {
+          "rep": 1,
+          "tokens": 3685,
+          "usd": 0.00137505,
+          "replans": 1
+        },
+        {
+          "rep": 2,
+          "tokens": 3955,
+          "usd": 0.0017038,
+          "replans": 1
+        },
+        {
+          "rep": 3,
+          "tokens": 1935,
+          "usd": 0.0008161,
+          "replans": 0
+        }
+      ],
+      "quotes-author": [
+        {
+          "rep": 1,
+          "tokens": 1313,
+          "usd": 0.00044685,
+          "replans": 0
+        },
+        {
+          "rep": 2,
+          "tokens": 0,
+          "usd": 0.0,
+          "replans": 0
+        },
+        {
+          "rep": 3,
+          "tokens": 0,
+          "usd": 0.0,
+          "replans": 0
+        }
+      ],
+      "openlibrary": [
+        {
+          "rep": 1,
+          "tokens": 1724,
+          "usd": 0.0005762,
+          "replans": 0
+        },
+        {
+          "rep": 2,
+          "tokens": 0,
+          "usd": 0.0,
+          "replans": 0
+        },
+        {
+          "rep": 3,
+          "tokens": 0,
+          "usd": 0.0,
+          "replans": 0
+        }
+      ]
+    },
+    "qualifying_post_first_runs": 7,
+    "qualifying_post_first_runs_zero_planner_cost": false
+  }
+}
