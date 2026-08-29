@@ -12,7 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M47 — two-day agentic hardening: stop exact repeats and show the decision trail            [status: in-progress]
+### M47 — two-day agentic hardening: stop exact repeats and show the decision trail            [status: pr]
 Depends: M42
 Priority: P0
 Spec: implement the 12-hour vertical slice in
