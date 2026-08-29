@@ -2935,6 +2935,24 @@ action sequences. Keep T-M40-5-3 open; local-file cache durability and
 verified-quality admission are now the two evidenced boundaries, not reasons
 to rerun this campaign.
 
+### T-M40-5-4 — a uniquely resolved element with accessible-name-only content extracts empty            [status: done]
+Origin: T-M40-5 Open Library run `bdd9ebf7`, reproduced identically by ADR-042
+runs `4947a902`, `e1dece67`, `095e81c2` on 2026-08-30.
+Priority: P1
+Classification: `input-variant` — the resolver reached the intended image link
+at one role-tier match, but the executor accepted only `innerText`; the value
+the observation and resolver both used lived in the same element's accessible
+name.
+Acceptance: an authored, site-free fixture uniquely resolves a link with no
+rendered text and a non-empty browser-computed accessible name; watched red as
+`failure:extract`, then returns that name with grounded evidence. No parent,
+sibling, nearby-element search, retry, model call or site selector is added.
+`trap-empty-extraction` also stays loud, preventing a generic control label
+from being promoted to an answer.
+Closed by ADR-043 and `extract-falls-back-to-accessible-name`. This does not
+upgrade Open Library's support row without a post-deployment live result, does
+not repair T-M40-5-2's distinct label target, and does not close T-M40-5-3.
+
 ### T-M38-5 — the ledger's probe-isolation mechanism does not cover ablation probes, and a published band cited mutated code because of it            [status: todo]
 Update (2026-08-28, ADR-039 §4): a general mechanism now exists — `EVAL_PROBE=1`
 routes a run's history line to `evals/report/history-probe.jsonl` (gitignored)

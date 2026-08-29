@@ -83,10 +83,13 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 273 cases, ts `20260829-192958`, **106.89s**, 270/273
-  (`dirty: true`; report `evals/report/20260829-192958-fast.json`, and red — the
-  three failures are the derived headline and band checks being refreshed by this
-  change. That is the general shape of every band republish and
+- Band source — local `fast` at 274 cases, ts `20260829-201645`, **109.15s**, 270/274
+  (`dirty: true`; report `evals/report/20260829-201645-fast.json`, and red — two
+  failures are the derived headline and band checks being refreshed, while two
+  are the discarded broad accessible-name fallback that promoted control labels
+  to answers. A later final-code run is faster; this row remains the band source
+  under the no-outlier-rejection rule.
+  That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
   the addition forces.
@@ -231,7 +234,7 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 273 cases, 270/273) and
+The cited rows' own results — (restated — `fast`: 274 cases, 270/274) and
 (restated — `invariant`: 115 cases, 111/115) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
@@ -354,7 +357,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 106.89 × 1.15 = 122.92 → **125**, below the committed ceiling.
+five — gives 109.15 × 1.15 = 125.52 → **130**, equal to the committed ceiling.
 The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
 ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
 each derived
