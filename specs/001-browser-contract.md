@@ -428,6 +428,13 @@ appears, in order — no post-hoc reconstruction).
   failure, nothing superseded and no ladder run, so labelling it would inflate
   the recovery metric with attempts that never failed (the ruling `ADR-020`
   made for the drill-down and `ADR-018` for the lint note).
+- `extract` reads the resolved element's rendered text first. If and only if an
+  image-bearing link has empty text, it reads that same link's browser-computed
+  accessible name and carries it in the extraction evidence; it never searches
+  a neighbour or reinterprets the target. Other empty controls stay loud — an
+  accessible name can be only a label, not a value. An empty or unavailable
+  image-link name remains `failure:extract`
+  (`extract-falls-back-to-accessible-name`, `trap-empty-extraction`, ADR-043).
 - `extract_all` reads **every** match of its target instead of requiring the
   target to identify one element, and contributes a list to `answer`. It is the
   comparison primitive the vocabulary lacked: "which author has the most

@@ -1,0 +1,27 @@
+{
+  "id": "extract-falls-back-to-accessible-name",
+  "task": "browser",
+  "suites": ["fast"],
+  "level": "L1",
+  "tc": "TC1",
+  "input": {
+    "fixture": "a11y-name-only.html",
+    "task": "Who is named on the book cover link?",
+    "stub_plan": [
+      {
+        "action": "extract",
+        "target": {"role": "link", "name": "Ana Soto"}
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "answer": "Ana Soto",
+    "trace_actions": ["navigate", "extract"]
+  },
+  "provenance": "T-M40 Open Library live failure bdd9ebf7 and ADR-042 runs 4947a902/e1dece67/095e81c2: the resolver uniquely reached a link whose accessible name contained the requested author, but extract read only innerText and failed empty. This authored fixture removes the site and planner: one uniquely resolvable visible image link, no rendered text, and one browser-computed accessible name.",
+  "triage": {
+    "class": "input-variant",
+    "note": "A readable element whose meaning is exposed only through its accessible name is resolved correctly but the extraction boundary accepts rendered text only. Fix that shared boundary; do not add a site selector or planner retry."
+  }
+}

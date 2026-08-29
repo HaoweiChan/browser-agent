@@ -21,6 +21,7 @@ on `fixtures/frames-host.html` before the change (ADR-028):
     mutation. `page_text` below is the one place that is fixed.
 """
 
+import json
 import re
 
 from .resolver import DOC_ROOT_ROLES
@@ -135,6 +136,26 @@ PAGE_TEXT_JS = """() => {
 # One line of Playwright's ARIA snapshot: `- button "Reload source"`,
 # `- status "Inventory turnover": 4.82`, `- text: "Document ID:"`.
 _ARIA_LINE = re.compile(r'^\s*-\s+([A-Za-z][\w-]*)(?:\s+"((?:[^"\\]|\\.)*)")?')
+
+
+async def image_accessible_name(locator) -> str:
+    """The browser-computed name for one image-bearing resolved element.
+
+    `aria_snapshot()` uses the same Playwright accessibility view that makes a
+    name-only image link resolvable in the first place. A control's accessible
+    name may be only its label, so require image replacement content before it
+    can become an extracted value.
+    """
+    try:
+        has_image = await locator.evaluate(
+            "el => el.matches('img[alt]') || Boolean(el.querySelector('img[alt]'))")
+        if not has_image:
+            return ""
+        line = (await locator.aria_snapshot()).splitlines()[0]
+        match = _ARIA_LINE.match(line)
+        return json.loads(f'"{match.group(2)}"').strip() if match and match.group(2) else ""
+    except Exception:
+        return ""
 
 
 async def page_text(page, frames: bool = True, bases: dict | None = None) -> str:

@@ -1376,7 +1376,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
 
     from playwright.async_api import async_playwright
 
-    from .observe import DRILL_TEXT_HEAD, observe
+    from .observe import DRILL_TEXT_HEAD, image_accessible_name, observe
 
     # At most one scoped observation, produced by an `observe` step and consumed
     # by the replan it triggers. A list rather than a variable so `execute`
@@ -1908,11 +1908,28 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # assembly, never in the model.
                     vals = ([v.strip() for v in await loc.all_inner_texts()]
                             if action == "extract_all" else [(await loc.inner_text()).strip()])
+                    # Some readable controls have no rendered text at all: an
+                    # image link can expose its whole meaning through the same
+                    # accessible name `observe` advertised and `resolve`
+                    # matched. Falling back on THAT resolved element closes the
+                    # observation -> resolution -> extraction round trip; it is
+                    # not a search for a nearby value and cannot change which
+                    # element the plan selected.
+                    accessible_value = ""
+                    target_role = str((step.get("target") or {}).get("role") or "").lower()
+                    if action == "extract" and target_role == "link" and not vals[0]:
+                        accessible_value = vals[0] = await image_accessible_name(loc)
                     vals = [v for v in vals if v]
                     if not vals:
                         raise StepError("extract", "extraction returned empty text")
                     bases: dict = {}
                     body = await page_text(page, bases=bases)
+                    # `grounded` must see the browser evidence the extraction
+                    # actually read. Accessible names are not in innerText, so
+                    # append only fallback values to this extraction's bounded
+                    # evidence copy; page state and postconditions keep their
+                    # existing rendered-text semantics.
+                    evidence_body = body + ("\n" + accessible_value if accessible_value else "")
                     # T-M42-3: the offset hint `TEXT_OFFSET_JS` returns is
                     # relative to the element's OWN frame's body, while `body`
                     # above is every frame concatenated — so for an element
@@ -1964,7 +1981,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # left in `answers` would be carried into the replan's
                     # answer -- turning a scalar into a list, or answering with
                     # the very read the anchor just refused.
-                    if anchor and anchor not in body:
+                    if anchor and anchor not in evidence_body:
                         raise StepError(
                             "semantic",
                             f"identity anchor {anchor!r} absent from the page "
@@ -1985,7 +2002,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     # vals[0] either way; every later value falls back to its own
                     # first occurrence, below.
                     real_offset = _closest_occurrence(
-                        body, vals[0],
+                        evidence_body, vals[0],
                         await loc.first.evaluate(TEXT_OFFSET_JS) + frame_base)
                     # body_len is the real page the value was read from -- verify()'s
                     # not_a_dump denominator prefers this over len(page_text), because
@@ -2044,12 +2061,13 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             # run that already has its answer.
                             hint = -1
                         off = _closest_occurrence(
-                            body, v, hint if hint < 0 else hint + frame_base)
+                            evidence_body, v, hint if hint < 0 else hint + frame_base)
                         extractions.append(
                             {"value": v,
-                             "page_text": evidence_window(body, v, anchor, offset=off),
+                             "page_text": evidence_window(evidence_body, v, anchor, offset=off),
                              "body_len": doc_len, "other_page_text": other_page_text,
-                             "value_offset": (off - _window_lo(body, off)) if off >= 0 else None})
+                             "value_offset": (off - _window_lo(evidence_body, off))
+                             if off >= 0 else None})
                     page_bodies[page.url] = body
                     answers.append(vals if action == "extract_all" else vals[0])
 
