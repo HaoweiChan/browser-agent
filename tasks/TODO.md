@@ -1689,7 +1689,7 @@ site (doc + surrounding literal) rather than taking the heading from its own
 config, so R11's four-pointer retarget goes red. All three watched red first, on
 those exact three mutations. Gate green.
 
-### M45-D8 — the request-frame rule is the untried path, and nothing measured it            [status: todo]
+### M45-D8 — the request-frame rule is the untried path, and nothing measured it            [status: pr]
 Origin: PR #56 R8, 2026-08-26. M45 published a universal claim — that no regex
 separates a CJK term inside another word from the same term heading a real
 request's object — and conceded one exception by pointing at a debt block that
@@ -1724,6 +1724,15 @@ case the universal claim in `src/browser/agent.py`, `docs/support-matrix.md` D31
 separates those" to "no NEIGHBOUR rule separates those; the frame rule was
 measured and did not either, see this block". Either outcome closes it. Gate
 green.
+
+IMPLEMENTED 2026-08-29 under ADR-040. A read frame gates a measured
+informational-mention allowlist, and every blocked match must be wholly inside
+one such mention; a safe clause cannot launder an unrelated destructive clause.
+Bare imperatives remain refused. The valid red-first invariant run is
+`20260829-085718` (107/109: the policy row and ADR/UI index). Cold review then
+added four composition variants and watched the policy row red again in
+`20260829-091252` (108/109) before the match-level repair. The English
+download-statistics row moved with the same ADR.
 
 ### M45-D4 — 刪除's positive-adjacency form was never built or priced            [status: todo]
 Origin: M45 spec-drift audit, 2026-08-26, finding 5. M45's own spec asked for
@@ -1787,7 +1796,7 @@ shipped, and handed whoever ran it either a phantom regression or a reason to
 ship one of the narrowings M45 withdrew on purpose.
 Cost ceiling: 15 runs, roughly $0.006 at the rate M45 measured.
 
-### M45-D3 — the auth block covers two of the five Chinese spellings of "log in"            [status: todo]
+### M45-D3 — the auth block covers two of the five Chinese spellings of "log in"            [status: pr]
 Origin: M45 cold review, 2026-08-26. Pre-existing (it predates M45 and M45 does
 not change it), out of M45's spec, and therefore not fixed in that PR.
 Priority: P1
@@ -1832,6 +1841,11 @@ been: it demonstrates WHY the alternation cannot move on a regex alone, rather
 than asserting it, and a later session that reaches for the one-line widening
 turns five rows red before it can ship. The remaining two spellings are blocked
 on M45-D8's mechanism, and this entry stays open until that lands.
+
+CLOSED BY ADR-040, pending merge: both 登陸/登陆 auth asks now refuse when the
+verb acts on a measured website/account/system object; the three
+landfall/spaceflight reads remain allowed even with polite question wording.
+The base alternation is deliberately unchanged.
 
 ### M45-D1 — docs/analysis.md §6's two tag tables have never matched the case files            [status: todo]
 Origin: M45, 2026-08-26. Found while refreshing §6's total for the one case
