@@ -1,0 +1,26 @@
+{
+  "id": "m49-nonrendered-text-is-not-evidence",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "canonical-evidence",
+    "fixture": "finance-script-hidden-rate.html",
+    "document_id": "fixture:finance-script-hidden-rate",
+    "url": "https://fixture.example/rendered-rate",
+    "request": {"capability": "dated-text-evidence", "question": "current rate and effective date"}
+  },
+  "expect": {
+    "citation": "fixture ground truth: only rendered rate/date text is selectable; source hashes and offsets retain hidden source context",
+    "packet": {
+      "document_id": "fixture:finance-script-hidden-rate",
+      "url": "https://fixture.example/rendered-rate",
+      "source_sha256": "1dd35b225dbff1ec8724523ffdacb2557b0372d93de42a9ffc0db91ad320418b",
+      "snapshot_sha256": "955228cc543330f2477a1e137154cffc2cd1504f27bc6fbff0363b2909d61ab2",
+      "items": [
+        {"kind": "text", "value": "4.00%", "text_offset": {"start": 96, "end": 101}},
+        {"kind": "text", "value": "Effective from 7 August 2025", "text_offset": {"start": 102, "end": 130}}
+      ]
+    }
+  },
+  "provenance": "M49 review repro: script/style/hidden/aria-hidden values were incorrectly considered selectable evidence."
+}

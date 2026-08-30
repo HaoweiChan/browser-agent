@@ -24,6 +24,8 @@ Case kinds (`input.kind`):
 - `canonical-contract` — pure ADR-046 graph/evidence and aggregate-stop checks
 - `canonical-evidence` — frozen finance evidence contracts, deliberately red
   until M49 adds deterministic extraction (no browser, network, or model call)
+- `evidence-export` — injected same-origin CSV/XML evidence normalization
+- `evidence-policy` — extraction source contains no showcase-specific recipe
 - `ablation-table` — the M9 cost/model table in docs/analysis.md carries no
   number that no committed report produced (pure code, no browser)
 - (default)      — fixture E2E: real agent, real browser, planner stubbed at the
@@ -9031,6 +9033,17 @@ def _run_canonical_evidence_case(case: dict) -> dict:
         return {"passed": False, "wrong": {"missing_fixture": data["fixture"]}}
     source = fixture.read_bytes()
     text = canonical_text(source)
+    expected_error = case["expect"].get("error")
+    if expected_error:
+        from .evidence import extract_evidence
+
+        try:
+            extract_evidence(source_bytes=source, url=data["url"],
+                             document_id=data["document_id"], request=data["request"])
+        except ValueError as exc:
+            return {"passed": type(exc).__name__ == expected_error,
+                    "wrong": {} if type(exc).__name__ == expected_error else {"error": str(exc)}}
+        return {"passed": False, "wrong": {"missing_error": expected_error}}
     expected = case["expect"]["packet"]
     hashes = {"source_sha256": hashlib.sha256(source).hexdigest(),
               "snapshot_sha256": hashlib.sha256(text.encode()).hexdigest()}
@@ -9063,6 +9076,45 @@ def _run_canonical_evidence_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong, "got": {**hashes, "canonical_text": text}}
 
 
+def _run_evidence_export_case(case: dict) -> dict:
+    """Exercise M49 export parsing with fixture bytes only, never a fetch."""
+    module = importlib.util.find_spec(f"{__package__}.evidence")
+    if module is None:
+        return {"passed": False, "wrong": {"missing_capability": "same-origin-export"}}
+    from .evidence import read_same_origin_export
+
+    data = case["input"]
+    bodies = {row["url"]: row["body"].encode("utf-8") for row in data["fixtures"]}
+    calls = []
+
+    def fetch(url: str) -> bytes:
+        calls.append(url)
+        if url not in bodies:
+            raise AssertionError(f"unexpected fetch: {url}")
+        return bodies[url]
+
+    wrong = []
+    for row in data["requests"]:
+        try:
+            got = read_same_origin_export(page_url=row.get("page_url", data["page_url"]),
+                                          export_url=row["url"], fetch=fetch)
+        except ValueError as exc:
+            got = {"error": type(exc).__name__}
+        if got != row["expect"]:
+            wrong.append({"url": row["url"], "want": row["expect"], "got": got})
+    return {"passed": not wrong, "wrong": {"exports": wrong} if wrong else {}, "got": {"fetches": calls}}
+
+
+def _run_evidence_policy_case(case: dict) -> dict:
+    """Keep extraction generic: fixture URLs are evidence, never production recipes."""
+    module = importlib.util.find_spec(f"{__package__}.evidence")
+    if module is None or module.origin is None:
+        return {"passed": False, "wrong": {"missing_capability": "site-agnostic-evidence"}}
+    source = Path(module.origin).read_text(encoding="utf-8").lower()
+    found = [token for token in case["input"]["forbidden"] if token.lower() in source]
+    return {"passed": not found, "wrong": {"site_recipe": found} if found else {}}
+
+
 # `input.kind` -> runner. An unknown kind is a fixture E2E case, which is the
 # default shape; every other kind names the narrower thing it grades.
 KINDS = {
@@ -9078,6 +9130,8 @@ KINDS = {
     "browser-liveness": _run_browser_liveness_case,
     "canonical-contract": _run_canonical_contract_case,
     "canonical-evidence": _run_canonical_evidence_case,
+    "evidence-export": _run_evidence_export_case,
+    "evidence-policy": _run_evidence_policy_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,

@@ -50,8 +50,8 @@ Status: accepted
 
 ## Consequences
 
-- M49 implements deterministic evidence extraction against the six frozen
-  finance contracts; the M48 cases intentionally remain red until then.
+- M49 supplies deterministic evidence extraction against the six frozen finance
+  contracts, with companion offline same-origin-export and no-recipe checks.
 - M51 may add bounded model nodes only behind this evidence and decide contract;
   the ADR-045 model ceiling and access control remain in force.
 - RunResult, TraceStep, resolver, executor, verifier, screen, and rule 6 remain

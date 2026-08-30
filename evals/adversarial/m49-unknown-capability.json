@@ -1,0 +1,14 @@
+{
+  "id": "m49-unknown-capability",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "canonical-evidence",
+    "fixture": "finance-eia-table.html",
+    "document_id": "fixture:finance-eia-table",
+    "url": "https://fixture.example/evidence",
+    "request": {"capability": "semantic-table-nromalization", "question": "latest value"}
+  },
+  "expect": {"error": "ValueError"},
+  "provenance": "M49 review repro: a misspelled capability must fail loudly instead of falling through to unrelated table evidence."
+}

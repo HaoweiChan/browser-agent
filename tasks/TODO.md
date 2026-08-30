@@ -12,17 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M49 — deterministic evidence layer            [status: todo]
-Spec: add deterministic DOM/accessibility text evidence, terminal live-region
-state, semantic table normalization, a latest/effective-date reducer,
-same-origin CSV/XML readers, source/snapshot hashes, and table coordinates. No
-site-specific selectors or navigation recipes.
-Acceptance: the M48 offline fixtures turn green through shared evidence
-capabilities, with cited source identity, temporal choice, and table-cell
-coordinates available to the verifier.
-
 ### M50 — one canonical LangGraph control flow            [status: todo]
-Depends: M49
 Spec: wrap the existing resolver, executor, and verifier in
 `observe → route → evidence → plan → act → evaluate → decide`, with a bounded
 retry edge to `plan`, deterministic decide, and one canonical trace. Retain
