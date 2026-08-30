@@ -594,7 +594,7 @@ PAGE = r"""<!doctype html>
        vertical-align:-.05em; border:2px solid color-mix(in srgb,var(--accent) 26%,transparent);
        border-top-color:var(--accent); border-radius:50%; animation:spin .75s linear infinite }
   /* Trace on the left, what the browser actually saw on the right. */
-  .live-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,25rem);
+  .live-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
        gap:.7rem; align-items:start }
   .live-main { min-width:0 }
   .pageview { position:sticky; top:.7rem; max-height:calc(100vh - 1.4rem); overflow:auto;
@@ -726,7 +726,8 @@ PAGE = r"""<!doctype html>
 </div>
 
 <h2><span class="section-no">03</span> What works today</h2>
-<p class="note">Finance workflows verified against live sites. Choose one to load a task.</p>
+<p class="note">Every demo starts from the site's homepage. Status reflects the recorded
+  page-level evidence; homepage navigation has not yet been re-rated.</p>
 <div id="matrix" class="panel table-wrap">loading&hellip;</div>
 
 <h2><span class="section-no">04</span> Known limits</h2>
@@ -767,43 +768,49 @@ const EXAMPLES = {
   "companiesmarketcap.com (live)": {workflow: "Company valuation",
     capability: "Read a company’s current market capitalization",
     label: "Read Apple market cap",
-    url: "https://companiesmarketcap.com/apple/marketcap/",
+    url: "https://companiesmarketcap.com/",
     task: "What is the market cap of this company?"},
   "bankofcanada.ca (live)": {workflow: "Monetary policy",
     capability: "Read a central bank’s current policy rate",
     label: "Read Bank of Canada rate",
-    url: "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+    url: "https://www.bankofcanada.ca/",
     task: "What is the current policy interest rate?"},
   "ecb.europa.eu (live)": {workflow: "European rates",
     capability: "Read the ECB deposit facility rate",
     label: "Read ECB deposit rate",
-    url: "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
+    url: "https://www.ecb.europa.eu/",
     task: "What is the deposit facility rate?",
     note: "2/3 live runs passed; the failed run was rejected instead of returning a wrong answer."},
   "bankofengland.co.uk (live)": {workflow: "UK monetary policy",
     capability: "Read the current official Bank Rate",
     label: "Read Bank of England rate",
-    url: "https://www.bankofengland.co.uk/boeapps/database/Bank-Rate.asp",
+    url: "https://www.bankofengland.co.uk/",
     task: "What is the current official Bank Rate?",
     note: "DeepSeek V4 Pro reached an Access Denied page and failed loudly (1/1)."},
   "federalreserve.gov (live)": {workflow: "U.S. monetary policy",
     capability: "Read the current federal funds target range",
     label: "Read Fed target range",
-    url: "https://www.federalreserve.gov/economy-at-a-glance-policy-rate.htm",
+    url: "https://www.federalreserve.gov/",
     task: "What is the current federal funds target range?",
     note: "DeepSeek V4 Pro could not locate the value inside the interactive chart (1/1)."},
   "home.treasury.gov (live)": {workflow: "Treasury yields",
     capability: "Read the latest 10-year Treasury par yield",
     label: "Read 10-year Treasury yield",
-    url: "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?page=0&type=daily_treasury_yield_curve",
+    url: "https://home.treasury.gov/",
     task: "What is the latest 10-year Treasury par yield and its date?",
     note: "DeepSeek V4 Pro could not resolve the date-sort control (1/1)."},
   "eia.gov (live)": {workflow: "Energy prices",
     capability: "Read the latest U.S. average retail gasoline price",
     label: "Read U.S. gasoline price",
-    url: "https://www.eia.gov/dnav/pet/pet_pri_gnd_a_epm0_pte_dpgal_w.htm",
+    url: "https://www.eia.gov/",
     task: "What is the latest U.S. average retail gasoline price and its date?",
     note: "DeepSeek V4 Pro could not resolve the gasoline-price layout table (1/1)."},
+  "taifex.com.tw (live)": {workflow: "臺股期貨規格",
+    capability: "從中文首頁找到臺股期貨商品規格",
+    label: "查臺股期貨一點價值",
+    url: "https://www.taifex.com.tw/",
+    task: "請從期交所首頁找到臺股期貨商品規格，告訴我一個指數點等於新臺幣多少元？",
+    note: "首頁路徑已人工驗證；live planner 尚未完成評估。"},
 };
 // Short limits for visitors; the declared rows with evidence stay in
 // docs/support-matrix.md, linked below with their count from the payload.

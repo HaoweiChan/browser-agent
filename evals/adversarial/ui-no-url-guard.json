@@ -25,7 +25,8 @@
       "bankofengland.co.uk (live)",
       "federalreserve.gov (live)",
       "home.treasury.gov (live)",
-      "eia.gov (live)"
+      "eia.gov (live)",
+      "taifex.com.tw (live)"
     ],
     "expected_headers": [
       "Financial workflow",
@@ -36,13 +37,14 @@
     ],
     "expected_sites": {
       "whaleforce-sec10k.zeabur.app (live)": "https://whaleforce-sec10k.zeabur.app/",
-      "companiesmarketcap.com (live)": "https://companiesmarketcap.com/apple/marketcap/",
-      "bankofcanada.ca (live)": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
-      "ecb.europa.eu (live)": "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
-      "bankofengland.co.uk (live)": "https://www.bankofengland.co.uk/boeapps/database/Bank-Rate.asp",
-      "federalreserve.gov (live)": "https://www.federalreserve.gov/economy-at-a-glance-policy-rate.htm",
-      "home.treasury.gov (live)": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?page=0&type=daily_treasury_yield_curve",
-      "eia.gov (live)": "https://www.eia.gov/dnav/pet/pet_pri_gnd_a_epm0_pte_dpgal_w.htm"
+      "companiesmarketcap.com (live)": "https://companiesmarketcap.com/",
+      "bankofcanada.ca (live)": "https://www.bankofcanada.ca/",
+      "ecb.europa.eu (live)": "https://www.ecb.europa.eu/",
+      "bankofengland.co.uk (live)": "https://www.bankofengland.co.uk/",
+      "federalreserve.gov (live)": "https://www.federalreserve.gov/",
+      "home.treasury.gov (live)": "https://home.treasury.gov/",
+      "eia.gov (live)": "https://www.eia.gov/",
+      "taifex.com.tw (live)": "https://www.taifex.com.tw/"
     },
     "expected_statuses": {
       "whaleforce-sec10k.zeabur.app (live)": "△ unreliable",
@@ -52,7 +54,8 @@
       "bankofengland.co.uk (live)": "△ unreliable",
       "federalreserve.gov (live)": "△ unreliable",
       "home.treasury.gov (live)": "△ unreliable",
-      "eia.gov (live)": "△ unreliable"
+      "eia.gov (live)": "△ unreliable",
+      "taifex.com.tw (live)": "— not evaluated"
     },
     "expected_examples": {
       "whaleforce-sec10k.zeabur.app (live)": {
@@ -62,23 +65,33 @@
       },
       "bankofengland.co.uk (live)": {
         "task": "What is the current official Bank Rate?",
-        "url": "https://www.bankofengland.co.uk/boeapps/database/Bank-Rate.asp",
+        "url": "https://www.bankofengland.co.uk/",
         "label": "Read Bank of England rate"
+      },
+      "ecb.europa.eu (live)": {
+        "task": "What is the deposit facility rate?",
+        "url": "https://www.ecb.europa.eu/",
+        "label": "Read ECB deposit rate"
       },
       "federalreserve.gov (live)": {
         "task": "What is the current federal funds target range?",
-        "url": "https://www.federalreserve.gov/economy-at-a-glance-policy-rate.htm",
+        "url": "https://www.federalreserve.gov/",
         "label": "Read Fed target range"
       },
       "home.treasury.gov (live)": {
         "task": "What is the latest 10-year Treasury par yield and its date?",
-        "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?page=0&type=daily_treasury_yield_curve",
+        "url": "https://home.treasury.gov/",
         "label": "Read 10-year Treasury yield"
       },
       "eia.gov (live)": {
         "task": "What is the latest U.S. average retail gasoline price and its date?",
-        "url": "https://www.eia.gov/dnav/pet/pet_pri_gnd_a_epm0_pte_dpgal_w.htm",
+        "url": "https://www.eia.gov/",
         "label": "Read U.S. gasoline price"
+      },
+      "taifex.com.tw (live)": {
+        "task": "請從期交所首頁找到臺股期貨商品規格，告訴我一個指數點等於新臺幣多少元？",
+        "url": "https://www.taifex.com.tw/",
+        "label": "查臺股期貨一點價值"
       }
     }
   },
@@ -90,7 +103,7 @@
     "guidance_contains": "start URL",
     "limits_contains": "2 declared limitations"
   },
-  "provenance": "M35 eval-first. Deployment run 2ce3e5c8 (2026-08-22) showed that a task with no start URL spent a run guaranteed to fail, so this rendered case pins the no-URL guard, site-name URL inference, verified access-key header, and Try-button behavior. User report, 2026-08-30, narrowed the interview surface to finance: the case pins SEC filing analysis first, followed by seven finance workflows, five useful columns, zero empty matrix cells, and each new site's exact URL and Try task. The four additions remain explicitly not evaluated until paid runs can use a valid rotated OpenRouter key. Watched red before each UI change: first the irrelevant rows and stale 10-K task, then the absence of the four new finance rows. Cold review then found two silent-success gaps; both watched red before repair: an all-dash showcased row rendered as supported, and the Intel button loaded a generic status question rather than explicitly asking the agent to select Intel, run extraction, and read the result. The access success state was then pinned to the green `enabled` class after the owner showed that grey `✓ Enabled` was visually weaker than the SEC extractor; watched red first with status_class `note`.",
+  "provenance": "M35 eval-first. Deployment run 2ce3e5c8 (2026-08-22) showed that a task with no start URL spent a run guaranteed to fail, so this rendered case pins the no-URL guard, site-name URL inference, verified access-key header, and Try-button behavior. User report, 2026-08-30, narrowed the interview surface to finance: the case pins SEC filing analysis first, followed by seven finance workflows, five useful columns, zero empty matrix cells, and each new site's exact URL and Try task. The four additions remain explicitly not evaluated until paid runs can use a valid rotated OpenRouter key. Watched red before each UI change: first the irrelevant rows and stale 10-K task, then the absence of the four new finance rows. Cold review then found two silent-success gaps; both watched red before repair: an all-dash showcased row rendered as supported, and the Intel button loaded a generic status question rather than explicitly asking the agent to select Intel, run extraction, and read the result. The access success state was then pinned to the green `enabled` class after the owner showed that grey `✓ Enabled` was visually weaker than the SEC extractor; watched red first with status_class `note`. A second user report required showcase URLs to start at each site's homepage and added a Chinese TAIFEX navigation task; the exact nine roots and Chinese task were pinned before the page changed. TAIFEX stays not evaluated because the bounded live planner probe reached the homepage but OpenRouter rejected the configured credential before planning; no success is inferred from the manual browser check.",
   "triage": {
     "class": "invariant-gap",
     "note": "The form must reject no-URL tasks that cannot be inferred safely and verify an LLM access key before a paid request, keeping it out of URL/body and attaching it to /tasks only as X-LLM-Access-Key.",

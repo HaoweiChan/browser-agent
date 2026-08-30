@@ -8,6 +8,9 @@
     "target_length": 90,
     "schemes": ["dark", "light"],
     "placeholder_minimum": 4.5,
+    "desktop_viewport_width": 1440,
+    "column_ratio": 1.0,
+    "column_ratio_tolerance": 0.02,
     "progress_states": {
       "start": ["current", "upcoming", "upcoming", "upcoming", "upcoming", "upcoming"],
       "start_labels": ["Planning — current", "Open page — upcoming", "Read page — upcoming", "Run actions — upcoming", "Verify answer — upcoming", "Complete — upcoming"],
@@ -28,7 +31,7 @@
     }
   },
   "expect": {},
-  "provenance": "PR #23 round 1 R1/R2. The initial TinBoker restyle kept the empty page within 390px but did not exercise a rendered trace target: 90 unbroken characters expanded the document to 665px. The light placeholder also mixed --dim at 82% with transparency, rendering at 3.61:1 against the paper-terminal input background. This browser case renders the actual stepEl output in both color schemes and measures document width plus the effective computed placeholder color. PR #23 R5: the case opted out of ADR-013 Decision 1 — it started its own Playwright driver and launched its own Chromium on every invocation, which measured 0.291 / 0.293 / 0.288s against 0.076 / 0.074 / 0.075s through the suite's shared browser, on a suite whose committed gate run had just breached the 60s ceiling at 60.28s. Moved onto `_browser()` + a per-scheme `new_context(viewport=..., color_scheme=...)` on the shared `_LOOP`; both mutation reds were re-verified afterwards and are unchanged — emptying `.hd > code { min-width:0; overflow-wrap:anywhere }` gives dark and light `document_width` 665 against `inner_width` 390, and a placeholder of `color-mix(in srgb, var(--dim) 60%, transparent)` gives contrast 3.28 dark / 2.42 light against the 4.5 minimum.",
+  "provenance": "PR #23 round 1 R1/R2. The initial TinBoker restyle kept the empty page within 390px but did not exercise a rendered trace target: 90 unbroken characters expanded the document to 665px. The light placeholder also mixed --dim at 82% with transparency, rendering at 3.61:1 against the paper-terminal input background. This browser case renders the actual stepEl output in both color schemes and measures document width plus the effective computed placeholder color. PR #23 R5: the case opted out of ADR-013 Decision 1 — it started its own Playwright driver and launched its own Chromium on every invocation, which measured 0.291 / 0.293 / 0.288s against 0.076 / 0.074 / 0.075s through the suite's shared browser, on a suite whose committed gate run had just breached the 60s ceiling at 60.28s. Moved onto `_browser()` + a per-scheme `new_context(viewport=..., color_scheme=...)` on the shared `_LOOP`; both mutation reds were re-verified afterwards and are unchanged — emptying `.hd > code { min-width:0; overflow-wrap:anywhere }` gives dark and light `document_width` 665 against `inner_width` 390, and a placeholder of `color-mix(in srgb, var(--dim) 60%, transparent)` gives contrast 3.28 dark / 2.42 light against the 4.5 minimum. User report, 2026-08-30: the Page view was visibly narrower than the trace because the desktop grid capped its second track at 25rem. The existing rendered case now also measures both actual grid children at 1440px; it was watched red at a 0.478 width ratio before the CSS fix and passes at 1.0 after it. The assertion is folded here rather than adding a new case whose only effect would be moving the suite-count fixed point.",
   "triage": {
     "class": "visual-regression",
     "note": "Narrow responsiveness and contrast must be checked in the populated UI, not inferred only from static container widths and opaque palette tokens.",

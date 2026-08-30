@@ -135,8 +135,18 @@ fraction, and why two of the three rows are `unreliable`.
 | federalreserve.gov (live) | unreliable | — | — | — | — |
 | home.treasury.gov (live) | unreliable | — | — | — | — |
 | eia.gov (live) | unreliable | — | — | — | — |
+| taifex.com.tw (live) | — | — | — | — | — |
 
 Statuses: `supported` / `unreliable` / `unsupported` / `—` (not yet evaluated).
+The reviewer UI now starts every showcase at the site's homepage. The statuses
+above remain the recorded page-level evidence; they are not silently promoted
+to claims that the new homepage-navigation path has passed. The TAIFEX row is
+therefore `—`: a manual browser check confirmed the visible homepage link to
+臺股期貨 and the product-spec answer (one index point is NTD 200), while one
+bounded canonical-agent probe stopped before planning when OpenRouter rejected
+the configured credential (HTTP 401, $0.00). Neither observation is reported as
+a successful planner run.
+
 The four finance additions were each run once on 2026-08-30 through the default
 DeepSeek V4 Pro → GPT-5 mini route; OpenRouter served DeepSeek V4 Pro for all
 four, so no fallback was used. All failed loudly and none returned a wrong
