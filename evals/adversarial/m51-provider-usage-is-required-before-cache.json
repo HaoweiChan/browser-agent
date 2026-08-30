@@ -1,0 +1,14 @@
+{
+  "id": "m51-provider-usage-is-required-before-cache",
+  "task": "browser",
+  "suites": ["m51", "invariant"],
+  "input": {"kind": "m51-policy", "check": "missing-usage"},
+  "expect": {
+    "refused": true,
+    "cache_empty": true,
+    "outcome": "invalid_accounting",
+    "spent": {"calls": 1, "tokens": 0, "usd": 0.0}
+  },
+  "provenance": "M51 cold review finding 2. A readable completion with no usage object was accepted, recorded as zero cost, and cached. Missing accounting cannot prove a zero bill. Watched red before production repair in the M51 focused suite.",
+  "triage": {"class": "silent-cost-underreport", "note": "Pure injected transport; no browser, network, key, or paid call."}
+}

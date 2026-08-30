@@ -1,0 +1,9 @@
+{
+  "id": "m51-cli-attributes-the-actual-served-model",
+  "task": "browser",
+  "suites": ["m51", "invariant"],
+  "input": {"kind": "m51-policy", "check": "cli-attribution"},
+  "expect": {"model": "openai/gpt-5-mini"},
+  "provenance": "M51 cold review finding 1. A default CLI request can be served by the GPT-5 mini fallback while run_task receives and publishes the requested DeepSeek primary. The boundary telemetry already knows the actual provider-served model; the top-level result must agree with it. Watched red before production repair in the M51 focused suite.",
+  "triage": {"class": "silent-model-misattribution", "note": "Pure injected CLI boundary; no browser, network, key, or paid call."}
+}

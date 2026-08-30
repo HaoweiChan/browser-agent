@@ -125,7 +125,7 @@
       ]
     ],
     "e2e": {
-      "model": "tencent/hy3",
+      "model": "deepseek/deepseek-v4-pro",
       "fixture": "shop-lamp-std.html",
       "task": "What is the price of the Aurora Desk Lamp on this page?",
       "plan_error": "planner returned non-plan output: Expecting value: line 1 column 1 (char 0): I'd be happy to help you with that!",
@@ -135,11 +135,11 @@
       }
     },
     "model_echo": {
-      "submits": "tencent/hy3",
-      "echoes": "anthropic/claude-sonnet-4.5"
+      "submits": "deepseek/deepseek-v4-pro",
+      "echoes": "openai/gpt-5-mini"
     },
     "e2e_fatal": {
-      "model": "tencent/hy3",
+      "model": "deepseek/deepseek-v4-pro",
       "fixture": "shop-lamp-std.html",
       "task": "What is the price of the Aurora Desk Lamp on this page?",
       "http_status": 402,
@@ -190,7 +190,7 @@
       }
     ],
     "e2e_unreachable": {
-      "model": "tencent/hy3",
+      "model": "deepseek/deepseek-v4-pro",
       "task": "In the Travel category, open a book and tell me its price.",
       "url": "http://127.0.0.1:9/catalogue/category/books/travel_2/index.html"
     },

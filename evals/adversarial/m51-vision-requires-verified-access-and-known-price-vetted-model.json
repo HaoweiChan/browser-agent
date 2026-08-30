@@ -1,0 +1,9 @@
+{
+  "id": "m51-vision-requires-verified-access-and-known-price-vetted-model",
+  "task": "browser",
+  "suites": ["m51", "invariant"],
+  "input": {"kind": "m51-policy", "check": "vision"},
+  "expect": {"unverified_refused": true, "disabled_refused": true, "transport_calls": 0, "reason_contains": true},
+  "triage": {"class": "spec-ambiguity", "note": "The frozen snapshot has no exact Flash Vision model id or Flash image capability. ADR-048 chooses fail-closed rather than inventing one."},
+  "provenance": "M51 red-first offline vision authorization and frozen-evidence contract."
+}

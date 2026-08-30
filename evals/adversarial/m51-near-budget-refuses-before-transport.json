@@ -1,0 +1,9 @@
+{
+  "id": "m51-near-budget-refuses-before-transport",
+  "task": "browser",
+  "suites": ["m51", "invariant"],
+  "input": {"kind": "m51-policy", "check": "near-budget"},
+  "expect": {"transport_calls": 0, "spent_unchanged": true, "outcome": "budget_refused"},
+  "provenance": "M51 cold review finding 3. With 3,999/4,000 tokens and $0.049/$0.05 already spent, the boundary still requested a full 2,000-token completion and refused only after the paid response crossed both limits. Watched red before production repair in the M51 focused suite.",
+  "triage": {"class": "spend-hole", "note": "Pure injected transport; no browser, network, key, or paid call."}
+}

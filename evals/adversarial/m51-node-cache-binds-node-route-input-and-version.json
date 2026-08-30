@@ -1,0 +1,9 @@
+{
+  "id": "m51-node-cache-binds-node-route-input-and-version",
+  "task": "browser",
+  "suites": ["m51", "invariant"],
+  "input": {"kind": "m51-policy", "check": "cache"},
+  "expect": {"same_input_hits": true, "different_node_misses": true, "different_route_misses": true, "different_input_misses": true, "different_version_misses": true, "corrupt_misses": true, "malformed_plan_retries_transport": true, "cache_write_failure_accounted": true},
+  "triage": {"class": "invariant-gap", "note": "Legacy planner and judge caches do not bind canonical node policy/version/route together."},
+  "provenance": "M51 red-first offline cache-key and corrupt-cache contract; zero network/model calls. Spec-drift finding 3 added the malformed-schema half after a live not-JSON completion was cached before planner parsing and replayed forever."
+}

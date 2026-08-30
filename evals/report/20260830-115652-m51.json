@@ -1,0 +1,116 @@
+{
+  "suite": "m51",
+  "score": 0.625,
+  "totals": {
+    "wall_seconds": 0.21,
+    "latency_p50": 0.0,
+    "latency_p95": 0.21,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n             ^^^^^^^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9525, in run_case\n    return _await(runner(case)) if asyncio.iscoroutinefunction(runner) else runner(case)\n                                                                            ^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9367, in _run_m51_policy_case\n    fixture = f\"{_base_url()}/fixtures/hello.html\"\n                 ^^^^^^^^^^^\nPermissionError: [Errno 1] Operation not permitted\n",
+      "seconds": 0.21,
+      "id": "m51-canonical-deterministic-evidence-spends-zero-flash-calls",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n             ^^^^^^^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9525, in run_case\n    return _await(runner(case)) if asyncio.iscoroutinefunction(runner) else runner(case)\n                                                                            ^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9367, in _run_m51_policy_case\n    fixture = f\"{_base_url()}/fixtures/hello.html\"\n                 ^^^^^^^^^^^\nPermissionError: [Errno 1] Operation not permitted\n",
+      "seconds": 0.0,
+      "id": "m51-critic-runs-only-on-semantic-ambiguity-and-cannot-publish",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "max_calls": true,
+        "tokens": true,
+        "usd": true,
+        "transport_calls": 1
+      },
+      "seconds": 0.0,
+      "id": "m51-node-budget-stops-before-next-call",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "same_input_hits": true,
+        "different_node_misses": true,
+        "different_route_misses": true,
+        "different_input_misses": true,
+        "different_version_misses": true,
+        "corrupt_misses": true
+      },
+      "seconds": 0.0,
+      "id": "m51-node-cache-binds-node-route-input-and-version",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "roles": [
+          "evidence",
+          "plan",
+          "vision",
+          "critic"
+        ],
+        "plan_route": [
+          "deepseek/deepseek-v4-pro",
+          "openai/gpt-5-mini"
+        ],
+        "snapshot_matches": true,
+        "price_bounded": true,
+        "reject_served": [
+          "anthropic/claude-opus-5",
+          "unknown/model"
+        ]
+      },
+      "seconds": 0.0,
+      "id": "m51-node-policy-is-central-and-price-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "requested_route": [
+          "deepseek/deepseek-v4-pro",
+          "openai/gpt-5-mini"
+        ],
+        "served_model": "openai/gpt-5-mini",
+        "cached_second": true,
+        "zero_cached_cost": true
+      },
+      "seconds": 0.0,
+      "id": "m51-node-telemetry-attributes-actual-served-model",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n             ^^^^^^^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9525, in run_case\n    return _await(runner(case)) if asyncio.iscoroutinefunction(runner) else runner(case)\n                                                                            ^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9411, in _run_m51_policy_case\n    req = urllib.request.Request(f\"{_base_url()}/tasks\", data=json.dumps({\"task\": \"read one fact\"}).encode(), headers=_task_headers(), method=\"POST\")\n                                    ^^^^^^^^^^^\nPermissionError: [Errno 1] Operation not permitted\n",
+      "seconds": 0.0,
+      "id": "m51-public-canonical-threads-verified-access-without-logging-secret",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "unverified_refused": true,
+        "disabled_refused": true,
+        "transport_calls": 0,
+        "reason_contains": true
+      },
+      "seconds": 0.0,
+      "id": "m51-vision-requires-verified-access-and-known-price-vetted-model",
+      "kind": "adversarial"
+    }
+  ]
+}

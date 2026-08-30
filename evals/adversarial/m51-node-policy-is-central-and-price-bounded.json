@@ -1,0 +1,9 @@
+{
+  "id": "m51-node-policy-is-central-and-price-bounded",
+  "task": "browser",
+  "suites": ["m51", "invariant"],
+  "input": {"kind": "m51-policy", "check": "policy"},
+  "expect": {"roles": ["evidence", "plan", "vision", "critic"], "plan_route": ["deepseek/deepseek-v4-pro", "openai/gpt-5-mini"], "reject_served": ["anthropic/claude-opus-5", "unknown/model"], "reject_route_override": true},
+  "triage": {"class": "invariant-gap", "note": "M50 had no centralized canonical model policy or served-model check."},
+  "provenance": "M51 red-first offline contract. The frozen OpenRouter snapshot is the only price source; no provider call. Spec-drift finding 2 added the route-override half after the central boundary accepted Flash as a plan model merely because it was globally cheap enough."
+}

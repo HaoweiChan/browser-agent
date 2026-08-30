@@ -1,0 +1,85 @@
+{
+  "suite": "m51",
+  "score": 0.0,
+  "totals": {
+    "wall_seconds": 0.06,
+    "latency_p50": 0.0,
+    "latency_p95": 0.06,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "m51-model-policy"
+      },
+      "seconds": 0.06,
+      "id": "m51-canonical-deterministic-evidence-spends-zero-flash-calls",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "m51-model-policy"
+      },
+      "seconds": 0.0,
+      "id": "m51-critic-runs-only-on-semantic-ambiguity-and-cannot-publish",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "m51-model-policy"
+      },
+      "seconds": 0.0,
+      "id": "m51-node-budget-stops-before-next-call",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "m51-model-policy"
+      },
+      "seconds": 0.0,
+      "id": "m51-node-cache-binds-node-route-input-and-version",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "m51-model-policy"
+      },
+      "seconds": 0.0,
+      "id": "m51-node-policy-is-central-and-price-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "m51-model-policy"
+      },
+      "seconds": 0.0,
+      "id": "m51-node-telemetry-attributes-actual-served-model",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "m51-model-policy"
+      },
+      "seconds": 0.0,
+      "id": "m51-public-canonical-threads-verified-access-without-logging-secret",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "m51-model-policy"
+      },
+      "seconds": 0.0,
+      "id": "m51-vision-requires-verified-access-and-known-price-vetted-model",
+      "kind": "adversarial"
+    }
+  ]
+}
