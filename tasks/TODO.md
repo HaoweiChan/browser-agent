@@ -12,117 +12,69 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M47 — two-day agentic hardening: stop exact repeats and show the decision trail            [status: done]
-Depends: M42
-Priority: P0
-Spec: implement the 12-hour vertical slice in
-`docs/plans/active/m47-two-day-agentic-hardening.md`. Close `T-M42-6` at the
-loop boundary with a site-agnostic exact-repeat guard, then project the existing
-`TraceStep` -> SSE stream into a plain terminal-style decision console. Reuse
-the current trace and inline UI; add no framework, event bus or dependency.
-Acceptance: red-first adversarial cases prove that one identical choice on an
-unchanged page receives a forced strategy-change diagnosis and the next one is
-refused before the general action ceiling; a changed strategy resets the streak
-and an unchanged `wait_for` gets exactly one bounded retry. The reviewer console
-renders escaped/clipped action, target, outcome, recovery and terminal budget
-lines from provisional `step` events, then rebuilds from the final authoritative
-trace; it renders no model prompt, raw page dump or hidden chain-of-thought.
-`python3 -m evals.run --suite invariant` is 100% and
-`python3 -m evals.run --suite fast` meets its committed score and wall ceiling.
-Any post-deploy evidence names build SHA/run ids and stays within a $0.50 total
-spend cap.
-Out of scope: choosing the deployment default, closing M44's exact SEC/INTC
-three-mode campaign, Nasdaq auth/date workarounds, Chinese over-refusal, custom
-ARIA widgets, virtual lists, and production `INCONCLUSIVE`.
+### M48 — canonical graph and evidence contract            [status: todo]
+Spec: make an ADR-first decision for one canonical browser-agent graph. Freeze
+red-first fixtures for the six visible finance failure shapes: 10-K Extractor,
+ECB, Bank of England, Federal Reserve, Treasury, and EIA. Define the canonical
+state and cited evidence-packet schema, deterministic publish authority, and
+the retirement plan for `plan`/`loop`/`escalate`. Migrate the general budget
+invariants before deleting or quarantining `evals/m44_campaign.py`; retain its
+historical evidence. No paid calls.
+Acceptance: each failure shape is red before its fix; the schema binds source
+or snapshot hashes and provenance; only deterministic verification may publish;
+and the ADR names the parity evidence required before legacy modes disappear.
 
-### M44 — the matrix is re-declared under loop mode, and the mandate gets its bill            [status: todo]
-Depends: M42
-Origin: ADR-027. Depends: M42 (M43 for the vision rows, marked as such).
-Spec: re-run the D28 domain set (the four regressed groups + two controls,
-ADR-025's task texts where applicable), the M40 card tasks, and the sec-10k
-inspector probe (M41's task list — M41 stays the inspector-side owner; run its
-probes under both modes and fold the results back into its matrix row) against
-the deployment in loop mode, 3 reps minimum per task (T-M40-5-3 is why one rep
-is not a read), every run id published. Added 2026-08-26 from interviewer
-feedback: the probe set also carries (a) zh phrasings alongside the English
-ones (M45 owns the screening fix; this row measures zh COMPLETION once tasks
-get past the screen), and (b) the interviewer's own reproduced flow — enter
-the SEC Extractor, submit INTC, wait for extraction, check the result — the
-multi-step shape that looped 首頁↔dashboard for 18 LLM calls and 2 repairs
-before failing, re-run under both modes so the A-vs-B table includes the
-exact failure the feedback cites. Declare per-mode matrix rows under the
-ADR-022 rule — a row says which mode it measures; no blending. Absorb M33: the
-same runs ARE the A-vs-B arm — report per-mode correct-rate, $/task, tokens,
-wall clock and planner calls in `docs/analysis.md` §9's table shape, from a
-committed report, and record the default-mode decision for live traffic as an
-ADR ("numbers decide" survives; the mandate moved which numbers matter).
-Added 2026-08-28 by M46 (ADR-037): `escalate` is a THIRD arm of the same table
-— same probe set, same 3-rep protocol, same per-mode row rule. It is the arm
-that settles what the offline suites structurally cannot (ADR-037 Decision 8):
-whether B-first is actually cheaper per task, and whether the loop leg recovers
-what mode B failed. Report its $/task against the other two arms and count its
-escalation RATE (how many of the 3 reps needed the second leg), because the
-cost argument is entirely about that rate.
-Acceptance: matrix rows updated with run ids, repeat counts, both build shas
-where the target is our own deploy (postmortem §2); the cost table committed
-and guarded the way §9 already is; zero wrong-success across all published
-loop-mode runs — one wrong-success is a stop-ship finding routed back to M42,
-not a row footnote; an ADR recording the live default. The default-mode
-decision now chooses between THREE modes, and `escalate`'s row is the one the
-cost argument in ADR-037 has to survive.
+### M49 — deterministic evidence layer            [status: todo]
+Depends: M48
+Spec: add deterministic DOM/accessibility text evidence, terminal live-region
+state, semantic table normalization, a latest/effective-date reducer,
+same-origin CSV/XML readers, source/snapshot hashes, and table coordinates. No
+site-specific selectors or navigation recipes.
+Acceptance: the M48 offline fixtures turn green through shared evidence
+capabilities, with cited source identity, temporal choice, and table-cell
+coordinates available to the verifier.
 
-PRE-SPEND HARNESS 2026-08-29: `evals/m44_campaign.py` freezes the deduplicated
-14-probe / 28 bilingual-task / three-mode / three-repetition matrix (252 runs),
-journals every accepted run id before polling, binds browser and inspector
-builds plus fresh ground truth, and stops on incomplete evidence, spend/time
-limits, wrong-success, or text answers awaiting independent adjudication. Two
-invariant cases pin the registry and crash/recovery boundary. This does not
-close M44: no live run, matrix row, cost table or default-mode ADR is claimed
-until the separately authorized paid campaign executes.
+### M50 — one canonical LangGraph control flow            [status: todo]
+Depends: M49
+Spec: wrap the existing resolver, executor, and verifier in
+`observe → route → evidence → plan → act → evaluate → decide`, with a bounded
+retry edge to `plan`, deterministic decide, and one canonical trace. Retain
+legacy modes only for bounded parity evaluation, then remove them; do not keep
+three permanent flows or create an agent class hierarchy.
+Acceptance: graph-state transitions, retry bounds, and trace projection are
+invariants; the verifier retains final authority; and parity evidence makes
+legacy-flow removal an explicit decision.
 
-ZERO-SPEND PREFLIGHT 2026-08-30 (ADR-044): the deployed browser and inspector
-were healthy and build-bound, but the campaign exposed aggregate token and
-planner-call totals without stopping on either. Execution and recovery now
-require explicit USD, token, and planner-call stops, freeze the exact values in
-the journal, and refuse the next POST when any completed total reaches its
-line. This still does not close M44 or authorize the paid campaign.
+### M51 — centralized bounded multi-model policy            [status: todo]
+Depends: M50
+Spec: centralize deterministic-first node policy and cache/budget each model
+call: DeepSeek V4 Flash for evidence/text, DeepSeek V4 Pro for planning,
+authenticated experimental Flash Vision with GPT-5 mini fallback, and GPT-5
+mini critic only for semantic ambiguity. Log actual served model, tokens, USD,
+and latency; a critic cannot override the verifier. Keep every route under the
+ADR-045 price ceiling.
+Acceptance: node policy, access control, cache keys, per-node limits, actual
+model attribution, and critic non-authority are covered offline; no node call
+can silently exceed the configured model ceiling.
 
-PAUSED 2026-08-30: the operator stopped the authorized campaign after 27/252
-runs and US$3.9049 while model-control behavior is investigated separately.
-No further model or judge call is authorized and the partial sample does not
-close M44. Run `467fdd77` also exposed an eval-only number-association bug;
-`m44-campaign-number-in-label-is-not-the-answer` pins its offline repair.
+### M52 — live finance promotion campaign            [status: todo]
+Depends: M51
+Spec: run a new, separately authorized journalled campaign for the six visible
+finance workflows. It also absorbs M43's unclosed live clause with a separate
+deployed S2 nameless-readout vision probe: three canonical-graph repetitions,
+not folded into the finance results. Carry any still-relevant M44/T-M46 live
+assertions. Never retry until green; record both build SHAs where applicable
+and move UI/matrix status only from the evidence.
+Acceptance: zero wrong-success; each finance workflow is 3/3 in the first pass
+and at least 2/2 on a second build; the S2 probe is 3/3 on its declared build.
+Every published run names actual model, costs, build, and ground truth. A new
+explicit paid authorization and budget are required: the old 27/252 M44 sample
+and US$5 authorization are invalid. GitHub and Zeabur `LLM_ACCESS_KEY` plus
+green deploy-smoke are hard preconditions.
 
-### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
-Depends: M44
-Update 2026-08-25 (ADR-027): absorbed, not deleted. The interviewer mandate
-makes the loop a deliverable (M42–M44), so this block's QUESTION is answered by
-fiat; its MEASUREMENT is still owed and runs as M44's A-vs-B arm — take M44,
-not this, and close this block when M44's per-mode table commits. One declared
-substitution (ADR-027 Decision 6): M44's arm runs on the D28/M40-card/
-inspector probe set, not this block's M9 task set — if the M9-set comparison
-is still wanted it is a separate, unqueued ask. Kept for its mechanism spec,
-which M42 builds on.
-Origin: `prompts/015` — "would an MCP / tool-calling loop raise completion?"
-`docs/architecture/task1-overview.md` chose B over A (LLM-per-step) on
-reasoning, never on a measurement; M9's ablation mechanism (ADR-010,
-`evals/ablation.py`) now exists and varies only the model.
-Spec: a second planner mode behind the unchanged
-`planner(task, url, obs, note)` boundary — OpenRouter native `tools=[…]` with
-the same step schemas as function definitions (four when this block was
-written; five since M31 added `extract_all`), one model call per step,
-fresh observation after every step, step cap = `RUN_BUDGETS["actions"]`. No
-MCP: same process, no external client — MCP is transport, not capability.
-Every tool call lands in the trace record so the UI and verifier read the
-same evidence pipeline. Driven by `evals/ablation.py --planner toolcall`
-against the deployment on the M9 task set plus one probe-#3-shaped task;
-report as `-ablation.json` under the ADR-012 policy; `fast` stays on
-`stub_planner` — the arm is paid-only.
-Acceptance: `docs/analysis.md` §9 gains a per-arm row set (correct-answer,
-success, $/task, tokens, ms, planner calls) built from a committed report and
-guarded by `analysis-ablation-table-not-estimated`; an ADR that either keeps B
-with the measured gap or amends the A-vs-B table — decided by the numbers,
-with the fast-suite/inspectability cost of A stated either way.
+Track delivery: execute M48 → M52 sequentially, one PR merged after green CI
+before the next. Do not use pr-loop for this track. Terra tasks implement
+sequentially; the primary agent owns plan, review, and gates.
 
 ## Debt
 
@@ -141,17 +93,14 @@ The payload that matters is the FORGED FACT rather than the imperative —
 evidence a seeded note legitimately carries, and adopting it answers the task
 with the wrong value. That is the shape a live check has to look for: a run
 whose answer matches the bait rather than the page.
-Vehicle: rides along with M44's live campaign as an extra assertion on runs
-already planned — M44 gains `escalate` as a third arm regardless, and its
-escalated runs are the only runs where a seeded note reaches a real model. Not a
-separate campaign, and not blocked on one: if M44's live arm never runs, this
-stays open and says why.
-Acceptance (M43-D2's shape): M44's `escalate` arm publishes, for every escalated
-run, the run id and the seeded note that run carried, and states whether any
-answer matched a page-authored bait string rather than the page's own value —
-zero is the pass bar and one is a stop-ship finding routed back here, the same
-rule M44 already applies to wrong-success. Until that publishes, ADR-037
-Decision 3's claim is scoped to the channel and says so in those words.
+Vehicle: rides along with M52's live campaign as an extra assertion on runs
+already planned; it is not a separate campaign. The authenticated graph run is
+the only place a seeded note reaches a real model.
+Acceptance (M43-D2's shape): M52 publishes, for every applicable run, the run
+id and seeded note, and states whether any answer matched a page-authored bait
+string rather than the page's own value — zero is the pass bar and one is a
+stop-ship finding routed back here. Until that publishes, ADR-037 Decision 3's
+claim is scoped to the channel and says so in those words.
 
 ### T-M46-3 — the residual after the state-change guard: effects outside `STATE_CHANGING`            [status: todo]
 Origin: M46 implementation, cold review finding 1; guard built at PR #78 R1 and
@@ -187,8 +136,8 @@ driving two POSTs would grade one.
 Acceptance: a fixture that COUNTS submissions rather than keeping the last one,
 plus an adversarial case driving a plan leg that commits through `fill` (or a
 mutating `navigate`) and dies after — asserting whichever policy is then
-decided, watched red against the other. M44's live arm reports whether any
-escalated run committed a side effect twice.
+decided, watched red against the other. M52's live campaign reports whether any
+retrying run committed a side effect twice.
 
 ### T-M46-4 — five of the seven trigger classes reach the escalation with no case            [status: todo]
 Origin: M46 implementation, cold review finding 3.
@@ -205,12 +154,10 @@ the run pays a browser launch to learn nothing.
 Acceptance: a case per class the policy could plausibly treat differently —
 starting with `nav` (a first-request-fails fixture, asserting the two legs'
 first steps are identical) and the url-guard `task` refusal (asserting two legs
-with the same status and no wasted claim of recovery) — and M44's third arm
-reporting escalation rate BY trigger class, so a `nav` retry is never counted as
-evidence that the loop cadence helped. Also owed here: an escalate case with
-`judge_verdicts` that reaches the judge boundary in BOTH legs, pinning the
-`judge_calls: 2` path specs/001 now documents; nothing in the suite reaches it
-today, and it is the path ADR-037's own cost argument makes most likely.
+with the same status and no wasted claim of recovery). M50 explicitly retires
+or replaces the legacy two-leg `judge_calls: 2` path with a canonical retry
+call-budget case; M52 reports canonical retry rate BY trigger class, so a `nav`
+retry is never counted as evidence that the canonical graph helped.
 
 ### T-A39-3 — ADR-039 traded a paint race for a cap, and on the sec-10k inspector the status line is what fell off            [status: done]
 Origin: ADR-039's own live verification, 2026-08-28. Measured, not predicted.
