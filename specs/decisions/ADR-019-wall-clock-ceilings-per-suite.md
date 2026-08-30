@@ -3,7 +3,7 @@
 Date: 2026-08-22
 Status: accepted
 
-**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → 110 → 115 → 120 → 125 → 130 → **135s** [local] (ADR-021, then ADR-029, then ADR-035, ADR-037, T-M42-14, and ADR-047), local `invariant` 20 → 35 → 40 → 55 → **70s** [local] (T-M42-4, ADR-039, ADR-040, then T-M42-14; republished in §3), and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 — from one run's attempts until §9 (2026-08-28) made the input a cross-commit sample of runs — and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
+**Ruling**: four ceilings, one per (suite, environment), each derived by ADR-013's own rule (slowest observed run +15%, rounded up to a multiple of five) from a band computed from `evals/report/history.jsonl` and graded against it — local `fast` 60 → 80 → 90 → 105 → 110 → 115 → 120 → 125 → 130 → 135 → 140 → **235s** [local] (ADR-021, then ADR-029, then ADR-035, ADR-037, T-M42-14, ADR-047, and the 2026-08-30 async-submit red-first instrumentation), local `invariant` 20 → 35 → 40 → 55 → 70 → **220s** [local] (T-M42-4, ADR-039, ADR-040, T-M42-14, then the same instrumentation; republished in §3), and CI's two — ~~CI `fast` 80 → **90s**, CI `invariant` **20s**~~, struck 2026-08-26 (PR #57 R24), both re-derived in §5 — from one run's attempts until §9 (2026-08-28) made the input a cross-commit sample of runs — and published there rather than here, because §5's table is what `ci-numbers-are-derived` reads back against the workflow — read through one variable per suite (`EVAL_WALL_BUDGET_S_FAST`, `EVAL_WALL_BUDGET_S_INVARIANT`).
 **Because**: M31 added real cost and the first repair moved three browser cases to `invariant`-only tags instead of facing it — which left the gate refusing a commit that changed nothing but JSON at 60.24s with every case passing — and the first version of this ADR then gave `invariant` a ceiling derived from local runs but enforced only on CI, where it had never been measured and immediately went red.
 **Enforced by**: `fast-wall-clock-budget` (both ceilings, the set of suites that have one, and the override's scope), `published-band-matches-the-ledger` (the bands against the ledger), `published-band-slack-is-declared` (§6's bound), `band-is-graded-against-the-citable-maximum` (§8's ruling, and the deadlock it removes), `evals/run.py` `over_budget()`
 
@@ -81,12 +81,17 @@ every gate-green claim on that branch is scoped to the local environment
 (PR #57 R7). They stay ungraded by `published-band-matches-the-ledger`, which reads this
 repo's ledger and nothing else.
 
+The superseded M51 fixed-point report recorded 274/278
+(`evals/report/20260830-124838-fast.json`); it remains historical evidence, not
+the current wall-clock input.
+
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 278 cases, ts `20260830-124838`, **114.97s**, 274/278
-  (`evals/report/20260830-124838-fast.json`; `dirty: true`; M51's fixed-point
-  run. Its four reds were the two derived-document guards plus two stale route
-  expectations corrected before the completion gate.)
+- Band source — local `fast` at 278 cases, ts `20260830-155302`, **203.75s**, 277/278
+  (`evals/report/history.jsonl`; `dirty: true`; the first async-submit
+  implementation charged two ordinary form submissions 30s each. The sole red
+  was the old wall-clock boundary. The implementation was narrowed afterward,
+  but §6's no-rejection rule keeps the completed measurement.)
   That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
@@ -232,7 +237,7 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 278 cases, 274/278) and
+The cited rows' own results — (restated — `fast`: 278 cases, 277/278) and
 (restated — `invariant`: 122 cases, 120/122) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
@@ -355,7 +360,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 114.97 × 1.15 = 132.22 → **135**, equal to the committed ceiling.
+five — gives 203.75 × 1.15 = 234.31 → **235**, equal to the committed ceiling.
 The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
 ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
 each derived
@@ -382,15 +387,16 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 122 cases, ts `20260830-125949`, **40.02s**, 120/122
-  (`evals/report/20260830-125949-invariant.json`; `dirty: true`; M51's
-  fixed-point run, red only on the two derived-document guards updated here.)
-  This short sample derives 50 because 40.02 × 1.15 = 46.02 → **50**, below the
-  committed 70s ceiling. Section 6's no-ratchet-down rule keeps 70: a quieter
-  fresh-count sample cannot erase the earlier measured outlier. Whether this remains the maximum at this count is
+- Band source — local `invariant` at 122 cases, ts `20260830-153741`, **191.02s**, 120/122
+  (`evals/report/history.jsonl`; `dirty: true`; the first async-submit
+  implementation accidentally charged a 15s wait to unrelated clicks. The
+  implementation was narrowed afterward, but §6's no-rejection rule keeps the
+  completed measurement.)
+  This sample derives 220 because 191.02 × 1.15 = 219.67 → **220**, equal to the
+  committed 220s ceiling. Whether this remains the maximum at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger
   had already overtaken, and the rule needs only that the published number and
-  the ledger's maximum derive the same **70**; `published-band-matches-the-ledger`
+  the ledger's maximum derive the same **220**; `published-band-matches-the-ledger`
   prints `ledger_slowest`.
   **This band is an outlier and says so.** It sits seconds above its neighbours
   because one environment probe stalled; the ceiling it derives lands a step

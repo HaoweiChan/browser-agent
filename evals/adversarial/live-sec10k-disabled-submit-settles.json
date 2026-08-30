@@ -1,0 +1,38 @@
+{
+  "id": "live-sec10k-disabled-submit-settles",
+  "task": "browser",
+  "suites": ["live", "full"],
+  "level": "L2",
+  "tc": "TC1",
+  "domain": "whaleforce-sec10k.zeabur.app",
+  "input": {
+    "task": "Select the intc-2002 committed filing, run extraction, wait for it to finish, and report the extraction status.",
+    "url": "https://whaleforce-sec10k.zeabur.app/",
+    "stub_plan": [
+      {
+        "action": "select_option",
+        "target": {"role": "combobox", "name": "SELECT A COMMITTED FIXTURE"},
+        "value": "intc-2002"
+      },
+      {
+        "action": "click",
+        "target": {"role": "button", "name": "Extract the selected committed fixture"},
+        "expected_state": {"text_visible": "Extraction complete"}
+      },
+      {
+        "action": "extract",
+        "target": {"role": "status", "name": "doc_status"},
+        "anchor": "intc-2002"
+      }
+    ]
+  },
+  "expect": {
+    "status": "success",
+    "anchors": ["intc-2002"]
+  },
+  "provenance": "Homepage showcase run f9d53e0f terminated success with the progress text 'Extracting — prepare filing'. The target disables its submit button while the deterministic extraction runs and re-enables it at completion; measured manually on the deployed homepage, intc-2002 completed in 10.58s. The authored expected_state currently has only the executor's 2s generic postcondition window, so the red case demonstrates that a real async submit cannot reach the terminal state before that window expires.",
+  "triage": {
+    "class": "input-variant",
+    "note": "A legitimate async form exposes completion through the clicked control's disabled-to-enabled lifecycle. Before the fix, extraction runs immediately after click and reads a transient progress status. Production remains site-agnostic: no URL, selector, status phrase, or TAIFEX/SEC recipe enters the executor."
+  }
+}

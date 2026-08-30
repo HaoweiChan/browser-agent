@@ -79,6 +79,10 @@ OPTIONS_JS = "el => el.options ? [...el.options].map(o => [o.value, o.label]) : 
 # can act on; a longer budget buys that back at a price the published band cannot
 # currently pay (T-M42-20-D3/D9).
 SELECT_OPTIONS_WAIT_MS = 1_000
+# A submit button that disables itself has declared that its action is still in
+# flight.  Wait for that same control to become usable again before reading the
+# page; static and instantly-completing buttons pay one boolean check.
+DISABLED_SUBMIT_WAIT_MS = 15_000
 
 # Actions that leave the page as they found it, so `attempt` does not pay for a
 # before/after comparison. `observe` reads, and `final_answer` is the loop's
@@ -1440,7 +1444,35 @@ class _TaskRuntime:
     async def execute_action(self, step, rec, action, loc) -> bool:
         """Execute one resolved, non-extraction browser action."""
         if action == "click":
+            expected = step.get("expected_state") or {}
+            wait_text = expected.get("text_visible") if set(expected) == {"text_visible"} else None
+            button_type = (await loc.get_attribute("type")
+                           if (step.get("target") or {}).get("role") == "button" else None)
+            track_async_submit = ((step.get("target") or {}).get("role") == "button"
+                                  and button_type != "submit" and bool(wait_text))
+            statuses = self.page.get_by_role("status") if track_async_submit else None
+            status_before = await statuses.all_inner_texts() if statuses is not None else []
             await loc.click(timeout=10_000)
+            disabled, status_after = False, status_before
+            if track_async_submit:
+                try:
+                    disabled = await loc.is_disabled()
+                    status_after = await statuses.all_inner_texts()
+                except Exception:
+                    pass
+            # The generic async-submit signal is three facts together: the
+            # clicked control disabled, a live status changed, and the authored
+            # terminal text is not visible yet. Ordinary disabled buttons and
+            # already-satisfied postconditions do not enter the long window.
+            if disabled and status_after != status_before and wait_text:
+                deadline = time.monotonic() + DISABLED_SUBMIT_WAIT_MS / 1000
+                while time.monotonic() < deadline:
+                    try:
+                        if wait_text in await page_text(self.page) or await loc.is_enabled():
+                            break
+                    except Exception:
+                        break  # replacement/detachment is also observable completion
+                    await self.page.wait_for_timeout(50)
         elif action == "fill":
             if not await loc.evaluate(FILLABLE_JS):
                 raise StepError("locate", f"resolved element is not fillable: {step.get('target')}")

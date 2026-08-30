@@ -38,7 +38,7 @@ failing case is decoration.
 ```bash
 python3 -m evals.run --suite fast        # offline gate: 278 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
-python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
+python3 -m evals.run --suite live        # 14 cases, 5 real sites, still $0.00
 ```
 
 The reviewer UI locally — task submission needs both `OPENROUTER_API_KEY` and a
@@ -262,12 +262,12 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 278 | 114.97s | 132.22 | **135s** |
-| `invariant` | 122 | 40.02s | 46.02 | **70s** |
+| `fast` | 278 | 203.75s | 234.31 | **235s** |
+| `invariant` | 122 | 191.02s | 219.67 | **220s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer.
 A short sample may derive UNDER the committed ceiling and must never drag it
-down (ADR-019 §6). The 113-case `invariant` band derives 70s and moves that
+down (ADR-019 §6). The 122-case `invariant` band derives 220s and moves that
 ceiling; the cited outlier is retained under the ledger's no-rejection rule.
 The rule is one-directional: derived BELOW the committed ceiling is held;
 derived ABOVE it requires an ADR.
@@ -316,7 +316,7 @@ own measured ceiling alongside a local one
 by [ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) when M31
 grew the suite, and `invariant` given ceilings of its own).
 
-`live` covers 5 real sites across 13 cases. It was `4/6` at the M6 merge; two of those
+`live` covers 5 real sites across 14 cases. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one
 case went green immediately while the other kept failing, because the outage had
 been hiding a defect of ours: navigation waited for `load`, so one hanging
@@ -527,7 +527,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 341 cases (278 of them in the offline gate), it
+The eval set is not weak; it is 342 cases (278 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things
