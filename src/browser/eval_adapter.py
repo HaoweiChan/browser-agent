@@ -6054,6 +6054,7 @@ def _run_ui_form_case(case: dict) -> dict:
           }
           out.access = {present: !!(key && verify), label: key && key.labels[0]?.textContent,
                         type: key && key.type, status: $("access-status")?.textContent,
+                        status_class: $("access-status")?.className,
                         calls: calls.splice(0)};
           $("task").value = inp.no_url_task; $("url").value = "";
           $("go").click(); await tick();
@@ -6114,6 +6115,7 @@ def _run_ui_form_case(case: dict) -> dict:
     verify_calls = [c for c in access["calls"] if c["url"] == "/access/verify"]
     if not access["present"] or access["label"].strip() != expect["access_label"] \
             or access["type"] != "password" or expect["enabled_contains"] not in access["status"] \
+            or expect.get("enabled_class") not in access["status_class"].split() \
             or len(verify_calls) != 1 \
             or verify_calls[0]["headers"].get("x-llm-access-key") != inp["access_key"] \
             or verify_calls[0]["body"] is not None:

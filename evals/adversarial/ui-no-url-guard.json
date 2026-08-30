@@ -85,11 +85,12 @@
   "expect": {
     "access_label": "LLM access key",
     "enabled_contains": "Enabled",
+    "enabled_class": "enabled",
     "site_url": "https://books.toscrape.com",
     "guidance_contains": "start URL",
     "limits_contains": "2 declared limitations"
   },
-  "provenance": "M35 eval-first. Deployment run 2ce3e5c8 (2026-08-22) showed that a task with no start URL spent a run guaranteed to fail, so this rendered case pins the no-URL guard, site-name URL inference, verified access-key header, and Try-button behavior. User report, 2026-08-30, narrowed the interview surface to finance: the case pins SEC filing analysis first, followed by seven finance workflows, five useful columns, zero empty matrix cells, and each new site's exact URL and Try task. The four additions remain explicitly not evaluated until paid runs can use a valid rotated OpenRouter key. Watched red before each UI change: first the irrelevant rows and stale 10-K task, then the absence of the four new finance rows. Cold review then found two silent-success gaps; both watched red before repair: an all-dash showcased row rendered as supported, and the Intel button loaded a generic status question rather than explicitly asking the agent to select Intel, run extraction, and read the result.",
+  "provenance": "M35 eval-first. Deployment run 2ce3e5c8 (2026-08-22) showed that a task with no start URL spent a run guaranteed to fail, so this rendered case pins the no-URL guard, site-name URL inference, verified access-key header, and Try-button behavior. User report, 2026-08-30, narrowed the interview surface to finance: the case pins SEC filing analysis first, followed by seven finance workflows, five useful columns, zero empty matrix cells, and each new site's exact URL and Try task. The four additions remain explicitly not evaluated until paid runs can use a valid rotated OpenRouter key. Watched red before each UI change: first the irrelevant rows and stale 10-K task, then the absence of the four new finance rows. Cold review then found two silent-success gaps; both watched red before repair: an all-dash showcased row rendered as supported, and the Intel button loaded a generic status question rather than explicitly asking the agent to select Intel, run extraction, and read the result. The access success state was then pinned to the green `enabled` class after the owner showed that grey `✓ Enabled` was visually weaker than the SEC extractor; watched red first with status_class `note`.",
   "triage": {
     "class": "invariant-gap",
     "note": "The form must reject no-URL tasks that cannot be inferred safely and verify an LLM access key before a paid request, keeping it out of URL/body and attaching it to /tasks only as X-LLM-Access-Key.",
