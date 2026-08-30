@@ -1,0 +1,26 @@
+{
+  "id": "m49-boe-dated-rate",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "canonical-evidence",
+    "fixture": "finance-boe-rate.html",
+    "document_id": "fixture:finance-boe-rate",
+    "url": "https://www.bankofengland.co.uk/boeapps/database/Bank-Rate.asp",
+    "request": {"capability": "dated-text-evidence", "question": "current Bank Rate and effective date"}
+  },
+  "expect": {
+    "citation": "fixture ground truth: Bank Rate value with its effective-from date",
+    "packet": {
+      "document_id": "fixture:finance-boe-rate",
+      "url": "https://www.bankofengland.co.uk/boeapps/database/Bank-Rate.asp",
+      "snapshot_sha256": "e5a69d27a0f8613e12670b4ca2efce7b706e0c4839eca79c8987d25b43d642bd",
+      "source_sha256": "6ed6f462251e586b74879206ed4ff6fad018f786ed9b5df33c6c4796eb6e133c",
+      "items": [
+        {"kind": "text", "value": "4.00%", "text_offset": {"start": 28, "end": 33}},
+        {"kind": "text", "value": "Effective from 7 August 2025", "text_offset": {"start": 34, "end": 62}}
+      ]
+    }
+  },
+  "provenance": "Support-matrix run 001b9727 failed loudly with Access Denied at this showcase URL. The fixture is synthetic ground truth, not a live-rate claim."
+}

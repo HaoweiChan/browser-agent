@@ -1,0 +1,97 @@
+{
+  "suite": "m49",
+  "score": 0.0,
+  "totals": {
+    "wall_seconds": 0.05,
+    "latency_p50": 0.0,
+    "latency_p95": 0.05,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "dated-text-evidence"
+      },
+      "got": {
+        "source_sha256": "6ed6f462251e586b74879206ed4ff6fad018f786ed9b5df33c6c4796eb6e133c",
+        "snapshot_sha256": "e5a69d27a0f8613e12670b4ca2efce7b706e0c4839eca79c8987d25b43d642bd",
+        "canonical_text": "Bank Rate fixture Bank Rate 4.00% Effective from 7 August 2025"
+      },
+      "seconds": 0.05,
+      "id": "m49-boe-dated-rate",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "temporal-effective-date"
+      },
+      "got": {
+        "source_sha256": "0a988ef42f00ad363e2698d924ae25cec0570d8d30fd13f880e09a6cce6a87c5",
+        "snapshot_sha256": "4268ed91670e1892fc4ee4c02213c1b45e35ccf56fe885a5520956760177b7a4",
+        "canonical_text": "ECB fixture Effective date Rate 2026-06-11 2.00% 2025-06-11 2.25%"
+      },
+      "seconds": 0.0,
+      "id": "m49-ecb-effective-date",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "semantic-table-normalization"
+      },
+      "got": {
+        "source_sha256": "ce29126451be84181940edd266e27a6613b6acd891616785cd2f8158a91dce2a",
+        "snapshot_sha256": "17a8cdce867a2f620c668ef4769b18eea96f3e557d9e18471d5f9ead61689d91",
+        "canonical_text": "EIA fixture layout only U.S. regular gasoline Area 2026-08-24 U.S. 3.71"
+      },
+      "seconds": 0.0,
+      "id": "m49-eia-semantic-table",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "chart-context-text-evidence"
+      },
+      "got": {
+        "source_sha256": "aba6496af0530b4e77c033a2d787dbb86e5f724fb96bfecaa939a983e7d6626f",
+        "snapshot_sha256": "8d3b8a8427abc48b9e7f3b9dbd5b66cdb5ee87d5d2fa558efb4bf73e2083765d",
+        "canonical_text": "Federal Reserve fixture Federal Funds Rate Target Range 4.25% to 4.50%"
+      },
+      "seconds": 0.0,
+      "id": "m49-fed-chart-data-evidence",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "terminal-live-region"
+      },
+      "got": {
+        "source_sha256": "f6c47a1b331a341ecb077498f0af72e44a97e9f430b275bfaf5a7ae50f86ad19",
+        "snapshot_sha256": "76ee7f5a543b5e3000bf4b6fa1d7815cca55c3166cc94378d5fa031a98e7a153",
+        "canonical_text": "10-K fixture Extracting filing\u2026 doc_status: success \u2014 18 extracted"
+      },
+      "seconds": 0.0,
+      "id": "m49-sec10k-terminal-live-region",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "latest-dated-table-cell"
+      },
+      "got": {
+        "source_sha256": "8b152378245a56cb8e3871d827bd02b72898c6361485e9a4e27416e6c8137bef",
+        "snapshot_sha256": "0f152383dfbbd229a48346c65d43c90289248fc77914f35c3417b367cf470c5e",
+        "canonical_text": "Treasury fixture Date 10 yr 2026-08-28 4.21 2026-08-27 4.18"
+      },
+      "seconds": 0.0,
+      "id": "m49-treasury-latest-tenor",
+      "kind": "adversarial"
+    }
+  ]
+}

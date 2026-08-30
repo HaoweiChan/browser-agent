@@ -364,3 +364,10 @@ Whether loop mode becomes the live default (M44's evidence decides), vision
 observation (M43), and the live A/B numbers. This ADR ships the mechanism and
 its offline grading; the deployment probes that measure the live model's step
 choices are M44's, under ADR-022/ADR-025's protocol.
+
+## Amendment — ADR-046 canonical migration
+
+ADR-046 supersedes only the permanent-control-flow reading of this ADR's loop
+driver. Until M50 proves parity, this implementation and its shared resolver,
+executor, verifier, RunResult, trace, INV-0 through INV-3, screen, and rule 6
+remain unchanged; it is a comparator, not the future permanent graph.

@@ -8,8 +8,17 @@ planner-call stop lines; all three are frozen in the journal and checked between
 completed runs before another task is submitted.
 **Because**: the zero-spend campaign preflight found that the report already
 totalled tokens and planner calls but `execute()` bounded neither aggregate.
-**Enforced by**: `m44-campaign-enforces-aggregate-budget-stops` and
-`m44-campaign-partial-evidence-stays-loud`.
+**Enforced by**: historical M44 campaign cases archived at M48; the reusable
+completed-run boundary is active as `canonical-budget-stops-before-next-run`.
+
+## M48 archival
+
+The original M44 runner/cases remain under `evals/archive/m44/`, outside
+`evals.run` discovery, because their journal is tied to the old deployment/model
+route and their POST lacks the now-required access header. This does not alter
+the historical journal or authorize a resumed campaign. ADR-046 carries the
+generic completed-run stop into the canonical contract; M52 requires a new
+authorized journal.
 
 ## Decision
 

@@ -1,0 +1,23 @@
+{
+  "id": "m49-ecb-effective-date",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "canonical-evidence",
+    "fixture": "finance-ecb-rate.html",
+    "document_id": "fixture:finance-ecb-rate",
+    "url": "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
+    "request": {"capability": "temporal-effective-date", "question": "current deposit-facility rate"}
+  },
+  "expect": {
+    "citation": "fixture ground truth: current deposit-facility rate paired with effective date, never the historical row",
+    "packet": {
+      "document_id": "fixture:finance-ecb-rate",
+      "url": "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
+      "snapshot_sha256": "4268ed91670e1892fc4ee4c02213c1b45e35ccf56fe885a5520956760177b7a4",
+      "source_sha256": "0a988ef42f00ad363e2698d924ae25cec0570d8d30fd13f880e09a6cce6a87c5",
+      "items": [{"kind": "table", "value": "2.00%", "table_cell": {"headers": ["Effective date", "Rate"], "row": 0, "column": 1}}]
+    }
+  },
+  "provenance": "Support-matrix D28 records ECB run 35c4e211 as a correct rejection for reading history instead of the current rate. The fixture is synthetic ground truth; table rows are zero-based data rows after headers."
+}

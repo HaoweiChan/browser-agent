@@ -1,0 +1,47 @@
+{
+  "id": "canonical-contract-schema-binds-cited-evidence",
+  "task": "browser",
+  "suites": ["invariant"],
+  "input": {
+    "kind": "canonical-contract",
+    "check": "schema",
+    "packet": {
+      "document_id": "fixture:canonical",
+      "url": "https://example.test/fixture",
+      "snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "items": [{"kind": "text", "value": "4.21", "text_offset": {"start": 10, "end": 14}}]
+    },
+    "state": {
+      "node": "decide",
+      "route": "publish",
+      "status": "accepted",
+      "verifier": {"authority": "deterministic", "verdict": "PASS"},
+      "retry": {"used": 1, "limit": 2},
+      "budgets": {"calls": 1, "tokens": 2, "usd": 0.01, "ms": 3},
+      "evidence": [{
+        "document_id": "fixture:canonical",
+        "url": "https://example.test/fixture",
+        "snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "items": [{"kind": "text", "value": "4.21", "text_offset": {"start": 10, "end": 14}}]
+      }]
+    },
+    "reject": [
+      {"label": "skip canonical transition", "error": "invalid:transition", "state": {"node": "evidence", "route": "publish", "status": "running", "retry": {"used": 0, "limit": 1}, "budgets": {"calls": 0, "tokens": 0, "usd": 0, "ms": 0}, "evidence": []}},
+      {"label": "publish without deterministic PASS", "error": "invalid:publish-authority", "state": {"node": "decide", "route": "publish", "status": "accepted", "verifier": {"authority": "deterministic", "verdict": "FAIL"}, "retry": {"used": 0, "limit": 1}, "budgets": {"calls": 0, "tokens": 0, "usd": 0, "ms": 0}, "evidence": []}},
+      {"label": "publish before accepted", "error": "invalid:publish-authority", "state": {"node": "decide", "route": "publish", "status": "running", "verifier": {"authority": "deterministic", "verdict": "PASS"}, "retry": {"used": 0, "limit": 1}, "budgets": {"calls": 0, "tokens": 0, "usd": 0, "ms": 0}, "evidence": []}},
+      {"label": "retry after budget exhausted", "error": "invalid:retry", "state": {"node": "decide", "route": "plan", "status": "retryable", "verifier": {"authority": "deterministic", "verdict": "FAIL"}, "retry": {"used": 1, "limit": 1}, "budgets": {"calls": 0, "tokens": 0, "usd": 0, "ms": 0}, "evidence": []}},
+      {"label": "boolean retry count", "error": "invalid:retry", "state": {"node": "decide", "route": "plan", "status": "retryable", "verifier": {"authority": "deterministic", "verdict": "FAIL"}, "retry": {"used": true, "limit": 1}, "budgets": {"calls": 0, "tokens": 0, "usd": 0, "ms": 0}, "evidence": []}},
+      {"label": "non-string loud failure status", "error": "invalid:failure", "state": {"node": "decide", "route": "failure", "status": null, "verifier": {"authority": "deterministic", "verdict": "FAIL"}, "retry": {"used": 1, "limit": 1}, "budgets": {"calls": 0, "tokens": 0, "usd": 0, "ms": 0}, "evidence": []}},
+      {"label": "bad source hash", "error": "invalid:source_sha256", "packet": {"document_id": "fixture:canonical", "url": "https://example.test/fixture", "snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "source_sha256": "not-a-hash", "items": [{"kind": "text", "value": "4.21", "text_offset": {"start": 10, "end": 14}}]}},
+      {"label": "empty text offset", "error": "invalid:items[0].text_offset", "packet": {"document_id": "fixture:canonical", "url": "https://example.test/fixture", "snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "items": [{"kind": "text", "value": "4.21", "text_offset": {"start": 10, "end": 10}}]}},
+      {"label": "negative table coordinate", "error": "invalid:items[0].table_cell", "packet": {"document_id": "fixture:canonical", "url": "https://example.test/fixture", "snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "items": [{"kind": "table", "value": "4.21", "table_cell": {"headers": ["Date", "10 yr"], "row": -1, "column": 1}}]}}
+    ],
+    "accept": [
+      {"label": "deterministic loud failure", "state": {"node": "decide", "route": "failure", "status": "failure:extract", "verifier": {"authority": "deterministic", "verdict": "FAIL"}, "retry": {"used": 1, "limit": 1}, "budgets": {"calls": 0, "tokens": 0, "usd": 0, "ms": 0}, "evidence": []}}
+    ]
+  },
+  "expect": {"note": "canonical transitions are exact; only decide with deterministic PASS may publish, and hostile evidence coordinates are rejected"},
+  "provenance": "M48 ADR-046 contract. Pure stdlib validation; no browser, network, or model call."
+}

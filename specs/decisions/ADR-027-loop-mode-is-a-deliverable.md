@@ -145,3 +145,10 @@ at 3.1x/7.8x this ceiling, frozen with its price (§8). Decision 5's re-homing i
 §2, and it came out narrower than this ADR anticipated in one respect worth
 recording: both guards are the SAME functions asked at a second anchor, not
 loop-mode reimplementations of them.
+
+## Amendment — ADR-046 canonical migration
+
+ADR-046 supersedes Decision 1's permanent peer-mode direction only: `plan` and
+`loop` become temporary parity comparators on the path to one canonical graph.
+Its preservation requirements — shared executor, resolver, trace, verifier,
+judge, rule 6, and zero wrong-success — remain unchanged.
