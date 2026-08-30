@@ -1,0 +1,17 @@
+{
+  "id": "m44-campaign-number-in-label-is-not-the-answer",
+  "task": "browser",
+  "suites": ["invariant"],
+  "input": {
+    "kind": "m44-campaign",
+    "check": "number-in-label"
+  },
+  "expect": {
+    "note": "a number inside a metric label such as S&P 500 is not treated as the value asserted after that label"
+  },
+  "provenance": "M44 paid campaign run 467fdd77 on build d8e0e966377445a3b252adbfb4af89acf3b7e526 returned success with the grounded extraction `Current S&P 500 PE Ratio: 29.72 -0.07 (-0.23%)`, exactly matching the independently refreshed value 29.72. The campaign classifier nevertheless emitted wrong_success because `_asserted` chose the preceding `500` embedded in the field label as the number nearest `ratio`. The minimal synthetic repro keeps only that label and value; no browser, network, or model call is made.",
+  "triage": {
+    "class": "eval-bug",
+    "note": "The production answer and ground truth agree; only the campaign classifier is wrong. The fix belongs in the shared typed-match association logic, not the agent or model configuration."
+  }
+}

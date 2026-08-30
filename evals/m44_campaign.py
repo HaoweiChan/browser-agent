@@ -362,6 +362,13 @@ def _truth_for_post(path: Path, probe: dict, initial: dict) -> dict:
 
 
 def _answer_text(answer) -> str:
+    if isinstance(answer, list):
+        labels = [value for value in answer
+                  if isinstance(value, str) and value.rstrip().endswith(":")]
+        answer = [value for value in answer if not (
+            value in labels and any(isinstance(other, str) and other != value and
+                                    other.casefold().startswith(value.casefold())
+                                    for other in answer))]
     return " ".join(json.dumps(answer, ensure_ascii=False, allow_nan=False).casefold().split())
 
 
@@ -1234,6 +1241,27 @@ def self_check(check: str) -> dict:
                 "boundary_safe_matches": True, "assertion_safe_matches": True,
                 "text_tri_state": True}
         wrong = {k: {"want": want[k], "got": got[k]} for k in want if got[k] != want[k]}
+        return {"passed": not wrong, "wrong": wrong, "got": got}
+    if check == "number-in-label":
+        rule = _rule("number", "p/e", "ratio", "本益比")
+        truth = {"values": [29.72]}
+        got = {
+            "label_prefix_does_not_add_its_number": classify(
+                {"status": "success", "answer": [
+                    "Current S&P 500 PE Ratio:",
+                    "Current S&P 500 PE Ratio: 29.72"]},
+                truth, (rule,)) == "correct",
+            "wrong_value_after_same_label_is_rejected": classify(
+                {"status": "success", "answer": [
+                    "Current S&P 500 PE Ratio:",
+                    "Current S&P 500 PE Ratio: 29.71"]},
+                truth, (rule,)) == "wrong_success",
+            "contradictory_values_are_rejected": classify(
+                {"status": "success", "answer": [
+                    "Current ratio: 29.72", "Current ratio: 29.71"]},
+                truth, (rule,)) == "wrong_success",
+        }
+        wrong = {key: value for key, value in got.items() if not value}
         return {"passed": not wrong, "wrong": wrong, "got": got}
     if check not in {"safety", "aggregate-budgets"}:
         return {"passed": False, "wrong": {"unknown_check": check}}
