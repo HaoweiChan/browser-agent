@@ -18,14 +18,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("task")
     ap.add_argument("--url", default=None)
-    ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--model", default=None)
     ap.add_argument("--headed", action="store_true")
     args = ap.parse_args()
 
     run_dir = f"runs/{time.strftime('%Y%m%d-%H%M%S')}"
     result = asyncio.run(
-        run_task(args.task, args.url, live_planner(args.model), run_dir,
-                 judge=live_judge(), headless=not args.headed, model=args.model)
+        run_task(args.task, args.url,
+                 live_planner(args.model or DEFAULT_MODEL, fallback=args.model is None), run_dir,
+                 judge=live_judge(), headless=not args.headed,
+                 model=args.model or DEFAULT_MODEL)
     )
     print(json.dumps(result, indent=2, ensure_ascii=False))
     print(f"\n[trace] {run_dir}/trace.jsonl")

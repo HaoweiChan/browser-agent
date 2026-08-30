@@ -6,6 +6,7 @@ the inline smoke page is replaced by the real frontend at M4.
 
 import asyncio
 import hashlib
+import hmac
 import html
 import ipaddress
 import json
@@ -41,6 +42,21 @@ SEM = asyncio.Semaphore(1)
 # The run currently holding SEM, for /readyz. One variable rather than a registry:
 # concurrency is 1 by design, so "which run" has exactly one answer or none.
 ACTIVE_RUN: str | None = None
+ACCESS_KEY_ENV = "LLM_ACCESS_KEY"
+ACCESS_HEADER = "X-LLM-Access-Key"
+MIN_ACCESS_KEY_CHARS = 16
+
+
+def access_key_valid(presented: str | None) -> bool:
+    configured = os.environ.get(ACCESS_KEY_ENV, "")
+    return (len(configured) >= MIN_ACCESS_KEY_CHARS
+            and isinstance(presented, str)
+            and hmac.compare_digest(presented, configured))
+
+
+def require_access(request: Request) -> None:
+    if not access_key_valid(request.headers.get(ACCESS_HEADER)):
+        raise HTTPException(401, "LLM access key required or invalid")
 
 
 # --- Support matrix --------------------------------------------------------
@@ -207,12 +223,10 @@ class TaskIn(BaseModel):
     mode: str | None = None
     # The M9 ablation's independent variable. Absent means the default; anything
     # else must be on `planner.ALLOWED_MODELS` — the ablation set plus the
-    # incumbent default, which stays reachable by explicit name even though it is
-    # priced out of the comparison (ADR-010 Decision 6). This endpoint is public and
-    # unauthenticated and OpenRouter bills whatever id it is handed, so an
-    # unbounded field here is a stranger pointing this deployment's key at the
-    # priciest model on the platform — and the run budgets would not notice,
-    # because they count tokens, not price (case gateway-model-not-allowlisted).
+    # models frozen under the DeepSeek V4 Pro ceiling. Authentication is a
+    # separate first gate; exact allowlist membership is still required because
+    # a shared access key can leak or be shared and run budgets count tokens,
+    # not provider price (ADR-045, gateway-model-not-allowlisted).
     model: str | None = None
 
 
@@ -224,13 +238,24 @@ def _env_failure(reason: str, model: str | None = None, mode: str = "plan") -> d
         failure="env", reason=reason, model=model, mode=mode)
 
 
-async def _execute(run_id: str, task: str, url: str | None, model: str, mode: str = "plan"):
+def _served_model(requested: str, *callers) -> str:
+    used = list(dict.fromkeys(
+        mid for caller in callers if caller
+        for mid in getattr(caller, "models_used", []) if isinstance(mid, str)))
+    return " + ".join(used) if used else requested
+
+
+async def _execute(run_id: str, task: str, url: str | None, model: str,
+                   mode: str = "plan", fallback: bool = True):
     global ACTIVE_RUN
     q = STREAMS[run_id]
     result = None
+    planner = driver = None
     async with SEM:
         ACTIVE_RUN = run_id
         try:
+            planner = None if mode == "loop" else live_planner(model, fallback=fallback)
+            driver = live_driver(model, fallback=fallback) if mode != "plan" else None
             result = await run_task(
                 task, url,
                 # Exactly one of the two factories is constructed — except in
@@ -238,8 +263,8 @@ async def _execute(run_id: str, task: str, url: str | None, model: str, mode: st
                 # Decision 7). Each validates the API key on the way in, so
                 # building an unused one would raise on a deployment that only
                 # meant to use the other.
-                None if mode == "loop" else live_planner(model), RUN_ROOT / run_id,
-                mode=mode, driver=live_driver(model) if mode != "plan" else None,
+                planner, RUN_ROOT / run_id,
+                mode=mode, driver=driver,
                 judge=live_judge(), url_guard=url_ok,
                 # Echoed back on the record so a committed ablation report is
                 # self-attributing rather than trusting the driver's loop variable.
@@ -263,13 +288,23 @@ async def _execute(run_id: str, task: str, url: str | None, model: str, mode: st
             # endpoint, and a reviewer watching a spinner with no end.
             if result is None:
                 result = _env_failure("run ended without producing a result", model, mode)
+            result["model"] = _served_model(model, planner, driver)
             RUNS[run_id] = result
             ACTIVE_RUN = None
             q.put_nowait({"event": "done", "result": result})
 
 
+@app.post("/access/verify")
+async def verify_access(request: Request):
+    require_access(request)
+    return {"enabled": True}
+
+
 @app.post("/tasks")
-async def submit_task(t: TaskIn):
+async def submit_task(t: TaskIn, request: Request):
+    # Authentication is first: an invalid visitor learns no model allowlist and
+    # cannot allocate a run, construct a planner, open Chromium, or spend $0.01.
+    require_access(request)
     if not t.task.strip() or len(t.task) > 500:
         raise HTTPException(422, "task must be 1-500 chars")
     if t.url and not url_ok(t.url):
@@ -301,7 +336,8 @@ async def submit_task(t: TaskIn):
     mode = t.mode or default_mode()
     asyncio.get_event_loop().create_task(
         _execute(run_id, t.task, t.url,
-                 t.model or (DEFAULT_MODEL if mode == "plan" else DEFAULT_LOOP_MODEL), mode))
+                 t.model or (DEFAULT_MODEL if mode == "plan" else DEFAULT_LOOP_MODEL), mode,
+                 fallback=t.model is None))
     return {"run_id": run_id}
 
 
@@ -503,6 +539,7 @@ PAGE = r"""<!doctype html>
   .command { border-top:2px solid var(--amber) }
   label { display:block; color:var(--dim); font-size:11px; font-weight:700;
        letter-spacing:.1em; text-transform:uppercase; margin:0 0 .3rem }
+  .field > label { color:var(--amber-ink) }
   input, button, select { font:inherit }
   input, select { background:var(--bg); border:1px solid var(--line); color:var(--fg);
        border-radius:var(--radius); padding:.6rem .7rem; width:100%; min-width:0;
@@ -512,6 +549,12 @@ PAGE = r"""<!doctype html>
   .row { display:flex; gap:.65rem; flex-wrap:wrap; margin-bottom:.7rem; align-items:flex-end }
   .field { flex:1 1 20rem }
   .actions { display:flex; gap:.55rem; flex:0 0 auto }
+  .access-row { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;
+       margin-bottom:.85rem; padding-bottom:.85rem; border-bottom:1px solid var(--line) }
+  .access-row label { margin:0; white-space:nowrap }
+  .access-row input { width:16rem; flex:0 1 16rem; padding:.42rem .55rem }
+  .access-row button { padding:.42rem .8rem }
+  .access-copy { color:var(--dim); font-size:11px }
   button { background:var(--amber); border:1px solid var(--amber); color:var(--on-amber);
        font-weight:800; border-radius:var(--radius); padding:.6rem 1rem; cursor:pointer;
        flex:0 0 auto; text-transform:uppercase; letter-spacing:.06em; font-size:12px;
@@ -556,9 +599,9 @@ PAGE = r"""<!doctype html>
   th { color:var(--amber-ink); font-weight:700; background:var(--raised);
        text-transform:uppercase; font-size:11px; letter-spacing:.07em }
   td.supported { color:var(--ok) } td.unreliable { color:var(--warn) }
-  td.unsupported { color:var(--bad) } td.none { color:var(--dim) }
+  td.unsupported { color:var(--bad) } td.none, td.unassessed { color:var(--dim) }
+  .site-link { display:inline-block; overflow-wrap:anywhere; word-break:break-word }
   .note { color:var(--dim); font-size:13px }
-  #guards::before { content:"guardrails :: "; color:var(--amber-ink); font-weight:700 }
   .status-line { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin-bottom:.7rem }
   .big { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.08em;
        border:1px solid currentColor; padding:.17rem .45rem }
@@ -656,18 +699,26 @@ PAGE = r"""<!doctype html>
 <h2><span class="section-no">01</span> Run task</h2>
 
 <div class="panel command">
+  <div class="access-row" aria-label="LLM access">
+    <label for="access-key">LLM access key</label>
+    <input id="access-key" type="password" autocomplete="current-password"
+      placeholder="Enter access key">
+    <button id="verify-access" onclick="verifyAccess()">Verify</button>
+    <span class="note" id="access-status" role="status" aria-live="polite">Not enabled</span>
+    <span class="access-copy">Required for LLM requests. Verify once; saved in this browser.</span>
+  </div>
   <div class="row">
     <div class="field"><label for="task">What should it find?</label>
       <input id="task" placeholder="e.g. What is the market cap of this company?"></div>
     <div class="field"><label for="url">Start URL</label>
       <input id="url" placeholder="https://… the page to start on" onchange="urlChanged()"></div>
     <div class="actions">
-      <button id="go" onclick="submitTask()">Run task</button>
+      <button id="go" onclick="submitTask()" disabled>Run task</button>
       <button id="check" class="ghost" onclick="smoke()"
         title="Launches Chromium against example.com — proves the browser works, spends no tokens">Browser check</button>
     </div>
   </div>
-  <p class="note" id="guards">Public http/https pages only · one run at a time.</p>
+  <p class="note" id="guards">Use a public webpage that doesn't require sign-in.</p>
   <pre id="err" hidden></pre>
 </div>
 
@@ -710,8 +761,7 @@ PAGE = r"""<!doctype html>
 </div>
 
 <h2><span class="section-no">03</span> What works today</h2>
-<p class="note">Each status is declared by a human from eval evidence, never inferred from a
-  pass rate. &ldquo;Try&rdquo; buttons are examples that were run against this deployment.</p>
+<p class="note">Finance workflows verified against live sites. Choose one to load a task.</p>
 <div id="matrix" class="panel table-wrap">loading&hellip;</div>
 
 <h2><span class="section-no">04</span> Known limits</h2>
@@ -733,91 +783,62 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let es = null, runId = null;
+let accessEnabled = false;
+const ACCESS_STORE = "browser-agent.llm-access-key";
 const PHASES = ["planning", "browser", "reading", "action", "verification", "complete"];
 const SUPPORT_LABELS = {
   TC1: "Read a page", TC2: "Search and read", TC3: "Navigate and read",
   TC4: "Compare or sort", TC5: "Submit a form"
 };
-// One per real-site support-matrix row — the cards are the only example
-// surface. Every entry was run against the deployment: the M35 entries on
-// 2026-08-22, the four M40 ones (quotes, companiesmarketcap, x-rates, multpl)
-// on 2026-08-23. A run_id here is a receipt against docs/support-matrix.md and
-// the eval record, NOT against a live GET /tasks/<run_id> — RUNS is in-memory
-// and a redeploy destroys the history (support matrix D19). A site declared supported/—
-// cites a run that answered correctly; a site declared unreliable/unsupported
-// may cite a run that demonstrates the declared status (fails loudly, never a
-// wrong answer) and says so in `note`. An example nobody can reproduce is
-// removed, not kept.
+// Finance-only interview surface. The full cross-domain evidence remains in
+// docs/support-matrix.md; each showcased domain must resolve to a row there.
 const EXAMPLES = {
-  "books.toscrape.com (live)": {label: "Price of a book",
-    url: "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
-    task: "What is the price of this book?"},                  // run ac69e850 → "£51.77"
-  "news.ycombinator.com (live)": {label: "Title of an HN story",
-    url: "https://news.ycombinator.com/item?id=2",
-    // runs c0af867b, 6e537b01 → "A Student's Guide to Startups" (2/2, 2026-08-24).
-    // Moved off item?id=1, whose title is literally "Y Combinator" (runs
-    // 97f2157d, 4453fae6, correct answers): a right answer there is
-    // indistinguishable from the domain-name fallback a broken extractor
-    // would emit, so the example demonstrated nothing. Item 2 is the same
-    // frozen Oct-2006 shape with a title that can only have been read off
-    // the page. Retired "Who submitted this story?" (run bcdc8f8a → "pg"):
-    // post-M35 it failed 5/5 on the deployment — 349e4839, e08b7627,
-    // bcae4fe7, 63b9d944, failure:locate, the planner targets link "pg"
-    // and the page has two.
-    task: "What is the title of this story?"},
-  "quotes.toscrape.com (live)": {label: "First of the top ten tags",
-    url: "https://quotes.toscrape.com/",
-    // Third task on this card in one milestone, and the first that survives a
-    // pre-merge re-run: 3/3 (51bc4a0a, eb5ed750, b131ac78 → "love"). The two it
-    // replaces are both the resolver-ambiguity shape main's M38 exists to fix —
-    // "Who wrote the quote about the world we have created?" is 1/6 on this build
-    // ("3 matches at tier text" for "Albert Einstein", three of his quotes on the
-    // page: f7dd7f52, 7d05d5e2), and the /author/ page answers with the site
-    // title and is rejected by the judge (6811f8bf, 79572b33, a8fe1b01). This
-    // task asks for a value that is unique on the page, which is the property
-    // this agent needs and the page cannot always offer.
-    task: "Which tag is listed first under Top Ten tags?",
-    note: "3/3 on this task. The author-name tasks are 1/6 — the same value appears three times and the resolver will not guess; the declared failure is the JS-rendered /js/ pages."},
-  "whaleforce-sec10k.zeabur.app (live)": {label: "doc_status of a filing",
-    // This project's OTHER deployment — Task 2's sec-10K inspector, and the
-    // site the 2026-08-24 demo failed against. The URL is a DEEP LINK, which is
-    // per-site data rule 6 allows (a start URL) and nothing more: the page
-    // preloads that fixture and extracts on load, so a run lands on a rendered
-    // page instead of hunting for one of three "Extract" buttons. 4/6 on the
-    // pre-registered probe, ADR-030 (a413fbf9, 1e43220d, 5da0441b, 81172a2f
-    // correct; e996cc7d answered "Extracting..." and the judge rejected it;
-    // 79c8dc32 died on the drill-down's no-progress guard).
-    url: "https://whaleforce-sec10k.zeabur.app/?fixture=aapl-2025&run=1",
-    task: "What is the doc_status of the aapl-2025 fixture?",
-    note: "Declared unreliable, 4/6 — the page renders after load, so a run that reaches the banner before the extraction lands reads a progress message instead of the answer."},
-  "openlibrary.org (live)": {label: "See a failure: author of a book",
-    url: "https://openlibrary.org/books/OL7025919M",
-    task: "Who is the author of this book?",   // run f1ecf157 → failure:extract (015b6778, 65af344f too: loud, never wrong)
-    note: "Declared unreliable — this example fails loudly, so you can see what a failure looks like."},
-  "companiesmarketcap.com (live)": {label: "Market cap of a company",
+  "whaleforce-sec10k.zeabur.app (live)": {workflow: "SEC filing analysis",
+    capability: "Select a filing, run extraction, and read its 10-K status",
+    label: "Run an Intel 10-K extraction",
+    url: "https://whaleforce-sec10k.zeabur.app/",
+    task: "Select the Intel filing, run the extraction, and report the resulting 10-K status.",
+    note: "The live control flow passes, but the broader integration remains unreliable (4/6)."},
+  "companiesmarketcap.com (live)": {workflow: "Company valuation",
+    capability: "Read a company’s current market capitalization",
+    label: "Read Apple market cap",
     url: "https://companiesmarketcap.com/apple/marketcap/",
-    // The only row here with a real repeat count behind it: 7/7 on the pre-M32
-    // build and 8/8 on the current one (d0b63c7e, f2c8c624, 65bb1028, 03eedb79,
-    // 2a058974, 4cec8304, 215e511a, f8925a42) across six pages. It survives a
-    // build change because the answer IS a heading's accessible name, so no plan
-    // ever needs a container — D28 has the shape.
     task: "What is the market cap of this company?"},
-  "bankofcanada.ca (live)": {label: "A central bank's policy rate",
+  "bankofcanada.ca (live)": {workflow: "Monetary policy",
+    capability: "Read a central bank’s current policy rate",
+    label: "Read Bank of Canada rate",
     url: "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
-    task: "What is the current policy interest rate?",   // 3/3: e36edcc1, 93fc8e6f, 5125b503 → "2.25"
-    },
-  "ecb.europa.eu (live)": {label: "An ECB key rate",
+    task: "What is the current policy interest rate?"},
+  "ecb.europa.eu (live)": {workflow: "European rates",
+    capability: "Read the ECB deposit facility rate",
+    label: "Read ECB deposit rate",
     url: "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
-    task: "What is the deposit facility rate?",   // 2/3: c8f04424, 9597fab9 → "2.25"
-    note: "2/3 — the third run read the historical table instead of the current rate, and the judge rejected it."},
-  "wikipedia.org": {label: "A university's motto",
-    url: "https://en.wikipedia.org/wiki/Harvard_University",
-    // 3/4 on the current build (4bdbd12f, f31a05c8, a51a772f → "Veritas
-    // (Latin)[3]"; 7547e580 failed at locate). The pre-merge re-run is what
-    // found the failure — the earlier note said "one verified run", which was
-    // true and told a reader nothing about how often it holds.
-    task: "What is the motto of this university?",
-    note: "3/4 on this build; still no eval case, so nothing re-checks it."},
+    task: "What is the deposit facility rate?",
+    note: "2/3 live runs passed; the failed run was rejected instead of returning a wrong answer."},
+  "bankofengland.co.uk (live)": {workflow: "UK monetary policy",
+    capability: "Read the current official Bank Rate",
+    label: "Read Bank of England rate",
+    url: "https://www.bankofengland.co.uk/boeapps/database/Bank-Rate.asp",
+    task: "What is the current official Bank Rate?",
+    note: "DeepSeek V4 Pro reached an Access Denied page and failed loudly (1/1)."},
+  "federalreserve.gov (live)": {workflow: "U.S. monetary policy",
+    capability: "Read the current federal funds target range",
+    label: "Read Fed target range",
+    url: "https://www.federalreserve.gov/economy-at-a-glance-policy-rate.htm",
+    task: "What is the current federal funds target range?",
+    note: "DeepSeek V4 Pro could not locate the value inside the interactive chart (1/1)."},
+  "home.treasury.gov (live)": {workflow: "Treasury yields",
+    capability: "Read the latest 10-year Treasury par yield",
+    label: "Read 10-year Treasury yield",
+    url: "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?page=0&type=daily_treasury_yield_curve",
+    task: "What is the latest 10-year Treasury par yield and its date?",
+    note: "DeepSeek V4 Pro could not resolve the date-sort control (1/1)."},
+  "eia.gov (live)": {workflow: "Energy prices",
+    capability: "Read the latest U.S. average retail gasoline price",
+    label: "Read U.S. gasoline price",
+    url: "https://www.eia.gov/dnav/pet/pet_pri_gnd_a_epm0_pte_dpgal_w.htm",
+    task: "What is the latest U.S. average retail gasoline price and its date?",
+    note: "DeepSeek V4 Pro could not resolve the gasoline-price layout table (1/1)."},
 };
 // Short limits for visitors; the declared rows with evidence stay in
 // docs/support-matrix.md, linked below with their count from the payload.
@@ -884,6 +905,7 @@ const ADRS = [
   ["042", "identical parsed mode-B requests reuse a content-keyed plan at zero extra planner cost; changed prompts or parameters and malformed answers always miss"],
   ["043", "an extraction reads rendered text first, then the browser-computed accessible name of that same element when its text is empty"],
   ["044", "a paid campaign must state aggregate USD, token and planner-call stop lines explicitly; recovery cannot change them, and reaching one refuses the next submission"],
+  ["045", "paid LLM requests require a verified LLM access key; DeepSeek V4 Pro is primary, GPT-5 mini is fallback, and Opus has no price exception"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;
@@ -953,11 +975,43 @@ document.addEventListener("click", (ev) => {
 let smokeStream = null;
 
 function busy(on) {
-  $("go").disabled = on;
+  $("go").disabled = on || !accessEnabled;
   $("check").disabled = on;
   if (!on) return;
   if (es) { es.close(); es = null; }
   if (smokeStream) { smokeStream.close(); smokeStream = null; }
+}
+
+function savedAccess() {
+  try { return localStorage.getItem(ACCESS_STORE) || ""; } catch (_) { return ""; }
+}
+function storeAccess(value) {
+  try { value ? localStorage.setItem(ACCESS_STORE, value) : localStorage.removeItem(ACCESS_STORE); }
+  catch (_) { /* storage can be disabled; the verified field still works this tab */ }
+}
+function setAccess(enabled, message) {
+  accessEnabled = enabled;
+  $("go").disabled = !enabled;
+  $("access-status").textContent = message;
+}
+async function verifyAccess() {
+  const key = $("access-key").value;
+  setAccess(false, "Verifying…");
+  try {
+    const r = await fetch("/access/verify", {method:"POST", headers:{"X-LLM-Access-Key":key}});
+    if (!r.ok) throw new Error("invalid key");
+    storeAccess(key);
+    setAccess(true, "✓ Enabled");
+  } catch (_) {
+    storeAccess("");
+    setAccess(false, "Not enabled — check the key and try again.");
+  }
+}
+async function restoreAccess() {
+  const key = savedAccess();
+  if (!key) return;
+  $("access-key").value = key;
+  await verifyAccess();
 }
 
 function progressItems() { return [...$("progress").children]; }
@@ -1181,6 +1235,11 @@ function renderResult(r) {
 }
 
 async function submitTask() {
+  if (!accessEnabled) {
+    $("err").hidden = false;
+    $("err").textContent = "Verify the LLM access key before running a task.";
+    return;
+  }
   const task = $("task").value.trim();
   if (!task) return;
   let url = $("url").value.trim();
@@ -1208,11 +1267,13 @@ async function submitTask() {
   showLive(url);
   try {
     const r = await fetch("/tasks", {
-      method: "POST", headers: {"Content-Type": "application/json"},
+      method: "POST", headers: {"Content-Type": "application/json",
+        "X-LLM-Access-Key": $("access-key").value},
       body: JSON.stringify({task, url}),
     });
     const data = await r.json();
     if (!r.ok) {
+      if (r.status === 401) { storeAccess(""); setAccess(false, "Not enabled — verify again."); }
       // A refusal is a terminal path too: without this the guard working once
       // disables the form for good, and the UI looks broken by its own success.
       busy(false);
@@ -1325,88 +1386,47 @@ function smoke() {
 }
 
 fetch("/support-matrix").then(r => r.json()).then(m => {
-  // The task-class columns come from the payload, not a second hardcoded list:
-  // parse_matrix refuses to return zero rows, so rows[0] is always there.
   const TCS = Object.keys(m.rows[0].cells);
-  const MARK = {supported: "✓", unreliable: "△", unsupported: "×"};
+  const MARK = {supported: "✓", unreliable: "△", unsupported: "×", "not evaluated": "—"};
   const RANK = {supported: 0, unreliable: 1, unsupported: 2};
-  // Real sites only: the fixture rows stay in the doc, not on the page. Sorted
-  // best-status-first (stable, so ties keep the doc's order) so the fully
-  // supported rows aren't buried under a page mostly showing "—"/unreliable —
-  // a sparse grid of warning words otherwise reads as "mostly broken" even
-  // though every "—" is just not-yet-evaluated, not a failure.
-  const worst = row => Math.max(0, ...TCS.map(t => RANK[row.cells[t]] ?? 0));
-  const liveRows = m.rows.filter(row => !/ fixture$/.test(row.domain))
-    .map((row, i) => ({row, i})).sort((a, b) => worst(a.row) - worst(b.row) || a.i - b.i)
-    .map(({row}) => row);
-  // Computed from the payload every render, never hardcoded, so it can't drift
-  // from docs/support-matrix.md: one sentence instead of a grid of marks.
-  const counts = {supported: 0, unreliable: 0, unsupported: 0};
-  liveRows.forEach(row => TCS.forEach(t => { if (row.cells[t] in counts) counts[row.cells[t]]++; }));
+  const showcaseRows = Object.keys(EXAMPLES)
+    .map(domain => m.rows.find(row => row.domain === domain)).filter(Boolean);
+  const statusOf = row => {
+    const assessed = TCS.map(t => row.cells[t]).filter(v => v in RANK);
+    return assessed.length ? assessed.reduce(
+      (worst, value) => RANK[value] > RANK[worst] ? value : worst) : "not evaluated";
+  };
+  const counts = {supported: 0, unreliable: 0, unsupported: 0, "not evaluated": 0};
+  showcaseRows.forEach(row => counts[statusOf(row)]++);
   const summary = `<p class="note" style="margin:0 0 .6rem">${counts.supported} supported &middot; ${
-    counts.unreliable} unreliable &middot; ${counts.unsupported} unsupported &mdash; every status declared
-    by hand from eval evidence.</p>`;
-  $("matrix").innerHTML = summary + `<table><tr><th>Domain</th>${
-    TCS.map(t => `<th>${esc(SUPPORT_LABELS[t] || t)}</th>`).join("")}<th>Try it</th></tr>${
-    liveRows.map(row => {
-      const cells = TCS.map(t => {
-        const v = row.cells[t] || "—";
-        const cls = ["supported", "unreliable", "unsupported"].includes(v) ? v : "none";
-        return `<td class="${cls}">${MARK[v] ? MARK[v] + " " : ""}${esc(v)}</td>`;
-      }).join("");
+    counts.unreliable} unreliable${counts.unsupported ? ` &middot; ${counts.unsupported} unsupported` : ""}${
+    counts["not evaluated"] ? ` &middot; ${counts["not evaluated"]} not evaluated` : ""}</p>`;
+  $("matrix").innerHTML = summary + `<table><tr><th>Financial workflow</th><th>Website</th><th>Capability</th><th>Status</th><th>Try it</th></tr>${
+    showcaseRows.map(row => {
       const ex = EXAMPLES[row.domain];
+      const status = statusOf(row);
       const tryCell = ex
         ? `<button class="ghost chip try" data-example="${esc(row.domain)}">Try: ${esc(ex.label)}</button>${
             ex.note ? `<p class="note" style="margin:.3rem 0 0">${esc(ex.note)}</p>` : ""}`
         : "";
-      return `<tr><td><b>${esc(row.domain.replace(/ \(live\)$/, ""))}</b></td>${cells}<td>${tryCell}</td></tr>`;
+      return `<tr><td><b>${esc(ex.workflow)}</b></td>
+        <td><a class="site-link" href="${esc(ex.url)}" target="_blank" rel="noopener noreferrer">${esc(ex.url)}</a></td>
+        <td>${esc(ex.capability)}</td>
+        <td class="${status === "not evaluated" ? "unassessed" : status}">${MARK[status]} ${esc(status)}</td><td>${tryCell}</td></tr>`;
     }).join("")}</table>`;
   $("limits").innerHTML = `<ul class="limits-summary">${
     LIMITS.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
     <p class="note" style="margin:.8rem 0 0">${m.limitations.length} declared limitations, each with
       its evidence and a case id: <a href="https://github.com/HaoweiChan/browser-agent/blob/main/docs/support-matrix.md">docs/support-matrix.md</a></p>`;
 }).catch(e => { $("matrix").textContent = "support matrix unavailable: " + e; });
+restoreAccess();
 </script>
 """
 
 
-def guards_line(mode: str) -> str:
-    """The ceilings a visitor is actually watching, for the mode that will run.
-
-    T-M42-8. The line was hardcoded with mode B's numbers and printed
-    unconditionally, so under `BROWSER_AGENT_MODE=loop` every visitor read the
-    wrong ceilings for the run in front of them — 30 actions and 2 replans
-    against an actual 40 actions, no replans, and a USD ceiling that ADR-028
-    names as the ONLY bound on a public unauthenticated endpoint. That makes it
-    the wrong sentence to have wrong.
-    Read from the same constants the executor enforces, never retyped: a number
-    in this page that a run does not use is the defect, not a formatting choice.
-    """
-    from .agent import LOOP_BUDGETS, MAX_REPLANS, RUN_BUDGETS
-
-    if mode == "plan":
-        return (f"up to {RUN_BUDGETS['actions']} actions and {MAX_REPLANS} replans per run · "
-                f"a run costs about $0.001 in model tokens")
-    loop = (f"up to {LOOP_BUDGETS['actions']} actions, no replans, and a "
-            f"${LOOP_BUDGETS['llm_usd']:.2f} ceiling on model spend per run")
-    if mode == "escalate":
-        return (f"plan first ({RUN_BUDGETS['actions']} actions, {MAX_REPLANS} replans), "
-                f"then on a failure that changed nothing, {loop}")
-    return loop
-
-
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    mode = default_mode()
-    # Mode is DEPLOYMENT-LEVEL and the page says so rather than offering a
-    # control: whether loop mode earns default-ness is M44's evidence to give,
-    # and a selector shipped ahead of it would be a product decision made by a
-    # UI edit. What a visitor is owed meanwhile is the truth about the run they
-    # are watching.
-    return PAGE.replace(
-        "Public http/https pages only · one run at a time.",
-        f"Public http/https pages only · {guards_line(mode)} · one run at a time · "
-        f"mode <code>{mode}</code>, set for this deployment and not selectable here.")
+    return PAGE
 
 
 @app.get("/readyz")

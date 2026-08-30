@@ -54,6 +54,11 @@ from .verifier import verify
 
 FIXTURES = Path(__file__).parent / "fixtures"
 _BASE: str | None = None
+_EVAL_ACCESS_KEY = "eval-only-llm-access-key"
+
+
+def _task_headers() -> dict[str, str]:
+    return {"Content-Type": "application/json", "X-LLM-Access-Key": _EVAL_ACCESS_KEY}
 
 
 def _base_url() -> str:
@@ -61,9 +66,12 @@ def _base_url() -> str:
     global _BASE
     if _BASE:
         return _BASE
+    import os
     import uvicorn
 
     from .server import app
+
+    os.environ["LLM_ACCESS_KEY"] = _EVAL_ACCESS_KEY
 
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))
@@ -653,7 +661,8 @@ def _check_planner_cache_is_content_keyed() -> dict:
         else:
             content = json.dumps([{"action": "extract", "target": {
                 "role": "heading", "name": f"provider-call-{len(calls)}"}}])
-        return {"choices": [{"message": {"content": content},
+        return {"model": P.FALLBACK_MODEL,
+                "choices": [{"message": {"content": content},
                               "finish_reason": "stop"}],
                 "usage": {"total_tokens": 11, "cost": 0.001}}
 
@@ -666,14 +675,16 @@ def _check_planner_cache_is_content_keyed() -> dict:
         P._plan_cache_path = lambda: Path(tmp) / "planner_cache.json"
         os.environ["OPENROUTER_API_KEY"] = "eval-probe-not-a-key"
         try:
-            planner = P.live_planner("openai/gpt-5.6-luna")
+            planner = P.live_planner()
             first, first_usage = asyncio.run(
                 planner("find the heading", "https://example.com"))
             second, second_usage = asyncio.run(
                 planner("find the heading", "https://example.com"))
             # A new closure proves the cache is not accidentally closure-local.
-            third, third_usage = asyncio.run(P.live_planner(
-                "openai/gpt-5.6-luna")("find the heading", "https://example.com"))
+            third_planner = P.live_planner()
+            third, third_usage = asyncio.run(
+                third_planner("find the heading", "https://example.com"))
+            hit_models = (planner.models_used[:2], third_planner.models_used)
             changed, changed_usage = asyncio.run(
                 planner("find the heading", "https://example.com", note="try another target"))
             malformed_calls_before = len(calls)
@@ -695,6 +706,8 @@ def _check_planner_cache_is_content_keyed() -> dict:
 
     if first != second or first != third:
         wrong["exact_request_changed"] = [first, second, third]
+    if hit_models != ([P.FALLBACK_MODEL, P.FALLBACK_MODEL], [P.FALLBACK_MODEL]):
+        wrong["cached_model_attribution"] = hit_models
     if len(calls) != 4:
         wrong["provider_calls"] = len(calls)
     if first_usage.get("cached") is not False or first_usage["llm_tokens"] != 11:
@@ -4119,7 +4132,7 @@ def _run_readyz_case(case: dict) -> dict:
     # `server.py` — the same trade `_run_gateway_model_case` documents.
     prev_guard = S.url_ok
 
-    def holding_planner(model=None):
+    def holding_planner(model=None, fallback=True):
         async def plan(task, url, observation=None, note=None):
             await _a.sleep(hold)
             return [{"action": "extract", "target": {"role": "heading"}, "anchor": None,
@@ -4134,7 +4147,7 @@ def _run_readyz_case(case: dict) -> dict:
             f"{base}/tasks",
             data=json.dumps({"task": inp["task"],
                              "url": f"{base}/fixtures/hello.html"}).encode(),
-            headers={"Content-Type": "application/json"}, method="POST")
+            headers=_task_headers(), method="POST")
         with urllib.request.urlopen(req, timeout=10) as r:
             run_id = json.load(r)["run_id"]
         # Sample while the stubbed planner is still holding the semaphore.
@@ -4720,7 +4733,7 @@ def _run_gateway_error_case(case: dict) -> dict:
     try:
         req = urllib.request.Request(
             f"{base}/tasks", data=json.dumps({"task": inp["task"]}).encode(),
-            headers={"Content-Type": "application/json"}, method="POST")
+            headers=_task_headers(), method="POST")
         with urllib.request.urlopen(req, timeout=10) as r:
             run_id = json.load(r)["run_id"]
         for _ in range(200):
@@ -4747,12 +4760,77 @@ def _run_gateway_error_case(case: dict) -> dict:
             "got": {"status": rec.get("status"), "reason": rec.get("reason")}}
 
 
+def _run_gateway_access_case(case: dict) -> dict:
+    """Bad or unconfigured access keys stop before a run or model exists."""
+    import os
+    from . import server as S
+
+    base = _base_url()
+    configured = case["input"]["configured_key"]
+    old = os.environ.get("LLM_ACCESS_KEY")
+    old_planner = S.live_planner
+    called = []
+
+    def recorder(model=None, fallback=True):
+        called.append(model)
+        raise RuntimeError("eval recorder: no paid call")
+
+    def post(path, key=None):
+        headers = {"Content-Type": "application/json"}
+        if key is not None:
+            headers["X-LLM-Access-Key"] = key
+        req = urllib.request.Request(
+            base + path,
+            data=(json.dumps({"task": "read example.com"}).encode()
+                  if path == "/tasks" else b""),
+            headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=10) as r:
+                return r.status, json.load(r)
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read().decode() or "{}")
+
+    try:
+        S.live_planner = recorder
+        os.environ["LLM_ACCESS_KEY"] = configured
+        before = len(S.RUNS)
+        rows = {
+            "missing": post("/tasks"),
+            "wrong": post("/tasks", "wrong-key-that-is-long-enough"),
+            "verify_wrong": post("/access/verify", "wrong-key-that-is-long-enough"),
+            "verify_right": post("/access/verify", configured),
+            "right": post("/tasks", configured),
+        }
+        for _ in range(100):
+            if called:
+                break
+            time.sleep(.01)
+        invalid_allocations = len(S.RUNS) - before - (1 if rows["right"][0] == 200 else 0)
+        os.environ.pop("LLM_ACCESS_KEY", None)
+        unset = post("/tasks", configured)
+    finally:
+        S.live_planner = old_planner
+        if old is None:
+            os.environ.pop("LLM_ACCESS_KEY", None)
+        else:
+            os.environ["LLM_ACCESS_KEY"] = old
+
+    got_codes = {k: v[0] for k, v in rows.items()} | {"unset": unset[0]}
+    wanted = case["expect"]["http"]
+    leaked = configured in json.dumps(rows) or configured in json.dumps(unset)
+    checks = {"http": got_codes == wanted, "no_invalid_run": invalid_allocations == 0,
+              "one_factory": len(called) == 1, "key_not_echoed": not leaked}
+    return {"passed": all(checks.values()), "checks": checks,
+            "got": got_codes, "invalid_allocations": invalid_allocations,
+            "factory_calls": called}
+
+
 def _run_gateway_model_case(case: dict) -> dict:
     """`POST /tasks`'s `model` field: allowlisted or loudly refused, never dropped.
 
     Two things need proving and neither is visible from outside the process. That
-    a non-allowlisted model is refused *before* a run exists — `/tasks` is public
-    and unauthenticated, so an unbounded model field is a stranger pointing this
+    a non-allowlisted model is refused *before* a run exists — `/tasks` spends
+    through a shared deployment key, so an unbounded model field could point it
     deployment's key at the priciest model on OpenRouter. And that an allowlisted
     one actually reaches `live_planner`, because a parameter that is accepted and
     silently ignored looks identical from the HTTP side to one that works, and
@@ -4771,13 +4849,15 @@ def _run_gateway_model_case(case: dict) -> dict:
 
     seen: list = []
     factories: list = []
+    fallbacks: list = []
 
-    def recorder(model=None):
+    def recorder(model=None, fallback=True):
         seen.append(model)
         factories.append("planner")
+        fallbacks.append(fallback)
         raise RuntimeError("eval recorder: planner never constructed")
 
-    def driver_recorder(model=None):
+    def driver_recorder(model=None, fallback=True):
         # M42: the loop mode's factory gets the same treatment, and for the same
         # reason — a `mode` field that is accepted, validated and then dropped
         # looks identical over HTTP to one that selects the driver. It must also
@@ -4785,18 +4865,29 @@ def _run_gateway_model_case(case: dict) -> dict:
         # row would construct a real driver and open a real browser.
         seen.append(model)
         factories.append("driver")
+        fallbacks.append(fallback)
         raise RuntimeError("eval recorder: driver never constructed")
 
     base, prev = _base_url(), S.live_planner
     prev_driver = S.live_driver
     wrong = []
+    if case["input"].get("access_gate"):
+        access = _run_gateway_access_case({
+            "input": {"configured_key": _EVAL_ACCESS_KEY},
+            "expect": {"http": {"missing": 401, "wrong": 401,
+                "verify_wrong": 401, "verify_right": 200, "right": 200, "unset": 401}},
+        })
+        if not access["passed"]:
+            wrong.append({"access_gate": access})
     # The allowlist and the frozen verification evidence must name the same four
     # models. Without this the ADR's "every id verified against OpenRouter on
     # <date>" is a claim about a list that can be edited independently of the
     # snapshot it was verified from (spec-drift audit, M9).
     if verified := case["input"].get("verified_ids_file"):
+        from . import planner as P
         from .planner import (ABLATION_MODELS, ALLOWED_MODELS, CEILING_MODEL,
-                              DEFAULT_MODEL, SUPERSEDED_INCUMBENT)
+                              DEFAULT_MODEL, FALLBACK_MODEL, SUPERSEDED_INCUMBENT,
+                              _model_route)
 
         snap = json.loads((Path(__file__).parents[2] / verified).read_text(encoding="utf-8"))
         snap_ids = [m["id"] for m in snap["models"]]
@@ -4809,27 +4900,39 @@ def _run_gateway_model_case(case: dict) -> dict:
         if unfrozen := [m for m in ALLOWED_MODELS if m not in snap_ids]:
             wrong.append({"allowlisted_but_not_in_the_verified_snapshot": unfrozen,
                           "verified_snapshot": snap_ids, "read_on": snap.get("_read_on")})
-        # M42/ADR-028: the loop-mode additions are ADR-027's declared amendment
-        # to ADR-010's price ceiling, and an amendment is only as narrow as
-        # something checks. ADR-027 scopes it: the ceiling STAYS for the
-        # ablation arms and for mode B's default, and is lifted ONLY for
-        # loop-mode ids, each allowlisted explicitly with its price recorded.
-        # Three properties, because dropping any one of them turns "a declared
-        # amendment" back into "the ceiling drifted": a loop model must be
-        # accepted by the endpoint, must be frozen evidence like every other
-        # accepted id (the containment check above already sees it), and must
-        # NOT be in the ablation set — where the ceiling sweep below runs, and
-        # where its presence would either break the sweep or quietly raise the
-        # bar for every ablated model.
-        from .planner import LOOP_MODELS
-
-        for mid in LOOP_MODELS:
-            if mid not in ALLOWED_MODELS:
-                wrong.append({"loop_model_not_accepted_by_the_endpoint": mid})
-            if mid in ABLATION_MODELS:
-                wrong.append({"loop_model_leaked_into_the_ablation_set": mid,
-                              "note": "ADR-027 lifts ADR-010's ceiling for loop mode ONLY; an "
-                                      "id in the ablation set is measured under that ceiling"})
+        import inspect
+        route_params = inspect.signature(_model_route).parameters
+        if "fallback" not in route_params:
+            wrong.append({"explicit_primary_cannot_disable_fallback": str(route_params)})
+        else:
+            if _model_route(DEFAULT_MODEL, fallback=True) != {
+                    "models": [DEFAULT_MODEL, FALLBACK_MODEL]}:
+                wrong.append({"default_route_dropped_or_reordered":
+                              _model_route(DEFAULT_MODEL, fallback=True)})
+            if _model_route(DEFAULT_MODEL, fallback=False) != {"model": DEFAULT_MODEL}:
+                wrong.append({"explicit_primary_is_not_pinned":
+                              _model_route(DEFAULT_MODEL, fallback=False)})
+        old_openrouter_key = P.os.environ.get("OPENROUTER_API_KEY")
+        P.os.environ["OPENROUTER_API_KEY"] = "eval-not-sent"
+        try:
+            try:
+                probe = P.live_planner(DEFAULT_MODEL, fallback=True)
+            except TypeError:
+                probe = None
+        finally:
+            if old_openrouter_key is None:
+                P.os.environ.pop("OPENROUTER_API_KEY", None)
+            else:
+                P.os.environ["OPENROUTER_API_KEY"] = old_openrouter_key
+        if probe is None or not hasattr(probe, "models_used"):
+            wrong.append({"served_fallback_model_is_not_recorded": DEFAULT_MODEL})
+        if not hasattr(S, "_served_model"):
+            wrong.append({"gateway_cannot_attribute_the_effective_model": DEFAULT_MODEL})
+        else:
+            fake = type("Caller", (), {"models_used": [FALLBACK_MODEL]})()
+            if S._served_model(DEFAULT_MODEL, fake) != FALLBACK_MODEL:
+                wrong.append({"fallback_is_still_attributed_to_the_primary":
+                              S._served_model(DEFAULT_MODEL, fake)})
         if SUPERSEDED_INCUMBENT in ALLOWED_MODELS:
             wrong.append({"superseded_incumbent_still_accepted": SUPERSEDED_INCUMBENT})
         if SUPERSEDED_INCUMBENT not in snap_ids:
@@ -4856,7 +4959,7 @@ def _run_gateway_model_case(case: dict) -> dict:
                 wrong += [{"over_the_owner_ceiling": mid, "field": k,
                            "list_price": price[mid][k], "ceiling_model": CEILING_MODEL,
                            "ceiling": cap}
-                          for mid in ABLATION_MODELS for k, cap in ceiling.items()
+                          for mid in ALLOWED_MODELS for k, cap in ceiling.items()
                           if mid in price and float(price[mid][k]) > cap]
                 # The other direction. Until 2026-08-21 this asserted that the
                 # INCUMBENT was still over the bar, so that a price move would
@@ -4912,7 +5015,7 @@ def _run_gateway_model_case(case: dict) -> dict:
             try:
                 req = urllib.request.Request(
                     f"{base}/tasks", data=json.dumps(payload).encode(),
-                    headers={"Content-Type": "application/json"}, method="POST")
+                    headers=_task_headers(), method="POST")
                 with urllib.request.urlopen(req, timeout=10) as r:
                     code, body = r.status, json.load(r)
             except urllib.error.HTTPError as e:
@@ -4932,6 +5035,9 @@ def _run_gateway_model_case(case: dict) -> dict:
             if "factory" in chk:
                 got["factory"] = factories[before] if len(factories) > before else None
                 want["factory"] = chk["factory"]
+            if "fallback" in chk:
+                got["fallback"] = fallbacks[before] if len(fallbacks) > before else None
+                want["fallback"] = chk["fallback"]
             if chk.get("detail_contains"):
                 want["detail"] = chk["detail_contains"]
                 got["detail"] = chk["detail_contains"] if chk["detail_contains"] in str(
@@ -5113,7 +5219,7 @@ def _run_ablation_run_one_case(case: dict) -> dict:
         cfg = inp["e2e"]
         billed = cfg["billed_usage"]
 
-        def prose_planner(model=None):
+        def prose_planner(model=None, fallback=True):
             async def plan(*a, **k):
                 raise PlanError(cfg["plan_error"], usage=dict(billed))
             return plan
@@ -5143,7 +5249,7 @@ def _run_ablation_run_one_case(case: dict) -> dict:
         # --- a provider fault during planning: aborts, never a 0/5 cell -------
         f = inp["e2e_fatal"]
 
-        def http_planner(model=None):
+        def http_planner(model=None, fallback=True):
             async def plan(*a, **k):
                 raise urllib.error.HTTPError(
                     "https://openrouter.ai/api/v1/chat/completions", f["http_status"],
@@ -5212,12 +5318,22 @@ def _run_ablation_preflight_case(case: dict) -> dict:
     task trips `agent.screen` before `run_task` plans, so even the accepting
     branch spends nothing; that is asserted here rather than assumed, since it is
     the reason this check is safe to run against a deployment that has a key."""
+    import evals.ablation as A
     from evals.ablation import preflight
 
     from . import server as S
     from .agent import screen
 
     base, wrong = _base_url(), []
+    if not hasattr(A, "_NoRedirect"):
+        wrong.append("ablation requests use urllib's default redirect handler, which forwards "
+                     "X-LLM-Access-Key to a cross-origin Location")
+    else:
+        req = urllib.request.Request("https://agent.example/tasks",
+                                     headers={"X-LLM-Access-Key": "must-not-leak"})
+        if A._NoRedirect().redirect_request(
+                req, None, 302, "Found", {}, "https://attacker.example/collect") is not None:
+            wrong.append("ablation redirect handler forwards a credential-bearing request")
     probe = case["input"]["probe_task"]
     # The probe's safety property, MEASURED rather than proxied. `screen(probe)`
     # being truthy is not the claim; the claim is that a build which accepts the
@@ -5232,7 +5348,7 @@ def _run_ablation_preflight_case(case: dict) -> dict:
                      "so on a build that accepts the model field it would really plan")
     called, prev_planner = [], S.live_planner
 
-    def counting_planner(model=None):
+    def counting_planner(model=None, fallback=True):
         async def plan(*a, **k):
             called.append(model)
             return [], {"llm_tokens": 0, "llm_usd": 0.0}
@@ -5242,7 +5358,7 @@ def _run_ablation_preflight_case(case: dict) -> dict:
     try:
         req = urllib.request.Request(
             f"{base}/tasks", data=json.dumps({"task": probe}).encode(),
-            headers={"Content-Type": "application/json"}, method="POST")
+            headers=_task_headers(), method="POST")
         with urllib.request.urlopen(req, timeout=10) as r:
             rid = json.load(r)["run_id"]
         for _ in range(200):
@@ -5274,7 +5390,7 @@ def _run_ablation_preflight_case(case: dict) -> dict:
         # eval nobody has ever seen red. So: prove the door is open first.
         req = urllib.request.Request(
             f"{base}/tasks", data=json.dumps({"task": probe, "model": "definitely/not-allowlisted"}).encode(),
-            headers={"Content-Type": "application/json"}, method="POST")
+            headers=_task_headers(), method="POST")
         try:
             with urllib.request.urlopen(req, timeout=10) as r:
                 accepted = r.status == 200
@@ -5690,7 +5806,15 @@ _UI_MATRIX = {
         {"domain": "news.ycombinator.com (live)", "cells": {"TC1": "unreliable"}},  # M37: so its chip renders
         {"domain": "openlibrary.org (live)", "cells": {"TC1": "unreliable", "TC2": "unsupported"}},
         {"domain": "quotes.toscrape.com (live)", "cells": {"TC1": "unsupported"}},
-        {"domain": "wikipedia.org", "cells": {"TC1": "—"}}],
+        {"domain": "wikipedia.org", "cells": {"TC1": "—"}},
+        {"domain": "companiesmarketcap.com (live)", "cells": {"TC1": "—"}},
+        {"domain": "bankofcanada.ca (live)", "cells": {"TC1": "supported"}},
+        {"domain": "ecb.europa.eu (live)", "cells": {"TC1": "unreliable"}},
+        {"domain": "whaleforce-sec10k.zeabur.app (live)", "cells": {"TC1": "unreliable"}},
+        {"domain": "bankofengland.co.uk (live)", "cells": {"TC1": "unreliable"}},
+        {"domain": "federalreserve.gov (live)", "cells": {"TC1": "unreliable"}},
+        {"domain": "home.treasury.gov (live)", "cells": {"TC1": "unreliable"}},
+        {"domain": "eia.gov (live)", "cells": {"TC1": "unreliable"}}],
     "limitations": [
         {"limitation": "**D1** — one", "evidence": "a", "status": "unsupported"},
         {"limitation": "**D2** — two", "evidence": "b", "status": "unsupported"}]}
@@ -5848,7 +5972,11 @@ def _run_ui_form_case(case: dict) -> dict:
           const calls = [];
           const realFetch = window.fetch;
           window.fetch = (u, o) => {
-            calls.push({url: String(u), body: o && o.body ? JSON.parse(o.body) : null});
+            const headers = Object.fromEntries(new Headers(o && o.headers || {}).entries());
+            calls.push({url: String(u), body: o && o.body ? JSON.parse(o.body) : null, headers});
+            if (String(u) === "/access/verify")
+              return Promise.resolve(new Response(JSON.stringify({enabled:true}),
+                {status:200, headers:{"Content-Type":"application/json"}}));
             return Promise.reject(new Error("stubbed: no run"));
           };
           const tick = () => new Promise(r => setTimeout(r, 0));  // let submitTask's catch land
@@ -5856,6 +5984,14 @@ def _run_ui_form_case(case: dict) -> dict:
                        examples: typeof EXAMPLES === "object" ? EXAMPLES : {},
                        limits_text: $("limits").textContent,
                        stray: document.querySelectorAll("#examples, .eyebrow, .kind").length};
+          const key = $("access-key"), verify = $("verify-access");
+          if (key && verify) {
+            key.value = inp.access_key;
+            verify.click(); await tick();
+          }
+          out.access = {present: !!(key && verify), label: key && key.labels[0]?.textContent,
+                        type: key && key.type, status: $("access-status")?.textContent,
+                        calls: calls.splice(0)};
           $("task").value = inp.no_url_task; $("url").value = "";
           $("go").click(); await tick();
           out.no_url = {err_hidden: $("err").hidden, err_text: $("err").textContent,
@@ -5886,7 +6022,14 @@ def _run_ui_form_case(case: dict) -> dict:
           }
           out.card_list = [...document.querySelectorAll("#matrix tr:has(td)")].map(card => ({
             text: card.textContent, buttons: card.querySelectorAll("[data-example]").length,
-            key: (card.querySelector("[data-example]") || {dataset: {}}).dataset.example}));
+            key: (card.querySelector("[data-example]") || {dataset: {}}).dataset.example,
+            status: card.querySelector("td:nth-child(4)")?.textContent.trim(),
+            site: card.querySelector("a.site-link") && {
+              text: card.querySelector("a.site-link").textContent,
+              href: card.querySelector("a.site-link").href}}));
+          out.matrix_headers = [...document.querySelectorAll("#matrix th")]
+            .map(header => header.textContent.trim());
+          out.empty_matrix_cells = document.querySelectorAll("#matrix td.none").length;
           // T-R41: hand the page back as it was found. `_ui_page` CACHES the
           // (390, dark) render, and `ui-rendered-narrow` reuses it — so this
           // case's stubbed `window.fetch`, its visible `#err` and its filled
@@ -5904,6 +6047,14 @@ def _run_ui_form_case(case: dict) -> dict:
 
     got = _await(go())
     wrong = {}
+    access = got["access"]
+    verify_calls = [c for c in access["calls"] if c["url"] == "/access/verify"]
+    if not access["present"] or access["label"].strip() != expect["access_label"] \
+            or access["type"] != "password" or expect["enabled_contains"] not in access["status"] \
+            or len(verify_calls) != 1 \
+            or verify_calls[0]["headers"].get("x-llm-access-key") != inp["access_key"] \
+            or verify_calls[0]["body"] is not None:
+        wrong["access"] = access
     nu = got["no_url"]
     if nu["calls"] or nu["err_hidden"] or nu["go_disabled"] or nu["url"] \
             or expect["guidance_contains"] not in nu["err_text"]:
@@ -5914,27 +6065,34 @@ def _run_ui_form_case(case: dict) -> dict:
             wrong.setdefault("not_sites", []).append(row)
     site = got["site"]
     posted = [c["body"] for c in site["calls"] if c["url"] == "/tasks"]
+    task_headers = [c["headers"] for c in site["calls"] if c["url"] == "/tasks"]
     if site["url"] != expect["site_url"] or site["go_disabled"] \
-            or posted != [{"task": inp["site_task"], "url": expect["site_url"]}]:
+            or posted != [{"task": inp["site_task"], "url": expect["site_url"]}] \
+            or [h.get("x-llm-access-key") for h in task_headers] != [inp["access_key"]]:
         wrong["site"] = site
     examples = got["examples"]
-    # Cards are the only example surface: one card per real-site row, no fixture
-    # rows, exactly one Try button per card, and a note where the example has one.
-    # Rows render best-status-first (stable), same rule as the page's own RANK.
+    # Cards are the finance-only interview surface: every EXAMPLES entry renders
+    # once, backed by a support-matrix row, with no empty capability cells.
     cards = got["card_list"]
-    # Mirrors the page's own TCS/RANK: TCS is rows[0]'s cell keys, matching how
-    # the real parse_matrix() always hands every row the same fixed 5-key set.
-    # _UI_MATRIX's fixture row (rows[0]) must carry all 5 keys for the same
-    # reason production always does — otherwise a status in a column the
-    # fixture row lacks goes invisible to the sort on both sides at once,
-    # which happened here once (a 2-key fixture row hid a real-row TC3).
-    _rank = {"supported": 0, "unreliable": 1, "unsupported": 2}
-    _tcs = list(_UI_MATRIX["rows"][0]["cells"].keys())
-    _worst = lambda r: max([_rank.get(r["cells"].get(t), 0) for t in _tcs], default=0)
-    want_cards = [r["domain"] for r in sorted(
-        (r for r in _UI_MATRIX["rows"] if not r["domain"].endswith(" fixture")), key=_worst)]
+    matrix_domains = {r["domain"] for r in _UI_MATRIX["rows"]}
+    want_cards = [key for key in examples if key in matrix_domains]
     if [c["key"] for c in cards] != want_cards or any(c["buttons"] != 1 for c in cards):
         wrong["cards"] = cards
+    if inp.get("expected_showcases") is not None:
+        if [c["key"] for c in cards] != inp["expected_showcases"]:
+            wrong["showcases"] = [c["key"] for c in cards]
+        if got["matrix_headers"] != inp["expected_headers"]:
+            wrong["matrix_headers"] = got["matrix_headers"]
+        if got["empty_matrix_cells"]:
+            wrong["empty_matrix_cells"] = got["empty_matrix_cells"]
+        for key, status in inp.get("expected_statuses", {}).items():
+            card = next((c for c in cards if c["key"] == key), None)
+            if not card or card["status"] != status:
+                wrong.setdefault("showcase_statuses", {})[key] = card and card["status"]
+        for key, site in inp.get("expected_sites", {}).items():
+            card = next((c for c in cards if c["key"] == key), None)
+            if not card or card["site"] != {"text": site, "href": site}:
+                wrong.setdefault("showcase_sites", {})[key] = card and card["site"]
     for c in cards:
         note = (examples.get(c["key"]) or {}).get("note")
         if note and note not in c["text"]:
@@ -6471,13 +6629,13 @@ def _run_soak_accounting_case(case: dict) -> dict:
         # `soak.probe` and `ablation._http` both reach through the `urllib.request`
         # module object, so one patch covers both. The two driver constants are
         # zeroed so a retry probe costs milliseconds instead of 15 seconds.
-        prev = (urllib.request.urlopen, SK.POLL_SECONDS, AB.RETRY_SLEEPS)
-        urllib.request.urlopen = responder(script)
+        prev = (AB._urlopen, SK.POLL_SECONDS, AB.RETRY_SLEEPS)
+        AB._urlopen = responder(script)
         SK.POLL_SECONDS, AB.RETRY_SLEEPS = 0.01, (0.0, 0.0)
         try:
             return fn()
         finally:
-            urllib.request.urlopen, SK.POLL_SECONDS, AB.RETRY_SLEEPS = prev
+            AB._urlopen, SK.POLL_SECONDS, AB.RETRY_SLEEPS = prev
 
     def spec_for(answer=None):
         return {"id": "stub-case", "task": "What is the price?", "fixture": "shop.html",
@@ -7240,19 +7398,34 @@ def _check_steps_adopt_only() -> dict:
 
 
 def _check_examples_cover_matrix() -> dict:
-    """Every real-site row of docs/support-matrix.md has a Try example on the
-    page, and no example points at a row that is not there (M35 acceptance,
-    PR #32 R1). Pure code: the EXAMPLES keys are read out of the PAGE source,
-    the rows out of parse_matrix() on the real doc -- the rendered form case
-    grades the card mechanics against a stub payload and cannot see a new or
-    renamed real-site row."""
+    """Every finance showcase is backed by a real support-matrix row."""
     from .server import parse_matrix
 
     page = Path(__file__).with_name("server.py").read_text(encoding="utf-8")
     examples = _js_object_keys(page, "EXAMPLES")
-    rows = {r["domain"] for r in parse_matrix()["rows"] if not r["domain"].endswith(" fixture")}
-    wrong = {"rows_without_example": sorted(rows - examples),
-             "examples_without_row": sorted(examples - rows)}
+    matrix = parse_matrix()["rows"]
+    real_domains = [r["domain"] for r in matrix if not r["domain"].endswith(" fixture")]
+    rows = set(real_domains)
+    wrong = {"examples_without_row": sorted(examples - rows)}
+    duplicates = sorted({domain for domain in real_domains if real_domains.count(domain) > 1})
+    if duplicates:
+        wrong["duplicate_matrix_rows"] = duplicates
+    expected_status = {
+        "companiesmarketcap.com (live)": "supported",
+        "bankofcanada.ca (live)": "supported",
+        "ecb.europa.eu (live)": "unreliable",
+        "whaleforce-sec10k.zeabur.app (live)": "unreliable",
+        "bankofengland.co.uk (live)": "unreliable",
+        "federalreserve.gov (live)": "unreliable",
+        "home.treasury.gov (live)": "unreliable",
+        "eia.gov (live)": "unreliable",
+    }
+    for domain, expected in expected_status.items():
+        row = next((r for r in matrix if r["domain"] == domain), None)
+        statuses = set(row["cells"].values()) - {"—"} if row else set()
+        wanted = set() if expected == "—" else {expected}
+        if statuses != wanted:
+            wrong.setdefault("showcase_status_drift", {})[domain] = sorted(statuses)
     # T-R42: the parser used to require a key to START a line, so an entry
     # written mid-line was dropped from the parsed set -- and a dropped key
     # reads exactly like a doc row with no example. Every consequence happened
@@ -7441,41 +7614,21 @@ def _check_driver_tools_match_the_executor() -> dict:
 
 
 def _check_guards_line_matches_the_mode() -> dict:
-    """The ceilings the page prints are the ceilings the run will enforce.
+    """The task form carries only guidance that helps a visitor use it."""
+    from .server import index
 
-    T-M42-8. `#guards` carried mode B's numbers as literal text, printed
-    unconditionally — so under `BROWSER_AGENT_MODE=loop` a visitor read "30
-    actions and 2 replans" while watching a run bounded by 40 actions, no
-    replans and a $5.00 ceiling that ADR-028 names as the only bound on a public
-    unauthenticated endpoint.
-
-    Graded against the CONSTANTS the executor enforces rather than against a
-    frozen string, because the failure is divergence, not wording: retyping a
-    number here would reproduce exactly the defect. All three modes, since the
-    bug was that only one was ever rendered. And the page must carry no literal
-    ceiling of its own — a second copy is a second thing to drift.
-    """
-    from .agent import LOOP_BUDGETS, MAX_REPLANS, RUN_BUDGETS
-    from .server import PAGE, guards_line
-
+    useful = "Use a public webpage that doesn't require sign-in."
+    internal = ("actions", "replans", "model tokens", "one run at a time",
+                "deployment", "not selectable", "guardrails ::")
+    page = asyncio.run(index())
+    match = re.search(r'<p class="note" id="guards">(.*?)</p>', page, re.DOTALL)
+    line = match.group(1) if match else ""
     wrong = {}
-    for mode, must in (("plan", [str(RUN_BUDGETS["actions"]), str(MAX_REPLANS)]),
-                       ("loop", [str(LOOP_BUDGETS["actions"]),
-                                 f"{LOOP_BUDGETS['llm_usd']:.2f}"]),
-                       ("escalate", [str(RUN_BUDGETS["actions"]),
-                                     str(LOOP_BUDGETS["actions"]),
-                                     f"{LOOP_BUDGETS['llm_usd']:.2f}"])):
-        line = guards_line(mode)
-        if missing := [w for w in must if w not in line]:
-            wrong[mode] = {"line": line, "does_not_carry": missing}
-    # The loop line must not advertise replans it does not have, which is the
-    # half a "contains the right numbers" test would pass while still lying.
-    if "replan" in guards_line("loop") and "no replans" not in guards_line("loop"):
-        wrong["loop_advertises_replans"] = guards_line("loop")
-    if re.search(r"up to \d+ actions", PAGE):
-        wrong["page_carries_its_own_ceiling"] = "a literal ceiling in PAGE is a second copy"
-    return {"passed": not wrong, "wrong": wrong,
-            "got": {m: guards_line(m) for m in ("plan", "loop", "escalate")}}
+    if useful not in line:
+        wrong["missing_user_guidance"] = useful
+    if leaked := [text for text in internal if text in line]:
+        wrong["internal_details_in_task_form"] = leaked
+    return {"passed": not wrong, "wrong": wrong, "got": line}
 
 
 def _check_ui_adrs_cover_every_decision() -> dict:
@@ -8843,6 +8996,7 @@ KINDS = {
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,
+    "gateway-access": _run_gateway_access_case,
     "gateway-model": _run_gateway_model_case,
     "history-ledger-isolated": _run_history_ledger_isolated_case,
     "pre-commit-hook": _run_pre_commit_hook_case,

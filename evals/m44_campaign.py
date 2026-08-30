@@ -1286,7 +1286,7 @@ def self_check(check: str) -> dict:
     truth, snapshot = {"verified_at": "2026-08-29T00:00:00+00:00", "source": "fixture",
                        "values": ["42"]}, {"sha256": "truth-sha", "captured_at":
                                                        "2026-08-29T00:00:00+00:00"}
-    start = {"event": "campaign_start", "started_at": "2026-08-29T00:00:00+00:00",
+    start = {"event": "campaign_start", "started_at": datetime.now(timezone.utc).isoformat(),
              "registry_sha256": registry_sha256(), "max_runs": DEFAULT_MAX_RUNS,
              "max_usd_completed_stop": DEFAULT_MAX_USD,
              "max_tokens_completed_stop": DEFAULT_MAX_TOKENS,

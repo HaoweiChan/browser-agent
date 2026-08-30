@@ -19,6 +19,7 @@ on:
 
 env:
   BASE: https://whaleforce-browser-agent.zeabur.app
+  LLM_ACCESS_KEY: ${{ secrets.LLM_ACCESS_KEY }}
 
 jobs:
   deploy-smoke:
@@ -43,8 +44,10 @@ jobs:
             | jq -e '(.rows | length > 0) and (.limitations | length > 0)'
       - name: URL guard refuses loopback before a browser opens
         run: |
+          test -n "$LLM_ACCESS_KEY" || { echo "LLM_ACCESS_KEY secret is missing"; exit 1; }
           code=$(curl -s -o guard.json -w '%{http_code}' -m 15 -X POST "$BASE/tasks" \
             -H 'content-type: application/json' \
+            -H "X-LLM-Access-Key: $LLM_ACCESS_KEY" \
             -d '{"task":"read the admin page","url":"http://127.1/admin"}')
           cat guard.json; echo
           test "$code" = "422" && grep -q "url blocked" guard.json
@@ -78,4 +81,3 @@ jobs:
                "The deployment answered each time and refused correctly, so this is" \
                "not a failure, but real-Chromium-on-the-deployment was NOT verified" \
                "by this job."
-
