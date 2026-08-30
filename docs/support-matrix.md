@@ -127,25 +127,42 @@ fraction, and why two of the three rows are `unreliable`.
 | quotes.toscrape.com (live) | unreliable | — | — | — | — |
 | lamp-spec fixture | supported | — | — | — | — |
 | wikipedia.org | unreliable | — | — | — | — |
-| companiesmarketcap.com (live) | supported | — | — | — | — |
+| companiesmarketcap.com (live) | unreliable | — | — | — | — |
 | bankofcanada.ca (live) | supported | — | — | — | — |
-| ecb.europa.eu (live) | unreliable | — | — | — | — |
+| ecb.europa.eu (live) | supported | — | — | — | — |
 | whaleforce-sec10k.zeabur.app (live) | unreliable | — | — | — | — |
 | bankofengland.co.uk (live) | unreliable | — | — | — | — |
 | federalreserve.gov (live) | unreliable | — | — | — | — |
 | home.treasury.gov (live) | unreliable | — | — | — | — |
 | eia.gov (live) | unreliable | — | — | — | — |
-| taifex.com.tw (live) | — | — | — | — | — |
+| taifex.com.tw (live) | unreliable | — | — | — | — |
 
 Statuses: `supported` / `unreliable` / `unsupported` / `—` (not yet evaluated).
-The reviewer UI now starts every showcase at the site's homepage. The statuses
-above remain the recorded page-level evidence; they are not silently promoted
-to claims that the new homepage-navigation path has passed. The TAIFEX row is
-therefore `—`: a manual browser check confirmed the visible homepage link to
-臺股期貨 and the product-spec answer (one index point is NTD 200), while one
-bounded canonical-agent probe stopped before planning when OpenRouter rejected
-the configured credential (HTTP 401, $0.00). Neither observation is reported as
-a successful planner run.
+
+**Homepage re-rating, 2026-08-30, deployed build `3927366`.** All nine reviewer
+cards were submitted from their homepage through the deployed canonical agent.
+The cost-bounded protocol ran every card once, then repeated only a correct
+first-pass result to three repetitions: 13 recorded runs, 26,049 model tokens,
+$0.028077270228 total spend. Full rows are committed in
+`evals/report/20260830-230414-homepage-showcase-probe.json`.
+
+Bank of Canada is `supported`: `fb642546`, `512ed6d1`, and `6eee9c43` all
+returned 2.25% dated 15 July 2026, independently checked against the Bank's
+official policy-rate table and decision release. ECB is `supported`:
+`c4937caf`, `20ed4027`, and `f5e80add` all returned 2.25%, independently checked
+against the ECB's official key-rate table (effective 17 June 2026).
+
+The other homepage paths do not inherit those promotions. SEC run `f9d53e0f`
+was a wrong success ("Extracting — prepare filing" is a progress message, not the
+requested status). CompaniesMarketCap `11151f1a`, Bank of England `d6a57c24`,
+Federal Reserve `1a8fc8ad`, EIA `f9a9ba41`, and TAIFEX `7631566f` failed loudly
+when the provider response lacked valid accounting. Treasury `0fe19f7c` reached
+the yield page from the homepage and then failed to resolve its table. Those
+rows stay or become `unreliable`; a service-level failure is not relabelled as a
+site limitation, but it is still evidence that the advertised workflow did not
+work today. CompaniesMarketCap's older deep-page `supported` declaration is
+therefore withdrawn for this homepage card, and TAIFEX now has a real failed run
+rather than `—`.
 
 The four finance additions were each run once on 2026-08-30 through the default
 DeepSeek V4 Pro → GPT-5 mini route; OpenRouter served DeepSeek V4 Pro for all
