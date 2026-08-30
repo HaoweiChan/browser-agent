@@ -1,0 +1,24 @@
+{
+  "id": "m49-same-origin-export",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "evidence-export",
+    "page_url": "https://fixture.example/rates",
+    "fixtures": [
+      {"url": "https://fixture.example/rates.csv", "body": "Date,Rate\n2026-08-28,4.21\n"},
+      {"url": "https://fixture.example/rates.xml", "body": "<rates><row><Date>2026-08-28</Date><Rate>4.21</Rate></row></rates>"},
+      {"url": "https://fixture.example/rates-relative.csv", "body": "Date,Rate\n2026-08-29,4.22\n"}
+    ],
+    "requests": [
+      {"url": "https://fixture.example/rates.csv", "expect": {"headers": ["Date", "Rate"], "rows": [["2026-08-28", "4.21"]]}},
+      {"url": "https://fixture.example/rates.xml", "expect": {"headers": ["Date", "Rate"], "rows": [["2026-08-28", "4.21"]]}},
+      {"url": "/rates-relative.csv", "expect": {"headers": ["Date", "Rate"], "rows": [["2026-08-29", "4.22"]]}},
+      {"page_url": "https://fixture.example:443/rates", "url": "https://fixture.example/rates.csv", "expect": {"headers": ["Date", "Rate"], "rows": [["2026-08-28", "4.21"]]}},
+      {"url": "https://other.example/rates.csv", "expect": {"error": "ValueError"}},
+      {"url": "file:///tmp/rates.csv", "expect": {"error": "ValueError"}}
+    ]
+  },
+  "expect": {"citation": "offline fixture ground truth: only same-origin http(s) CSV/XML exports normalize"},
+  "provenance": "M49 acceptance coverage. Fetch is injected and the gate makes no external request."
+}

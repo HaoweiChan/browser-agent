@@ -1,0 +1,11 @@
+{
+  "id": "m49-evidence-is-site-agnostic",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "evidence-policy",
+    "forbidden": ["bankofengland", "federalreserve", "whaleforce", "treasury.gov", "ecb.europa", "eia.gov", "queryselector", "beautifulsoup"]
+  },
+  "expect": {"citation": "M49 production evidence remains generic; fixtures, not runtime recipes, carry showcase URLs."},
+  "provenance": "M49 acceptance coverage for AGENTS rule 6."
+}

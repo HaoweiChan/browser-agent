@@ -1,0 +1,23 @@
+{
+  "id": "m49-relevant-table-not-first",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "canonical-evidence",
+    "fixture": "finance-multi-table.html",
+    "document_id": "fixture:finance-multi-table",
+    "url": "https://fixture.example/tables",
+    "request": {"capability": "latest-dated-table-cell", "question": "latest 10-year yield and date"}
+  },
+  "expect": {
+    "citation": "fixture ground truth: question-relevant dated yield table, not the preceding unrelated metric table",
+    "packet": {
+      "document_id": "fixture:finance-multi-table",
+      "url": "https://fixture.example/tables",
+      "source_sha256": "a6cbdf20ca9bd5bd7481df26dc45437461a5d4dbc7ce4324986c522a7039def2",
+      "snapshot_sha256": "595f9300a31cd407ec161a782b2681104802a9cc62ad587bc380d566658d0a47",
+      "items": [{"kind": "table", "value": "4.21", "table_cell": {"headers": ["Date", "10 yr"], "row": 0, "column": 1}}]
+    }
+  },
+  "provenance": "M49 review repro: the old first-semantic-table policy silently returned the unrelated value 999."
+}

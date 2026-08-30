@@ -72,6 +72,7 @@ unmeasured (ADR-007) — the M5/M10 held-out probes are the counterweight.
 
 - M47 — two-day agentic hardening (2026-08-29) — plan PR #82; implementation PR #83.
 - M48 — canonical graph and evidence contract (2026-08-30) — ADR-046; hash-bound EvidencePacket/state validator, six M49 red-first finance contracts (0/6, zero-cost), and M44 campaign archive after its reusable completed-run budget stop migrated.
+- M49 — deterministic evidence layer (2026-08-30) — stdlib, site-agnostic cited DOM/accessibility text, terminal live regions, question-relevant semantic/date-reduced tables, and injected same-origin CSV/XML exports; 11/11 offline M49 evidence cases green at $0.00.
 
 ## Retired without completion
 

@@ -680,6 +680,19 @@ indices under the cited headers (headers are not rows); a live region is termina
 these items; M48 validates the envelope, hashes, and fixture-text offsets, but
 contains no site selector, navigation recipe, or model call.
 
+M49's deterministic evidence layer reads visible DOM text or an explicit
+accessible name, selects a terminal ARIA live-region state when one exists, and
+normalizes the question-relevant semantic table (header/caption evidence, not
+document order) before applying a latest/effective-date reducer. Script, style,
+template, and hidden/ARIA-hidden content never becomes selectable evidence,
+though offsets remain bound to the raw canonical-text snapshot. A CSV or XML
+export is admissible only over HTTP(S) from the exact same origin as the page;
+relative URLs resolve first and default ports normalize. Its byte reader is
+caller-injected, so offline evaluation never fetches a live site. It normalizes
+to headers plus ordered data rows. Cross-origin, unsupported, empty, or unknown
+evidence capabilities fail loudly; no hostname, selector, or navigation recipe
+is a production input.
+
 For the M49 fixture seam, the adapter calls the optional production function
 `extract_evidence(source_bytes, url, document_id, request)`. `document_id` is a
 stable caller-supplied source identity; it is not inferred from a URL or a site rule.
