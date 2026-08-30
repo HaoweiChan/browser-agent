@@ -5870,15 +5870,15 @@ _UI_MATRIX = {
         {"domain": "openlibrary.org (live)", "cells": {"TC1": "unreliable", "TC2": "unsupported"}},
         {"domain": "quotes.toscrape.com (live)", "cells": {"TC1": "unsupported"}},
         {"domain": "wikipedia.org", "cells": {"TC1": "—"}},
-        {"domain": "companiesmarketcap.com (live)", "cells": {"TC1": "—"}},
+        {"domain": "companiesmarketcap.com (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "bankofcanada.ca (live)", "cells": {"TC1": "supported"}},
-        {"domain": "ecb.europa.eu (live)", "cells": {"TC1": "unreliable"}},
+        {"domain": "ecb.europa.eu (live)", "cells": {"TC1": "supported"}},
         {"domain": "whaleforce-sec10k.zeabur.app (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "bankofengland.co.uk (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "federalreserve.gov (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "home.treasury.gov (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "eia.gov (live)", "cells": {"TC1": "unreliable"}},
-        {"domain": "taifex.com.tw (live)", "cells": {"TC1": "—", "TC2": "—",
+        {"domain": "taifex.com.tw (live)", "cells": {"TC1": "unreliable", "TC2": "—",
                                                         "TC3": "—", "TC4": "—",
                                                         "TC5": "—"}}],
     "limitations": [
@@ -7491,15 +7491,15 @@ def _check_examples_cover_matrix() -> dict:
     if duplicates:
         wrong["duplicate_matrix_rows"] = duplicates
     expected_status = {
-        "companiesmarketcap.com (live)": "supported",
+        "companiesmarketcap.com (live)": "unreliable",
         "bankofcanada.ca (live)": "supported",
-        "ecb.europa.eu (live)": "unreliable",
+        "ecb.europa.eu (live)": "supported",
         "whaleforce-sec10k.zeabur.app (live)": "unreliable",
         "bankofengland.co.uk (live)": "unreliable",
         "federalreserve.gov (live)": "unreliable",
         "home.treasury.gov (live)": "unreliable",
         "eia.gov (live)": "unreliable",
-        "taifex.com.tw (live)": "—",
+        "taifex.com.tw (live)": "unreliable",
     }
     for domain, expected in expected_status.items():
         row = next((r for r in matrix if r["domain"] == domain), None)

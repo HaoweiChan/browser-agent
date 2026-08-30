@@ -1,0 +1,116 @@
+{
+  "suite": "homepage-showcase-live-probe",
+  "timestamp": "2026-08-30T23:04:14+08:00",
+  "deployment": {
+    "base": "https://whaleforce-browser-agent.zeabur.app",
+    "sha": "3927366bed2fe5025ed7015e0361b693967f3cbe",
+    "source": "GET /version"
+  },
+  "protocol": {
+    "execution": "deployed canonical agent, default DeepSeek V4 Pro route",
+    "start_urls": "homepage only",
+    "first_passes": 9,
+    "repeat_rule": "repeat only a correct first pass until three total repetitions",
+    "status_rule": "supported only for 3/3 correct answers independently checked against official ground truth; a runtime PASS alone is insufficient"
+  },
+  "totals": {
+    "recorded_runs": 13,
+    "planner_calls": 13,
+    "actions": 25,
+    "llm_tokens": 26049,
+    "llm_usd": 0.028077270228,
+    "judge_calls": 0,
+    "run_ms": 283169,
+    "wrong_successes": 1
+  },
+  "tasks": [
+    {
+      "domain": "whaleforce-sec10k.zeabur.app",
+      "task": "Select the Intel filing, run the extraction, and report the resulting 10-K status.",
+      "start_url": "https://whaleforce-sec10k.zeabur.app/",
+      "declared_status": "unreliable",
+      "runs": [
+        {"run_id": "f9d53e0f", "status": "success", "answer": "Extracting — prepare filing", "correct": false, "classification": "wrong success", "actions": 4, "tokens": 0, "usd": 0.0, "ms": 1842}
+      ]
+    },
+    {
+      "domain": "companiesmarketcap.com",
+      "task": "What is the market cap of this company?",
+      "start_url": "https://companiesmarketcap.com/",
+      "declared_status": "unreliable",
+      "runs": [
+        {"run_id": "11151f1a", "status": "failure:env", "reason": "planner rejected: canonical plan invalid provider accounting", "actions": 1, "tokens": 3556, "usd": 0.001873044228, "ms": 56816}
+      ]
+    },
+    {
+      "domain": "bankofcanada.ca",
+      "task": "What is the current policy interest rate?",
+      "start_url": "https://www.bankofcanada.ca/",
+      "declared_status": "supported",
+      "ground_truth": {"answer": "2.25%", "date": "2026-07-15", "source": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/"},
+      "runs": [
+        {"run_id": "fb642546", "status": "success", "answer": "Policy interest rate\n2.25%\nJul 15, 2026", "correct": true, "actions": 2, "tokens": 2228, "usd": 0.00119374164, "ms": 12752},
+        {"run_id": "512ed6d1", "status": "success", "answer": "Policy interest rate\n2.25%\nJul 15, 2026", "correct": true, "actions": 2, "tokens": 0, "usd": 0.0, "ms": 4348},
+        {"run_id": "6eee9c43", "status": "success", "answer": "Policy interest rate\n2.25%\nJul 15, 2026", "correct": true, "actions": 2, "tokens": 1973, "usd": 0.00402114, "ms": 7258}
+      ]
+    },
+    {
+      "domain": "ecb.europa.eu",
+      "task": "What is the deposit facility rate?",
+      "start_url": "https://www.ecb.europa.eu/",
+      "declared_status": "supported",
+      "ground_truth": {"answer": "2.25%", "effective_date": "2026-06-17", "source": "https://data.ecb.europa.eu/key-figures/ecb-interest-rates-and-exchange-rates/key-ecb-interest-rates"},
+      "runs": [
+        {"run_id": "c4937caf", "status": "success", "answer": "2.25 %", "correct": true, "actions": 2, "tokens": 2217, "usd": 0.00086437512, "ms": 13568},
+        {"run_id": "20ed4027", "status": "success", "answer": "2.25 %", "correct": true, "actions": 2, "tokens": 0, "usd": 0.0, "ms": 4892},
+        {"run_id": "f5e80add", "status": "success", "answer": "2.25 %", "correct": true, "actions": 2, "tokens": 0, "usd": 0.0, "ms": 5589}
+      ]
+    },
+    {
+      "domain": "bankofengland.co.uk",
+      "task": "What is the current official Bank Rate?",
+      "start_url": "https://www.bankofengland.co.uk/",
+      "declared_status": "unreliable",
+      "runs": [
+        {"run_id": "d6a57c24", "status": "failure:env", "reason": "planner rejected: canonical plan invalid provider accounting", "actions": 1, "tokens": 3228, "usd": 0.005458032, "ms": 44247}
+      ]
+    },
+    {
+      "domain": "federalreserve.gov",
+      "task": "What is the current federal funds target range?",
+      "start_url": "https://www.federalreserve.gov/",
+      "declared_status": "unreliable",
+      "runs": [
+        {"run_id": "1a8fc8ad", "status": "failure:env", "reason": "planner rejected: canonical plan invalid provider accounting", "actions": 1, "tokens": 3570, "usd": 0.0020721708, "ms": 34999}
+      ]
+    },
+    {
+      "domain": "home.treasury.gov",
+      "task": "What is the latest 10-year Treasury par yield and its date?",
+      "start_url": "https://home.treasury.gov/",
+      "declared_status": "unreliable",
+      "runs": [
+        {"run_id": "0fe19f7c", "status": "failure:locate", "reason": "step 4 (extract): no tier resolved for the table", "final_url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value=2026", "actions": 4, "tokens": 1897, "usd": 0.002321943, "ms": 37078}
+      ]
+    },
+    {
+      "domain": "eia.gov",
+      "task": "What is the latest U.S. average retail gasoline price and its date?",
+      "start_url": "https://www.eia.gov/",
+      "declared_status": "unreliable",
+      "runs": [
+        {"run_id": "f9a9ba41", "status": "failure:env", "reason": "planner rejected: canonical plan invalid provider accounting", "actions": 1, "tokens": 3598, "usd": 0.00208409544, "ms": 33061}
+      ]
+    },
+    {
+      "domain": "taifex.com.tw",
+      "task": "請從期交所首頁找到臺股期貨商品規格，告訴我一個指數點等於新臺幣多少元？",
+      "start_url": "https://www.taifex.com.tw/",
+      "declared_status": "unreliable",
+      "manual_ground_truth": {"answer": "NTD 200", "note": "manual browser path only; the canonical run did not reach an answer"},
+      "runs": [
+        {"run_id": "7631566f", "status": "failure:env", "reason": "planner rejected: canonical plan invalid provider accounting", "final_url": "https://www.taifex.com.tw/cht/index", "actions": 1, "tokens": 3782, "usd": 0.008188728, "ms": 26719}
+      ]
+    }
+  ]
+}
