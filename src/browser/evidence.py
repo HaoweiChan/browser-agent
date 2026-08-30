@@ -27,7 +27,7 @@ _DATE_WORDS = re.compile(
     re.I,
 )
 _TERMINAL = re.compile(r"\b(success|complete|error|failed)\b", re.I)
-_NON_RENDERED = {"script", "style", "template"}
+_NON_RENDERED = {"head", "title", "script", "style", "template"}
 
 
 def _text(value: str) -> str:
@@ -253,6 +253,29 @@ def extract_evidence(*, source_bytes: bytes, url: str, document_id: str, request
     return {"document_id": document_id, "url": url,
             "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
             "snapshot_sha256": hashlib.sha256(text.encode()).hexdigest(), "items": items}
+
+
+def snapshot_evidence(*, source_bytes: bytes, url: str, document_id: str) -> dict:
+    """Cite the first offset-bound visible text from already-acquired page bytes."""
+    text = canonical_text(source_bytes)
+    if not text:
+        raise ValueError("empty canonical snapshot text")
+    value = ""
+    offset = -1
+    for node in _visible_walk(_parse(source_bytes)):
+        if node.children:
+            continue
+        candidate = _node_text(node)[:1_500]
+        if candidate and (found := text.find(candidate)) >= 0:
+            value, offset = candidate, found
+            break
+    if not value:
+        raise ValueError("no visible offset-bound snapshot text")
+    return {"document_id": document_id, "url": url,
+            "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
+            "snapshot_sha256": hashlib.sha256(text.encode()).hexdigest(),
+            "items": [{"kind": "text", "value": value,
+                       "text_offset": {"start": offset, "end": offset + len(value)}}]}
 
 
 def read_same_origin_export(*, page_url: str, export_url: str,

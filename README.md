@@ -259,8 +259,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 274 | 109.15s | 125.52 | **130s** |
-| `invariant` | 115 | 35.83s | 41.20 | **70s** |
+| `fast` | 274 | 114.81s | 132.03 | **135s** |
+| `invariant` | 115 | 39.91s | 45.90 | **70s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer.
 A short sample may derive UNDER the committed ceiling and must never drag it
@@ -524,7 +524,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 320 cases (274 of them in the offline gate), it
+The eval set is not weak; it is 330 cases (274 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

@@ -1,0 +1,40 @@
+{
+  "suite": "m50",
+  "score": 0.0,
+  "totals": {
+    "wall_seconds": 0.06,
+    "latency_p50": 0.0,
+    "latency_p95": 0.06,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "canonical-stategraph"
+      },
+      "seconds": 0.06,
+      "id": "m50-canonical-order",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "canonical-stategraph"
+      },
+      "seconds": 0.0,
+      "id": "m50-canonical-parity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "canonical-stategraph"
+      },
+      "seconds": 0.0,
+      "id": "m50-canonical-retry-bound",
+      "kind": "adversarial"
+    }
+  ]
+}

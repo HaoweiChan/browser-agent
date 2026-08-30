@@ -1,0 +1,147 @@
+{
+  "suite": "m50",
+  "score": 0.42857142857142855,
+  "totals": {
+    "wall_seconds": 0.33,
+    "latency_p50": 0.0,
+    "latency_p95": 0.33,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "nodes": [
+          "observe",
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide"
+        ],
+        "routes": [
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide",
+          "publish"
+        ],
+        "status": "accepted",
+        "verifier": "PASS",
+        "mode": "canonical"
+      },
+      "seconds": 0.33,
+      "id": "m50-canonical-order",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "nodes": [
+          "observe",
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide"
+        ],
+        "routes": [
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide",
+          "publish"
+        ],
+        "status": "accepted",
+        "verifier": "PASS",
+        "mode": "canonical"
+      },
+      "seconds": 0.0,
+      "id": "m50-canonical-parity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "nodes": [
+          "observe",
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide",
+          "plan",
+          "act",
+          "evaluate",
+          "decide"
+        ],
+        "routes": [
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide",
+          "plan",
+          "act",
+          "evaluate",
+          "decide",
+          "review_required"
+        ],
+        "status": "review_required",
+        "verifier": "FAIL",
+        "mode": "canonical"
+      },
+      "seconds": 0.0,
+      "id": "m50-canonical-retry-bound",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "snapshot-evidence"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-canonical-text",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "snapshot-evidence"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-empty-is-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "snapshot-evidence"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-generic",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "missing_capability": "snapshot-evidence"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-hash-offset",
+      "kind": "adversarial"
+    }
+  ]
+}

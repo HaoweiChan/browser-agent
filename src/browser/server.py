@@ -25,8 +25,7 @@ from pydantic import BaseModel
 from .agent import assemble_result, run_task
 from .judge import live_judge
 from .mutate import apply_mutation
-from .planner import (ALLOWED_MODELS, DEFAULT_LOOP_MODEL, DEFAULT_MODEL, live_driver,
-                      live_planner)
+from .planner import ALLOWED_MODELS, DEFAULT_MODEL, live_planner
 
 app = FastAPI(title="browser-agent")
 FIXTURE_DIR = (Path(__file__).parent / "fixtures").resolve()
@@ -191,35 +190,10 @@ def url_ok(u: str) -> bool:
                 or ip.is_reserved or ip.is_multicast or ip.is_unspecified)
 
 
-# ADR-027 Decision 1: loop mode is a peer mode, selected per task, and mode B
-# stays the default. Three spellings and no more — an unknown mode is refused at
-# the boundary rather than silently defaulting, because a flag that is accepted
-# and ignored looks identical over HTTP to one that works
-# (`gateway-mode-selects-the-driver`).
-# `escalate` (M46, ADR-037) is the third: mode B first, the loop only if that
-# leg ends in a failure class, one RunResult carrying both legs.
-MODES = ("plan", "loop", "escalate")
-MODE_ENV = "BROWSER_AGENT_MODE"
-
-
-def default_mode() -> str:
-    """The env default for `POST /tasks`'s mode flag.
-
-    Falls back to mode B on anything unrecognised rather than refusing to boot.
-    The quiet direction is usually the wrong one in this repo, and this is the
-    exception that proves the rule: the fallback is the SAFE, cheap, fully
-    graded mode, so a typo in a deployment variable costs a run that plans
-    instead of looping — not a service that will not start, and never a run
-    that spends more than it was asked to.
-    """
-    return m if (m := os.environ.get(MODE_ENV, "").strip().lower()) in MODES else "plan"
-
-
 class TaskIn(BaseModel):
     task: str
     url: str | None = None
-    # Absent means `default_mode()`. Same `is not None` treatment `model` gets:
-    # an explicit JSON null IS the absent value for an optional field.
+    # Optional only to return a loud boundary error for retired public values.
     mode: str | None = None
     # The M9 ablation's independent variable. Absent means the default; anything
     # else must be on `planner.ALLOWED_MODELS` — the ablation set plus the
@@ -230,7 +204,7 @@ class TaskIn(BaseModel):
     model: str | None = None
 
 
-def _env_failure(reason: str, model: str | None = None, mode: str = "plan") -> dict:
+def _env_failure(reason: str, model: str | None = None, mode: str = "canonical") -> dict:
     """A contract-shaped result for a run that never got off the ground."""
     return assemble_result(
         [], None,
@@ -245,29 +219,22 @@ def _served_model(requested: str, *callers) -> str:
     return " + ".join(used) if used else requested
 
 
-async def _execute(run_id: str, task: str, url: str | None, model: str,
-                   mode: str = "plan", fallback: bool = True):
+async def _execute(run_id: str, task: str, url: str | None, model: str, fallback: bool = True):
     global ACTIVE_RUN
     q = STREAMS[run_id]
     result = None
-    planner = driver = None
+    planner = None
     async with SEM:
         ACTIVE_RUN = run_id
         try:
-            planner = None if mode == "loop" else live_planner(model, fallback=fallback)
-            driver = live_driver(model, fallback=fallback) if mode != "plan" else None
+            planner = live_planner(model, fallback=fallback)
             result = await run_task(
                 task, url,
-                # Exactly one of the two factories is constructed — except in
-                # `escalate`, which runs a leg of each and needs both (ADR-037
-                # Decision 7). Each validates the API key on the way in, so
-                # building an unused one would raise on a deployment that only
-                # meant to use the other.
                 planner, RUN_ROOT / run_id,
-                mode=mode, driver=driver,
+                mode="canonical",
                 judge=live_judge(), url_guard=url_ok,
                 # Echoed back on the record so a committed ablation report is
-                # self-attributing rather than trusting the driver's loop variable.
+                # self-attributing rather than trusting its submission record.
                 model=model,
                 # Copy on emit: the executor keeps mutating its record (a later
                 # supersede lands on an attempt already sent). The final `done`
@@ -280,15 +247,15 @@ async def _execute(run_id: str, task: str, url: str | None, model: str,
             # frontend renders both (gateway-error-contract-shape). Empty trace is
             # correct — live_planner() validates the key before a browser opens,
             # so nothing was attempted; only the shape was ever wrong.
-            result = _env_failure(f"{type(e).__name__}: {e}", model, mode)
+            result = _env_failure(f"{type(e).__name__}: {e}", model)
         finally:
             # A run must always reach a terminal state. When the error path
             # itself raised (a NameError, once), the record stayed "running" and
             # the SSE stream never closed — a hung connection on a public
             # endpoint, and a reviewer watching a spinner with no end.
             if result is None:
-                result = _env_failure("run ended without producing a result", model, mode)
-            result["model"] = _served_model(model, planner, driver)
+                result = _env_failure("run ended without producing a result", model)
+            result["model"] = _served_model(model, planner)
             RUNS[run_id] = result
             ACTIVE_RUN = None
             q.put_nowait({"event": "done", "result": result})
@@ -317,26 +284,13 @@ async def submit_task(t: TaskIn, request: Request):
     if t.model is not None and t.model not in ALLOWED_MODELS:
         raise HTTPException(422, "model blocked: allowlisted models only — "
                                  + ", ".join(ALLOWED_MODELS))
-    if t.mode is not None and t.mode not in MODES:
-        raise HTTPException(422, "mode must be one of " + ", ".join(MODES))
+    if t.mode is not None and t.mode != "canonical":
+        raise HTTPException(422, "only canonical execution is available")
     run_id = uuid.uuid4().hex[:8]
     RUNS[run_id] = {"status": "running"}
     STREAMS[run_id] = asyncio.Queue()
-    # The default model is the MODE's default, not one global one. Passing
-    # `DEFAULT_MODEL` whatever the mode drove the loop with the model ADR-010's
-    # cost ablation picked under a ceiling ADR-027 deliberately lifted for this
-    # mode — and one never verified to support the tool-calling the driver
-    # requires (spec-drift audit, `gateway-mode-selects-the-driver`). An
-    # explicit `model` still wins over both: the ablation and any A/B have to be
-    # able to pin it.
-    # `escalate` takes the LOOP's default for both of its legs (ADR-037
-    # Decision 7): the loop leg is the one with a hard capability requirement —
-    # native tool calling, verified for that model and no other — while the plan
-    # leg has none, and one model per run keeps the record self-attributing.
-    mode = t.mode or default_mode()
     asyncio.get_event_loop().create_task(
-        _execute(run_id, t.task, t.url,
-                 t.model or (DEFAULT_MODEL if mode == "plan" else DEFAULT_LOOP_MODEL), mode,
+        _execute(run_id, t.task, t.url, t.model or DEFAULT_MODEL,
                  fallback=t.model is None))
     return {"run_id": run_id}
 
@@ -907,6 +861,7 @@ const ADRS = [
   ["044", "a paid campaign must state aggregate USD, token and planner-call stop lines explicitly; recovery cannot change them, and reaching one refuses the next submission"],
   ["045", "paid LLM requests require a verified LLM access key; DeepSeek V4 Pro is primary, GPT-5 mini is fallback, and Opus has no price exception"],
   ["046", "the future browser agent has one cited-evidence graph; deterministic verification alone may publish, and the legacy modes retire only after parity evidence"],
+  ["047", "public tasks follow one verified browser flow; the result is published only after its evidence and checks agree"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

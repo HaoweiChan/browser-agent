@@ -1,0 +1,484 @@
+{
+  "suite": "m50",
+  "score": 0.8888888888888888,
+  "totals": {
+    "wall_seconds": 1.49,
+    "latency_p50": 0.2,
+    "latency_p95": 0.59,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "nodes": [
+          "observe",
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide"
+        ],
+        "routes": [
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide",
+          "publish"
+        ],
+        "status": "accepted",
+        "verifier": {
+          "authority": "deterministic",
+          "verdict": "PASS"
+        },
+        "mode": "canonical",
+        "rejects_invalid_callback": true
+      },
+      "seconds": 0.27,
+      "id": "m50-canonical-order",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "legacy": {
+          "status": "success",
+          "answer": "Hello Fixture",
+          "verdict": {
+            "verdict": "PASS",
+            "layer": 1,
+            "ground_truth": false,
+            "checks": {
+              "trace_nonempty": true,
+              "supersedes_resolve": true,
+              "no_failed_postcondition": true,
+              "answer_nonempty": true,
+              "no_abandoned_failure": true,
+              "actions_verified": true,
+              "grounded": true,
+              "not_a_dump": true,
+              "not_page_furniture": true,
+              "identity_anchors": true,
+              "aggregate_needs_comparison": true,
+              "judge_attempts": 1,
+              "judge_responsive": true
+            },
+            "reason": null
+          }
+        },
+        "canonical": {
+          "status": "success",
+          "answer": "Hello Fixture",
+          "verdict": {
+            "verdict": "PASS",
+            "layer": 1,
+            "ground_truth": false,
+            "checks": {
+              "trace_nonempty": true,
+              "supersedes_resolve": true,
+              "no_failed_postcondition": true,
+              "answer_nonempty": true,
+              "no_abandoned_failure": true,
+              "actions_verified": true,
+              "grounded": true,
+              "not_a_dump": true,
+              "not_page_furniture": true,
+              "identity_anchors": true,
+              "aggregate_needs_comparison": true
+            },
+            "reason": null
+          }
+        },
+        "control_flow": {
+          "nodes": [
+            "observe",
+            "route",
+            "evidence",
+            "plan",
+            "act",
+            "evaluate",
+            "decide"
+          ],
+          "routes": [
+            "route",
+            "evidence",
+            "plan",
+            "act",
+            "evaluate",
+            "decide",
+            "publish"
+          ],
+          "status": "accepted",
+          "verifier": {
+            "authority": "deterministic",
+            "verdict": "PASS"
+          },
+          "retry": {
+            "used": 0,
+            "limit": 1
+          },
+          "evidence_hashes": [
+            {
+              "document_id": "snapshot:51c2d07694ab1d9d2d99d76abdcecc08c69bb59d8724619efa1f588137a7017b",
+              "source_sha256": "51c2d07694ab1d9d2d99d76abdcecc08c69bb59d8724619efa1f588137a7017b",
+              "snapshot_sha256": "ebe6c1aaa5174ef120a045cb8475e489656bca7f9ce39bd72888d87e5217b916"
+            }
+          ],
+          "budgets": {
+            "calls": 1,
+            "tokens": 0,
+            "usd": 0.0,
+            "ms": 156
+          }
+        }
+      },
+      "seconds": 0.59,
+      "id": "m50-canonical-parity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "legacy": null,
+        "canonical": {},
+        "control_flow": {
+          "nodes": [
+            "observe",
+            "route",
+            "evidence",
+            "plan",
+            "act",
+            "evaluate",
+            "decide",
+            "plan",
+            "act",
+            "evaluate",
+            "decide"
+          ],
+          "routes": [
+            "route",
+            "evidence",
+            "plan",
+            "act",
+            "evaluate",
+            "decide",
+            "plan",
+            "act",
+            "evaluate",
+            "decide",
+            "publish"
+          ],
+          "status": "accepted",
+          "verifier": {
+            "authority": "deterministic",
+            "verdict": "PASS"
+          },
+          "retry": {
+            "used": 1,
+            "limit": 1
+          },
+          "evidence_hashes": [
+            {
+              "document_id": "snapshot:51c2d07694ab1d9d2d99d76abdcecc08c69bb59d8724619efa1f588137a7017b",
+              "source_sha256": "51c2d07694ab1d9d2d99d76abdcecc08c69bb59d8724619efa1f588137a7017b",
+              "snapshot_sha256": "ebe6c1aaa5174ef120a045cb8475e489656bca7f9ce39bd72888d87e5217b916"
+            }
+          ],
+          "budgets": {
+            "calls": 2,
+            "tokens": 0,
+            "usd": 0.0,
+            "ms": 193
+          }
+        }
+      },
+      "seconds": 0.2,
+      "id": "m50-canonical-retry-bound",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "legacy": null,
+        "canonical": {},
+        "control_flow": {
+          "nodes": [
+            "observe",
+            "route",
+            "evidence",
+            "plan",
+            "act",
+            "evaluate",
+            "decide"
+          ],
+          "routes": [
+            "route",
+            "evidence",
+            "plan",
+            "act",
+            "evaluate",
+            "decide",
+            "failure"
+          ],
+          "status": "failure:locate",
+          "verifier": {
+            "authority": "deterministic",
+            "verdict": "FAIL"
+          },
+          "retry": {
+            "used": 0,
+            "limit": 1
+          },
+          "evidence_hashes": [
+            {
+              "document_id": "snapshot:51c2d07694ab1d9d2d99d76abdcecc08c69bb59d8724619efa1f588137a7017b",
+              "source_sha256": "51c2d07694ab1d9d2d99d76abdcecc08c69bb59d8724619efa1f588137a7017b",
+              "snapshot_sha256": "ebe6c1aaa5174ef120a045cb8475e489656bca7f9ce39bd72888d87e5217b916"
+            }
+          ],
+          "budgets": {
+            "calls": 1,
+            "tokens": 0,
+            "usd": 0.0,
+            "ms": 225
+          }
+        }
+      },
+      "seconds": 0.23,
+      "id": "m50-canonical-state-change-retry-refused",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "control_flow": {
+          "routes": {
+            "want": [
+              "route",
+              "evidence",
+              "plan",
+              "act",
+              "evaluate",
+              "decide",
+              "plan",
+              "act",
+              "evaluate",
+              "decide",
+              "publish"
+            ],
+            "got": [
+              "route",
+              "evidence",
+              "plan",
+              "act",
+              "evaluate",
+              "decide",
+              "plan",
+              "act",
+              "evaluate",
+              "decide",
+              "review_required"
+            ]
+          },
+          "status": {
+            "want": "accepted",
+            "got": "review_required"
+          },
+          "verifier": {
+            "want": {
+              "authority": "deterministic",
+              "verdict": "PASS"
+            },
+            "got": {
+              "authority": "deterministic",
+              "verdict": "FAIL"
+            }
+          }
+        },
+        "answer": {
+          "want": "Hello Fixture",
+          "got": null
+        },
+        "supersedes": [
+          {
+            "i": 1,
+            "action": "navigate",
+            "target": null,
+            "value": "http://127.0.0.1:65476/fixtures/hello.html",
+            "anchor": null,
+            "rank": null,
+            "resolved": null,
+            "expected_state": null,
+            "postcondition_ok": true,
+            "failure_class": null,
+            "note": "pre-plan observation",
+            "retry_or_recovery": null,
+            "superseded_by": null,
+            "page_changed": null,
+            "screenshot": null,
+            "ms": 28
+          },
+          {
+            "i": 2,
+            "action": "extract",
+            "target": {
+              "text": "A tiny page for the walking skeleton. The shop and forms fixtures land at M2. The second heading exists to catch substring-name resolution (case resolver-substring-name)."
+            },
+            "value": null,
+            "anchor": null,
+            "rank": null,
+            "resolved": {
+              "tier": "text",
+              "description": "{'text': 'A tiny page for the walking skeleton. The shop and forms fixtures land at M2. The second heading exists to catch substring-name resolution (case resolver-substring-name).'}",
+              "scope": "http://127.0.0.1:65476/fixtures/hello.html",
+              "narrowed": null
+            },
+            "expected_state": null,
+            "postcondition_ok": null,
+            "failure_class": null,
+            "note": null,
+            "retry_or_recovery": null,
+            "superseded_by": null,
+            "page_changed": null,
+            "screenshot": "step_2.png",
+            "ms": 66
+          },
+          {
+            "i": 3,
+            "action": "extract",
+            "target": {
+              "role": "heading",
+              "name": "Hello Fixture"
+            },
+            "value": null,
+            "anchor": null,
+            "rank": null,
+            "resolved": {
+              "tier": "role",
+              "description": "{'role': 'heading', 'name': 'Hello Fixture'}",
+              "scope": "http://127.0.0.1:65476/fixtures/hello.html",
+              "narrowed": null
+            },
+            "expected_state": null,
+            "postcondition_ok": null,
+            "failure_class": null,
+            "note": "value reproduces most of its own evidence window: ['A tiny page for the walking skeleton. The shop and forms fixtures land at M2. Th\u2026 (170 chars)']",
+            "retry_or_recovery": "retry",
+            "superseded_by": null,
+            "page_changed": null,
+            "screenshot": "step_3.png",
+            "ms": 53
+          }
+        ]
+      },
+      "got": {
+        "legacy": null,
+        "canonical": {},
+        "control_flow": {
+          "nodes": [
+            "observe",
+            "route",
+            "evidence",
+            "plan",
+            "act",
+            "evaluate",
+            "decide",
+            "plan",
+            "act",
+            "evaluate",
+            "decide"
+          ],
+          "routes": [
+            "route",
+            "evidence",
+            "plan",
+            "act",
+            "evaluate",
+            "decide",
+            "plan",
+            "act",
+            "evaluate",
+            "decide",
+            "review_required"
+          ],
+          "status": "review_required",
+          "verifier": {
+            "authority": "deterministic",
+            "verdict": "FAIL"
+          },
+          "retry": {
+            "used": 1,
+            "limit": 1
+          },
+          "evidence_hashes": [
+            {
+              "document_id": "snapshot:51c2d07694ab1d9d2d99d76abdcecc08c69bb59d8724619efa1f588137a7017b",
+              "source_sha256": "51c2d07694ab1d9d2d99d76abdcecc08c69bb59d8724619efa1f588137a7017b",
+              "snapshot_sha256": "ebe6c1aaa5174ef120a045cb8475e489656bca7f9ce39bd72888d87e5217b916"
+            }
+          ],
+          "budgets": {
+            "calls": 2,
+            "tokens": 0,
+            "usd": 0.0,
+            "ms": 195
+          }
+        }
+      },
+      "seconds": 0.2,
+      "id": "m50-canonical-verifier-retry-clears-attempt",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "source_sha256": "880cefc384ab6d4d70e89a1702a81fbf6913e6bae743c9e21e45ce2ce183832b",
+        "snapshot_sha256": "7a3cd2a02e38b76feace0fe27e467d295fc2fe31b717a59cc5591fa4cc2f65b5",
+        "text": "Title bait 9.00% Head bait 8.50% old 9.99% Hidden 8.00% Aria 7.00% Style 6.00% Visible 4.00%"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-canonical-text",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "m50-snapshot-empty-is-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "source_sha256": "80f84bbbd50002fa8eb4e2b6a4b5316dc7736805984ed9a26cd1279ae7934b8d",
+        "snapshot_sha256": "601c1bf03fde9ec76d25b35ec5e4bb1ff61c8481a86f240dddea5126204c6886",
+        "text": "Generic source text"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-generic",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "source_sha256": "93598a1793d614ab1bd81dddf76a81c15d5e837d1925dd9109fed08bd2da44bf",
+        "snapshot_sha256": "f0493c24178de623529b400ca9fd4c89f384da4527b2a2df629b1797482bbd34",
+        "text": "Current rate 4.00%"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-hash-offset",
+      "kind": "adversarial"
+    }
+  ]
+}

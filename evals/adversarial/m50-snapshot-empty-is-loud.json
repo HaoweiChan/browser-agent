@@ -1,0 +1,13 @@
+{
+  "id": "m50-snapshot-empty-is-loud",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {
+    "kind": "snapshot-evidence",
+    "source": "<main><!-- no text --></main>",
+    "url": "https://fixture.example/empty",
+    "document_id": "snapshot:empty"
+  },
+  "expect": {"error": "ValueError"},
+  "provenance": "B2a red-first: empty canonical text is a loud missing-evidence failure."
+}

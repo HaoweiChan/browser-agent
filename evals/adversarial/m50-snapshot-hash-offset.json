@@ -1,0 +1,13 @@
+{
+  "id": "m50-snapshot-hash-offset",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {
+    "kind": "snapshot-evidence",
+    "source": "<main><h1>Current rate</h1><p>4.00%</p></main>",
+    "url": "https://fixture.example/rate",
+    "document_id": "snapshot:fixture-rate"
+  },
+  "expect": {"value": "Current rate"},
+  "provenance": "B2a red-first: acquired bytes must bind source/snapshot hashes and a text offset."
+}

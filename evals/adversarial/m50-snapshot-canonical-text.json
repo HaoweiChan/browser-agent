@@ -1,0 +1,13 @@
+{
+  "id": "m50-snapshot-canonical-text",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {
+    "kind": "snapshot-evidence",
+    "source": "<head><title>Title bait 9.00%</title>Head bait 8.50%</head><script>old 9.99%</script><p hidden>Hidden 8.00%</p><p aria-hidden='true'>Aria 7.00%</p><p style='display:none'>Style 6.00%</p><p>Visible 4.00%</p>",
+    "url": "https://fixture.example/rate",
+    "document_id": "snapshot:canonical-text"
+  },
+  "expect": {"value": "Visible 4.00%", "nonzero_offset": true},
+  "provenance": "B2a red-first: title/head/script/hidden/aria-hidden/style-hidden text remains hash-bound in raw canonical_text but is not selectable evidence; visible body text must retain a nonzero raw offset."
+}

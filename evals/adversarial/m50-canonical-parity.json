@@ -1,0 +1,21 @@
+{
+  "id": "m50-canonical-parity",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {
+    "kind": "canonical-runtime",
+    "fixture": "hello.html",
+    "task": "What does the main heading on the page say?",
+    "stub_plan": [{"action": "extract", "target": {"role": "heading", "name": "Hello Fixture"}}]
+  },
+  "expect": {
+    "control_flow": {
+      "nodes": ["observe", "route", "evidence", "plan", "act", "evaluate", "decide"],
+      "routes": ["route", "evidence", "plan", "act", "evaluate", "decide", "publish"],
+      "status": "accepted",
+      "verifier": {"authority": "deterministic", "verdict": "PASS"},
+      "retry": {"used": 0, "limit": 1}
+    }
+  },
+  "provenance": "M50 B3b red-first: identical fixture plan runs once through legacy plan and once through canonical callbacks; public status, answer, and deterministic verdict must agree."
+}

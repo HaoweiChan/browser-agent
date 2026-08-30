@@ -24,10 +24,12 @@ Every other class stays a loud classified stop. Output: specs/001-browser-contra
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import os
 import re
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from .judge import JUDGE_ATTEMPTS, RUN_JUDGE_BUDGET
@@ -1278,6 +1280,607 @@ def origin_storage_state(raw=None):
     return {"cookies": [], "origins": origins}
 
 
+@dataclass
+class _TaskRuntime:
+    task: str
+    model: str | None
+    mode: str
+    run_dir: Path
+    t0: float
+    trace: list[dict]
+    budgets: dict
+    answers: list
+    extractions: list[dict]
+    judge: object
+    page: object = None
+    url_guard: object = None
+    vision: list[bool] | None = None
+    acted_scope: list | None = None
+    acted_document: list[str | None] | None = None
+    drilled: list | None = None
+    page_bodies: dict[str, str] | None = None
+    step_offset: int = 0
+    pending_supersede: list | None = None
+    emit: object = None
+
+    def done(self, answer=None, failure=None, reason=None, final_url=None, digest=None, verdict=None):
+        self.budgets["ms"] = int((time.monotonic() - self.t0) * 1000)
+        result = assemble_result(self.trace, answer, self.budgets, failure, reason, final_url,
+                                 digest, self.extractions, verdict, self.model, self.mode)
+        (self.run_dir / "trace.jsonl").write_text("\n".join(json.dumps(s) for s in self.trace) + "\n")
+        (self.run_dir / "result.json").write_text(json.dumps(result, indent=2))
+        return result
+
+    async def finalize(self, final_url, digest):
+        answer = self.answers[0] if len(self.answers) == 1 else (self.answers or None)
+        enumerated = next((s.get("rank") for s in self.trace
+                           if s.get("action") == "extract_all" and not s.get("superseded_by")
+                           and not s.get("failure_class")), None)
+        if len(self.answers) == 1 and isinstance(answer, list) and enumerated is not None:
+            try:
+                answer = rank(self.task, answer, enumerated)
+            except ValueError as e:
+                return self.done(failure="semantic", reason=str(e), final_url=final_url, digest=digest)
+        verdict = verify(trace=self.trace, extractions=self.extractions, answer=answer, task=self.task)
+        if verdict["verdict"] == "PASS":
+            verdict = await _apply_judge(self.judge, self.task, answer, self.extractions,
+                                         verdict, self.budgets)
+        return self.done(answer=answer, final_url=final_url, digest=digest, verdict=verdict)
+
+    async def execute_control(self, step, rec) -> bool:
+        action = step["action"]
+        if action == "navigate":
+            if self.url_guard and not self.url_guard(step.get("value") or ""):
+                raise StepError("task", f"blocked URL: {step.get('value')!r}")
+            await navigate(self.page, step["value"])
+        elif action not in ACTIONS:
+            raise StepError("task", f"unknown action {action!r}")
+        elif action == "final_answer":
+            pass
+        elif action == "wait_for":
+            if not step.get("expected_state"):
+                raise StepError("task", "a wait_for must carry the expected_state it is "
+                                        "waiting for; a wait with no predicate is a sleep")
+        elif action == "go_back":
+            if await self.page.go_back(wait_until="domcontentloaded") is None:
+                raise StepError("act", "go_back: this tab has no earlier page to return to")
+        elif action == "click_at":
+            if not self.vision or not self.vision[0]:
+                raise StepError("task", "click_at needs coordinates read off the screenshot you "
+                                        "were just shown, and this call was not emitted from a "
+                                        "viewport-screenshot-bearing observation (a drill's "
+                                        "element-scoped image has a different coordinate frame), "
+                                        "so these coordinates cannot come from anything this run "
+                                        "saw. Name an element semantically, or look at the full "
+                                        "page again first")
+            try:
+                x, y = (float(v) for v in str(step.get("value") or "").split(","))
+            except ValueError:
+                raise StepError("task", "click_at needs `value` as \"x,y\" viewport "
+                                        f"CSS pixels; got {step.get('value')!r}")
+            await self.page.mouse.click(x, y)
+        else:
+            return False
+        return True
+
+    async def resolve_step(self, step, rec):
+        """Validate one non-control action and resolve its semantic target."""
+        action = step["action"]
+        if unknown := set(step.get("target") or {}) - TARGET_KEYS:
+            raise StepError("task", f"unsupported target key(s) {sorted(unknown)}")
+        if action == "extract_all" and any(
+                (step.get("target") or {}).get(k) is not None for k in ("index", "near")):
+            raise StepError("task", "extract_all enumerates every match; `index`/`near` "
+                                    "select one, so the plan says two different things")
+        if action == "extract_all" and not isinstance(step.get("rank"), bool):
+            raise StepError("task", "extract_all must declare `rank`: true if the answer "
+                                    "is the one item the task ranks for, false if the "
+                                    "answer is the enumeration itself")
+        if gap := root_target_gap(step):
+            raise StepError("task", gap)
+        loc = None
+        if step.get("target") or action in NEEDS_TARGET:
+            loc, tier, narrowed, scope = await resolve(
+                self.page, step.get("target") or {}, many=action == "extract_all",
+                anchor=step.get("anchor"), task=self.task, action=action)
+            self.acted_scope[0] = scope
+            if (scope is not self.page and step.get("expected_state")
+                    and any(k != "url_contains" for k in step["expected_state"])):
+                self.acted_document[0] = f"__browser_agent_document_{time.monotonic_ns()}"
+                try:
+                    await scope.evaluate(
+                        "key => { globalThis[key] = true; }", self.acted_document[0])
+                except Exception:
+                    # Verification will read the missing marker as unverifiable;
+                    # failing open here recreates the successor-document hole.
+                    pass
+            rec["resolved"] = {"tier": tier, "description": str(step.get("target")),
+                               "scope": scope.url, "narrowed": narrowed}
+            if narrowed:
+                rec["note"] = "; ".join(
+                    x for x in (rec["note"], f"narrowed: {narrowed}") if x)
+        return action, loc
+
+    async def execute_observe(self, step, rec, loc) -> bool:
+        """Run an observe/drill action without changing page state."""
+        if step["action"] != "observe":
+            return False
+        if step.get("expected_state"):
+            raise StepError("task", "an observe step cannot carry expected_state: "
+                                    f"{step['expected_state']}")
+        from .observe import DRILL_TEXT_HEAD, observe
+
+        # The scoped observation is replanner input, not an answer or action.
+        self.drilled.append(await observe(self.page, root=loc, text_head=DRILL_TEXT_HEAD))
+        # A drill's optional crop is model input only in loop mode. It is clipped
+        # from a viewport screenshot, never `loc.screenshot()`: Playwright's
+        # element-shot actionability scroll would mutate lazy-load pages.
+        if self.mode == "loop":
+            shot = f"step_{rec['i']}_element.png"
+            try:
+                box = await loc.bounding_box(timeout=SCREENSHOT_TIMEOUT_MS)
+                vp = self.page.viewport_size or {}
+                x0, y0 = max(box["x"], 0.0), max(box["y"], 0.0)
+                x1 = min(box["x"] + box["width"], vp.get("width", 0))
+                y1 = min(box["y"] + box["height"], vp.get("height", 0))
+                if x1 > x0 and y1 > y0:
+                    await self.page.screenshot(
+                        path=str(self.run_dir / shot), timeout=SCREENSHOT_TIMEOUT_MS,
+                        clip={"x": x0, "y": y0, "width": x1 - x0, "height": y1 - y0})
+                    self.drilled[-1].update(screenshot=shot,
+                                            screenshot_path=str(self.run_dir / shot),
+                                            screenshot_frame="element")
+            except Exception:
+                # Best effort must stay bounded: every awaited screenshot/crop
+                # operation above carries SCREENSHOT_TIMEOUT_MS.
+                pass
+        return True
+
+    async def execute_action(self, step, rec, action, loc) -> bool:
+        """Execute one resolved, non-extraction browser action."""
+        if action == "click":
+            await loc.click(timeout=10_000)
+        elif action == "fill":
+            if not await loc.evaluate(FILLABLE_JS):
+                raise StepError("locate", f"resolved element is not fillable: {step.get('target')}")
+            await loc.fill(step.get("value") or "", timeout=10_000)
+            back = await loc.input_value()
+            if back != (step.get("value") or ""):
+                raise StepError("act", f"field readback {back!r} != filled value")
+            rec["postcondition_ok"] = True
+        elif action == "select_option":
+            want = step.get("value")
+            if not isinstance(want, str) or not want:
+                raise StepError("task", "select_option needs a `value` naming the option "
+                                        f"to choose; got {step.get('value')!r}")
+            opts = await loc.evaluate(OPTIONS_JS)
+            if opts is None:
+                raise StepError("act", "resolved element has no options to select: "
+                                       f"{step.get('target')}")
+            if not opts:
+                try:
+                    await loc.locator("option").first.wait_for(
+                        state="attached", timeout=SELECT_OPTIONS_WAIT_MS)
+                except Exception:
+                    pass
+                opts = await loc.evaluate(OPTIONS_JS)
+            exact = [o for o in opts if want in (o[0], o[1])]
+            if len(exact) > 1:
+                raise StepError("act", f"{want!r} matches {len(exact)} options "
+                                       f"({[(v, l) for v, l in exact]}); name one exactly")
+            match = exact[0] if exact else None
+            if match is None:
+                loose = [o for o in opts if want in o[0] or want in o[1]]
+                match = loose[0] if len(loose) == 1 else None
+            if match is None:
+                raise StepError("act", f"no option matches {want!r}; this control offers "
+                                       f"{[label for _v, label in opts]}")
+            await loc.select_option(value=match[0], timeout=10_000)
+            if await loc.input_value() != match[0]:
+                raise StepError("act", f"select readback is not {want!r}")
+            rec["postcondition_ok"] = True
+        elif action == "press":
+            if not step.get("value"):
+                raise StepError("task", "a press must name the key in `value`")
+            if loc is not None:
+                await loc.press(step["value"], timeout=10_000)
+            else:
+                await self.page.keyboard.press(step["value"])
+        elif action == "scroll":
+            before_y = await self.page.evaluate("() => window.scrollY")
+            if loc is not None:
+                await loc.scroll_into_view_if_needed(timeout=10_000)
+                if not await loc.is_visible():
+                    raise StepError("act", "scrolled to the target and it is still not "
+                                           f"visible: {step.get('target')}")
+            else:
+                await self.page.evaluate("d => window.scrollBy(0, d)",
+                                         int(step.get("value") or 800))
+                if await self.page.evaluate("() => window.scrollY") == before_y:
+                    raise StepError("act", "scroll moved nothing: the page is already at "
+                                           "that position, so there is nothing further "
+                                           "down to read")
+            rec["postcondition_ok"] = True
+        else:
+            return False
+        return True
+
+    async def execute_extract(self, step, action, loc) -> bool:
+        """Capture deterministic evidence for one extract or extract_all action."""
+        if action not in ("extract", "extract_all"):
+            return False
+        from .observe import image_accessible_name
+
+        vals = ([v.strip() for v in await loc.all_inner_texts()]
+                if action == "extract_all" else [(await loc.inner_text()).strip()])
+        accessible_value = ""
+        target_role = str((step.get("target") or {}).get("role") or "").lower()
+        if action == "extract" and target_role == "link" and not vals[0]:
+            accessible_value = vals[0] = await image_accessible_name(loc)
+        vals = [v for v in vals if v]
+        if not vals:
+            raise StepError("extract", "extraction returned empty text")
+        bases: dict = {}
+        body = await page_text(self.page, bases=bases)
+        # Accessible names are rendered evidence only when an empty link needed
+        # the fallback; they are never a wider search for a nearby value.
+        evidence_body = body + ("\n" + accessible_value if accessible_value else "")
+        frame_base = bases.get(self.acted_scope[0], 0)
+        scope_now = self.acted_scope[0]
+        try:
+            doc_len = len(await page_text(scope_now, frames=False)
+                          if scope_now is self.page or scope_now is None
+                          else await page_text(scope_now))
+        except Exception:
+            doc_len = len(body)
+        anchor = step.get("anchor")
+        # Refuse before writes: a rejected read must never survive a recovery.
+        if anchor and anchor not in evidence_body:
+            raise StepError("semantic", f"identity anchor {anchor!r} absent from the page "
+                                        "the answer was read from")
+        real_offset = _closest_occurrence(
+            evidence_body, vals[0], await loc.first.evaluate(TEXT_OFFSET_JS) + frame_base)
+        other_page_text = " ".join(t for u, t in self.page_bodies.items() if u != self.page.url)
+        for i, value in enumerate(vals):
+            try:
+                hint = await loc.nth(i).evaluate(TEXT_OFFSET_JS)
+            except Exception:
+                hint = -1
+            offset = _closest_occurrence(
+                evidence_body, value, hint if hint < 0 else hint + frame_base)
+            self.extractions.append(
+                {"value": value,
+                 "page_text": evidence_window(evidence_body, value, anchor, offset=offset),
+                 "body_len": doc_len, "other_page_text": other_page_text,
+                 "value_offset": (offset - _window_lo(evidence_body, offset))
+                 if offset >= 0 else None})
+        self.page_bodies[self.page.url] = body
+        self.answers.append(vals if action == "extract_all" else vals[0])
+        return True
+
+    async def execute(self, step, rec):
+        """Dispatch exactly one browser action through its named boundary."""
+        if await self.execute_control(step, rec):
+            return
+        action, loc = await self.resolve_step(step, rec)
+        if await self.execute_observe(step, rec, loc):
+            return
+        if await self.execute_action(step, rec, action, loc):
+            return
+        if await self.execute_extract(step, action, loc):
+            return
+        raise StepError("task", f"unhandled action {action!r}")
+
+    async def attempt(self, step, note=None, recovery=None):
+        """Record, execute, classify, and emit one action attempt."""
+        rec = {
+            "i": self.step_offset + len(self.trace) + 1,
+            "action": step["action"], "target": step.get("target"),
+            "value": step.get("value"), "anchor": step.get("anchor"),
+            "rank": step.get("rank"), "resolved": None,
+            "expected_state": step.get("expected_state"), "postcondition_ok": None,
+            "failure_class": None, "note": note, "retry_or_recovery": recovery,
+            "superseded_by": None, "page_changed": None, "screenshot": None, "ms": 0,
+        }
+        self.trace.append(rec)
+        if self.pending_supersede and step["action"] not in ("observe", "final_answer"):
+            self.pending_supersede.pop()["superseded_by"] = rec["i"]
+        self.budgets["actions"] += 1
+        started = time.monotonic()
+        failure_class = None
+        before = (await page_text(self.page)
+                  if not step["action"].startswith("extract")
+                  and step["action"] not in READ_ONLY_ACTIONS else None)
+        mark = (len(self.extractions), len(self.answers))
+        self.acted_scope[0] = None
+        self.acted_document[0] = None
+        try:
+            await self.execute(step, rec)
+            if self.url_guard and not self.url_guard(self.page.url):
+                raise StepError("task", f"navigated to blocked URL: {self.page.url!r}")
+            if before is not None:
+                after = await page_text(self.page)
+                rec["page_changed"] = after != before
+                self.page_bodies[self.page.url] = after
+            checked = await check_state(
+                self.page, step.get("expected_state"),
+                scope=None if step["action"] in PAGE_WIDE_STATE
+                else (self.acted_scope[0] or self.page),
+                document_marker=self.acted_document[0])
+            if (checked is None and self.acted_document[0]
+                    and not await _same_document(self.acted_scope[0], self.acted_document[0])):
+                rec["note"] = "; ".join(filter(None, [
+                    rec["note"],
+                    "postcondition unverifiable: resolved frame document was replaced"
+                ]))
+            if checked is not None or rec["postcondition_ok"] is None:
+                rec["postcondition_ok"] = checked
+            if rec["postcondition_ok"] is False:
+                raise StepError("act", f"expected_state not reached: {step.get('expected_state')}")
+        except Exception as exc:
+            failure_class = classify(step["action"], exc)
+            rec["failure_class"] = failure_class
+            rec["note"] = "; ".join(filter(None, [rec["note"], f"{type(exc).__name__}: {exc}"]))
+            del self.extractions[mark[0]:], self.answers[mark[1]:]
+        shot = f"step_{rec['i']}.png"
+        try:
+            await self.page.screenshot(path=str(self.run_dir / shot), timeout=SCREENSHOT_TIMEOUT_MS)
+            rec["screenshot"] = shot
+        except Exception:
+            pass
+        rec["ms"] = int((time.monotonic() - started) * 1000)
+        self.emit(rec)
+        return rec, failure_class
+
+    async def look(self):
+        """Return a fresh observation, or None when a recovery cannot observe."""
+        from .observe import observe
+
+        try:
+            return await observe(self.page)
+        except Exception:
+            return None
+
+    async def capture_evidence(self) -> dict:
+        """Build one contract-checked packet from the current acquired page snapshot."""
+        from .canonical_contract import validate_evidence_packet
+        from .evidence import snapshot_evidence
+
+        source = (await self.page.content()).encode("utf-8")
+        document_id = f"snapshot:{hashlib.sha256(source).hexdigest()}"
+        packet = snapshot_evidence(source_bytes=source, url=self.page.url,
+                                   document_id=document_id)
+        if wrong := validate_evidence_packet(packet):
+            raise ValueError(f"invalid snapshot evidence: {wrong}")
+        return packet
+
+    async def observe_start(self, url: str | None):
+        """Navigate and observe the pre-plan page, returning (observation, terminal)."""
+        if not url:
+            return None, None
+        if self.url_guard and not self.url_guard(url):
+            return None, self.done(failure="task", reason=f"blocked URL: {url!r}")
+        started = time.monotonic()
+        rec = {
+            "i": self.step_offset + 1,
+            "action": "navigate", "target": None, "value": url, "anchor": None,
+            "rank": None, "resolved": None, "expected_state": None, "postcondition_ok": None,
+            "failure_class": None, "note": "pre-plan observation",
+            "retry_or_recovery": None, "superseded_by": None, "page_changed": None,
+            "screenshot": None, "ms": 0,
+        }
+        self.trace.append(rec)
+        self.budgets["actions"] += 1
+        try:
+            from .observe import observe
+
+            await navigate(self.page, url)
+            observation = await observe(self.page)
+            self.page_bodies[self.page.url] = await page_text(self.page)
+            path = self.run_dir / (f"observation_{self.step_offset}.json" if self.step_offset
+                                   else "observation.json")
+            path.write_text(json.dumps(observation, indent=2))
+            rec["postcondition_ok"] = True
+        except Exception as exc:
+            rec["failure_class"] = "nav"
+            rec["note"] = f"{type(exc).__name__}: {exc}"
+            rec["ms"] = int((time.monotonic() - started) * 1000)
+            self.emit(rec)
+            return None, self.done(failure="nav", reason=f"pre-plan navigation failed: {exc}")
+        rec["ms"] = int((time.monotonic() - started) * 1000)
+        self.emit(rec)
+        return observation, None
+
+
+def _canonical_budget(runtime: _TaskRuntime, calls: int) -> dict:
+    return {"calls": calls, "tokens": runtime.budgets["llm_tokens"],
+            "usd": runtime.budgets["llm_usd"],
+            "ms": int((time.monotonic() - runtime.t0) * 1000)}
+
+
+async def _run_canonical(runtime: _TaskRuntime, planner, url: str | None) -> dict:
+    """Bind existing browser work to ADR-046's callback graph."""
+    from .canonical_contract import STATUSES
+    from .canonical_graph import run as run_graph
+
+    pending = {"authority": "deterministic", "verdict": "PENDING"}
+    failed = {"authority": "deterministic", "verdict": "FAIL"}
+    passed = {"authority": "deterministic", "verdict": "PASS"}
+
+    def running(state, context):
+        return {"status": "running", "verifier": pending, "context": context,
+                "budgets": _canonical_budget(runtime, context.get("calls", 0))}
+
+    def failure(context, cls, reason, record=None):
+        context.update(failure_class=cls, failure_reason=reason, failure_record=record)
+        return context
+
+    async def observe(_state):
+        observation, result = await runtime.observe_start(url)
+        context = {"observation": observation, "result": result, "calls": 0}
+        return {"status": "running", "verifier": pending,
+                "retry": {"used": 0, "limit": 1},
+                "budgets": _canonical_budget(runtime, 0), "evidence": [],
+                "context": context}
+
+    async def route(state):
+        return running(state, dict(state["context"]))
+
+    async def evidence(state):
+        context = dict(state["context"])
+        if not context.get("result"):
+            try:
+                packet = await runtime.capture_evidence()
+            except Exception as exc:
+                failure(context, "extract", f"canonical evidence failed: {exc}")
+            else:
+                return {**running(state, context), "evidence": [packet]}
+        return running(state, context)
+
+    async def plan(state):
+        context = dict(state["context"])
+        retry = dict(state["retry"])
+        if state["status"] == "retryable":
+            retry["used"] += 1
+            observation = await runtime.look()
+            if observation is None:
+                failure(context, "env", "canonical retry could not observe the current page")
+            else:
+                context["observation"] = observation
+        if not context.get("result") and not context.get("failure_class"):
+            if stop := budget_stop(runtime.budgets):
+                failure(context, "env", stop)
+            else:
+                context["calls"] += 1
+                try:
+                    candidate_steps, usage = await planner(task=runtime.task, url=url,
+                                                            observation=context.get("observation"),
+                                                            note=context.get("retry_note"))
+                except PlanError as exc:
+                    runtime.budgets["llm_tokens"] += exc.usage["llm_tokens"]
+                    runtime.budgets["llm_usd"] += exc.usage["llm_usd"]
+                    failure(context, "env", f"planner rejected: {exc}")
+                except Exception as exc:
+                    failure(context, "env", f"planner failed: {exc}")
+                else:
+                    runtime.budgets["llm_tokens"] += usage["llm_tokens"]
+                    runtime.budgets["llm_usd"] += usage["llm_usd"]
+                    context["steps"] = candidate_steps
+        return {**running(state, context), "retry": retry}
+
+    async def act(state):
+        context = dict(state["context"])
+        if not context.get("result") and not context.get("failure_class"):
+            context["attempt_mark"] = {"answers": len(runtime.answers),
+                                       "extractions": len(runtime.extractions),
+                                       "trace": len(runtime.trace)}
+            for step in context.get("steps", []):
+                if stop := budget_stop(runtime.budgets):
+                    failure(context, "env", stop)
+                    break
+                if not isinstance(step, dict) or not isinstance(step.get("action"), str):
+                    failure(context, "task", f"plan step is not executable: {step!r}")
+                    break
+                record, cls = await runtime.attempt(step, note=context.get("retry_note"),
+                                                    recovery="retry" if state["retry"]["used"] else None)
+                context.pop("retry_note", None)
+                if cls:
+                    failure(context, cls, f"step {record['i']} ({step['action']}): {record['note']}",
+                            record)
+                    break
+        return running(state, context)
+
+    async def evaluate(state):
+        context = dict(state["context"])
+        if not context.get("result") and not context.get("failure_class"):
+            answer = runtime.answers[0] if len(runtime.answers) == 1 else (runtime.answers or None)
+            enumerated = next((record.get("rank") for record in runtime.trace
+                               if record.get("action") == "extract_all"
+                               and not record.get("superseded_by")
+                               and not record.get("failure_class")), None)
+            if len(runtime.answers) == 1 and isinstance(answer, list) and enumerated is not None:
+                try:
+                    answer = rank(runtime.task, answer, enumerated)
+                except ValueError as exc:
+                    failure(context, "semantic", str(exc))
+            if not context.get("failure_class"):
+                context["answer"] = answer
+                context["digest"] = (await page_text(runtime.page))[:500]
+                context["verdict"] = verify(trace=runtime.trace, extractions=runtime.extractions,
+                                             answer=answer, task=runtime.task)
+        return running(state, context)
+
+    async def decide(state):
+        context = dict(state["context"])
+        if context.get("result"):
+            status = context["result"].get("status")
+            if status not in STATUSES:
+                raise ValueError(f"invalid canonical terminal result status: {status!r}")
+            return {"route": "failure", "status": status, "verifier": failed,
+                    "context": context, "budgets": _canonical_budget(runtime, context["calls"])}
+        cls, record = context.get("failure_class"), context.get("failure_record")
+        changed = any(not item.get("superseded_by") and item.get("action") in STATE_CHANGING
+                      for item in runtime.trace)
+        retryable = (state["retry"]["used"] < state["retry"]["limit"]
+                     and not changed
+                     and ((cls and record and record["action"] not in STATE_CHANGING)
+                          or (not cls and context.get("verdict", {}).get("verdict") != "PASS")))
+        if retryable:
+            if record is not None:
+                runtime.pending_supersede.append(record)
+            elif mark := context.get("attempt_mark"):
+                # A verifier rejection has no failed record to clear itself.
+                # Its read-only attempt is replaced wholesale by the next one,
+                # including the answer/evidence that made the verdict fail.
+                if runtime.trace[mark["trace"]:]:
+                    runtime.pending_supersede.append(runtime.trace[-1])
+                del runtime.answers[mark["answers"]:]
+                del runtime.extractions[mark["extractions"]:]
+            context["retry_note"] = (context.get("failure_reason")
+                                     or context.get("verdict", {}).get("reason")
+                                     or "deterministic verifier rejected the prior attempt")
+            context.pop("failure_class", None)
+            context.pop("failure_reason", None)
+            context.pop("failure_record", None)
+            return {"route": "plan", "status": "retryable", "verifier": failed,
+                    "context": context, "budgets": _canonical_budget(runtime, context["calls"])}
+        if cls:
+            return {"route": "failure", "status": f"failure:{cls}", "verifier": failed,
+                    "context": context, "budgets": _canonical_budget(runtime, context["calls"])}
+        verdict = context["verdict"]
+        if verdict["verdict"] == "PASS":
+            return {"route": "publish", "status": "accepted", "verifier": passed,
+                    "context": context, "budgets": _canonical_budget(runtime, context["calls"])}
+        return {"route": "review_required", "status": "review_required", "verifier": failed,
+                "context": context, "budgets": _canonical_budget(runtime, context["calls"])}
+
+    callbacks = {"observe": observe, "route": route, "evidence": evidence, "plan": plan,
+                 "act": act, "evaluate": evaluate, "decide": decide}
+    state = await run_graph({"runtime": runtime}, callbacks)
+    context = state["context"]
+    if context.get("result"):
+        result = context["result"]
+    elif state["route"] == "publish":
+        result = runtime.done(answer=context.get("answer"), final_url=runtime.page.url,
+                              digest=context.get("digest"), verdict=context["verdict"])
+    elif state["route"] == "review_required":
+        result = runtime.done(failure="semantic", final_url=runtime.page.url,
+                              reason="canonical review required: " + context["verdict"].get("reason", ""),
+                              verdict=context["verdict"])
+    else:
+        result = runtime.done(failure=context["failure_class"], final_url=runtime.page.url,
+                              reason=context["failure_reason"])
+    result["control_flow"] = {
+        "nodes": state["nodes"], "routes": state["routes"], "status": state["status"],
+        "verifier": state["verifier"], "retry": state["retry"],
+        "evidence_hashes": [{key: packet[key] for key in ("document_id", "source_sha256", "snapshot_sha256")}
+                            for packet in state["evidence"]],
+        "budgets": _canonical_budget(runtime, context["calls"]),
+    }
+    runtime.run_dir.joinpath("result.json").write_text(json.dumps(result, indent=2))
+    return result
+
+
 async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, judge,
                    headless: bool = True, url_guard=None, on_step=None, model=None, browser=None,
                    mode: str = "plan", driver=None, loop_budgets=None,
@@ -1333,9 +1936,11 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
         return await _escalate(task, url, planner, run_dir, judge=judge, headless=headless,
                                url_guard=url_guard, on_step=on_step, model=model,
                                browser=browser, driver=driver, loop_budgets=loop_budgets)
-    if mode not in ("plan", "loop"):
+    if mode not in ("plan", "loop", "canonical"):
         raise ValueError(f"unknown mode {mode!r}")
-    if (driver is None) != (mode != "loop"):
+    if mode == "canonical" and (planner is None or driver is not None):
+        raise ValueError("mode 'canonical' needs a planner and no driver")
+    if mode != "canonical" and (driver is None) != (mode != "loop"):
         raise ValueError(f"mode {mode!r} needs exactly one of planner/driver, not both or neither")
     t0 = time.monotonic()
     run_dir = Path(run_dir)
@@ -1357,31 +1962,31 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
     # the raw material for verify()'s `not_page_furniture` check, keyed by
     # URL so re-visiting a page updates rather than duplicates its evidence.
     page_bodies: dict[str, str] = {}
+    answers: list = []
+    runtime = _TaskRuntime(task, model, mode, run_dir, t0, trace, budgets,
+                           answers, extractions, judge)
+    runtime.page_bodies = page_bodies
+    runtime.step_offset = step_offset
+    runtime.pending_supersede = pending_supersede
 
     # Hand each finished step to a live watcher (the gateway's SSE endpoint).
     # Every attempt is emitted, including the ones a ladder supersedes: the
     # stream is the trace, not a highlight reel (stream-shows-every-step).
     emit = on_step or (lambda _rec: None)
+    runtime.emit = emit
 
-    def done(answer=None, failure=None, reason=None, final_url=None, digest=None, verdict=None):
-        budgets["ms"] = int((time.monotonic() - t0) * 1000)
-        result = assemble_result(trace, answer, budgets, failure, reason, final_url,
-                                 digest, extractions, verdict, model, mode)
-        (run_dir / "trace.jsonl").write_text("\n".join(json.dumps(s) for s in trace) + "\n")
-        (run_dir / "result.json").write_text(json.dumps(result, indent=2))
-        return result
+    done = runtime.done
 
     if reason := screen(task):
         return done(failure="unsupported", reason=reason)
 
     from playwright.async_api import async_playwright
 
-    from .observe import DRILL_TEXT_HEAD, image_accessible_name, observe
-
     # At most one scoped observation, produced by an `observe` step and consumed
     # by the replan it triggers. A list rather than a variable so `execute`
     # (nested) can write it without a `nonlocal` dance.
     drilled: list[dict] = []
+    runtime.drilled = drilled
 
     # M43 (ADR-035): is the observation the CURRENT driver call was emitted from
     # bearing a VIEWPORT screenshot? The loop's `see()` arms it, a drill
@@ -1389,6 +1994,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
     # `click_at` refusal reads one cell in both modes. Same no-`nonlocal` shape
     # as `drilled`.
     vision: list[bool] = [False]
+    runtime.vision = vision
     # The Page or Frame the CURRENT attempt's target resolved in — `execute`
     # fills it, `attempt` resets it per step and hands it to `check_state` so
     # the postcondition is checked in the document the action touched
@@ -1401,76 +2007,8 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
     # their existing URL/postcondition semantics; this closes the demonstrated
     # iframe successor-document hole without widening the blast radius.
     acted_document: list[str | None] = [None]
-
-    answers: list = []
-
-    async def finalize(final_url, digest):
-        """Everything between the last action and the result, for BOTH modes.
-
-        One extract -> scalar answer; several -> list (contract: answer
-        string|list). An `extract_all` enumeration is reduced HERE, in code:
-        the run gathered every candidate and `rank` picks the one the task's
-        superlative asks for. Whether to reduce is the PLAN's (or the loop's)
-        declaration, not a guess from the task text — three repairs guessed,
-        from the answer's shape, from `is_aggregate`, then from a three-word
-        enumerate regex, and each shipped a raw enumeration as the answer to a
-        single-answer question (PR #29 R2, R9, R16). The executor refuses an
-        `extract_all` that does not declare, so by the time an enumeration
-        reaches here `enumerated` is a bool, never a guess. Everything about
-        the COMPARISON is still code's: which value wins, and by what rule.
-
-        The `len(answers) == 1` half is about the PLAN, not the task: a run
-        that also extracts something else is composing a list, not ranking one
-        (multi-extract-list). More than one enumeration never reaches here for
-        an aggregate task, because `plan_gap` runs at EVERY point where mode B
-        adopts a plan — the first plan, an act-ladder replan (PR #29 R3), and
-        the drill-down replan M32 added, which was adopted unlinted until
-        PR #34 R16 and made this sentence false: a mid-run drill-down could add
-        a second enumeration and the run reported `success` with a list of
-        lists. All three splice through one `adopt()`, so the claim rests on
-        there being one path rather than on three call sites being remembered.
-        Loop mode has no adoption point at all, which is why the same
-        `plan_gap` is asked once more over the executed trace before this
-        function is reached (ADR-027 Decision 5). A tie is refused rather than
-        guessed, and a refusal is `semantic`: the page was read correctly and
-        does not decide.
-
-        Extracted as a function by M42 because loop mode has to reach it from
-        inside the browser context while mode B reaches it from outside, and
-        two copies of the grading tail is exactly the divergence ADR-027's
-        "the verifier and the judge are shared" forbids.
-
-        ponytail: extractions from an executed prefix are kept, so a replan
-        that re-extracts the same value would append it twice and turn a scalar
-        answer into a list. No case produces it (ADR-003); dedupe by (value,
-        step intent) if one ever does.
-        """
-        answer = answers[0] if len(answers) == 1 else (answers or None)
-        # Superseded attempts are excluded, and in loop mode that filter is
-        # what makes this correct rather than decorative: a first `extract_all`
-        # that omitted `rank` is refused by `execute` in a message that teaches
-        # the model the exact retry, so "the first enumeration in the trace" was
-        # the FAILED one, `enumerated` came back None, `rank` never ran, and the
-        # raw candidate list was the answer to a which-one question (cold review
-        # 2, `loop-failed-enumeration-does-not-disarm-rank`).
-        enumerated = next((s.get("rank") for s in trace
-                           if s.get("action") == "extract_all" and not s.get("superseded_by")
-                           and not s.get("failure_class")),
-                          None)
-        if len(answers) == 1 and isinstance(answer, list) and enumerated is not None:
-            try:
-                answer = rank(task, answer, enumerated)
-            except ValueError as e:
-                return done(failure="semantic", reason=str(e), final_url=final_url, digest=digest)
-        # The run is graded by the verifier, not by having reached this line.
-        verdict = verify(trace=trace, extractions=extractions, answer=answer, task=task)
-        # M36: the judge is the LAST rung of the escalation ladder -- a run that
-        # failed L1 needs no judge call, the free deterministic checks above
-        # already caught it (cost-discipline rule 1). Only a run that survived
-        # every one of them reaches the terminal-verdict boundary.
-        if verdict["verdict"] == "PASS":
-            verdict = await _apply_judge(judge, task, answer, extractions, verdict, budgets)
-        return done(answer=answer, final_url=final_url, digest=digest, verdict=verdict)
+    runtime.acted_scope = acted_scope
+    runtime.acted_document = acted_document
 
     async with contextlib.AsyncExitStack() as stack:
         if browser is None:
@@ -1479,761 +2017,14 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
             stack.push_async_callback(browser.close)
         ctx = await browser.new_context(storage_state=origin_storage_state())
         page = await ctx.new_page()
+        runtime.page = page
+        runtime.url_guard = url_guard
         try:
-            # Pre-plan navigation + observation: the planner never plans blind
-            # (live failures dee8ad5d / 2e70785a — guessed roles, invented
-            # postconditions). The evolving prefix itself is below: a step whose
-            # postcondition fails is replaced by a plan made from the page now.
-            obs = None
-            if url:
-                if url_guard and not url_guard(url):
-                    return done(failure="task", reason=f"blocked URL: {url!r}")
-                s0 = time.monotonic()
-                rec = {
-                    # `step_offset + 1`, not 1: an escalation's second leg
-                    # continues the first leg's numbering (ADR-037 Decision 4).
-                    "i": step_offset + 1,
-                    "action": "navigate", "target": None, "value": url, "anchor": None,
-                    "rank": None, "resolved": None, "expected_state": None, "postcondition_ok": None,
-                    "failure_class": None, "note": "pre-plan observation",
-                    "retry_or_recovery": None, "superseded_by": None, "page_changed": None,
-                    "screenshot": None, "ms": 0,
-                }
-                trace.append(rec)
-                budgets["actions"] += 1
-                try:
-                    await navigate(page, url)
-                    obs = await observe(page)
-                    page_bodies[page.url] = await page_text(page)
-                    # Named from the same index the step is, so an escalation's
-                    # second leg cannot overwrite the record of what the FIRST
-                    # leg's planner was shown — the `step_N.png` collision one
-                    # artifact over, found by the cold review of M46 while
-                    # ADR-037 Decision 4 claimed to have closed the class. The
-                    # unoffset name is kept for a single-leg run, which is every
-                    # `plan` and `loop` run there has ever been.
-                    (run_dir / (f"observation_{step_offset}.json" if step_offset
-                                else "observation.json")).write_text(json.dumps(obs, indent=2))
-                    rec["postcondition_ok"] = True
-                except Exception as e:
-                    rec["failure_class"] = "nav"
-                    rec["note"] = f"{type(e).__name__}: {e}"
-                    rec["ms"] = int((time.monotonic() - s0) * 1000)
-                    emit(rec)
-                    return done(failure="nav", reason=f"pre-plan navigation failed: {e}")
-                rec["ms"] = int((time.monotonic() - s0) * 1000)
-                emit(rec)
-
-            async def execute(step, rec):
-                """Perform one step against the page. Raises; the caller classifies."""
-                action = step["action"]
-                if action == "navigate":
-                    if url_guard and not url_guard(step.get("value") or ""):
-                        raise StepError("task", f"blocked URL: {step.get('value')!r}")
-                    await navigate(page, step["value"])
-                    return
-                if action not in ACTIONS:
-                    raise StepError("task", f"unknown action {action!r}")
-                if action == "final_answer":
-                    # The loop's terminal call. It performs nothing — the answer
-                    # is assembled in code from what was extracted, never from
-                    # what the model says — but it IS a tool call, so it gets a
-                    # trace record like every other one and the run's terminal
-                    # decision is in the evidence rather than implied by it.
-                    return
-                if action == "wait_for":
-                    # The wait IS the postcondition: `attempt` calls
-                    # `check_state` on the way out, which polls for the same
-                    # SETTLE_BUDGET_MS a postcondition gets and fails `act` when
-                    # the predicate never holds. So there is nothing to do here
-                    # except refuse a wait that does not say what it waits for —
-                    # which would otherwise be a sleep, and the domain skill's
-                    # rule is never sleep, always assert.
-                    if not step.get("expected_state"):
-                        raise StepError("task", "a wait_for must carry the expected_state it is "
-                                                "waiting for; a wait with no predicate is a sleep")
-                    return
-                if action == "go_back":
-                    # Browser history, the one navigation primitive that needs
-                    # no URL. `go_back` returns None when there was nothing to
-                    # go back to, which is an act failure and not a quiet no-op
-                    # the next step reads through.
-                    #
-                    # ponytail: Playwright also returns None for a same-document
-                    # history entry, so an in-page back on a pushState app reads
-                    # as a failure here. No fixture has that shape; the upgrade
-                    # is to compare page.url before and after instead, once one
-                    # does.
-                    if await page.go_back(wait_until="domcontentloaded") is None:
-                        raise StepError("act", "go_back: this tab has no earlier page to "
-                                               "return to")
-                    return
-                if action == "click_at":
-                    # M43 (ADR-035 Decision 4): a coordinate click, for the
-                    # element no tier can name — postmortem S2's control half.
-                    # CLOSED-WORLD about where the coordinates came from, the
-                    # same ruling `resolver-unknown-target-key` makes about
-                    # arguments: coordinates the model never saw are a plan
-                    # quietly invented. Refused as the call is emitted unless
-                    # the loop marked the observation this call was emitted
-                    # from as bearing a VIEWPORT screenshot — an element-scoped
-                    # drill image does not arm it (the gate reads the frame
-                    # LABEL: a crop taken to show a sub-region is labelled
-                    # `element` however its pixels happen to line up, which is
-                    # provenance and not origin arithmetic — ADR-035 Decision 2,
-                    # PR #70 R10/R12), and mode B never arms it (its planning
-                    # observation carries no screenshot).
-                    # Out-of-viewport coordinates are deliberately not
-                    # pre-checked: nothing is there, the click changes nothing,
-                    # and the authored expected_state fails the step — the
-                    # postcondition is the gate, `click`'s own ruling.
-                    if not vision[0]:
-                        raise StepError(
-                            "task", "click_at needs coordinates read off the screenshot you "
-                                    "were just shown, and this call was not emitted from a "
-                                    "viewport-screenshot-bearing observation (a drill's "
-                                    "element-scoped image has a different coordinate frame), "
-                                    "so these coordinates cannot come from anything this run "
-                                    "saw. Name an element semantically, or look at the full "
-                                    "page again first")
-                    try:
-                        x, y = (float(v) for v in str(step.get("value") or "").split(","))
-                    except ValueError:
-                        raise StepError("task", "click_at needs `value` as \"x,y\" viewport "
-                                                f"CSS pixels; got {step.get('value')!r}")
-                    await page.mouse.click(x, y)
-                    return
-                # A key the resolver does not implement used to be dropped, and
-                # the step ran against whatever was left of its target — the plan
-                # quietly reinterpreted, the run reported on the weaker task it
-                # actually did (case resolver-unknown-target-key).
-                if unknown := set(step.get("target") or {}) - TARGET_KEYS:
-                    raise StepError("task", f"unsupported target key(s) {sorted(unknown)}")
-                # `index` and `near` both mean "of these matches, that one", which
-                # is the opposite of what `extract_all` asks for. Honouring the
-                # selector would enumerate exactly one value, rank it against
-                # nothing, and hand the verifier a trace whose `extract_all` step
-                # relaxes the aggregate guard for a single-shot read — the wrong
-                # answer of run 734d3d1f wearing this milestone's badge. Closed
-                # the same way an unknown target key is: loudly, as a plan the
-                # executor will not reinterpret (case extract-all-refuses-a-selector).
-                if action == "extract_all" and any(
-                        (step.get("target") or {}).get(k) is not None for k in ("index", "near")):
-                    raise StepError("task", "extract_all enumerates every match; `index`/`near` "
-                                            "select one, so the plan says two different things")
-                # `extract_all` returns a set, and the answer is either that set
-                # or one item of it. Nothing in the plan's shape, the page or the
-                # trace distinguishes them, and three repairs that inferred it
-                # from the task text each shipped a raw enumeration as the answer
-                # to a single-answer question (PR #29 R2, R9, R16). So the plan
-                # must say, and a plan that does not is one the executor cannot
-                # honour — the same closed-world refusal an unknown action or an
-                # unsupported target key already gets
-                # (case extract-all-undeclared-intent-fails-loud).
-                if action == "extract_all" and not isinstance(step.get("rank"), bool):
-                    raise StepError("task", "extract_all must declare `rank`: true if the answer "
-                                            "is the one item the task ranks for, false if the "
-                                            "answer is the enumeration itself")
-                # `extract_all` wants every match, so ambiguity is the answer
-                # rather than a locate failure — the only difference in how a
-                # target is resolved.
-                # ADR-024's refusal, re-homed to tool-call time (ADR-027
-                # Decision 5). In mode B `plan_gap` has already refused this
-                # plan and the clause is unreachable; in loop mode this IS the
-                # refusal, raised as the call is emitted so the root read never
-                # happens, and the model is told why and chooses again.
-                if gap := root_target_gap(step):
-                    raise StepError("task", gap)
-                loc = None
-                if step.get("target") or action in NEEDS_TARGET:
-                    loc, tier, narrowed, scope = await resolve(
-                        page, step.get("target") or {}, many=action == "extract_all",
-                        anchor=step.get("anchor"), task=task, action=action)
-                    # WHICH document the target resolved in (ADR-036, amending
-                    # ADR-028 §7): the postcondition below is checked in this
-                    # scope. A URL rather than a frame index keeps the public
-                    # trace readable; the live scope object and its one-use
-                    # document marker stay internal because equal URLs (such
-                    # as about:srcdoc) do not identify a document (T-M42-14).
-                    acted_scope[0] = scope
-                    if (scope is not page and step.get("expected_state")
-                            and any(k != "url_contains" for k in step["expected_state"])):
-                        acted_document[0] = f"__browser_agent_document_{time.monotonic_ns()}"
-                        try:
-                            await scope.evaluate(
-                                "key => { globalThis[key] = true; }", acted_document[0])
-                        except Exception:
-                            # Verification will read the missing marker as
-                            # unverifiable; failing open here recreates the bug.
-                            pass
-                    rec["resolved"] = {"tier": tier, "description": str(step.get("target")),
-                                       "scope": scope.url, "narrowed": narrowed}
-                # WHICH narrowing rung settled an ambiguity the plan left open
-                # (M38). It goes in the trace because a run that answered from
-                # one of several matches has to say so — but NOT as
-                # `retry_or_recovery`: nothing failed and no ladder ran, the
-                # same ruling the plan lint above and M32's drill-down got, and
-                # the recovery metric counts rungs that rescued a classified
-                # failure (specs/001, ADR-003).
-                    if narrowed:
-                        rec["note"] = "; ".join(
-                            x for x in (rec["note"], f"narrowed: {narrowed}") if x)
-                if action == "observe":
-                    # An observation asserts nothing about the page, so there is
-                    # nothing for an expected_state to hold. Refused rather than
-                    # ignored (`resolver-unknown-target-key`'s rule): left to
-                    # `check_state`, a failing assertion raised StepError("act")
-                    # for a step that acted on nothing, diagnosed the run
-                    # `failure:act` and opened the act/replan recovery ladder for
-                    # it (M32 cold review, runner-up; case
-                    # observe-step-cannot-carry-expected-state).
-                    if step.get("expected_state"):
-                        raise StepError(
-                            "task", "an observe step cannot carry expected_state: "
-                                    f"{step['expected_state']}")
-                    # Drill-down (M32, ADR-020): re-observe THIS subtree with the
-                    # whole element budget and a longer text head, then hand it
-                    # to the replanner below. Reads the page and changes nothing,
-                    # so like `extract` it has no postcondition of its own.
-                    drilled.append(await observe(page, root=loc,
-                                                 text_head=DRILL_TEXT_HEAD))
-                    # M43 (ADR-035 Decision 2): in loop mode the drill also
-                    # LOOKS — an element-scoped capture attached to the scoped
-                    # observation, so a vision model examining a dense region
-                    # sees that region's pixels, not the whole page shrunk.
-                    # The step's TRACE evidence stays the viewport shot
-                    # `attempt` takes; this file is model input beside it.
-                    # `screenshot_frame: "element"` is what keeps the crop
-                    # from arming `click_at` — the label records that the crop
-                    # was taken to show a sub-region, and the gate reads the
-                    # label, never the geometry (ADR-035 Decision 2).
-                    # Best-effort like every
-                    # capture: a failed shot leaves an image-less drill, which
-                    # is M42's whole behaviour. Mode B is untouched — its
-                    # planner consumes no images, and a file nothing reads is
-                    # a behaviour change nothing asks for.
-                    #
-                    # The crop is a VIEWPORT shot clipped to the element's box,
-                    # not `loc.screenshot()` (PR #70 R1). Playwright's
-                    # element screenshot runs an actionability check that
-                    # SCROLLS the element into view, and a scroll is a state
-                    # change on any lazy-load page: looking closer loads
-                    # content nobody acted for, recorded as a step that changed
-                    # nothing because `observe` is in READ_ONLY_ACTIONS
-                    # (`loop-drill-capture-does-not-scroll-the-page`). Clipping
-                    # cannot move the page, so an element that is off-screen
-                    # simply gets no crop — the same best-effort degrade a
-                    # failed capture already takes, and cheaper than the
-                    # alternative of scrolling and scrolling back, which
-                    # restores the offset but not what the scroll loaded.
-                    #
-                    # EVERY await in here passes SCREENSHOT_TIMEOUT_MS, the
-                    # `bounding_box` included (PR #70 R7). "Best-effort" and
-                    # "unbounded" cannot both be true — the same rule the
-                    # `attempt` capture states with its receipts (32s and 64s
-                    # inside a suite ADR-002 budgets at 60s), and it applies
-                    # here for the same reason: this block swallows everything
-                    # it raises, so an unbounded wait is invisible rather than
-                    # loud. `bounding_box()` inherits Playwright's 30s default
-                    # and blocks the full 30s on a locator that matches
-                    # nothing — measured, not assumed. The first version of
-                    # this repair dropped the bound while removing the call
-                    # that carried it, which is the defect the repair was
-                    # about, so the constant is named on each await.
-                    if mode == "loop":
-                        shot = f"step_{rec['i']}_element.png"
-                        try:
-                            box = await loc.bounding_box(timeout=SCREENSHOT_TIMEOUT_MS)
-                            vp = page.viewport_size or {}
-                            x0, y0 = max(box["x"], 0.0), max(box["y"], 0.0)
-                            x1 = min(box["x"] + box["width"], vp.get("width", 0))
-                            y1 = min(box["y"] + box["height"], vp.get("height", 0))
-                            if x1 > x0 and y1 > y0:
-                                await page.screenshot(
-                                    path=str(run_dir / shot), timeout=SCREENSHOT_TIMEOUT_MS,
-                                    clip={"x": x0, "y": y0, "width": x1 - x0,
-                                          "height": y1 - y0})
-                                drilled[-1].update(screenshot=shot,
-                                                   screenshot_path=str(run_dir / shot),
-                                                   screenshot_frame="element")
-                        except Exception:
-                            pass
-                elif action == "click":
-                    await loc.click(timeout=10_000)
-                elif action == "fill":
-                    # An element that cannot hold a value is the WRONG element,
-                    # so this is a locate failure however Playwright phrases it.
-                    # Called it `act` and the act ladder (replan) chased a problem
-                    # the locate ladder (different tier) owns — which is how a
-                    # relocation onto a non-fillable match laundered its own
-                    # failure class on a live site (relocate-fill-non-editable,
-                    # live-ol-search-a11y-invisible).
-                    if not await loc.evaluate(FILLABLE_JS):
-                        raise StepError("locate", f"resolved element is not fillable: {step.get('target')}")
-                    await loc.fill(step.get("value") or "", timeout=10_000)
-                    # A fill verifies itself by readback, so it needs no authored
-                    # postcondition to count as checked.
-                    back = await loc.input_value()
-                    if back != (step.get("value") or ""):
-                        raise StepError("act", f"field readback {back!r} != filled value")
-                    rec["postcondition_ok"] = True
-                elif action == "select_option":
-                    # The options are READ first, then one is chosen by value.
-                    # Letting Playwright match the string itself would mean two
-                    # attempts (label, then value), each burning its own timeout
-                    # on the failure path — 20s per absent option in a suite
-                    # budgeted at 90s — and would tell the model nothing about
-                    # what it could have picked instead.
-                    # T-M42-20-D5: a `select_option` with no `value` used to
-                    # become `want = ""`, and `"" in anything` is True — so it
-                    # matched the FIRST option, selected it, read it back
-                    # successfully and recorded `postcondition_ok: True` for a
-                    # filter nobody asked for. `press` already refuses its
-                    # missing-value shape and this did not; `plan_gap` type-checks
-                    # neither. A step the executor cannot honour is `task`, which
-                    # is the same ruling and the same class `press` uses.
-                    want = step.get("value")
-                    if not isinstance(want, str) or not want:
-                        raise StepError("task", "select_option needs a `value` naming the option "
-                                                f"to choose; got {step.get('value')!r}")
-                    opts = await loc.evaluate(OPTIONS_JS)
-                    if opts is None:
-                        # The target resolved; this action cannot operate the
-                        # control. Replan to another verb instead of relocating
-                        # an element we already found (T-M42-20-D7).
-                        raise StepError("act", "resolved element has no options to select: "
-                                               f"{step.get('target')}")
-                    if not opts:
-                        # NO options is not the same as no MATCHING option. A
-                        # `<select>` painted from a `fetch()` is in the DOM,
-                        # resolvable and empty until the response lands, and the
-                        # eager read above is taken the instant the element
-                        # resolved — which is precisely the auto-wait that
-                        # reading the options ourselves gives up. So wait for the
-                        # first option to exist, once, and read again. A control
-                        # that never fills still fails loudly below, having paid
-                        # the wait; nothing else on the page is waited on
-                        # (`action-select-option-waits-for-fetch-painted-options`).
-                        try:
-                            # `attached`, not the default `visible`: the options
-                            # of a closed `<select>` are never visible, so the
-                            # default state waits out the whole timeout and only
-                            # then reads a list that arrived seconds earlier
-                            # (measured: 10.2s vs 1.6s on the case below).
-                            #
-                            # SELECT_OPTIONS_WAIT_MS, not the 10s the select
-                            # call below gets: this budget is paid IN FULL by
-                            # every control that never fills, and at 10s that was
-                            # 10.0s per such step with no case measuring it,
-                            # inside a wall-clock-gated suite (PR #60 R4, case
-                            # action-select-option-never-filled-fails-loud).
-                            await loc.locator("option").first.wait_for(
-                                state="attached", timeout=SELECT_OPTIONS_WAIT_MS)
-                        except Exception:
-                            pass  # let the empty-offer message below say it
-                        opts = await loc.evaluate(OPTIONS_JS)
-                    # T-M42-20-D5, the other half: `want in o` searched the
-                    # (value, label) PAIR, so a wanted string matched either
-                    # field and the first hit won. On
-                    # `<option value='2024'>FY 2023</option>` beside
-                    # `<option value='2025'>FY 2024</option>`, `want='2024'`
-                    # matched the FY 2023 row by its value, selected it, read it
-                    # back against its own match and reported success — the page
-                    # firing `change` for a filing nobody asked for. The readback
-                    # could not catch it because it compares to `match[0]`, which
-                    # is self-consistent by construction.
-                    #
-                    # Exact before substring, and value before label, because
-                    # "which option did the user mean" has a right answer when
-                    # one field matches exactly and a guess when several match
-                    # loosely. A guess that cannot be told from a hit is what
-                    # this defect was.
-                    exact = [o for o in opts if want in (o[0], o[1])]
-                    if len(exact) > 1:
-                        # Two options genuinely answer to this string. Refusing
-                        # is the same fail-closed ruling the resolver applies to
-                        # an ambiguous target: picking one silently is how the
-                        # wrong filing got selected in the first place.
-                        raise StepError("act", f"{want!r} matches {len(exact)} options "
-                                               f"({[(v, l) for v, l in exact]}); name one exactly")
-                    match = exact[0] if exact else None
-                    if match is None:
-                        loose = [o for o in opts if want in o[0] or want in o[1]]
-                        match = loose[0] if len(loose) == 1 else None
-                    if match is None:
-                        raise StepError("act", f"no option matches {want!r}; this control offers "
-                                               f"{[label for _v, label in opts]}")
-                    await loc.select_option(value=match[0], timeout=10_000)
-                    # Readback, for the reason `fill` reads back: the postcondition
-                    # is what the browser says is selected, not that the call
-                    # returned (`action-select-option-refuses-an-absent-option`).
-                    if await loc.input_value() != match[0]:
-                        raise StepError("act", f"select readback is not {want!r}")
-                    rec["postcondition_ok"] = True
-                elif action == "press":
-                    # State-changing like a click, and verified the same way: by
-                    # the authored expected_state, which `verify` now requires of
-                    # every state-changing verb rather than of `click` alone.
-                    if not step.get("value"):
-                        raise StepError("task", "a press must name the key in `value`")
-                    if loc is not None:
-                        await loc.press(step["value"], timeout=10_000)
-                    else:
-                        await page.keyboard.press(step["value"])
-                elif action == "scroll":
-                    # `window.scrollBy`, not `mouse.wheel`: the wheel dispatches
-                    # an event and the scroll lands whenever it lands, so the
-                    # postcondition below would be a race. This is the same
-                    # site-agnostic primitive either way — no selector, no DOM
-                    # path, nothing a reader could not do.
-                    before_y = await page.evaluate("() => window.scrollY")
-                    if loc is not None:
-                        await loc.scroll_into_view_if_needed(timeout=10_000)
-                        if not await loc.is_visible():
-                            raise StepError("act", "scrolled to the target and it is still not "
-                                                   f"visible: {step.get('target')}")
-                    else:
-                        await page.evaluate("d => window.scrollBy(0, d)",
-                                            int(step.get("value") or 800))
-                        if await page.evaluate("() => window.scrollY") == before_y:
-                            raise StepError("act", "scroll moved nothing: the page is already at "
-                                                   "that position, so there is nothing further "
-                                                   "down to read")
-                    rec["postcondition_ok"] = True
-                else:
-                    # `extract` reads one element; `extract_all` reads every
-                    # match, which is the comparison primitive the plan
-                    # vocabulary lacked (probe #3, live-books-cheapest-travel).
-                    # The ranking over those values happens in code at answer
-                    # assembly, never in the model.
-                    vals = ([v.strip() for v in await loc.all_inner_texts()]
-                            if action == "extract_all" else [(await loc.inner_text()).strip()])
-                    # Some readable controls have no rendered text at all: an
-                    # image link can expose its whole meaning through the same
-                    # accessible name `observe` advertised and `resolve`
-                    # matched. Falling back on THAT resolved element closes the
-                    # observation -> resolution -> extraction round trip; it is
-                    # not a search for a nearby value and cannot change which
-                    # element the plan selected.
-                    accessible_value = ""
-                    target_role = str((step.get("target") or {}).get("role") or "").lower()
-                    if action == "extract" and target_role == "link" and not vals[0]:
-                        accessible_value = vals[0] = await image_accessible_name(loc)
-                    vals = [v for v in vals if v]
-                    if not vals:
-                        raise StepError("extract", "extraction returned empty text")
-                    bases: dict = {}
-                    body = await page_text(page, bases=bases)
-                    # `grounded` must see the browser evidence the extraction
-                    # actually read. Accessible names are not in innerText, so
-                    # append only fallback values to this extraction's bounded
-                    # evidence copy; page state and postconditions keep their
-                    # existing rendered-text semantics.
-                    evidence_body = body + ("\n" + accessible_value if accessible_value else "")
-                    # T-M42-3: the offset hint `TEXT_OFFSET_JS` returns is
-                    # relative to the element's OWN frame's body, while `body`
-                    # above is every frame concatenated — so for an element
-                    # inside an iframe the hint is short by everything before
-                    # that frame, and `_closest_occurrence` chooses among
-                    # duplicate occurrences on an offset that means something
-                    # else. `bases` is where each document starts in `body`;
-                    # adding the acted scope's base makes the two agree. Zero
-                    # for the main frame and for every frameless page, so
-                    # nothing that worked changes.
-                    frame_base = bases.get(acted_scope[0], 0)
-                    # T-M42-5: the DOCUMENT the value was read from, which is
-                    # not the same string as `body` once frames are in play.
-                    # `body` is every frame concatenated (M42 made `page_text`
-                    # frame-piercing), while `not_a_dump`'s 0.35 ratio was
-                    # calibrated by ADR-008 on main-frame `innerText` over a
-                    # 25-record confusion matrix. A page with a substantial
-                    # iframe therefore inflates the DENOMINATOR, and a value
-                    # that is a dump of its own document passes. No committed
-                    # case moved when M42 changed this, because no fixture in
-                    # the calibration set has a frame — the ratio was measured
-                    # on pages that no longer exist in the shape it was measured
-                    # on.
-                    #
-                    # This is the narrower of the two answers T-M42-5 offered,
-                    # and it is chosen over re-deriving DUMP_RATIO because
-                    # guessing a new ratio is exactly what ADR-008 exists to
-                    # prevent: re-deriving needs framed pages in `evals/labels/`
-                    # and a re-run confusion matrix, which is a measurement task,
-                    # not an edit. `acted_scope[0]` is the scope `resolve`
-                    # returned, already recorded for the postcondition; falling
-                    # back to `body` keeps every frameless page byte-identical.
-                    scope_now = acted_scope[0]
-                    try:
-                        doc_len = len(await page_text(scope_now, frames=False)
-                                      if scope_now is page or scope_now is None
-                                      else await page_text(scope_now))
-                    except Exception:
-                        doc_len = len(body)
-                    anchor = step.get("anchor")
-                    # Identity anchor (verifier L1): the entity the task names
-                    # must be present where the answer was read.
-                    #
-                    # Checked BEFORE the appends below, not after them. It used
-                    # to fire once `answers` and `extractions` already held the
-                    # rejected read, which was harmless only because a semantic
-                    # failure ended the run on the spot. It no longer does (the
-                    # ladder in family 3 replans on it), and a rejected value
-                    # left in `answers` would be carried into the replan's
-                    # answer -- turning a scalar into a list, or answering with
-                    # the very read the anchor just refused.
-                    if anchor and anchor not in evidence_body:
-                        raise StepError(
-                            "semantic",
-                            f"identity anchor {anchor!r} absent from the page "
-                            "the answer was read from")
-                    # M34 R2-1: which occurrence of `val` is this, when it is not
-                    # unique on the page (a decoy blurb beside the real answer,
-                    # case verifier-context-anchors-real-occurrence)? A DOM-derived
-                    # hint (TEXT_OFFSET_JS) picks the real one via `_closest_
-                    # occurrence`, rather than `evidence_window`/`_context` always
-                    # taking the first. `real_offset < 0` (value somehow not found
-                    # in body at all -- should not happen when `loc.inner_text()`
-                    # just returned it, but this is evidence capture, not an
-                    # assumption) degrades to the old first-occurrence behaviour
-                    # in both `evidence_window` and `value_offset` below.
-                    # `.first` is load-bearing: an `extract_all` locator resolves
-                    # to every match, and Playwright's strict mode refuses
-                    # `evaluate` on a multi-match locator. The hint is about
-                    # vals[0] either way; every later value falls back to its own
-                    # first occurrence, below.
-                    real_offset = _closest_occurrence(
-                        evidence_body, vals[0],
-                        await loc.first.evaluate(TEXT_OFFSET_JS) + frame_base)
-                    # body_len is the real page the value was read from -- verify()'s
-                    # not_a_dump denominator prefers this over len(page_text), because
-                    # page_text is evidence_window()'s output: capped at PAGE_TEXT_KEEP
-                    # and doubled when a distant anchor forces a second window onto it
-                    # (case verifier-dump-ratio-anchor-flip).
-                    # M34: evidence for verify()'s `not_page_furniture` -- every
-                    # OTHER distinct page this run has already loaded, excluding
-                    # the one the value was just read from. A value that is also
-                    # verbatim on a different page is very likely nav/banner
-                    # furniture, not an answer to a page-specific question
-                    # (docs/analysis.md §8a-3). Recorded BEFORE this page's own
-                    # body is (re-)stored below, so a page never gets compared
-                    # against itself.
-                    #
-                    # M31: one evidence record per enumerated value, because
-                    # `grounded`, `not_a_dump` and `not_page_furniture` all judge
-                    # per extraction — an enumeration is judged row by row
-                    # (verifier-list-rows-not-a-dump), not as one page-sized blob.
-                    # `extract` contributes exactly one value, so the loop is the
-                    # same code for both verbs.
-                    other_page_text = " ".join(t for u, t in page_bodies.items() if u != page.url)
-                    for i, v in enumerate(vals):
-                        # M34 R2-1: which occurrence of `v` is this, when it is
-                        # not unique on the page? The DOM hint picks the real one
-                        # rather than always taking the first.
-                        #
-                        # T-R38: per ROW. This used to be `real_offset if v ==
-                        # vals[0] else _closest_occurrence(body, v, -1)`, so rows
-                        # 2..n of an `extract_all` got hint -1 — plain
-                        # first-occurrence, the pre-M34 behaviour — while
-                        # `docs/support-matrix.md` D24 said the context is
-                        # "anchored to the actual DOM occurrence it was read
-                        # from". `verify()` judges an enumeration row by row, so
-                        # a row anchored to the wrong occurrence is judged on
-                        # somebody else's evidence: `not_page_furniture` compares
-                        # that row's window against the other pages this run
-                        # loaded, and a window centred on the wrong copy of the
-                        # string can clear a check the right copy would fail, or
-                        # fail one it would clear.
-                        #
-                        # `loc.nth(i)`, not `loc.first`: `.first` was correct only
-                        # because Playwright's strict mode refuses `evaluate` on a
-                        # multi-match locator, and `.nth(i)` satisfies that the
-                        # same way while asking about the row actually in hand.
-                        # It costs one `evaluate` per row where the old code cost
-                        # one per step; `extract_all` has no cap on matches
-                        # (T-EXTRACT-ALL-VOLUME), so if that ever shows up in the
-                        # wall clock the answer is that cap, not this hint.
-                        try:
-                            hint = await loc.nth(i).evaluate(TEXT_OFFSET_JS)
-                        except Exception:
-                            # Evidence capture, not an assumption: a row whose
-                            # element went away between the read and here degrades
-                            # to its own first occurrence rather than killing a
-                            # run that already has its answer.
-                            hint = -1
-                        off = _closest_occurrence(
-                            evidence_body, v, hint if hint < 0 else hint + frame_base)
-                        extractions.append(
-                            {"value": v,
-                             "page_text": evidence_window(evidence_body, v, anchor, offset=off),
-                             "body_len": doc_len, "other_page_text": other_page_text,
-                             "value_offset": (off - _window_lo(evidence_body, off))
-                             if off >= 0 else None})
-                    page_bodies[page.url] = body
-                    answers.append(vals if action == "extract_all" else vals[0])
-
-            async def attempt(step, note=None, recovery=None):
-                """One execution of one step: appends its trace record, returns
-                (record, failure class or None). Every attempt is recorded —
-                including the ones a ladder later supersedes — because the trace
-                is what shows an evaluator that the strategy changed."""
-                rec = {
-                    "i": step_offset + len(trace) + 1,
-                    "action": step["action"], "target": step.get("target"),
-                    "value": step.get("value"), "anchor": step.get("anchor"),
-                    "rank": step.get("rank"), "resolved": None,
-                    "expected_state": step.get("expected_state"), "postcondition_ok": None,
-                    "failure_class": None, "note": note, "retry_or_recovery": recovery,
-                    "superseded_by": None, "page_changed": None, "screenshot": None, "ms": 0,
-                }
-                trace.append(rec)
-                # A replan is only allowed to skip the step it replaces once the
-                # replacement attempt actually exists. Writing the pointer early
-                # shipped traces whose run-killing step claimed to be superseded
-                # by an index that was never created (case supersede-never-dangles).
-                # `observe` is excluded: `superseded_by` claims "this failed
-                # attempt was replaced by that one", and an observation replaces
-                # nothing — it reads. The pointer waits for the first attempt
-                # that actually acts (PR #34 R1/R2). If the run ends before one,
-                # nothing is written and the failed step keeps
-                # `superseded_by: null`, which is the safe direction
-                # `supersede-never-dangles` asks for.
-                # `observe` and `final_answer` are excluded for the same reason:
-                # `superseded_by` claims "this failed attempt was REPLACED by
-                # that one", and neither replaces anything — one reads, and the
-                # other stops. If the run ends before a replacement exists,
-                # nothing is written and the failed step keeps
-                # `superseded_by: null`, which is the safe direction
-                # `supersede-never-dangles` asks for and, in loop mode, the
-                # direction that correctly leaves a give-up-after-a-failure run
-                # graded on its failure.
-                if pending_supersede and step["action"] not in ("observe", "final_answer"):
-                    pending_supersede.pop()["superseded_by"] = rec["i"]
-                budgets["actions"] += 1
-                s0 = time.monotonic()
-                cls = None
-                # Did this action change anything at all? The only evidence that
-                # separates a replan legitimately skipping work already done from
-                # one laundering an action that did nothing (replan-cannot-launder-noop-action).
-                before = (await page_text(page)
-                          if not step["action"].startswith("extract")
-                          and step["action"] not in READ_ONLY_ACTIONS else None)
-                # Where this step's evidence starts, so a step that FAILS can be
-                # rolled back to it. `execute` writes `extractions` and `answers`
-                # before every check it can still fail — the identity-anchor
-                # check is the one that raises after the write, and the URL guard
-                # below raises after `execute` has returned entirely. That was
-                # harmless for five milestones because mode B ends the run at the
-                # first failed step, so nothing ever read what a failed step had
-                # written. Loop mode makes a failed call routine and the refused
-                # read stayed in `answers`: `success`, verdict PASS, with the
-                # trace carrying `failure_class: 'semantic'` on the very step the
-                # answer came from (cold review 1, `loop-refused-anchor-is-not-
-                # an-answer`). Rolled back HERE rather than by reordering that
-                # one check, because "a failed step leaves no evidence behind" is
-                # the property, and it has two instances already.
-                mark = (len(extractions), len(answers))
-                # Reset per attempt: `execute` fills it when (and only when) a
-                # target resolves, and a stale scope from the PREVIOUS attempt
-                # would hand this step's postcondition a document its action
-                # never touched — the exact defect ADR-036 exists to close.
-                acted_scope[0] = None
-                acted_document[0] = None
-                try:
-                    await execute(step, rec)
-                    if url_guard and not url_guard(page.url):
-                        # The guard is not just an input filter: a click, a 302 or
-                        # a meta-refresh can walk the browser off the allowed host
-                        # after the submitted URL passed (url-guard-holds-after-navigation).
-                        raise StepError("task", f"navigated to blocked URL: {page.url!r}")
-                    if before is not None:
-                        # The SAME scope `before` was read at, and that scope
-                        # is every frame. Two findings pin the pair, and neither
-                        # alone constrains this line:
-                        #
-                        #   * asymmetric (`before` main-only, `after` all frames)
-                        #     made every step of any framed page read as changed,
-                        #     disarming `changed_nothing` — the whole evidence
-                        #     behind the anti-laundering guard, in BOTH modes —
-                        #     and telling the loop driver a no-op did something
-                        #     (PR #57 R1,
-                        #     `replan-cannot-launder-noop-action-in-a-frame`);
-                        #   * symmetric-but-frames-BLIND flipped the sign instead
-                        #     of removing the defect: a control whose only effect
-                        #     is inside an iframe — an inspector's source pane,
-                        #     the exact shape M42 leg (a) exists for — recorded
-                        #     `false`, so the guard refused a legitimate replan
-                        #     and the run died stating as fact that a step which
-                        #     had just loaded a document ID "changed nothing on
-                        #     the page" (PR #57 R13,
-                        #     `replan-after-an-iframe-only-change-is-not-laundering`).
-                        #
-                        # Symmetric and frames-aware is the only setting under
-                        # which both cases are green, and they are the same page
-                        # shape with and without a real effect. A page-owned
-                        # iframe mutation can still flip this raw signal true.
-                        # T-M42-14 demonstrates that shape and prevents it from
-                        # certifying an action: a successor document makes the
-                        # scoped postcondition null, so verification refuses the
-                        # answer. Keep this frames-aware for the positive control.
-                        after = await page_text(page)
-                        rec["page_changed"] = after != before
-                        page_bodies[page.url] = after
-                    # The postcondition is checked in the document the action
-                    # touched (ADR-036): the scope `resolve` returned from, or
-                    # the main document for a targetless step — an un-focused
-                    # key press or window scroll lands on the top-level
-                    # document. `PAGE_WIDE_STATE` actions keep every frame in
-                    # scope, deliberately (the constant's comment says why).
-                    checked = await check_state(
-                        page, step.get("expected_state"),
-                        scope=None if step["action"] in PAGE_WIDE_STATE
-                        else (acted_scope[0] or page),
-                        document_marker=acted_document[0])
-                    if (checked is None and acted_document[0]
-                            and not await _same_document(acted_scope[0], acted_document[0])):
-                        rec["note"] = "; ".join(filter(None, [
-                            rec["note"],
-                            "postcondition unverifiable: resolved frame document was replaced"
-                        ]))
-                    if checked is not None or rec["postcondition_ok"] is None:
-                        rec["postcondition_ok"] = checked
-                    if rec["postcondition_ok"] is False:
-                        raise StepError("act", f"expected_state not reached: {step.get('expected_state')}")
-                except Exception as exc:
-                    cls = classify(step["action"], exc)
-                    rec["failure_class"] = cls
-                    rec["note"] = "; ".join(filter(None, [rec["note"], f"{type(exc).__name__}: {exc}"]))
-                    del extractions[mark[0]:], answers[mark[1]:]
-                shot = f"step_{rec['i']}.png"
-                try:
-                    # Bounded, because "best-effort" and "unbounded" cannot both
-                    # be true. Playwright waits for fonts before it shoots, and
-                    # on a page whose `load` never fires that wait runs to its
-                    # 30s default — per step, silently, inside a block whose
-                    # whole point is that failing here is acceptable. It cost
-                    # nav-load-event-never-fires 32s and its twin 64s, in a
-                    # suite ADR-002 budgets at 60s total.
-                    await page.screenshot(path=str(run_dir / shot),
-                                          timeout=SCREENSHOT_TIMEOUT_MS)
-                    rec["screenshot"] = shot
-                except Exception:
-                    pass  # evidence best-effort; the postcondition is the gate
-                rec["ms"] = int((time.monotonic() - s0) * 1000)
-                emit(rec)
-                return rec, cls
-
-            async def look():
-                """Fresh observation for a ladder, or None if the page cannot be
-                observed. A ladder is a best-effort second chance: if looking at
-                the page fails too, the run must still end as the classified
-                failure it already is, never as an uncaught exception with no
-                class at all (INV-1)."""
-                try:
-                    return await observe(page)
-                except Exception:
-                    return None
-
-
+            if mode == "canonical":
+                return await _run_canonical(runtime, planner, url)
+            obs, terminal = await runtime.observe_start(url)
+            if terminal is not None:
+                return terminal
             # --- Loop mode: the model chooses every step (ADR-027, ADR-028) ---
             async def drive_loop():
                 """One tool call per model turn, a fresh observation after each.
@@ -2419,7 +2210,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         note = ("EXACT REPEAT: this unchanged page received the same choice twice. "
                                 "Choose a different action or target; the next identical choice is refused.")
 
-                    rec, cls = await attempt(call, note=repeat_note)
+                    rec, cls = await runtime.attempt(call, note=repeat_note)
                     last_failure_class = cls
                     # The first decision cannot know the outcome that classifies
                     # it. Rebind its just-executed signature once that closed
@@ -2468,7 +2259,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                                  None: "Whether the page changed was never checked."}
                         note = ((note + " ") if repeat_note else "") + (f"Your last call FAILED: {rec['note']}. "
                                 f"{moved[rec['page_changed']]} Do not repeat it unchanged.")
-                        observation = await see(await look() or observation)
+                        observation = await see(await runtime.look() or observation)
                         continue
                     if call["action"] == "final_answer":
                         digest = (await page_text(page))[:500]
@@ -2487,7 +2278,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                             return done(failure="task", final_url=page.url, digest=digest,
                                         reason=("the answer cannot be assembled from what this "
                                                 "run actually did: " + gap))
-                        return await finalize(page.url, digest)
+                        return await runtime.finalize(page.url, digest)
                     # ADR-020's drill-down, in loop mode. `execute` has put the
                     # scoped observation in `drilled`; mode B pops it into a
                     # replan, and without this branch the loop would hand the
@@ -2518,7 +2309,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                         note = (f"The observation above is the subtree of "
                                 f"{call.get('target')} ONLY, not the whole page.")
                     else:
-                        observation = await see(await look() or observation)
+                        observation = await see(await runtime.look() or observation)
 
             if mode == "loop":
                 return await drive_loop()
@@ -2643,7 +2434,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                     return done(failure="task", reason=(
                         f"plan step {si + 1} is not a step: {step!r}"))
                 read_only = step["action"] == "observe"
-                rec, cls = await attempt(step, note=pending,
+                rec, cls = await runtime.attempt(step, note=pending,
                                          recovery=("recovery" if pending_recovery
                                                    and not read_only else None))
                 pending = None
@@ -2660,11 +2451,11 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 # (T-M40-2-5). Let the locate failure stay loud; only an
                 # answer/action attempt may take the relocation ladder.
                 if cls == "locate" and step["action"] != "observe" \
-                        and (fresh := await look()) is not None:
+                        and (fresh := await runtime.look()) is not None:
                     for cand in relocation_candidates(step.get("target") or {}, fresh)[:MAX_FIXES]:
                         rec["superseded_by"] = step_offset + len(trace) + 1
                         alt = {**step, "target": cand}
-                        rec, cls = await attempt(
+                        rec, cls = await runtime.attempt(
                             alt, note=f"relocation after locate failure: retargeting as {cand}",
                             recovery="recovery")
                         if cls is None:
@@ -2773,7 +2564,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
                 if cls in ("act", "semantic"):
                     if budgets["replans"] >= MAX_REPLANS:
                         rec["note"] += f"; replan budget exhausted ({MAX_REPLANS})"
-                    elif (fresh := await look()) is not None:
+                    elif (fresh := await runtime.look()) is not None:
                         try:
                             new_steps, usage = await planner(
                                 task, page.url, fresh,
@@ -2864,4 +2655,4 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
         finally:
             await ctx.close()  # the run's own context; the browser may be shared
 
-    return await finalize(final_url, digest)
+    return await runtime.finalize(final_url, digest)

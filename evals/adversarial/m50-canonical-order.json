@@ -1,0 +1,15 @@
+{
+  "id": "m50-canonical-order",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {"kind": "canonical-graph", "fixture": "accepted"},
+  "expect": {
+    "nodes": ["observe", "route", "evidence", "plan", "act", "evaluate", "decide"],
+    "routes": ["route", "evidence", "plan", "act", "evaluate", "decide", "publish"],
+    "status": "accepted",
+    "verifier": {"authority": "deterministic", "verdict": "PASS"},
+    "mode": "canonical",
+    "rejects_invalid_callback": true
+  },
+  "provenance": "M50 red-first: a canonical run must be a StateGraph execution with exact node order, deterministic verifier authority, and one public trace."
+}
