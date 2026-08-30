@@ -87,6 +87,12 @@ require explicit USD, token, and planner-call stops, freeze the exact values in
 the journal, and refuse the next POST when any completed total reaches its
 line. This still does not close M44 or authorize the paid campaign.
 
+PAUSED 2026-08-30: the operator stopped the authorized campaign after 27/252
+runs and US$3.9049 while model-control behavior is investigated separately.
+No further model or judge call is authorized and the partial sample does not
+close M44. Run `467fdd77` also exposed an eval-only number-association bug;
+`m44-campaign-number-in-label-is-not-the-answer` pins its offline repair.
+
 ### M33 — Ablation arm: per-step tool-calling planner vs evolving-prefix, same eval set, numbers decide            [status: todo]
 Depends: M44
 Update 2026-08-25 (ADR-027): absorbed, not deleted. The interviewer mandate
