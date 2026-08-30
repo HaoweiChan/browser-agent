@@ -5877,7 +5877,10 @@ _UI_MATRIX = {
         {"domain": "bankofengland.co.uk (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "federalreserve.gov (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "home.treasury.gov (live)", "cells": {"TC1": "unreliable"}},
-        {"domain": "eia.gov (live)", "cells": {"TC1": "unreliable"}}],
+        {"domain": "eia.gov (live)", "cells": {"TC1": "unreliable"}},
+        {"domain": "taifex.com.tw (live)", "cells": {"TC1": "—", "TC2": "—",
+                                                        "TC3": "—", "TC4": "—",
+                                                        "TC5": "—"}}],
     "limitations": [
         {"limitation": "**D1** — one", "evidence": "a", "status": "unsupported"},
         {"limitation": "**D2** — two", "evidence": "b", "status": "unsupported"}]}
@@ -5932,9 +5935,12 @@ def _run_ui_rendered_case(case: dict) -> dict:
 
     async def go():
         results = {}
-        for scheme in inp["schemes"]:
-            page = await _ui_page(inp["viewport_width"], scheme)
-            results[scheme] = await page.evaluate("""(targetLength) => {
+        renders = [(scheme, inp["viewport_width"], scheme) for scheme in inp["schemes"]]
+        if inp.get("desktop_viewport_width"):
+            renders.append(("desktop", inp["desktop_viewport_width"], inp["schemes"][0]))
+        for label, width, color_scheme in renders:
+            page = await _ui_page(width, color_scheme)
+            results[label] = await page.evaluate("""(targetLength) => {
               document.getElementById("live").hidden = false;
               document.getElementById("steps").innerHTML = stepEl({
                 i:1, action:"extract", value:"x".repeat(targetLength),
@@ -5991,6 +5997,8 @@ def _run_ui_rendered_case(case: dict) -> dict:
               return {
                 inner_width: innerWidth,
                 document_width: document.documentElement.scrollWidth,
+                live_main_width: document.querySelector(".live-main").getBoundingClientRect().width,
+                pageview_width: document.getElementById("pageview").getBoundingClientRect().width,
                 placeholder_contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05),
                 placeholder_color: getComputedStyle(input, "::placeholder").color,
                 input_background: getComputedStyle(input).backgroundColor,
@@ -6015,6 +6023,13 @@ def _run_ui_rendered_case(case: dict) -> dict:
         if inp.get("progress_states") and rendered["progress"] != inp["progress_states"]:
             wrong[f"{scheme}_progress"] = {"want": inp["progress_states"],
                                                "got": rendered["progress"]}
+        if scheme == "desktop" and inp.get("column_ratio") is not None:
+            ratio = rendered["pageview_width"] / rendered["live_main_width"]
+            if abs(ratio - inp["column_ratio"]) > inp["column_ratio_tolerance"]:
+                wrong[f"{scheme}_column_ratio"] = {
+                    "want": inp["column_ratio"], "got": round(ratio, 3),
+                    "trace_px": rendered["live_main_width"],
+                    "pageview_px": rendered["pageview_width"]}
     return {"passed": not wrong, "wrong": wrong, "got": got}
 
 
@@ -7484,6 +7499,7 @@ def _check_examples_cover_matrix() -> dict:
         "federalreserve.gov (live)": "unreliable",
         "home.treasury.gov (live)": "unreliable",
         "eia.gov (live)": "unreliable",
+        "taifex.com.tw (live)": "—",
     }
     for domain, expected in expected_status.items():
         row = next((r for r in matrix if r["domain"] == domain), None)
