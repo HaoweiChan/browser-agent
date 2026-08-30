@@ -1,0 +1,27 @@
+{
+  "id": "m50-canonical-retry-bound",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {
+    "kind": "canonical-runtime",
+    "fixture": "hello.html",
+    "task": "What does the main heading on the page say?",
+    "compare_legacy": false,
+    "stub_plans": [
+      [{"action": "extract", "target": {"role": "heading", "name": "Missing Heading"}}],
+      [{"action": "extract", "target": {"role": "heading", "name": "Hello Fixture"}}]
+    ]
+  },
+  "expect": {
+    "planner_calls": 2,
+    "supersedes": true,
+    "control_flow": {
+      "nodes": ["observe", "route", "evidence", "plan", "act", "evaluate", "decide", "plan", "act", "evaluate", "decide"],
+      "routes": ["route", "evidence", "plan", "act", "evaluate", "decide", "plan", "act", "evaluate", "decide", "publish"],
+      "status": "accepted",
+      "verifier": {"authority": "deterministic", "verdict": "PASS"},
+      "retry": {"used": 1, "limit": 1}
+    }
+  },
+  "provenance": "M50 B3b red-first: a non-mutating failed extraction gets exactly one decide-to-plan retry, and the later successful extraction supersedes it."
+}

@@ -27,7 +27,7 @@ def main():
         run_task(args.task, args.url,
                  live_planner(args.model or DEFAULT_MODEL, fallback=args.model is None), run_dir,
                  judge=live_judge(), headless=not args.headed,
-                 model=args.model or DEFAULT_MODEL)
+                 model=args.model or DEFAULT_MODEL, mode="canonical")
     )
     print(json.dumps(result, indent=2, ensure_ascii=False))
     print(f"\n[trace] {run_dir}/trace.jsonl")

@@ -1,0 +1,21 @@
+{
+  "id": "gateway-canonical-selects-planner",
+  "task": "browser",
+  "suites": ["fast"],
+  "input": {
+    "kind": "gateway-model",
+    "task": "read the headline of example.com",
+    "checks": [
+      {"mode": null, "http": 200, "planner_model": "deepseek/deepseek-v4-pro", "factory": "planner"},
+      {"mode": "canonical", "http": 200, "planner_model": "deepseek/deepseek-v4-pro", "factory": "planner"},
+      {"mode": "plan", "http": 422, "planner_model": null, "detail_contains": "only canonical"},
+      {"mode": "loop", "http": 422, "planner_model": null, "detail_contains": "only canonical"},
+      {"mode": "escalate", "http": 422, "planner_model": null, "detail_contains": "only canonical"},
+      {"mode": "canonical", "model": "openai/gpt-5.6-luna", "http": 200, "planner_model": "openai/gpt-5.6-luna", "factory": "planner"}
+    ]
+  },
+  "expect": {
+    "note": "Public tasks select the canonical planner only; legacy cadences are direct run_task eval comparators."
+  },
+  "provenance": "M50 B3c: replacement for the public mode-selection case after ADR-047 retired legacy gateway cadences."
+}

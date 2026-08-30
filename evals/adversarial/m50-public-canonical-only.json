@@ -1,0 +1,15 @@
+{
+  "id": "m50-public-canonical-only",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {
+    "kind": "public-canonical",
+    "task": "read the headline of example.com",
+    "legacy_modes": ["plan", "loop", "escalate"]
+  },
+  "expect": {
+    "legacy_http": 422,
+    "default_http": 200
+  },
+  "provenance": "M50 B3c red-first: public HTTP rejects legacy comparator cadences; an omitted mode builds a planner, invokes run_task in canonical mode, and never constructs a driver."
+}

@@ -1,0 +1,104 @@
+{
+  "suite": "m50",
+  "score": 0.7142857142857143,
+  "totals": {
+    "wall_seconds": 0.4,
+    "latency_p50": 0.0,
+    "latency_p95": 0.34,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "nodes": [
+          "observe",
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide"
+        ],
+        "routes": [
+          "route",
+          "evidence",
+          "plan",
+          "act",
+          "evaluate",
+          "decide",
+          "publish"
+        ],
+        "status": "accepted",
+        "verifier": {
+          "authority": "deterministic",
+          "verdict": "PASS"
+        },
+        "mode": "canonical",
+        "rejects_invalid_callback": true
+      },
+      "seconds": 0.34,
+      "id": "m50-canonical-order",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n             ^^^^^^^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9285, in run_case\n    return _await(runner(case)) if asyncio.iscoroutinefunction(runner) else runner(case)\n                                                                            ^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9211, in _run_canonical_runtime_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ^^^^^^^^^^^\nPermissionError: [Errno 1] Operation not permitted\n",
+      "seconds": 0.06,
+      "id": "m50-canonical-parity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "error": "Traceback (most recent call last):\n  File \"/Users/willy/Documents/browser-agent/evals/run.py\", line 69, in run_case\n    result = mod.run_case(case)\n             ^^^^^^^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9285, in run_case\n    return _await(runner(case)) if asyncio.iscoroutinefunction(runner) else runner(case)\n                                                                            ^^^^^^^^^^^^\n  File \"/Users/willy/Documents/browser-agent/src/browser/eval_adapter.py\", line 9211, in _run_canonical_runtime_case\n    fixture_url = f\"{_base_url()}/fixtures/{inp['fixture']}\"\n                     ^^^^^^^^^^^\nPermissionError: [Errno 1] Operation not permitted\n",
+      "seconds": 0.0,
+      "id": "m50-canonical-retry-bound",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "source_sha256": "35d7e3fc25ec3003dcb7ee6457b93543e4740153b3fab0a092dab4df45af0ab1",
+        "snapshot_sha256": "62e0a6d4ae7f7f4f005b7af3fe198ef23b0839311f096e536b0469baea7a8a39",
+        "text": "old 9.99% Hidden 8.00% Aria 7.00% Style 6.00% Visible 4.00%"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-canonical-text",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "seconds": 0.0,
+      "id": "m50-snapshot-empty-is-loud",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "source_sha256": "80f84bbbd50002fa8eb4e2b6a4b5316dc7736805984ed9a26cd1279ae7934b8d",
+        "snapshot_sha256": "601c1bf03fde9ec76d25b35ec5e4bb1ff61c8481a86f240dddea5126204c6886",
+        "text": "Generic source text"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-generic",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "source_sha256": "93598a1793d614ab1bd81dddf76a81c15d5e837d1925dd9109fed08bd2da44bf",
+        "snapshot_sha256": "f0493c24178de623529b400ca9fd4c89f384da4527b2a2df629b1797482bbd34",
+        "text": "Current rate 4.00%"
+      },
+      "seconds": 0.0,
+      "id": "m50-snapshot-hash-offset",
+      "kind": "adversarial"
+    }
+  ]
+}

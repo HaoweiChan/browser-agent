@@ -11,7 +11,7 @@ users to paste an OpenRouter API key. GPT-5 mini is under the ceiling recorded i
 the frozen decision snapshot; OpenRouter's live prices may drift, so changing the
 snapshot remains an explicit re-decision rather than a silent runtime change.
 
-**Enforced by**: `gateway-model-reaches-planner`, `gateway-mode-selects-the-driver`, and
+**Enforced by**: `gateway-model-reaches-planner`, `gateway-canonical-selects-planner`, and
 `ui-no-url-guard-and-example-chips`.
 
 ## Consequences

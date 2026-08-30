@@ -1,0 +1,28 @@
+{
+  "id": "m50-canonical-verifier-retry-clears-attempt",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {
+    "kind": "canonical-runtime",
+    "fixture": "hello.html",
+    "task": "What does the main heading on the page say?",
+    "compare_legacy": false,
+    "stub_plans": [
+      [{"action": "extract", "target": {"text": "A tiny page for the walking skeleton. The shop and forms fixtures land at M2. The second heading exists to catch substring-name resolution (case resolver-substring-name)."}}],
+      [{"action": "extract", "target": {"role": "heading", "name": "Hello Fixture"}}]
+    ]
+  },
+  "expect": {
+    "answer": "Hello Fixture",
+    "planner_calls": 2,
+    "supersedes": true,
+    "control_flow": {
+      "nodes": ["observe", "route", "evidence", "plan", "act", "evaluate", "decide", "plan", "act", "evaluate", "decide"],
+      "routes": ["route", "evidence", "plan", "act", "evaluate", "decide", "plan", "act", "evaluate", "decide", "publish"],
+      "status": "accepted",
+      "verifier": {"authority": "deterministic", "verdict": "PASS"},
+      "retry": {"used": 1, "limit": 1}
+    }
+  },
+  "provenance": "M50 B3b root-review red-first: a completed read can fail deterministic verification; its retry must discard only that attempt's answers/extractions and supersede the read before publishing a later verified answer."
+}

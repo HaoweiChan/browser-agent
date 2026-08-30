@@ -26,6 +26,7 @@ Case kinds (`input.kind`):
   until M49 adds deterministic extraction (no browser, network, or model call)
 - `evidence-export` — injected same-origin CSV/XML evidence normalization
 - `evidence-policy` — extraction source contains no showcase-specific recipe
+- `canonical-graph` — M50 graph order, retry, trace, gateway, and parity seams
 - `ablation-table` — the M9 cost/model table in docs/analysis.md carries no
   number that no committed report produced (pure code, no browser)
 - (default)      — fixture E2E: real agent, real browser, planner stubbed at the
@@ -4868,19 +4869,7 @@ def _run_gateway_model_case(case: dict) -> dict:
         fallbacks.append(fallback)
         raise RuntimeError("eval recorder: planner never constructed")
 
-    def driver_recorder(model=None, fallback=True):
-        # M42: the loop mode's factory gets the same treatment, and for the same
-        # reason — a `mode` field that is accepted, validated and then dropped
-        # looks identical over HTTP to one that selects the driver. It must also
-        # be swapped for the $0 property to hold: without it a `mode: "loop"`
-        # row would construct a real driver and open a real browser.
-        seen.append(model)
-        factories.append("driver")
-        fallbacks.append(fallback)
-        raise RuntimeError("eval recorder: driver never constructed")
-
     base, prev = _base_url(), S.live_planner
-    prev_driver = S.live_driver
     wrong = []
     if case["input"].get("access_gate"):
         access = _run_gateway_access_case({
@@ -5009,7 +4998,6 @@ def _run_gateway_model_case(case: dict) -> dict:
     # recorder still installed, breaking every later case in the same process and
     # attributing the damage to unrelated cases (PR #15, R6).
     S.live_planner = recorder
-    S.live_driver = driver_recorder
     try:
         for chk in case["input"]["checks"]:
             payload = {"task": case["input"]["task"]}
@@ -5058,9 +5046,71 @@ def _run_gateway_model_case(case: dict) -> dict:
                               "got": {k: got.get(k) for k in want}})
     finally:
         S.live_planner = prev
-        S.live_driver = prev_driver
     return {"passed": not wrong, "wrong": wrong, "recorded_models": seen,
             "recorded_factories": factories}
+
+
+def _run_public_canonical_case(case: dict) -> dict:
+    """Public tasks accept only canonical execution and never build a driver."""
+    from . import server as S
+
+    factories, calls, run_ids = [], [], []
+    old_planner, old_run = S.live_planner, S.run_task
+    had_driver, old_driver = hasattr(S, "live_driver"), getattr(S, "live_driver", None)
+
+    def planner(model=None, fallback=True):
+        factories.append(("planner", model, fallback))
+        return object()
+
+    def driver(*_args, **_kwargs):
+        factories.append(("driver", None, None))
+        return object()
+
+    async def run_recorder(*_args, **kwargs):
+        calls.append(kwargs)
+        return {"status": "success", "answer": "ok", "verdict": {"verdict": "PASS"}}
+
+    def post(payload):
+        req = urllib.request.Request(f"{_base_url()}/tasks", data=json.dumps(payload).encode(),
+                                     headers=_task_headers(), method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                return response.status, json.load(response)
+        except urllib.error.HTTPError as error:
+            return error.code, json.loads(error.read().decode() or "{}")
+
+    try:
+        S.live_planner, S.live_driver, S.run_task = planner, driver, run_recorder
+        rejected = {mode: post({"task": case["input"]["task"], "mode": mode})[0]
+                    for mode in case["input"]["legacy_modes"]}
+        code, body = post({"task": case["input"]["task"]})
+        if code == 200:
+            run_ids.append(body["run_id"])
+            for _ in range(100):
+                if _get_json(f"/tasks/{body['run_id']}").get("status") != "running":
+                    break
+                time.sleep(.01)
+    finally:
+        S.live_planner, S.run_task = old_planner, old_run
+        if had_driver:
+            S.live_driver = old_driver
+        else:
+            delattr(S, "live_driver")
+        for run_id in run_ids:
+            S.RUNS.pop(run_id, None)
+            S.STREAMS.pop(run_id, None)
+
+    expected = case["expect"]
+    got = {"legacy": rejected, "default_http": code,
+           "canonical": [call.get("mode") for call in calls],
+           "driver_calls": [factory for factory in factories if factory[0] == "driver"]}
+    checks = {
+        "legacy": set(rejected.values()) == {expected["legacy_http"]},
+        "default": code == expected["default_http"],
+        "canonical": got["canonical"] == ["canonical"],
+        "no_driver": not got["driver_calls"],
+    }
+    return {"passed": all(checks.values()), "checks": checks, "got": got}
 
 
 def _run_ablation_run_one_case(case: dict) -> dict:
@@ -9115,6 +9165,131 @@ def _run_evidence_policy_case(case: dict) -> dict:
     return {"passed": not found, "wrong": {"site_recipe": found} if found else {}}
 
 
+def _run_snapshot_evidence_case(case: dict) -> dict:
+    """Exercise the generic acquired-snapshot evidence seam without a fetch."""
+    from .canonical_contract import canonical_text, validate_evidence_packet
+
+    data, expected = case["input"], case["expect"]
+    source = data["source"].encode("utf-8")
+    try:
+        from .evidence import snapshot_evidence
+    except ImportError:
+        return {"passed": False, "wrong": {"missing_capability": "snapshot-evidence"}}
+    try:
+        packet = snapshot_evidence(source_bytes=source, url=data["url"],
+                                  document_id=data["document_id"])
+    except ValueError as exc:
+        return {"passed": expected.get("error") == type(exc).__name__,
+                "wrong": {} if expected.get("error") == type(exc).__name__ else {"error": str(exc)}}
+    if expected.get("error"):
+        return {"passed": False, "wrong": {"missing_error": expected["error"]}}
+    text = canonical_text(source)
+    item = packet.get("items", [{}])[0]
+    offset = item.get("text_offset", {}) if isinstance(item, dict) else {}
+    expected_hashes = {"source_sha256": hashlib.sha256(source).hexdigest(),
+                       "snapshot_sha256": hashlib.sha256(text.encode()).hexdigest()}
+    wrong = {"contract": validate_evidence_packet(packet)}
+    for key, value in {"document_id": data["document_id"], "url": data["url"],
+                       **expected_hashes}.items():
+        if packet.get(key) != value:
+            wrong.setdefault("packet", []).append(key)
+    if item.get("value") != expected.get("value"):
+        wrong.setdefault("value", []).append({"want": expected.get("value"), "got": item.get("value")})
+    if text[offset.get("start", -1):offset.get("end", -1)] != item.get("value"):
+        wrong.setdefault("offset", []).append(item.get("value"))
+    if expected.get("nonzero_offset") and offset.get("start", 0) <= 0:
+        wrong.setdefault("offset", []).append("expected a nonzero raw canonical offset")
+    wrong = {key: value for key, value in wrong.items() if value}
+    return {"passed": not wrong, "wrong": wrong, "got": {**expected_hashes, "text": text}}
+
+
+async def _run_canonical_graph_case(case: dict) -> dict:
+    module = importlib.util.find_spec(f"{__package__}.canonical_graph")
+    if module is None:
+        return {"passed": False, "wrong": {"missing_capability": "canonical-stategraph"}}
+    from .canonical_graph import run
+
+    fixture = case["input"]["fixture"]
+    pending = {"authority": "deterministic", "verdict": "PENDING"}
+    failed = {"authority": "deterministic", "verdict": "FAIL"}
+    passed = {"authority": "deterministic", "verdict": "PASS"}
+
+    async def observe(_state):
+        return {"status": "running", "verifier": pending,
+                "retry": {"used": 0, "limit": 1},
+                "budgets": {"calls": 0, "tokens": 0, "usd": 0, "ms": 0},
+                "evidence": []}
+
+    async def running(state):
+        retry = dict(state["retry"])
+        if state["status"] == "retryable":
+            retry["used"] += 1
+        return {"status": "running", "verifier": pending, "retry": retry}
+
+    async def decide(state):
+        if fixture == "retry-bound" and state["retry"]["used"] == 0:
+            return {"route": "plan", "status": "retryable", "verifier": failed}
+        if fixture == "retry-bound":
+            return {"route": "review_required", "status": "review_required", "verifier": failed}
+        return {"route": "publish", "status": "accepted", "verifier": passed}
+
+    callbacks = {"observe": observe, "route": running, "evidence": running,
+                 "plan": running, "act": running, "evaluate": running, "decide": decide}
+    state = await run({"mode": "canonical"}, callbacks)
+    got = {key: state.get(key) for key in ("nodes", "routes", "status", "verifier", "mode")}
+
+    async def invalid_observe(_state):
+        return {}
+
+    try:
+        await run({"mode": "canonical"}, {**callbacks, "observe": invalid_observe})
+    except ValueError as exc:
+        got["rejects_invalid_callback"] = "invalid canonical observe callback state" in str(exc)
+    else:
+        got["rejects_invalid_callback"] = False
+
+    want = case["expect"]
+    wrong = {key: {"want": value, "got": got.get(key)} for key, value in want.items()
+             if got.get(key) != value}
+    return {"passed": not wrong, "wrong": wrong, "got": got}
+
+
+def _run_canonical_runtime_case(case: dict) -> dict:
+    """Run one fixture through plan and canonical cadences at the same boundary."""
+    inp, want = case["input"], case["expect"]
+    fixture_url = f"{_base_url()}/fixtures/{inp['fixture']}"
+    plans = _subst(inp.get("stub_plans") or [inp["stub_plan"]], fixture_url)
+    legacy = (_run_agent(inp["task"], fixture_url, stub_planner(plans), mode="plan")
+              if inp.get("compare_legacy", True) else None)
+    canonical_planner = stub_planner(plans)
+    canonical = _run_agent(inp["task"], fixture_url, canonical_planner, mode="canonical")
+    same = ({"status": canonical.get("status") == legacy.get("status"),
+             "answer": canonical.get("answer") == legacy.get("answer"),
+             "verdict": (canonical.get("verdict") or {}).get("verdict")
+             == (legacy.get("verdict") or {}).get("verdict")}
+            if legacy is not None else {})
+    control = canonical.get("control_flow", {})
+    wrong = ({"legacy": {key: {"legacy": legacy.get(key), "canonical": canonical.get(key)}
+                           for key, ok in same.items() if not ok}}
+             if inp.get("compare_legacy", True) else {})
+    for key, value in want.get("control_flow", {}).items():
+        if control.get(key) != value:
+            wrong.setdefault("control_flow", {})[key] = {"want": value, "got": control.get(key)}
+    if "planner_calls" in want and len(canonical_planner.notes) != want["planner_calls"]:
+        wrong["planner_calls"] = {"want": want["planner_calls"], "got": len(canonical_planner.notes)}
+    if "answer" in want and canonical.get("answer") != want["answer"]:
+        wrong["answer"] = {"want": want["answer"], "got": canonical.get("answer")}
+    if want.get("supersedes"):
+        records = canonical["evidence"]["trace"]
+        if not any(record.get("superseded_by") for record in records):
+            wrong["supersedes"] = records
+    wrong = {key: value for key, value in wrong.items() if value}
+    return {"passed": not wrong, "wrong": wrong,
+            "got": {"legacy": {key: legacy.get(key) for key in same} if legacy else None,
+                    "canonical": {key: canonical.get(key) for key in same},
+                    "control_flow": control}}
+
+
 # `input.kind` -> runner. An unknown kind is a fixture E2E case, which is the
 # default shape; every other kind names the narrower thing it grades.
 KINDS = {
@@ -9132,11 +9307,15 @@ KINDS = {
     "canonical-evidence": _run_canonical_evidence_case,
     "evidence-export": _run_evidence_export_case,
     "evidence-policy": _run_evidence_policy_case,
+    "snapshot-evidence": _run_snapshot_evidence_case,
+    "canonical-graph": _run_canonical_graph_case,
+    "canonical-runtime": _run_canonical_runtime_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,
     "gateway-access": _run_gateway_access_case,
     "gateway-model": _run_gateway_model_case,
+    "public-canonical": _run_public_canonical_case,
     "history-ledger-isolated": _run_history_ledger_isolated_case,
     "pre-commit-hook": _run_pre_commit_hook_case,
     "snapshot-freshness": _run_snapshot_freshness_case,
@@ -9167,4 +9346,5 @@ KINDS = {
 
 
 def run_case(case: dict) -> dict:
-    return KINDS.get(case["input"].get("kind"), _run_fixture_case)(case)
+    runner = KINDS.get(case["input"].get("kind"), _run_fixture_case)
+    return _await(runner(case)) if asyncio.iscoroutinefunction(runner) else runner(case)

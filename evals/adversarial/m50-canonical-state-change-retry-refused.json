@@ -1,0 +1,29 @@
+{
+  "id": "m50-canonical-state-change-retry-refused",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {
+    "kind": "canonical-runtime",
+    "fixture": "hello.html",
+    "task": "What does the main heading on the page say?",
+    "compare_legacy": false,
+    "stub_plans": [
+      [
+        {"action": "click", "target": {"role": "button", "name": "Reveal"}, "expected_state": {"text_visible": "secret-42"}},
+        {"action": "extract", "target": {"role": "heading", "name": "Missing Heading"}}
+      ],
+      [{"action": "extract", "target": {"role": "heading", "name": "Hello Fixture"}}]
+    ]
+  },
+  "expect": {
+    "planner_calls": 1,
+    "control_flow": {
+      "nodes": ["observe", "route", "evidence", "plan", "act", "evaluate", "decide"],
+      "routes": ["route", "evidence", "plan", "act", "evaluate", "decide", "failure"],
+      "status": "failure:locate",
+      "verifier": {"authority": "deterministic", "verdict": "FAIL"},
+      "retry": {"used": 0, "limit": 1}
+    }
+  },
+  "provenance": "M50 B3b red-first: a successful state-changing Reveal click permanently refuses the later retry path, even though the following missing extraction itself did not mutate the page."
+}

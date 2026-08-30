@@ -1,0 +1,13 @@
+{
+  "id": "m50-snapshot-generic",
+  "task": "browser",
+  "suites": ["m50"],
+  "input": {
+    "kind": "snapshot-evidence",
+    "source": "<article>Generic source text</article>",
+    "url": "https://another.example/path",
+    "document_id": "snapshot:generic"
+  },
+  "expect": {"value": "Generic source text"},
+  "provenance": "B2a red-first: packet construction uses supplied bytes and URL only; no network, host recipe, or capability inference."
+}

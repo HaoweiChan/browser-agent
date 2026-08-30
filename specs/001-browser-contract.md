@@ -236,66 +236,10 @@ appears, in order — no post-hoc reconstruction).
   `resolved.narrowed` names the site-agnostic ambiguity rung that selected one
   candidate, or is null when no narrowing was needed. It is structured so the
   reviewer UI and reports do not have to parse the human-readable `note`.
-- **Modes** (ADR-027, ADR-028). `run_task` takes `mode`, selected per task by
-  `POST /tasks`'s `mode` field and defaulting to `BROWSER_AGENT_MODE`, itself
-  defaulting to `plan`.
-  - `plan` (mode B, the default and the only mode any offline suite exercises
-    end to end for planning quality) — one planning call over a condensed
-    observation, then deterministic execution, with observe/replan as the
-    recovery path. Everything else in this document describes it.
-  - `loop` — a driver is called after EVERY action with a fresh observation, the
-    trace so far and what has been extracted, and returns exactly one tool call.
-    Each loop observation also carries the viewport screenshot that is already
-    the trace's step evidence (the same `step_N.png`, by filename — ADR-035;
-    the pre-plan navigate gets one as the loop starts, filling its existing
-    `screenshot` field), and a drill observation carries an element-scoped
-    `step_N_element.png` beside it — a viewport shot CLIPPED to the element's
-    box, never an element screenshot, because that one scrolls and an
-    observation must not move the page (`loop-drill-capture-does-not-scroll-the-page`);
-    an element wholly outside the viewport simply gets no crop.
-    `live_driver` sends the image as a
-    data-URL content part. The trace schema is unchanged by all of this.
-    It replaces the planning **cadence** and nothing else: the same executor
-    actions, the same resolver, **the same TraceStep with no additional fields**,
-    the same answer assembly, the same verifier and the same judge
-    (`contract-trace-schema-loop-mode` is what keeps that true). Its budgets are
-    its own (`agent.LOOP_BUDGETS`: actions, tokens AND USD) and exhausting any
-    of them is INV-3's loud stop.
-  - Two rules that mode B enforces at plan adoption have no adoption point in a
-    loop and are re-homed rather than lost (ADR-027 Decision 5): an
-    extraction targeting the accessibility document root is refused **as the
-    call is emitted** — recorded as a refused step, never executed, the reason
-    returned to the model — and the aggregate single-read rule is applied at
-    **answer assembly** over the executed trace. Both are the same functions
-    mode B uses (`agent.root_target_gap`, `agent.plan_gap`), asked at a second
-    anchor.
-  - `escalate` (M46, ADR-037) — a POLICY over the other two, not a third
-    cadence: mode B runs once, and only if that leg ends in a `failure:<class>`
-    **and attempted no state-changing action** does the same task re-run in loop
-    mode, with the loop's opening note seeded by `agent.escalation_note`.
-    ANY plan-leg step whose action is in `verifier.STATE_CHANGING` refuses the
-    escalation, whatever its `postcondition_ok` — that field is a verification
-    outcome, not an execution fact, so `false` ("the predicate did not hold")
-    and `null` ("nobody checked") are both compatible with the action having
-    taken full effect (ADR-037 Decision 2a). The run then carries the plan leg's
-    own failure and one `legs` entry, and `reason` says which step and which
-    verb stopped it. No new status class: nothing new failed. That note carries four facts and nothing else —
-    the failure class, the dying step's index, its action verb and its target
-    KEY NAMES, each from a closed vocabulary — so no page text, target value or
-    error string crosses between legs (rule 6 and the injection boundary in one
-    clause). Both legs need their own factory (`planner` AND `driver`, refused
-    otherwise), each spends its OWN mode's budgets, the traces concatenate into
-    one run under supersede semantics (`legs` above), and the verifier and the
-    judge run in the legs' own `finalize`, once per leg that reaches an answer:
-    the RunResult's verdict is the final leg's, and a plan leg the judge
-    rejected has already spent its own single boundary call, which the summed
-    `judge_calls` reports. `unsupported` does not
-    escalate: `screen()` refuses identically at the top of both legs.
-  - A failed call does not end a loop run: the model is told what happened and
-    chooses again. What bounds that is the budgets and the no-progress harness —
-    arriving at the same `(URL, page signature)` state `LOOP_REVISIT_CAP` times
-    with nothing new extracted forces a strategy change, and the arrival after
-    that ends the run `failure:env` naming no-progress as the reason.
+- **Canonical execution** (ADR-047). Public `POST /tasks` and the CLI always
+  run the canonical graph; omitted `mode` means canonical and any other public
+  value is refused. `plan`, `loop`, and `escalate` remain direct `run_task`
+  comparators for bounded evals only, never gateway or CLI choices.
 - The five keys above are the **whole** target schema. A key outside it is a
   plan the executor cannot honour and stops the run as `failure:task`. It used
   to be dropped, and the step ran against whatever was left of the target —
