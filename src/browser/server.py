@@ -519,6 +519,7 @@ PAGE = r"""<!doctype html>
   .access-row input { width:16rem; flex:0 1 16rem; padding:.42rem .55rem }
   .access-row button { padding:.42rem .8rem }
   .access-copy { color:var(--dim); font-size:11px }
+  #access-status.enabled { color:var(--ok); font-weight:700 }
   button { background:var(--amber); border:1px solid var(--amber); color:var(--on-amber);
        font-weight:800; border-radius:var(--radius); padding:.6rem 1rem; cursor:pointer;
        flex:0 0 auto; text-transform:uppercase; letter-spacing:.06em; font-size:12px;
@@ -959,6 +960,7 @@ function storeAccess(value) {
 function setAccess(enabled, message) {
   accessEnabled = enabled;
   $("go").disabled = !enabled;
+  $("access-status").classList.toggle("enabled", enabled);
   $("access-status").textContent = message;
 }
 async function verifyAccess() {
