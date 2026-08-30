@@ -609,7 +609,7 @@ its `invariant` ceiling — the relief-valve property §3 is about — and each 
 can be measured where it is enforced, which is what ADR-013 Decision 3 already
 ruled `fast` needed. `fast-wall-clock-budget` pins both directions.
 
-### 5. CI's two numbers, measured on CI: 160 and 55
+### 5. CI's two numbers, measured on CI: 210 and 60
 
 Not projected from local runs, which is the mistake §3 made. **Hand-read off the
 workflow logs, not from the ledger** (§7). Since §9 (2026-08-28) a row is one
@@ -618,23 +618,23 @@ independently — the run that sets `invariant`'s ceiling breached on `invariant
 and so never reached the `fast` step at all, which is the shape §9 exists for.
 The sample is **the four slowest observed runs per suite** from every eval-gate
 run between declared endpoints `33255314466` (2026-08-29T13:33:22Z) and
-`33267084252` (2026-08-29T18:00:16Z): 20 consecutive workflow runs. The start
-boundary is arbitrary and the endpoint declaration is the reproducibility
-contract. A rerun remains one workflow run and contributes its slowest attempt;
-run `33267084252` therefore contributes 45.71s, not a second row for its 45.08s
-attempt. Two runs breached on `invariant` and never produced a `fast` figure.
+`33321283648` (2026-08-30T16:01:55Z), plus the prior sample's slowest rows. The
+endpoint declaration is the reproducibility contract. A rerun remains one
+workflow run and contributes its slowest attempt; run `33321283648` therefore
+contributes 51.09s and 181.08s, not separate rows for its 47.32s and 168.07s
+attempt. Two earlier runs breached on `invariant` and never produced a `fast` figure.
 `gh run view <id> --log` reprints each line below.
 
 | run | branch | suite | cases | wall |
 |---|---|---|---|---|
+| 33321283648 | ui/homepage-evidence-note | invariant | 122 | 51.09s |
 | 33267084252 | task/next-hardening-5 | invariant | 113 | 45.71s |
 | 33264063193 | main | invariant | 113 | 45.51s |
 | 33262824894 | main | invariant | 113 | 44.86s |
-| 33264954451 | task/next-hardening-3 | invariant | 113 | 44.84s |
+| 33321283648 | ui/homepage-evidence-note | fast | 278 | 181.08s |
 | 33258498343 | main | fast | 268 | 138.35s |
 | 33262824894 | main | fast | 270 | 137.51s |
 | 33265873161 | main | fast | 271 | 137.07s |
-| 33256277519 | task/T-M42-20-D7 | fast | 268 | 137.06s |
 
 Each cell is one `[eval] cost … wall Ns` line of that run's log, and every one
 of these runs was correctness-green on the suite it is quoted for — `45.71s` was
@@ -683,7 +683,7 @@ to hold over the commits that will run under it — and it is the deliberate
 reversal of the rule the previous version of this section stated, that a table
 must not publish two trees at once.
 
-Same rule: 45.71 × 1.15 = 52.57 → **55**; 138.35 × 1.15 = 159.10 → **160**.
+Same rule: 51.09 × 1.15 = 58.75 → **60**; 181.08 × 1.15 = 208.24 → **210**.
 
 Both ceilings move together, which is the rule this section has kept through
 three re-derivations: `fast` has never breached and does not now, but a ceiling
