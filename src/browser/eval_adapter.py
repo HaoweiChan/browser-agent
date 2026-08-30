@@ -21,6 +21,9 @@ Case kinds (`input.kind`):
 - `ui-rendered`  — narrow trace overflow and effective placeholder contrast
 - `gateway-model` — `POST /tasks`'s model allowlist, and that the model actually
   reaches the planner factory (the planner is swapped for a recorder: $0.00)
+- `canonical-contract` — pure ADR-046 graph/evidence and aggregate-stop checks
+- `canonical-evidence` — frozen finance evidence contracts, deliberately red
+  until M49 adds deterministic extraction (no browser, network, or model call)
 - `ablation-table` — the M9 cost/model table in docs/analysis.md carries no
   number that no committed report produced (pure code, no browser)
 - (default)      — fixture E2E: real agent, real browser, planner stubbed at the
@@ -35,6 +38,8 @@ import ast
 import asyncio
 import atexit
 import collections
+import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -4520,7 +4525,7 @@ def _run_matrix_case(case: dict) -> dict:
 
 REPORT_CITATION_SCOPE = ("docs", "specs", "tasks", "README.md", "src",
                           "evals/golden", "evals/adversarial", ".github", "prompts")
-REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z]+\.json)")
+REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z0-9-]+\.json)")
 # T-M32-10: how far from a citation a pass-rate claim still counts as being
 # ABOUT it, and the shape of such a claim. 400 characters is roughly a
 # paragraph — wide enough for "9/9 after this change (evals/report/…)" and its
@@ -4591,8 +4596,12 @@ def _run_report_citations_case(case: dict) -> dict:
             cited |= set(REPORT_CITATION.findall(body))
             scanned.append((str(f.relative_to(root)), body))
     cited -= set(REPORT_CITATION_SKIP)
+    unrecognized = [name for name in case.get("expect", {}).get("citation_names", [])
+                    if not REPORT_CITATION.fullmatch(f"evals/report/{name}")]
     missing = sorted(n for n in cited if not (root / "evals" / "report" / n).exists())
     wrong: dict = {}
+    if unrecognized:
+        wrong["citation_names_not_recognized"] = unrecognized
     if missing:
         wrong["missing_reports"] = missing
     # T-R19: the OTHER direction. This checked citation -> file and never file ->
@@ -8975,9 +8984,83 @@ def _run_invariant_case(case: dict) -> dict:
     return INVARIANTS[check]()
 
 
-def _run_m44_campaign_case(case: dict) -> dict:
-    from evals.m44_campaign import self_check
-    return self_check(case["input"]["check"])
+def _run_canonical_contract_case(case: dict) -> dict:
+    from .canonical_contract import budget_stop_before_next_run, validate_evidence_packet, validate_state
+
+    data = case["input"]
+    if data["check"] == "schema":
+        evidence_wrong = validate_evidence_packet(data["packet"])
+        state_wrong = validate_state(data["state"])
+        wrong = {"evidence": evidence_wrong, "state": state_wrong}
+        mutations = []
+        for row in data.get("reject", []):
+            got = (validate_evidence_packet(row["packet"]) if "packet" in row
+                   else validate_state(row["state"]))
+            if row["error"] not in got:
+                mutations.append({"label": row["label"], "want": row["error"], "got": got})
+        accepted = []
+        for row in data.get("accept", []):
+            got = validate_state(row["state"])
+            if got:
+                accepted.append({"label": row["label"], "got": got})
+        if mutations:
+            wrong["mutations"] = mutations
+        if accepted:
+            wrong["accept"] = accepted
+        return {"passed": not evidence_wrong and not state_wrong and not mutations and not accepted,
+                "wrong": {key: value for key, value in wrong.items() if value},
+                "got": {"evidence_items": len(data["packet"]["items"]), "node": data["state"]["node"],
+                        "mutations": mutations, "accept": accepted}}
+    if data["check"] == "budget-stop":
+        rows = data.get("cases", [data])
+        got = [{"label": row.get("label", "boundary"),
+                "stop": budget_stop_before_next_run(row["spent"], row["limits"]),
+                "expect": row["expect_stop"]} for row in rows]
+        wrong = [row for row in got if row["stop"] != row["expect"]]
+        return {"passed": not wrong, "wrong": {"budget_stop": wrong} if wrong else {}, "got": got}
+    return {"passed": False, "wrong": {"unknown_check": data["check"]}}
+
+
+def _run_canonical_evidence_case(case: dict) -> dict:
+    """Call M49's optional site-agnostic extractor against a frozen fixture."""
+    from .canonical_contract import canonical_text, validate_evidence_packet
+
+    data = case["input"]
+    fixture = FIXTURES / data["fixture"]
+    if not fixture.is_file():
+        return {"passed": False, "wrong": {"missing_fixture": data["fixture"]}}
+    source = fixture.read_bytes()
+    text = canonical_text(source)
+    expected = case["expect"]["packet"]
+    hashes = {"source_sha256": hashlib.sha256(source).hexdigest(),
+              "snapshot_sha256": hashlib.sha256(text.encode()).hexdigest()}
+    bad_fixture = [key for key, value in hashes.items() if expected.get(key) != value]
+    if expected.get("document_id") != data.get("document_id"):
+        bad_fixture.append("document_id")
+    if bad_fixture:
+        return {"passed": False, "wrong": {"bad_fixture_expectation": bad_fixture}, "got": hashes}
+    module = importlib.util.find_spec(f"{__package__}.evidence")
+    if module is None:
+        return {"passed": False, "wrong": {"missing_capability": data["request"]["capability"]},
+                "got": {**hashes, "canonical_text": text}}
+    from .evidence import extract_evidence
+
+    packet = extract_evidence(source_bytes=source, url=data["url"],
+                              document_id=data["document_id"], request=data["request"])
+    if not isinstance(packet, dict):
+        return {"passed": False, "wrong": {"contract": ["invalid:packet"]},
+                "got": {**hashes, "canonical_text": text}}
+    wrong = {"contract": validate_evidence_packet(packet)}
+    for key in ("document_id", "url", "source_sha256", "snapshot_sha256", "items"):
+        if packet.get(key) != expected.get(key):
+            wrong.setdefault("expected", []).append(key)
+    for item in packet.get("items", []):
+        if isinstance(item, dict) and item.get("kind") == "text":
+            offset = item.get("text_offset", {})
+            if text[offset.get("start", -1):offset.get("end", -1)] != item.get("value"):
+                wrong.setdefault("offset", []).append(item.get("value"))
+    wrong = {key: value for key, value in wrong.items() if value}
+    return {"passed": not wrong, "wrong": wrong, "got": {**hashes, "canonical_text": text}}
 
 
 # `input.kind` -> runner. An unknown kind is a fixture E2E case, which is the
@@ -8993,6 +9076,8 @@ KINDS = {
     "soak-accounting": _run_soak_accounting_case,
     "doc-counts": _run_doc_counts_case,
     "browser-liveness": _run_browser_liveness_case,
+    "canonical-contract": _run_canonical_contract_case,
+    "canonical-evidence": _run_canonical_evidence_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,
     "gateway-error": _run_gateway_error_case,
@@ -9004,7 +9089,6 @@ KINDS = {
     "invariant": _run_invariant_case,
     "judge": _run_judge_case,
     "matrix": _run_matrix_case,
-    "m44-campaign": _run_m44_campaign_case,
     "matrix-drift": _run_matrix_drift_case,
     "report-citations": _run_report_citations_case,
     "mutation": _run_mutation_case,

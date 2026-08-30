@@ -1,0 +1,23 @@
+{
+  "id": "m49-eia-semantic-table",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "canonical-evidence",
+    "fixture": "finance-eia-table.html",
+    "document_id": "fixture:finance-eia-table",
+    "url": "https://www.eia.gov/dnav/pet/pet_pri_gnd_a_epm0_pte_dpgal_w.htm",
+    "request": {"capability": "semantic-table-normalization", "question": "latest U.S. average retail gasoline price and date"}
+  },
+  "expect": {
+    "citation": "fixture ground truth: U.S. regular-gasoline cell with row, column, and date; layout tables excluded",
+    "packet": {
+      "document_id": "fixture:finance-eia-table",
+      "url": "https://www.eia.gov/dnav/pet/pet_pri_gnd_a_epm0_pte_dpgal_w.htm",
+      "snapshot_sha256": "17a8cdce867a2f620c668ef4769b18eea96f3e557d9e18471d5f9ead61689d91",
+      "source_sha256": "ce29126451be84181940edd266e27a6613b6acd891616785cd2f8158a91dce2a",
+      "items": [{"kind": "table", "value": "3.71", "table_cell": {"headers": ["Area", "2026-08-24"], "row": 0, "column": 1}}]
+    }
+  },
+  "provenance": "Support-matrix run df2f3ed7 failed by locating a layout table at this showcase URL. The fixture is synthetic ground truth, not a live-price claim."
+}

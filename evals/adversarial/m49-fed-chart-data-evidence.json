@@ -1,0 +1,26 @@
+{
+  "id": "m49-fed-chart-data-evidence",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "canonical-evidence",
+    "fixture": "finance-fed-rate.html",
+    "document_id": "fixture:finance-fed-rate",
+    "url": "https://www.federalreserve.gov/economy-at-a-glance-policy-rate.htm",
+    "request": {"capability": "chart-context-text-evidence", "question": "Federal Funds Rate Target Range"}
+  },
+  "expect": {
+    "citation": "fixture ground truth: Federal Funds Rate Target Range label and value from chart/data context",
+    "packet": {
+      "document_id": "fixture:finance-fed-rate",
+      "url": "https://www.federalreserve.gov/economy-at-a-glance-policy-rate.htm",
+      "snapshot_sha256": "8d3b8a8427abc48b9e7f3b9dbd5b66cdb5ee87d5d2fa558efb4bf73e2083765d",
+      "source_sha256": "aba6496af0530b4e77c033a2d787dbb86e5f724fb96bfecaa939a983e7d6626f",
+      "items": [
+        {"kind": "text", "value": "Federal Funds Rate Target Range", "text_offset": {"start": 24, "end": 55}},
+        {"kind": "text", "value": "4.25% to 4.50%", "text_offset": {"start": 56, "end": 70}}
+      ]
+    }
+  },
+  "provenance": "Support-matrix run 51309b76 failed by locating an interactive chart image. The fixture is synthetic ground truth; M49 must cite label and value before any visual worker."
+}

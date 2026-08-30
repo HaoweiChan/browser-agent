@@ -12,20 +12,7 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M48 — canonical graph and evidence contract            [status: todo]
-Spec: make an ADR-first decision for one canonical browser-agent graph. Freeze
-red-first fixtures for the six visible finance failure shapes: 10-K Extractor,
-ECB, Bank of England, Federal Reserve, Treasury, and EIA. Define the canonical
-state and cited evidence-packet schema, deterministic publish authority, and
-the retirement plan for `plan`/`loop`/`escalate`. Migrate the general budget
-invariants before deleting or quarantining `evals/m44_campaign.py`; retain its
-historical evidence. No paid calls.
-Acceptance: each failure shape is red before its fix; the schema binds source
-or snapshot hashes and provenance; only deterministic verification may publish;
-and the ADR names the parity evidence required before legacy modes disappear.
-
 ### M49 — deterministic evidence layer            [status: todo]
-Depends: M48
 Spec: add deterministic DOM/accessibility text evidence, terminal live-region
 state, semantic table normalization, a latest/effective-date reducer,
 same-origin CSV/XML readers, source/snapshot hashes, and table coordinates. No

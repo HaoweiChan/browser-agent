@@ -619,3 +619,67 @@ path components are pattern-matched, so nothing else in a run directory —
   is offline* (the boundary is measured today — ADR-002 threshold 5 — but not
   invariant-tagged) and *traces are complete* (every action carries pre/post
   observation). Each enters specs/000 with its backing case, not before.
+
+## Canonical graph envelope (ADR-046; runtime lands in M50)
+
+This is an internal state envelope, not a new RunResult or TraceStep. The
+runtime may advance only in this order:
+
+```text
+observe → route → evidence → plan → act → evaluate → decide
+                               ↑                    │
+                               └── bounded retry ────┘
+```
+
+```json
+{
+  "node": "observe | route | evidence | plan | act | evaluate | decide",
+  "route": "route | evidence | plan | act | evaluate | decide | publish | review_required | failure",
+  "status": "running | accepted | retryable | review_required | failure:<class>",
+  "verifier": {"authority": "deterministic", "verdict": "PENDING | PASS | FAIL"},
+  "retry": {"used": 0, "limit": 0},
+  "budgets": {"calls": 0, "tokens": 0, "usd": 0.0, "ms": 0},
+  "evidence": [EvidencePacket]
+}
+```
+
+- Intermediate routes are exact: `observe→route`, `route→evidence`,
+  `evidence→plan`, `plan→act`, `act→evaluate`, and `evaluate→decide`; each has
+  `status: running` and deterministic verifier `PENDING`. Only `decide` may route back to `plan`, and only with
+  `status: retryable`, deterministic verifier `FAIL`, and `retry.used < retry.limit`.
+  `publish` requires `node: decide`, `status: accepted`, and deterministic verifier
+  `PASS`; `review_required` requires `node: decide`, matching status, and verifier `FAIL`.
+  A loud terminal failure requires `node: decide`, `route: failure`, deterministic
+  verifier `FAIL`, and one existing `status: failure:<class>`.
+- Calls and tokens are non-negative integers; USD and milliseconds are finite
+  non-negative numbers. A campaign freezes its
+  positive limits and refuses the next submission when any completed total is
+  `>=` its limit; an in-flight call can cross a line, so this is a stop line,
+  never an absolute cap.
+
+```json
+{
+  "document_id": "stable source identity",
+  "url": "source URL",
+  "snapshot_sha256": "64 lowercase hex chars",
+  "source_sha256": "64 lowercase hex chars",
+  "items": [
+    {"kind": "text", "value": "…", "text_offset": {"start": 0, "end": 1}},
+    {"kind": "table", "value": "…", "table_cell": {"headers": ["…"], "row": 0, "column": 0}},
+    {"kind": "live_region", "value": "…", "live_state": "running | complete | success | error | failed"}
+  ]
+}
+```
+
+An EvidencePacket binds every citation to both the source bytes and rendered
+canonical text. Canonical text is UTF-8 HTML text nodes in document order with
+all whitespace collapsed to one ASCII space. Text offsets are half-open into
+that exact string. Table coordinates are zero-based **data-row** and column
+indices under the cited headers (headers are not rows); a live region is terminal only for `complete`, `success`, `error`, or
+`failed`. `export` and `vision` items use the same packet binding. M49 creates
+these items; M48 validates the envelope, hashes, and fixture-text offsets, but
+contains no site selector, navigation recipe, or model call.
+
+For the M49 fixture seam, the adapter calls the optional production function
+`extract_evidence(source_bytes, url, document_id, request)`. `document_id` is a
+stable caller-supplied source identity; it is not inferred from a URL or a site rule.

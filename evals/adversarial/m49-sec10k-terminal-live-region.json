@@ -1,0 +1,23 @@
+{
+  "id": "m49-sec10k-terminal-live-region",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "canonical-evidence",
+    "fixture": "finance-sec10k-async.html",
+    "document_id": "fixture:finance-sec10k-async",
+    "url": "https://whaleforce-sec10k.zeabur.app/",
+    "request": {"capability": "terminal-live-region", "question": "10-K extraction status"}
+  },
+  "expect": {
+    "citation": "fixture ground truth: terminal live-region value, not the preceding Extracting state",
+    "packet": {
+      "document_id": "fixture:finance-sec10k-async",
+      "url": "https://whaleforce-sec10k.zeabur.app/",
+      "snapshot_sha256": "76ee7f5a543b5e3000bf4b6fa1d7815cca55c3166cc94378d5fa031a98e7a153",
+      "source_sha256": "f6c47a1b331a341ecb077498f0af72e44a97e9f430b275bfaf5a7ae50f86ad19",
+      "items": [{"kind": "live_region", "value": "doc_status: success — 18 extracted", "live_state": "success"}]
+    }
+  },
+  "provenance": "M41/D30 evidence and the 2026-08-24 inspector failure shape. The fixture is synthetic ground truth, not a deployed extraction claim."
+}

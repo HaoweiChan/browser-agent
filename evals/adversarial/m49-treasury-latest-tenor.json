@@ -1,0 +1,23 @@
+{
+  "id": "m49-treasury-latest-tenor",
+  "task": "browser",
+  "suites": ["m49"],
+  "input": {
+    "kind": "canonical-evidence",
+    "fixture": "finance-treasury-rates.html",
+    "document_id": "fixture:finance-treasury-rates",
+    "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?page=0&type=daily_treasury_yield_curve",
+    "request": {"capability": "latest-dated-table-cell", "question": "latest 10-year Treasury par yield and date"}
+  },
+  "expect": {
+    "citation": "fixture ground truth: latest dated 10-year cell from the source table or same-origin export",
+    "packet": {
+      "document_id": "fixture:finance-treasury-rates",
+      "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?page=0&type=daily_treasury_yield_curve",
+      "snapshot_sha256": "0f152383dfbbd229a48346c65d43c90289248fc77914f35c3417b367cf470c5e",
+      "source_sha256": "8b152378245a56cb8e3871d827bd02b72898c6361485e9a4e27416e6c8137bef",
+      "items": [{"kind": "table", "value": "4.21", "table_cell": {"headers": ["Date", "10 yr"], "row": 0, "column": 1}}]
+    }
+  },
+  "provenance": "Support-matrix run 6c393014 failed while seeking a date-sort control at this showcase URL. The fixture is synthetic ground truth, not a live yield claim."
+}

@@ -906,6 +906,7 @@ const ADRS = [
   ["043", "an extraction reads rendered text first, then the browser-computed accessible name of that same element when its text is empty"],
   ["044", "a paid campaign must state aggregate USD, token and planner-call stop lines explicitly; recovery cannot change them, and reaching one refuses the next submission"],
   ["045", "paid LLM requests require a verified LLM access key; DeepSeek V4 Pro is primary, GPT-5 mini is fallback, and Opus has no price exception"],
+  ["046", "the future browser agent has one cited-evidence graph; deterministic verification alone may publish, and the legacy modes retire only after parity evidence"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

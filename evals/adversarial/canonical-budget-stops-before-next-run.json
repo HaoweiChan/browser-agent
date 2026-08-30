@@ -1,0 +1,18 @@
+{
+  "id": "canonical-budget-stops-before-next-run",
+  "task": "browser",
+  "suites": ["invariant"],
+  "input": {
+    "kind": "canonical-contract",
+    "check": "budget-stop",
+    "cases": [
+      {"label": "exact boundary", "spent": {"calls": 2, "tokens": 10, "usd": 0.01, "ms": 20}, "limits": {"calls": 2, "tokens": 100, "usd": 1.0, "ms": 1000}, "expect_stop": "budget exhausted: calls"},
+      {"label": "below every boundary", "spent": {"calls": 1, "tokens": 99, "usd": 0.99, "ms": 999}, "limits": {"calls": 2, "tokens": 100, "usd": 1.0, "ms": 1000}, "expect_stop": null},
+      {"label": "fractional calls refused", "spent": {"calls": 1.5, "tokens": 1, "usd": 0, "ms": 0}, "limits": {"calls": 2, "tokens": 2, "usd": 1, "ms": 1}, "expect_stop": "invalid spent accounting"},
+      {"label": "fractional tokens limit refused", "spent": {"calls": 1, "tokens": 1, "usd": 0, "ms": 0}, "limits": {"calls": 2, "tokens": 1.5, "usd": 1, "ms": 1}, "expect_stop": "invalid budget limits"},
+      {"label": "missing budget refused", "spent": {"calls": 1, "tokens": 1, "usd": 0}, "limits": {"calls": 2, "tokens": 2, "usd": 1, "ms": 1}, "expect_stop": "invalid spent accounting"}
+    ]
+  },
+  "expect": {"note": "a completed run at an aggregate limit blocks the next paid submission; this is a stop line, not an absolute in-flight cap"},
+  "provenance": "M48 migrates ADR-044's reusable completed-run budget boundary out of the retired M44 campaign harness. Pure stdlib; zero network, browser, and model calls."
+}

@@ -377,3 +377,10 @@ ceilings are untouched: nothing here measured CI.
 * **No change to either existing mode.** `mode="plan"` and `mode="loop"` behave
   exactly as they did; `step_offset` defaults to 0 and `opening_note` to None,
   which is the behaviour every existing case pins.
+
+## Amendment — ADR-046 canonical migration
+
+ADR-046 supersedes the permanent-policy reading of `escalate` and its blanket
+no-orchestration clause. The two-leg record, state-change guard, RunResult and
+trace semantics remain until M50's explicit parity/retirement ruling; M48 adds
+no runtime graph and changes no existing mode.

@@ -71,6 +71,7 @@ unmeasured (ADR-007) — the M5/M10 held-out probes are the counterweight.
 - T-M46-2 — the local `fast` band crossed into 115 (2026-08-28) — closed inside PR #78. The forecast was paid rather than argued away: the previous round published a band hundredths of a second inside the 95.65s boundary and filed the crossing, and the crossing arrived on the next measurement. The headroom note survives in the block's successor — `fast` now runs ~98-99s against the 115 band's 99.99s edge, so the next case added is likely to move it again.
 
 - M47 — two-day agentic hardening (2026-08-29) — plan PR #82; implementation PR #83.
+- M48 — canonical graph and evidence contract (2026-08-30) — ADR-046; hash-bound EvidencePacket/state validator, six M49 red-first finance contracts (0/6, zero-cost), and M44 campaign archive after its reusable completed-run budget stop migrated.
 
 ## Retired without completion
 

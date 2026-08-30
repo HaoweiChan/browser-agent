@@ -17,6 +17,10 @@
     "exclude_exactly": [
       "src/browser/fixtures"
     ],
+    "citation_names": [
+      "20260830-083657-m49.json",
+      "20260829-202042-fast.json"
+    ],
     "uncited_kinds_allowed": [
       "-live.json",
       "-soak.json",
