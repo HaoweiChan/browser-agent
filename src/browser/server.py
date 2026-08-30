@@ -44,7 +44,7 @@ SEM = asyncio.Semaphore(1)
 ACTIVE_RUN: str | None = None
 ACCESS_KEY_ENV = "LLM_ACCESS_KEY"
 ACCESS_HEADER = "X-LLM-Access-Key"
-MIN_ACCESS_KEY_CHARS = 16
+MIN_ACCESS_KEY_CHARS = 10
 
 
 def access_key_valid(presented: str | None) -> bool:

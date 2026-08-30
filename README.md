@@ -42,7 +42,7 @@ python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
 ```
 
 The reviewer UI locally — task submission needs both `OPENROUTER_API_KEY` and a
-16+ character `LLM_ACCESS_KEY`. Visitors enter the latter as the
+10+ character `LLM_ACCESS_KEY`. Visitors enter the latter as the
 “LLM access key”; the guards, matrix and browser smoke test work without either:
 
 ```bash

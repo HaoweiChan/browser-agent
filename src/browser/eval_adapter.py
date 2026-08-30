@@ -4778,6 +4778,7 @@ def _run_gateway_access_case(case: dict) -> dict:
 
     base = _base_url()
     configured = case["input"]["configured_key"]
+    too_short = case["input"].get("too_short_key")
     old = os.environ.get("LLM_ACCESS_KEY")
     old_planner = S.canonical_live_planner
     called = []
@@ -4812,6 +4813,10 @@ def _run_gateway_access_case(case: dict) -> dict:
             "verify_right": post("/access/verify", configured),
             "right": post("/tasks", configured),
         }
+        if too_short is not None:
+            os.environ["LLM_ACCESS_KEY"] = too_short
+            rows["too_short"] = post("/access/verify", too_short)
+            os.environ["LLM_ACCESS_KEY"] = configured
         for _ in range(100):
             if called:
                 break
@@ -4872,9 +4877,10 @@ def _run_gateway_model_case(case: dict) -> dict:
     wrong = []
     if case["input"].get("access_gate"):
         access = _run_gateway_access_case({
-            "input": {"configured_key": _EVAL_ACCESS_KEY},
+            "input": {"configured_key": "0123456789", "too_short_key": "123456789"},
             "expect": {"http": {"missing": 401, "wrong": 401,
-                "verify_wrong": 401, "verify_right": 200, "right": 200, "unset": 401}},
+                "verify_wrong": 401, "verify_right": 200, "right": 200,
+                "too_short": 401, "unset": 401}},
         })
         if not access["passed"]:
             wrong.append({"access_gate": access})
