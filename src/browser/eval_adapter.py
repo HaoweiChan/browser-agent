@@ -646,6 +646,9 @@ def _check_planner_request_disables_sampling() -> dict:
         wrong["temperatures"] = temperatures
     if first != second:
         wrong["plans_disagreed"] = [first, second]
+    required = "For a link with an observed URL, use url_contains from that URL"
+    if required not in P.SYSTEM:
+        wrong["link_postcondition_guidance"] = required
     return {"passed": not wrong, "wrong": wrong,
             "got": {"requests": len(captured), "temperatures": temperatures}}
 
