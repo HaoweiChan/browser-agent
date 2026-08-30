@@ -6060,6 +6060,7 @@ def _run_ui_form_case(case: dict) -> dict:
           const tick = () => new Promise(r => setTimeout(r, 0));  // let submitTask's catch land
           const out = {origin: location.origin,
                        examples: typeof EXAMPLES === "object" ? EXAMPLES : {},
+                       matrix_note: $("matrix").previousElementSibling.textContent.replace(/\\s+/g, " ").trim(),
                        limits_text: $("limits").textContent,
                        stray: document.querySelectorAll("#examples, .eyebrow, .kind").length};
           const key = $("access-key"), verify = $("verify-access");
@@ -6194,6 +6195,8 @@ def _run_ui_form_case(case: dict) -> dict:
             wrong.setdefault("expected_examples", {})[key] = chip
     if got["stray"]:  # owner amendment: no chip row, no eyebrow, no built-in/real-site tag
         wrong["stray_elements"] = got["stray"]
+    if expect.get("matrix_note_contains") not in got["matrix_note"]:
+        wrong["matrix_note"] = got["matrix_note"]
     if expect["limits_contains"] not in got["limits_text"]:
         wrong["limits_text"] = got["limits_text"]
     return {"passed": not wrong, "wrong": wrong, "got": got}
@@ -9297,6 +9300,8 @@ def _run_m51_policy_case(case: dict) -> dict:
                   for entry in snapshot["models"]}
         ceiling = prices[PRO_MODEL]
         got = {"roles": list(NODE_POLICY), "plan_route": list(NODE_POLICY["plan"].route),
+               "plan_max_output_tokens": NODE_POLICY["plan"].max_output_tokens,
+               "plan_max_tokens": NODE_POLICY["plan"].max_tokens,
                "snapshot_matches": all(FROZEN_PRICES.get(model) == prices.get(model)
                                        for policy in NODE_POLICY.values() for model in policy.route),
                "price_bounded": all(prices[model][0] <= ceiling[0] and prices[model][1] <= ceiling[1]

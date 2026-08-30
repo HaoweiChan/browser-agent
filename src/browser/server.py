@@ -726,8 +726,8 @@ PAGE = r"""<!doctype html>
 </div>
 
 <h2><span class="section-no">03</span> What works today</h2>
-<p class="note">Every demo starts from the site's homepage. Status reflects the recorded
-  page-level evidence; homepage navigation has not yet been re-rated.</p>
+<p class="note">Every demo starts from the site's homepage. Status reflects the deployed
+  homepage evidence recorded in the support matrix.</p>
 <div id="matrix" class="panel table-wrap">loading&hellip;</div>
 
 <h2><span class="section-no">04</span> Known limits</h2>

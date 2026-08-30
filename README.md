@@ -38,7 +38,7 @@ failing case is decoration.
 ```bash
 python3 -m evals.run --suite fast        # offline gate: 278 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
-python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
+python3 -m evals.run --suite live        # 14 cases, 5 real sites, still $0.00
 ```
 
 The reviewer UI locally — task submission needs both `OPENROUTER_API_KEY` and a
@@ -156,12 +156,12 @@ first version of this paragraph published the first two of those runs as
 "59.56 / 59.60s" and was falsified inside the same review round by a run at
 60.64s; this is a sample, not a bound, and the honest statement is that this
 suite straddles its ceiling rather than clears it. The same suite on CI
-(ubuntu-latest) measured **137.06 / 137.07 / 137.51 / 138.35s** — the four
-slowest `fast` figures in the 20-run window ADR-019 §5 names by its endpoints.
-The slowest is eval-gate run 33258498343; the ids and case counts are in §5.
+(ubuntu-latest) measured **137.07 / 137.51 / 138.35 / 181.08s** — the four
+slowest `fast` figures ADR-019 §5 currently publishes.
+The slowest is eval-gate run 33321283648; the ids and case counts are in §5.
 Since §9 (2026-08-28) the sample is measured runs across commits rather than
-repeated attempts of one run. The current `invariant` maximum is run
-33267084252 at 45.71s with 113/113 passing; its earlier 45.08s attempt collapses
+repeated attempts of one run. The current `invariant` maximum is also run
+33321283648 at 51.09s with 122/122 passing; its 47.32s attempt collapses
 into the same workflow-run row. These supersede an earlier CI band published
 here — 59.77 / 60.84 / 64.61 / 64.67s — which was measured on a 95-case tree and
 so cannot describe this one. That band is NOT unevidenced, and an earlier
@@ -262,12 +262,12 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 278 | 114.97s | 132.22 | **135s** |
-| `invariant` | 122 | 40.02s | 46.02 | **70s** |
+| `fast` | 278 | 203.75s | 234.31 | **235s** |
+| `invariant` | 122 | 191.02s | 219.67 | **220s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer.
 A short sample may derive UNDER the committed ceiling and must never drag it
-down (ADR-019 §6). The 113-case `invariant` band derives 70s and moves that
+down (ADR-019 §6). The 122-case `invariant` band derives 220s and moves that
 ceiling; the cited outlier is retained under the ledger's no-rejection rule.
 The rule is one-directional: derived BELOW the committed ceiling is held;
 derived ABOVE it requires an ADR.
@@ -279,8 +279,8 @@ not, which is the drift this section warns about two paragraphs up. PR #78 R9.)
 
 **CI has its own two, measured on CI** rather than projected from these — the
 four slowest observed runs per suite, sampled across commits (ADR-019 §5, §9;
-eval-gate runs 33267084252 and 33258498343 set the two ceilings) gave `invariant` 44.84-45.71s and
-`fast` 137.06-138.35s, so **55s** and **160s** by the same rule.
+eval-gate run 33321283648 sets both ceilings) gave `invariant` 44.86-51.09s and
+`fast` 137.07-181.08s, so **60s** and **210s** by the same rule.
 Both are the sample's range, not the population's. `fast` moves
 although its CI runs have never been over budget, because deriving one suite
 from this table while leaving the other on an older one publishes two
@@ -316,7 +316,7 @@ own measured ceiling alongside a local one
 by [ADR-019](specs/decisions/ADR-019-wall-clock-ceilings-per-suite.md) when M31
 grew the suite, and `invariant` given ceilings of its own).
 
-`live` covers 5 real sites across 13 cases. It was `4/6` at the M6 merge; two of those
+`live` covers 5 real sites across 14 cases. It was `4/6` at the M6 merge; two of those
 reds were openlibrary.org during an outage — and when the host came back, one
 case went green immediately while the other kept failing, because the outage had
 been hiding a defect of ours: navigation waited for `load`, so one hanging
@@ -527,7 +527,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 341 cases (278 of them in the offline gate), it
+The eval set is not weak; it is 342 cases (278 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

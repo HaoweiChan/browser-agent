@@ -65,7 +65,7 @@ NODE_POLICY = {
         disabled_reason="M51 deterministic evidence is sufficient; no safe text-assistance input"),
     "plan": NodePolicy(
         trigger="canonical plan", route=(PRO_MODEL, MINI_MODEL), max_calls=2,
-        max_output_tokens=2000, max_input_chars=50_000, max_tokens=4000, max_usd=0.05,
+        max_output_tokens=3000, max_input_chars=50_000, max_tokens=6000, max_usd=0.05,
         cache_namespace="m51-plan-v1", access_required=True,
         authority="proposal"),
     "vision": NodePolicy(
@@ -326,8 +326,8 @@ class PolicyBoundary:
             raise PolicyError(f"canonical {node} unreadable provider response", billed) from exc
         if not isinstance(content, str):
             self._record(node=node, route=policy.route, served_model=model, tokens=tokens, usd=usd,
-                         latency_ms=latency_ms, cached=False, outcome="invalid_accounting")
-            raise PolicyError(f"canonical {node} invalid provider accounting", billed)
+                         latency_ms=latency_ms, cached=False, outcome="unreadable_response")
+            raise PolicyError(f"canonical {node} unreadable provider response", billed)
         if spent["tokens"] > policy.max_tokens or spent["usd"] > policy.max_usd:
             self._record(node=node, route=policy.route, served_model=model, tokens=tokens, usd=usd,
                          latency_ms=latency_ms, cached=False, outcome="budget_exceeded")
