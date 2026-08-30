@@ -15,7 +15,8 @@ import urllib.request
 from pathlib import Path
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "openai/gpt-5.6-luna"
+DEFAULT_MODEL = "deepseek/deepseek-v4-pro"
+FALLBACK_MODEL = "openai/gpt-5-mini"
 
 # Bump when the prompt, request parameters or cached response shape changes.
 # The complete payload is also hashed; the version makes an intentional cache
@@ -79,39 +80,17 @@ ABLATION_MODELS = [
 # the default moved. It is NOT in the allowlist any more — a public endpoint
 # should not accept a model this system deliberately stopped paying for.
 #
-# --- M42 loop mode (ADR-027 Decision 4, ADR-028) -----------------------------
-#
-# The declared amendment to ADR-010's price ceiling, and the whole of it. ADR-027
-# rules that the ceiling STAYS for the ablation arms and for mode B's default,
-# and is lifted only for loop-mode additions, each allowlisted by explicit id
-# with its price recorded. So this is a THIRD list, not a widening of either
-# existing one:
-#   * it is NOT in ABLATION_MODELS, so `gateway-model-reaches-planner`'s ceiling
-#     sweep — which runs over the ablation set — is untouched and still refuses
-#     any ablated model priced above CEILING_MODEL;
-#   * it IS in ALLOWED_MODELS, so `POST /tasks` accepts it by name, and the same
-#     case's containment check therefore requires it to be frozen evidence like
-#     every other accepted id (evals/labels/openrouter-models-20260820.json,
-#     amended 2026-08-26 with this entry read from the live endpoint that day).
-# `gateway-model-reaches-planner` grades exactly that split: an id that leaks
-# into the ablation set, or that is allowlisted without frozen evidence, is red.
-#
-# Why a frontier model at all: loop mode calls the model once per STEP with a
-# fresh observation, and M43 will hand it screenshots. The two capabilities that
-# buys are native tool-calling and vision. No price literal here for the reason
-# CEILING_MODEL carries none — the snapshot holds the numbers, and a figure
-# re-typed into code drifted 11% inside one working session once already.
-LOOP_MODELS = ["anthropic/claude-opus-5"]
+# The owner revoked ADR-027's loop-only price exception on 2026-08-30 after an
+# unexpected Opus 5 charge. Both cadences use the same default route. An explicit
+# model still pins one model for ablations; only the default route asks
+# OpenRouter to try DeepSeek first and GPT-5 mini second.
+DEFAULT_LOOP_MODEL = DEFAULT_MODEL
+ALLOWED_MODELS = list(dict.fromkeys([DEFAULT_MODEL, FALLBACK_MODEL, *ABLATION_MODELS]))
 
-# The loop driver's default. Named separately from DEFAULT_MODEL because the two
-# answer different questions: DEFAULT_MODEL is what mode B plans with and is the
-# ablation's own pick under a ceiling this model is deliberately above.
-DEFAULT_LOOP_MODEL = LOOP_MODELS[0]
 
-# dict.fromkeys, not a set: the default is also an ablated model now, so the two
-# lists overlap, and order is the display order §9 and the ADR both use. The loop
-# additions come last so that order stays the one ADR-010 published.
-ALLOWED_MODELS = list(dict.fromkeys([DEFAULT_MODEL, *ABLATION_MODELS, *LOOP_MODELS]))
+def _model_route(model: str, fallback: bool = True) -> dict:
+    return ({"models": [DEFAULT_MODEL, FALLBACK_MODEL]}
+            if fallback and model == DEFAULT_MODEL else {"model": model})
 
 SYSTEM = """You are a browser-automation planner. Emit ONLY a JSON array of steps.
 Each step: {"action": "navigate|click|fill|extract|extract_all|observe|select_option|scroll|press|wait_for|go_back",
@@ -309,7 +288,7 @@ def _plan_cache_save(cache: dict) -> None:
     path.write_text(json.dumps(cache))
 
 
-def live_planner(model: str = DEFAULT_MODEL):
+def live_planner(model: str = DEFAULT_MODEL, fallback: bool = True):
     key = os.environ.get("OPENROUTER_API_KEY")
     if not key:
         raise PlanError("OPENROUTER_API_KEY is not set")
@@ -317,7 +296,7 @@ def live_planner(model: str = DEFAULT_MODEL):
     async def plan(task: str, url: str | None, observation: dict | None = None, note: str | None = None):
         user = build_user(task, url, observation, note)
         payload = {
-            "model": model,
+            **_model_route(model, fallback),
             "temperature": 0,
             "messages": [
                 {"role": "system", "content": SYSTEM},
@@ -328,10 +307,13 @@ def live_planner(model: str = DEFAULT_MODEL):
         cache_key = _plan_cache_key(payload)
         cache = _plan_cache_load()
         try:
-            steps = parse_plan(json.dumps(cache[cache_key]["steps"]))
+            cached = cache[cache_key]
+            steps = parse_plan(json.dumps(cached["steps"]))
         except (KeyError, TypeError, PlanError):
             pass
         else:
+            if isinstance(cached.get("model"), str):
+                plan.models_used.append(cached["model"])
             return steps, {"llm_tokens": 0, "llm_usd": 0.0, "cached": True}
         data = await asyncio.to_thread(_openrouter, key, payload)
         # Usage first: this completion is billed whatever it contains, and
@@ -355,6 +337,8 @@ def live_planner(model: str = DEFAULT_MODEL):
         # an `isinstance(..., dict)` test missed `{"error": "rate limited"}`.
         if data.get("error"):
             raise RuntimeError(f"provider error: {data['error']}")
+        if isinstance(data.get("model"), str):
+            plan.models_used.append(data["model"])
         try:
             choice = data["choices"][0]
             message = choice["message"]
@@ -378,11 +362,12 @@ def live_planner(model: str = DEFAULT_MODEL):
         except PlanError as e:
             e.usage = usage
             raise
-        cache[cache_key] = {"steps": steps}
+        cache[cache_key] = {"steps": steps, "model": data.get("model")}
         _plan_cache_save(cache)
         usage["cached"] = False
         return steps, usage
 
+    plan.models_used = []
     return plan
 
 
@@ -617,7 +602,7 @@ def stub_driver(calls: list):
     return drive
 
 
-def live_driver(model: str = DEFAULT_LOOP_MODEL):
+def live_driver(model: str = DEFAULT_LOOP_MODEL, fallback: bool = True):
     """OpenRouter native tool-calling, one call per step.
 
     Stateless by construction: every turn is rebuilt from (task, observation,
@@ -649,7 +634,7 @@ def live_driver(model: str = DEFAULT_LOOP_MODEL):
                        {"type": "image_url",
                         "image_url": {"url": f"data:image/png;base64,{b64}"}}]
         payload = {
-            "model": model,
+            **_model_route(model, fallback),
             "messages": [
                 {"role": "system", "content": DRIVER_SYSTEM},
                 {"role": "user", "content": content},
@@ -666,6 +651,8 @@ def live_driver(model: str = DEFAULT_LOOP_MODEL):
                  "llm_usd": float(u.get("cost", 0.0))}
         if data.get("error"):
             raise RuntimeError(f"provider error: {data['error']}")
+        if isinstance(data.get("model"), str):
+            drive.models_used.append(data["model"])
         try:
             message = data["choices"][0]["message"]
             assert isinstance(message, dict)
@@ -678,4 +665,5 @@ def live_driver(model: str = DEFAULT_LOOP_MODEL):
             e.usage = usage
             raise
 
+    drive.models_used = []
     return drive

@@ -16,5 +16,6 @@
   "triage": {
     "class": "spend-hole",
     "note": "tagged invariant — 'do not spend twenty runs measuring one model' is not a property that may regress to a baseline. Costs $0.00 in both directions and needs no key: the refusal branch never constructs a planner, and the accepting branch's probe task trips `agent.screen`, which `run_task` applies before it plans. That second property is asserted by the case rather than assumed, because it is the whole reason this probe is safe to fire at a deployment that does have a key. `gateway-model-not-allowlisted` grades the guard; this grades the driver's use of it."
-  }
+  },
+  "provenance_2026_08_30": "ADR-045 cold review finding 3 was folded into this paid-driver invariant: urllib's default redirect handler copies custom headers to a redirected request, so a cross-origin 301/302/303 could receive X-LLM-Access-Key and return plausible JSON. Watched red while evals.ablation._http still used urllib.request.urlopen directly; green only after API redirects became loud through _NoRedirect."
 }

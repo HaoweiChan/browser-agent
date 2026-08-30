@@ -41,11 +41,13 @@ python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + 
 python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
 ```
 
-The reviewer UI locally — task submission needs `OPENROUTER_API_KEY`; the
-guards, matrix and browser smoke test work without one:
+The reviewer UI locally — task submission needs both `OPENROUTER_API_KEY` and a
+16+ character `LLM_ACCESS_KEY`. Visitors enter the latter as the
+“LLM access key”; the guards, matrix and browser smoke test work without either:
 
 ```bash
-python3 -m uvicorn src.browser.server:app --port 8099
+LLM_ACCESS_KEY='choose-a-long-demo-key' \
+  python3 -m uvicorn src.browser.server:app --port 8099
 ```
 
 ## Where it stands

@@ -5,9 +5,9 @@
   "level": "L1",
   "input": {"kind": "invariant", "check": "planner-cache-is-content-keyed"},
   "expect": {
-    "note": "an identical parsed mode-B request is served from a content-keyed cache at zero additional planner cost; task, URL, observation, replan note, model, prompt or params changes miss, and malformed completions are never cached"
+    "note": "an identical parsed mode-B request is served from a content-keyed cache at zero additional planner cost and keeps the provider's effective model attribution; task, URL, observation, replan note, model, prompt or params changes miss, and malformed completions are never cached"
   },
-  "provenance": "T-M40-5-3 / ADR-042 red-first repro. Deployed build 6d9b94ad emitted different plans for identical adjacent requests even with temperature zero. This fixture drives the real live_planner boundary with only transport and cache location replaced, so it proves the deterministic mechanism without a key, network call or paid token.",
+  "provenance": "T-M40-5-3 / ADR-042 red-first repro. Deployed build 6d9b94ad emitted different plans for identical adjacent requests even with temperature zero. This fixture drives the real live_planner boundary with only transport and cache location replaced, so it proves the deterministic mechanism without a key, network call or paid token. ADR-045's rebase onto the cache added the fallback-attribution direction: watched red when the first fallback response named GPT-5 mini but both cache hits lost that id and were reported as the DeepSeek primary.",
   "triage": {
     "class": "flake",
     "note": "same task, URL, build and request parameters produced divergent provider completions; fix determinism at the shared planner boundary, never by retry-until-green"

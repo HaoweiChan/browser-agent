@@ -79,6 +79,7 @@
       "body::before",
       "background-image:",
       "button:not(.ghost):hover:not(:disabled)",
+      ".field > label { color:var(--amber-ink) }",
       "@keyframes spin",
       "animation:spin",
       "[hidden] { display:none !important }"

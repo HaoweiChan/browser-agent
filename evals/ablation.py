@@ -10,7 +10,8 @@ over HTTP from a machine that has no key at all.
     python3 -m evals.ablation                       # the live deployment, all 4 models
     python3 -m evals.ablation --models tencent/hy3
 
-`--base` exists for a second *deployed* instance, not for localhost: the fixture
+The caller needs `LLM_ACCESS_KEY`, the demo unlock (not the provider
+key); `_http` sends it only as `X-LLM-Access-Key`. `--base` exists for a second *deployed* instance, not for localhost: the fixture
 URLs are built against it and the deployment's own URL guard refuses loopback in
 every spelling, so a local run aborts on task 1 by design.
 
@@ -31,6 +32,7 @@ verifier already uses.
 
 import argparse
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -162,12 +164,25 @@ def _fatal(msg: str, rows: list) -> None:
 RETRY_SLEEPS = (5, 10)   # backoff between connect-phase retries; a constant so a case can zero it
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """API redirects are loud; forwarding the access header can disclose it."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _urlopen(req, timeout):
+    return urllib.request.build_opener(_NoRedirect()).open(req, timeout=timeout)
+
+
 def _http(url: str, payload: dict | None = None, timeout: int = 120,
           retries: list | None = None) -> dict:
+    headers = {"Content-Type": "application/json"} if payload is not None else {}
+    if access_key := os.environ.get("LLM_ACCESS_KEY"):
+        headers["X-LLM-Access-Key"] = access_key
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode() if payload is not None else None,
-        headers={"Content-Type": "application/json"} if payload is not None else {},
+        headers=headers,
         method="POST" if payload is not None else "GET",
     )
     # Bounded retry, and ONLY for a failure that never delivered the request.
@@ -199,7 +214,7 @@ def _http(url: str, payload: dict | None = None, timeout: int = 120,
     last = None
     for attempt in range(len(RETRY_SLEEPS) + 1):
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
+            with _urlopen(req, timeout=timeout) as r:
                 return json.load(r)
         except urllib.error.HTTPError:
             raise                     # a real answer from the server — never retried
