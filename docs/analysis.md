@@ -57,10 +57,10 @@ between M8 and M9. Every count in the rest of this section is the current one;
 where an M8 or M9 figure is still quoted elsewhere in this document it is with
 its own report beside it.
 
-330 distinct cases (28 golden + 302 adversarial).
-502 browser actions in a `fast` run; **180 of the 274** `fast` cases drive a real Chromium end to end — counted here as
+341 distinct cases (28 golden + 313 adversarial).
+502 browser actions in a `fast` run; **180 of the 278** `fast` cases drive a real Chromium end to end — counted here as
 cases that actually recorded browser actions, read out of the committed report
-`evals/report/20260829-202042-fast.json` rather than tallied by hand (the
+`evals/report/20260830-130558-fast.json` rather than tallied by hand (the
 previous version of this line carried an M8-era 54/97 against an M10-era total,
 and said so with the confidence of a derived number; PR #57 R4 caught the next
 variant of the same defect — the two figures WERE recomputed, from the headline
@@ -69,7 +69,7 @@ and 109 browser cases, so the paragraph was arithmetically true and evidentially
 false. `docs-numbers-are-derived` now checks the citation as well as the
 arithmetic). The six L5 refusal cases
 are end-to-end cases that deliberately stop before a browser opens. The
-remaining 94 are those refusals plus pure-code probes of a single
+remaining 98 are those refusals plus pure-code probes of a single
 component (the grader, the classifier, the URL guard, the scope screen, the
 matrix parser, the evidence-window bound on a missing value; added in M8, the
 mutation counters and the opt-in `expect` keys; in M9, the model allowlist, the
@@ -530,7 +530,7 @@ tables, which is why the drift survived.
 | **news.ycombinator.com** | **live** | **2 cases: TC1 ×2** |
 | **openlibrary.org** | **live** | **2 cases: TC1 ×1, TC2 ×1 (the TC2 case grades a correct failure diagnosis, not a working search)** |
 | **quotes.toscrape.com** | **live, hostile (M8)** | **3 cases: the hostile TC1 role-tier-blind case, its text-tier-reaches twin, and the render-delayed L3 case — added since the M6 count above and never given a row until this refresh** |
-| **whaleforce-sec10k.zeabur.app** | **live, same-owner (M41) — Task 2's deployed inspector** | **7 cases: 5 fixture-snapshot (TC1 ×3 answering, TC1 ×2 observation-shape) + 2 live TC1 against the deep link; ground truth from that site's own `/api/extract/fixture`, eval side only** |
+| **whaleforce-sec10k.zeabur.app** | **live, same-owner (M41) — Task 2's deployed inspector** | **10 cases: 6 fixture-snapshot fast cases + 4 live cases against the deep link; ground truth from that site's own `/api/extract/fixture`, eval side only** |
 
 | **companiesmarketcap.com** | **live, M40 (declared `supported`)** | **0 cases — declared from 15/15 deployment runs across two builds, D28** |
 | **bankofcanada.ca** | **live, M40 (declared `supported`)** | **0 cases — declared from 3/3 deployment runs, D28** |

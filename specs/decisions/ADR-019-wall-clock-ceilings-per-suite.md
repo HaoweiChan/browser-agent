@@ -83,10 +83,10 @@ repo's ledger and nothing else.
 
 **The ledger's numbers, at the case count this branch ships:**
 
-- Band source — local `fast` at 274 cases, ts `20260830-112027`, **114.81s**, 274/274
-  (`evals/report/history.jsonl`; `dirty: true`; M50's clean root gate after the
-  LangGraph runtime and its import path landed. The next invariant run made the
-  existing band guard red before the ceiling moved.)
+- Band source — local `fast` at 278 cases, ts `20260830-124838`, **114.97s**, 274/278
+  (`evals/report/20260830-124838-fast.json`; `dirty: true`; M51's fixed-point
+  run. Its four reds were the two derived-document guards plus two stale route
+  expectations corrected before the completion gate.)
   That is the general shape of every band republish and
   not a fact about any one milestone: a tree reaches its new case count only
   while the cases are uncommitted, and this section's own republication is what
@@ -232,8 +232,8 @@ two cases this merge is repairing, which item 2 (cited-run) does not require to
 be green. The CI half is asserted, not
 demonstrated from here, for the reason §7 gives at the end (T-R74).
 
-The cited rows' own results — (restated — `fast`: 274 cases, 274/274) and
-(restated — `invariant`: 115 cases, 115/115) — are graded against the bullets they
+The cited rows' own results — (restated — `fast`: 278 cases, 274/278) and
+(restated — `invariant`: 122 cases, 120/122) — are graded against the bullets they
 summarise, by item 10 (restatement), not merely stated beside them (T-R55).
 The result is stated because a band source is taken as it is found — item 2
 (cited-run) requires a run that happened, and green is required nowhere in §6 —
@@ -355,7 +355,7 @@ branch, and gets the same resolution — see §3). What
 is published here is now exactly what is graded (§6).
 
 ADR-013 Decision 3's rule — slowest observed +15%, rounded up to a multiple of
-five — gives 114.81 × 1.15 = 132.03 → **135**, equal to the committed ceiling.
+five — gives 114.97 × 1.15 = 132.22 → **135**, equal to the committed ceiling.
 The ceiling was moved 90 → 105 by ADR-029, 105 → 110 by
 ADR-035 Decision 7, 110 → 115 by ADR-037 Decision 9 and 115 → 120 by ADR-039,
 each derived
@@ -382,10 +382,10 @@ commit that changed nothing but JSON.
 
 ### 3. `invariant` gets a ceiling of its own
 
-- Band source — local `invariant` at 115 cases, ts `20260830-111532`, **39.91s**, 115/115
-  (`evals/report/history.jsonl`; `dirty: true`; M50's clean root gate after the
-  LangGraph runtime and its import path landed.)
-  This short sample derives 50 because 39.91 × 1.15 = 45.90 → **50**, below the
+- Band source — local `invariant` at 122 cases, ts `20260830-125949`, **40.02s**, 120/122
+  (`evals/report/20260830-125949-invariant.json`; `dirty: true`; M51's
+  fixed-point run, red only on the two derived-document guards updated here.)
+  This short sample derives 50 because 40.02 × 1.15 = 46.02 → **50**, below the
   committed 70s ceiling. Section 6's no-ratchet-down rule keeps 70: a quieter
   fresh-count sample cannot erase the earlier measured outlier. Whether this remains the maximum at this count is
   deliberately not asserted — PR #78 R4 found that adjective on a row the ledger

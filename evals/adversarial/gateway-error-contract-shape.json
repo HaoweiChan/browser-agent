@@ -34,7 +34,10 @@
         "llm_tokens",
         "llm_usd",
         "replans",
-        "ms"
+        "ms",
+        "judge_calls",
+        "judge_tokens",
+        "judge_usd"
       ]
     }
   },

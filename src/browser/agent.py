@@ -1292,6 +1292,7 @@ class _TaskRuntime:
     answers: list
     extractions: list[dict]
     judge: object
+    verified_access: bool = False
     page: object = None
     url_guard: object = None
     vision: list[bool] | None = None
@@ -1702,6 +1703,7 @@ async def _run_canonical(runtime: _TaskRuntime, planner, url: str | None) -> dic
     """Bind existing browser work to ADR-046's callback graph."""
     from .canonical_contract import STATUSES
     from .canonical_graph import run as run_graph
+    from .model_policy import node_calls_for
 
     pending = {"authority": "deterministic", "verdict": "PENDING"}
     failed = {"authority": "deterministic", "verdict": "FAIL"}
@@ -1717,7 +1719,8 @@ async def _run_canonical(runtime: _TaskRuntime, planner, url: str | None) -> dic
 
     async def observe(_state):
         observation, result = await runtime.observe_start(url)
-        context = {"observation": observation, "result": result, "calls": 0}
+        context = {"observation": observation, "result": result, "calls": 0,
+                   "critic_attempted": False}
         return {"status": "running", "verifier": pending,
                 "retry": {"used": 0, "limit": 1},
                 "budgets": _canonical_budget(runtime, 0), "evidence": [],
@@ -1808,6 +1811,35 @@ async def _run_canonical(runtime: _TaskRuntime, planner, url: str | None) -> dic
                 context["digest"] = (await page_text(runtime.page))[:500]
                 context["verdict"] = verify(trace=runtime.trace, extractions=runtime.extractions,
                                              answer=answer, task=runtime.task)
+                # No graph edge changes here: a critic is advisory metadata for
+                # one explicit deterministic ambiguity marker only. It cannot
+                # repair a FAIL or choose publish.
+                from .model_policy import PolicyError, semantic_ambiguity
+                boundary = getattr(planner, "node_policy_boundary", None)
+                if (boundary and semantic_ambiguity(context["verdict"])
+                        and not context.get("critic_attempted")):
+                    # `context` survives the one read-only retry.  Do not pay
+                    # twice to critique the same deterministically marked
+                    # ambiguity, including when the retry's plan came from cache.
+                    context["critic_attempted"] = True
+                    context["calls"] += 1
+                    try:
+                        _content, critic = await boundary.call(
+                            "critic", [{"role": "user", "content": json.dumps({
+                                "task": runtime.task, "verdict": context["verdict"], "answer": answer},
+                                ensure_ascii=False)}], "critic-json-v1",
+                            verified_access=runtime.verified_access)
+                    except PolicyError as exc:
+                        # The boundary validates/accounted readable provider
+                        # usage before refusing its response.  Retain that bill
+                        # even though a critic remains advisory and failed.
+                        runtime.budgets["llm_tokens"] += exc.usage["llm_tokens"]
+                        runtime.budgets["llm_usd"] += exc.usage["llm_usd"]
+                        context["critic"] = {"outcome": "failure", "reason": str(exc)}
+                    else:
+                        runtime.budgets["llm_tokens"] += critic["tokens"]
+                        runtime.budgets["llm_usd"] += critic["usd"]
+                        context["critic"] = critic
         return running(state, context)
 
     async def decide(state):
@@ -1875,6 +1907,8 @@ async def _run_canonical(runtime: _TaskRuntime, planner, url: str | None) -> dic
         "verifier": state["verifier"], "retry": state["retry"],
         "evidence_hashes": [{key: packet[key] for key in ("document_id", "source_sha256", "snapshot_sha256")}
                             for packet in state["evidence"]],
+        "node_calls": node_calls_for(planner),
+        "critic": context.get("critic"),
         "budgets": _canonical_budget(runtime, context["calls"]),
     }
     runtime.run_dir.joinpath("result.json").write_text(json.dumps(result, indent=2))
@@ -1884,7 +1918,8 @@ async def _run_canonical(runtime: _TaskRuntime, planner, url: str | None) -> dic
 async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, judge,
                    headless: bool = True, url_guard=None, on_step=None, model=None, browser=None,
                    mode: str = "plan", driver=None, loop_budgets=None,
-                   step_offset: int = 0, opening_note: str | None = None):
+                   step_offset: int = 0, opening_note: str | None = None,
+                   verified_access: bool = False):
     """`mode` (ADR-027 Decision 1): "plan" is architecture B — one planning call
     over a condensed observation, then deterministic execution with
     observe/replan as the recovery path — and stays the default for every
@@ -1964,7 +1999,7 @@ async def run_task(task: str, url: str | None, planner, run_dir: str | Path, *, 
     page_bodies: dict[str, str] = {}
     answers: list = []
     runtime = _TaskRuntime(task, model, mode, run_dir, t0, trace, budgets,
-                           answers, extractions, judge)
+                           answers, extractions, judge, verified_access=verified_access)
     runtime.page_bodies = page_bodies
     runtime.step_offset = step_offset
     runtime.pending_supersede = pending_supersede

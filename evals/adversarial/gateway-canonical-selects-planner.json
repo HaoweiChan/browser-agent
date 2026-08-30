@@ -11,7 +11,7 @@
       {"mode": "plan", "http": 422, "planner_model": null, "detail_contains": "only canonical"},
       {"mode": "loop", "http": 422, "planner_model": null, "detail_contains": "only canonical"},
       {"mode": "escalate", "http": 422, "planner_model": null, "detail_contains": "only canonical"},
-      {"mode": "canonical", "model": "openai/gpt-5.6-luna", "http": 200, "planner_model": "openai/gpt-5.6-luna", "factory": "planner"}
+      {"mode": "canonical", "model": "openai/gpt-5-mini", "http": 200, "planner_model": "openai/gpt-5-mini", "factory": "planner"}
     ]
   },
   "expect": {

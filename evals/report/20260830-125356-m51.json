@@ -1,0 +1,398 @@
+{
+  "suite": "m51",
+  "score": 0.6363636363636364,
+  "totals": {
+    "wall_seconds": 1.54,
+    "latency_p50": 0.0,
+    "latency_p95": 0.86,
+    "cases_with_budgets": 0
+  },
+  "metrics": {},
+  "results": [
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "evidence_calls": 0,
+        "flash_calls": 0,
+        "packet_retained": true
+      },
+      "seconds": 0.86,
+      "id": "m51-canonical-deterministic-evidence-spends-zero-flash-calls",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "model": "openai/gpt-5-mini"
+      },
+      "seconds": 0.0,
+      "id": "m51-cli-attributes-the-actual-served-model",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "expected": {
+          "clear_skips": true,
+          "ambiguous_calls_once": true,
+          "clear_critic_count": 0,
+          "critic_count": 1,
+          "critic_failure_tokens": 7,
+          "critic_failure_usd": 0.002,
+          "aggregate_retains_critic_bill": true,
+          "aggregate_calls_include_critic": true,
+          "fail_stays_fail": true,
+          "route_not_publish": true
+        },
+        "got": {
+          "clear_skips": true,
+          "ambiguous_calls_once": true,
+          "clear_critic_count": 0,
+          "critic_count": 1,
+          "ambiguous_node_calls": [
+            {
+              "node": "plan",
+              "requested_route": [
+                "deepseek/deepseek-v4-pro",
+                "openai/gpt-5-mini"
+              ],
+              "served_model": "openai/gpt-5-mini",
+              "tokens": 1,
+              "usd": 0.001,
+              "latency_ms": 0,
+              "cached": false,
+              "outcome": "ok"
+            },
+            {
+              "node": "critic",
+              "requested_route": [
+                "openai/gpt-5-mini"
+              ],
+              "served_model": "openai/gpt-5-mini",
+              "tokens": 1,
+              "usd": 0.001,
+              "latency_ms": 0,
+              "cached": false,
+              "outcome": "ok"
+            },
+            {
+              "node": "plan",
+              "requested_route": [
+                "deepseek/deepseek-v4-pro",
+                "openai/gpt-5-mini"
+              ],
+              "served_model": "openai/gpt-5-mini",
+              "tokens": 1,
+              "usd": 0.001,
+              "latency_ms": 0,
+              "cached": false,
+              "outcome": "ok"
+            }
+          ],
+          "ambiguous_verdict": {
+            "verdict": "FAIL",
+            "reason": "ambiguous semantic evidence: two cited values"
+          },
+          "critic_failure_tokens": 7,
+          "critic_failure_usd": 0.002,
+          "aggregate_retains_critic_bill": true,
+          "aggregate_calls_include_critic": false,
+          "fail_stays_fail": true,
+          "route_not_publish": true
+        }
+      },
+      "got": {
+        "clear_skips": true,
+        "ambiguous_calls_once": true,
+        "clear_critic_count": 0,
+        "critic_count": 1,
+        "ambiguous_node_calls": [
+          {
+            "node": "plan",
+            "requested_route": [
+              "deepseek/deepseek-v4-pro",
+              "openai/gpt-5-mini"
+            ],
+            "served_model": "openai/gpt-5-mini",
+            "tokens": 1,
+            "usd": 0.001,
+            "latency_ms": 0,
+            "cached": false,
+            "outcome": "ok"
+          },
+          {
+            "node": "critic",
+            "requested_route": [
+              "openai/gpt-5-mini"
+            ],
+            "served_model": "openai/gpt-5-mini",
+            "tokens": 1,
+            "usd": 0.001,
+            "latency_ms": 0,
+            "cached": false,
+            "outcome": "ok"
+          },
+          {
+            "node": "plan",
+            "requested_route": [
+              "deepseek/deepseek-v4-pro",
+              "openai/gpt-5-mini"
+            ],
+            "served_model": "openai/gpt-5-mini",
+            "tokens": 1,
+            "usd": 0.001,
+            "latency_ms": 0,
+            "cached": false,
+            "outcome": "ok"
+          }
+        ],
+        "ambiguous_verdict": {
+          "verdict": "FAIL",
+          "reason": "ambiguous semantic evidence: two cited values"
+        },
+        "critic_failure_tokens": 7,
+        "critic_failure_usd": 0.002,
+        "aggregate_retains_critic_bill": true,
+        "aggregate_calls_include_critic": false,
+        "fail_stays_fail": true,
+        "route_not_publish": true
+      },
+      "seconds": 0.68,
+      "id": "m51-critic-runs-only-on-semantic-ambiguity-and-cannot-publish",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "transport_calls": 0,
+        "spent_unchanged": true,
+        "outcome": "budget_refused"
+      },
+      "seconds": 0.0,
+      "id": "m51-near-budget-refuses-before-transport",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "max_calls": true,
+        "tokens": true,
+        "usd": true,
+        "input_bound": true,
+        "nan_accounting_refused": true,
+        "negative_accounting_refused": true,
+        "fractional_accounting_refused": true,
+        "transport_calls": 1
+      },
+      "seconds": 0.0,
+      "id": "m51-node-budget-stops-before-next-call",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "expected": {
+          "same_input_hits": true,
+          "different_node_misses": true,
+          "different_route_misses": true,
+          "different_input_misses": true,
+          "different_version_misses": true,
+          "corrupt_misses": true,
+          "malformed_plan_retries_transport": true,
+          "cache_write_failure_accounted": true
+        },
+        "got": {
+          "same_input_hits": true,
+          "different_node_misses": true,
+          "different_route_misses": true,
+          "different_input_misses": true,
+          "different_version_misses": true,
+          "corrupt_misses": true,
+          "malformed_plan_retries_transport": false,
+          "cache_write_failure_accounted": true
+        }
+      },
+      "got": {
+        "same_input_hits": true,
+        "different_node_misses": true,
+        "different_route_misses": true,
+        "different_input_misses": true,
+        "different_version_misses": true,
+        "corrupt_misses": true,
+        "malformed_plan_retries_transport": false,
+        "cache_write_failure_accounted": true
+      },
+      "seconds": 0.0,
+      "id": "m51-node-cache-binds-node-route-input-and-version",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "expected": {
+          "roles": [
+            "evidence",
+            "plan",
+            "vision",
+            "critic"
+          ],
+          "plan_route": [
+            "deepseek/deepseek-v4-pro",
+            "openai/gpt-5-mini"
+          ],
+          "reject_served": [
+            "anthropic/claude-opus-5",
+            "unknown/model"
+          ],
+          "reject_route_override": true
+        },
+        "got": {
+          "roles": [
+            "evidence",
+            "plan",
+            "vision",
+            "critic"
+          ],
+          "plan_route": [
+            "deepseek/deepseek-v4-pro",
+            "openai/gpt-5-mini"
+          ],
+          "snapshot_matches": true,
+          "price_bounded": true,
+          "reject_served": [
+            "anthropic/claude-opus-5",
+            "unknown/model"
+          ],
+          "reject_route_override": false
+        }
+      },
+      "got": {
+        "roles": [
+          "evidence",
+          "plan",
+          "vision",
+          "critic"
+        ],
+        "plan_route": [
+          "deepseek/deepseek-v4-pro",
+          "openai/gpt-5-mini"
+        ],
+        "snapshot_matches": true,
+        "price_bounded": true,
+        "reject_served": [
+          "anthropic/claude-opus-5",
+          "unknown/model"
+        ],
+        "reject_route_override": false
+      },
+      "seconds": 0.0,
+      "id": "m51-node-policy-is-central-and-price-bounded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "wrong": {
+        "expected": {
+          "requested_route": [
+            "deepseek/deepseek-v4-pro",
+            "openai/gpt-5-mini"
+          ],
+          "served_model": "openai/gpt-5-mini",
+          "cached_second": true,
+          "zero_cached_cost": true,
+          "top_level_is_planner_only": true
+        },
+        "got": {
+          "requested_route": [
+            "deepseek/deepseek-v4-pro",
+            "openai/gpt-5-mini"
+          ],
+          "served_model": "openai/gpt-5-mini",
+          "cached_second": true,
+          "zero_cached_cost": true,
+          "top_level_is_planner_only": false
+        }
+      },
+      "got": {
+        "requested_route": [
+          "deepseek/deepseek-v4-pro",
+          "openai/gpt-5-mini"
+        ],
+        "served_model": "openai/gpt-5-mini",
+        "cached_second": true,
+        "zero_cached_cost": true,
+        "top_level_is_planner_only": false
+      },
+      "seconds": 0.0,
+      "id": "m51-node-telemetry-attributes-actual-served-model",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "refused": true,
+        "cache_empty": true,
+        "outcome": "invalid_accounting",
+        "spent": {
+          "calls": 1,
+          "tokens": 0,
+          "usd": 0.0
+        }
+      },
+      "seconds": 0.0,
+      "id": "m51-provider-usage-is-required-before-cache",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "verified_capability": true,
+        "call_count": 2,
+        "factory_model": "deepseek/deepseek-v4-pro",
+        "factory_fallback": true,
+        "run_model": "deepseek/deepseek-v4-pro",
+        "run_mode": "canonical",
+        "calls": [
+          {
+            "factory": {
+              "verified_access": true,
+              "model": "deepseek/deepseek-v4-pro",
+              "fallback": true
+            }
+          },
+          {
+            "run": {
+              "verified_access": true,
+              "model": "deepseek/deepseek-v4-pro",
+              "mode": "canonical"
+            }
+          }
+        ],
+        "header_not_logged": true,
+        "secret_not_logged": true
+      },
+      "seconds": 0.0,
+      "id": "m51-public-canonical-threads-verified-access-without-logging-secret",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "wrong": {},
+      "got": {
+        "unverified_refused": true,
+        "disabled_refused": true,
+        "transport_calls": 0,
+        "reason_contains": true
+      },
+      "seconds": 0.0,
+      "id": "m51-vision-requires-verified-access-and-known-price-vetted-model",
+      "kind": "adversarial"
+    }
+  ]
+}

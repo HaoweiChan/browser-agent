@@ -1,0 +1,9 @@
+{
+  "id": "m51-node-budget-stops-before-next-call",
+  "task": "browser",
+  "suites": ["m51", "invariant"],
+  "input": {"kind": "m51-policy", "check": "budget"},
+  "expect": {"max_calls": true, "tokens": true, "usd": true, "input_bound": true, "nan_accounting_refused": true, "negative_accounting_refused": true, "fractional_accounting_refused": true, "transport_calls": 1},
+  "triage": {"class": "invariant-gap", "note": "Canonical planner had only run token accounting, not per-node pre-call calls/token/USD stops."},
+  "provenance": "M51 red-first offline budget stop contract; transport is an injected stub."
+}

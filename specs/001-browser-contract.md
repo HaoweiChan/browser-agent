@@ -1,14 +1,16 @@
 # Output contract — browser task
 
-Every run of the browser agent — CLI, gateway, or eval adapter — returns exactly
-this shape. The eval adapter and the frontend both consume it; drift here is
-contract-drift (spec-drift audits field-by-field).
+Every run of the browser agent — CLI, gateway, or eval adapter — returns the
+base shape below. Canonical runs additionally carry `control_flow`; historical
+`escalate` comparator runs carry `legs`. The eval adapter and the frontend both
+consume it; drift here is contract-drift (spec-drift audits field-by-field).
 
 ## RunResult
 
 ```json
 {
   "status": "success | partial | failure:<class> | unsupported",
+  "mode": "canonical | plan | loop | escalate",
   "model": "planner model id | null",
   "answer": "string | list | null",
   "reason": "string | null",
@@ -32,7 +34,10 @@ contract-drift (spec-drift audits field-by-field).
     "judge_usd": 0.0
   },
   "legs": [ {"mode": "plan", "status": "failure:<class>", "reason": "…", "answer": null,
-             "steps": 0, "budgets_spent": {}, "extractions": []} ]
+             "steps": 0, "budgets_spent": {}, "extractions": []} ],
+  "control_flow": {"nodes": [], "routes": [], "status": "accepted",
+                    "verifier": {}, "retry": {}, "evidence_hashes": [],
+                    "node_calls": [], "critic": null, "budgets": {}}
 }
 ```
 
@@ -240,6 +245,11 @@ appears, in order — no post-hoc reconstruction).
   run the canonical graph; omitted `mode` means canonical and any other public
   value is refused. `plan`, `loop`, and `escalate` remain direct `run_task`
   comparators for bounded evals only, never gateway or CLI choices.
+- **Canonical model policy** (ADR-048). Public planning defaults to the ordered
+  DeepSeek V4 Pro → GPT-5 mini route; explicit public model selection may pin
+  only either of those two models. `control_flow.node_calls` contains safe node
+  telemetry (`requested_route`, `served_model`, tokens, USD, latency, cached,
+  outcome), never messages, page evidence, headers, or access-key material.
 - The five keys above are the **whole** target schema. A key outside it is a
   plan the executor cannot honour and stops the run as `failure:task`. It used
   to be dropped, and the step ran against whatever was left of the target —
@@ -586,6 +596,12 @@ observe → route → evidence → plan → act → evaluate → decide
   "evidence": [EvidencePacket]
 }
 ```
+
+`control_flow` additionally projects `node_calls` after the graph finishes.
+Each record is safe accounting only: node, requested route, provider-served
+model when readable, tokens, USD, latency, cached flag, and outcome. The
+provider's served model must be on that node's frozen, price-bounded route;
+otherwise the graph ends loudly and still retains billed usage.
 
 - Intermediate routes are exact: `observe→route`, `route→evidence`,
   `evidence→plan`, `plan→act`, `act→evaluate`, and `evaluate→decide`; each has

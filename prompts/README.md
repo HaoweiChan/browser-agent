@@ -27,6 +27,8 @@ The assignment reviewers read this folder. One layer:
 | [014](014-a-freeze.md) | M10: A-freeze, and the probe that failed the milestone it was gating |
 | [015](015-agent-control-after-the-probe-regression.md) | After the probe regression: MCP, tool-calling loops, and what actually limits completion |
 | [016](016-m40-demo-surface-and-investment-domains.md) | M40: the demo surface, and what 43 live runs said about finance pages |
+| [017](017-m51-bounded-multimodel-policy.md) | M51: a bounded role policy without activating speculative model nodes |
+| [018](018-m51-independent-review-corrections.md) | M51: cold review and spec drift corrected public attribution and accounting |
 
 ## Curated file format
 

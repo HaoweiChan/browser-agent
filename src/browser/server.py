@@ -25,7 +25,8 @@ from pydantic import BaseModel
 from .agent import assemble_result, run_task
 from .judge import live_judge
 from .mutate import apply_mutation
-from .planner import ALLOWED_MODELS, DEFAULT_MODEL, live_planner
+from .planner import DEFAULT_MODEL
+from .model_policy import CANONICAL_PLAN_MODELS, canonical_live_planner
 
 app = FastAPI(title="browser-agent")
 FIXTURE_DIR = (Path(__file__).parent / "fixtures").resolve()
@@ -196,11 +197,9 @@ class TaskIn(BaseModel):
     # Optional only to return a loud boundary error for retired public values.
     mode: str | None = None
     # The M9 ablation's independent variable. Absent means the default; anything
-    # else must be on `planner.ALLOWED_MODELS` — the ablation set plus the
-    # models frozen under the DeepSeek V4 Pro ceiling. Authentication is a
-    # separate first gate; exact allowlist membership is still required because
-    # a shared access key can leak or be shared and run budgets count tokens,
-    # not provider price (ADR-045, gateway-model-not-allowlisted).
+    # else must be on the canonical policy's two price-vetted plan routes.
+    # Authentication is a separate first gate; exact membership still matters
+    # because a shared key can leak and token budgets do not bound price.
     model: str | None = None
 
 
@@ -208,18 +207,25 @@ def _env_failure(reason: str, model: str | None = None, mode: str = "canonical")
     """A contract-shaped result for a run that never got off the ground."""
     return assemble_result(
         [], None,
-        {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0},
+        {"actions": 0, "llm_tokens": 0, "llm_usd": 0.0, "replans": 0, "ms": 0,
+         "judge_calls": 0, "judge_tokens": 0, "judge_usd": 0.0},
         failure="env", reason=reason, model=model, mode=mode)
 
 
 def _served_model(requested: str, *callers) -> str:
+    policy_models = [call["served_model"] for caller in callers if caller
+                     for call in getattr(getattr(caller, "node_policy_boundary", None), "node_calls", [])
+                     if call.get("node") == "plan" and isinstance(call.get("served_model"), str)]
+    if policy_models:
+        return " + ".join(dict.fromkeys(policy_models))
     used = list(dict.fromkeys(
         mid for caller in callers if caller
         for mid in getattr(caller, "models_used", []) if isinstance(mid, str)))
     return " + ".join(used) if used else requested
 
 
-async def _execute(run_id: str, task: str, url: str | None, model: str, fallback: bool = True):
+async def _execute(run_id: str, task: str, url: str | None, model: str, fallback: bool = True,
+                   verified_access: bool = False):
     global ACTIVE_RUN
     q = STREAMS[run_id]
     result = None
@@ -227,7 +233,10 @@ async def _execute(run_id: str, task: str, url: str | None, model: str, fallback
     async with SEM:
         ACTIVE_RUN = run_id
         try:
-            planner = live_planner(model, fallback=fallback)
+            # Public canonical policy owns the only live call route.  The
+            # capability is a boolean after header verification, never the key.
+            planner = canonical_live_planner(verified_access=verified_access, model=model,
+                                             fallback=fallback)
             result = await run_task(
                 task, url,
                 planner, RUN_ROOT / run_id,
@@ -236,6 +245,7 @@ async def _execute(run_id: str, task: str, url: str | None, model: str, fallback
                 # Echoed back on the record so a committed ablation report is
                 # self-attributing rather than trusting its submission record.
                 model=model,
+                verified_access=verified_access,
                 # Copy on emit: the executor keeps mutating its record (a later
                 # supersede lands on an attempt already sent). The final `done`
                 # event carries the authoritative trace; steps stream as they are.
@@ -245,7 +255,7 @@ async def _execute(run_id: str, task: str, url: str | None, model: str, fallback
             # Through the same assembler a real run uses: a hand-built dict here
             # drifted from the contract with evidence/budgets_spent null, and the
             # frontend renders both (gateway-error-contract-shape). Empty trace is
-            # correct — live_planner() validates the key before a browser opens,
+            # correct — the canonical policy validates its environment before a browser opens,
             # so nothing was attempted; only the shape was ever wrong.
             result = _env_failure(f"{type(e).__name__}: {e}", model)
         finally:
@@ -281,9 +291,9 @@ async def submit_task(t: TaskIn, request: Request):
     # value for an optional field, and Pydantic cannot tell the two apart here
     # anyway — so the rule is written as it behaves rather than the other way
     # round, and pinned by a row in gateway-model-reaches-planner (PR #15, R8).
-    if t.model is not None and t.model not in ALLOWED_MODELS:
+    if t.model is not None and t.model not in CANONICAL_PLAN_MODELS:
         raise HTTPException(422, "model blocked: allowlisted models only — "
-                                 + ", ".join(ALLOWED_MODELS))
+                                 + ", ".join(CANONICAL_PLAN_MODELS))
     if t.mode is not None and t.mode != "canonical":
         raise HTTPException(422, "only canonical execution is available")
     run_id = uuid.uuid4().hex[:8]
@@ -291,7 +301,7 @@ async def submit_task(t: TaskIn, request: Request):
     STREAMS[run_id] = asyncio.Queue()
     asyncio.get_event_loop().create_task(
         _execute(run_id, t.task, t.url, t.model or DEFAULT_MODEL,
-                 fallback=t.model is None))
+                 fallback=t.model is None, verified_access=True))
     return {"run_id": run_id}
 
 
@@ -862,6 +872,7 @@ const ADRS = [
   ["045", "paid LLM requests require a verified LLM access key; DeepSeek V4 Pro is primary, GPT-5 mini is fallback, and Opus has no price exception"],
   ["046", "the future browser agent has one cited-evidence graph; deterministic verification alone may publish, and the legacy modes retire only after parity evidence"],
   ["047", "public tasks follow one verified browser flow; the result is published only after its evidence and checks agree"],
+  ["048", "each model node has one price-vetted route, a hard budget and safe served-model telemetry; deterministic verification alone decides whether an answer is published"],
 ];
 $("adr-list").innerHTML = ADRS.map(([n, line]) => `<li>ADR-${n} — ${esc(line)}</li>`).join("");
 $("adrs-summary").textContent = `${ADRS.length} architecture decisions — click to expand`;

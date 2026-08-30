@@ -36,7 +36,7 @@ failing case is decoration.
 ## Running it
 
 ```bash
-python3 -m evals.run --suite fast        # offline gate: 274 cases, zero paid calls
+python3 -m evals.run --suite fast        # offline gate: 278 cases, zero paid calls
 python3 -m evals.run --suite invariant   # must-always-hold; pure-code probes + the fixture runs that pin them
 python3 -m evals.run --suite live        # 13 cases, 5 real sites, still $0.00
 ```
@@ -52,24 +52,27 @@ LLM_ACCESS_KEY='choose-a-long-demo-key' \
 
 ## Where it stands
 
-Latest offline baseline — `evals/report/20260829-202042-fast.json`, with
-`evals/report/20260830-081923-invariant.json` and
+Latest offline baseline — `evals/report/20260830-130558-fast.json`, with
+`evals/report/20260830-125949-invariant.json` and
 `evals/report/20260828-153810-live.json`:
 
 ```
-fast  272/274    invariant  113/115    live  12/13    $0.0000    108.0s
+fast  276/278    invariant  120/122    live  12/13    $0.0000    115.8s
 recovery 10/10 verified (25 rungs tried) · mutation 9/11 passed, 6 recovered (5 by relocating)
 diagnosis 80/80 · 15 replans
 ```
 
-The fast report's two reds are the fixed-point headline and band checks that
-block updated; its subsequent no-report gate was green. The cited invariant
-refresh is the 115-case fixed-point report; its two reds are the derived
-headline and band checks that this change refreshes.
+The fast report's two reds are the fixed-point headline and report-citation
+checks that this block updates. The cited invariant refresh is the 122-case
+fixed-point report; its two reds are the derived headline and band checks that
+this change refreshes. Subsequent no-report gates are the completion proof;
+these reports preserve the fixed point that forced the docs.
 
 The earlier 117-case band source and fixed point remain historical evidence in
 `evals/report/20260830-053008-invariant.json` and
 `evals/report/20260830-053423-invariant.json`; they are not current baselines.
+M50's superseded fixed point remains in
+`evals/report/20260830-081923-invariant.json`.
 
 This refresh supersedes the prior baselines
 `evals/report/20260829-193439-invariant.json`,
@@ -259,8 +262,8 @@ enumerating them here is the snapshot that drifted:
 
 | suite | cases | band source | × 1.15 | ceiling |
 |---|---|---|---|---|
-| `fast` | 274 | 114.81s | 132.03 | **135s** |
-| `invariant` | 115 | 39.91s | 45.90 | **70s** |
+| `fast` | 278 | 114.97s | 132.22 | **135s** |
+| `invariant` | 122 | 40.02s | 46.02 | **70s** |
 
 The last column is the **committed** ceiling, not the arithmetic's own answer.
 A short sample may derive UNDER the committed ceiling and must never drag it
@@ -524,7 +527,7 @@ left the suite at 84/84 and restored the flattering number in silence
 (`mutation-metrics-honesty` exists because of that, and `ADR-009` Decisions 7–9
 record all six).
 
-The eval set is not weak; it is 330 cases (274 of them in the offline gate), it
+The eval set is not weak; it is 341 cases (278 of them in the offline gate), it
 caught a *bad fix* mid-session during a review, and in M6 it caught a fix that
 passed its own case for the wrong reason. But an eval set written by the author of the code is
 blind in the direction the author was already looking, and the only two things

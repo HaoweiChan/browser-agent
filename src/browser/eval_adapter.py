@@ -4133,21 +4133,21 @@ def _run_readyz_case(case: dict) -> dict:
 
     inp = case["input"]
     hold = float(inp.get("hold_seconds", 3.0))
-    base, prev = _base_url(), S.live_planner
+    base, prev = _base_url(), S.canonical_live_planner
     # The guard refuses loopback in every spelling, which is exactly right for a
     # public endpoint and exactly wrong for an in-process fixture run. Patched
     # eval-side for the duration and restored in the `finally`, never softened in
     # `server.py` — the same trade `_run_gateway_model_case` documents.
     prev_guard = S.url_ok
 
-    def holding_planner(model=None, fallback=True):
+    def holding_planner(*, verified_access, model=None, fallback=True):
         async def plan(task, url, observation=None, note=None):
             await _a.sleep(hold)
             return [{"action": "extract", "target": {"role": "heading"}, "anchor": None,
                      "value": None, "expected_state": None}], {"llm_tokens": 0, "llm_usd": 0.0}
         return plan
 
-    S.live_planner, S.url_ok = holding_planner, lambda u: True
+    S.canonical_live_planner, S.url_ok = holding_planner, lambda u: True
     try:
         before = _get_json("/readyz")
         t0 = time.monotonic()
@@ -4171,7 +4171,7 @@ def _run_readyz_case(case: dict) -> dict:
         after = _get_json("/readyz")
         elapsed = round(time.monotonic() - t0, 2)
     finally:
-        S.live_planner, S.url_ok = prev, prev_guard
+        S.canonical_live_planner, S.url_ok = prev, prev_guard
 
     def state(r):
         return "idle" if (r.get("ready") and not r.get("busy")) else (
@@ -4732,10 +4732,9 @@ def _run_report_citations_case(case: dict) -> dict:
 def _run_gateway_error_case(case: dict) -> dict:
     """The gateway's catch-all must return the contract shape, not a stub dict.
 
-    Forces the no-key path by blanking OPENROUTER_API_KEY for the duration: the
-    app runs in a thread in this process, so the run fails before any HTTP call
-    to OpenRouter and the case costs $0.00 on a developer machine that has a key
-    (cost-discipline rule 4) instead of quietly making a live request."""
+    Forces the no-key path by blanking OPENROUTER_API_KEY for the duration.  The
+    canonical planner validates it at construction, so the run fails before a
+    browser or provider call and remains a deterministic $0 contract check."""
     import os
 
     inp, exp = case["input"], case["expect"]
@@ -4780,11 +4779,11 @@ def _run_gateway_access_case(case: dict) -> dict:
     base = _base_url()
     configured = case["input"]["configured_key"]
     old = os.environ.get("LLM_ACCESS_KEY")
-    old_planner = S.live_planner
+    old_planner = S.canonical_live_planner
     called = []
 
-    def recorder(model=None, fallback=True):
-        called.append(model)
+    def recorder(*, verified_access, model=None, fallback=True):
+        called.append((verified_access, model, fallback))
         raise RuntimeError("eval recorder: no paid call")
 
     def post(path, key=None):
@@ -4803,7 +4802,7 @@ def _run_gateway_access_case(case: dict) -> dict:
             return e.code, json.loads(e.read().decode() or "{}")
 
     try:
-        S.live_planner = recorder
+        S.canonical_live_planner = recorder
         os.environ["LLM_ACCESS_KEY"] = configured
         before = len(S.RUNS)
         rows = {
@@ -4821,7 +4820,7 @@ def _run_gateway_access_case(case: dict) -> dict:
         os.environ.pop("LLM_ACCESS_KEY", None)
         unset = post("/tasks", configured)
     finally:
-        S.live_planner = old_planner
+        S.canonical_live_planner = old_planner
         if old is None:
             os.environ.pop("LLM_ACCESS_KEY", None)
         else:
@@ -4863,13 +4862,13 @@ def _run_gateway_model_case(case: dict) -> dict:
     factories: list = []
     fallbacks: list = []
 
-    def recorder(model=None, fallback=True):
+    def recorder(*, verified_access, model=None, fallback=True):
         seen.append(model)
         factories.append("planner")
         fallbacks.append(fallback)
         raise RuntimeError("eval recorder: planner never constructed")
 
-    base, prev = _base_url(), S.live_planner
+    base, prev = _base_url(), S.canonical_live_planner
     wrong = []
     if case["input"].get("access_gate"):
         access = _run_gateway_access_case({
@@ -4997,7 +4996,7 @@ def _run_gateway_model_case(case: dict) -> dict:
     # the snapshot block, so a renamed or malformed snapshot file raised with the
     # recorder still installed, breaking every later case in the same process and
     # attributing the damage to unrelated cases (PR #15, R6).
-    S.live_planner = recorder
+    S.canonical_live_planner = recorder
     try:
         for chk in case["input"]["checks"]:
             payload = {"task": case["input"]["task"]}
@@ -5045,7 +5044,7 @@ def _run_gateway_model_case(case: dict) -> dict:
                 wrong.append({"model": chk.get("model"), "want": want,
                               "got": {k: got.get(k) for k in want}})
     finally:
-        S.live_planner = prev
+        S.canonical_live_planner = prev
     return {"passed": not wrong, "wrong": wrong, "recorded_models": seen,
             "recorded_factories": factories}
 
@@ -5055,11 +5054,11 @@ def _run_public_canonical_case(case: dict) -> dict:
     from . import server as S
 
     factories, calls, run_ids = [], [], []
-    old_planner, old_run = S.live_planner, S.run_task
+    old_planner, old_run = S.canonical_live_planner, S.run_task
     had_driver, old_driver = hasattr(S, "live_driver"), getattr(S, "live_driver", None)
 
-    def planner(model=None, fallback=True):
-        factories.append(("planner", model, fallback))
+    def planner(*, verified_access, model=None, fallback=True):
+        factories.append(("planner", verified_access, model, fallback))
         return object()
 
     def driver(*_args, **_kwargs):
@@ -5080,7 +5079,7 @@ def _run_public_canonical_case(case: dict) -> dict:
             return error.code, json.loads(error.read().decode() or "{}")
 
     try:
-        S.live_planner, S.live_driver, S.run_task = planner, driver, run_recorder
+        S.canonical_live_planner, S.live_driver, S.run_task = planner, driver, run_recorder
         rejected = {mode: post({"task": case["input"]["task"], "mode": mode})[0]
                     for mode in case["input"]["legacy_modes"]}
         code, body = post({"task": case["input"]["task"]})
@@ -5091,7 +5090,7 @@ def _run_public_canonical_case(case: dict) -> dict:
                     break
                 time.sleep(.01)
     finally:
-        S.live_planner, S.run_task = old_planner, old_run
+        S.canonical_live_planner, S.run_task = old_planner, old_run
         if had_driver:
             S.live_driver = old_driver
         else:
@@ -5266,7 +5265,8 @@ def _run_ablation_run_one_case(case: dict) -> dict:
                           "want_measurement": want, "got": got})
 
     base = _base_url()
-    prev_planner, prev_guard, prev_assemble = S.live_planner, S.url_ok, A.assemble_result
+    prev_planner, prev_guard, prev_served = (
+        S.canonical_live_planner, S.url_ok, S._served_model)
     # Fixtures are served on loopback and the production guard refuses loopback;
     # this grades the driver, not the guard (url-guard-literal-ips grades that).
     S.url_ok = lambda u: True
@@ -5280,12 +5280,12 @@ def _run_ablation_run_one_case(case: dict) -> dict:
         cfg = inp["e2e"]
         billed = cfg["billed_usage"]
 
-        def prose_planner(model=None, fallback=True):
+        def prose_planner(*, verified_access, model=None, fallback=True):
             async def plan(*a, **k):
                 raise PlanError(cfg["plan_error"], usage=dict(billed))
             return plan
 
-        S.live_planner = prose_planner
+        S.canonical_live_planner = prose_planner
         try:
             row = AB.run_one(base, cfg["model"], spec_for(cfg), 60, [])
         except SystemExit as e:
@@ -5310,14 +5310,14 @@ def _run_ablation_run_one_case(case: dict) -> dict:
         # --- a provider fault during planning: aborts, never a 0/5 cell -------
         f = inp["e2e_fatal"]
 
-        def http_planner(model=None, fallback=True):
+        def http_planner(*, verified_access, model=None, fallback=True):
             async def plan(*a, **k):
                 raise urllib.error.HTTPError(
                     "https://openrouter.ai/api/v1/chat/completions", f["http_status"],
                     f["http_reason"], {}, None)
             return plan
 
-        S.live_planner = http_planner
+        S.canonical_live_planner = http_planner
         try:
             bad = AB.run_one(base, f["model"], spec_for(f), 60, [])
             wrong.append({"published_a_provider_fault_as_a_model_result": bad,
@@ -5330,7 +5330,7 @@ def _run_ablation_run_one_case(case: dict) -> dict:
         # Pre-plan navigation runs before the planner exists, so this cell would
         # be a model scoring 0/5 at $0.00 for a site being down (PR #15, R14).
         u = inp["e2e_unreachable"]
-        S.live_planner = lambda model=None: stub_planner(
+        S.canonical_live_planner = lambda *, verified_access, model=None, fallback=True: stub_planner(
             [[{"action": "extract", "target": {"role": "heading", "index": 0}}]])
         try:
             bad = AB.run_one(base, u["model"],
@@ -5344,25 +5344,20 @@ def _run_ablation_run_one_case(case: dict) -> dict:
             pass  # loud, which is the contract
 
         # --- a gateway attributing the run to a different model ---------------
-        # Patched from the EVAL side by wrapping the result assembler, so no
-        # eval-only branch lives in the gateway's execution path (PR #15, R13).
-        S.live_planner = lambda model=None: stub_planner(
+        # Patched at the gateway attribution seam, which is now what turns
+        # canonical node telemetry into the top-level model field.
+        S.canonical_live_planner = lambda *, verified_access, model=None, fallback=True: stub_planner(
             [[{"action": "extract", "target": {"role": "heading", "index": 0}}]])
         echoes = inp["model_echo"]["echoes"]
-
-        def lying_assemble(*a, **kw):
-            out = prev_assemble(*a, **kw)
-            out["model"] = echoes
-            return out
-
-        A.assemble_result = lying_assemble
+        S._served_model = lambda _requested, *_callers: echoes
         try:
             AB.run_one(base, inp["model_echo"]["submits"], spec_for(cfg), 60, [])
             wrong.append("run_one accepted a run the gateway attributed to a different model")
         except SystemExit:
             pass  # loud, which is the contract
     finally:
-        S.live_planner, S.url_ok, A.assemble_result = prev_planner, prev_guard, prev_assemble
+        S.canonical_live_planner, S.url_ok, S._served_model = (
+            prev_planner, prev_guard, prev_served)
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -5407,15 +5402,15 @@ def _run_ablation_preflight_case(case: dict) -> dict:
     if not screen(probe):
         wrong.append("the preflight probe task is NOT refused by the scope screen, "
                      "so on a build that accepts the model field it would really plan")
-    called, prev_planner = [], S.live_planner
+    called, prev_planner = [], S.canonical_live_planner
 
-    def counting_planner(model=None, fallback=True):
+    def counting_planner(*, verified_access, model=None, fallback=True):
         async def plan(*a, **k):
             called.append(model)
             return [], {"llm_tokens": 0, "llm_usd": 0.0}
         return plan
 
-    S.live_planner = counting_planner
+    S.canonical_live_planner = counting_planner
     try:
         req = urllib.request.Request(
             f"{base}/tasks", data=json.dumps({"task": probe}).encode(),
@@ -5433,14 +5428,15 @@ def _run_ablation_preflight_case(case: dict) -> dict:
         if got != want:
             wrong.append({"probe_run_is_not_free_and_refused": got, "want": want})
     finally:
-        S.live_planner = prev_planner
+        S.canonical_live_planner = prev_planner
     try:
         preflight(base)
     except SystemExit as e:
         wrong.append({"shipped_build_rejected_by_its_own_preflight": str(e)})
-    prev = S.ALLOWED_MODELS
+    prev = S.CANONICAL_PLAN_MODELS
     # Accepts anything — what a build predating the `model` field does by dropping it.
-    S.ALLOWED_MODELS = type("AcceptsAnything", (), {"__contains__": lambda self, x: True})()
+    S.CANONICAL_PLAN_MODELS = type(
+        "AcceptsAnything", (), {"__contains__": lambda self, x: True})()
     try:
         # The simulation has to be real before its result means anything. This case
         # patches a module attribute by NAME, and the name it patches has already
@@ -5466,7 +5462,7 @@ def _run_ablation_preflight_case(case: dict) -> dict:
     except SystemExit:
         pass  # loud, which is the contract
     finally:
-        S.ALLOWED_MODELS = prev
+        S.CANONICAL_PLAN_MODELS = prev
     return {"passed": not wrong, "wrong": wrong}
 
 
@@ -9254,6 +9250,346 @@ async def _run_canonical_graph_case(case: dict) -> dict:
     return {"passed": not wrong, "wrong": wrong, "got": got}
 
 
+def _run_m51_policy_case(case: dict) -> dict:
+    """Offline contract seam for M51's centralized canonical-node policy."""
+    try:
+        from .model_policy import (FLASH_MODEL, FROZEN_PRICES, MINI_MODEL, NODE_POLICY,
+                                   POLICY_VERSION, PRO_MODEL, NodePolicy, PolicyBoundary,
+                                   PolicyError, _cache_key, canonical_live_planner, policy_for)
+        from .planner import PlanError
+    except ModuleNotFoundError:
+        return {"passed": False, "wrong": {"missing_capability": "m51-model-policy"}}
+    check, want = case["input"]["check"], case["expect"]
+
+    async def transport(payload):
+        return {"model": MINI_MODEL, "choices": [{"message": {"content": "[]"}}],
+                "usage": {"total_tokens": 1, "cost": 0.001}}
+
+    if check == "policy":
+        snapshot = json.loads((Path(__file__).parents[2] / "evals" / "labels" /
+                               "openrouter-models-20260820.json").read_text())
+        prices = {entry["id"]: (float(entry["pricing"]["prompt"]),
+                                 float(entry["pricing"]["completion"]))
+                  for entry in snapshot["models"]}
+        ceiling = prices[PRO_MODEL]
+        got = {"roles": list(NODE_POLICY), "plan_route": list(NODE_POLICY["plan"].route),
+               "snapshot_matches": all(FROZEN_PRICES.get(model) == prices.get(model)
+                                       for policy in NODE_POLICY.values() for model in policy.route),
+               "price_bounded": all(prices[model][0] <= ceiling[0] and prices[model][1] <= ceiling[1]
+                                    for policy in NODE_POLICY.values() for model in policy.route)}
+        async def reject_served():
+            rejected = []
+            for model in want["reject_served"]:
+                boundary = PolicyBoundary(transport=lambda _payload, model=model: asyncio.sleep(0, result={
+                    "model": model, "choices": [{"message": {"content": "[]"}}],
+                    "usage": {"total_tokens": 1, "cost": 0.001}}), cache={})
+                try:
+                    await boundary.call("plan", [], "v1", verified_access=True)
+                except PolicyError:
+                    rejected.append(model)
+            return rejected
+        got["reject_served"] = _await(reject_served())
+        async def reject_route_override():
+            boundary = PolicyBoundary(transport=lambda _payload: asyncio.sleep(0, result={
+                "model": FLASH_MODEL, "choices": [{"message": {"content": "[]"}}],
+                "usage": {"total_tokens": 1, "cost": 0.001}}), cache={})
+            try:
+                await boundary.call("plan", [], "v1", verified_access=True,
+                                    route=(FLASH_MODEL,))
+            except PolicyError:
+                return True
+            return False
+        got["reject_route_override"] = _await(reject_route_override())
+        passed = all(got.get(key) == value for key, value in want.items())
+    elif check == "cache":
+        async def cache_scenario():
+            from . import model_policy as M
+            calls = [0]
+            async def counted(payload):
+                calls[0] += 1
+                return await transport(payload)
+            messages = [{"role": "user", "content": "x"}]
+            cache, boundary = {}, PolicyBoundary(transport=counted, cache={})
+            key = _cache_key("plan", policy_for("plan"), messages, "v1")
+            cache[key] = {"content": 9, "served_model": MINI_MODEL}
+            corrupt = PolicyBoundary(transport=counted, cache=cache)
+            await corrupt.call("plan", messages, "v1", verified_access=True)
+            await boundary.call("plan", messages, "v1", verified_access=True)
+            await boundary.call("plan", messages, "v1", verified_access=True)
+            original_save = M._cache_save
+            try:
+                M._cache_save = lambda _cache: (_ for _ in ()).throw(OSError("offline cache disk full"))
+                persistent = PolicyBoundary(transport=counted)
+                persisted_messages = [{"role": "user", "content": "cache-write-failure"}]
+                persistent.cache.pop(_cache_key("plan", policy_for("plan"), persisted_messages, "v1"), None)
+                _content, persisted = await persistent.call("plan", persisted_messages, "v1",
+                                                            verified_access=True)
+            finally:
+                M._cache_save = original_save
+            malformed_calls = [0]
+            async def malformed_then_valid(_payload):
+                malformed_calls[0] += 1
+                content = "not-json" if malformed_calls[0] == 1 else "[]"
+                return {"model": MINI_MODEL, "choices": [{"message": {"content": content}}],
+                        "usage": {"total_tokens": 1, "cost": 0.001}}
+            malformed = canonical_live_planner(
+                verified_access=True,
+                boundary=PolicyBoundary(transport=malformed_then_valid, cache={}))
+            try:
+                await malformed("task", "https://example.com")
+            except PlanError:
+                pass
+            try:
+                await malformed("task", "https://example.com")
+                malformed_retried = malformed_calls[0] == 2
+            except PlanError:
+                malformed_retried = False
+            return {"same_input_hits": boundary.node_calls[-1]["cached"],
+                    "different_node_misses": _cache_key("plan", policy_for("plan"), messages, "v1") != _cache_key("critic", policy_for("critic"), messages, "v1"),
+                    "different_route_misses": _cache_key("plan", policy_for("plan"), messages, "v1") != _cache_key("plan", NodePolicy(**{**policy_for("plan").__dict__, "route": (MINI_MODEL,)}), messages, "v1"),
+                    "different_input_misses": _cache_key("plan", policy_for("plan"), messages, "v1") != _cache_key("plan", policy_for("plan"), [{"role": "user", "content": "y"}], "v1"),
+                    "different_version_misses": _cache_key("plan", policy_for("plan"), messages, "v1") != _cache_key("plan", policy_for("plan"), messages, "v2"),
+                    "corrupt_misses": corrupt.node_calls[0]["cached"] is False,
+                    "malformed_plan_retries_transport": malformed_retried,
+                    "cache_write_failure_accounted": (persisted["outcome"] == "ok_cache_write_failed"
+                                                        and persisted["tokens"] == 1
+                                                        and persisted["usd"] == 0.001)}
+        got = _await(cache_scenario())
+        passed = all(got.get(key) == value for key, value in want.items())
+    elif check in ("budget", "telemetry"):
+        async def boundary_scenario():
+            calls = [0]
+            async def counted(payload):
+                calls[0] += 1
+                return await transport(payload)
+            boundary = PolicyBoundary(transport=counted, cache={})
+            await boundary.call("plan", [{"role": "user", "content": "x"}], "v1", verified_access=True)
+            if check == "telemetry":
+                await boundary.call("plan", [{"role": "user", "content": "x"}], "v1", verified_access=True)
+                return boundary.node_calls, calls[0]
+            stopped = {}
+            for name, spent in (("max_calls", {"calls": 2, "tokens": 0, "usd": 0.0}),
+                                ("tokens", {"calls": 0, "tokens": 4000, "usd": 0.0}),
+                                ("usd", {"calls": 0, "tokens": 0, "usd": 0.05})):
+                boundary.spent["plan"] = spent
+                try:
+                    await boundary.call("plan", [{"role": "user", "content": name}], "v1", verified_access=True)
+                except PolicyError:
+                    stopped[name] = True
+            boundary.spent["plan"] = {"calls": 0, "tokens": 0, "usd": 0.0}
+            try:
+                await boundary.call("plan", [{"role": "user", "content": "x" * 50_001}], "v1",
+                                    verified_access=True)
+            except PolicyError:
+                stopped["input_bound"] = True
+            invalid = {}
+            for label, usage in (("nan", {"total_tokens": 2, "cost": float("nan")} ),
+                                 ("negative", {"total_tokens": -1, "cost": 0.001}),
+                                 ("fractional", {"total_tokens": 1.9, "cost": 0.001})):
+                bad = PolicyBoundary(transport=lambda _payload, usage=usage: asyncio.sleep(0, result={
+                    "model": MINI_MODEL, "choices": [{"message": {"content": "[]"}}], "usage": usage}), cache={})
+                try:
+                    await bad.call("plan", [{"role": "user", "content": label}], "v1",
+                                   verified_access=True)
+                except PolicyError:
+                    invalid[label] = (bad.spent.get("plan") == {"calls": 1, "tokens": 0, "usd": 0.0}
+                                      and not bad.cache and bad.node_calls[-1]["outcome"] == "invalid_accounting")
+            return {**stopped, "nan_accounting_refused": invalid.get("nan"),
+                    "negative_accounting_refused": invalid.get("negative"),
+                    "fractional_accounting_refused": invalid.get("fractional")}, calls[0]
+        first, transport_calls = _await(boundary_scenario())
+        if check == "telemetry":
+            from . import server as S
+            fake_boundary = type("Boundary", (), {"node_calls": [
+                {"node": "plan", "served_model": PRO_MODEL},
+                {"node": "critic", "served_model": MINI_MODEL},
+            ]})()
+            fake_planner = type("Planner", (), {"node_policy_boundary": fake_boundary})()
+            got = {"requested_route": first[0]["requested_route"], "served_model": first[0]["served_model"],
+                   "cached_second": first[1]["cached"],
+                   "zero_cached_cost": first[1]["tokens"] == 0 and first[1]["usd"] == 0,
+                   "top_level_is_planner_only": S._served_model(PRO_MODEL, fake_planner) == PRO_MODEL}
+        else:
+            got = {**first, "transport_calls": transport_calls}
+        passed = all(got.get(key) == value for key, value in want.items())
+    elif check == "missing-usage":
+        async def missing_usage_scenario():
+            boundary = PolicyBoundary(transport=lambda _payload: asyncio.sleep(0, result={
+                "model": MINI_MODEL,
+                "choices": [{"message": {"content": "[]"}}],
+            }), cache={})
+            refused = False
+            try:
+                await boundary.call("plan", [{"role": "user", "content": "x"}], "v1",
+                                    verified_access=True)
+            except PolicyError:
+                refused = True
+            return {"refused": refused, "cache_empty": not boundary.cache,
+                    "outcome": boundary.node_calls[-1]["outcome"],
+                    "spent": boundary.spent.get("plan")}
+        got = _await(missing_usage_scenario())
+        passed = all(got.get(key) == value for key, value in want.items())
+    elif check == "near-budget":
+        async def near_budget_scenario():
+            calls = [0]
+            async def counted(_payload):
+                calls[0] += 1
+                return {"model": MINI_MODEL,
+                        "choices": [{"message": {"content": "[]"}}],
+                        "usage": {"total_tokens": 2, "cost": 0.002}}
+            boundary = PolicyBoundary(transport=counted, cache={})
+            before = {"calls": 1, "tokens": 3999, "usd": 0.049}
+            boundary.spent["plan"] = dict(before)
+            try:
+                await boundary.call("plan", [{"role": "user", "content": "retry"}], "v1",
+                                    verified_access=True)
+            except PolicyError:
+                pass
+            return {"transport_calls": calls[0], "spent_unchanged": boundary.spent["plan"] == before,
+                    "outcome": boundary.node_calls[-1]["outcome"]}
+        got = _await(near_budget_scenario())
+        passed = all(got.get(key) == value for key, value in want.items())
+    elif check == "cli-attribution":
+        import contextlib
+        import io
+        import sys
+        from . import cli as C
+
+        old_run, old_planner, old_argv = C.run_task, C.canonical_live_planner, sys.argv
+        async def fake_run(*_args, **kwargs):
+            return {"model": kwargs["model"], "control_flow": {"node_calls": [
+                {"node": "plan", "served_model": MINI_MODEL}
+            ]}}
+        C.run_task = fake_run
+        C.canonical_live_planner = lambda **_kwargs: object()
+        sys.argv = ["browser-agent", "read one fact", "--allow-llm"]
+        output = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(output):
+                C.main()
+        finally:
+            C.run_task, C.canonical_live_planner, sys.argv = old_run, old_planner, old_argv
+        result, _ = json.JSONDecoder().raw_decode(output.getvalue())
+        got = {"model": result.get("model")}
+        passed = all(got.get(key) == value for key, value in want.items())
+    elif check == "vision":
+        async def vision_scenario():
+            calls = [0]
+            async def counted(payload):
+                calls[0] += 1
+                return await transport(payload)
+            boundary, reasons = PolicyBoundary(transport=counted), []
+            for capability in (False, True):
+                try:
+                    await boundary.call("vision", [], "v1", verified_access=capability)
+                except PolicyError as exc:
+                    reasons.append(str(exc))
+            return calls[0], reasons
+        calls, reasons = _await(vision_scenario())
+        got = {"unverified_refused": "requires verified" in reasons[0], "disabled_refused": "disabled" in reasons[1],
+               "transport_calls": calls, "reason_contains": "price-vetted Flash Vision" in reasons[1]}
+        passed = all(got.get(key) == value for key, value in want.items())
+    elif check in ("deterministic-evidence", "critic"):
+        from . import agent as A
+        fixture = f"{_base_url()}/fixtures/hello.html"
+        plan_json = json.dumps([{"action": "extract", "target": {"role": "heading", "name": "Hello Fixture"}}])
+        async def planned(payload):
+            if payload["models"] == [MINI_MODEL]:
+                return {"model": MINI_MODEL, "choices": [{"message": {"content": "{}"}}],
+                        "usage": {"total_tokens": 1, "cost": 0.001}}
+            return {"model": MINI_MODEL, "choices": [{"message": {"content": plan_json}}],
+                    "usage": {"total_tokens": 1, "cost": 0.001}}
+        boundary = PolicyBoundary(transport=planned, cache={})
+        planner = canonical_live_planner(verified_access=True, boundary=boundary)
+        if check == "deterministic-evidence":
+            result = _run_agent("What does the main heading on the page say?", fixture, planner,
+                                mode="canonical", verified_access=True)
+            calls = result["control_flow"]["node_calls"]
+            got = {"evidence_calls": len([r for r in calls if r["node"] == "evidence"]),
+                   "flash_calls": len([r for r in calls if r["served_model"] == FLASH_MODEL]),
+                   "packet_retained": bool(result["control_flow"]["evidence_hashes"])}
+            passed = all(got.get(key) == value for key, value in want.items())
+        else:
+            original_verify = A.verify
+            try:
+                A.verify = lambda **_kw: {"verdict": "FAIL", "reason": "wrong answer"}
+                clear_planner = canonical_live_planner(
+                    verified_access=True, boundary=PolicyBoundary(transport=planned, cache={}))
+                clear = _run_agent("What does the main heading on the page say?", fixture, clear_planner,
+                                   mode="canonical", verified_access=True)
+                A.verify = lambda **_kw: {"verdict": "FAIL", "reason": "ambiguous semantic evidence: two cited values"}
+                ambiguous_planner = canonical_live_planner(
+                    verified_access=True, boundary=PolicyBoundary(transport=planned, cache={}))
+                ambiguous = _run_agent("What does the main heading on the page say?", fixture, ambiguous_planner,
+                                       mode="canonical", verified_access=True)
+                async def billed_critic(payload):
+                    if payload["models"] == [MINI_MODEL]:
+                        return {"model": MINI_MODEL, "error": "critic unavailable",
+                                "usage": {"total_tokens": 7, "cost": 0.002}}
+                    return await planned(payload)
+                billed_boundary = PolicyBoundary(transport=billed_critic, cache={})
+                billed = _run_agent("What does the main heading on the page say?", fixture,
+                                    canonical_live_planner(verified_access=True, boundary=billed_boundary),
+                                    mode="canonical", verified_access=True)
+            finally:
+                A.verify = original_verify
+            critic_calls = [r for r in ambiguous["control_flow"]["node_calls"] if r["node"] == "critic"]
+            billed_critic_calls = [r for r in billed["control_flow"]["node_calls"] if r["node"] == "critic"]
+            got = {"clear_skips": not any(r["node"] == "critic" for r in clear["control_flow"]["node_calls"]),
+                   "ambiguous_calls_once": len(critic_calls) == 1,
+                   "clear_critic_count": len([r for r in clear["control_flow"]["node_calls"] if r["node"] == "critic"]),
+                   "critic_count": len(critic_calls),
+                   "ambiguous_node_calls": ambiguous["control_flow"]["node_calls"],
+                   "ambiguous_verdict": ambiguous.get("verdict"),
+                   "critic_failure_tokens": billed_critic_calls[0]["tokens"] if billed_critic_calls else None,
+                   "critic_failure_usd": billed_critic_calls[0]["usd"] if billed_critic_calls else None,
+                   "aggregate_retains_critic_bill": (billed["budgets_spent"]["llm_tokens"] >= 7
+                                                      and billed["budgets_spent"]["llm_usd"] >= 0.002),
+                   "aggregate_calls_include_critic": (
+                       ambiguous["control_flow"]["budgets"]["calls"] ==
+                       len([r for r in ambiguous["control_flow"]["node_calls"] if not r["cached"]])),
+                   "fail_stays_fail": ambiguous["control_flow"]["verifier"]["verdict"] == "FAIL",
+                   "route_not_publish": ambiguous["control_flow"]["routes"][-1] != "publish"}
+            passed = all(got.get(key) == value for key, value in want.items())
+    elif check == "access":
+        from . import server as S
+        old_planner, old_run = S.canonical_live_planner, S.run_task
+        calls, run_ids = [], []
+        def planner_factory(*, verified_access, model, fallback):
+            calls.append({"factory": {"verified_access": verified_access,
+                                      "model": model, "fallback": fallback}})
+            return object()
+        async def recorder(*_args, **kwargs):
+            calls.append({"run": {"verified_access": kwargs.get("verified_access"),
+                                  "model": kwargs.get("model"), "mode": kwargs.get("mode")}})
+            return {"status": "accepted", "control_flow": {"node_calls": []}}
+        try:
+            S.canonical_live_planner, S.run_task = planner_factory, recorder
+            req = urllib.request.Request(f"{_base_url()}/tasks", data=json.dumps({"task": "read one fact"}).encode(), headers=_task_headers(), method="POST")
+            body = json.load(urllib.request.urlopen(req, timeout=10)); run_ids.append(body["run_id"])
+            for _ in range(100):
+                if _get_json(f"/tasks/{body['run_id']}").get("status") != "running":
+                    break
+                time.sleep(.01)
+        finally:
+            S.canonical_live_planner, S.run_task = old_planner, old_run
+            for run_id in run_ids:
+                S.RUNS.pop(run_id, None); S.STREAMS.pop(run_id, None)
+        encoded = json.dumps(calls)
+        factory = calls[0].get("factory", {}) if calls else {}
+        run = calls[1].get("run", {}) if len(calls) > 1 else {}
+        got = {"verified_capability": factory.get("verified_access") is True and run.get("verified_access") is True,
+               "call_count": len(calls), "factory_model": factory.get("model"),
+               "factory_fallback": factory.get("fallback"), "run_model": run.get("model"),
+               "run_mode": run.get("mode"), "calls": calls,
+               "header_not_logged": "X-LLM-Access-Key" not in encoded,
+               "secret_not_logged": _EVAL_ACCESS_KEY not in encoded}
+        passed = all(got.get(key) == value for key, value in want.items())
+    else:
+        return {"passed": False, "wrong": {"unknown_check": check}}
+    return {"passed": passed, "wrong": {} if passed else {"expected": want, "got": got}, "got": got}
+
+
 def _run_canonical_runtime_case(case: dict) -> dict:
     """Run one fixture through plan and canonical cadences at the same boundary."""
     inp, want = case["input"], case["expect"]
@@ -9309,6 +9645,7 @@ KINDS = {
     "evidence-policy": _run_evidence_policy_case,
     "snapshot-evidence": _run_snapshot_evidence_case,
     "canonical-graph": _run_canonical_graph_case,
+    "m51-policy": _run_m51_policy_case,
     "canonical-runtime": _run_canonical_runtime_case,
     "classify": _run_classify_case,
     "declared-keys": _run_declared_keys_case,

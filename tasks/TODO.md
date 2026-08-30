@@ -12,28 +12,6 @@ parallel pr-loop sessions on their own `task/<id>` worktree branches.
 
 ## Queue
 
-### M50 — one canonical LangGraph control flow            [status: todo]
-Spec: wrap the existing resolver, executor, and verifier in
-`observe → route → evidence → plan → act → evaluate → decide`, with a bounded
-retry edge to `plan`, deterministic decide, and one canonical trace. Retain
-legacy modes only for bounded parity evaluation, then remove them; do not keep
-three permanent flows or create an agent class hierarchy.
-Acceptance: graph-state transitions, retry bounds, and trace projection are
-invariants; the verifier retains final authority; and parity evidence makes
-legacy-flow removal an explicit decision.
-
-### M51 — centralized bounded multi-model policy            [status: todo]
-Depends: M50
-Spec: centralize deterministic-first node policy and cache/budget each model
-call: DeepSeek V4 Flash for evidence/text, DeepSeek V4 Pro for planning,
-authenticated experimental Flash Vision with GPT-5 mini fallback, and GPT-5
-mini critic only for semantic ambiguity. Log actual served model, tokens, USD,
-and latency; a critic cannot override the verifier. Keep every route under the
-ADR-045 price ceiling.
-Acceptance: node policy, access control, cache keys, per-node limits, actual
-model attribution, and critic non-authority are covered offline; no node call
-can silently exceed the configured model ceiling.
-
 ### M52 — live finance promotion campaign            [status: todo]
 Depends: M51
 Spec: run a new, separately authorized journalled campaign for the six visible

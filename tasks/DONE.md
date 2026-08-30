@@ -4,6 +4,8 @@ Append-only index. Details live in each milestone's ADR/PR and
 `tasks/pr-loop-ledger.jsonl`; the full milestone-table narrative is in git
 history (`tasks/TODO.md` as of `98de1a6`, blocks as of `127bd58`).
 
+- M50 — one canonical LangGraph control flow (2026-08-30) — ADR-047, PR #107; deterministic decide, one safe retry, canonical public gateway/CLI, and hash-bound snapshot evidence.
+
 - M0 — Harness (2026-08-15) — ADR-001
 - M1 — Walking Skeleton (2026-08-15) — specs/001, prompts/002, run 09b21b3a
 - M2 — Eval Backbone (2026-08-16) — ADR-002, docs/evals/scope-checkpoint.md
@@ -73,6 +75,7 @@ unmeasured (ADR-007) — the M5/M10 held-out probes are the counterweight.
 - M47 — two-day agentic hardening (2026-08-29) — plan PR #82; implementation PR #83.
 - M48 — canonical graph and evidence contract (2026-08-30) — ADR-046; hash-bound EvidencePacket/state validator, six M49 red-first finance contracts (0/6, zero-cost), and M44 campaign archive after its reusable completed-run budget stop migrated.
 - M49 — deterministic evidence layer (2026-08-30) — stdlib, site-agnostic cited DOM/accessibility text, terminal live regions, question-relevant semantic/date-reduced tables, and injected same-origin CSV/XML exports; 11/11 offline M49 evidence cases green at $0.00.
+- M51 — centralized bounded multi-model policy (2026-08-30) — ADR-048; deterministic evidence remains the zero-call path, DeepSeek V4 Pro plans with GPT-5 mini fallback, and the optional GPT-5 mini critic is advisory only; 11/11 focused M51 cases green at US$0.00 after independent cold review and spec-drift repair.
 
 ## Retired without completion
 

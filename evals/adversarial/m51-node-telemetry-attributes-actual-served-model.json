@@ -1,0 +1,9 @@
+{
+  "id": "m51-node-telemetry-attributes-actual-served-model",
+  "task": "browser",
+  "suites": ["m51", "fast"],
+  "input": {"kind": "m51-policy", "check": "telemetry"},
+  "expect": {"requested_route": ["deepseek/deepseek-v4-pro", "openai/gpt-5-mini"], "served_model": "openai/gpt-5-mini", "cached_second": true, "zero_cached_cost": true, "top_level_is_planner_only": true},
+  "triage": {"class": "invariant-gap", "note": "Requested planner model was recorded separately from provider-served attribution."},
+  "provenance": "M51 red-first offline provider-envelope attribution contract; no provider request. Spec-drift finding 4 added the mixed plan+critic half after the gateway published both model ids in the planner-model field."
+}
