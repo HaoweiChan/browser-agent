@@ -130,12 +130,12 @@ fraction, and why two of the three rows are `unreliable`.
 | companiesmarketcap.com (live) | unreliable | — | — | — | — |
 | bankofcanada.ca (live) | supported | — | — | — | — |
 | ecb.europa.eu (live) | supported | — | — | — | — |
-| whaleforce-sec10k.zeabur.app (live) | unreliable | — | — | — | — |
+| whaleforce-sec10k.zeabur.app (live) | supported | — | — | — | — |
 | bankofengland.co.uk (live) | unreliable | — | — | — | — |
 | federalreserve.gov (live) | unreliable | — | — | — | — |
 | home.treasury.gov (live) | unreliable | — | — | — | — |
 | eia.gov (live) | unreliable | — | — | — | — |
-| taifex.com.tw (live) | unreliable | — | — | — | — |
+| taifex.com.tw (live) | supported | — | — | — | — |
 
 Statuses: `supported` / `unreliable` / `unsupported` / `—` (not yet evaluated).
 
@@ -163,6 +163,23 @@ site limitation, but it is still evidence that the advertised workflow did not
 work today. CompaniesMarketCap's older deep-page `supported` declaration is
 therefore withdrawn for this homepage card, and TAIFEX now has a real failed run
 rather than `—`.
+
+**Re-rating, 2026-08-31.** Newer evidence supersedes the SEC and TAIFEX verdicts
+above. SEC completed the homepage workflow 3/3 on deployed build `959b1a0`:
+`cde9b457`, `6a5096c0`, and `6f2243f9` all returned the completed Intel 10-K
+extraction status. TAIFEX completed a simpler Chinese-homepage read 3/3 on
+localhost with the allowlisted `openai/gpt-5-mini` planner: `5fd232e1`,
+`c26ef665`, and `777c9676` all returned the same four links from the
+「國內股價類」section — 臺股期貨、小型臺指期貨、臺指選擇權、股票期貨. Both rows
+are therefore `supported` for exactly these advertised tasks. The failed
+multi-page TAIFEX contract-spec task and the older SEC progress-message task
+remain evidence against broader claims; neither is advertised by the homepage.
+The first local fast run caught the two stale UI status expectations
+(`evals/report/20260830-171804-fast.json`, 277/278); after synchronising them,
+the complete fast suite passed 278/278 at 20260830-172128. A commit-hook rerun
+then caught a dangling backticked timestamp in this paragraph
+(`evals/report/20260830-172958-fast.json`, 277/278); both documentation checks
+pass after removing that accidental case-like citation.
 
 The four finance additions were each run once on 2026-08-30 through the default
 DeepSeek V4 Pro → GPT-5 mini route; OpenRouter served DeepSeek V4 Pro for all

@@ -5876,12 +5876,12 @@ _UI_MATRIX = {
         {"domain": "companiesmarketcap.com (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "bankofcanada.ca (live)", "cells": {"TC1": "supported"}},
         {"domain": "ecb.europa.eu (live)", "cells": {"TC1": "supported"}},
-        {"domain": "whaleforce-sec10k.zeabur.app (live)", "cells": {"TC1": "unreliable"}},
+        {"domain": "whaleforce-sec10k.zeabur.app (live)", "cells": {"TC1": "supported"}},
         {"domain": "bankofengland.co.uk (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "federalreserve.gov (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "home.treasury.gov (live)", "cells": {"TC1": "unreliable"}},
         {"domain": "eia.gov (live)", "cells": {"TC1": "unreliable"}},
-        {"domain": "taifex.com.tw (live)", "cells": {"TC1": "unreliable", "TC2": "—",
+        {"domain": "taifex.com.tw (live)", "cells": {"TC1": "supported", "TC2": "—",
                                                         "TC3": "—", "TC4": "—",
                                                         "TC5": "—"}}],
     "limitations": [
@@ -6185,8 +6185,11 @@ def _run_ui_form_case(case: dict) -> dict:
         e = examples.get(chip["key"])
         want_url = e and (e["url"] if "://" in e["url"] else got["origin"] + e["url"])
         posted = [c["body"] for c in chip["calls"] if c["url"] == "/tasks"]
+        want_post = ({"task": e["task"], "url": want_url,
+                      **({"model": e["model"]} if e.get("model") else {})}
+                     if e else None)
         if not e or not chip["in_card"] or chip["task"] != e["task"] or chip["url"] != want_url \
-                or posted != [{"task": e["task"], "url": want_url}]:
+                or posted != [want_post]:
             wrong.setdefault("chips", []).append(chip)
     # The chip loop is reflexive (graded against the page's own EXAMPLES); this
     # pins the literal text a chip must fill and show, so swapping an example is
@@ -7500,12 +7503,12 @@ def _check_examples_cover_matrix() -> dict:
         "companiesmarketcap.com (live)": "unreliable",
         "bankofcanada.ca (live)": "supported",
         "ecb.europa.eu (live)": "supported",
-        "whaleforce-sec10k.zeabur.app (live)": "unreliable",
+        "whaleforce-sec10k.zeabur.app (live)": "supported",
         "bankofengland.co.uk (live)": "unreliable",
         "federalreserve.gov (live)": "unreliable",
         "home.treasury.gov (live)": "unreliable",
         "eia.gov (live)": "unreliable",
-        "taifex.com.tw (live)": "unreliable",
+        "taifex.com.tw (live)": "supported",
     }
     for domain, expected in expected_status.items():
         row = next((r for r in matrix if r["domain"] == domain), None)

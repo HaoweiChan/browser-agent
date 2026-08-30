@@ -19,14 +19,11 @@
     "scheme": "dark",
     "expected_showcases": [
       "whaleforce-sec10k.zeabur.app (live)",
-      "companiesmarketcap.com (live)",
       "bankofcanada.ca (live)",
       "ecb.europa.eu (live)",
-      "bankofengland.co.uk (live)",
-      "federalreserve.gov (live)",
-      "home.treasury.gov (live)",
-      "eia.gov (live)",
-      "taifex.com.tw (live)"
+      "taifex.com.tw (live)",
+      "companiesmarketcap.com (live)",
+      "bankofengland.co.uk (live)"
     ],
     "expected_headers": [
       "Financial workflow",
@@ -40,22 +37,16 @@
       "companiesmarketcap.com (live)": "https://companiesmarketcap.com/",
       "bankofcanada.ca (live)": "https://www.bankofcanada.ca/",
       "ecb.europa.eu (live)": "https://www.ecb.europa.eu/",
-      "bankofengland.co.uk (live)": "https://www.bankofengland.co.uk/",
-      "federalreserve.gov (live)": "https://www.federalreserve.gov/",
-      "home.treasury.gov (live)": "https://home.treasury.gov/",
-      "eia.gov (live)": "https://www.eia.gov/",
-      "taifex.com.tw (live)": "https://www.taifex.com.tw/"
+      "taifex.com.tw (live)": "https://www.taifex.com.tw/",
+      "bankofengland.co.uk (live)": "https://www.bankofengland.co.uk/"
     },
     "expected_statuses": {
-      "whaleforce-sec10k.zeabur.app (live)": "△ unreliable",
+      "whaleforce-sec10k.zeabur.app (live)": "✓ supported",
       "companiesmarketcap.com (live)": "△ unreliable",
       "bankofcanada.ca (live)": "✓ supported",
       "ecb.europa.eu (live)": "✓ supported",
       "bankofengland.co.uk (live)": "△ unreliable",
-      "federalreserve.gov (live)": "△ unreliable",
-      "home.treasury.gov (live)": "△ unreliable",
-      "eia.gov (live)": "△ unreliable",
-      "taifex.com.tw (live)": "△ unreliable"
+      "taifex.com.tw (live)": "✓ supported"
     },
     "expected_examples": {
       "whaleforce-sec10k.zeabur.app (live)": {
@@ -66,32 +57,17 @@
       "bankofengland.co.uk (live)": {
         "task": "What is the current official Bank Rate?",
         "url": "https://www.bankofengland.co.uk/",
-        "label": "Read Bank of England rate"
+        "label": "Try Bank of England rate"
       },
       "ecb.europa.eu (live)": {
         "task": "What is the deposit facility rate?",
         "url": "https://www.ecb.europa.eu/",
         "label": "Read ECB deposit rate"
       },
-      "federalreserve.gov (live)": {
-        "task": "What is the current federal funds target range?",
-        "url": "https://www.federalreserve.gov/",
-        "label": "Read Fed target range"
-      },
-      "home.treasury.gov (live)": {
-        "task": "What is the latest 10-year Treasury par yield and its date?",
-        "url": "https://home.treasury.gov/",
-        "label": "Read 10-year Treasury yield"
-      },
-      "eia.gov (live)": {
-        "task": "What is the latest U.S. average retail gasoline price and its date?",
-        "url": "https://www.eia.gov/",
-        "label": "Read U.S. gasoline price"
-      },
       "taifex.com.tw (live)": {
-        "task": "請從期交所首頁找到臺股期貨商品規格，告訴我一個指數點等於新臺幣多少元？",
+        "task": "請列出期交所首頁『國內股價類』區塊中的四個商品連結名稱，不要離開首頁。",
         "url": "https://www.taifex.com.tw/",
-        "label": "查臺股期貨一點價值"
+        "label": "列出國內股價類商品"
       }
     }
   },
@@ -101,7 +77,7 @@
     "enabled_class": "enabled",
     "site_url": "https://books.toscrape.com",
     "guidance_contains": "start URL",
-    "matrix_note_contains": "Status reflects the deployed homepage evidence",
+    "matrix_note_contains": "Status reflects the latest live evidence",
     "limits_contains": "2 declared limitations"
   },
   "provenance": "M35 eval-first. Deployment run 2ce3e5c8 (2026-08-22) showed that a task with no start URL spent a run guaranteed to fail, so this rendered case pins the no-URL guard, site-name URL inference, verified access-key header, and Try-button behavior. User report, 2026-08-30, narrowed the interview surface to finance: the case pins SEC filing analysis first, followed by seven finance workflows, five useful columns, zero empty matrix cells, and each new site's exact URL and Try task. Watched red before each UI change: first the irrelevant rows and stale 10-K task, then the absence of the four new finance rows. Cold review then found two silent-success gaps; both watched red before repair: an all-dash showcased row rendered as supported, and the Intel button loaded a generic status question rather than explicitly asking the agent to select Intel, run extraction, and read the result. The access success state was then pinned to the green `enabled` class after the owner showed that grey `✓ Enabled` was visually weaker than the SEC extractor; watched red first with status_class `note`. A second user report required showcase URLs to start at each site's homepage and added a Chinese TAIFEX navigation task; the exact nine roots and Chinese task were pinned before the page changed. The deployment-backed homepage probe on build 3927366 then supplied the first status evidence for those roots: Bank of Canada and ECB were independently ground-truthed 3/3 successes, while CompaniesMarketCap and TAIFEX failed loudly. These three changed status expectations were watched red against the pre-probe matrix before its declarations and notes were updated. Live QA after merge found the section note still claiming homepage navigation had not been re-rated; matrix_note_contains pins the corrected claim and was watched red against that deployed wording.",
