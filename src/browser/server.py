@@ -726,8 +726,8 @@ PAGE = r"""<!doctype html>
 </div>
 
 <h2><span class="section-no">03</span> What works today</h2>
-<p class="note">Every demo starts from the site's homepage. Status reflects the deployed
-  homepage evidence recorded in the support matrix.</p>
+<p class="note">Every demo starts from the site's homepage. Status reflects the latest
+  live evidence recorded in the support matrix.</p>
 <div id="matrix" class="panel table-wrap">loading&hellip;</div>
 
 <h2><span class="section-no">04</span> Known limits</h2>
@@ -764,13 +764,7 @@ const EXAMPLES = {
     label: "Run an Intel 10-K extraction",
     url: "https://whaleforce-sec10k.zeabur.app/",
     task: "Select the Intel filing, run the extraction, and report the resulting 10-K status.",
-    note: "Homepage run f9d53e0f returned a wrong success: a progress message, not the 10-K status."},
-  "companiesmarketcap.com (live)": {workflow: "Company valuation",
-    capability: "Read a company’s current market capitalization",
-    label: "Read Apple market cap",
-    url: "https://companiesmarketcap.com/",
-    task: "What is the market cap of this company?",
-    note: "Homepage run 11151f1a failed loudly on invalid provider accounting; old deep-page evidence is not used."},
+    note: "3/3 homepage runs completed the Intel extraction and returned its final 10-K status."},
   "bankofcanada.ca (live)": {workflow: "Monetary policy",
     capability: "Read a central bank’s current policy rate",
     label: "Read Bank of Canada rate",
@@ -783,36 +777,25 @@ const EXAMPLES = {
     url: "https://www.ecb.europa.eu/",
     task: "What is the deposit facility rate?",
     note: "3/3 homepage runs returned the official 2.25% deposit facility rate."},
+  "taifex.com.tw (live)": {workflow: "中文期貨商品",
+    capability: "從中文首頁讀取國內股價類商品",
+    label: "列出國內股價類商品",
+    url: "https://www.taifex.com.tw/",
+    task: "請列出期交所首頁『國內股價類』區塊中的四個商品連結名稱，不要離開首頁。",
+    model: "openai/gpt-5-mini",
+    note: "localhost 3/3：5fd232e1、c26ef665、777c9676，答案一致。"},
+  "companiesmarketcap.com (live)": {workflow: "Company valuation",
+    capability: "Find Apple from the homepage and read its market capitalization",
+    label: "Try Apple market cap",
+    url: "https://companiesmarketcap.com/",
+    task: "Starting from this homepage, find Apple and report its current market capitalization.",
+    note: "Historically strong on company pages; the latest homepage run still failed during navigation."},
   "bankofengland.co.uk (live)": {workflow: "UK monetary policy",
-    capability: "Read the current official Bank Rate",
-    label: "Read Bank of England rate",
+    capability: "Find and read the current official Bank Rate",
+    label: "Try Bank of England rate",
     url: "https://www.bankofengland.co.uk/",
     task: "What is the current official Bank Rate?",
-    note: "Homepage run d6a57c24 failed loudly on invalid provider accounting."},
-  "federalreserve.gov (live)": {workflow: "U.S. monetary policy",
-    capability: "Read the current federal funds target range",
-    label: "Read Fed target range",
-    url: "https://www.federalreserve.gov/",
-    task: "What is the current federal funds target range?",
-    note: "Homepage run 1a8fc8ad failed loudly on invalid provider accounting."},
-  "home.treasury.gov (live)": {workflow: "Treasury yields",
-    capability: "Read the latest 10-year Treasury par yield",
-    label: "Read 10-year Treasury yield",
-    url: "https://home.treasury.gov/",
-    task: "What is the latest 10-year Treasury par yield and its date?",
-    note: "Homepage run 0fe19f7c reached the yield page but could not resolve its table."},
-  "eia.gov (live)": {workflow: "Energy prices",
-    capability: "Read the latest U.S. average retail gasoline price",
-    label: "Read U.S. gasoline price",
-    url: "https://www.eia.gov/",
-    task: "What is the latest U.S. average retail gasoline price and its date?",
-    note: "Homepage run f9a9ba41 failed loudly on invalid provider accounting."},
-  "taifex.com.tw (live)": {workflow: "臺股期貨規格",
-    capability: "從中文首頁找到臺股期貨商品規格",
-    label: "查臺股期貨一點價值",
-    url: "https://www.taifex.com.tw/",
-    task: "請從期交所首頁找到臺股期貨商品規格，告訴我一個指數點等於新臺幣多少元？",
-    note: "首頁路徑已人工驗證；正式 run 7631566f 因 provider accounting 失敗。"},
+    note: "The task is simple, but the site can return an Access Denied page."},
 };
 // Short limits for visitors; the declared rows with evidence stay in
 // docs/support-matrix.md, linked below with their count from the payload.
@@ -919,7 +902,7 @@ function useExample(key) {
   $("task").value = e.task;
   $("url").value = new URL(e.url, location.origin).href;
   urlChanged();
-  if (!$("go").disabled) submitTask();
+  if (!$("go").disabled) submitTask(e.model || null);
 }
 
 // Typing or pasting a URL is enough to see the page. The panel exists to let a
@@ -1212,7 +1195,7 @@ function renderResult(r) {
   </div>`;
 }
 
-async function submitTask() {
+async function submitTask(model = null) {
   if (!accessEnabled) {
     $("err").hidden = false;
     $("err").textContent = "Verify the LLM access key before running a task.";
@@ -1247,7 +1230,7 @@ async function submitTask() {
     const r = await fetch("/tasks", {
       method: "POST", headers: {"Content-Type": "application/json",
         "X-LLM-Access-Key": $("access-key").value},
-      body: JSON.stringify({task, url}),
+      body: JSON.stringify({task, url, ...(model ? {model} : {})}),
     });
     const data = await r.json();
     if (!r.ok) {

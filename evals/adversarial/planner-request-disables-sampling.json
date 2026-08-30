@@ -8,9 +8,10 @@
     "check": "planner-request-disables-sampling"
   },
   "expect": {
-    "note": "two identical live_planner calls explicitly send temperature 0 and therefore do not inherit the provider's sampling default"
+    "note": "two identical live_planner calls explicitly send temperature 0, and link navigation postconditions use the observed href instead of an invented destination heading"
   },
   "provenance": "T-M40-5-3, reproduced again by ADR-041's post-change campaign on deployed build bfb2f395cfdf80c08636fb83ae5a5aee5aab6127: identical quotes reps produced one correct extraction and two adjacent-label failures; identical Open Library reps produced one correct extraction and two empty extracts. None of the twelve traces used a newly advertised action, so the 7/12 baseline to 5/12 result cannot evidence vocabulary behaviour and the within-build disagreement is classified as a flake. This case calls the real live_planner twice and replaces only its transport helper with a provider double that varies when sampling is implicit and holds still when temperature is zero. It neither retries nor selects a favourable completion.",
+  "provenance_taifex_2026_08_31": "Deployed TAIFEX homepage run 69f204dc navigated successfully from / to /cht/2/tX, then failed because the plan guessed that the destination exposed an accessible heading named 臺股期貨. The URL was observed on the link before the click; the added assertion watched red before the generic planner guidance was added. No TAIFEX URL, label, selector, or recipe enters production policy.",
   "triage": {
     "class": "flake",
     "note": "same build, task, URL and mode disagreed across adjacent fixed repetitions; mitigate the uncontrolled request parameter rather than rerunning the paid campaign until green",

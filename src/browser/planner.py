@@ -129,7 +129,8 @@ task names a specific entity. Prefer few steps.
 Every `click` MUST carry an expected_state — a click that changes nothing you
 can check is a click nobody can verify, and the run will be failed for it.
 Pick the cheapest checkable consequence: a URL fragment, or a role+name that
-becomes visible. All keys you give must hold, so assert one thing you are sure
+becomes visible. For a link with an observed URL, use url_contains from that URL
+instead of guessing that the destination has a same-named heading. All keys you give must hold, so assert one thing you are sure
 of rather than two you are hoping for. `fill` verifies itself by readback and
 needs no expected_state. If a click's consequence genuinely cannot be known
 from the observation, prefer a different plan over a guess — never invent
