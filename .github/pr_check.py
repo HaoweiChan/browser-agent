@@ -74,7 +74,7 @@ def check_body(body):
         parts[m.group(1).strip()] = text[m.end():end]
 
     for name in SECTIONS:
-        lines = [l for l in parts[name].splitlines() if l.strip()]
+        lines = [line for line in parts[name].splitlines() if line.strip()]
         if not lines:
             errors.append(f"section '## {name}' is empty (write 'none' if nothing applies)")
 
