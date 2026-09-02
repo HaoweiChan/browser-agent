@@ -23,7 +23,7 @@ README.md; this file is the working contract.
 .githooks/         pre-commit eval gate (installed via core.hooksPath)
 specs/             ONLY: 000-invariants.md, per-task contracts, decisions/ADR-*.md
 docs/              planning package: product/ architecture/ evals/ plans/ + support-matrix.md, analysis.md (ADR-001)
-tasks/TODO.md      milestone-level tracker only — micro-tasks stay in-session (ADR-001)
+backlog/           Backlog.md task store — one file per task, drafts/ = debt; `backlog task list --ready --plain` (groundwork GW-017)
 evals/golden/      hand-labeled cases (JSON, one per case)
 evals/adversarial/ cases known or designed to break the pipeline
 evals/labels/      frozen raw evidence + hand labels for accuracy sampling (JSONL)
@@ -73,12 +73,17 @@ exercises real sites at $0.00 while the paid cases stay behind `full`.
 2. **Every new failure becomes a case** in `evals/adversarial/` before it is fixed.
    Watch the new case fail first; an eval you've never seen red proves nothing.
 3. **specs/ holds only three kinds of files**: invariants, output contracts, ADRs.
-   Prose planning lives in `docs/`; the only task file is milestone-level
-   `tasks/TODO.md` (ADR-001). Micro-task lists stay in the session.
+   Prose planning lives in `docs/`; task state lives only in Backlog.md
+   (`backlog/`; ADR-001 amended by groundwork GW-017). Micro-task lists stay in
+   the session.
 4. **No mocked results.** If a live dependency is unreachable, fail loudly; never
    fabricate output to make a run look green.
 5. Commits go through the pre-commit eval gate. `--no-verify` is for emergencies
    and must be explained in the commit message.
+   Commit subjects and PR titles share one shape: `<type>(<scope>)?: <lowercase
+   summary>` (feat, fix, docs, chore, refactor, test, perf, ci, build, revert);
+   `.githooks/commit-msg` and `.github/pr_check.py` enforce it, and PR bodies
+   follow `.github/PULL_REQUEST_TEMPLATE.md`.
 6. **No site-specific knowledge in the execution policy.** Production agent code
    contains no site-specific selectors, DOM paths, or navigation recipes.
    Eval/fixture code may use them strictly for ground-truth verification and
@@ -101,12 +106,18 @@ exercises real sites at $0.00 while the paid cases stay behind `full`.
 5. New cases into the eval set → back to 3
 6. Eval gate green → commit
 
-For a full tasks/TODO.md task that should end in a PR, run the loop through
-**/pr-loop <task-id>** instead: one orchestrator session drives
-implement → gate → review → repair with subagents (implementer in a worktree,
-pr-reviewer with fresh context); the human only writes the spec and merges.
-The PR carries role-tagged structured findings and an evidence pack — never
-agent chatter. Protocol: the `pr-loop` plugin skill.
+For a full Backlog.md task that should end in a PR, run the loop through
+**/pr-loop <task-id>** (Claude Code) or **$pr-loop <task-id>** (Codex): one
+orchestrator session drives implement → gate → probe → one independent
+verification → one repair → one delta verification, with the roles kept apart
+(implementer in a worktree, verifier with fresh context, never more than two
+model calls). A finding blocks only with a reproduction and only for unmet
+acceptance, drift from the task, or wrong output; prose never blocks. What is
+still open after the second call goes to the human as `Decision: not met`.
+Debt is one `backlog task create --draft` line naming a case or run id. The PR
+carries the six-section body `.github/pr_check.py` enforces. One pr-loop
+session per repo at a time. Protocol: the `pr-loop` plugin skill (groundwork
+GW-017).
 
 ## Adding a task
 

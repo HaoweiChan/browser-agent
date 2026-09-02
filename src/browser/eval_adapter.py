@@ -3924,9 +3924,15 @@ def _run_adr_header_index_case(case: dict) -> dict:
     # exact form is not quoted here, for the same reason REPORT_CITATION_SKIP
     # spells its exception out in prose: this sweep reads this file too.)
     # `evals/report/` is out because those are machine-written artifacts.
-    citing = [root / "README.md", root / "CLAUDE.md",
-              root / "tasks" / "TODO.md", root / "tasks" / "DONE.md"]
-    for d in ("src", "evals", "specs", ".github", "docs", "prompts"):
+    # tasks/TODO.md and tasks/DONE.md retired with groundwork GW-017 (task
+    # state lives in Backlog.md); listed still so a repo that keeps them is
+    # swept, skipped when absent.
+    citing = [p for p in (root / "README.md", root / "CLAUDE.md",
+                          root / "tasks" / "TODO.md", root / "tasks" / "DONE.md")
+              if p.exists()]
+    # `backlog/` is the migrated ledger (GW-017): its drafts carry the
+    # citations TODO.md used to, so they keep counting as citers.
+    for d in ("src", "evals", "specs", ".github", "docs", "prompts", "backlog"):
         citing += [p for p in (root / d).rglob("*")
                    if p.is_file()
                    and p.suffix in (".py", ".md", ".yml", ".yaml", ".json")
@@ -4060,8 +4066,12 @@ def _run_id_uniqueness_case(case: dict) -> dict:
                 wrong.append({"fixture": f["note"], "want": f["expect_wrong"], "got": got})
         return {"passed": not wrong, "wrong": wrong, "got": {"fixtures": len(fixtures)}}
 
-    todo = (root / "tasks" / "TODO.md").read_text(encoding="utf-8")
-    done = (root / "tasks" / "DONE.md").read_text(encoding="utf-8")
+    # Both trackers retired with groundwork GW-017 (Backlog.md holds task
+    # state); an absent file reads as empty and the orphan check below is
+    # skipped when neither exists, because there is no tracker to be absent from.
+    todo_path, done_path = root / "tasks" / "TODO.md", root / "tasks" / "DONE.md"
+    todo = todo_path.read_text(encoding="utf-8") if todo_path.exists() else ""
+    done = done_path.read_text(encoding="utf-8") if done_path.exists() else ""
     todo_ids = _task_ids(todo, "### ")
     done_ids = _task_ids(done, "- ")
 
@@ -4087,7 +4097,7 @@ def _run_id_uniqueness_case(case: dict) -> dict:
     # mid-flight and not yet expected anywhere else.
     ledger = root / "tasks" / "pr-loop-ledger.jsonl"
     orphans = []
-    if ledger.exists():
+    if ledger.exists() and (todo_path.exists() or done_path.exists()):
         for line in ledger.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
@@ -4529,7 +4539,7 @@ def _run_matrix_case(case: dict) -> dict:
     }
 
 
-REPORT_CITATION_SCOPE = ("docs", "specs", "tasks", "README.md", "src",
+REPORT_CITATION_SCOPE = ("docs", "specs", "tasks", "backlog", "README.md", "src",
                           "evals/golden", "evals/adversarial", ".github", "prompts")
 REPORT_CITATION = re.compile(r"evals/report/(\d{8}-\d{6}-[a-z0-9-]+\.json)")
 # T-M32-10: how far from a citation a pass-rate claim still counts as being
